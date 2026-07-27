@@ -1,5 +1,5 @@
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}.
-prefix: "<dark_gray>[<orange>JManhunt<dark_gray>] "
+prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
 
 command:
   player-only: "{prefix}<red>Only players can use this command."
@@ -7,9 +7,9 @@ command:
   invalid: "{prefix}<red>Unknown command. Use <yellow>/manhunt help<red>."
 
 manhunt:
-  help-header: "{prefix}<orange>JManhunt commands:"
+  help-header: "{prefix}<gold>JManhunt commands:"
   help-line: "{prefix}<white>{command} <gray>- {description}"
-  status-header: "{prefix}<orange>Manhunt status: <white>{status}"
+  status-header: "{prefix}<gold>Manhunt status: <white>{status}"
   status-player: "{prefix}<gray>{player}: <white>{role}"
   no-match: "{prefix}<yellow>No match is active."
   set-success: "{prefix}<green>Updated <white>{count}<green> player(s) to <white>{role}<green>."
@@ -27,11 +27,26 @@ game:
   hunters-title: "<red>Hunters Win!"
   speedrunners-title: "<green>Speedrunners Win!"
   stat-line: "{prefix}<gray>{stat}: <white>{value}"
+  stat-names:
+    DAMAGE_DEALT: "Damage Dealt"
+    FINAL_KILLS: "Final Kills"
+    KILLS: "Kills"
+    PROGRESSION: "Progression"
+  progression-names:
+    got_wood: "<white>Got Wood"
+    got_iron: "<white>Got Iron"
+    found_ruined_portal: "<white>Found Ruined Portal"
+    entered_village: "<white>Entered Village"
+    entered_nether: "<white>Entered the Nether"
+    found_bastion: "<white>Found Bastion"
+    found_fortress: "<white>Found Fortress"
+    entered_stronghold: "<white>Entered Stronghold"
+    entered_end: "<white>Entered the End"
 
 compass:
-  compass-name: "<orange>Hunter's Compass"
+  compass-name: "<gold>Hunter's Compass"
   compass-lore:
     - "<gray>Tracks the nearest speedrunner."
     - "<dark_gray>Right-click to refresh when enabled."
-  compass-actionbar: "<orange>Tracking <white>{player}<orange> • <white>{distance}m"
+  compass-actionbar: "<gold>Tracking <white>{player}<gold> • <white>{distance}m"
   no-target-actionbar: "<gray>No speedrunner location available."

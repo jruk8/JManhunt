@@ -3,8 +3,10 @@ package com.jruk8.jmanhunt;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -59,6 +61,7 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
     private final Map<UUID, Location> lastSeen = new HashMap<>();
     private final Map<UUID, Stats> stats = new HashMap<>();
     private final Map<UUID, Long> compassClicks = new HashMap<>();
+    private final Map<UUID, Component> compassActionbars = new HashMap<>();
     private NamespacedKey compassKey;
     private boolean active;
     private boolean ending;
@@ -68,6 +71,7 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
     @Override public void onEnable() {
         saveDefaultConfig();
         saveResource("messages.yml", false);
+        saveResource("placeholders.yml", false);
         reloadMessages();
         compassKey = new NamespacedKey(this, "hunters_compass");
         format = getConfig().getString("text-format", "minimessage");
@@ -76,6 +80,7 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
         getServer().getPluginManager().registerEvents(this, this);
         long ticks = Math.max(1L, Math.round(getConfig().getDouble("compass-refresh-interval", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskTimer(this, this::refreshAllCompasses, ticks, ticks);
+        Bukkit.getScheduler().runTaskTimer(this, this::showHeldActionbars, 1L, 20L);
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -134,7 +139,7 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
         List<Player> players = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE).map(p -> (Player) p).toList();
         if (players.stream().noneMatch(p -> role(p) == Role.HUNTER) || players.stream().noneMatch(p -> role(p) == Role.SPEEDRUNNER)) return message(sender, "manhunt.start-invalid");
         active = true; ending = false; stats.clear(); lastSeen.clear();
-        for (Player player : players) { Stats stat = new Stats(); stat.player = player.getName(); stats.put(player.getUniqueId(), stat); if (role(player) == Role.HUNTER) giveCompass(player); }
+        for (Player player : players) { Stats stat = new Stats(); stat.player = player.getName(); stats.put(player.getUniqueId(), stat); if (role(player) == Role.HUNTER) { giveCompass(player); refreshCompass(player); } }
         runConfigured("start-commands", "");
         broadcast("manhunt.start-success"); sound("neutral-sound");
         return true;
@@ -150,18 +155,26 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
         if (ending) return;
         ending = true;
         String winnerName = winner == Role.HUNTER ? "Hunters" : "Speedrunners";
-        broadcast(winner == Role.HUNTER ? "game.hunters-win" : "game.speedrunners-win");
-        for (Player player : Bukkit.getOnlinePlayers()) player.sendActionBar(component(winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title"));
+        String winMessage = winner == Role.HUNTER ? "game.hunters-win" : "game.speedrunners-win";
+        String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
+        broadcast(winMessage);
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            player.showTitle(Title.title(component(title), Component.empty(), Title.Times.times(java.time.Duration.ofMillis(500), java.time.Duration.ofSeconds(3), java.time.Duration.ofMillis(500))));
+        }
+        sound(winner == Role.HUNTER ? "fail-sound" : "win-sound");
         long delay = Math.max(0L, Math.round(getConfig().getDouble("game-end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(this, () -> {
             showStats(winner);
-            for (Player player : Bukkit.getOnlinePlayers()) player.sendTitle(text(winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title"), "", 10, 60, 10);
         }, delay / 2);
         Bukkit.getScheduler().runTaskLater(this, () -> {
             runConfigured("end-commands", winnerName);
             for (Player player : Bukkit.getOnlinePlayers()) { player.getInventory().clear(); if (getConfig().getBoolean("run-default-commands", true)) player.setGameMode(GameMode.SURVIVAL); }
-            active = false; ending = false; sound(winner == Role.HUNTER ? "fail-sound" : "win-sound");
+            active = false; ending = false; compassActionbars.clear();
         }, delay);
+    }
+
+    private void finishLater(Role winner) {
+        Bukkit.getScheduler().runTask(this, () -> finish(winner));
     }
 
     private void showStats(Role winner) {
@@ -169,12 +182,22 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
             if (stat.equalsIgnoreCase("PROGRESSION") && winner == Role.SPEEDRUNNER) continue;
             List<String> values = stats.values().stream().sorted(Comparator.comparingInt((Stats s) -> s.value(stat)).reversed()).limit(3)
                     .map(s -> s.player + ": " + s.value(stat)).toList();
-            if (!values.isEmpty()) broadcast("game.stat-line", Map.of("stat", stat, "value", String.join(", ", values)));
+            if (!values.isEmpty()) {
+                String displayName = messages.getString("game.stat-names." + stat, stat);
+                broadcast("game.stat-line", Map.of("stat", displayName, "value", String.join(", ", values)));
+            }
         }
     }
 
     private void refreshAllCompasses() {
         if (active) Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.HUNTER).forEach(this::refreshCompass);
+    }
+
+    private void showHeldActionbars() {
+        if (!active) return;
+        Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.HUNTER)
+                .filter(p -> isCompass(p.getInventory().getItemInMainHand()) || isCompass(p.getInventory().getItemInOffHand()))
+                .forEach(p -> p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(), component("compass.no-target-actionbar"))));
     }
 
     private void refreshCompass(Player hunter) {
@@ -187,11 +210,14 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
         Location location = target == null ? lastSeen.entrySet().stream().filter(e -> roleById(e.getKey()) == Role.SPEEDRUNNER)
                 .map(Map.Entry::getValue).filter(l -> l.getWorld() != null).min(Comparator.comparingDouble(l -> l.distanceSquared(hunter.getLocation()))).orElse(null) : target.getLocation();
         if (location != null && item != null && item.getItemMeta() instanceof CompassMeta meta) { meta.setLodestone(location); meta.setLodestoneTracked(false); item.setItemMeta(meta); }
-        if (target != null) hunter.sendActionBar(component("compass.compass-actionbar", Map.of("player", target.getName(), "distance", String.valueOf(Math.round(hunter.getLocation().distance(target.getLocation()))))));
-        else hunter.sendActionBar(component("compass.no-target-actionbar"));
+        if (target != null) {
+            compassActionbars.put(hunter.getUniqueId(), component("compass.compass-actionbar", Map.of("player", target.getName(), "distance", String.valueOf(Math.round(hunter.getLocation().distance(target.getLocation()))))));
+        } else {
+            compassActionbars.put(hunter.getUniqueId(), component("compass.no-target-actionbar"));
+        }
     }
 
-    private void giveCompass(Player player) { if (role(player) != Role.HUNTER) return; ItemStack item = new ItemStack(Material.COMPASS); CompassMeta meta = (CompassMeta) item.getItemMeta(); meta.displayName(component("compass.compass-name")); meta.lore(messages.getStringList("compass.compass-lore").stream().map(this::parse).toList()); meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES); meta.getPersistentDataContainer().set(compassKey, PersistentDataType.BYTE, (byte) 1); item.setItemMeta(meta); player.getInventory().setItem(8, item); }
+    private void giveCompass(Player player) { if (role(player) != Role.HUNTER) return; ItemStack item = new ItemStack(Material.COMPASS); CompassMeta meta = (CompassMeta) item.getItemMeta(); meta.displayName(component("compass.compass-name").decoration(TextDecoration.ITALIC, false)); meta.lore(messages.getStringList("compass.compass-lore").stream().map(this::parse).map(line -> line.decoration(TextDecoration.ITALIC, false)).toList()); meta.addEnchant(Enchantment.VANISHING_CURSE, 1, true); meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS); meta.getPersistentDataContainer().set(compassKey, PersistentDataType.BYTE, (byte) 1); item.setItemMeta(meta); player.getInventory().setItem(8, item); }
     private void enforceCompassSlot(Player player) {
         ItemStack found = null;
         for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
@@ -212,8 +238,8 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
 
     @EventHandler public void onJoin(PlayerJoinEvent event) { roles.putIfAbsent(event.getPlayer().getUniqueId(), Role.NONE); }
     @EventHandler public void onRespawn(PlayerRespawnEvent event) { if (active && role(event.getPlayer()) == Role.HUNTER) Bukkit.getScheduler().runTask(this, () -> giveCompass(event.getPlayer())); }
-    @EventHandler public void onDeath(PlayerDeathEvent event) { Player player = event.getEntity(); lastSeen.put(player.getUniqueId(), player.getLocation()); if (!active) return; if (role(player) == Role.SPEEDRUNNER) { if (player.getKiller() != null) stats.computeIfAbsent(player.getKiller().getUniqueId(), k -> new Stats()).finalKills++; Bukkit.getScheduler().runTask(this, () -> player.setGameMode(GameMode.SPECTATOR)); if (Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.SPEEDRUNNER).allMatch(p -> p.isDead() || p.getGameMode() == GameMode.SPECTATOR)) finish(Role.HUNTER); } }
-    @EventHandler public void onTeleport(PlayerTeleportEvent event) { if (active && role(event.getPlayer()) == Role.SPEEDRUNNER) lastSeen.put(event.getPlayer().getUniqueId(), event.getTo()); if (active && role(event.getPlayer()) == Role.SPEEDRUNNER && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL) finish(Role.SPEEDRUNNER); }
+    @EventHandler public void onDeath(PlayerDeathEvent event) { Player player = event.getEntity(); lastSeen.put(player.getUniqueId(), player.getLocation()); if (!active) return; if (role(player) == Role.SPEEDRUNNER) { if (player.getKiller() != null) stats.computeIfAbsent(player.getKiller().getUniqueId(), k -> new Stats()).finalKills++; Bukkit.getScheduler().runTask(this, () -> player.setGameMode(GameMode.SPECTATOR)); if (Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.SPEEDRUNNER).allMatch(p -> p.isDead() || p.getGameMode() == GameMode.SPECTATOR)) finishLater(Role.HUNTER); } }
+    @EventHandler public void onTeleport(PlayerTeleportEvent event) { if (active && role(event.getPlayer()) == Role.SPEEDRUNNER) lastSeen.put(event.getPlayer().getUniqueId(), event.getTo()); if (active && role(event.getPlayer()) == Role.SPEEDRUNNER && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL) finishLater(Role.SPEEDRUNNER); }
     @EventHandler public void onDrop(PlayerDropItemEvent event) { if (isCompass(event.getItemDrop().getItemStack())) event.setCancelled(true); }
     @EventHandler public void onClick(InventoryClickEvent event) { if (isCompass(event.getCurrentItem()) || isCompass(event.getCursor()) || isCompass(event.getHotbarButton() >= 0 ? event.getWhoClicked().getInventory().getItem(event.getHotbarButton()) : null)) event.setCancelled(true); }
     @EventHandler public void onDrag(InventoryDragEvent event) { if (isCompass(event.getOldCursor()) || event.getNewItems().values().stream().anyMatch(this::isCompass)) event.setCancelled(true); }
@@ -238,7 +264,6 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
     private void reloadMessages() { messages = YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")); }
     private Component component(String key) { return component(key, Map.of()); }
     private Component component(String key, Map<String, String> values) { String raw = messages.getString(key, key); return parse(replace(raw, values)); }
-    private String text(String key) { return ChatColor.stripColor(component(key).toString()); }
     private String replace(String raw, Map<String, String> values) { String result = raw.replace("{prefix}", messages.getString("prefix", "")); for (Map.Entry<String, String> e : values.entrySet()) result = result.replace("{" + e.getKey() + "}", e.getValue()); return result; }
     private Component parse(String raw) { return "legacy".equalsIgnoreCase(format) ? LegacyComponentSerializer.legacyAmpersand().deserialize(raw) : MiniMessage.miniMessage().deserialize(raw); }
     private static final class Stats { String player = "unknown"; double damage; int kills; int finalKills; int progression; int value(String s) { return switch (s.toUpperCase(Locale.ROOT)) { case "DAMAGE_DEALT" -> (int) damage; case "KILLS" -> kills; case "FINAL_KILLS" -> finalKills; case "PROGRESSION" -> progression; default -> 0; }; } }
