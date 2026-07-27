@@ -1,22 +1,29 @@
 # JManhunt configuration. Reload with /manhunt reload.
 # This version is used to add new defaults during upgrades without replacing
 # values already customized by the server owner.
-config-version: 2
+# Configuration schema version. Managed by JManhunt; do not set this to -1.
+config-version: 3
 
 # Message parser used for messages.yml: minimessage or legacy.
 text-format: minimessage
 
 # When true, JManhunt performs its built-in inventory and game-mode setup and
-# cleanup in addition to the configured command arrays below.
+# cleanup in addition to the configured commands in gamestate-commands below.
 run-default-commands: true
 
-# Commands run by the console after a match starts. Commands run as console.
-# Available placeholders: {player} and {role}.
-start-commands: []
-
-# Commands run by the console after a match ends. Commands run as console.
-# Available placeholders: {player} and {winner}.
-end-commands: []
+# Commands JManhunt dispatches from the console during match state changes.
+# Each entry is executed once, in list order.
+#
+# {winner} is replaced in end commands with the winning side ("Hunters" or
+# "Speedrunners").
+#
+# The configured commands run in addition to the built-in setup/cleanup when
+# run-default-commands is true.
+gamestate-commands:
+  # Executed after the match has been initialized and before the start message.
+  start: []
+  # Executed when the configured game-end delay expires, before cleanup ends.
+  end: []
 
 # When true, a match waits until a speedrunner damages a hunter before deaths,
 # portals, and other game-ending rules become active.
@@ -24,14 +31,19 @@ start-on-speedrunner-damage: true
 
 # Seconds between the win announcement and final inventory cleanup. Statistics
 # are displayed halfway through this delay.
+# Set to -1 to skip the delay (cleanup is immediate); other negative values are
+# also treated as zero.
 game-end-delay: 10.0
 
 # Seconds between reminders while waiting for the first speedrunner hit.
+# Set to -1 to disable the reminders entirely while still waiting for damage.
 start-reminder-interval: 10.0
 
 # Optional effects applied to every hunter when the game begins. Effect keys
 # are Bukkit PotionEffectType names. Duration is in seconds and amplifier is
-# zero-based: amplifier 0 is level I, amplifier 1 is level II.
+# zero-based: amplifier 0 is level I, amplifier 1 is level II. Set seconds to
+# -1 to disable that effect entry. An amplifier of -1 is treated as amplifier
+# 0 (level I), because potion amplifiers cannot be negative.
 start-debuffs:
   enabled: false
   effects:
@@ -43,17 +55,22 @@ start-debuffs:
       amplifier: 0
 
 # End-screen sections, in display order. Available values are DAMAGE_DEALT,
-# KILLS, FINAL_KILLS, and PROGRESSION. Empty sections are omitted.
+# KILLS, FINAL_KILLS, and PROGRESSION. If no player got a statistic, that
+# statistic is omitted in-game.
 end-statistics: [DAMAGE_DEALT, FINAL_KILLS, KILLS, PROGRESSION]
 
-# Seconds between compass target/location refreshes. The held actionbar stays
-# visible between these refreshes and continues showing the cached values.
-compass-refresh-interval: 10.0
-
-# Optional refresh-on-right-click runs alongside the interval refresh.
+# Compass tracking settings. The held actionbar stays visible between interval
+# refreshes and continues showing its cached value.
 compass-refresh:
-  refresh-on-right-click: false
-  compass-right-click-cooldown: 3.0
+  # Seconds between compass target/location refreshes. Set to -1 to disable
+  # scheduled refreshes (in that case use right-click refresh or the compass
+  # NEVER refreshes); right-click refreshes can still be used separately.
+  compass-refresh-interval: 10.0
+  right-click:
+    # Optional refresh-on-right-click runs alongside interval refreshes.
+    refresh-on-right-click: false
+    # Seconds between right-click refreshes. Set to -1 for no cooldown.
+    right-click-cooldown: 3.0
 
 # Sound names may be Bukkit names or namespaced Minecraft keys.
 sounds:

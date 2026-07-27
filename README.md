@@ -10,14 +10,14 @@ Contribute: https://github.com/jruk8/JManhunt
 
 ## Commands
 
-| Command | Permission | Notes |
-| --- | --- | --- |
-| `/manhunt` | `jmanhunt.command.status` | Shows match status grouped into speedrunners, hunters, and unassigned players. |
-| `/manhunt help` | `jmanhunt.command.help` | Lists available commands. |
-| `/manhunt setplayer <selector> <role>` | `jmanhunt.command.setplayer` | Assigns `hunter`, `speedrunner`, or `none`. Supports selectors such as `@a`. |
-| `/manhunt start` | `jmanhunt.command.start` | Starts the match. |
-| `/manhunt end` | `jmanhunt.command.end` | Ends the match; hunters win. |
-| `/manhunt reload` | `jmanhunt.command.reload` | Reloads `config.yml` and `messages.yml`. |
+| Command | Permission | Notes                                                                                             |
+| --- | --- |---------------------------------------------------------------------------------------------------|
+| `/manhunt` | `jmanhunt.command.status` | Shows match status grouped into speedrunners, hunters, and unassigned players.                    |
+| `/manhunt help` | `jmanhunt.command.help` | Lists available commands.                                                                         |
+| `/manhunt setplayer <selector> <role>` | `jmanhunt.command.setplayer` | Assigns `hunter`, `speedrunner`, or `none`. Supports selectors such as `@a` and `[distance=..x]`. |
+| `/manhunt start` | `jmanhunt.command.start` | Starts the match.                                                                                 |
+| `/manhunt end` | `jmanhunt.command.end` | Ends the match; hunters win.                                                                      |
+| `/manhunt reload` | `jmanhunt.command.reload` | Reloads `config.yml` and `messages.yml`.                                                          |
 
 Players need `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive that role.
 Both permissions are granted by default. The `mh` alias is also available.

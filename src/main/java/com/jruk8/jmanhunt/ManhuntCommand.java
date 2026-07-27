@@ -1,0 +1,131 @@
+package com.jruk8.jmanhunt;
+
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+public final class ManhuntCommand implements CommandExecutor, TabCompleter {
+    private final JManhuntPlugin plugin;
+    private final MessageService messages;
+    private final PlayerStateStore playerStates;
+    private final GameManager game;
+    private final CompassManager compass;
+
+    public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
+                          GameManager game, CompassManager compass) {
+        this.plugin = plugin; this.messages = messages; this.playerStates = playerStates;
+        this.game = game; this.compass = compass;
+    }
+
+    @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
+        if (!sender.hasPermission("jmanhunt.command." + sub)) return message(sender, "command.no-permission");
+        return switch (sub) {
+            case "help" -> help(sender);
+            case "status" -> status(sender);
+            case "setplayer" -> setPlayer(sender, args);
+            case "start" -> start(sender);
+            case "end" -> end(sender);
+            case "reload" -> reload(sender);
+            default -> message(sender, "command.invalid");
+        };
+    }
+
+    private boolean help(CommandSender sender) {
+        message(sender, "manhunt.help-header");
+        String[][] lines = {{"/manhunt help", "show commands"}, {"/manhunt", "show match status"},
+                {"/manhunt setplayer <selector> <hunter|speedrunner|none>", "assign roles"},
+                {"/manhunt start", "start a match"}, {"/manhunt end", "end a match"}, {"/manhunt reload", "reload files"}};
+        for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
+        return true;
+    }
+
+    private boolean status(CommandSender sender) {
+        message(sender, "manhunt.status-header", Map.of("status", game.isActive() ? "ACTIVE" : "INACTIVE"));
+        sendRoleSection(sender, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
+        sendRoleSection(sender, Role.HUNTER, "manhunt.hunters-header");
+        sendRoleSection(sender, Role.NONE, "manhunt.none-header"); return true;
+    }
+
+    private void sendRoleSection(CommandSender sender, Role role, String header) {
+        List<Player> players = Bukkit.getOnlinePlayers().stream().filter(p -> playerStates.role(p) == role)
+                .map(p -> (Player) p).sorted(Comparator.comparing(Player::getName)).toList();
+        if (players.isEmpty()) return;
+        message(sender, header); players.forEach(player -> message(sender, "manhunt.status-player",
+                Map.of("player", player.getName())));
+    }
+
+    private boolean setPlayer(CommandSender sender, String[] args) {
+        if (args.length < 3) return message(sender, "command.invalid");
+        Role role;
+        try { role = Role.valueOf(args[2].toUpperCase(Locale.ROOT)); }
+        catch (IllegalArgumentException exception) { return message(sender, "command.invalid"); }
+        List<Entity> selected;
+        try { selected = Bukkit.selectEntities(sender, args[1]); }
+        catch (IllegalArgumentException exception) { return message(sender, "command.invalid"); }
+        int changed = 0, skipped = 0;
+        for (Entity entity : selected) if (entity instanceof Player player) {
+            if (role == Role.HUNTER && !player.hasPermission("jmanhunt.hunter")
+                    || role == Role.SPEEDRUNNER && !player.hasPermission("jmanhunt.speedrunner")) { skipped++; continue; }
+            playerStates.setRole(player, role); changed++;
+            if (game.isActive() && role == Role.NONE) {
+                playerStates.setSpeedrunnerAlive(player.getUniqueId(), false); player.setGameMode(GameMode.SPECTATOR);
+                compass.removeCompasses(player);
+            }
+            if (game.isActive() && role == Role.HUNTER) compass.giveCompass(player);
+        }
+        message(sender, "manhunt.set-success", Map.of("count", String.valueOf(changed), "role", role.name()));
+        if (skipped > 0) message(sender, "manhunt.set-skipped", Map.of("count", String.valueOf(skipped)));
+        return true;
+    }
+
+    private boolean start(CommandSender sender) {
+        if (game.isActive()) return message(sender, "manhunt.already-active");
+        if (!game.start()) return message(sender, "manhunt.start-invalid");
+        return true;
+    }
+
+    private boolean end(CommandSender sender) {
+        if (!game.isActive()) return message(sender, "manhunt.not-active");
+        game.end(); return true;
+    }
+
+    private boolean reload(CommandSender sender) {
+        YamlFileUpdater.update(plugin, "config.yml", "config-version", 3);
+        YamlFileUpdater.update(plugin, "messages.yml", "messages-version", 2);
+        plugin.reloadConfig();
+        messages.reload(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                new File(plugin.getDataFolder(), "messages.yml")), plugin.getConfig().getString("text-format", "minimessage"));
+        return message(sender, "manhunt.reload-success");
+    }
+
+    @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "reload"));
+        if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) {
+            List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p"));
+            Bukkit.getOnlinePlayers().forEach(player -> selectors.add(player.getName()));
+            if (args[1].startsWith("@a[")) return partial(args[1], List.of("@a[distance=", "@a[limit=", "@a[name=", "@a[gamemode="));
+            return partial(args[1], selectors);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) return partial(args[2], List.of("hunter", "speedrunner", "none"));
+        return List.of();
+    }
+
+    private List<String> partial(String value, List<String> options) {
+        return options.stream().filter(option -> option.startsWith(value.toLowerCase(Locale.ROOT))).toList();
+    }
+    private boolean message(CommandSender sender, String key) { sender.sendMessage(messages.component(key)); return true; }
+    private void message(CommandSender sender, String key, Map<String, String> values) { sender.sendMessage(messages.component(key, values)); }
+}
