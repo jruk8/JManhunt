@@ -1,0 +1,32 @@
+# JManhunt configuration. Reload with /manhunt reload.
+# Text format: minimessage or legacy.
+text-format: minimessage
+
+# When true, the plugin performs its normal built-in match setup and cleanup.
+run-default-commands: true
+
+# Commands run by the console after a match starts. Available: {player}, {role}.
+start-commands: []
+
+# Commands run by the console after a match ends. Available: {player}, {winner}.
+end-commands: []
+
+# Seconds between a win condition and the final cleanup.
+game-end-delay: 10.0
+
+# End-screen sections. Available: DAMAGE_DEALT, KILLS, FINAL_KILLS, PROGRESSION.
+end-statistics: [DAMAGE_DEALT, FINAL_KILLS, KILLS, PROGRESSION]
+
+# Compass refresh interval in seconds.
+compass-refresh-interval: 10.0
+
+# Optional refresh-on-right-click runs alongside the interval refresh.
+compass-refresh:
+  refresh-on-right-click: false
+  compass-right-click-cooldown: 3.0
+
+# Sound names may be Bukkit names or namespaced Minecraft keys.
+sounds:
+  neutral-sound: BLOCK_NOTE_BLOCK_PLING
+  win-sound: ENTITY_ENDER_DRAGON_DEATH
+  fail-sound: ENTITY_WITHER_DEATH

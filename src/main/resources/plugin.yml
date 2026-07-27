@@ -4,3 +4,35 @@ main: ${main}
 api-version: "${apiVersion}"
 author: ${author}
 description: ${description}
+
+commands:
+  manhunt:
+    description: Manage a Manhunt match.
+    usage: /manhunt help
+    aliases: [mh]
+
+permissions:
+  jmanhunt.command.help:
+    description: Use /manhunt help.
+    default: true
+  jmanhunt.command.status:
+    description: View the current Manhunt status.
+    default: true
+  jmanhunt.command.setplayer:
+    description: Assign players to Manhunt roles.
+    default: op
+  jmanhunt.command.start:
+    description: Start a Manhunt match.
+    default: op
+  jmanhunt.command.end:
+    description: End an active Manhunt match.
+    default: op
+  jmanhunt.command.reload:
+    description: Reload JManhunt configuration.
+    default: op
+  jmanhunt.hunter:
+    description: Allows a player to become a hunter.
+    default: true
+  jmanhunt.speedrunner:
+    description: Allows a player to become a speedrunner.
+    default: true

@@ -1,0 +1,37 @@
+# Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}.
+prefix: "<dark_gray>[<orange>JManhunt<dark_gray>] "
+
+command:
+  player-only: "{prefix}<red>Only players can use this command."
+  no-permission: "{prefix}<red>You do not have permission to use this command."
+  invalid: "{prefix}<red>Unknown command. Use <yellow>/manhunt help<red>."
+
+manhunt:
+  help-header: "{prefix}<orange>JManhunt commands:"
+  help-line: "{prefix}<white>{command} <gray>- {description}"
+  status-header: "{prefix}<orange>Manhunt status: <white>{status}"
+  status-player: "{prefix}<gray>{player}: <white>{role}"
+  no-match: "{prefix}<yellow>No match is active."
+  set-success: "{prefix}<green>Updated <white>{count}<green> player(s) to <white>{role}<green>."
+  set-skipped: "{prefix}<yellow>Skipped <white>{count}<yellow> player(s) without the required permission."
+  start-success: "{prefix}<green>Manhunt has started."
+  start-invalid: "{prefix}<red>A match needs at least one hunter and one speedrunner."
+  already-active: "{prefix}<red>A match is already active."
+  not-active: "{prefix}<yellow>No match is active."
+  end-success: "{prefix}<green>Manhunt ended. Hunters win!"
+  reload-success: "{prefix}<green>Reloaded config.yml and messages.yml."
+
+game:
+  hunters-win: "{prefix}<red>Hunters Win!"
+  speedrunners-win: "{prefix}<green>Speedrunners Win!"
+  hunters-title: "<red>Hunters Win!"
+  speedrunners-title: "<green>Speedrunners Win!"
+  stat-line: "{prefix}<gray>{stat}: <white>{value}"
+
+compass:
+  compass-name: "<orange>Hunter's Compass"
+  compass-lore:
+    - "<gray>Tracks the nearest speedrunner."
+    - "<dark_gray>Right-click to refresh when enabled."
+  compass-actionbar: "<orange>Tracking <white>{player}<orange> • <white>{distance}m"
+  no-target-actionbar: "<gray>No speedrunner location available."
