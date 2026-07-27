@@ -12,7 +12,7 @@ Contribute: https://github.com/jruk8/JManhunt
 
 | Command | Permission | Notes |
 | --- | --- | --- |
-| `/manhunt` | `jmanhunt.command.status` | Shows match status and player roles. |
+| `/manhunt` | `jmanhunt.command.status` | Shows match status grouped into speedrunners, hunters, and unassigned players. |
 | `/manhunt help` | `jmanhunt.command.help` | Lists available commands. |
 | `/manhunt setplayer <selector> <role>` | `jmanhunt.command.setplayer` | Assigns `hunter`, `speedrunner`, or `none`. Supports selectors such as `@a`. |
 | `/manhunt start` | `jmanhunt.command.start` | Starts the match. |
@@ -28,8 +28,9 @@ inventory interactions. It is restored to slot 8 after a hunter respawns.
 
 Configuration is generated in the plugin data folder. `config.yml` documents
 all options, including command arrays, end-screen statistics, text format,
-sounds, and compass refresh behavior. `messages.yml` contains MiniMessage-first
-text, with optional legacy formatting.
+sounds, compass refresh behavior, and the optional requirement for a speedrunner
+to damage a hunter before the match begins. `messages.yml` contains
+MiniMessage-first text, with optional legacy formatting.
 
 ## Build
 

@@ -65,6 +65,7 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
     private NamespacedKey compassKey;
     private boolean active;
     private boolean ending;
+    private boolean gameBegun;
     private String format;
     private FileConfiguration messages;
 
@@ -108,9 +109,18 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
 
     private boolean status(CommandSender sender) {
         message(sender, "manhunt.status-header", Map.of("status", active ? "ACTIVE" : "INACTIVE"));
-        Bukkit.getOnlinePlayers().stream().sorted(Comparator.comparing(Player::getName)).forEach(p ->
-                message(sender, "manhunt.status-player", Map.of("player", p.getName(), "role", role(p).name())));
+        sendRoleSection(sender, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
+        sendRoleSection(sender, Role.HUNTER, "manhunt.hunters-header");
+        sendRoleSection(sender, Role.NONE, "manhunt.none-header");
         return true;
+    }
+
+    private void sendRoleSection(CommandSender sender, Role role, String header) {
+        List<Player> players = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == role)
+                .map(p -> (Player) p).sorted(Comparator.comparing(Player::getName)).toList();
+        if (players.isEmpty()) return;
+        message(sender, header);
+        players.forEach(player -> message(sender, "manhunt.status-player", Map.of("player", player.getName())));
     }
 
     private boolean setPlayer(CommandSender sender, String[] args) {
@@ -138,10 +148,12 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
         if (active) return message(sender, "manhunt.already-active");
         List<Player> players = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE).map(p -> (Player) p).toList();
         if (players.stream().noneMatch(p -> role(p) == Role.HUNTER) || players.stream().noneMatch(p -> role(p) == Role.SPEEDRUNNER)) return message(sender, "manhunt.start-invalid");
-        active = true; ending = false; stats.clear(); lastSeen.clear();
+        active = true; ending = false; gameBegun = !getConfig().getBoolean("start-on-speedrunner-damage", true); stats.clear(); lastSeen.clear();
+        Bukkit.getOnlinePlayers().forEach(player -> player.setGameMode(GameMode.SURVIVAL));
         for (Player player : players) { Stats stat = new Stats(); stat.player = player.getName(); stats.put(player.getUniqueId(), stat); if (role(player) == Role.HUNTER) { giveCompass(player); refreshCompass(player); } }
         runConfigured("start-commands", "");
         broadcast("manhunt.start-success"); sound("neutral-sound");
+        if (!gameBegun) broadcast("manhunt.waiting-for-damage");
         return true;
     }
 
@@ -169,7 +181,7 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
         Bukkit.getScheduler().runTaskLater(this, () -> {
             runConfigured("end-commands", winnerName);
             for (Player player : Bukkit.getOnlinePlayers()) { player.getInventory().clear(); if (getConfig().getBoolean("run-default-commands", true)) player.setGameMode(GameMode.SURVIVAL); }
-            active = false; ending = false; compassActionbars.clear();
+            active = false; ending = false; gameBegun = false; compassActionbars.clear();
         }, delay);
     }
 
@@ -182,9 +194,15 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
             if (stat.equalsIgnoreCase("PROGRESSION") && winner == Role.SPEEDRUNNER) continue;
             List<String> values = stats.values().stream().sorted(Comparator.comparingInt((Stats s) -> s.value(stat)).reversed()).limit(3)
                     .map(s -> s.player + ": " + s.value(stat)).toList();
-            if (!values.isEmpty()) {
-                String displayName = messages.getString("game.stat-names." + stat, stat);
-                broadcast("game.stat-line", Map.of("stat", displayName, "value", String.join(", ", values)));
+            List<Stats> ranked = stats.values().stream().sorted(Comparator.comparingInt((Stats s) -> s.value(stat)).reversed())
+                    .filter(s -> s.value(stat) > 0).limit(3).toList();
+            if (ranked.isEmpty()) continue;
+            String displayName = messages.getString("game.stat-names." + stat, stat);
+            broadcast("game.stat-header", Map.of("stat", displayName));
+            for (int index = 0; index < ranked.size(); index++) {
+                Stats statValue = ranked.get(index);
+                broadcast("game.stat-entry", Map.of("rank", String.valueOf(index + 1), "player", statValue.player,
+                        "value", String.valueOf(statValue.value(stat))));
             }
         }
     }
@@ -238,8 +256,8 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
 
     @EventHandler public void onJoin(PlayerJoinEvent event) { roles.putIfAbsent(event.getPlayer().getUniqueId(), Role.NONE); }
     @EventHandler public void onRespawn(PlayerRespawnEvent event) { if (active && role(event.getPlayer()) == Role.HUNTER) Bukkit.getScheduler().runTask(this, () -> giveCompass(event.getPlayer())); }
-    @EventHandler public void onDeath(PlayerDeathEvent event) { Player player = event.getEntity(); lastSeen.put(player.getUniqueId(), player.getLocation()); if (!active) return; if (role(player) == Role.SPEEDRUNNER) { if (player.getKiller() != null) stats.computeIfAbsent(player.getKiller().getUniqueId(), k -> new Stats()).finalKills++; Bukkit.getScheduler().runTask(this, () -> player.setGameMode(GameMode.SPECTATOR)); if (Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.SPEEDRUNNER).allMatch(p -> p.isDead() || p.getGameMode() == GameMode.SPECTATOR)) finishLater(Role.HUNTER); } }
-    @EventHandler public void onTeleport(PlayerTeleportEvent event) { if (active && role(event.getPlayer()) == Role.SPEEDRUNNER) lastSeen.put(event.getPlayer().getUniqueId(), event.getTo()); if (active && role(event.getPlayer()) == Role.SPEEDRUNNER && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL) finishLater(Role.SPEEDRUNNER); }
+    @EventHandler public void onDeath(PlayerDeathEvent event) { Player player = event.getEntity(); lastSeen.put(player.getUniqueId(), player.getLocation()); if (!active || !gameBegun) return; if (role(player) == Role.SPEEDRUNNER) { if (player.getKiller() != null) stats.computeIfAbsent(player.getKiller().getUniqueId(), k -> new Stats()).finalKills++; Bukkit.getScheduler().runTask(this, () -> player.setGameMode(GameMode.SPECTATOR)); if (Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.SPEEDRUNNER).allMatch(p -> p.isDead() || p.getGameMode() == GameMode.SPECTATOR)) finishLater(Role.HUNTER); } }
+    @EventHandler public void onTeleport(PlayerTeleportEvent event) { if (active && role(event.getPlayer()) == Role.SPEEDRUNNER) lastSeen.put(event.getPlayer().getUniqueId(), event.getTo()); if (active && gameBegun && role(event.getPlayer()) == Role.SPEEDRUNNER && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL) finishLater(Role.SPEEDRUNNER); }
     @EventHandler public void onDrop(PlayerDropItemEvent event) { if (isCompass(event.getItemDrop().getItemStack())) event.setCancelled(true); }
     @EventHandler public void onClick(InventoryClickEvent event) { if (isCompass(event.getCurrentItem()) || isCompass(event.getCursor()) || isCompass(event.getHotbarButton() >= 0 ? event.getWhoClicked().getInventory().getItem(event.getHotbarButton()) : null)) event.setCancelled(true); }
     @EventHandler public void onDrag(InventoryDragEvent event) { if (isCompass(event.getOldCursor()) || event.getNewItems().values().stream().anyMatch(this::isCompass)) event.setCancelled(true); }
@@ -247,10 +265,10 @@ public final class JManhuntPlugin extends JavaPlugin implements Listener, Comman
     @EventHandler public void onPickup(InventoryPickupItemEvent event) { if (isCompass(event.getItem().getItemStack())) event.setCancelled(true); }
     @EventHandler public void onSwap(PlayerSwapHandItemsEvent event) { if (isCompass(event.getMainHandItem()) || isCompass(event.getOffHandItem())) event.setCancelled(true); }
     @EventHandler public void onInteract(PlayerInteractEvent event) { if (event.getHand() != EquipmentSlot.HAND || !isCompass(event.getItem()) || !active) return; if (getConfig().getBoolean("compass-refresh.refresh-on-right-click", false)) { long now = System.currentTimeMillis(); if (now - compassClicks.getOrDefault(event.getPlayer().getUniqueId(), 0L) >= getConfig().getDouble("compass-refresh.compass-right-click-cooldown", 3.0) * 1000) { compassClicks.put(event.getPlayer().getUniqueId(), now); refreshCompass(event.getPlayer()); } } }
-    @EventHandler public void onDamage(EntityDamageByEntityEvent event) { if (event.getEntity() instanceof Player victim && event.getDamager() instanceof Player attacker) { Stats s = stats.computeIfAbsent(attacker.getUniqueId(), k -> new Stats()); s.damage += event.getFinalDamage(); } }
-    @EventHandler public void onEntityDeath(EntityDeathEvent event) { if (event.getEntity().getKiller() != null) stats.computeIfAbsent(event.getEntity().getKiller().getUniqueId(), k -> new Stats()).kills++; }
+    @EventHandler public void onDamage(EntityDamageByEntityEvent event) { if (!(event.getEntity() instanceof Player victim) || !(event.getDamager() instanceof Player attacker) || event.getFinalDamage() <= 0) return; if (active && !gameBegun && role(attacker) == Role.SPEEDRUNNER && role(victim) == Role.HUNTER) { gameBegun = true; broadcast("manhunt.started-by-damage"); sound("neutral-sound"); } if (!active || !gameBegun) return; Stats s = stats.computeIfAbsent(attacker.getUniqueId(), k -> new Stats()); s.damage += event.getFinalDamage(); }
+    @EventHandler public void onEntityDeath(EntityDeathEvent event) { if (!active || !gameBegun || !(event.getEntity() instanceof Player victim) || event.getEntity().getKiller() == null || role(victim) == Role.NONE || role(event.getEntity().getKiller()) == Role.NONE) return; stats.computeIfAbsent(event.getEntity().getKiller().getUniqueId(), k -> new Stats()).kills++; }
 
-    @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) { if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "reload")); if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) return partial(args[2], List.of("hunter", "speedrunner", "none")); return List.of(); }
+    @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) { if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "reload")); if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) { List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p")); Bukkit.getOnlinePlayers().forEach(player -> selectors.add(player.getName())); if (args[1].startsWith("@a[")) { return partial(args[1], List.of("@a[distance=", "@a[limit=", "@a[name=", "@a[gamemode=")); } return partial(args[1], selectors); } if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) return partial(args[2], List.of("hunter", "speedrunner", "none")); return List.of(); }
     private List<String> partial(String value, List<String> options) { return options.stream().filter(s -> s.startsWith(value.toLowerCase(Locale.ROOT))).toList(); }
     private Role role(Player p) { return roleById(p.getUniqueId()); }
     private Role roleById(UUID id) { return roles.getOrDefault(id, Role.NONE); }

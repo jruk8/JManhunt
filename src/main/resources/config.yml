@@ -11,6 +11,9 @@ start-commands: []
 # Commands run by the console after a match ends. Available: {player}, {winner}.
 end-commands: []
 
+# When true, the match waits until a speedrunner damages a hunter.
+start-on-speedrunner-damage: true
+
 # Seconds between a win condition and the final cleanup.
 game-end-delay: 10.0
 
