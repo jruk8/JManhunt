@@ -1,26 +1,53 @@
 # JManhunt configuration. Reload with /manhunt reload.
-# Text format: minimessage or legacy.
+# This version is used to add new defaults during upgrades without replacing
+# values already customized by the server owner.
+config-version: 2
+
+# Message parser used for messages.yml: minimessage or legacy.
 text-format: minimessage
 
-# When true, the plugin performs its normal built-in match setup and cleanup.
+# When true, JManhunt performs its built-in inventory and game-mode setup and
+# cleanup in addition to the configured command arrays below.
 run-default-commands: true
 
-# Commands run by the console after a match starts. Available: {player}, {role}.
+# Commands run by the console after a match starts. Commands run as console.
+# Available placeholders: {player} and {role}.
 start-commands: []
 
-# Commands run by the console after a match ends. Available: {player}, {winner}.
+# Commands run by the console after a match ends. Commands run as console.
+# Available placeholders: {player} and {winner}.
 end-commands: []
 
-# When true, the match waits until a speedrunner damages a hunter.
+# When true, a match waits until a speedrunner damages a hunter before deaths,
+# portals, and other game-ending rules become active.
 start-on-speedrunner-damage: true
 
-# Seconds between a win condition and the final cleanup.
+# Seconds between the win announcement and final inventory cleanup. Statistics
+# are displayed halfway through this delay.
 game-end-delay: 10.0
 
-# End-screen sections. Available: DAMAGE_DEALT, KILLS, FINAL_KILLS, PROGRESSION.
+# Seconds between reminders while waiting for the first speedrunner hit.
+start-reminder-interval: 10.0
+
+# Optional effects applied to every hunter when the game begins. Effect keys
+# are Bukkit PotionEffectType names. Duration is in seconds and amplifier is
+# zero-based: amplifier 0 is level I, amplifier 1 is level II.
+start-debuffs:
+  enabled: false
+  effects:
+    SLOWNESS:
+      seconds: 10.0
+      amplifier: 1
+    WEAKNESS:
+      seconds: 10.0
+      amplifier: 0
+
+# End-screen sections, in display order. Available values are DAMAGE_DEALT,
+# KILLS, FINAL_KILLS, and PROGRESSION. Empty sections are omitted.
 end-statistics: [DAMAGE_DEALT, FINAL_KILLS, KILLS, PROGRESSION]
 
-# Compass refresh interval in seconds.
+# Seconds between compass target/location refreshes. The held actionbar stays
+# visible between these refreshes and continues showing the cached values.
 compass-refresh-interval: 10.0
 
 # Optional refresh-on-right-click runs alongside the interval refresh.
