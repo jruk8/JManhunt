@@ -1,0 +1,23 @@
+# Build output
+/build/
+/out/
+/.gradle/
+
+# Gradle wrapper cache/runtime downloads
+/gradle/wrapper/dists/
+
+# IDE
+/.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store

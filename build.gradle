@@ -1,0 +1,60 @@
+plugins {
+    id 'java'
+    id 'checkstyle'
+}
+
+group = project.property('pluginGroup')
+version = project.property('pluginVersion')
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+}
+
+dependencies {
+    compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+}
+
+checkstyle {
+    toolVersion = '10.17.0'
+    configFile = file('config/checkstyle/checkstyle.xml')
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 25
+}
+
+test {
+    useJUnitPlatform()
+}
+
+check {
+    dependsOn 'checkstyleMain', 'checkstyleTest'
+}
+
+processResources {
+    def pluginProperties = [
+        version: project.version,
+        name: pluginName,
+        main: pluginMain,
+        apiVersion: paperApiVersion.split('\\.build\\.')[0],
+        author: pluginAuthor,
+        description: pluginDescription
+    ]
+    inputs.properties(pluginProperties)
+    filesMatching('plugin.yml') {
+        expand(pluginProperties)
+    }
+}
