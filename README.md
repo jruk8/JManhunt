@@ -18,6 +18,7 @@ Contribute: https://github.com/jruk8/JManhunt
 | `/manhunt setplayer <selector> <role>` | `jmanhunt.command.setplayer` | Assigns `hunter`, `speedrunner`, or `none`. Supports selectors such as `@a` and `[distance=..x]`. |
 | `/manhunt start` | `jmanhunt.command.start` | Starts the match.                                                                                 |
 | `/manhunt end` | `jmanhunt.command.end` | Ends the match; hunters win.                                                                      |
+| `/manhunt settings <setting> <true\|false>` | `jmanhunt.command.settings` | Lists or changes boolean default-command and custom-modifier settings. |
 | `/manhunt reload` | `jmanhunt.command.reload` | Reloads `config.yml` and `messages.yml`.                                                          |
 
 Players need `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive that role.
@@ -29,10 +30,17 @@ inventory interactions. It is restored to the last slot of the hotbar after
 a hunter respawns.
 
 Configuration is generated in the plugin data folder. `config.yml` documents
-all options, including command arrays, end-screen statistics, text format,
-sounds, compass refresh behavior, and the optional requirement for a speedrunner
-to damage a hunter before the match begins. `messages.yml` contains
+all options, including default actions, command arrays, custom modifiers,
+end-screen statistics, text format, sounds, compass refresh behavior, and the
+optional requirement for a speedrunner to damage a hunter before the match
+begins. `messages.yml` contains
 MiniMessage-first text, with optional legacy formatting.
+
+Game-state console commands use `<winner>` in end commands. Player commands use
+`<p>` and run once per participating online player, for example
+`/give <p> cooked_steak 8`. Command sections are disabled by default; built-in
+default actions and named `custom-modifiers` can be enabled or disabled in-game
+with `/manhunt settings`.
 
 ## Optional PlaceholderAPI Dependency
 

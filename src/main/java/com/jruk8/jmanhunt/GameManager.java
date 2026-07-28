@@ -3,11 +3,9 @@ package com.jruk8.jmanhunt;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Sound;
 import org.bukkit.Registry;
 import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -17,6 +15,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public final class GameManager {
     private final JManhuntPlugin plugin;
@@ -24,6 +23,7 @@ public final class GameManager {
     private final PlayerStateStore playerStates;
     private final CompassManager compass;
     private final StatsManager stats;
+    private final GameStateCommandManager stateCommands;
     private boolean active;
     private boolean ending;
     private boolean gameBegun;
@@ -33,11 +33,15 @@ public final class GameManager {
                        CompassManager compass, StatsManager stats) {
         this.plugin = plugin; this.messages = messages; this.playerStates = playerStates;
         this.compass = compass; this.stats = stats;
+        this.stateCommands = new GameStateCommandManager(plugin, playerStates);
     }
 
     public boolean isActive() { return active; }
     public boolean isGameBegun() { return gameBegun; }
     public boolean isEnding() { return ending; }
+    public Set<String> settingNames() { return stateCommands.settingNames(); }
+    public boolean getSetting(String setting) { return stateCommands.getSetting(setting); }
+    public boolean setSetting(String setting, boolean value) { return stateCommands.setSetting(setting, value); }
 
     public boolean start() {
         if (active) return false;
@@ -46,11 +50,6 @@ public final class GameManager {
         if (players.stream().noneMatch(p -> role(p) == Role.HUNTER)
                 || players.stream().noneMatch(p -> role(p) == Role.SPEEDRUNNER)) return false;
         active = true; ending = false; gameBegun = false; stats.clear(); playerStates.clearMatch();
-        if (plugin.getConfig().getBoolean("run-default-commands", true)) {
-            clearAdvancements();
-            Bukkit.getOnlinePlayers().forEach(player -> player.setGameMode(
-                    role(player) == Role.NONE ? GameMode.SPECTATOR : GameMode.SURVIVAL));
-        }
         for (Player player : players) {
             StatsManager.Stats playerStats = stats.getOrCreate(player.getUniqueId());
             playerStats.player = player.getName();
@@ -63,8 +62,8 @@ public final class GameManager {
             }
             if (role(player) == Role.HUNTER) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
-        runConfigured("gamestate-commands.start", ""); broadcast("manhunt.start-success"); sound("neutral-sound");
-        if (plugin.getConfig().getBoolean("start-on-speedrunner-damage", true)) scheduleWaitingReminder();
+        stateCommands.runStart(); broadcast("manhunt.start-success"); sound("neutral-sound");
+        if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage", true)) scheduleWaitingReminder();
         else beginGame();
         return true;
     }
@@ -86,12 +85,8 @@ public final class GameManager {
         long delay = Math.max(0L, Math.round(plugin.getConfig().getDouble("game-end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            runConfigured("gamestate-commands.end", winnerName);
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                player.getInventory().clear();
-                if (plugin.getConfig().getBoolean("run-default-commands", true)) player.setGameMode(GameMode.SURVIVAL);
-            }
-            if (plugin.getConfig().getBoolean("run-default-commands", true)) clearAdvancements();
+            stateCommands.runEnd(winnerName);
+            stateCommands.runCleanup(winnerName);
             active = false; ending = false; gameBegun = false; playerStates.clearMatch();
         }, delay);
     }
@@ -124,13 +119,14 @@ public final class GameManager {
     }
 
     private void applyStartDebuffs() {
-        if (!plugin.getConfig().getBoolean("start-debuffs.enabled", false)) return;
-        ConfigurationSection effects = plugin.getConfig().getConfigurationSection("start-debuffs.effects");
+        if (!plugin.getConfig().getBoolean("settings.start-debuffs", false)) return;
+        var effects = plugin.getConfig().getConfigurationSection("start-debuffs.effects");
         if (effects == null) return;
         for (Player hunter : Bukkit.getOnlinePlayers()) {
             if (role(hunter) != Role.HUNTER) continue;
+            boolean applied = false;
             for (String effectName : effects.getKeys(false)) {
-                ConfigurationSection effect = effects.getConfigurationSection(effectName);
+                var effect = effects.getConfigurationSection(effectName);
                 if (effect == null) continue;
                 PotionEffectType type = Registry.POTION_EFFECT_TYPE.get(
                         NamespacedKey.minecraft(effectName.toLowerCase(Locale.ROOT)));
@@ -140,9 +136,9 @@ public final class GameManager {
                 int amplifier = Math.max(0, effect.getInt("amplifier", 0));
                 hunter.addPotionEffect(new PotionEffect(type, Math.max(1, (int) Math.round(seconds * 20.0)),
                         amplifier, false, false, true));
-                message(hunter, "manhunt.debuff-applied", Map.of("effect", effectName,
-                        "seconds", String.valueOf(seconds)));
+                applied = true;
             }
+            if (applied) hunter.sendMessage(messages.component("game.debuff-applied"));
         }
     }
 
@@ -150,17 +146,6 @@ public final class GameManager {
     private Component component(String key) { return messages.component(key); }
     private void broadcast(String key) { Bukkit.broadcast(component(key)); }
     private void message(Player player, String key, Map<String, String> values) { player.sendMessage(messages.component(key, values)); }
-    private void runConfigured(String key, String winner) {
-        for (String command : plugin.getConfig().getStringList(key)) {
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("{winner}", winner));
-        }
-    }
-
-    private void clearAdvancements() {
-        Bukkit.getOnlinePlayers().forEach(player -> Bukkit.advancementIterator().forEachRemaining(advancement ->
-                player.getAdvancementProgress(advancement).getAwardedCriteria().forEach(criteria ->
-                        player.getAdvancementProgress(advancement).revokeCriteria(criteria))));
-    }
     public void playNeutralSound(Player player) { playSound(player, "neutral-sound"); }
 
     private void sound(String key) {

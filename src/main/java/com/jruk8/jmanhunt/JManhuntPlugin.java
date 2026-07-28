@@ -6,12 +6,10 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import java.io.File;
-import java.io.IOException;
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int CONFIG_VERSION = 4;
-    private static final int MESSAGES_VERSION = 3;
+    private static final int CONFIG_VERSION = 1;
+    private static final int MESSAGES_VERSION = 1;
     private MessageService messages;
     private PlayerStateStore playerStates;
     private StatsManager stats;
@@ -22,7 +20,6 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        migrateLegacyConfigKeys();
         YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION);
         YamlFileUpdater.update(this, "messages.yml", "messages-version", MESSAGES_VERSION);
         saveResource("placeholders.yml", false);
@@ -74,29 +71,4 @@ public final class JManhuntPlugin extends JavaPlugin {
         if (statsRepository != null) statsRepository.close();
     }
 
-    private void migrateLegacyConfigKeys() {
-        File file = new File(getDataFolder(), "config.yml");
-        if (!file.exists()) return;
-        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
-        boolean changed = false;
-        changed |= copyIfMissing(config, "start-commands", "gamestate-commands.start");
-        changed |= copyIfMissing(config, "end-commands", "gamestate-commands.end");
-        changed |= copyIfMissing(config, "compass-refresh-interval", "compass-refresh.compass-refresh-interval");
-        changed |= copyIfMissing(config, "compass-refresh.refresh-on-right-click",
-                "compass-refresh.right-click.refresh-on-right-click");
-        changed |= copyIfMissing(config, "compass-refresh.compass-right-click-cooldown",
-                "compass-refresh.right-click.right-click-cooldown");
-        if (!changed) return;
-        try {
-            config.save(file);
-        } catch (IOException exception) {
-            getLogger().warning("Could not migrate config.yml: " + exception.getMessage());
-        }
-    }
-
-    private boolean copyIfMissing(YamlConfiguration config, String oldPath, String newPath) {
-        if (!config.contains(oldPath) || config.contains(newPath)) return false;
-        config.set(newPath, config.get(oldPath));
-        return true;
-    }
 }

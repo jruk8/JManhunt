@@ -2,7 +2,7 @@
 # This version is used to add new defaults during upgrades without replacing
 # values already customized by the server owner.
 # Configuration schema version. Managed by JManhunt; do not set this to -1.
-config-version: 4
+config-version: 1
 
 # Message parser used for messages.yml: minimessage or legacy.
 text-format: minimessage
@@ -61,28 +61,47 @@ placeholders:
     enabled: true
     format: "{value}"
 
-# When true, JManhunt performs its built-in inventory and game-mode setup and
-# cleanup in addition to the configured commands in gamestate-commands below.
-run-default-commands: true
+# Match behavior settings. Boolean settings can also be changed in-game with
+# /manhunt settings <setting> true|false.
+settings:
+  start-on-speedrunner-damage: true
+  start-debuffs: false
 
-# Commands JManhunt dispatches from the console during match state changes.
-# Each entry is executed once, in list order.
-#
-# {winner} is replaced in end commands with the winning side ("Hunters" or
-# "Speedrunners").
-#
-# The configured commands run in addition to the built-in setup/cleanup when
-# run-default-commands is true.
+# Built-in game-state actions and optional commands. All command sections are
+# disabled by default except default-commands.
 gamestate-commands:
-  # Executed after the match has been initialized and before the start message.
-  start: []
-  # Executed when the configured game-end delay expires, before cleanup ends.
-  end: []
+  default-commands:
+    enabled: true
+    start:
+      gamemode: true
+      clear-inventory: true
+      remove-advancements: true
+      disable-locator-bar: true
+      set-daytime: true
+    end:
+      gamemode: true
+      clear-inventory: true
+      remove-advancements: true
+      disable-locator-bar: false
+      set-daytime: false
+  # Console commands run once per configured entry. <winner> is replaced with
+  # Hunters or Speedrunners in end commands.
+  console-commands:
+    enabled: false
+    start:
+      - "say The hunt has begun!"
+    end:
+      - "say <winner> won the hunt!"
+  # Player commands run once for every online Hunter or Speedrunner. <p> is
+  # replaced with that player's name. Commands may start with '/'.
+  player-commands:
+    enabled: false
+    start:
+      - "/give <p> cooked_steak 8"
+    end:
+      - "/clear <p>"
 
-# When true, a match waits until a speedrunner damages a hunter before deaths,
-# portals, and other game-ending rules become active.
-start-on-speedrunner-damage: true
-
+# The following timing options control reminders and end-of-match cleanup.
 # Seconds between the win announcement and final inventory cleanup. Statistics
 # are displayed halfway through this delay.
 # Set to -1 to skip the delay (cleanup is immediate); other negative values are
@@ -99,7 +118,6 @@ start-reminder-interval: 10.0
 # -1 to disable that effect entry. An amplifier of -1 is treated as amplifier
 # 0 (level I), because potion amplifiers cannot be negative.
 start-debuffs:
-  enabled: false
   effects:
     SLOWNESS:
       seconds: 10.0
@@ -131,3 +149,25 @@ sounds:
   neutral-sound: BLOCK_NOTE_BLOCK_PLING
   win-sound: ENTITY_ENDER_DRAGON_DEATH
   fail-sound: ENTITY_WITHER_SPAWN
+
+# Optional named command bundles. Toggle a bundle in-game with
+# /manhunt settings custom-modifiers.<name> true|false.
+custom-modifiers:
+  # Gives every participating player eight steaks when the match starts.
+  everyone-gets-beef:
+    enabled: false
+    commands:
+      player:
+        - "/give <p> cooked_steak 8"
+      console: []
+      console-cleanup: []
+  # Stops the day/night cycle during the match and restores it when it ends.
+  perma-night:
+    enabled: false
+    commands:
+      player: []
+      console:
+        - "gamerule advance_time false"
+        - "time set midnight"
+      console-cleanup:
+        - "gamerule advance_time true"

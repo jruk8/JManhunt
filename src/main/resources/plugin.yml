@@ -35,6 +35,9 @@ permissions:
   jmanhunt.command.reload:
     description: Reload JManhunt configuration.
     default: op
+  jmanhunt.command.settings:
+    description: Change boolean JManhunt settings.
+    default: op
   jmanhunt.hunter:
     description: Allows a player to become a hunter.
     default: true

@@ -40,6 +40,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "setplayer" -> setPlayer(sender, args);
             case "start" -> start(sender);
             case "end" -> end(sender);
+            case "settings" -> settings(sender, args);
             case "reload" -> reload(sender);
             default -> message(sender, "command.invalid");
         };
@@ -112,9 +113,30 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         game.end(); return true;
     }
 
+    private boolean settings(CommandSender sender, String[] args) {
+        if (args.length == 1) {
+            for (String setting : game.settingNames()) {
+                sender.sendMessage(messages.component("manhunt.setting-entry",
+                        Map.of("setting", setting, "value", String.valueOf(game.getSetting(setting)))));
+            }
+            return true;
+        }
+        String setting = args[1].toLowerCase(Locale.ROOT);
+        if (args.length < 3) return message(sender, "manhunt.settings-usage");
+        if (!game.settingNames().contains(setting)) return message(sender, "manhunt.setting-invalid");
+        if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
+            return message(sender, "manhunt.setting-invalid-value");
+        }
+        boolean value = Boolean.parseBoolean(args[2]);
+        game.setSetting(setting, value);
+        message(sender, "manhunt.setting-updated", Map.of("setting", setting, "value", String.valueOf(value)));
+        neutralSound(sender);
+        return true;
+    }
+
     private boolean reload(CommandSender sender) {
-        YamlFileUpdater.update(plugin, "config.yml", "config-version", 4);
-        YamlFileUpdater.update(plugin, "messages.yml", "messages-version", 3);
+        YamlFileUpdater.update(plugin, "config.yml", "config-version", 1);
+        YamlFileUpdater.update(plugin, "messages.yml", "messages-version", 1);
         plugin.reloadConfig();
         messages.reload(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                 new File(plugin.getDataFolder(), "messages.yml")), plugin.getConfig().getString("text-format", "minimessage"));
@@ -124,7 +146,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "reload"));
+        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "settings", "reload"));
+        if (args.length == 2 && args[0].equalsIgnoreCase("settings"))
+            return partial(args[1], new ArrayList<>(game.settingNames()));
+        if (args.length == 3 && args[0].equalsIgnoreCase("settings"))
+            return partial(args[2], List.of("true", "false"));
         if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) {
             List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p"));
             Bukkit.getOnlinePlayers().forEach(player -> selectors.add(player.getName()));
