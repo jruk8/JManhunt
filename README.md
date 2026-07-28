@@ -1,3 +1,4 @@
+![banner](banner-1280x640.png)
 # JManhunt
 
 JManhunt is a configurable Paper plugin for running Minecraft Manhunt matches.
