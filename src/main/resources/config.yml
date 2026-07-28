@@ -197,7 +197,10 @@ custom-modifiers:
         - "attribute <p> minecraft:max_health base set 30"
         - "effect give <p> minecraft:instant_health 1 50 true"
       console: []
-      console-cleanup: []
+      console-cleanup:
+        # Ran by the console when the match ends.
+        # Resets health to 10 full hearts for all players.
+        - "attribute <p> minecraft:max_health base set 20"
   # Sets to night permanently for the duration of the match.
   perma-night:
     enabled: false
