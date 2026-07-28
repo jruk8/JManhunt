@@ -12,7 +12,7 @@ Contribute: https://github.com/jruk8/JManhunt
 
 Compared to other plugins, JManhunt excels at configurability.
 
-### Sensible Defaults
+### Defaults
 Almost everything in this plugin is configurable, but you don't have to
 touch a single YAML file to get started. The default settings work out of
 the box for anyone who just wants to start playing.
