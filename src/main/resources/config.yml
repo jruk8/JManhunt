@@ -2,10 +2,64 @@
 # This version is used to add new defaults during upgrades without replacing
 # values already customized by the server owner.
 # Configuration schema version. Managed by JManhunt; do not set this to -1.
-config-version: 3
+config-version: 4
 
 # Message parser used for messages.yml: minimessage or legacy.
 text-format: minimessage
+
+# Persistent career statistics. SQLite is local and requires no setup. Use
+# PostgreSQL when several JManhunt servers should share the same statistics.
+database:
+  enabled: true
+  type: sqlite
+  sqlite:
+    file: stats.db
+  postgresql:
+    host: localhost
+    port: 5432
+    database: jmanhunt
+    username: jmanhunt
+    password: change-me
+    ssl: false
+  pool-size: 4
+
+# Formatting is applied before PlaceholderAPI returns a value. {value} is the
+# built-in value; formatting uses the selected text-format above. Values are
+# disabled individually by setting enabled to false.
+placeholders:
+  time_as_speedrunner:
+    enabled: true
+    format: "{value}"
+  time_as_hunter:
+    enabled: true
+    format: "{value}"
+  formatted_time_as_speedrunner:
+    enabled: true
+    format: "{value}"
+  formatted_time_as_hunter:
+    enabled: true
+    format: "{value}"
+  total_kills:
+    enabled: true
+    format: "{value}"
+  total_kills_as_hunter:
+    enabled: true
+    format: "{value}"
+  total_kills_as_speedrunner:
+    enabled: true
+    format: "{value}"
+  total_final_kills:
+    enabled: true
+    format: "{value}"
+  total_damage_dealt:
+    enabled: true
+    format: "{value}"
+  total_wins_as_hunter:
+    enabled: true
+    format: "{value}"
+  total_wins_as_speedrunner:
+    enabled: true
+    format: "{value}"
 
 # When true, JManhunt performs its built-in inventory and game-mode setup and
 # cleanup in addition to the configured commands in gamestate-commands below.
@@ -76,4 +130,4 @@ compass-refresh:
 sounds:
   neutral-sound: BLOCK_NOTE_BLOCK_PLING
   win-sound: ENTITY_ENDER_DRAGON_DEATH
-  fail-sound: ENTITY_WITHER_DEATH
+  fail-sound: ENTITY_WITHER_SPAWN

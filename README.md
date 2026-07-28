@@ -33,6 +33,23 @@ sounds, compass refresh behavior, and the optional requirement for a speedrunner
 to damage a hunter before the match begins. `messages.yml` contains
 MiniMessage-first text, with optional legacy formatting.
 
+## Persistent statistics and PlaceholderAPI
+
+Career statistics are enabled by default and stored in `stats.db` using SQLite,
+so they survive server restarts without additional setup. For multiple servers
+sharing the same statistics, set `database.type` to `postgresql` and configure
+`database.postgresql` in `config.yml`.
+
+When PlaceholderAPI is installed, JManhunt registers the internal `jmanhunt`
+expansion. Examples include `%jmanhunt_total_kills%` and
+`%jmanhunt_formatted_time_as_hunter%`. Available identifiers are documented in
+`placeholders.yml`; formatting and per-placeholder enable/disable settings are
+configured in `config.yml`. MiniMessage is the default formatting mode, and
+legacy formatting can be selected with `text-format: legacy`.
+
+If PlaceholderAPI is not installed, JManhunt logs a warning and continues
+without registering the expansion. PlaceholderAPI is optional.
+
 ## Build
 
 Java 25 is required. Gradle can use a locally installed matching toolchain.

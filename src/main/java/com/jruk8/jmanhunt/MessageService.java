@@ -35,6 +35,13 @@ public final class MessageService {
                 : MiniMessage.miniMessage().deserialize(raw);
     }
 
+    public String formatPlaceholder(String raw) {
+        if ("legacy".equalsIgnoreCase(format)) {
+            return LegacyComponentSerializer.legacySection().serialize(LegacyComponentSerializer.legacyAmpersand().deserialize(raw));
+        }
+        return LegacyComponentSerializer.legacySection().serialize(MiniMessage.miniMessage().deserialize(raw));
+    }
+
     public Component nonItalic(Component component) {
         return component.decoration(TextDecoration.ITALIC, false);
     }

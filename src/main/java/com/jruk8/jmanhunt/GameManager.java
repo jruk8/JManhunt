@@ -56,6 +56,7 @@ public final class GameManager {
             playerStats.player = player.getName();
             playerStats.uuid = player.getUniqueId();
             playerStats.role = role(player);
+            playerStats.matchStartedAt = System.currentTimeMillis();
             if (role(player) == Role.SPEEDRUNNER) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
                 playerStates.recordLastSeen(player, player.getLocation());
@@ -81,6 +82,7 @@ public final class GameManager {
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
         sound(winner == Role.HUNTER ? "fail-sound" : "win-sound");
+        stats.completeMatch(winner);
         long delay = Math.max(0L, Math.round(plugin.getConfig().getDouble("game-end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {

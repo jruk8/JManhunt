@@ -113,7 +113,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean reload(CommandSender sender) {
-        YamlFileUpdater.update(plugin, "config.yml", "config-version", 3);
+        YamlFileUpdater.update(plugin, "config.yml", "config-version", 4);
         YamlFileUpdater.update(plugin, "messages.yml", "messages-version", 3);
         plugin.reloadConfig();
         messages.reload(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(

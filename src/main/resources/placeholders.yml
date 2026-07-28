@@ -1,12 +1,37 @@
-# JManhunt placeholders. These names are available to messages and command integrations.
-# Values are documented defaults; live values are supplied while a match is active.
-time_as_speedrunner: "{time_as_speedrunner}"
-time_as_hunter: "{time_as_hunter}"
-kills_as_hunter: "{kills_as_hunter}"
-kills_total: "{kills_total}"
-kills_as_speedrunner: "{kills_as_speedrunner}"
-final_kills: "{final_kills}"
-damage_dealt: "{damage_dealt}"
-role: "{role}"
-player: "{player}"
-winner: "{winner}"
+# JManhunt's built-in PlaceholderAPI identifiers.
+# Formatting, aliases, and enabled/disabled state are configured in config.yml.
+# Values are resolved for the player passed by PlaceholderAPI.
+placeholders:
+  time_as_speedrunner:
+    type: LONG
+    description: Career time played as a speedrunner, in milliseconds.
+  time_as_hunter:
+    type: LONG
+    description: Career time played as a hunter, in milliseconds.
+  formatted_time_as_speedrunner:
+    type: TEXT
+    description: Career speedrunner time formatted as days, hours, minutes, seconds.
+  formatted_time_as_hunter:
+    type: TEXT
+    description: Career hunter time formatted as days, hours, minutes, seconds.
+  total_kills:
+    type: INTEGER
+    description: Career total kills.
+  total_kills_as_hunter:
+    type: INTEGER
+    description: Career kills while playing as a hunter.
+  total_kills_as_speedrunner:
+    type: INTEGER
+    description: Career kills while playing as a speedrunner.
+  total_final_kills:
+    type: INTEGER
+    description: Career final kills.
+  total_damage_dealt:
+    type: DECIMAL
+    description: Career damage dealt in hearts.
+  total_wins_as_hunter:
+    type: INTEGER
+    description: Career wins as a hunter.
+  total_wins_as_speedrunner:
+    type: INTEGER
+    description: Career wins as a speedrunner.

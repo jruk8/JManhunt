@@ -4,6 +4,7 @@ main: ${main}
 api-version: "${apiVersion}"
 author: ${author}
 description: ${description}
+softdepend: [PlaceholderAPI]
 
 commands:
   manhunt:

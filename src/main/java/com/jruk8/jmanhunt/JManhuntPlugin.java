@@ -10,13 +10,15 @@ import java.io.File;
 import java.io.IOException;
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int CONFIG_VERSION = 3;
+    private static final int CONFIG_VERSION = 4;
     private static final int MESSAGES_VERSION = 3;
     private MessageService messages;
     private PlayerStateStore playerStates;
     private StatsManager stats;
     private CompassManager compass;
     private GameManager game;
+    private StatsRepository statsRepository;
+    private JManhuntExpansion expansion;
 
     @Override
     public void onEnable() {
@@ -29,7 +31,23 @@ public final class JManhuntPlugin extends JavaPlugin {
         messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")),
                 getConfig().getString("text-format", "minimessage"));
         playerStates = new PlayerStateStore();
-        stats = new StatsManager(this, messages);
+        if (getConfig().getBoolean("database.enabled", true)) {
+            try {
+                statsRepository = StatsRepository.open(this);
+                getLogger().info("Career statistics database initialized.");
+            } catch (Exception exception) {
+                getLogger().severe("Career statistics are disabled because the database could not be initialized: "
+                        + exception.getMessage());
+            }
+        }
+        stats = new StatsManager(this, messages, statsRepository);
+        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            expansion = new JManhuntExpansion(this, stats, messages);
+            expansion.register();
+            getLogger().info("Hooked into PlaceholderAPI as the %jmanhunt_<placeholder>% expansion.");
+        } else {
+            getLogger().warning("PlaceholderAPI is not installed; JManhunt placeholders will not be hooked into.");
+        }
         compass = new CompassManager(this, messages, playerStates,
                 new NamespacedKey(this, "hunters_compass"));
         game = new GameManager(this, messages, playerStates, compass, stats);
@@ -48,6 +66,12 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
         BukkitTask actionbars = Bukkit.getScheduler().runTaskTimer(this,
                 () -> compass.showHeldActionbars(game.isActive()), 1L, 20L);
+    }
+
+    @Override public void onDisable() {
+        if (expansion != null) expansion.unregister();
+        if (stats != null) stats.flush();
+        if (statsRepository != null) statsRepository.close();
     }
 
     private void migrateLegacyConfigKeys() {
