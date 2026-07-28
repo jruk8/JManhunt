@@ -157,4 +157,4 @@ Modrinth using the repository's `MODRINTH_ID`, `MODRINTH_GAME_VERSIONS`, and
 
 See `CONTRIBUTING.md` for contributor setup.
 
-Copyright 2026 jruk8. Licensed under GNU GPLv3.
+© 2026 jruk8. Licensed under GNU GPLv3.
