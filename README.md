@@ -2,13 +2,36 @@
 
 # JManhunt
 
-JManhunt is a configurable Paper plugin for Minecraft Manhunt. Give players
-roles, start a match, and let the hunters track speedrunners with a protected
-compass.
+JManhunt is a configurable Paper plugin for 26.2+ Manhunts.
 
 Download: https://modrinth.com/plugin/jmanhunt
 
 Contribute: https://github.com/jruk8/JManhunt
+
+## Why JManhunt?
+
+Compared to other plugins, JManhunt excels at configurability.
+
+### Sensible Defaults
+Almost everything in this plugin is configurable, but you don't have to
+touch a single YAML file to get started. The default settings work out of
+the box for anyone who just wants to start playing.
+
+### Deep Configurability
+Advanced users can toggle any default off and build a completely unique
+Manhunt experience. The plugin is designed so that anyone comfortable with
+vanilla Minecraft commands can figure out how to create custom modifiers
+without much of a learning curve.
+
+The commands-based approach keeps things modular and dependency-free.
+Need something like a world reset between matches? Just pair JManhunt with
+a plugin that handles that, and wire it into your game-state commands. There
+is zero direct integration required.
+
+If a feature you need doesn't exist yet, contributions are welcome on our
+[GitHub page](https://github.com/jruk8/JManhunt). We're intentionally
+keeping this plugin lightweight and modular, so please keep that philosophy
+in mind when contributing.
 
 ## Getting started
 
@@ -60,7 +83,7 @@ example. You can also toggle a modifier by changing its `enabled` value in
 `config.yml`, then running `/manhunt reload`.
 
 When creating a modifier, copy the structure of an existing one. Currently
-only manual YAML file editing is supported for creation. Commands can use 
+only manual YAML file editing is supported for creation. Commands can use
 these placeholders:
 
 | Placeholder | Replaced with |
