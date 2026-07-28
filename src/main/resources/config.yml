@@ -146,22 +146,59 @@ compass-refresh:
 
 # Optional named command bundles. Toggle a bundle in-game with
 # /manhunt modifiers custom-modifiers.<name> true|false.
+# All commands are run when the match starts, except console-cleanup
+# which runs when the match ends.
 custom-modifiers:
   # Gives every participating player eight steaks when the match starts.
   everyone-gets-beef:
     enabled: false
     commands:
       player:
-        - "give <p> cooked_beef 8"
-      hunter-commands:
-        # Runs only once for each Hunter, with <p> replaced by their name.
-        - "effect give <p> resistance 10 0"
-      speedrunner-commands:
-        # Runs only once for each Speedrunner, with <p> replaced by their name.
-        - "give <p> cooked_carrot 8"
+        # Runs for every participating player (only hunters and speedrunners, not including NONE)
+        - "give <p> minecraft:cooked_beef 8"
+      hunter-commands: []
+      speedrunner-commands: []
       console: []
       console-cleanup: []
-  # Stops the day/night cycle during the match and restores it when it ends.
+  speedrunners-speed:
+    enabled: false
+    commands:
+      player: []
+      hunter-commands: []
+      speedrunner-commands:
+        # Runs only once for each Speedrunner, with <p> replaced by their name.
+        # Note the single quotes used to escape the double quotes inside the JSON.
+        - 'give <p> potion[potion_contents={potion:"minecraft:strong_swiftness"}] 1'
+      console: []
+      console-cleanup: []
+  hunters-wooden-sword:
+    enabled: false
+    commands:
+      player: []
+      hunter-commands:
+        # Runs only once for each Hunter, with <p> replaced by their name.
+        - "give <p> wooden_sword"
+      speedrunner-commands: []
+      console: []
+      console-cleanup: []
+  # Speedrunners get a health advantage while hunters' health gets a debuff.
+  speedrunner-health-advantage:
+    enabled: false
+    commands:
+      player: []
+      hunter-commands:
+        # Runs only once for each Hunter, with <p> replaced by their name.
+        # Sets health to 8 full hearts for all hunters.
+        - "attribute <p> minecraft:max_health base set 16"
+        - "effect give <p> minecraft:instant_health 1 50 true"
+      speedrunner-commands:
+        # Runs only once for each Speedrunner, with <p> replaced by their name.
+        # Sets health to 15 full hearts for all speedrunners.
+        - "attribute <p> minecraft:max_health base set 30"
+        - "effect give <p> minecraft:instant_health 1 50 true"
+      console: []
+      console-cleanup: []
+  # Sets to night permanently for the duration of the match.
   perma-night:
     enabled: false
     commands:
@@ -169,9 +206,11 @@ custom-modifiers:
       hunter-commands: []
       speedrunner-commands: []
       console:
+        # Ran by the console when the match starts.
         - "gamerule advance_time false"
         - "time set midnight"
       console-cleanup:
+        # Ran by the console when the match ends.
         - "gamerule advance_time true"
 
 # Sound names may be Bukkit names or namespaced Minecraft keys.
