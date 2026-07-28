@@ -22,11 +22,12 @@ Contribute: https://github.com/jruk8/JManhunt
    Selectors such as `@a`, `@p`, and `@a[distance=..10]` are supported.
 2. Start the match with `/manhunt start`.
 3. Check the teams at any time with `/manhunt`.
-4. End the match with `/manhunt end` when the hunt is over.
+4. The match ends when all speedrunners have died, or manually through
+   `/manhunt end`.
 
 Players need `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive the
-corresponding role. Both permissions are granted by default. The command also
-has the `mh` alias.
+corresponding role. Both permissions are granted by default. The `/manhunt` 
+is also accessible through the `mh` alias.
 
 ## Commands
 
@@ -58,13 +59,14 @@ different commands to hunters and speedrunners. `perma-night` is another
 example. You can also toggle a modifier by changing its `enabled` value in
 `config.yml`, then running `/manhunt reload`.
 
-When creating a modifier, copy the structure of an existing one. Commands can
-use these placeholders:
+When creating a modifier, copy the structure of an existing one. Currently
+only manual YAML file editing is supported for creation. Commands can use 
+these placeholders:
 
 | Placeholder | Replaced with |
 | --- | --- |
 | `<p>` | The participating player's name. Use this in player and role commands. |
-| `<winner>` | `Hunters` or `Speedrunners` in end and cleanup commands. |
+| `<winner>` | Parses as `Hunters` or `Speedrunners` in end and cleanup commands. |
 
 The available command lists are:
 
