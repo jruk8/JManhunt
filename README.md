@@ -18,7 +18,7 @@ Contribute: https://github.com/jruk8/JManhunt
 | `/manhunt setplayer <selector> <role>` | `jmanhunt.command.setplayer` | Assigns `hunter`, `speedrunner`, or `none`. Supports selectors such as `@a` and `[distance=..x]`. |
 | `/manhunt start` | `jmanhunt.command.start` | Starts the match.                                                                                 |
 | `/manhunt end` | `jmanhunt.command.end` | Ends the match; hunters win.                                                                      |
-| `/manhunt settings <setting> <true\|false>` | `jmanhunt.command.settings` | Lists or changes boolean default-command and custom-modifier settings. |
+| `/manhunt settings <setting> <true\|false>` | `jmanhunt.command.settings` | Views or changes boolean default-command and custom-modifier settings. `/manhunt modifiers` is an alias. |
 | `/manhunt reload` | `jmanhunt.command.reload` | Reloads `config.yml` and `messages.yml`.                                                          |
 
 Players need `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive that role.
@@ -38,10 +38,12 @@ MiniMessage-first text, with optional legacy formatting.
 
 Game-state console commands use `<winner>` in end commands. Player commands use
 `<p>` and run once per participating online player, for example
-`/give <p> cooked_steak 8`. Command sections are disabled by default; built-in
-default actions and named `custom-modifiers` can be enabled or disabled in-game
-with `/manhunt settings`. Each configured sound has a `sound` and `pitch` value
-under its sound name in `config.yml`.
+`/give <p> cooked_steak 8`. Custom modifiers can additionally define
+`hunter-commands` and `speedrunner-commands` to target only that role. Command
+sections are disabled by default; built-in default actions and named
+`custom-modifiers` can be enabled or disabled in-game with `/manhunt settings`
+or its `/manhunt modifiers` alias. Each configured sound has a `sound` and
+`pitch` value under its sound name in `config.yml`.
 
 ## Optional PlaceholderAPI Dependency
 

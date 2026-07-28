@@ -153,6 +153,12 @@ custom-modifiers:
     commands:
       player:
         - "give <p> cooked_beef 8"
+      hunter-commands:
+        # Runs only once for each Hunter, with <p> replaced by their name.
+        - "effect give <p> resistance 10 0"
+      speedrunner-commands:
+        # Runs only once for each Speedrunner, with <p> replaced by their name.
+        - "give <p> cooked_carrot 8"
       console: []
       console-cleanup: []
   # Stops the day/night cycle during the match and restores it when it ends.
@@ -160,6 +166,8 @@ custom-modifiers:
     enabled: false
     commands:
       player: []
+      hunter-commands: []
+      speedrunner-commands: []
       console:
         - "gamerule advance_time false"
         - "time set midnight"

@@ -126,6 +126,9 @@ public final class GameStateCommandManager {
                 runCommands(modifier + "console", null, winner);
                 for (Player player : participatingPlayers()) {
                     runCommands(modifier + "player", player.getName(), winner);
+                    String roleCommands = playerStates.role(player) == Role.HUNTER
+                            ? "hunter-commands" : "speedrunner-commands";
+                    runCommands(modifier + roleCommands, player.getName(), winner);
                 }
             }
         }

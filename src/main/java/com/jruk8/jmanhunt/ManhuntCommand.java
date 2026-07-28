@@ -33,7 +33,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
-        if (!sender.hasPermission("jmanhunt.command." + sub)) return message(sender, "command.no-permission");
+        String permissionSub = sub.equals("modifiers") ? "settings" : sub;
+        if (!sender.hasPermission("jmanhunt.command." + permissionSub)) return message(sender, "command.no-permission");
         return switch (sub) {
             case "help" -> help(sender);
             case "status" -> status(sender);
@@ -41,6 +42,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "start" -> start(sender);
             case "end" -> end(sender);
             case "settings" -> settings(sender, args);
+            case "modifiers" -> settings(sender, args);
             case "reload" -> reload(sender);
             default -> message(sender, "command.invalid");
         };
@@ -50,7 +52,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         message(sender, "manhunt.help-header");
         String[][] lines = {{"/manhunt help", "show commands"}, {"/manhunt", "show match status"},
                 {"/manhunt setplayer <selector> <hunter|speedrunner|none>", "assign roles"},
-                {"/manhunt start", "start a match"}, {"/manhunt end", "end a match"}, {"/manhunt reload", "reload files"}};
+                {"/manhunt start", "start a match"}, {"/manhunt end", "end a match"},
+                {"/manhunt settings <setting> <true|false>", "view or change a setting"},
+                {"/manhunt reload", "reload files"}};
         for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
         neutralSound(sender);
         return true;
@@ -122,8 +126,12 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         String setting = args[1].toLowerCase(Locale.ROOT);
-        if (args.length < 3) return message(sender, "manhunt.settings-usage");
         if (!game.settingNames().contains(setting)) return message(sender, "manhunt.setting-invalid");
+        if (args.length < 3) {
+            message(sender, "manhunt.setting-status",
+                    Map.of("setting", setting, "value", String.valueOf(game.getSetting(setting))));
+            return true;
+        }
         if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
             return message(sender, "manhunt.setting-invalid-value");
         }
@@ -146,10 +154,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "settings", "reload"));
-        if (args.length == 2 && args[0].equalsIgnoreCase("settings"))
+        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "settings", "modifiers", "reload"));
+        if (args.length == 2 && (args[0].equalsIgnoreCase("settings") || args[0].equalsIgnoreCase("modifiers")))
             return partial(args[1], new ArrayList<>(game.settingNames()));
-        if (args.length == 3 && args[0].equalsIgnoreCase("settings"))
+        if (args.length == 3 && (args[0].equalsIgnoreCase("settings") || args[0].equalsIgnoreCase("modifiers")))
             return partial(args[2], List.of("true", "false"));
         if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) {
             List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p"));

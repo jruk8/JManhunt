@@ -158,18 +158,23 @@ public final class GameManager {
             if (soundName == null) soundName = plugin.getConfig().getString("sounds." + key + ".sound");
             if (soundName == null) soundName = "BLOCK_NOTE_BLOCK_PLING";
             float pitch = (float) plugin.getConfig().getDouble("sounds." + key + ".pitch", 1.0);
-            Sound sound;
-            try {
-                sound = Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
-            } catch (IllegalArgumentException ignored) {
-                NamespacedKey soundKey = NamespacedKey.fromString(soundName.toLowerCase(Locale.ROOT));
-                if (soundKey == null) soundKey = NamespacedKey.minecraft(soundName.toLowerCase(Locale.ROOT));
-                sound = Registry.SOUNDS.get(soundKey);
-            }
+            Sound sound = resolveSound(soundName);
             if (sound == null) {
                 return;
             }
             player.playSound(player.getLocation(), sound, 1, pitch);
         } catch (IllegalArgumentException ignored) { }
+    }
+
+    private Sound resolveSound(String soundName) {
+        NamespacedKey soundKey = NamespacedKey.fromString(soundName.toLowerCase(Locale.ROOT));
+        if (soundKey == null) soundKey = NamespacedKey.minecraft(soundName.toLowerCase(Locale.ROOT));
+        Sound sound = Registry.SOUNDS.get(soundKey);
+        if (sound != null) return sound;
+        try {
+            return Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 }

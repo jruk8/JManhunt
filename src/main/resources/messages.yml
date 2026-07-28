@@ -34,6 +34,7 @@ manhunt:
   setting-invalid-value: "{prefix}<red>Setting values must be true or false."
   setting-updated: "{prefix}<green>Set <white>{setting}<green> to <white>{value}<green>."
   setting-entry: "{prefix}<white>{setting}<gray>: <white>{value}"
+  setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
 
 game:
   separator: "<strikethrough><gradient:#bababa:#dedede:#bababa>                                                    </gradient></strikethrough>"
