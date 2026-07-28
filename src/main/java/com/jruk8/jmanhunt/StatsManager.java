@@ -129,7 +129,8 @@ public final class StatsManager {
                     .filter(stat -> stat.value(statistic) > 0).limit(3).toList();
             if (ranked.isEmpty()) continue;
             String displayName = messages.string("game.stat-names." + statistic, statistic);
-            broadcast("game.stat-header", Map.of("stat", displayName));
+            String prefix = messages.string("game.stat-header-prefix", "<gold>");
+            broadcast("game.stat-header", Map.of("stat-prefix", prefix, "stat", displayName));
             for (int i = 0; i < ranked.size(); i++) {
                 Stats stat = ranked.get(i);
                 String placement = getPlacementName(i);
@@ -141,7 +142,7 @@ public final class StatsManager {
     }
 
     private String getPlacementName(int index) {
-        return switch (index) { case 0 -> "first"; case 1 -> "second"; case 2 -> "third"; default -> "default"; };
+        return switch (index) { case 0 -> "first"; case 1 -> "second"; case 2 -> "third"; default -> "other"; };
     }
 
     private void broadcast(String key, Map<String, String> values) { Bukkit.broadcast(messages.component(key, values)); }

@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 4
+messages-version: 1
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
@@ -31,16 +31,19 @@ manhunt:
   reload-success: "{prefix}<green>Reloaded config.yml and messages.yml."
 
 game:
-  hunters-win: "{prefix}<red>Hunters Win!"
+  separator: "<strikethrough><gradient:#bababa:#dedede:#bababa>                                                    </gradient></strikethrough>"
   speedrunners-win: "{prefix}<green>Speedrunners Win!"
+  hunters-win: "{prefix}<red>Hunters Win!"
   hunters-title: "<red>Hunters Win!"
   speedrunners-title: "<green>Speedrunners Win!"
-  stat-header: "\n{prefix}<gold>{stat}:"
-  rank-colors:
-    first: "<#e3ac36>"
-    second: "<#cccccc>"
-    third: "<#785936>"
+  stat-header: "\n{prefix}{stat-prefix}{stat}:"
+  stat-header-prefix: "<bold><gradient:white:#dbdbdb:white>"
   stat-entry: "{prefix}{rank-color}#{rank}: {player}: {value}"
+  rank-colors:
+    first: "<#f5e042>"
+    second: "<#cccccc>"
+    third: "<#85553c>"
+    other: "<gray>"
   stat-names:
     DAMAGE_DEALT: "Damage Dealt"
     HUNTER_FINAL_KILLS: "Hunter Final Kills"

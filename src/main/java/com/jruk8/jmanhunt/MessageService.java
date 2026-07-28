@@ -42,6 +42,11 @@ public final class MessageService {
         return LegacyComponentSerializer.legacySection().serialize(MiniMessage.miniMessage().deserialize(raw));
     }
 
+    public String addSeparators(String text) {
+        String separator = string("game.separator", "");
+        return separator + "\n" + text + "\n" + separator;
+    }
+
     public Component nonItalic(Component component) {
         return component.decoration(TextDecoration.ITALIC, false);
     }

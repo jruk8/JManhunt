@@ -1,8 +1,9 @@
 package com.jruk8.jmanhunt;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.io.File;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -13,16 +14,12 @@ import java.util.UUID;
 public final class StatsRepository implements AutoCloseable {
     private final JManhuntPlugin plugin;
     private final boolean postgres;
-    private final String url;
-    private final String username;
-    private final String password;
+    private final HikariDataSource dataSource;
 
-    private StatsRepository(JManhuntPlugin plugin, boolean postgres, String url, String username, String password) {
+    private StatsRepository(JManhuntPlugin plugin, boolean postgres, HikariDataSource dataSource) {
         this.plugin = plugin;
         this.postgres = postgres;
-        this.url = url;
-        this.username = username;
-        this.password = password;
+        this.dataSource = dataSource;
     }
 
     public static StatsRepository open(JManhuntPlugin plugin) throws SQLException {
@@ -31,7 +28,8 @@ public final class StatsRepository implements AutoCloseable {
             String file = plugin.getConfig().getString("database.sqlite.file", "stats.db");
             File database = new File(plugin.getDataFolder(), file);
             if (database.getParentFile() != null) database.getParentFile().mkdirs();
-            StatsRepository repository = new StatsRepository(plugin, false, "jdbc:sqlite:" + database, "", "");
+            StatsRepository repository = new StatsRepository(plugin, false,
+                    dataSource("jdbc:sqlite:" + database, "", "", plugin.getConfig().getInt("database.pool-size", 4)));
             repository.initialize();
             return repository;
         }
@@ -44,15 +42,25 @@ public final class StatsRepository implements AutoCloseable {
             boolean ssl = plugin.getConfig().getBoolean("database.postgresql.ssl", false);
             String jdbc = "jdbc:postgresql://" + host + ":" + port + "/" + database + "?sslmode="
                     + (ssl ? "require" : "disable");
-            StatsRepository repository = new StatsRepository(plugin, true, jdbc, user, pass);
+            StatsRepository repository = new StatsRepository(plugin, true,
+                    dataSource(jdbc, user, pass, plugin.getConfig().getInt("database.pool-size", 4)));
             repository.initialize();
             return repository;
         }
         throw new SQLException("Unsupported database.type: " + type);
     }
 
+    private static HikariDataSource dataSource(String url, String username, String password, int poolSize) {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setMaximumPoolSize(Math.max(1, poolSize));
+        if (!username.isEmpty()) config.setUsername(username);
+        if (!password.isEmpty()) config.setPassword(password);
+        return new HikariDataSource(config);
+    }
+
     private Connection connection() throws SQLException {
-        return username.isEmpty() ? DriverManager.getConnection(url) : DriverManager.getConnection(url, username, password);
+        return dataSource.getConnection();
     }
 
     private void initialize() throws SQLException {
@@ -138,5 +146,5 @@ public final class StatsRepository implements AutoCloseable {
         }
     }
 
-    @Override public void close() { }
+    @Override public void close() { dataSource.close(); }
 }

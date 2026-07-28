@@ -5,6 +5,10 @@ api-version: "${apiVersion}"
 author: ${author}
 description: ${description}
 softdepend: [PlaceholderAPI]
+libraries:
+  - org.postgresql:postgresql:42.7.7
+  - org.xerial:sqlite-jdbc:3.50.3.0
+  - com.zaxxer:HikariCP:6.3.0
 
 commands:
   manhunt:

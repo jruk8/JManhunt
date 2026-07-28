@@ -74,7 +74,7 @@ public final class GameManager {
         ending = true;
         if (waitingReminderTask != null) waitingReminderTask.cancel();
         String winnerName = winner == Role.HUNTER ? "Hunters" : "Speedrunners";
-        String winMessage = winner == Role.HUNTER ? "game.hunters-win" : "game.speedrunners-win";
+        String winMessage = getWinMessage(winner);
         String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
         broadcast(winMessage);
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -105,6 +105,13 @@ public final class GameManager {
         gameBegun = true;
         if (waitingReminderTask != null) waitingReminderTask.cancel();
         broadcast("manhunt.started-by-damage"); sound("neutral-sound"); applyStartDebuffs();
+    }
+
+    private String getWinMessage(Role winner) {
+        String text = winner == Role.HUNTER ?
+                messages.string("game.hunters-win", "Hunters Win!") :
+                messages.string("game.speedrunners-win", "Speedrunners Win!");
+        return messages.addSeparators(text);
     }
 
     private void scheduleWaitingReminder() {

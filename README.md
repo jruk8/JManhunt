@@ -41,6 +41,10 @@ so they survive server restarts without additional setup. For proxy-wide configs
 set `database.type` to `postgresql` and configure `database.postgresql` in
 `config.yml`.
 
+The SQLite driver, PostgreSQL driver, and HikariCP are declared through
+Paper's `libraries` loader. Paper downloads them at runtime, so they are not
+bundled into the JManhunt jar.
+
 When PlaceholderAPI is installed, JManhunt registers the internal `jmanhunt`
 expansion. Examples include `%jmanhunt_total_kills%` and
 `%jmanhunt_formatted_time_as_hunter%`. Available identifiers are documented in
