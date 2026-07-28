@@ -62,7 +62,7 @@ placeholders:
     format: "{value}"
 
 # Match behavior settings. Boolean settings can also be changed in-game with
-# /manhunt settings <setting> true|false.
+# /manhunt modifiers <setting> true|false.
 settings:
   start-on-speedrunner-damage: true
   start-debuffs: false
@@ -145,7 +145,7 @@ compass-refresh:
     right-click-cooldown: 3.0
 
 # Optional named command bundles. Toggle a bundle in-game with
-# /manhunt settings custom-modifiers.<name> true|false.
+# /manhunt modifiers custom-modifiers.<name> true|false.
 custom-modifiers:
   # Gives every participating player eight steaks when the match starts.
   everyone-gets-beef:

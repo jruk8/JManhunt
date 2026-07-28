@@ -1,66 +1,115 @@
-![banner](banner-1280x640.png)
+![JManhunt banner](banner-1280x640.png)
+
 # JManhunt
 
-JManhunt is a configurable Paper plugin for running Minecraft Manhunt matches.
-Players can be assigned as hunters or speedrunners, while hunters receive a
-protected compass that tracks the nearest speedrunner.
+JManhunt is a configurable Paper plugin for Minecraft Manhunt. Give players
+roles, start a match, and let the hunters track speedrunners with a protected
+compass.
 
 Download: https://modrinth.com/plugin/jmanhunt
 
 Contribute: https://github.com/jruk8/JManhunt
 
+## Getting started
+
+1. Assign at least one hunter and one speedrunner:
+
+   ```text
+   /manhunt setplayer <selector> hunter
+   /manhunt setplayer <selector> speedrunner
+   ```
+
+   Selectors such as `@a`, `@p`, and `@a[distance=..10]` are supported.
+2. Start the match with `/manhunt start`.
+3. Check the teams at any time with `/manhunt`.
+4. End the match with `/manhunt end` when the hunt is over.
+
+Players need `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive the
+corresponding role. Both permissions are granted by default. The command also
+has the `mh` alias.
+
 ## Commands
 
-| Command | Permission | Notes                                                                                             |
-| --- | --- |---------------------------------------------------------------------------------------------------|
-| `/manhunt` | `jmanhunt.command.status` | Shows match status grouped into speedrunners, hunters, and unassigned players.                    |
-| `/manhunt help` | `jmanhunt.command.help` | Lists available commands.                                                                         |
-| `/manhunt setplayer <selector> <role>` | `jmanhunt.command.setplayer` | Assigns `hunter`, `speedrunner`, or `none`. Supports selectors such as `@a` and `[distance=..x]`. |
-| `/manhunt start` | `jmanhunt.command.start` | Starts the match.                                                                                 |
-| `/manhunt end` | `jmanhunt.command.end` | Ends the match; hunters win.                                                                      |
-| `/manhunt settings <setting> <true\|false>` | `jmanhunt.command.settings` | Views or changes boolean default-command and custom-modifier settings. `/manhunt modifiers` is an alias. |
-| `/manhunt reload` | `jmanhunt.command.reload` | Reloads `config.yml` and `messages.yml`.                                                          |
+| Command | What it does | Permission |
+| --- | --- | --- |
+| `/manhunt` | Shows the current teams and match status. | `jmanhunt.command.status` |
+| `/manhunt help` | Shows the in-game command list. | `jmanhunt.command.help` |
+| `/manhunt setplayer <selector> <role>` | Assigns `hunter`, `speedrunner`, or `none`. | `jmanhunt.command.setplayer` |
+| `/manhunt start` | Starts a match. | `jmanhunt.command.start` |
+| `/manhunt end` | Ends the active match; hunters win. | `jmanhunt.command.end` |
+| `/manhunt modifiers [setting] [true\|false]` | Lists, views, or changes built-in actions and custom modifiers. | `jmanhunt.command.modifiers` |
+| `/manhunt reload` | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
 
-Players need `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive that role.
-Both permissions are granted by default. The `mh` alias is also available.
+## Custom modifiers
 
-The compass is always protected: it cannot be dropped, moved to a chest or
-other container, dragged, swapped, picked up by a hopper, or transferred by
-inventory interactions. It is restored to the last slot of the hotbar after
-a hunter respawns.
+Custom modifiers are named command bundles in `config.yml` under
+`custom-modifiers`. They are disabled by default. A modifier can run commands
+when a match starts and when it ends, either from the console or once for each
+participating player.
 
-Configuration is generated in the plugin data folder. `config.yml` documents
-all options, including default actions, command arrays, custom modifiers,
-end-screen statistics, text format, sounds, compass refresh behavior, and the
-optional requirement for a speedrunner to damage a hunter before the match
-begins. `messages.yml` contains
-MiniMessage-first text, with optional legacy formatting.
+To enable a modifier, use its configuration name:
 
-Game-state console commands use `<winner>` in end commands. Player commands use
-`<p>` and run once per participating online player, for example
-`/give <p> cooked_steak 8`. Custom modifiers can additionally define
-`hunter-commands` and `speedrunner-commands` to target only that role. Command
-sections are disabled by default; built-in default actions and named
-`custom-modifiers` can be enabled or disabled in-game with `/manhunt settings`
-or its `/manhunt modifiers` alias. Each configured sound has a `sound` and
-`pitch` value under its sound name in `config.yml`.
+```text
+/manhunt modifiers custom-modifiers.everyone-gets-beef true
+```
 
-## Optional PlaceholderAPI Dependency
+The example modifier in the default config gives players food and applies
+different commands to hunters and speedrunners. `perma-night` is another
+example. You can also toggle a modifier by changing its `enabled` value in
+`config.yml`, then running `/manhunt reload`.
 
-Career statistics are enabled by default and stored in `stats.db` using SQLite,
-so they survive server restarts without additional setup. For proxy-wide configs, 
-set `database.type` to `postgresql` and configure `database.postgresql` in
-`config.yml`.
+When creating a modifier, copy the structure of an existing one. Commands can
+use these placeholders:
 
-The SQLite driver, PostgreSQL driver, and HikariCP are declared through
-Paper's `libraries` loader. Paper downloads them at runtime, so they are not
-bundled into the JManhunt jar.
+| Placeholder | Replaced with |
+| --- | --- |
+| `<p>` | The participating player's name. Use this in player and role commands. |
+| `<winner>` | `Hunters` or `Speedrunners` in end and cleanup commands. |
 
-When PlaceholderAPI is installed, JManhunt registers the internal `jmanhunt`
-expansion. Examples include `%jmanhunt_total_kills%` and
-`%jmanhunt_formatted_time_as_hunter%`. Available identifiers are documented in
-`placeholders.yml`; formatting and per-placeholder enable/disable settings are
-configured in `config.yml`. Uses the formatting configured in `config.yml`.
+The available command lists are:
+
+- `commands.player`: runs once for every participating player.
+- `commands.hunter-commands`: runs once for every hunter.
+- `commands.speedrunner-commands`: runs once for every speedrunner.
+- `commands.console`: runs once from the console.
+- `commands.console-cleanup`: runs when the match finishes.
+
+For example:
+
+```yaml
+custom-modifiers:
+  starter-kit:
+    enabled: false
+    commands:
+      player:
+        - "give <p> cooked_beef 8"
+      hunter-commands: []
+      speedrunner-commands: []
+      console: []
+      console-cleanup: []
+```
+
+## Configuration
+
+The plugin creates `config.yml` in its data folder. It includes match
+behavior, default game actions, command bundles, custom modifiers, compass
+refreshing, end-screen statistics, sounds, text formatting, and optional
+PlaceholderAPI settings. Use `/manhunt modifiers` to browse and change the
+boolean built-in actions and modifier switches in-game.
+
+The hunter compass cannot be dropped, stored in another container, moved by a
+hopper, or transferred through inventory interactions. It is restored after a
+hunter respawns.
+
+## Statistics and PlaceholderAPI
+
+Career statistics are enabled by default and stored in `stats.db` using SQLite.
+For statistics shared between servers, set `database.type` to `postgresql` and
+configure `database.postgresql` in `config.yml`.
+
+With PlaceholderAPI installed, JManhunt provides placeholders such as
+`%jmanhunt_total_kills%` and `%jmanhunt_formatted_time_as_hunter%`. The complete
+list and formatting options are documented in `placeholders.yml`.
 
 ## Build
 
@@ -76,11 +125,11 @@ On Windows:
 .\gradlew.bat build
 ```
 
-The plugin jar is written to `build/libs/`. GitHub Actions builds every push and
-pull request. Pushing a `v*` tag creates a GitHub release and publishes to
-Modrinth using the repository’s `MODRINTH_ID`, `MODRINTH_GAME_VERSIONS`, and
+The plugin jar is written to `build/libs/`. GitHub Actions builds every push
+and pull request. Pushing a `v*` tag creates a GitHub release and publishes to
+Modrinth using the repository's `MODRINTH_ID`, `MODRINTH_GAME_VERSIONS`, and
 `MODRINTH_TOKEN` settings.
 
 See `CONTRIBUTING.md` for contributor setup.
 
-© 2026 jruk8. Licensed under GNU GPLv3.
+Copyright 2026 jruk8. Licensed under GNU GPLv3.

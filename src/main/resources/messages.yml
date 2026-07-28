@@ -29,7 +29,7 @@ manhunt:
   not-active: "{prefix}<yellow>No match is active."
   end-success: "{prefix}<green>Manhunt ended. Hunters win!"
   reload-success: "{prefix}<green>Reloaded config.yml and messages.yml."
-  settings-usage: "{prefix}<yellow>Usage: /manhunt settings <setting> <true|false>"
+  modifiers-usage: "{prefix}<yellow>Usage: /manhunt modifiers <setting> <true|false>"
   setting-invalid: "{prefix}<red>Unknown setting."
   setting-invalid-value: "{prefix}<red>Setting values must be true or false."
   setting-updated: "{prefix}<green>Set <white>{setting}<green> to <white>{value}<green>."
