@@ -154,7 +154,11 @@ public final class GameManager {
 
     private void playSound(Player player, String key) {
         try {
-            String soundName = plugin.getConfig().getString("sounds." + key, "BLOCK_NOTE_BLOCK_PLING");
+            String soundName = plugin.getConfig().getString("sounds." + key + ".sound");
+            if (soundName == null) {
+                soundName = plugin.getConfig().getString("sounds." + key, "BLOCK_NOTE_BLOCK_PLING");
+            }
+            float pitch = (float) plugin.getConfig().getDouble("sounds." + key + ".pitch", 1.0);
             Sound sound;
             try {
                 sound = Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
@@ -166,7 +170,7 @@ public final class GameManager {
             if (sound == null) {
                 return;
             }
-            player.playSound(player.getLocation(), sound, 1, 1);
+            player.playSound(player.getLocation(), sound, 1, pitch);
         } catch (IllegalArgumentException ignored) { }
     }
 }

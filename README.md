@@ -40,7 +40,8 @@ Game-state console commands use `<winner>` in end commands. Player commands use
 `<p>` and run once per participating online player, for example
 `/give <p> cooked_steak 8`. Command sections are disabled by default; built-in
 default actions and named `custom-modifiers` can be enabled or disabled in-game
-with `/manhunt settings`.
+with `/manhunt settings`. Each configured sound has a `sound` and `pitch` value
+under its sound name in `config.yml`.
 
 ## Optional PlaceholderAPI Dependency
 

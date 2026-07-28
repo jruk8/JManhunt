@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.GameRule;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -95,8 +96,16 @@ public final class GameStateCommandManager {
                 Bukkit.getWorlds().forEach(world -> world.setGameRule(GameRule.LOCATOR_BAR, false));
             }
             if (plugin.getConfig().getBoolean(path + "set-daytime", false)) {
-                Bukkit.getWorlds().forEach(world -> world.setTime(0L));
+                Bukkit.getWorlds().forEach(this::setDaytime);
             }
+        }
+    }
+
+    private void setDaytime(World world) {
+        try {
+            world.setTime(0L);
+        } catch (IllegalArgumentException exception) {
+            plugin.getLogger().fine("Skipping daytime reset in world without a world clock: " + world.getName());
         }
     }
 
