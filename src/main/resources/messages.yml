@@ -19,6 +19,7 @@ manhunt:
   status-player: "{prefix}<gray>{player}"
   no-match: "{prefix}<yellow>No match is active."
   set-success: "{prefix}<green>Updated <white>{count}<green> player(s) to <white>{role}<green>."
+  set-success-unchanged: "{prefix}<green>Updated <white>{count}<green> player(s) to <white>{role}<green> (<white>{unchanged}<green> unchanged)."
   role-assigned: "{prefix}<green>You have been assigned the role <white>{role}<green>."
   set-skipped: "{prefix}<yellow>Skipped <white>{count}<yellow> player(s) without the required permission."
   start-success: "{prefix}<green>Manhunt has started."

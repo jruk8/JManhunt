@@ -83,9 +83,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         List<Entity> selected;
         try { selected = Bukkit.selectEntities(sender, args[1]); }
         catch (IllegalArgumentException exception) { return message(sender, "command.invalid"); }
-        int changed = 0, skipped = 0;
+        int changed = 0, unchanged = 0, skipped = 0;
         Set<java.util.UUID> assigned = new HashSet<>();
         for (Entity entity : selected) if (entity instanceof Player player) {
+            if (playerStates.role(player) == role) { unchanged++; continue; }
             if (role == Role.HUNTER && !player.hasPermission("jmanhunt.hunter")
                     || role == Role.SPEEDRUNNER && !player.hasPermission("jmanhunt.speedrunner")) { skipped++; continue; }
             playerStates.setRole(player, role); changed++;
@@ -98,7 +99,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             }
             if (game.isActive() && role == Role.HUNTER) compass.giveCompass(player);
         }
-        message(sender, "manhunt.set-success", Map.of("count", String.valueOf(changed), "role", role.name()));
+        message(sender, unchanged == 0 ? "manhunt.set-success" : "manhunt.set-success-unchanged",
+                Map.of("count", String.valueOf(changed), "role", role.name(), "unchanged", String.valueOf(unchanged)));
         if (skipped > 0) message(sender, "manhunt.set-skipped", Map.of("count", String.valueOf(skipped)));
         if (sender instanceof Player player && !assigned.contains(player.getUniqueId())) game.playNeutralSound(player);
         return true;
