@@ -157,7 +157,12 @@ public final class GameManager {
             String soundName = plugin.getConfig().getString("sounds." + key);
             if (soundName == null) soundName = plugin.getConfig().getString("sounds." + key + ".sound");
             if (soundName == null) soundName = "BLOCK_NOTE_BLOCK_PLING";
-            float pitch = (float) plugin.getConfig().getDouble("sounds." + key + ".pitch", 1.0);
+            double configuredPitch = plugin.getConfig().getDouble("sounds." + key + ".pitch", 1.0);
+            // An invalid pitch can make the server reject the sound packet. Keep a
+            // bad server config from disabling all sound playback.
+            float pitch = Double.isFinite(configuredPitch)
+                    ? (float) Math.max(0.0, Math.min(2.0, configuredPitch))
+                    : 1.0f;
             Sound sound = resolveSound(soundName);
             if (sound == null) {
                 return;
@@ -167,14 +172,18 @@ public final class GameManager {
     }
 
     private Sound resolveSound(String soundName) {
+        // Bukkit names are the most widely used config format. Resolve these
+        // first, since their enum name uses underscores while the registry key
+        // uses dotted names (for example BLOCK_NOTE_BLOCK_PLING).
+        try {
+            return Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ignored) {
+            // Continue with a namespaced Minecraft key.
+        }
         NamespacedKey soundKey = NamespacedKey.fromString(soundName.toLowerCase(Locale.ROOT));
         if (soundKey == null) soundKey = NamespacedKey.minecraft(soundName.toLowerCase(Locale.ROOT));
         Sound sound = Registry.SOUNDS.get(soundKey);
         if (sound != null) return sound;
-        try {
-            return Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
+        return null;
     }
 }
