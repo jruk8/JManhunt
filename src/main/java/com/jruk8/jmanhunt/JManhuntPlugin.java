@@ -8,7 +8,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int CONFIG_VERSION = 1;
+    private static final int CONFIG_VERSION = 2;
     private static final int MESSAGES_VERSION = 1;
     private MessageService messages;
     private PlayerStateStore playerStates;

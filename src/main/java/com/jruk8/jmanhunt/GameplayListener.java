@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -56,9 +57,15 @@ public final class GameplayListener implements Listener {
             playerStates.recordLastSeen(event.getPlayer(), event.getTo());
         }
     }
-    @EventHandler public void onDamage(EntityDamageByEntityEvent event) {
-        if (!(event.getEntity() instanceof Player victim) || !(event.getDamager() instanceof Player attacker)
-                || event.getFinalDamage() <= 0) return;
+    @EventHandler public void onDamage(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player victim) || event.getFinalDamage() <= 0) return;
+        if (game.isActive() && !game.isGameBegun()
+                && playerStates.role(victim) == Role.SPEEDRUNNER) {
+            event.setCancelled(true);
+            return;
+        }
+        if (!(event instanceof EntityDamageByEntityEvent byEntity)
+                || !(byEntity.getDamager() instanceof Player attacker)) return;
         if (game.isActive() && !game.isGameBegun() && playerStates.role(attacker) == Role.SPEEDRUNNER
                 && playerStates.role(victim) == Role.HUNTER) game.beginGame();
         if (!game.isActive() || !game.isGameBegun() || playerStates.role(attacker) == Role.NONE

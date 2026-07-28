@@ -59,9 +59,15 @@ public final class GameManager {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
                 playerStates.recordLastSeen(player, player.getLocation());
             }
+        }
+        // Apply the configured default state and custom start commands before
+        // giving role equipment. In particular, default clear-inventory must
+        // not remove the hunter compass.
+        stateCommands.runStart();
+        for (Player player : players) {
             if (role(player) == Role.HUNTER) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
-        stateCommands.runStart(); broadcast("manhunt.start-success"); sound("neutral-sound");
+        broadcast("manhunt.start-success"); sound("neutral-sound");
         if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage", true)) scheduleWaitingReminder();
         else beginGame();
         return true;

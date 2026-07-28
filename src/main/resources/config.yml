@@ -2,7 +2,7 @@
 # This version is used to add new defaults during upgrades without replacing
 # values already customized by the server owner.
 # Configuration schema version. Managed by JManhunt; do not set this to -1.
-config-version: 1
+config-version: 2
 
 # Message parser used for messages.yml: minimessage or legacy.
 text-format: minimessage
@@ -66,6 +66,10 @@ placeholders:
 settings:
   start-on-speedrunner-damage: true
   start-debuffs: false
+
+# When true, a compass survives a speedrunner's death as a normal dropped
+# item. It keeps its glow, but does not use Vanishing Curse.
+drop-compass-on-death: false
 
 # Built-in game-state actions and optional commands. All command sections are
 # disabled by default except default-commands.

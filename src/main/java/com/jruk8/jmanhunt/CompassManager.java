@@ -35,36 +35,41 @@ public final class CompassManager {
     }
 
     public void refreshAllCompasses(boolean active) {
-        if (active) Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.HUNTER).forEach(this::refreshCompass);
+        if (active) Bukkit.getOnlinePlayers().stream()
+                .filter(p -> role(p) != Role.NONE)
+                .filter(p -> isCompass(p.getInventory().getItem(8)))
+                .forEach(this::refreshCompass);
     }
 
     public void showHeldActionbars(boolean active) {
         if (!active) return;
-        Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.HUNTER)
+        Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
                 .filter(p -> isCompass(p.getInventory().getItemInMainHand()) || isCompass(p.getInventory().getItemInOffHand()))
                 .forEach(p -> p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
                         component("compass.no-target-actionbar"))));
     }
 
-    public void refreshCompass(Player hunter) {
-        ItemStack item = hunter.getInventory().getItem(8);
-        enforceCompassSlot(hunter);
-        item = hunter.getInventory().getItem(8);
-        if (!isCompass(item)) { giveCompass(hunter); item = hunter.getInventory().getItem(8); }
+    public void refreshCompass(Player holder) {
+        ItemStack item = holder.getInventory().getItem(8);
+        enforceCompassSlot(holder);
+        item = holder.getInventory().getItem(8);
+        if (!isCompass(item)) return;
         Player target = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.SPEEDRUNNER
                         && playerStates.isActiveSpeedrunner(p.getUniqueId()) && p.getGameMode() != GameMode.SPECTATOR
-                        && p.getWorld().equals(hunter.getWorld()))
-                .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(hunter.getLocation()))).orElse(null);
+                        && !p.getUniqueId().equals(holder.getUniqueId())
+                        && p.getWorld().equals(holder.getWorld()))
+                .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(holder.getLocation()))).orElse(null);
         Location location = target == null ? playerStates.sightings().entrySet().stream()
-                .filter(entry -> playerStates.isActiveSpeedrunner(entry.getKey())).map(Map.Entry::getValue)
-                .map(worlds -> worlds.get(hunter.getWorld().getUID())).filter(l -> l != null && l.getWorld() != null)
-                .min(Comparator.comparingDouble(l -> l.distanceSquared(hunter.getLocation()))).orElse(null) : target.getLocation();
+                .filter(entry -> playerStates.isActiveSpeedrunner(entry.getKey())
+                        && !entry.getKey().equals(holder.getUniqueId())).map(Map.Entry::getValue)
+                .map(worlds -> worlds.get(holder.getWorld().getUID())).filter(l -> l != null && l.getWorld() != null)
+                .min(Comparator.comparingDouble(l -> l.distanceSquared(holder.getLocation()))).orElse(null) : target.getLocation();
         if (location != null && item != null && item.getItemMeta() instanceof CompassMeta meta) {
             meta.setLodestone(location); meta.setLodestoneTracked(false); item.setItemMeta(meta);
         }
-        compassActionbars.put(hunter.getUniqueId(), target == null ? component("compass.no-target-actionbar")
+        compassActionbars.put(holder.getUniqueId(), target == null ? component("compass.no-target-actionbar")
                 : component("compass.compass-actionbar", Map.of("player", target.getName(),
-                "distance", String.valueOf(Math.round(hunter.getLocation().distance(target.getLocation()))))));
+                "distance", String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
     }
 
     public void giveCompass(Player player) {
@@ -73,7 +78,11 @@ public final class CompassManager {
         CompassMeta meta = (CompassMeta) item.getItemMeta();
         meta.displayName(messages.nonItalic(component("compass.compass-name")));
         meta.lore(messages.strings("compass.compass-lore").stream().map(messages::parse).map(messages::nonItalic).toList());
-        meta.addEnchant(Enchantment.VANISHING_CURSE, 1, true);
+        if (plugin.getConfig().getBoolean("drop-compass-on-death", false)) {
+            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+        } else {
+            meta.addEnchant(Enchantment.VANISHING_CURSE, 1, true);
+        }
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
         meta.getPersistentDataContainer().set(compassKey, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta); player.getInventory().setItem(8, item);
