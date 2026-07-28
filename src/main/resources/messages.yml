@@ -43,13 +43,13 @@ game:
     SPEEDRUNNER_KILLS: "Speedrunner Kills"
     PROGRESSION: "Progression"
   progression-names:
-    got_wood: "<white>Got Wood"
-    got_iron: "<white>Got Iron"
-    entered_nether: "<white>Entered the Nether"
-    found_bastion: "<white>Found Bastion"
-    found_fortress: "<white>Found Fortress"
-    entered_stronghold: "<white>Entered Stronghold"
-    entered_end: "<white>Entered the End"
+    got_wood: "<#874f2a>Got Wood"
+    got_iron: "<#c4c4c4>Got Iron"
+    entered_nether: "<#c237de>Entered the Nether"
+    found_bastion: "<#de802f>Found Bastion"
+    found_fortress: "<#912d4b>Found Fortress"
+    entered_stronghold: "<#88a698>Entered Stronghold"
+    entered_end: "<#5fe888>Entered the End"
 
 compass:
   compass-name: "<gold>Hunter's Compass"
