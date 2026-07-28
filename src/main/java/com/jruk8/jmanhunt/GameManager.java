@@ -3,9 +3,9 @@ package com.jruk8.jmanhunt;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.Sound;
-import org.bukkit.Registry;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -163,27 +163,27 @@ public final class GameManager {
             float pitch = Double.isFinite(configuredPitch)
                     ? (float) Math.max(0.0, Math.min(2.0, configuredPitch))
                     : 1.0f;
-            Sound sound = resolveSound(soundName);
-            if (sound == null) {
+            String soundKey = resolveSound(soundName);
+            if (soundKey == null) {
                 return;
             }
-            player.playSound(player.getLocation(), sound, 1, pitch);
-        } catch (IllegalArgumentException ignored) { }
+            player.playSound(player.getLocation(), soundKey, 1, pitch);
+        } catch (IllegalArgumentException exception) {
+            plugin.getLogger().warning("Could not play configured sound '" + key + "': " + exception.getMessage());
+        }
     }
 
-    private Sound resolveSound(String soundName) {
+    private String resolveSound(String soundName) {
         // Bukkit names are the most widely used config format. Resolve these
         // first, since their enum name uses underscores while the registry key
         // uses dotted names (for example BLOCK_NOTE_BLOCK_PLING).
         try {
-            return Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
+            return Sound.valueOf(soundName.toUpperCase(Locale.ROOT)).getKey().asString();
         } catch (IllegalArgumentException ignored) {
             // Continue with a namespaced Minecraft key.
         }
         NamespacedKey soundKey = NamespacedKey.fromString(soundName.toLowerCase(Locale.ROOT));
         if (soundKey == null) soundKey = NamespacedKey.minecraft(soundName.toLowerCase(Locale.ROOT));
-        Sound sound = Registry.SOUNDS.get(soundKey);
-        if (sound != null) return sound;
-        return null;
+        return soundKey == null ? null : soundKey.asString();
     }
 }
