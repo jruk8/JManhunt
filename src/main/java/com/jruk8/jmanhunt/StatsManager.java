@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -43,7 +44,7 @@ public final class StatsManager {
             for (int index = 0; index < ranked.size(); index++) {
                 Stats stat = ranked.get(index);
                 broadcast("game.stat-entry", Map.of("rank", String.valueOf(index + 1),
-                        "player", stat.player, "value", stat.displayValue(statistic)));
+                        "player", stat.player, "value", stat.displayValue(statistic, messages)));
             }
         }
     }
@@ -53,23 +54,29 @@ public final class StatsManager {
     }
 
     private void updateProgression() {
-        Map<String, String> milestones = Map.of(
-                "got_wood", "story/mine_wood",
-                "got_iron", "story/smelt_iron",
-                "entered_nether", "story/enter_the_nether",
-                "found_bastion", "nether/find_bastion",
-                "found_fortress", "nether/find_fortress",
-                "entered_stronghold", "story/follow_ender_eye",
-                "entered_end", "story/enter_the_end");
+        Map<String, String> milestones = new LinkedHashMap<>();
+        milestones.put("got_wood", "story/mine_wood");
+        milestones.put("got_iron", "story/smelt_iron");
+        milestones.put("entered_nether", "story/enter_the_nether");
+        milestones.put("found_bastion", "nether/find_bastion");
+        milestones.put("found_fortress", "nether/find_fortress");
+        milestones.put("entered_stronghold", "story/follow_ender_eye");
+        milestones.put("entered_end", "story/enter_the_end");
         for (Stats stat : stats.values()) {
             if (stat.role != Role.SPEEDRUNNER) continue;
             Player player = Bukkit.getPlayer(stat.uuid);
             if (player == null) continue;
-            stat.progression = (int) milestones.values().stream()
-                    .map(key -> Bukkit.getAdvancement(new NamespacedKey("minecraft", key)))
-                    .filter(java.util.Objects::nonNull)
-                    .filter(advancement -> player.getAdvancementProgress(advancement).isDone())
-                    .count();
+            stat.progression = 0;
+            stat.progressionKey = null;
+            int rank = 0;
+            for (Map.Entry<String, String> milestone : milestones.entrySet()) {
+                rank++;
+                var advancement = Bukkit.getAdvancement(new NamespacedKey("minecraft", milestone.getValue()));
+                if (advancement != null && player.getAdvancementProgress(advancement).isDone()) {
+                    stat.progression = rank;
+                    stat.progressionKey = milestone.getKey();
+                }
+            }
         }
     }
 
@@ -81,6 +88,7 @@ public final class StatsManager {
         public int kills;
         public int finalKills;
         public int progression;
+        public String progressionKey;
 
         public double value(String statistic) {
             return switch (statistic.toUpperCase(Locale.ROOT)) {
@@ -101,9 +109,11 @@ public final class StatsManager {
             };
         }
 
-        public String displayValue(String statistic) {
+        public String displayValue(String statistic, MessageService messages) {
             if (statistic.equalsIgnoreCase("DAMAGE_DEALT"))
                 return String.format(Locale.ROOT, "%.1f Hearts", value(statistic));
+            if (statistic.equalsIgnoreCase("PROGRESSION"))
+                return messages.string("game.progression-names." + progressionKey, progressionKey);
             return String.valueOf((int) value(statistic));
         }
     }
