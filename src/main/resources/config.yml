@@ -68,7 +68,9 @@ settings:
   start-debuffs: false
 
 # When true, a compass survives a speedrunner's death as a normal dropped
-# item. It keeps its glow, but does not use Vanishing Curse.
+# item.
+# If a speedrunner gets ahold of the compass, they may
+# track the hunters.
 drop-compass-on-death: false
 
 # Built-in game-state actions and optional commands. All command sections are
