@@ -216,14 +216,15 @@ custom-modifiers:
         # Ran by the console when the match ends.
         - "gamerule advance_time true"
 
-# Sound names may be Bukkit names or namespaced Minecraft keys.
+# Sound names are namespaced Minecraft keys.
+# eg. block.note_block.pling
 sounds:
   neutral-sound:
-    sound: BLOCK_NOTE_BLOCK_PLING
+    sound: block.note_block.pling
     pitch: 1.0
   win-sound:
-    sound: ENTITY_ENDER_DRAGON_DEATH
+    sound: entity.ender_dragon.death
     pitch: 1.0
   fail-sound:
-    sound: ENTITY_WITHER_SPAWN
+    sound: entity.wither.spawn
     pitch: 1.0

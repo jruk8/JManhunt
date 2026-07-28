@@ -5,7 +5,6 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -154,19 +153,21 @@ public final class GameManager {
 
     private void playSound(Player player, String key) {
         try {
-            String soundName = plugin.getConfig().getString("sounds." + key);
-            if (soundName == null) soundName = plugin.getConfig().getString("sounds." + key + ".sound");
-            if (soundName == null) soundName = "BLOCK_NOTE_BLOCK_PLING";
-            double configuredPitch = plugin.getConfig().getDouble("sounds." + key + ".pitch", 1.0);
-            // An invalid pitch can make the server reject the sound packet. Keep a
-            // bad server config from disabling all sound playback.
+            String soundName;
+            String base = "sounds." + key;
+            if (plugin.getConfig().isString(base)) {
+                soundName = plugin.getConfig().getString(base);
+            } else {
+                soundName = plugin.getConfig().getString(base + ".sound");
+            }
+            if (soundName == null) soundName = "block.note_block.pling";
+
+            double configuredPitch = plugin.getConfig().getDouble(base + ".pitch", 1.0);
             float pitch = Double.isFinite(configuredPitch)
-                    ? (float) Math.max(0.0, Math.min(2.0, configuredPitch))
+                    ? (float) Math.clamp(configuredPitch, 0.0, 2.0)
                     : 1.0f;
             String soundKey = resolveSound(soundName);
-            if (soundKey == null) {
-                return;
-            }
+            if (soundKey == null) return;
             player.playSound(player.getLocation(), soundKey, 1, pitch);
         } catch (IllegalArgumentException exception) {
             plugin.getLogger().warning("Could not play configured sound '" + key + "': " + exception.getMessage());
@@ -174,16 +175,15 @@ public final class GameManager {
     }
 
     private String resolveSound(String soundName) {
-        // Bukkit names are the most widely used config format. Resolve these
-        // first, since their enum name uses underscores while the registry key
-        // uses dotted names (for example BLOCK_NOTE_BLOCK_PLING).
-        try {
-            return Sound.valueOf(soundName.toUpperCase(Locale.ROOT)).getKey().asString();
-        } catch (IllegalArgumentException ignored) {
-            // Continue with a namespaced Minecraft key.
-        }
+        // Only namespaced Minecraft keys are supported (for example
+        // "block.note_block.pling" or "minecraft:block.note_block.pling").
+        // Legacy Bukkit-style enum names (BLOCK_NOTE_BLOCK_PLING) are not
+        // resolved: Sound.valueOf()/OldEnum are deprecated for removal, and
+        // Registry.match() (the closest replacement) is likewise deprecated
+        // as unreliable, so there is no supported way left to translate them.
         NamespacedKey soundKey = NamespacedKey.fromString(soundName.toLowerCase(Locale.ROOT));
         if (soundKey == null) soundKey = NamespacedKey.minecraft(soundName.toLowerCase(Locale.ROOT));
-        return soundKey == null ? null : soundKey.asString();
+        if (soundKey == null || Registry.SOUNDS.get(soundKey) == null) return null;
+        return soundKey.asString();
     }
 }
