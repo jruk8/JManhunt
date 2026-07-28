@@ -46,9 +46,16 @@ public final class GameManager {
         if (players.stream().noneMatch(p -> role(p) == Role.HUNTER)
                 || players.stream().noneMatch(p -> role(p) == Role.SPEEDRUNNER)) return false;
         active = true; ending = false; gameBegun = false; stats.clear(); playerStates.clearMatch();
-        Bukkit.getOnlinePlayers().forEach(player -> player.setGameMode(GameMode.SURVIVAL));
+        if (plugin.getConfig().getBoolean("run-default-commands", true)) {
+            clearAdvancements();
+            Bukkit.getOnlinePlayers().forEach(player -> player.setGameMode(
+                    role(player) == Role.NONE ? GameMode.SPECTATOR : GameMode.SURVIVAL));
+        }
         for (Player player : players) {
-            stats.getOrCreate(player.getUniqueId()).player = player.getName();
+            StatsManager.Stats playerStats = stats.getOrCreate(player.getUniqueId());
+            playerStats.player = player.getName();
+            playerStats.uuid = player.getUniqueId();
+            playerStats.role = role(player);
             if (role(player) == Role.SPEEDRUNNER) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
                 playerStates.recordLastSeen(player, player.getLocation());
@@ -82,6 +89,7 @@ public final class GameManager {
                 player.getInventory().clear();
                 if (plugin.getConfig().getBoolean("run-default-commands", true)) player.setGameMode(GameMode.SURVIVAL);
             }
+            if (plugin.getConfig().getBoolean("run-default-commands", true)) clearAdvancements();
             active = false; ending = false; gameBegun = false; playerStates.clearMatch();
         }, delay);
     }
@@ -138,14 +146,33 @@ public final class GameManager {
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.replace("{winner}", winner));
         }
     }
+
+    private void clearAdvancements() {
+        Bukkit.getOnlinePlayers().forEach(player -> Bukkit.advancementIterator().forEachRemaining(advancement ->
+                player.getAdvancementProgress(advancement).getAwardedCriteria().forEach(criteria ->
+                        player.getAdvancementProgress(advancement).revokeCriteria(criteria))));
+    }
+    public void playNeutralSound(Player player) { playSound(player, "neutral-sound"); }
+
     private void sound(String key) {
+        Bukkit.getOnlinePlayers().forEach(player -> playSound(player, key));
+    }
+
+    private void playSound(Player player, String key) {
         try {
             String soundName = plugin.getConfig().getString("sounds." + key, "BLOCK_NOTE_BLOCK_PLING");
-            Sound sound = Registry.SOUNDS.get(NamespacedKey.minecraft(soundName.toLowerCase(Locale.ROOT)));
+            Sound sound;
+            try {
+                sound = Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException ignored) {
+                NamespacedKey soundKey = NamespacedKey.fromString(soundName.toLowerCase(Locale.ROOT));
+                if (soundKey == null) soundKey = NamespacedKey.minecraft(soundName.toLowerCase(Locale.ROOT));
+                sound = Registry.SOUNDS.get(soundKey);
+            }
             if (sound == null) {
                 return;
             }
-            Bukkit.getOnlinePlayers().forEach(p -> p.playSound(p.getLocation(), sound, 1, 1));
+            player.playSound(player.getLocation(), sound, 1, 1);
         } catch (IllegalArgumentException ignored) { }
     }
 }

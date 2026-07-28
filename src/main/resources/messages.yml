@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 2
+messages-version: 3
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
@@ -19,6 +19,7 @@ manhunt:
   status-player: "{prefix}<gray>{player}"
   no-match: "{prefix}<yellow>No match is active."
   set-success: "{prefix}<green>Updated <white>{count}<green> player(s) to <white>{role}<green>."
+  role-assigned: "{prefix}<green>You have been assigned the role <white>{role}<green>."
   set-skipped: "{prefix}<yellow>Skipped <white>{count}<yellow> player(s) without the required permission."
   start-success: "{prefix}<green>Manhunt has started."
   waiting-for-damage: "{prefix}<yellow>A speedrunner must hit a hunter before the game begins."
@@ -38,14 +39,12 @@ game:
   stat-entry: "{prefix}<white>#{rank}: {player}: {value}"
   stat-names:
     DAMAGE_DEALT: "Damage Dealt"
-    FINAL_KILLS: "Final Kills"
-    KILLS: "Kills"
+    HUNTER_FINAL_KILLS: "Hunter Final Kills"
+    SPEEDRUNNER_KILLS: "Speedrunner Kills"
     PROGRESSION: "Progression"
   progression-names:
     got_wood: "<white>Got Wood"
     got_iron: "<white>Got Iron"
-    found_ruined_portal: "<white>Found Ruined Portal"
-    entered_village: "<white>Entered Village"
     entered_nether: "<white>Entered the Nether"
     found_bastion: "<white>Found Bastion"
     found_fortress: "<white>Found Fortress"

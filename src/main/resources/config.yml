@@ -55,9 +55,9 @@ start-debuffs:
       amplifier: 0
 
 # End-screen sections, in display order. Available values are DAMAGE_DEALT,
-# KILLS, FINAL_KILLS, and PROGRESSION. If no player got a statistic, that
-# statistic is omitted in-game.
-end-statistics: [DAMAGE_DEALT, FINAL_KILLS, KILLS, PROGRESSION]
+# HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based
+# on reliable vanilla advancements and is calculated only at match end.
+end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
 
 # Compass tracking settings. The held actionbar stays visible between interval
 # refreshes and continues showing its cached value.

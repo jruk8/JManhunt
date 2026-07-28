@@ -15,6 +15,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final JManhuntPlugin plugin;
@@ -49,6 +51,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt setplayer <selector> <hunter|speedrunner|none>", "assign roles"},
                 {"/manhunt start", "start a match"}, {"/manhunt end", "end a match"}, {"/manhunt reload", "reload files"}};
         for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
+        neutralSound(sender);
         return true;
     }
 
@@ -56,7 +59,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         message(sender, "manhunt.status-header", Map.of("status", game.isActive() ? "ACTIVE" : "INACTIVE"));
         sendRoleSection(sender, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
         sendRoleSection(sender, Role.HUNTER, "manhunt.hunters-header");
-        sendRoleSection(sender, Role.NONE, "manhunt.none-header"); return true;
+        sendRoleSection(sender, Role.NONE, "manhunt.none-header");
+        neutralSound(sender);
+        return true;
     }
 
     private void sendRoleSection(CommandSender sender, Role role, String header) {
@@ -76,10 +81,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         try { selected = Bukkit.selectEntities(sender, args[1]); }
         catch (IllegalArgumentException exception) { return message(sender, "command.invalid"); }
         int changed = 0, skipped = 0;
+        Set<java.util.UUID> assigned = new HashSet<>();
         for (Entity entity : selected) if (entity instanceof Player player) {
             if (role == Role.HUNTER && !player.hasPermission("jmanhunt.hunter")
                     || role == Role.SPEEDRUNNER && !player.hasPermission("jmanhunt.speedrunner")) { skipped++; continue; }
             playerStates.setRole(player, role); changed++;
+            assigned.add(player.getUniqueId());
+            message(player, "manhunt.role-assigned", Map.of("role", role.name()));
+            game.playNeutralSound(player);
             if (game.isActive() && role == Role.NONE) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), false); player.setGameMode(GameMode.SPECTATOR);
                 compass.removeCompasses(player);
@@ -88,6 +97,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         message(sender, "manhunt.set-success", Map.of("count", String.valueOf(changed), "role", role.name()));
         if (skipped > 0) message(sender, "manhunt.set-skipped", Map.of("count", String.valueOf(skipped)));
+        if (sender instanceof Player player && !assigned.contains(player.getUniqueId())) game.playNeutralSound(player);
         return true;
     }
 
@@ -104,11 +114,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     private boolean reload(CommandSender sender) {
         YamlFileUpdater.update(plugin, "config.yml", "config-version", 3);
-        YamlFileUpdater.update(plugin, "messages.yml", "messages-version", 2);
+        YamlFileUpdater.update(plugin, "messages.yml", "messages-version", 3);
         plugin.reloadConfig();
         messages.reload(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
                 new File(plugin.getDataFolder(), "messages.yml")), plugin.getConfig().getString("text-format", "minimessage"));
-        return message(sender, "manhunt.reload-success");
+        boolean result = message(sender, "manhunt.reload-success");
+        neutralSound(sender);
+        return result;
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
@@ -124,8 +136,12 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     private List<String> partial(String value, List<String> options) {
-        return options.stream().filter(option -> option.startsWith(value.toLowerCase(Locale.ROOT))).toList();
+        String normalized = value.toLowerCase(Locale.ROOT);
+        return options.stream().filter(option -> option.toLowerCase(Locale.ROOT).startsWith(normalized)).toList();
     }
     private boolean message(CommandSender sender, String key) { sender.sendMessage(messages.component(key)); return true; }
     private void message(CommandSender sender, String key, Map<String, String> values) { sender.sendMessage(messages.component(key, values)); }
+    private void neutralSound(CommandSender sender) {
+        if (sender instanceof Player player) game.playNeutralSound(player);
+    }
 }
