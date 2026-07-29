@@ -1,8 +1,6 @@
 # JManhunt configuration. Reload with /manhunt reload.
-# This version is used to add new defaults during upgrades without replacing
-# values already customized by the server owner.
-# Configuration schema version. Managed by JManhunt; do not set this to -1.
-config-version: 2
+# Used for config updates, don't change unless you know what you're doing.
+config-version: 5
 
 # Message parser used for messages.yml: minimessage or legacy.
 text-format: minimessage
@@ -61,17 +59,6 @@ placeholders:
     enabled: true
     format: "{value}"
 
-# Match behavior settings. Boolean settings can also be changed in-game with
-# /manhunt modifiers <setting> true|false.
-settings:
-  start-on-speedrunner-damage: true
-  start-debuffs: false
-
-# When true, a compass survives a speedrunner's death as a normal dropped
-# item.
-# If a speedrunner gets ahold of the compass, they may
-# track the hunters.
-drop-compass-on-death: false
 
 # Built-in game-state actions and optional commands. All command sections are
 # disabled by default except default-commands.
@@ -79,14 +66,14 @@ gamestate-commands:
   default-commands:
     enabled: true
     start:
-      gamemode: true
-      clear-inventory: true
+      auto-set-gamemode: true
+      reset-players-stats: true
       remove-advancements: true
       disable-locator-bar: true
       set-daytime: true
     end:
-      gamemode: true
-      clear-inventory: true
+      auto-set-gamemode: true
+      reset-players-stats: true
       remove-advancements: true
       disable-locator-bar: false
       set-daytime: false
@@ -118,20 +105,6 @@ game-end-delay: 10.0
 # Set to -1 to disable the reminders entirely while still waiting for damage.
 start-reminder-interval: 10.0
 
-# Optional effects applied to every hunter when the game begins. Effect keys
-# are Bukkit PotionEffectType names. Duration is in seconds and amplifier is
-# zero-based: amplifier 0 is level I, amplifier 1 is level II. Set seconds to
-# -1 to disable that effect entry. An amplifier of -1 is treated as amplifier
-# 0 (level I), because potion amplifiers cannot be negative.
-start-debuffs:
-  effects:
-    SLOWNESS:
-      seconds: 10.0
-      amplifier: 1
-    WEAKNESS:
-      seconds: 10.0
-      amplifier: 0
-
 # End-screen sections, in display order. Available values are DAMAGE_DEALT,
 # HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based
 # on reliable vanilla advancements and is calculated only at match end.
@@ -162,36 +135,23 @@ custom-modifiers:
       player:
         # Runs for every participating player (only hunters and speedrunners, not including NONE)
         - "give <p> minecraft:cooked_beef 8"
-      hunter-commands: []
-      speedrunner-commands: []
-      console: []
-      console-cleanup: []
   speedrunners-speed:
     enabled: false
     commands:
-      player: []
-      hunter-commands: []
       speedrunner-commands:
         # Runs only once for each Speedrunner, with <p> replaced by their name.
         # Note the single quotes used to escape the double quotes inside the JSON.
         - 'give <p> potion[potion_contents={potion:"minecraft:strong_swiftness"}] 1'
-      console: []
-      console-cleanup: []
   hunters-wooden-sword:
     enabled: false
     commands:
-      player: []
       hunter-commands:
         # Runs only once for each Hunter, with <p> replaced by their name.
         - "give <p> wooden_sword"
-      speedrunner-commands: []
-      console: []
-      console-cleanup: []
   # Speedrunners get a health advantage while hunters' health gets a debuff.
   speedrunner-health-advantage:
     enabled: false
     commands:
-      player: []
       hunter-commands:
         # Runs only once for each Hunter, with <p> replaced by their name.
         # Sets health to 8 full hearts for all hunters.
@@ -202,18 +162,13 @@ custom-modifiers:
         # Sets health to 15 full hearts for all speedrunners.
         - "attribute <p> minecraft:max_health base set 30"
         - "effect give <p> minecraft:instant_health 1 50 true"
-      console: []
-      console-cleanup:
-        # Ran by the console when the match ends.
-        # Resets health to 10 full hearts for all players.
-        - "attribute <p> minecraft:max_health base set 20"
+      player-cleanup:
+        # Ran for every participating player (only hunters and speedrunners, not including NONE)
+        - "attribute @a minecraft:max_health base set 20"
   # Sets to night permanently for the duration of the match.
   perma-night:
     enabled: false
     commands:
-      player: []
-      hunter-commands: []
-      speedrunner-commands: []
       console:
         # Ran by the console when the match starts.
         - "gamerule advance_time false"
@@ -221,6 +176,46 @@ custom-modifiers:
       console-cleanup:
         # Ran by the console when the match ends.
         - "gamerule advance_time true"
+
+# Features for modifying the game.
+# These can be toggled in-game with the 'modifiers' subcommand.
+extras:
+  # Start the game only after a speedrunner hits a hunter.
+  # Default: true
+  start-on-speedrunner-damage:
+    enabled: true
+
+  # Optional effects applied to every hunter when the game begins. Effect keys
+  # are Bukkit PotionEffectType names. Duration is in seconds and amplifier is
+  # zero-based: amplifier 0 is level I, amplifier 1 is level II. Set seconds to
+  # -1 to disable that effect entry.
+  # Default: false
+  start-debuffs:
+    enabled: false
+    effects:
+      SLOWNESS:
+        seconds: 10.0
+        amplifier: 1
+      WEAKNESS:
+        seconds: 10.0
+        amplifier: 0
+
+  # When true, a compass survives a speedrunner's death as a normal dropped
+  # item.
+  # If a speedrunner gets ahold of the compass, they may track the hunters.
+  # Default: false
+  drop-compass-on-death: false
+
+  # Custom loot tables for things like piglin bartering.
+  # Tables may be found in extras/loot-tables.
+  # Loot tables are JSON files with the same format as vanilla Minecraft loot tables
+  # but parsed with some limitations.
+  loot-tables:
+    # Toggles between custom piglin barter odds.
+    # By default the custom odds have boosted up ender pearl and obsidian rates.
+    # This may help in balancing the game.
+    # Default: false
+    custom-piglin-barter: false
 
 # Sound names are namespaced Minecraft keys.
 # eg. block.note_block.pling

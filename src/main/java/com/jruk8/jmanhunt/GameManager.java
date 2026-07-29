@@ -68,7 +68,7 @@ public final class GameManager {
             if (role(player) == Role.HUNTER) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
         broadcast("manhunt.start-success"); sound("neutral-sound");
-        if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage", true)) scheduleWaitingReminder();
+        if (getSetting("extras.start-on-speedrunner-damage")) scheduleWaitingReminder();
         else beginGame();
         return true;
     }
@@ -91,7 +91,7 @@ public final class GameManager {
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             stateCommands.runEnd(winnerName);
-            stateCommands.runCleanup(winnerName);
+            stateCommands.runConsoleCleanup(winnerName);
             active = false; ending = false; gameBegun = false; playerStates.clearMatch();
         }, delay);
     }
@@ -124,8 +124,8 @@ public final class GameManager {
     }
 
     private void applyStartDebuffs() {
-        if (!plugin.getConfig().getBoolean("settings.start-debuffs", false)) return;
-        var effects = plugin.getConfig().getConfigurationSection("start-debuffs.effects");
+        if (!plugin.getConfig().getBoolean("extras.start-debuffs.enabled", false)) return;
+        var effects = plugin.getConfig().getConfigurationSection("extras.start-debuffs.effects");
         if (effects == null) return;
         for (Player hunter : Bukkit.getOnlinePlayers()) {
             if (role(hunter) != Role.HUNTER) continue;

@@ -9,7 +9,6 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -143,11 +142,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean reload(CommandSender sender) {
-        YamlFileUpdater.update(plugin, "config.yml", "config-version", 1);
-        YamlFileUpdater.update(plugin, "messages.yml", "messages-version", 1);
-        plugin.reloadConfig();
-        messages.reload(org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
-                new File(plugin.getDataFolder(), "messages.yml")), plugin.getConfig().getString("text-format", "minimessage"));
+        plugin.Reload();
         boolean result = message(sender, "manhunt.reload-success");
         neutralSound(sender);
         return result;

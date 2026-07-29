@@ -17,7 +17,7 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
 
     @Override public String getIdentifier() { return "jmanhunt"; }
     @Override public String getAuthor() { return "jruk8"; }
-    @Override public String getVersion() { return plugin.getDescription().getVersion(); }
+    @Override public String getVersion() { return plugin.getPluginMeta().getVersion(); }
     @Override public boolean persist() { return true; }
     @Override public boolean canRegister() { return true; }
 
