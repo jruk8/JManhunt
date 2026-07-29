@@ -2,8 +2,9 @@ package com.jruk8.jmanhunt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.GameRule;
+import org.bukkit.GameRules;
 import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -30,10 +31,19 @@ public final class GameStateCommandManager {
         runDefault("end");
     }
 
-    public void runCleanup(String winner) {
+    public void runConsoleCleanup(String winner) {
         for (String name : modifierNames()) {
             if (!modifierEnabled(name)) continue;
             runCommands("custom-modifiers." + name + ".commands.console-cleanup", null, winner);
+        }
+    }
+
+    public void runPlayerCleanup(String winner) {
+        for (String name : modifierNames()) {
+            if (!modifierEnabled(name)) continue;
+            for (Player player : participatingPlayers()) {
+                runCommands("custom-modifiers." + name + ".commands.player-cleanup", player.getName(), winner);
+            }
         }
     }
 
@@ -50,6 +60,7 @@ public final class GameStateCommandManager {
             }
         }
         for (String name : modifierNames()) names.add("custom-modifiers." + name);
+        names.addAll(extraModifierNames());
         return names;
     }
 
@@ -75,25 +86,37 @@ public final class GameStateCommandManager {
             String path = setting.replaceFirst("^custom-modifiers\\.", "custom-modifiers.") + ".enabled";
             return plugin.getConfig().contains(path) ? path : null;
         }
+        if (setting.startsWith("extras.")) {
+            String enabledPath = setting + ".enabled";
+            if (plugin.getConfig().contains(enabledPath)) return enabledPath;
+            if (plugin.getConfig().contains(setting)) return setting;
+            return null;
+        }
         return null;
     }
 
     private void runDefault(String phase) {
         if (!plugin.getConfig().getBoolean("gamestate-commands.default-commands.enabled", true)) return;
         String path = "gamestate-commands.default-commands." + phase + ".";
-        if (plugin.getConfig().getBoolean(path + "clear-inventory", false)) {
-            (phase.equals("end") ? Bukkit.getOnlinePlayers() : participatingPlayers())
-                    .forEach(player -> player.getInventory().clear());
+        if (plugin.getConfig().getBoolean(path + "reset-players-stats", false)) {
+            participatingPlayers().forEach(player -> {
+                player.getInventory().clear();
+                player.setLevel(0);
+                player.setExp(0.0f);
+                player.clearActivePotionEffects();
+                player.setHealth(20.0);
+                player.setFoodLevel(20);
+                clearAdvancements();
+            });
         }
-        if (plugin.getConfig().getBoolean(path + "gamemode", false)) {
+        if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
             Bukkit.getOnlinePlayers().forEach(player -> player.setGameMode(
                     phase.equals("start") && playerStates.role(player) == Role.NONE
                             ? GameMode.SPECTATOR : GameMode.SURVIVAL));
         }
-        if (plugin.getConfig().getBoolean(path + "remove-advancements", false)) clearAdvancements();
         if (phase.equals("start")) {
             if (plugin.getConfig().getBoolean(path + "disable-locator-bar", false)) {
-                Bukkit.getWorlds().forEach(world -> world.setGameRule(GameRule.LOCATOR_BAR, false));
+                Bukkit.getWorlds().forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, false));
             }
             if (plugin.getConfig().getBoolean(path + "set-daytime", false)) {
                 Bukkit.getWorlds().forEach(this::setDaytime);
@@ -137,10 +160,15 @@ public final class GameStateCommandManager {
     private void runCommands(String path, String playerName, String winner) {
         for (String command : plugin.getConfig().getStringList(path)) {
             if (command.isBlank()) continue;
-            String parsed = command.replace("<winner>", winner == null ? "" : winner);
-            if (playerName != null) parsed = parsed.replace("<p>", playerName);
-            if (parsed.startsWith("/")) parsed = parsed.substring(1);
-            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+            try {
+                String parsed = command.replace("<winner>", winner == null ? "" : winner);
+                if (playerName != null) parsed = parsed.replace("<p>", playerName);
+                if (parsed.startsWith("/")) parsed = parsed.substring(1);
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to run command '%s'. Skipping..".formatted(command));
+                e.printStackTrace();
+            }
         }
     }
 
@@ -152,6 +180,27 @@ public final class GameStateCommandManager {
     private Set<String> modifierNames() {
         var section = plugin.getConfig().getConfigurationSection("custom-modifiers");
         return section == null ? Set.of() : section.getKeys(false);
+    }
+
+    private Set<String> extraModifierNames() {
+        Set<String> names = new TreeSet<>();
+        collectExtraModifierNames(plugin.getConfig().getConfigurationSection("extras"), "", names);
+        return names;
+    }
+
+    private void collectExtraModifierNames(ConfigurationSection section, String prefix, Set<String> names) {
+        if (section == null) return;
+        for (String key : section.getKeys(false)) {
+            String path = prefix.isEmpty() ? key : prefix + "." + key;
+            ConfigurationSection child = section.getConfigurationSection(key);
+            if (child != null && child.contains("enabled")) {
+                names.add("extras." + path);
+            } else if (child != null) {
+                collectExtraModifierNames(child, path, names);
+            } else if (section.isBoolean(key)) {
+                names.add("extras." + path);
+            }
+        }
     }
 
     private boolean modifierEnabled(String name) {
