@@ -34,28 +34,28 @@ jobs:
         id: changelog
         shell: bash
         run: |
-            set -euo pipefail
-            
-            current_tag="${GITHUB_REF_NAME}"
-            previous_tag="$(git tag --sort=-version:refname --list 'v*' | grep -Fxv "$current_tag" | grep -v -i 'SNAPSHOT' | head -n 1 || true)"
-            
-            if [ -n "$previous_tag" ]; then
-            range="${previous_tag}..HEAD"
-            else
-            range="HEAD"
-            fi
-            
-            notes="$(git log --no-merges --pretty=format:'- %s' "$range")"
-            
-            if [ -z "$notes" ]; then
-            notes="- No commit messages available."
-            fi
-            
-            delimiter="$(openssl rand -hex 8)"
-            {
-              echo "notes<<${delimiter}"
+          set -euo pipefail
+          
+          current_tag="${GITHUB_REF_NAME}"
+          previous_tag="$(git tag --sort=-version:refname --list 'v*' | grep -Fxv "$current_tag" | grep -v -i 'SNAPSHOT' | head -n 1 || true)"
+          
+          if [ -n "$previous_tag" ]; then
+          range="${previous_tag}..HEAD"
+          else
+          range="HEAD"
+          fi
+          
+          notes="$(git log --no-merges --pretty=format:'- %s' "$range")"
+          
+          if [ -z "$notes" ]; then
+          notes="- No commit messages available."
+          fi
+          
+          delimiter="$(openssl rand -hex 8)"
+          {
+            echo "notes<<${delimiter}"
             echo "$notes"
-              echo "${delimiter}"
+            echo "${delimiter}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Publish to Modrinth
