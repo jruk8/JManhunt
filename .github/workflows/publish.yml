@@ -77,5 +77,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: build/libs/*.jar
-          token: ${{ secrets.GITHUB_RELEASE_TOKEN }}
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
           body: ${{ steps.changelog.outputs.notes }}
