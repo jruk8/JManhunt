@@ -163,8 +163,8 @@ custom-modifiers:
         - "attribute <p> minecraft:max_health base set 30"
         - "effect give <p> minecraft:instant_health 1 50 true"
       player-cleanup:
-        # Ran for every participating player (only hunters and speedrunners, not including NONE)
-        - "attribute @a minecraft:max_health base set 20"
+        # Runs for every participating player (only hunters and speedrunners, not including NONE)
+        - "attribute <p> minecraft:max_health base set 20"
   # Sets to night permanently for the duration of the match.
   perma-night:
     enabled: false
