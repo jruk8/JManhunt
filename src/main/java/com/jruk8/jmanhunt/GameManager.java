@@ -135,6 +135,10 @@ public final class GameManager {
     }
 
     public void updateAutostartState() {
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(plugin, this::updateAutostartState);
+            return;
+        }
         if (active || ending || !plugin.getConfig().getBoolean("extras.autostart.enabled", false)) {
             cancelAutostartCountdown();
             return;
@@ -180,12 +184,15 @@ public final class GameManager {
     }
 
     private boolean isEligibleToStart() {
-        List<Player> participants = Bukkit.getOnlinePlayers().stream()
-                .filter(player -> role(player) != Role.NONE)
-                .map(player -> (Player) player)
-                .toList();
-        return participants.stream().anyMatch(player -> role(player) == Role.HUNTER)
-                && participants.stream().anyMatch(player -> role(player) == Role.SPEEDRUNNER);
+        boolean hasHunter = false;
+        boolean hasSpeedrunner = false;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            Role playerRole = role(player);
+            if (playerRole == Role.HUNTER) hasHunter = true;
+            else if (playerRole == Role.SPEEDRUNNER) hasSpeedrunner = true;
+            if (hasHunter && hasSpeedrunner) return true;
+        }
+        return false;
     }
 
     private void showStatusToAllPlayers() {
