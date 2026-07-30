@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 2
+messages-version: 3
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
@@ -23,9 +23,12 @@ manhunt:
   role-assigned: "{prefix}<green>You have been assigned the role <white>{role}<green>."
   set-skipped: "{prefix}<yellow>Skipped <white>{count}<yellow> player(s) without the required permission."
   start-success: "{prefix}<green>Manhunt has started."
+  autostart-eligible: "{prefix}<yellow>Queue is eligible. Manhunt will auto-start in <white>{seconds}<yellow>s."
+  autostart-countdown: "{prefix}<yellow>Manhunt starts in <white>{seconds}<yellow>s."
   waiting-for-damage: "{prefix}<yellow>A speedrunner must hit a hunter before the game begins."
   started-by-damage: "{prefix}<green>The Manhunt game has begun!"
   start-invalid: "{prefix}<red>A match needs at least one hunter and one speedrunner."
+  queue-left: "{prefix}<yellow>{player} left the queue."
   already-active: "{prefix}<red>A match is already active."
   not-active: "{prefix}<yellow>No match is active."
   end-success: "{prefix}<green>Manhunt ended. Hunters win!"

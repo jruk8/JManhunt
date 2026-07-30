@@ -11,6 +11,7 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
@@ -28,6 +29,13 @@ public final class GameplayListener implements Listener {
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) { playerStates.resetRolesIfAbsent(event.getPlayer()); }
+    @EventHandler public void onQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        if (plugin.getConfig().getBoolean("extras.reset-role-on-leave", false)) {
+            playerStates.setRole(player.getUniqueId(), Role.NONE);
+        }
+        game.updateAutostartState();
+    }
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
         if (game.isActive() && playerStates.role(event.getPlayer()) == Role.HUNTER) {
             Bukkit.getScheduler().runTask(plugin, () -> compass.giveCompass(event.getPlayer()));

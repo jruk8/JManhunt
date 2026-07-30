@@ -33,6 +33,12 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.2'
 }
 
+sourceSets {
+    test {
+        java.srcDirs += 'src/tests/java'
+    }
+}
+
 checkstyle {
     toolVersion = '10.17.0'
     configFile = file('config/checkstyle/checkstyle.xml')
