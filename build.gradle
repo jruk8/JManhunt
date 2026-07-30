@@ -22,7 +22,7 @@ repositories {
 
 dependencies {
     compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
-    compileOnly 'me.clip:placeholderapi:2.11.6'
+    compileOnly 'me.clip:placeholderapi:2.12.3'
 
     compileOnly 'com.zaxxer:HikariCP:6.3.0'
     compileOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
