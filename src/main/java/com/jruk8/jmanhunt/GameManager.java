@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt;
 
 import com.jruk8.jmanhunt.extras.autostart.AutostartCountdownMessages;
+import com.jruk8.jmanhunt.extras.world_engine.WorldEngineService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -27,6 +28,7 @@ public final class GameManager {
     private final GameStateCommandManager stateCommands;
     private final ConfigService configService;
     private final SoundService sounds;
+    private final WorldEngineService worldEngine;
     private boolean active;
     private boolean ending;
     private boolean gameBegun;
@@ -37,7 +39,7 @@ public final class GameManager {
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
                        PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
-                       ConfigService configService) {
+                       ConfigService configService, WorldEngineService worldEngine) {
         this.plugin = plugin;
         this.messages = messages;
         this.sounds = sounds;
@@ -45,6 +47,7 @@ public final class GameManager {
         this.compass = compass;
         this.stats = stats;
         this.configService = configService;
+        this.worldEngine = worldEngine;
         this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService);
 
         // assign events
@@ -81,6 +84,7 @@ public final class GameManager {
         // giving role equipment. In particular, default clear-inventory must
         // not remove the hunter compass.
         stateCommands.runStart();
+        worldEngine.onMatchStart(players);
         for (Player player : players) {
             if (role(player) == Role.HUNTER) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
@@ -115,6 +119,9 @@ public final class GameManager {
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             stateCommands.runEnd(winnerName);
+            List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
+                    .map(p -> (Player) p).toList();
+            worldEngine.onMatchEnd(participants);
             if (plugin.getConfig().getBoolean("extras.reset-roles-on-game-end.enabled", false)) {
                 playerStates.resetParticipatingRoles();
             }

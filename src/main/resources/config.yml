@@ -11,7 +11,7 @@ database:
   enabled: true
   type: sqlite
   sqlite:
-    file: stats.db
+    file: jmanhunt.db
   postgresql:
     host: localhost
     port: 5432
@@ -247,6 +247,25 @@ extras:
     # This may help in balancing the game.
     # Default: false
     custom-piglin-barter: false
+
+  # Grid-based single-world manhunt engine.
+  # Uses persistent square-spiral cell indexing and teleports participants to
+  # randomized points near each cell center.
+  world-engine:
+    enabled: false
+    world-name: world
+    # Size of one spiral cell in blocks. Hard-capped at 50000.
+    cell-size: 10000
+    # Radius from each cell center used when selecting the exact spawn point.
+    tp-spread-radius: 5
+    # Lobby location for all participants after game end, before End reset.
+    lobby-location:
+      world: world
+      x: 0.5
+      y: 100.0
+      z: 0.5
+      yaw: 0.0
+      pitch: 0.0
 
 # Sound names are namespaced Minecraft keys.
 # eg. block.note_block.pling
