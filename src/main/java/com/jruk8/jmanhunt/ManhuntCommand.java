@@ -93,15 +93,22 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             message(player, "manhunt.role-assigned", Map.of("role", role.name()));
             game.playNeutralSound(player);
             if (game.isActive() && role == Role.NONE) {
-                playerStates.setSpeedrunnerAlive(player.getUniqueId(), false); player.setGameMode(GameMode.SPECTATOR);
+                playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
+                if (plugin.getConfig().getBoolean("extras.set-none-gamemode-spectator", true)) {
+                    player.setGameMode(GameMode.SPECTATOR);
+                }
                 compass.removeCompasses(player);
             }
             if (game.isActive() && role == Role.HUNTER) compass.giveCompass(player);
+            if (role == Role.NONE) {
+                Bukkit.broadcast(messages.component("manhunt.queue-left", Map.of("player", player.getName())));
+            }
         }
         message(sender, unchanged == 0 ? "manhunt.set-success" : "manhunt.set-success-unchanged",
                 Map.of("count", String.valueOf(changed), "role", role.name(), "unchanged", String.valueOf(unchanged)));
         if (skipped > 0) message(sender, "manhunt.set-skipped", Map.of("count", String.valueOf(skipped)));
         if (sender instanceof Player player && !assigned.contains(player.getUniqueId())) game.playNeutralSound(player);
+        if (changed > 0) game.updateAutostartState();
         return true;
     }
 
