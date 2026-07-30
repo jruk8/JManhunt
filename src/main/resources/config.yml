@@ -251,12 +251,16 @@ extras:
   # Grid-based single-world manhunt engine.
   # Uses persistent square-spiral cell indexing and teleports participants to
   # randomized points near each cell center.
+  # Avoids manual world restarting entirely.
+  # Default: false
   world-engine:
     enabled: false
     world-name: world
     # Size of one spiral cell in blocks. Hard-capped at 50000.
+    # Too low values may cause issues.
+    # Default: 10,000
     cell-size: 10000
-    # Radius from each cell center used when selecting the exact spawn point.
+    # Radius from each cell center used when selecting player's spawn points.
     tp-spread-radius: 5
     # Lobby location for all participants after game end, before End reset.
     lobby-location:

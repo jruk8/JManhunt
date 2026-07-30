@@ -15,10 +15,10 @@ public record WorldEngineConfig(
     public static WorldEngineConfig fromConfig(FileConfiguration config) {
         String base = "extras.world-engine.";
         int configuredCellSize = config.getInt(base + "cell-size", DEFAULT_CELL_SIZE);
-        int cellSize = Math.max(1, Math.min(MAX_CELL_SIZE, configuredCellSize));
+        int cellSize = Math.clamp(configuredCellSize, 1, MAX_CELL_SIZE);
         int spreadRadius = Math.max(0, config.getInt(base + "tp-spread-radius", 5));
         String worldName = config.getString(base + "world-name", "world");
-        if (worldName == null || worldName.isBlank()) worldName = "world";
+        if (worldName.isBlank()) worldName = "world";
         String lobbyWorld = config.getString(base + "lobby-location.world", worldName);
         Location lobby = new Location(
                 org.bukkit.Bukkit.getWorld(lobbyWorld),

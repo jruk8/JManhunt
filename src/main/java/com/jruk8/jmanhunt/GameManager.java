@@ -51,7 +51,7 @@ public final class GameManager {
         this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService);
 
         // assign events
-        configService.onChange("extras.autostart", (oldValue, newValue) -> updateAutostartState());
+        configService.onChange("extras.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
     }
 
     public boolean isActive() { return active; }
