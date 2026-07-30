@@ -121,6 +121,7 @@ The plugin provides extra options for things that modify the game flow.
 This includes things like:
 
 - starting the game only when speedrunner hits a hunter
+- autostart when enough players join
 - custom bartering loot tables for higher ender pearl pulls
 - dropping the compass on death so the speedrunner can track hunters
 
