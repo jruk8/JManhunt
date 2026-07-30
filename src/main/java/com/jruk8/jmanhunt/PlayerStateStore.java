@@ -52,6 +52,14 @@ public final class PlayerStateStore {
         return speedrunnerAlive.getOrDefault(playerId, false);
     }
 
+    public int getActiveSpeedrunnerCount() {
+        int count = 0;
+        for (boolean alive : speedrunnerAlive.values()) {
+            if (alive) count++;
+        }
+        return count;
+    }
+
     public Map<UUID, Map<UUID, Location>> sightings() {
         return lastSeenByWorld;
     }

@@ -26,6 +26,7 @@ public final class GameManager {
     private final StatsManager stats;
     private final GameStateCommandManager stateCommands;
     private final ConfigService configService;
+    private final SoundService sounds;
     private boolean active;
     private boolean ending;
     private boolean gameBegun;
@@ -34,10 +35,16 @@ public final class GameManager {
     private int autostartCountdownRemaining;
     private int autostartCountdownConfigured;
 
-    public GameManager(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
-                       CompassManager compass, StatsManager stats, ConfigService configService) {
-        this.plugin = plugin; this.messages = messages; this.playerStates = playerStates;
-        this.compass = compass; this.stats = stats; this.configService = configService;
+    public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
+                       PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
+                       ConfigService configService) {
+        this.plugin = plugin;
+        this.messages = messages;
+        this.sounds = sounds;
+        this.playerStates = playerStates;
+        this.compass = compass;
+        this.stats = stats;
+        this.configService = configService;
         this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService);
 
         // assign events
@@ -48,7 +55,7 @@ public final class GameManager {
     public boolean isGameBegun() { return gameBegun; }
     public boolean isEnding() { return ending; }
     public Set<String> settingNames() { return configService.settingNames(); }
-    public boolean getSetting(String setting) { return configService.getSetting(setting); }
+    public boolean getSetting(String setting) { return configService.getBoolSetting(setting, false); }
     public boolean setSetting(String setting, boolean value) { return configService.setSetting(setting, value); }
 
     public boolean start() {
@@ -77,7 +84,8 @@ public final class GameManager {
         for (Player player : players) {
             if (role(player) == Role.HUNTER) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
-        broadcast("manhunt.start-success"); sound("neutral-sound");
+        messages.broadcast("manhunt.start-success");
+        sounds.playNeutralSound();
         showStatusToAllPlayers();
         if (getSetting("extras.start-on-speedrunner-damage")) scheduleWaitingReminder();
         else beginGame();
@@ -91,12 +99,12 @@ public final class GameManager {
         String winnerName = winner == Role.HUNTER ? "Hunters" : "Speedrunners";
         String winMessage = getWinMessage(winner);
         String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
-        broadcast(winMessage);
+        messages.broadcast(winMessage);
         for (Player player : Bukkit.getOnlinePlayers()) {
-            player.showTitle(Title.title(component(title), Component.empty(),
+            player.showTitle(Title.title(messages.component(title), Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
-        sound(winner == Role.HUNTER ? "fail-sound" : "win-sound");
+        sounds.playGlobalSound(winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
         stats.completeMatch(winner);
 
         // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
@@ -123,7 +131,7 @@ public final class GameManager {
         if (gameBegun) return;
         gameBegun = true;
         if (waitingReminderTask != null) waitingReminderTask.cancel();
-        broadcast("manhunt.started-by-damage"); sound("neutral-sound"); applyStartDebuffs();
+        messages.broadcast("manhunt.started-by-damage"); sounds.playNeutralSound(); applyStartDebuffs();
     }
 
     private String getWinMessage(Role winner) {
@@ -134,12 +142,12 @@ public final class GameManager {
     }
 
     private void scheduleWaitingReminder() {
-        double interval = plugin.getConfig().getDouble("start-reminder-interval", 10.0);
+        double interval = configService.getFloatSetting("start-reminder-interval", 10.0f);
         if (interval == -1.0) return;
         long delay = Math.max(1L, Math.round(interval * 20.0));
-        broadcast("manhunt.waiting-for-damage");
+        messages.broadcast("manhunt.waiting-for-damage");
         waitingReminderTask = Bukkit.getScheduler().runTaskTimer(plugin,
-                () -> { if (active && !gameBegun) broadcast("manhunt.waiting-for-damage"); }, delay, delay);
+                () -> { if (active && !gameBegun) messages.broadcast("manhunt.waiting-for-damage"); }, delay, delay);
     }
 
     public void updateAutostartState() {
@@ -162,7 +170,7 @@ public final class GameManager {
             return;
         }
         autostartCountdownRemaining = autostartCountdownConfigured;
-        broadcast("manhunt.autostart-eligible", Map.of("seconds", String.valueOf(autostartCountdownConfigured)));
+        messages.broadcast("manhunt.autostart-eligible", Map.of("seconds", String.valueOf(autostartCountdownConfigured)));
         announceAutostartCheckpoint(autostartCountdownRemaining);
         autostartCountdownTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (active || ending || !isEligibleToStart()) {
@@ -181,14 +189,15 @@ public final class GameManager {
 
     private void announceAutostartCheckpoint(int remainingSeconds) {
         if (!AutostartCountdownMessages.shouldAnnounce(remainingSeconds, autostartCountdownConfigured)) return;
-        broadcast("manhunt.autostart-countdown", Map.of("seconds", String.valueOf(remainingSeconds)));
+        messages.broadcast("manhunt.autostart-countdown", Map.of("seconds", String.valueOf(remainingSeconds)));
+        sounds.playGlobalSound("game.autostart-countdown");
     }
 
     private void cancelAutostartCountdown() {
         if (autostartCountdownTask != null) {
             autostartCountdownTask.cancel();
             autostartCountdownTask = null;
-            broadcast("manhunt.autostart-cancelled");
+            messages.broadcast("manhunt.autostart-cancelled");
         }
     }
 
@@ -206,7 +215,7 @@ public final class GameManager {
 
     private void showStatusToAllPlayers() {
         for (Player player : Bukkit.getOnlinePlayers()) {
-            message(player, "manhunt.status-header", Map.of("status", active ? "ACTIVE" : "INACTIVE"));
+            messages.message(player, "manhunt.status-header", Map.of("status", active ? "ACTIVE" : "INACTIVE"));
             sendRoleSection(player, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
             sendRoleSection(player, Role.HUNTER, "manhunt.hunters-header");
             sendRoleSection(player, Role.NONE, "manhunt.none-header");
@@ -219,12 +228,12 @@ public final class GameManager {
             if (role(player) == role) names.add(player.getName());
         }
         if (names.isEmpty()) return;
-        message(receiver, headerKey, Map.of());
-        names.stream().sorted().forEach(name -> message(receiver, "manhunt.status-player", Map.of("player", name)));
+        messages.message(receiver, headerKey, Map.of());
+        names.stream().sorted().forEach(name -> messages.message(receiver, "manhunt.status-player", Map.of("player", name)));
     }
 
     private void applyStartDebuffs() {
-        if (!plugin.getConfig().getBoolean("extras.start-debuffs.enabled", false)) return;
+        if (!configService.getBoolSetting("extras.start-debuffs.enabled", false)) return;
         var effects = plugin.getConfig().getConfigurationSection("extras.start-debuffs.effects");
         if (effects == null) return;
         for (Player hunter : Bukkit.getOnlinePlayers()) {
@@ -248,49 +257,4 @@ public final class GameManager {
     }
 
     private Role role(Player player) { return playerStates.role(player); }
-    private Component component(String key) { return messages.component(key); }
-    private void broadcast(String key) { Bukkit.broadcast(component(key)); }
-    private void broadcast(String key, Map<String, String> values) { Bukkit.broadcast(messages.component(key, values)); }
-    private void message(Player player, String key, Map<String, String> values) { player.sendMessage(messages.component(key, values)); }
-    public void playNeutralSound(Player player) { playSound(player, "neutral-sound"); }
-
-    private void sound(String key) {
-        Bukkit.getOnlinePlayers().forEach(player -> playSound(player, key));
-    }
-
-    private void playSound(Player player, String key) {
-        try {
-            String soundName;
-            String base = "sounds." + key;
-            if (plugin.getConfig().isString(base)) {
-                soundName = plugin.getConfig().getString(base);
-            } else {
-                soundName = plugin.getConfig().getString(base + ".sound");
-            }
-            if (soundName == null) soundName = "block.note_block.pling";
-
-            double configuredPitch = plugin.getConfig().getDouble(base + ".pitch", 1.0);
-            float pitch = Double.isFinite(configuredPitch)
-                    ? (float) Math.clamp(configuredPitch, 0.0, 2.0)
-                    : 1.0f;
-            String soundKey = resolveSound(soundName);
-            if (soundKey == null) return;
-            player.playSound(player.getLocation(), soundKey, 1, pitch);
-        } catch (IllegalArgumentException exception) {
-            plugin.getLogger().warning("Could not play configured sound '" + key + "': " + exception.getMessage());
-        }
-    }
-
-    private String resolveSound(String soundName) {
-        // Only namespaced Minecraft keys are supported (for example
-        // "block.note_block.pling" or "minecraft:block.note_block.pling").
-        // Legacy Bukkit-style enum names (BLOCK_NOTE_BLOCK_PLING) are not
-        // resolved: Sound.valueOf()/OldEnum are deprecated for removal, and
-        // Registry.match() (the closest replacement) is likewise deprecated
-        // as unreliable, so there is no supported way left to translate them.
-        NamespacedKey soundKey = NamespacedKey.fromString(soundName.toLowerCase(Locale.ROOT));
-        if (soundKey == null) soundKey = NamespacedKey.minecraft(soundName.toLowerCase(Locale.ROOT));
-        if (soundKey == null || Registry.SOUNDS.get(soundKey) == null) return null;
-        return soundKey.asString();
-    }
 }

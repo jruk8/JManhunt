@@ -15,17 +15,26 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
+import java.util.Map;
+
 public final class GameplayListener implements Listener {
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
     private final GameManager game;
+    private final MessageService messages;
+    private final SoundService sounds;
     private final CompassManager compass;
     private final StatsManager stats;
 
     public GameplayListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
-                            CompassManager compass, StatsManager stats) {
-        this.plugin = plugin; this.playerStates = playerStates; this.game = game;
-        this.compass = compass; this.stats = stats;
+                            MessageService messages, SoundService sounds, CompassManager compass, StatsManager stats) {
+        this.plugin = plugin;
+        this.playerStates = playerStates;
+        this.game = game;
+        this.messages = messages;
+        this.sounds = sounds;
+        this.compass = compass;
+        this.stats = stats;
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) { playerStates.resetRolesIfAbsent(event.getPlayer()); }
@@ -44,12 +53,22 @@ public final class GameplayListener implements Listener {
     @EventHandler public void onDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
         playerStates.recordLastSeen(player, player.getLocation());
-        if (!game.isActive() || !game.isGameBegun() || playerStates.role(player) != Role.SPEEDRUNNER) return;
-        playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
-        if (player.getKiller() != null) stats.getOrCreate(player.getKiller().getUniqueId()).finalKills++;
-        Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
-        if (Bukkit.getOnlinePlayers().stream().filter(p -> playerStates.role(p) == Role.SPEEDRUNNER)
-                .filter(p -> playerStates.isActiveSpeedrunner(p.getUniqueId())).count() == 0) game.finishLater(Role.HUNTER);
+
+        if (!game.isActive() || !game.isGameBegun()) return;
+        if (playerStates.role(player) == Role.SPEEDRUNNER) {
+            playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
+            if (player.getKiller() != null) stats.getOrCreate(player.getKiller().getUniqueId()).finalKills++;
+            Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
+            if (Bukkit.getOnlinePlayers().stream().filter(p -> playerStates.role(p) == Role.SPEEDRUNNER)
+                    .filter(p -> playerStates.isActiveSpeedrunner(p.getUniqueId())).count() == 0) game.finishLater(Role.HUNTER);
+
+            messages.broadcast("manhunt.speedrunner-death", Map.of("value", Integer.toString(playerStates.getActiveSpeedrunnerCount())));
+            sounds.playGlobalSound("game.speedrunner-death");
+        }
+        else if (playerStates.role(player) == Role.HUNTER) {
+            messages.broadcast("manhunt.hunter-death");
+            sounds.playGlobalSound("game.hunter-death");
+        }
     }
     @EventHandler public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();

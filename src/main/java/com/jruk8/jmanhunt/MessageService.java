@@ -4,7 +4,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 
 import java.util.Map;
 
@@ -58,4 +60,10 @@ public final class MessageService {
     public java.util.List<String> strings(String path) {
         return messages.getStringList(path);
     }
+
+    public void broadcast(String s) { Bukkit.broadcast(parse(s)); }
+    public void broadcast(String key, Map<String, String> values) { Bukkit.broadcast(component(key, values)); }
+
+    public void message(Player player, String string) { player.sendMessage(parse(string)); }
+    public void message(Player player, String key, Map<String, String> values) { player.sendMessage(component(key, values)); }
 }

@@ -41,9 +41,19 @@ public final class ConfigService {
         return names;
     }
 
-    public boolean getSetting(String setting) {
+    public boolean getBoolSetting(String setting, boolean defaultValue) {
         String path = settingPath(setting);
-        return path != null && plugin.getConfig().getBoolean(path);
+        return path != null && plugin.getConfig().getBoolean(path, defaultValue);
+    }
+
+    public String getStringSetting(String setting, String defaultValue) {
+        String path = settingPath(setting);
+        return path != null ? plugin.getConfig().getString(path, defaultValue) : defaultValue;
+    }
+
+    public float getFloatSetting(String setting, float defaultValue) {
+        String path = settingPath(setting);
+        return path != null ? (float) plugin.getConfig().getDouble(path, defaultValue) : defaultValue;
     }
 
     public boolean setSetting(String setting, boolean value) {

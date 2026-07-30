@@ -245,13 +245,43 @@ extras:
 
 # Sound names are namespaced Minecraft keys.
 # eg. block.note_block.pling
+# It's recommended to use a sound explorer like
+# https://mudkipdev.github.io/minecraft-sound-explorer/
 sounds:
   neutral-sound:
+    enabled: true
     sound: block.note_block.pling
     pitch: 1.0
-  win-sound:
-    sound: entity.ender_dragon.death
-    pitch: 1.0
-  fail-sound:
-    sound: entity.wither.spawn
-    pitch: 1.0
+    volume: 1.0
+
+  game:
+    # Runs on autostart countdown
+    autostart-sound:
+      enabled: true
+      sound: block.stone_button.click_on
+      pitch: 2.0
+      volume: 1.0
+    # Runs on speedrunner killed (by any means)
+    speedrunner-death:
+      enabled: true
+      sound: block.trial_spawner.detect_player
+      pitch: 1.2
+      volume: 1.0
+    # Runs on hunter killed (by any means)
+    hunter-death:
+      enabled: true
+      sound: entity.player.hurt_sweet_berry_bush
+      pitch: 0.9
+      volume: 1.0
+    # Runs when speedrunners win
+    win-sound:
+      enabled: true
+      sound: entity.ender_dragon.death
+      pitch: 1.0
+      volume: 1.0
+    # Runs when hunters win
+    fail-sound:
+      enabled: true
+      sound: entity.wither.spawn
+      pitch: 1.0
+      volume: 1.0

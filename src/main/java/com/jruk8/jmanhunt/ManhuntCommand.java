@@ -20,14 +20,15 @@ import java.util.HashSet;
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final SoundService sounds;
     private final PlayerStateStore playerStates;
     private final GameManager game;
     private final CompassManager compass;
 
-    public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
-                          GameManager game, CompassManager compass) {
-        this.plugin = plugin; this.messages = messages; this.playerStates = playerStates;
-        this.game = game; this.compass = compass;
+    public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
+                          PlayerStateStore playerStates, GameManager game, CompassManager compass) {
+        this.plugin = plugin; this.messages = messages; this.sounds = sounds;
+        this.playerStates = playerStates; this.game = game; this.compass = compass;
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -91,7 +92,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             playerStates.setRole(player, role); changed++;
             assigned.add(player.getUniqueId());
             message(player, "manhunt.role-assigned", Map.of("role", role.name()));
-            game.playNeutralSound(player);
+            sounds.playNeutralSound(player);
             if (game.isActive() && role == Role.NONE) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
                 if (plugin.getConfig().getBoolean("extras.set-none-gamemode-spectator", true)) {
@@ -107,7 +108,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         message(sender, unchanged == 0 ? "manhunt.set-success" : "manhunt.set-success-unchanged",
                 Map.of("count", String.valueOf(changed), "role", role.name(), "unchanged", String.valueOf(unchanged)));
         if (skipped > 0) message(sender, "manhunt.set-skipped", Map.of("count", String.valueOf(skipped)));
-        if (sender instanceof Player player && !assigned.contains(player.getUniqueId())) game.playNeutralSound(player);
+        if (sender instanceof Player player && !assigned.contains(player.getUniqueId())) sounds.playNeutralSound(player);
         if (changed > 0) game.updateAutostartState();
         return true;
     }
@@ -178,6 +179,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private boolean message(CommandSender sender, String key) { sender.sendMessage(messages.component(key)); return true; }
     private void message(CommandSender sender, String key, Map<String, String> values) { sender.sendMessage(messages.component(key, values)); }
     private void neutralSound(CommandSender sender) {
-        if (sender instanceof Player player) game.playNeutralSound(player);
+        if (sender instanceof Player player) sounds.playNeutralSound(player);
     }
 }
