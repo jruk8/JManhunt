@@ -118,10 +118,13 @@ custom-modifiers:
 
 ## Extras
 The plugin provides extra options for things that modify the game flow.
-This includes things like starting the game only when speedrunner hits
-a hunter, custom bartering loot tables for higher ender pearl pulls,
-dropping the compass on death so speedrunner can track hunters, and
-a lot more.
+This includes things like:
+
+- starting the game only when speedrunner hits a hunter
+- custom bartering loot tables for higher ender pearl pulls
+- dropping the compass on death so the speedrunner can track hunters
+
+and a lot more!
 
 ## Configuration
 
