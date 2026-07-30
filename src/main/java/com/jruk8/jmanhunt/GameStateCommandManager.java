@@ -4,10 +4,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.GameRules;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -104,7 +106,7 @@ public final class GameStateCommandManager {
                 player.setLevel(0);
                 player.setExp(0.0f);
                 player.clearActivePotionEffects();
-                player.setHealth(20.0);
+                player.setHealth(Objects.requireNonNull(player.getAttribute(Attribute.MAX_HEALTH)).getValue());
                 player.setFoodLevel(20);
                 clearAdvancements();
             });

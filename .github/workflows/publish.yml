@@ -59,7 +59,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Publish to Modrinth
-        if: ${{ vars.MODRINTH_ID != '' }}
+        if: ${{ vars.MODRINTH_ID != '' && !contains(github.ref_name, 'SNAPSHOT') }}
         uses: Kir-Antipov/mc-publish@v3
         with:
           fail-mode: warn
