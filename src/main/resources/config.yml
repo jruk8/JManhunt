@@ -185,6 +185,13 @@ extras:
   start-on-speedrunner-damage:
     enabled: true
 
+  # When true, a compass survives a speedrunner's death as a normal dropped
+  # item.
+  # If a speedrunner gets ahold of the compass, they may track the hunters.
+  # Default: false
+  drop-compass-on-death:
+    enabled: false
+
   # Optional effects applied to every hunter when the game begins. Effect keys
   # are Bukkit PotionEffectType names. Duration is in seconds and amplifier is
   # zero-based: amplifier 0 is level I, amplifier 1 is level II. Set seconds to
@@ -199,12 +206,6 @@ extras:
       WEAKNESS:
         seconds: 10.0
         amplifier: 0
-
-  # When true, a compass survives a speedrunner's death as a normal dropped
-  # item.
-  # If a speedrunner gets ahold of the compass, they may track the hunters.
-  # Default: false
-  drop-compass-on-death: false
 
   # Custom loot tables for things like piglin bartering.
   # Tables may be found in extras/loot-tables.

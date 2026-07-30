@@ -78,7 +78,7 @@ public final class CompassManager {
         CompassMeta meta = (CompassMeta) item.getItemMeta();
         meta.displayName(messages.nonItalic(component("compass.compass-name")));
         meta.lore(messages.strings("compass.compass-lore").stream().map(messages::parse).map(messages::nonItalic).toList());
-        if (plugin.getConfig().getBoolean("extras.drop-compass-on-death", false)) {
+        if (plugin.getConfig().getBoolean("extras.drop-compass-on-death.enabled", false)) {
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         } else {
             meta.addEnchant(Enchantment.VANISHING_CURSE, 1, true);

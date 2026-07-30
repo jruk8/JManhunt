@@ -119,8 +119,8 @@ public final class JManhuntPlugin extends JavaPlugin {
             copySection(config, "start-debuffs", "extras.start-debuffs");
             changed = true;
         }
-        if (config.contains("drop-compass-on-death") && !config.contains("extras.drop-compass-on-death")) {
-            config.set("extras.drop-compass-on-death", config.getBoolean("drop-compass-on-death", false));
+        if (config.contains("drop-compass-on-death") && !config.contains("extras.drop-compass-on-death.enabled")) {
+            config.set("extras.drop-compass-on-death.enabled", config.getBoolean("drop-compass-on-death", false));
             changed = true;
         }
         if (changed) saveConfig();
