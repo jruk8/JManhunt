@@ -124,6 +124,8 @@ This includes things like:
 - autostart when enough players join
 - custom bartering loot tables for higher ender pearl pulls
 - dropping the compass on death so the speedrunner can track hunters
+- optional grid-based world-engine runs with persistent spiral cell assignment,
+  stronghold random spread, and automatic End resets between matches
 
 and a lot more!
 
@@ -134,6 +136,8 @@ behavior, default game actions, command bundles, custom modifiers, compass
 refreshing, end-screen statistics, sounds, text formatting, and optional
 PlaceholderAPI settings. Use `/manhunt modifiers` to browse and change the
 boolean built-in actions and modifier switches in-game.
+The `extras.world-engine` section controls grid cell size, spread radius,
+target world, and lobby teleport location for the grid-based world engine.
 
 The hunter compass cannot be dropped, stored in another container, moved by a
 hopper, or transferred through inventory interactions. It is restored after a
@@ -141,7 +145,8 @@ hunter respawns.
 
 ## Statistics and PlaceholderAPI
 
-Career statistics are enabled by default and stored in `stats.db` using SQLite.
+Career statistics are enabled by default and stored in `jmanhunt.db` using SQLite.
+The same database also stores the persistent world-engine spiral cell index.
 For statistics shared between servers, set `database.type` to `postgresql` and
 configure `database.postgresql` in `config.yml`.
 

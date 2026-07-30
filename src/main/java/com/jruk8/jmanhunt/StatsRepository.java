@@ -25,7 +25,7 @@ public final class StatsRepository implements AutoCloseable {
     public static StatsRepository open(JManhuntPlugin plugin) throws SQLException {
         String type = plugin.getConfig().getString("database.type", "sqlite").toLowerCase();
         if (type.equals("sqlite")) {
-            String file = plugin.getConfig().getString("database.sqlite.file", "stats.db");
+            String file = plugin.getConfig().getString("database.sqlite.file", "jmanhunt.db");
             File database = new File(plugin.getDataFolder(), file);
             if (database.getParentFile() != null) database.getParentFile().mkdirs();
             StatsRepository repository = new StatsRepository(plugin, false,
@@ -72,6 +72,52 @@ public final class StatsRepository implements AutoCloseable {
                     + "speedrunner_kills INTEGER NOT NULL DEFAULT 0, final_kills INTEGER NOT NULL DEFAULT 0, "
                     + "damage_dealt DOUBLE PRECISION NOT NULL DEFAULT 0, hunter_wins INTEGER NOT NULL DEFAULT 0, "
                     + "speedrunner_wins INTEGER NOT NULL DEFAULT 0, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS jmanhunt_state ("
+                    + "state_key VARCHAR(64) PRIMARY KEY, state_value BIGINT NOT NULL)");
+        }
+    }
+
+    public synchronized long consumeWorldCellIndexes(int amount) throws SQLException {
+        int consumed = Math.max(0, amount);
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                long current = 0L;
+                boolean hasValue;
+                try (PreparedStatement select = connection.prepareStatement(
+                        "SELECT state_value FROM jmanhunt_state WHERE state_key=?")) {
+                    select.setString(1, "world_cell_index");
+                    try (ResultSet result = select.executeQuery()) {
+                        hasValue = result.next();
+                        if (hasValue) current = result.getLong(1);
+                    }
+                }
+
+                if (!hasValue) {
+                    try (PreparedStatement insert = connection.prepareStatement(
+                            "INSERT INTO jmanhunt_state (state_key, state_value) VALUES (?, ?)")) {
+                        insert.setString(1, "world_cell_index");
+                        insert.setLong(2, 0L);
+                        insert.executeUpdate();
+                    }
+                }
+
+                long next = current + consumed;
+                try (PreparedStatement update = connection.prepareStatement(
+                        "UPDATE jmanhunt_state SET state_value=? WHERE state_key=?")) {
+                    update.setLong(1, next);
+                    update.setString(2, "world_cell_index");
+                    update.executeUpdate();
+                }
+
+                connection.commit();
+                return current;
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
         }
     }
 

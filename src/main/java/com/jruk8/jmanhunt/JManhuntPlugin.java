@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt;
 
 import com.jruk8.jmanhunt.extras.ExtrasListener;
 import com.jruk8.jmanhunt.extras.loot_tables.PiglinBarterListener;
+import com.jruk8.jmanhunt.extras.world_engine.WorldEngineService;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -26,6 +27,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private StatsRepository statsRepository;
     private JManhuntExpansion expansion;
     private ConfigService configService;
+    private WorldEngineService worldEngine;
     private final List<ExtrasListener> extras = new ArrayList<>();
 
     @Override
@@ -56,8 +58,10 @@ public final class JManhuntPlugin extends JavaPlugin {
                 new NamespacedKey(this, "hunters_compass"));
         configService = new ConfigService(this);
         sounds = new SoundService(this, configService);
-        game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService);
+        worldEngine = new WorldEngineService(this, statsRepository);
+        game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService, worldEngine);
         var piglinBarter = new PiglinBarterListener(this, game);
+        extras.add(worldEngine);
         extras.add(piglinBarter);
 
         ManhuntCommand command = new ManhuntCommand(this, messages, sounds, playerStates, game, compass);
