@@ -180,6 +180,7 @@ public final class GameManager {
         if (autostartCountdownTask != null) {
             autostartCountdownTask.cancel();
             autostartCountdownTask = null;
+            broadcast("manhunt.autostart-cancelled");
         }
     }
 
