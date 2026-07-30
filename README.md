@@ -98,6 +98,7 @@ The available command lists are:
 - `commands.speedrunner-commands`: runs once for every speedrunner.
 - `commands.console`: runs once from the console.
 - `commands.console-cleanup`: runs when the match finishes.
+- `commands.player-cleanup`: runs on every player when the match finishes.
 
 For example:
 
@@ -112,7 +113,15 @@ custom-modifiers:
       speedrunner-commands: []
       console: []
       console-cleanup: []
+      player-cleanup: []
 ```
+
+## Extras
+The plugin provides extra options for things that modify the game flow.
+This includes things like starting the game only when speedrunner hits
+a hunter, custom bartering loot tables for higher ender pearl pulls,
+dropping the compass on death so speedrunner can track hunters, and
+a lot more.
 
 ## Configuration
 
