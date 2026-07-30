@@ -25,6 +25,20 @@ public final class PlayerStateStore {
         roles.put(player.getUniqueId(), role);
     }
 
+    public void setRole(UUID playerId, Role role) {
+        roles.put(playerId, role);
+    }
+
+    public int resetParticipatingRoles() {
+        int reset = 0;
+        for (Map.Entry<UUID, Role> entry : roles.entrySet()) {
+            if (entry.getValue() == Role.NONE) continue;
+            entry.setValue(Role.NONE);
+            reset++;
+        }
+        return reset;
+    }
+
     public void clearMatch() {
         lastSeenByWorld.clear();
         speedrunnerAlive.clear();

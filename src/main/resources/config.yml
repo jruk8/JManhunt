@@ -1,6 +1,6 @@
 # JManhunt configuration. Reload with /manhunt reload.
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 5
+config-version: 6
 
 # Message parser used for messages.yml: minimessage or legacy.
 text-format: minimessage
@@ -180,6 +180,31 @@ custom-modifiers:
 # Features for modifying the game.
 # These can be toggled in-game with the 'modifiers' subcommand.
 extras:
+  # Automatically start a match when at least one hunter and one speedrunner
+  # are queued.
+  # Default: false
+  autostart:
+    enabled: false
+    # Seconds to wait before automatically running /manhunt start.
+    # Set to 0 to start immediately as soon as the queue is eligible.
+    countdown-seconds: 60
+
+  # When true, all queued hunters/speedrunners are reset to NONE when a match
+  # finishes.
+  # Default: false
+  reset-roles-on-game-end: false
+
+  # When true, players are reset to NONE when they leave the server.
+  # Default: false
+  reset-role-on-leave: false
+
+  # Controls how players with role NONE are handled when default auto-set
+  # gamemode is enabled.
+  # true: NONE players are put in spectator
+  # false: NONE players keep their current gamemode
+  # Default: true
+  set-none-gamemode-spectator: true
+
   # Start the game only after a speedrunner hits a hunter.
   # Default: true
   start-on-speedrunner-damage:

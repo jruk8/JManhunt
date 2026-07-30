@@ -110,9 +110,14 @@ public final class GameStateCommandManager {
             });
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
-            Bukkit.getOnlinePlayers().forEach(player -> player.setGameMode(
-                    phase.equals("start") && playerStates.role(player) == Role.NONE
-                            ? GameMode.SPECTATOR : GameMode.SURVIVAL));
+            boolean setNoneSpectator = plugin.getConfig().getBoolean("extras.set-none-gamemode-spectator", true);
+            Bukkit.getOnlinePlayers().forEach(player -> {
+                if (phase.equals("start") && playerStates.role(player) == Role.NONE) {
+                    if (setNoneSpectator) player.setGameMode(GameMode.SPECTATOR);
+                    return;
+                }
+                player.setGameMode(GameMode.SURVIVAL);
+            });
         }
         if (phase.equals("start")) {
             if (plugin.getConfig().getBoolean(path + "disable-locator-bar", false)) {

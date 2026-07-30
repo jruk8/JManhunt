@@ -22,15 +22,21 @@ repositories {
 
 dependencies {
     compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
-    compileOnly 'me.clip:placeholderapi:2.11.6'
+    compileOnly 'me.clip:placeholderapi:2.12.3'
 
-    compileOnly 'com.zaxxer:HikariCP:6.3.0'
-    compileOnly 'org.xerial:sqlite-jdbc:3.50.3.0'
-    compileOnly 'org.postgresql:postgresql:42.7.7'
+    compileOnly 'com.zaxxer:HikariCP:7.1.0'
+    compileOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
+    compileOnly 'org.postgresql:postgresql:42.7.13'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
     testImplementation "io.papermc.paper:paper-api:${paperApiVersion}"
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.2'
+}
+
+sourceSets {
+    test {
+        java.srcDirs += 'src/tests/java'
+    }
 }
 
 checkstyle {
