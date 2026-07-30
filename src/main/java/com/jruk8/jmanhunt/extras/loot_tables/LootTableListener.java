@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.extras.loot_tables;
 
-import com.jruk8.jmanhunt.ExtrasListener;
+import com.jruk8.jmanhunt.extras.ExtrasListener;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;

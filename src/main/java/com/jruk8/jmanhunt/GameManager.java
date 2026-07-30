@@ -25,6 +25,7 @@ public final class GameManager {
     private final CompassManager compass;
     private final StatsManager stats;
     private final GameStateCommandManager stateCommands;
+    private final ConfigService configService;
     private boolean active;
     private boolean ending;
     private boolean gameBegun;
@@ -34,18 +35,21 @@ public final class GameManager {
     private int autostartCountdownConfigured;
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
-                       CompassManager compass, StatsManager stats) {
+                       CompassManager compass, StatsManager stats, ConfigService configService) {
         this.plugin = plugin; this.messages = messages; this.playerStates = playerStates;
-        this.compass = compass; this.stats = stats;
-        this.stateCommands = new GameStateCommandManager(plugin, playerStates);
+        this.compass = compass; this.stats = stats; this.configService = configService;
+        this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService);
+
+        // assign events
+        configService.onChange("extras.autostart", (oldValue, newValue) -> updateAutostartState());
     }
 
     public boolean isActive() { return active; }
     public boolean isGameBegun() { return gameBegun; }
     public boolean isEnding() { return ending; }
-    public Set<String> settingNames() { return stateCommands.settingNames(); }
-    public boolean getSetting(String setting) { return stateCommands.getSetting(setting); }
-    public boolean setSetting(String setting, boolean value) { return stateCommands.setSetting(setting, value); }
+    public Set<String> settingNames() { return configService.settingNames(); }
+    public boolean getSetting(String setting) { return configService.getSetting(setting); }
+    public boolean setSetting(String setting, boolean value) { return configService.setSetting(setting, value); }
 
     public boolean start() {
         if (active) return false;

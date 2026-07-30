@@ -5,22 +5,21 @@ import org.bukkit.GameMode;
 import org.bukkit.GameRules;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.TreeSet;
 
 /** Executes built-in and configured actions at match state transitions. */
 public final class GameStateCommandManager {
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
+    private final ConfigService configService;
 
-    public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates) {
+    public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates, ConfigService configService) {
         this.plugin = plugin;
         this.playerStates = playerStates;
+        this.configService = configService;
     }
 
     public void runStart() {
@@ -34,67 +33,19 @@ public final class GameStateCommandManager {
     }
 
     public void runConsoleCleanup(String winner) {
-        for (String name : modifierNames()) {
-            if (!modifierEnabled(name)) continue;
+        for (String name : configService.modifierNames()) {
+            if (!configService.modifierEnabled(name)) continue;
             runCommands("custom-modifiers." + name + ".commands.console-cleanup", null, winner);
         }
     }
 
     public void runPlayerCleanup(String winner) {
-        for (String name : modifierNames()) {
-            if (!modifierEnabled(name)) continue;
+        for (String name : configService.modifierNames()) {
+            if (!configService.modifierEnabled(name)) continue;
             for (Player player : participatingPlayers()) {
                 runCommands("custom-modifiers." + name + ".commands.player-cleanup", player.getName(), winner);
             }
         }
-    }
-
-    public Set<String> settingNames() {
-        Set<String> names = new TreeSet<>();
-        var defaults = plugin.getConfig().getConfigurationSection("gamestate-commands.default-commands");
-        if (defaults != null) {
-            if (defaults.contains("enabled")) names.add("default-commands.enabled");
-            for (String phase : List.of("start", "end")) {
-                var section = defaults.getConfigurationSection(phase);
-                if (section != null) for (String key : section.getKeys(false)) {
-                    names.add("default-commands." + phase + "." + key);
-                }
-            }
-        }
-        for (String name : modifierNames()) names.add("custom-modifiers." + name);
-        names.addAll(extraModifierNames());
-        return names;
-    }
-
-    public boolean getSetting(String setting) {
-        String path = settingPath(setting);
-        return path != null && plugin.getConfig().getBoolean(path);
-    }
-
-    public boolean setSetting(String setting, boolean value) {
-        String path = settingPath(setting);
-        if (path == null) return false;
-        plugin.getConfig().set(path, value);
-        plugin.saveConfig();
-        return true;
-    }
-
-    private String settingPath(String setting) {
-        if (setting.startsWith("default-commands.")) {
-            String path = "gamestate-commands." + setting;
-            return plugin.getConfig().contains(path) && !plugin.getConfig().isConfigurationSection(path) ? path : null;
-        }
-        if (setting.startsWith("custom-modifiers.")) {
-            String path = setting.replaceFirst("^custom-modifiers\\.", "custom-modifiers.") + ".enabled";
-            return plugin.getConfig().contains(path) ? path : null;
-        }
-        if (setting.startsWith("extras.")) {
-            String enabledPath = setting + ".enabled";
-            if (plugin.getConfig().contains(enabledPath)) return enabledPath;
-            if (plugin.getConfig().contains(setting)) return setting;
-            return null;
-        }
-        return null;
     }
 
     private void runDefault(String phase) {
@@ -149,8 +100,8 @@ public final class GameStateCommandManager {
                 runCommands(base + "player-commands." + phase, player.getName(), winner);
             }
         }
-        for (String name : modifierNames()) {
-            if (!modifierEnabled(name)) continue;
+        for (String name : configService.modifierNames()) {
+            if (!configService.modifierEnabled(name)) continue;
             if (phase.equals("start")) {
                 String modifier = "custom-modifiers." + name + ".commands.";
                 runCommands(modifier + "console", null, winner);
@@ -182,36 +133,6 @@ public final class GameStateCommandManager {
     private List<Player> participatingPlayers() {
         return Bukkit.getOnlinePlayers().stream().filter(player -> playerStates.role(player) != Role.NONE)
                 .map(player -> (Player) player).toList();
-    }
-
-    private Set<String> modifierNames() {
-        var section = plugin.getConfig().getConfigurationSection("custom-modifiers");
-        return section == null ? Set.of() : section.getKeys(false);
-    }
-
-    private Set<String> extraModifierNames() {
-        Set<String> names = new TreeSet<>();
-        collectExtraModifierNames(plugin.getConfig().getConfigurationSection("extras"), "", names);
-        return names;
-    }
-
-    private void collectExtraModifierNames(ConfigurationSection section, String prefix, Set<String> names) {
-        if (section == null) return;
-        for (String key : section.getKeys(false)) {
-            String path = prefix.isEmpty() ? key : prefix + "." + key;
-            ConfigurationSection child = section.getConfigurationSection(key);
-            if (child != null && child.contains("enabled")) {
-                names.add("extras." + path);
-            } else if (child != null) {
-                collectExtraModifierNames(child, path, names);
-            } else if (section.isBoolean(key)) {
-                names.add("extras." + path);
-            }
-        }
-    }
-
-    private boolean modifierEnabled(String name) {
-        return plugin.getConfig().getBoolean("custom-modifiers." + name + ".enabled", false);
     }
 
     private void clearAdvancements() {

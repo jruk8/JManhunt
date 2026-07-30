@@ -1,4 +1,4 @@
-package com.jruk8.jmanhunt;
+package com.jruk8.jmanhunt.extras;
 
 public interface ExtrasListener {
     void onReload();
