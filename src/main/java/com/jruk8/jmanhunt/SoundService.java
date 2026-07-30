@@ -12,7 +12,7 @@ import java.util.Locale;
  */
 public class SoundService {
     private static final String SOUND_PATH_PREFIX = "sounds.";
-    private static final String DEFAULT_SOUND = "minecraft:entity.experience_orb.pickup";
+    private static final String FALLBACK_SOUND = "minecraft:entity.experience_orb.pickup";
     private static final String NEUTRAL_SOUND_KEY = "neutral-sound";
     private final JManhuntPlugin plugin;
     private final ConfigService config;
@@ -31,9 +31,9 @@ public class SoundService {
         SoundSettings settings = getSoundSettings(configKey);
         try {
             if (!settings.enabled() || settings.sound() == null) return;
-            player.playSound(player.getLocation(), settings.sound, settings.volume, settings.pitch);
+            player.playSound(player.getLocation(), settings.sound(), settings.volume(), settings.pitch());
         } catch (IllegalArgumentException exception) {
-            plugin.getLogger().warning("Could not play configured sound '" + settings.configKey + "': " + exception.getMessage());
+            plugin.getLogger().warning("Could not play configured sound '" + settings.configKey() + "': " + exception.getMessage());
         }
     }
 
@@ -49,13 +49,13 @@ public class SoundService {
         String soundPath = getSoundPath(configKey);
         boolean isEnabled = config.getBoolSetting(soundPath + ".enabled", false);
 
-        String soundInput = config.getStringSetting(soundPath + ".sound", DEFAULT_SOUND);
+        String soundInput = config.getStringSetting(soundPath + ".sound", FALLBACK_SOUND);
         NamespacedKey soundKey = NamespacedKey.fromString(soundInput.toLowerCase(Locale.ROOT));
         if (soundKey == null) soundKey = NamespacedKey.minecraft(soundInput.toLowerCase(Locale.ROOT));
         String sound = (Registry.SOUNDS.get(soundKey) == null) ? null : soundKey.asString();
         if (sound == null) {
             plugin.getLogger().warning("Sound '" + soundInput + "' for config key '" + configKey + "' is invalid. Using default sound.");
-            sound = DEFAULT_SOUND;
+            sound = FALLBACK_SOUND;
         }
 
         float pitch = config.getFloatSetting(soundPath + ".pitch", 1.0f);

@@ -40,7 +40,7 @@ public final class GameplayListener implements Listener {
     @EventHandler public void onJoin(PlayerJoinEvent event) { playerStates.resetRolesIfAbsent(event.getPlayer()); }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        if (plugin.getConfig().getBoolean("extras.reset-role-on-leave", false)) {
+        if (plugin.getConfig().getBoolean("extras.reset-role-on-leave.enabled", false)) {
             playerStates.setRole(player.getUniqueId(), Role.NONE);
         }
         game.updateAutostartState();
@@ -62,11 +62,18 @@ public final class GameplayListener implements Listener {
             if (Bukkit.getOnlinePlayers().stream().filter(p -> playerStates.role(p) == Role.SPEEDRUNNER)
                     .filter(p -> playerStates.isActiveSpeedrunner(p.getUniqueId())).count() == 0) game.finishLater(Role.HUNTER);
 
-            messages.broadcast("manhunt.speedrunner-death", Map.of("value", Integer.toString(playerStates.getActiveSpeedrunnerCount())));
+            int playerCount = playerStates.getActiveSpeedrunnerCount();
+            if (playerCount > 0) {
+                messages.broadcast("game.speedrunner-death", Map.of("value", Integer.toString(playerCount)));
+            }
+            else {
+                messages.broadcast("game.last-speedrunner-death");
+            }
+
             sounds.playGlobalSound("game.speedrunner-death");
         }
         else if (playerStates.role(player) == Role.HUNTER) {
-            messages.broadcast("manhunt.hunter-death");
+            messages.broadcast("game.hunter-death");
             sounds.playGlobalSound("game.hunter-death");
         }
     }

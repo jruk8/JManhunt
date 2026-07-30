@@ -95,7 +95,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             sounds.playNeutralSound(player);
             if (game.isActive() && role == Role.NONE) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
-                if (plugin.getConfig().getBoolean("extras.set-none-gamemode-spectator", true)) {
+                if (plugin.getConfig().getBoolean("extras.set-none-gamemode-spectator.enabled", true)) {
                     player.setGameMode(GameMode.SPECTATOR);
                 }
                 compass.removeCompasses(player);

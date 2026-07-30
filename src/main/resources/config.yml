@@ -70,12 +70,14 @@ gamestate-commands:
       reset-players-stats: true
       remove-advancements: true
       disable-locator-bar: true
+      respawn-immediate: true
       set-daytime: true
     end:
       auto-set-gamemode: true
       reset-players-stats: true
       remove-advancements: true
       disable-locator-bar: false
+      respawn-immediate: false
       set-daytime: false
   # Console commands run once per configured entry. <winner> is replaced with
   # Hunters or Speedrunners in end commands.
@@ -192,18 +194,21 @@ extras:
   # When true, all queued hunters/speedrunners are reset to NONE when a match
   # finishes.
   # Default: false
-  reset-roles-on-game-end: false
+  reset-roles-on-game-end:
+    enabled: false
 
   # When true, players are reset to NONE when they leave the server.
   # Default: false
-  reset-role-on-leave: false
+  reset-role-on-leave:
+    enabled: false
 
   # Controls how players with role NONE are handled when default auto-set
   # gamemode is enabled.
   # true: NONE players are put in spectator
   # false: NONE players keep their current gamemode
   # Default: true
-  set-none-gamemode-spectator: true
+  set-none-gamemode-spectator:
+    enabled: true
 
   # Start the game only after a speedrunner hits a hunter.
   # Default: true
@@ -256,7 +261,7 @@ sounds:
 
   game:
     # Runs on autostart countdown
-    autostart-sound:
+    autostart-countdown:
       enabled: true
       sound: block.stone_button.click_on
       pitch: 2.0

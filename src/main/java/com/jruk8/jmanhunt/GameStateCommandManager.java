@@ -76,6 +76,9 @@ public final class GameStateCommandManager {
             if (plugin.getConfig().getBoolean(path + "disable-locator-bar", false)) {
                 Bukkit.getWorlds().forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, false));
             }
+            if (plugin.getConfig().getBoolean(path + "respawn-immediate", false)) {
+                Bukkit.getWorlds().forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN, false));
+            }
             if (plugin.getConfig().getBoolean(path + "set-daytime", false)) {
                 Bukkit.getWorlds().forEach(this::setDaytime);
             }

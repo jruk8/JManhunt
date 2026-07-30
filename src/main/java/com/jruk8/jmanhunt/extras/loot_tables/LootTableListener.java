@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.extras.loot_tables;
 
+import com.jruk8.jmanhunt.GameManager;
 import com.jruk8.jmanhunt.extras.ExtrasListener;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
@@ -10,15 +11,18 @@ import java.io.File;
 public abstract class LootTableListener<T extends Event> implements Listener, ExtrasListener {
     protected final JavaPlugin plugin;
     protected final LootTableEngine engine;
+    private final GameManager game;
     private final File customFile;
 
-    public LootTableListener(JavaPlugin plugin) {
+    public LootTableListener(JavaPlugin plugin, GameManager game) {
         this.plugin = plugin;
+        this.game = game;
         this.engine = new LootTableEngine();
         this.customFile = new File(plugin.getDataFolder(), "extras/loot-tables/" + getLootTableName() + ".json");
     }
 
     protected boolean validateEvent(T event) {
+        if (!game.isActive()) return false;
         return plugin.getConfig().getBoolean("extras.loot-tables.%s".formatted(getConfigKey()), true) && customFile.exists();
     }
 

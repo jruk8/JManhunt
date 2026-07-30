@@ -44,8 +44,9 @@ manhunt:
 game:
   separator: "<strikethrough><gradient:#bababa:#dedede:#bababa>                                                    </gradient></strikethrough>"
   debuff-applied: "{prefix}<gray>You have been given debuffs for the start of the game."
-  hunter-died: "{prefix}<yellow>A hunter has died!"
-  speedrunner-died: "{prefix}<yellow>A speedrunner has died! (<white>{value}</white> left)."
+  hunter-death: "{prefix}<yellow>A hunter has died!"
+  speedrunner-death: "{prefix}<yellow>A speedrunner has died! <white>({value} remaining)</white>"
+  last-speedrunner-death: "{prefix}<yellow>The last speedrunner has died!"
   speedrunners-win: "{prefix}<green>Speedrunners Win!"
   hunters-win: "{prefix}<red>Hunters Win!"
   hunters-title: "<red>Hunters Win!"

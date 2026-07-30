@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.extras.loot_tables;
 
+import com.jruk8.jmanhunt.GameManager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.PiglinBarterEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -8,8 +9,8 @@ import org.bukkit.plugin.java.JavaPlugin;
  * Listens for PiglinBarterEvent and replaces the default loot with custom loot from a JSON file.
  */
 public class PiglinBarterListener extends LootTableListener<PiglinBarterEvent> {
-    public PiglinBarterListener(JavaPlugin plugin) {
-        super(plugin);
+    public PiglinBarterListener(JavaPlugin plugin, GameManager game) {
+        super(plugin, game);
     }
 
     @EventHandler

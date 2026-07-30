@@ -42,26 +42,20 @@ public final class ConfigService {
     }
 
     public boolean getBoolSetting(String setting, boolean defaultValue) {
-        String path = settingPath(setting);
-        return path != null && plugin.getConfig().getBoolean(path, defaultValue);
+        return plugin.getConfig().getBoolean(setting, defaultValue);
     }
 
     public String getStringSetting(String setting, String defaultValue) {
-        String path = settingPath(setting);
-        return path != null ? plugin.getConfig().getString(path, defaultValue) : defaultValue;
+        return plugin.getConfig().getString(setting, defaultValue);
     }
 
     public float getFloatSetting(String setting, float defaultValue) {
-        String path = settingPath(setting);
-        return path != null ? (float) plugin.getConfig().getDouble(path, defaultValue) : defaultValue;
+        return (float) plugin.getConfig().getDouble(setting, defaultValue);
     }
 
     public boolean setSetting(String setting, boolean value) {
-        String path = settingPath(setting);
-        if (path == null) return false;
-
-        boolean oldValue = plugin.getConfig().getBoolean(path);
-        plugin.getConfig().set(path, value);
+        boolean oldValue = plugin.getConfig().getBoolean(setting);
+        plugin.getConfig().set(setting, value);
         plugin.saveConfig();
 
         fireChange(setting, oldValue, value);
@@ -85,24 +79,6 @@ public final class ConfigService {
         }
     }
 
-    private String settingPath(String setting) {
-        if (setting.startsWith("default-commands.")) {
-            String path = "gamestate-commands." + setting;
-            return plugin.getConfig().contains(path) && !plugin.getConfig().isConfigurationSection(path) ? path : null;
-        }
-        if (setting.startsWith("custom-modifiers.")) {
-            String path = setting + ".enabled";
-            return plugin.getConfig().contains(path) ? path : null;
-        }
-        if (setting.startsWith("extras.")) {
-            String enabledPath = setting + ".enabled";
-            if (plugin.getConfig().contains(enabledPath)) return enabledPath;
-            if (plugin.getConfig().contains(setting)) return setting;
-            return null;
-        }
-        return null;
-    }
-
     private Set<String> extraModifierNames() {
         Set<String> names = new TreeSet<>();
         collectExtraModifierNames(plugin.getConfig().getConfigurationSection("extras"), "", names);
@@ -115,11 +91,11 @@ public final class ConfigService {
             String path = prefix.isEmpty() ? key : prefix + "." + key;
             ConfigurationSection child = section.getConfigurationSection(key);
             if (child != null && child.contains("enabled")) {
-                names.add("extras." + path);
+                names.add("extras." + path + ".enabled");
             } else if (child != null) {
                 collectExtraModifierNames(child, path, names);
             } else if (section.isBoolean(key)) {
-                names.add("extras." + path);
+                names.add("extras." + path + ".enabled");
             }
         }
     }

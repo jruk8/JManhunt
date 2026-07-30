@@ -30,8 +30,6 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        var piglinBarter = new PiglinBarterListener(this);
-        extras.add(piglinBarter);
         Reload();
 
         playerStates = new PlayerStateStore();
@@ -59,6 +57,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         configService = new ConfigService(this);
         sounds = new SoundService(this, configService);
         game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService);
+        var piglinBarter = new PiglinBarterListener(this, game);
+        extras.add(piglinBarter);
 
         ManhuntCommand command = new ManhuntCommand(this, messages, sounds, playerStates, game, compass);
         getCommand("manhunt").setExecutor(command);
@@ -75,6 +75,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
         BukkitTask actionbars = Bukkit.getScheduler().runTaskTimer(this,
                 () -> compass.showHeldActionbars(game.isActive()), 1L, 20L);
+        Reload(); // reload again to ensure that extras are loaded after the game manager is initialized
     }
 
     @Override public void onDisable() {
@@ -86,7 +87,6 @@ public final class JManhuntPlugin extends JavaPlugin {
     public void Reload() {
         YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION);
         reloadConfig();
-        migrateConfig();
         YamlFileUpdater.update(this, "messages.yml", "messages-version", MESSAGES_VERSION);
         saveResource("placeholders.yml", false);
 
@@ -102,33 +102,6 @@ public final class JManhuntPlugin extends JavaPlugin {
             listener.onReload();
         }
         getLogger().info("JManhunt has been reloaded.");
-    }
-
-    private void migrateConfig() {
-        FileConfiguration config = getConfig();
-        boolean changed = false;
-        if (config.contains("settings")) {
-            if (config.contains("settings.start-on-speedrunner-damage")
-                    && !config.contains("extras.start-on-speedrunner-damage.enabled")) {
-                config.set("extras.start-on-speedrunner-damage.enabled",
-                        config.getBoolean("settings.start-on-speedrunner-damage", true));
-            }
-            config.set("settings", null);
-            changed = true;
-        }
-        if (config.contains("settings.start-debuffs") && !config.contains("extras.start-debuffs.enabled")) {
-            config.set("extras.start-debuffs.enabled", config.getBoolean("settings.start-debuffs", false));
-            changed = true;
-        }
-        if (config.contains("start-debuffs") && !config.contains("extras.start-debuffs.effects")) {
-            copySection(config, "start-debuffs", "extras.start-debuffs");
-            changed = true;
-        }
-        if (config.contains("drop-compass-on-death") && !config.contains("extras.drop-compass-on-death.enabled")) {
-            config.set("extras.drop-compass-on-death.enabled", config.getBoolean("drop-compass-on-death", false));
-            changed = true;
-        }
-        if (changed) saveConfig();
     }
 
     private void copySection(FileConfiguration config, String fromPath, String toPath) {

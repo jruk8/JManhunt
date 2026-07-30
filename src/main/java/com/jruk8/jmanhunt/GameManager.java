@@ -87,7 +87,7 @@ public final class GameManager {
         messages.broadcast("manhunt.start-success");
         sounds.playNeutralSound();
         showStatusToAllPlayers();
-        if (getSetting("extras.start-on-speedrunner-damage")) scheduleWaitingReminder();
+        if (getSetting("extras.start-on-speedrunner-damage.enabled")) scheduleWaitingReminder();
         else beginGame();
         return true;
     }
@@ -115,7 +115,7 @@ public final class GameManager {
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             stateCommands.runEnd(winnerName);
-            if (plugin.getConfig().getBoolean("extras.reset-roles-on-game-end", false)) {
+            if (plugin.getConfig().getBoolean("extras.reset-roles-on-game-end.enabled", false)) {
                 playerStates.resetParticipatingRoles();
             }
             active = false; ending = false; gameBegun = false; playerStates.clearMatch();
