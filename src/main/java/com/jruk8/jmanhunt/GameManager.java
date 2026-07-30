@@ -94,11 +94,15 @@ public final class GameManager {
         }
         sound(winner == Role.HUNTER ? "fail-sound" : "win-sound");
         stats.completeMatch(winner);
+
+        // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
+        stateCommands.runConsoleCleanup(winnerName);
+        stateCommands.runPlayerCleanup(winnerName);
+
         long delay = Math.max(0L, Math.round(plugin.getConfig().getDouble("game-end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             stateCommands.runEnd(winnerName);
-            stateCommands.runConsoleCleanup(winnerName);
             if (plugin.getConfig().getBoolean("extras.reset-roles-on-game-end", false)) {
                 playerStates.resetParticipatingRoles();
             }
