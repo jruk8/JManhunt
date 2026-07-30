@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt;
 
+import com.jruk8.jmanhunt.extras.autostart.AutostartCountdownMessages;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -11,6 +12,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -27,6 +29,9 @@ public final class GameManager {
     private boolean ending;
     private boolean gameBegun;
     private BukkitTask waitingReminderTask;
+    private BukkitTask autostartCountdownTask;
+    private int autostartCountdownRemaining;
+    private int autostartCountdownConfigured;
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
                        CompassManager compass, StatsManager stats) {
@@ -44,6 +49,7 @@ public final class GameManager {
 
     public boolean start() {
         if (active) return false;
+        cancelAutostartCountdown();
         List<Player> players = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
                 .map(p -> (Player) p).toList();
         if (players.stream().noneMatch(p -> role(p) == Role.HUNTER)
@@ -68,6 +74,7 @@ public final class GameManager {
             if (role(player) == Role.HUNTER) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
         broadcast("manhunt.start-success"); sound("neutral-sound");
+        showStatusToAllPlayers();
         if (getSetting("extras.start-on-speedrunner-damage")) scheduleWaitingReminder();
         else beginGame();
         return true;
@@ -92,7 +99,11 @@ public final class GameManager {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             stateCommands.runEnd(winnerName);
             stateCommands.runConsoleCleanup(winnerName);
+            if (plugin.getConfig().getBoolean("extras.reset-roles-on-game-end", false)) {
+                playerStates.resetParticipatingRoles();
+            }
             active = false; ending = false; gameBegun = false; playerStates.clearMatch();
+            updateAutostartState();
         }, delay);
     }
 
@@ -123,6 +134,86 @@ public final class GameManager {
                 () -> { if (active && !gameBegun) broadcast("manhunt.waiting-for-damage"); }, delay, delay);
     }
 
+    public void updateAutostartState() {
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(plugin, this::updateAutostartState);
+            return;
+        }
+        if (active || ending || !plugin.getConfig().getBoolean("extras.autostart.enabled", false)) {
+            cancelAutostartCountdown();
+            return;
+        }
+        if (!isEligibleToStart()) {
+            cancelAutostartCountdown();
+            return;
+        }
+        if (autostartCountdownTask != null) return;
+        autostartCountdownConfigured = Math.max(0, plugin.getConfig().getInt("extras.autostart.countdown-seconds", 60));
+        if (autostartCountdownConfigured == 0) {
+            start();
+            return;
+        }
+        autostartCountdownRemaining = autostartCountdownConfigured;
+        broadcast("manhunt.autostart-eligible", Map.of("seconds", String.valueOf(autostartCountdownConfigured)));
+        announceAutostartCheckpoint(autostartCountdownRemaining);
+        autostartCountdownTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (active || ending || !isEligibleToStart()) {
+                cancelAutostartCountdown();
+                return;
+            }
+            autostartCountdownRemaining--;
+            if (autostartCountdownRemaining <= 0) {
+                cancelAutostartCountdown();
+                start();
+                return;
+            }
+            announceAutostartCheckpoint(autostartCountdownRemaining);
+        }, 20L, 20L);
+    }
+
+    private void announceAutostartCheckpoint(int remainingSeconds) {
+        if (!AutostartCountdownMessages.shouldAnnounce(remainingSeconds, autostartCountdownConfigured)) return;
+        broadcast("manhunt.autostart-countdown", Map.of("seconds", String.valueOf(remainingSeconds)));
+    }
+
+    private void cancelAutostartCountdown() {
+        if (autostartCountdownTask != null) {
+            autostartCountdownTask.cancel();
+            autostartCountdownTask = null;
+        }
+    }
+
+    private boolean isEligibleToStart() {
+        boolean hasHunter = false;
+        boolean hasSpeedrunner = false;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            Role playerRole = role(player);
+            if (playerRole == Role.HUNTER) hasHunter = true;
+            else if (playerRole == Role.SPEEDRUNNER) hasSpeedrunner = true;
+            if (hasHunter && hasSpeedrunner) return true;
+        }
+        return false;
+    }
+
+    private void showStatusToAllPlayers() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            message(player, "manhunt.status-header", Map.of("status", active ? "ACTIVE" : "INACTIVE"));
+            sendRoleSection(player, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
+            sendRoleSection(player, Role.HUNTER, "manhunt.hunters-header");
+            sendRoleSection(player, Role.NONE, "manhunt.none-header");
+        }
+    }
+
+    private void sendRoleSection(Player receiver, Role role, String headerKey) {
+        List<String> names = new ArrayList<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (role(player) == role) names.add(player.getName());
+        }
+        if (names.isEmpty()) return;
+        message(receiver, headerKey, Map.of());
+        names.stream().sorted().forEach(name -> message(receiver, "manhunt.status-player", Map.of("player", name)));
+    }
+
     private void applyStartDebuffs() {
         if (!plugin.getConfig().getBoolean("extras.start-debuffs.enabled", false)) return;
         var effects = plugin.getConfig().getConfigurationSection("extras.start-debuffs.effects");
@@ -150,6 +241,7 @@ public final class GameManager {
     private Role role(Player player) { return playerStates.role(player); }
     private Component component(String key) { return messages.component(key); }
     private void broadcast(String key) { Bukkit.broadcast(component(key)); }
+    private void broadcast(String key, Map<String, String> values) { Bukkit.broadcast(messages.component(key, values)); }
     private void message(Player player, String key, Map<String, String> values) { player.sendMessage(messages.component(key, values)); }
     public void playNeutralSound(Player player) { playSound(player, "neutral-sound"); }
 
