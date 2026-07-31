@@ -19,7 +19,7 @@ public final class ConfigService {
         this.plugin = plugin;
     }
 
-    /** Registers a callback fired whenever the given setting is changed via {@link #setSetting}. */
+    /** Registers a callback fired whenever the given setting is changed via {@link #setBoolean}. */
     public void onChange(String setting, BiConsumer<Boolean, Boolean> listener) {
         listeners.computeIfAbsent(setting, k -> new ArrayList<>()).add(listener);
     }
@@ -41,19 +41,19 @@ public final class ConfigService {
         return names;
     }
 
-    public boolean getBoolSetting(String setting, boolean defaultValue) {
+    public boolean getBoolean(String setting, boolean defaultValue) {
         return plugin.getConfig().getBoolean(setting, defaultValue);
     }
 
-    public String getStringSetting(String setting, String defaultValue) {
+    public String getString(String setting, String defaultValue) {
         return plugin.getConfig().getString(setting, defaultValue);
     }
 
-    public float getFloatSetting(String setting, float defaultValue) {
+    public float getFloat(String setting, float defaultValue) {
         return (float) plugin.getConfig().getDouble(setting, defaultValue);
     }
 
-    public boolean setSetting(String setting, boolean value) {
+    public boolean setBoolean(String setting, boolean value) {
         boolean oldValue = plugin.getConfig().getBoolean(setting);
         plugin.getConfig().set(setting, value);
         plugin.saveConfig();

@@ -1,11 +1,10 @@
 package com.jruk8.jmanhunt.extras.world_engine;
 
+import com.jruk8.jmanhunt.ConfigService;
 import com.jruk8.jmanhunt.StatsRepository;
 import com.jruk8.jmanhunt.extras.ExtrasListener;
-import org.bukkit.Bukkit;
-import org.bukkit.HeightMap;
-import org.bukkit.Location;
-import org.bukkit.World;
+import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -14,13 +13,17 @@ import java.util.OptionalLong;
 import java.util.concurrent.ThreadLocalRandom;
 
 public final class WorldEngineService implements ExtrasListener, LobbyTeleporter {
+    private static final int MAX_CELL_ALLOCATE_ATTEMPTS = 20;
+
     private final JavaPlugin plugin;
+    private final ConfigService configService;
     private final WorldCellAllocator cellAllocator;
     private final StrongholdDatapackManager strongholdDatapackManager;
     private final EndResetManager endResetManager;
 
-    public WorldEngineService(JavaPlugin plugin, StatsRepository statsRepository) {
+    public WorldEngineService(JavaPlugin plugin, ConfigService configService, StatsRepository statsRepository) {
         this.plugin = plugin;
+        this.configService = configService;
         this.cellAllocator = new WorldCellAllocator(statsRepository);
         this.strongholdDatapackManager = new StrongholdDatapackManager(plugin);
         this.endResetManager = new EndResetManager(plugin);
@@ -32,23 +35,7 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
         World world = Bukkit.getWorld(config.worldName());
         if (world == null) return;
 
-        OptionalLong startIndex = cellAllocator.reserveStartIndex(1);
-        if (startIndex.isEmpty()) return;
-
-        long baseIndex = startIndex.getAsLong();
-
-        SpiralCoordinateMapper.CellCoordinate cell = SpiralCoordinateMapper.toCoordinate(baseIndex);
-        int originX = toBlockCoordinate(cell.x() * config.cellSize());
-        int originZ = toBlockCoordinate(cell.z() * config.cellSize());
-
-        for (Player player : participants) {
-            Location spawn = randomSpawnInCell(world, originX, originZ, config.tpSpreadRadius(),
-                    player.getLocation().getYaw(), player.getLocation().getPitch());
-            player.teleport(spawn);
-        }
-        // reset on start as well to ensure the end is clean for the match
-        Location lobby = resolveLobby(config);
-        endResetManager.reset(config, lobby);
+        teleportToGame(participants, world, config);
     }
 
     public void onMatchEnd(List<Player> participants) {
@@ -91,6 +78,44 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
     @Override
     public String getDataPath() {
         return "world-engine/strongholds.json";
+    }
+
+    private void teleportToGame(List<Player> participants, World world, WorldEngineConfig config) {
+        for (int iter = 0; iter < MAX_CELL_ALLOCATE_ATTEMPTS; iter++) {
+            OptionalLong startIndex = cellAllocator.reserveStartIndex(1);
+            if (startIndex.isEmpty()) return;
+            long baseIndex = startIndex.getAsLong();
+
+            SpiralCoordinateMapper.CellCoordinate cell = SpiralCoordinateMapper.toCoordinate(baseIndex);
+            int originX = toBlockCoordinate(cell.x() * config.cellSize());
+            int originZ = toBlockCoordinate(cell.z() * config.cellSize());
+
+            boolean useAlgo = configService.getBoolean("extras.world-engine.use-spawnpoint-algorithm", true);
+            if (useAlgo) {
+                Block centerBlock = world.getHighestBlockAt(originX, originZ);
+                Material type = centerBlock.getType();
+                boolean isLastAttempt = (iter == MAX_CELL_ALLOCATE_ATTEMPTS - 1);
+
+                if ((type == Material.WATER || type == Material.LAVA || !centerBlock.isSolid()) && !isLastAttempt) {
+                    continue; // Bad terrain, try again
+                }
+
+                if (isLastAttempt && (type == Material.WATER || type == Material.LAVA || !centerBlock.isSolid())) {
+                    plugin.getLogger().warning("Could not find a valid spawn cell after "
+                            + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Using last attempted cell.");
+                }
+            }
+
+            for (Player player : participants) {
+                Location spawn = randomSpawnInCell(world, originX, originZ, config.tpSpreadRadius(),
+                        player.getLocation().getYaw(), player.getLocation().getPitch());
+                player.teleport(spawn);
+            }
+
+            Location lobby = resolveLobby(config);
+            endResetManager.reset(config, lobby);
+            break;
+        }
     }
 
     private Location resolveLobby(WorldEngineConfig config) {

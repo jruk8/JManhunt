@@ -68,17 +68,12 @@ gamestate-commands:
     start:
       auto-set-gamemode: true
       reset-players-stats: true
-      remove-advancements: true
       disable-locator-bar: true
-      respawn-immediate: true
+      set-respawn-immediate: true
       set-daytime: true
     end:
       auto-set-gamemode: true
       reset-players-stats: true
-      remove-advancements: true
-      disable-locator-bar: false
-      respawn-immediate: false
-      set-daytime: false
   # Console commands run once per configured entry. <winner> is replaced with
   # Hunters or Speedrunners in end commands.
   console-commands:
@@ -263,6 +258,11 @@ extras:
     cell-size: 10000
     # Radius from each cell center used when selecting player's spawn points.
     tp-spread-radius: 5
+    # When true, the spawnpoint algorithm is used to find a valid spawn point
+    # for each player. This fixes spawning inside oceans or lava, but can
+    # sometimes cause server lag.
+    # Default: true
+    use-spawnpoint-algorithm: true
     # Lobby location for all participants after game end, before End reset.
     # This is also used as the spawn point for joining NONE players.
     lobby-location:

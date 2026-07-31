@@ -47,9 +47,9 @@ public class SoundService {
 
     private SoundSettings getSoundSettings(String configKey) {
         String soundPath = getSoundPath(configKey);
-        boolean isEnabled = config.getBoolSetting(soundPath + ".enabled", false);
+        boolean isEnabled = config.getBoolean(soundPath + ".enabled", false);
 
-        String soundInput = config.getStringSetting(soundPath + ".sound", FALLBACK_SOUND);
+        String soundInput = config.getString(soundPath + ".sound", FALLBACK_SOUND);
         NamespacedKey soundKey = NamespacedKey.fromString(soundInput.toLowerCase(Locale.ROOT));
         if (soundKey == null) soundKey = NamespacedKey.minecraft(soundInput.toLowerCase(Locale.ROOT));
         String sound = (Registry.SOUNDS.get(soundKey) == null) ? null : soundKey.asString();
@@ -58,8 +58,8 @@ public class SoundService {
             sound = FALLBACK_SOUND;
         }
 
-        float pitch = config.getFloatSetting(soundPath + ".pitch", 1.0f);
-        float volume = config.getFloatSetting(soundPath + ".volume", 1.0f);
+        float pitch = config.getFloat(soundPath + ".pitch", 1.0f);
+        float volume = config.getFloat(soundPath + ".volume", 1.0f);
         pitch = Math.min(pitch, 2.0f);
         volume = Math.min(volume, 1.0f);
 

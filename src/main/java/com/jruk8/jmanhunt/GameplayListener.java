@@ -1,7 +1,6 @@
 package com.jruk8.jmanhunt;
 
 import com.jruk8.jmanhunt.extras.world_engine.LobbyTeleporter;
-import com.jruk8.jmanhunt.extras.world_engine.WorldEngineService;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.World;
@@ -57,7 +56,7 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        if (!game.isActive() && config.getBoolSetting("extras.reset-role-on-leave.enabled", false)) {
+        if (!game.isActive() && config.getBoolean("extras.reset-role-on-leave.enabled", false)) {
             playerStates.setRole(player.getUniqueId(), Role.NONE);
         }
         game.updateAutostartState();

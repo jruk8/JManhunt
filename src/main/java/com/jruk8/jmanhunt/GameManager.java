@@ -59,8 +59,8 @@ public final class GameManager {
     public boolean isGameBegun() { return gameBegun; }
     public boolean isEnding() { return ending; }
     public Set<String> settingNames() { return configService.settingNames(); }
-    public boolean getSetting(String setting) { return configService.getBoolSetting(setting, false); }
-    public boolean setSetting(String setting, boolean value) { return configService.setSetting(setting, value); }
+    public boolean getSetting(String setting) { return configService.getBoolean(setting, false); }
+    public boolean setSetting(String setting, boolean value) { return configService.setBoolean(setting, value); }
 
     public boolean start() {
         if (active) return false;
@@ -153,7 +153,7 @@ public final class GameManager {
     }
 
     private void scheduleWaitingReminder() {
-        double interval = configService.getFloatSetting("start-reminder-interval", 10.0f);
+        double interval = configService.getFloat("start-reminder-interval", 10.0f);
         if (interval == -1.0) return;
         long delay = Math.max(1L, Math.round(interval * 20.0));
         messages.broadcast("manhunt.waiting-for-damage");
@@ -244,7 +244,7 @@ public final class GameManager {
     }
 
     private void applyStartDebuffs() {
-        if (!configService.getBoolSetting("extras.start-debuffs.enabled", false)) return;
+        if (!configService.getBoolean("extras.start-debuffs.enabled", false)) return;
         var effects = plugin.getConfig().getConfigurationSection("extras.start-debuffs.effects");
         if (effects == null) return;
         for (Player hunter : Bukkit.getOnlinePlayers()) {
