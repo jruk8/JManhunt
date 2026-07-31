@@ -31,16 +31,17 @@ public final class WorldEngineService implements ExtrasListener {
         if (!config.enabled() || participants.isEmpty()) return;
         World world = Bukkit.getWorld(config.worldName());
         if (world == null) return;
-        OptionalLong startIndex = cellAllocator.reserveStartIndex(participants.size());
+
+        OptionalLong startIndex = cellAllocator.reserveStartIndex(1);
         if (startIndex.isEmpty()) return;
 
         long baseIndex = startIndex.getAsLong();
-        for (int i = 0; i < participants.size(); i++) {
-            Player player = participants.get(i);
-            long index = baseIndex + i;
-            SpiralCoordinateMapper.CellCoordinate cell = SpiralCoordinateMapper.toCoordinate(index);
-            int originX = toBlockCoordinate(cell.x() * config.cellSize());
-            int originZ = toBlockCoordinate(cell.z() * config.cellSize());
+
+        SpiralCoordinateMapper.CellCoordinate cell = SpiralCoordinateMapper.toCoordinate(baseIndex);
+        int originX = toBlockCoordinate(cell.x() * config.cellSize());
+        int originZ = toBlockCoordinate(cell.z() * config.cellSize());
+
+        for (Player player : participants) {
             Location spawn = randomSpawnInCell(world, originX, originZ, config.tpSpreadRadius(),
                     player.getLocation().getYaw(), player.getLocation().getPitch());
             player.teleport(spawn);

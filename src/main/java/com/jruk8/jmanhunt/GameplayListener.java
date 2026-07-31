@@ -22,16 +22,19 @@ public final class GameplayListener implements Listener {
     private final PlayerStateStore playerStates;
     private final GameManager game;
     private final MessageService messages;
+    private final ConfigService config;
     private final SoundService sounds;
     private final CompassManager compass;
     private final StatsManager stats;
 
     public GameplayListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
-                            MessageService messages, SoundService sounds, CompassManager compass, StatsManager stats) {
+                            MessageService messages, ConfigService config, SoundService sounds, CompassManager compass,
+                            StatsManager stats) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.game = game;
         this.messages = messages;
+        this.config = config;
         this.sounds = sounds;
         this.compass = compass;
         this.stats = stats;
@@ -40,7 +43,7 @@ public final class GameplayListener implements Listener {
     @EventHandler public void onJoin(PlayerJoinEvent event) { playerStates.resetRolesIfAbsent(event.getPlayer()); }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        if (plugin.getConfig().getBoolean("extras.reset-role-on-leave.enabled", false)) {
+        if (!game.isActive() && config.getBoolSetting("extras.reset-role-on-leave.enabled", false)) {
             playerStates.setRole(player.getUniqueId(), Role.NONE);
         }
         game.updateAutostartState();

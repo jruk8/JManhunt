@@ -100,14 +100,17 @@ public final class GameManager {
         if (ending) return;
         ending = true;
         if (waitingReminderTask != null) waitingReminderTask.cancel();
+
         String winnerName = winner == Role.HUNTER ? "Hunters" : "Speedrunners";
         String winMessage = getWinMessage(winner);
         String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
         messages.broadcast(winMessage);
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        var onlinePlayers = Bukkit.getOnlinePlayers();
+        for (Player player : onlinePlayers) {
             player.showTitle(Title.title(messages.component(title), Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
+        playerStates.resetOfflinePlayers(onlinePlayers);
         sounds.playGlobalSound(winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
         stats.completeMatch(winner);
 
@@ -119,7 +122,7 @@ public final class GameManager {
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             stateCommands.runEnd(winnerName);
-            List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
+            List<Player> participants = onlinePlayers.stream().filter(p -> role(p) != Role.NONE)
                     .map(p -> (Player) p).toList();
             worldEngine.onMatchEnd(participants);
             if (plugin.getConfig().getBoolean("extras.reset-roles-on-game-end.enabled", false)) {

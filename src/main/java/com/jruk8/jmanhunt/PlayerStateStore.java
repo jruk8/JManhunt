@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -37,6 +38,15 @@ public final class PlayerStateStore {
             reset++;
         }
         return reset;
+    }
+
+    public void resetOfflinePlayers(Collection<? extends Player> onlinePlayers) {
+        for (UUID playerId : roles.keySet()) {
+            boolean isOnline = onlinePlayers.stream().anyMatch(p -> p.getUniqueId().equals(playerId));
+            if (!isOnline) {
+                roles.put(playerId, Role.NONE);
+            }
+        }
     }
 
     public void clearMatch() {

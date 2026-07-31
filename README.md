@@ -131,6 +131,51 @@ This includes things like:
 
 and a lot more!
 
+## World Reset Engine
+
+The plugin provides a world reset engine that can be used to reset the world
+between matches. This can be useful for grid-based world engine runs, where
+the world needs to be reset between matches. The world reset engine can be
+configured in the `config.yml` file.
+
+### Setup Guide
+
+1. Enable the `extras.world-engine.enabled` option in `config.yml`.
+2. Set the `extras.world-engine.target-world` option to the name of the world
+you want to reset. The default should work for most servers.
+3. Set the `extras.world-engine.lobby-teleport` option to the location you
+want players to be teleported to after the world is reset. The default should
+work for most servers.
+4. Restart the server to apply the changes.
+5. Check `/datapack list` and make sure the `jmanhunt_world_engine` datapack 
+is enabled. If not, enable it with `/datapack enable jmanhunt_world_engine`.
+If it's still red, restart again.
+6. Test the world engine by starting a match and checking if the teleportation
+and cell algorithm works correctly.
+
+### Troubleshooting
+- Q: The datapack stays red and won't enable no matter what I do.
+- A: Regenerate `JManhunt/extras/world-engine` by deleting it and restarting the 
+server. Open an issue on GitHub with the relevant exception in server logs.
+
+
+- Q: Strongholds are generating in non-vanilla places.
+- A: This is a deliberate feature, not a bug. The world engine uses a custom
+stronghold spread algorithm. You cannot switch to the vanilla stronghold spread
+algorithm because this would make certain cells unbeatable after a certain
+point.
+
+
+- Q: I want to disable the world engine.
+- A: Set `extras.world-engine.enabled` to `false` in `config.yml` and disable the
+`jmanhunt_world_engine` datapack with `/datapack disable jmanhunt_world_engine`.
+
+
+- Q: Will this work in [specific Minecraft version]?
+- A: This feature is tested to work on 26.2. If the plugin is marked to support
+a newer version and you encounter issues, please open an issue on GitHub with 
+the relevant exception in server logs.
+
 ## Configuration
 
 The plugin creates `config.yml` in its data folder. It includes match

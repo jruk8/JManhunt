@@ -47,8 +47,9 @@ public final class StrongholdDatapackManager {
         return """
                 {
                   "pack": {
-                    "pack_format": 61,
-                    "description": "JManhunt world-engine stronghold placement"
+                    "description": "JManhunt world-engine stronghold placement",
+                    "min_format": 83,
+                    "max_format": 255
                   }
                 }
                 """;

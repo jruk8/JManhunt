@@ -198,9 +198,10 @@ extras:
     enabled: false
 
   # When true, players are reset to NONE when they leave the server.
-  # Default: false
+  # (only when no game is running, otherwise they are reset to NONE on game end)
+  # Default: true
   reset-role-on-leave:
-    enabled: false
+    enabled: true
 
   # Controls how players with role NONE are handled when default auto-set
   # gamemode is enabled.
