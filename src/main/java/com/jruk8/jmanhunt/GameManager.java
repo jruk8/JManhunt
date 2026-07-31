@@ -54,6 +54,7 @@ public final class GameManager {
         configService.onChange("extras.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
     }
 
+    // TODO: push players to a match container, so that new players cannot join the match mid-game.
     public boolean isActive() { return active; }
     public boolean isGameBegun() { return gameBegun; }
     public boolean isEnding() { return ending; }

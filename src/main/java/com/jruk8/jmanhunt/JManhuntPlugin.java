@@ -68,7 +68,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         getCommand("manhunt").setExecutor(command);
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);
-        getServer().getPluginManager().registerEvents(new GameplayListener(this, playerStates, game, messages, configService, sounds, compass, stats), this);
+        getServer().getPluginManager().registerEvents(new GameplayListener(this, playerStates, game, messages, configService, sounds, compass, stats, worldEngine), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
 
         double refreshInterval = getConfig().getDouble("compass-refresh.compass-refresh-interval", 10.0);

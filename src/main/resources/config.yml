@@ -264,6 +264,7 @@ extras:
     # Radius from each cell center used when selecting player's spawn points.
     tp-spread-radius: 5
     # Lobby location for all participants after game end, before End reset.
+    # This is also used as the spawn point for joining NONE players.
     lobby-location:
       world: world
       x: 0.5

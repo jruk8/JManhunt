@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.ThreadLocalRandom;
 
-public final class WorldEngineService implements ExtrasListener {
+public final class WorldEngineService implements ExtrasListener, LobbyTeleporter {
     private final JavaPlugin plugin;
     private final WorldCellAllocator cellAllocator;
     private final StrongholdDatapackManager strongholdDatapackManager;
@@ -54,15 +54,33 @@ public final class WorldEngineService implements ExtrasListener {
     public void onMatchEnd(List<Player> participants) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return;
-        Location lobby = resolveLobby(config);
-        if (lobby == null || lobby.getWorld() == null) {
-            plugin.getLogger().warning("Skipping world-engine lobby teleport because lobby world was not found.");
-            return;
-        }
+
+        Location lobby = getValidLobby(config);
+        if (lobby == null) return;
+
         for (Player player : participants) {
             player.teleport(lobby);
         }
         endResetManager.reset(config, lobby);
+    }
+
+    public void teleportToLobby(Player player) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled()) return;
+
+        Location lobby = getValidLobby(config);
+        if (lobby != null) {
+            player.teleport(lobby);
+        }
+    }
+
+    private Location getValidLobby(WorldEngineConfig config) {
+        Location lobby = resolveLobby(config);
+        if (lobby == null || lobby.getWorld() == null) {
+            plugin.getLogger().warning("Skipping world-engine lobby teleport because lobby world was not found.");
+            return null;
+        }
+        return lobby;
     }
 
     @Override

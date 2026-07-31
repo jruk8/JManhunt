@@ -1,5 +1,7 @@
 package com.jruk8.jmanhunt;
 
+import com.jruk8.jmanhunt.extras.world_engine.LobbyTeleporter;
+import com.jruk8.jmanhunt.extras.world_engine.WorldEngineService;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.World;
@@ -27,10 +29,11 @@ public final class GameplayListener implements Listener {
     private final SoundService sounds;
     private final CompassManager compass;
     private final StatsManager stats;
+    private final LobbyTeleporter lobbyTeleporter;
 
     public GameplayListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
                             MessageService messages, ConfigService config, SoundService sounds, CompassManager compass,
-                            StatsManager stats) {
+                            StatsManager stats, LobbyTeleporter lobbyTeleporter) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.game = game;
@@ -39,9 +42,19 @@ public final class GameplayListener implements Listener {
         this.sounds = sounds;
         this.compass = compass;
         this.stats = stats;
+        this.lobbyTeleporter = lobbyTeleporter;
     }
 
-    @EventHandler public void onJoin(PlayerJoinEvent event) { playerStates.resetRolesIfAbsent(event.getPlayer()); }
+    @EventHandler public void onJoin(PlayerJoinEvent event) {
+        var player = event.getPlayer();
+        playerStates.resetRolesIfAbsent(player);
+
+        // only if player is not in a match, teleport them to the lobby
+        // TODO: hook a check to the match players
+        if (!game.isActive()) {
+            lobbyTeleporter.teleportToLobby(player);
+        }
+    }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         if (!game.isActive() && config.getBoolSetting("extras.reset-role-on-leave.enabled", false)) {
