@@ -46,6 +46,9 @@ public final class WorldEngineService implements ExtrasListener {
                     player.getLocation().getYaw(), player.getLocation().getPitch());
             player.teleport(spawn);
         }
+        // reset on start as well to ensure the end is clean for the match
+        Location lobby = resolveLobby(config);
+        endResetManager.reset(config, lobby);
     }
 
     public void onMatchEnd(List<Player> participants) {

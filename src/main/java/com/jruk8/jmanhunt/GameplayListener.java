@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -87,7 +88,11 @@ public final class GameplayListener implements Listener {
         }
         if (game.isActive() && game.isGameBegun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
-                && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL) game.finishLater(Role.SPEEDRUNNER);
+                && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL
+                && event.getFrom().getWorld().getEnvironment() == World.Environment.THE_END
+                && event.getTo().getWorld().getEnvironment() == World.Environment.NORMAL) {
+            game.finishLater(Role.SPEEDRUNNER);
+        }
     }
     @EventHandler public void onMove(PlayerMoveEvent event) {
         if (game.isActive() && playerStates.role(event.getPlayer()) == Role.SPEEDRUNNER) {
