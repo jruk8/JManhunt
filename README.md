@@ -133,10 +133,16 @@ and a lot more!
 
 ## World Reset Engine
 
-The plugin provides a world reset engine that can be used to reset the world
-between matches. This can be useful for grid-based world engine runs, where
-the world needs to be reset between matches. The world reset engine can be
-configured in the `config.yml` file.
+The plugin provides a world reset engine that can be used to reset the match
+area. It works through partitioning the world into configurable cells and
+creating fresh matches on unused ones. This allows for practically infinite
+matches to run on just one world, which is:
+
+- a clean solution to compared to manually regenerating a world
+- more performant than world resets other plugins offer
+- far less likely to break on updates.
+  
+The world reset engine can be configured in the `config.yml` file.
 
 ### Setup Guide
 
