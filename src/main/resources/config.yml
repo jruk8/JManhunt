@@ -252,6 +252,15 @@ extras:
   world-engine:
     enabled: false
     world-name: world
+    # Lobby location for all participants after game end, before End reset.
+    # This is also used as the spawn point for joining NONE players.
+    lobby-location:
+      world: world
+      x: 0.5
+      y: 100.0
+      z: 0.5
+      yaw: 0.0
+      pitch: 0.0
     # Size of one spiral cell in blocks. Hard-capped at 50000.
     # Too low values may cause issues.
     # Default: 10,000
@@ -263,15 +272,15 @@ extras:
     # sometimes cause server lag.
     # Default: true
     use-spawnpoint-algorithm: true
-    # Lobby location for all participants after game end, before End reset.
-    # This is also used as the spawn point for joining NONE players.
-    lobby-location:
-      world: world
-      x: 0.5
-      y: 100.0
-      z: 0.5
-      yaw: 0.0
-      pitch: 0.0
+    # When true, the world border is used to limit the spiral cell area.
+    # It enforces the boundary between cells and prevents entering
+    # unused or already used cells. It works in both overworld and
+    # nether.
+    #
+    # This setting should only be used when the game world is different
+    # from the lobby world. Otherwise lobby players may suffocate.
+    # Default: false
+    use-world-border: false
 
 # Sound names are namespaced Minecraft keys.
 # eg. block.note_block.pling

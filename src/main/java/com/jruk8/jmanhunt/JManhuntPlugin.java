@@ -58,7 +58,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 new NamespacedKey(this, "hunters_compass"));
         configService = new ConfigService(this);
         sounds = new SoundService(this, configService);
-        worldEngine = new WorldEngineService(this, statsRepository);
+        worldEngine = new WorldEngineService(this, configService, statsRepository);
         game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService, worldEngine);
         var piglinBarter = new PiglinBarterListener(this, game);
         extras.add(worldEngine);

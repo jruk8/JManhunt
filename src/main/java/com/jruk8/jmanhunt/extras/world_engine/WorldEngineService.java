@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -35,7 +36,18 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
         World world = Bukkit.getWorld(config.worldName());
         if (world == null) return;
 
-        teleportToGame(participants, world, config);
+        CellOrigin origin;
+        try {
+            origin = findValidOrigin(world, config)
+                    .orElseThrow(Exception::new);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Could not find a valid spawn cell for world-engine after "
+                    + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Skipping teleport.");
+            return;
+        }
+
+        teleportToGame(participants, world, config, origin);
+        setWorldBorder(world, config, origin);
     }
 
     public void onMatchEnd(List<Player> participants) {
@@ -80,10 +92,12 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
         return "world-engine/strongholds.json";
     }
 
-    private void teleportToGame(List<Player> participants, World world, WorldEngineConfig config) {
+    private record CellOrigin(int x, int z) {}
+
+    private Optional<CellOrigin> findValidOrigin(World world, WorldEngineConfig config) {
         for (int iter = 0; iter < MAX_CELL_ALLOCATE_ATTEMPTS; iter++) {
             OptionalLong startIndex = cellAllocator.reserveStartIndex(1);
-            if (startIndex.isEmpty()) return;
+            if (startIndex.isEmpty()) return Optional.empty();
             long baseIndex = startIndex.getAsLong();
 
             SpiralCoordinateMapper.CellCoordinate cell = SpiralCoordinateMapper.toCoordinate(baseIndex);
@@ -106,16 +120,53 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
                 }
             }
 
-            for (Player player : participants) {
-                Location spawn = randomSpawnInCell(world, originX, originZ, config.tpSpreadRadius(),
-                        player.getLocation().getYaw(), player.getLocation().getPitch());
-                player.teleport(spawn);
-            }
-
-            Location lobby = resolveLobby(config);
-            endResetManager.reset(config, lobby);
-            break;
+            return Optional.of(new CellOrigin(originX, originZ));
         }
+        return Optional.empty();
+    }
+
+    private void teleportToGame(List<Player> participants, World world, WorldEngineConfig config, CellOrigin origin) {
+        for (Player player : participants) {
+            Location spawn = randomSpawnInCell(world, origin.x(), origin.z(), config.tpSpreadRadius(),
+                    player.getLocation().getYaw(), player.getLocation().getPitch());
+            player.teleport(spawn);
+        }
+
+        Location lobby = resolveLobby(config);
+        endResetManager.reset(config, lobby);
+
+        setWorldBorder(world, config, origin);
+    }
+
+    /**
+     * Sets the world border for the overworld and its corresponding Nether world.
+     */
+    private void setWorldBorder(World overworld, WorldEngineConfig config, CellOrigin origin) {
+        if (configService.getBoolean("extras.world-engine.use-world-border", false)) {
+            return;
+        }
+
+        WorldBorder border = overworld.getWorldBorder();
+        border.setCenter(origin.x(), origin.z());
+        border.setSize(config.cellSize());
+
+        World nether = getNetherWorld(overworld);
+        if (nether == null) {
+            plugin.getLogger().warning("Could not find matching Nether world for '"
+                    + overworld.getName() + "'. Skipping Nether world border sync.");
+            return;
+        }
+
+        WorldBorder netherBorder = nether.getWorldBorder();
+        netherBorder.setCenter(origin.x() / 8.0, origin.z() / 8.0);
+        netherBorder.setSize(config.cellSize() / 8.0);
+    }
+
+    private World getNetherWorld(World overworld) {
+        if (overworld.getEnvironment() == World.Environment.NETHER) {
+            return overworld; // already the Nether, guard against double-wrapping
+        }
+        return Bukkit.getWorld(overworld.getName() + "_nether");
     }
 
     private Location resolveLobby(WorldEngineConfig config) {
