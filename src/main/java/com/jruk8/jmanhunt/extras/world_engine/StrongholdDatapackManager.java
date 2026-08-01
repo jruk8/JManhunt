@@ -31,6 +31,25 @@ public final class StrongholdDatapackManager {
         } catch (IOException exception) {
             plugin.getLogger().warning("Failed to apply world-engine stronghold datapack: " + exception.getMessage());
         }
+        plugin.getServer().reloadData();
+    }
+
+    public void remove(WorldEngineConfig config) {
+        if (config.enabled()) {
+            plugin.getLogger().info("Attempted remove datapack with world engine enabled. " +
+                    "This message should not happen. Contact an admin.");
+            return;
+        }
+        File worldFolder = new File(plugin.getServer().getWorldContainer(), config.worldName());
+        File datapackRoot = new File(worldFolder, "datapacks/jmanhunt-world-engine");
+        if (datapackRoot.exists()) {
+            try {
+                FileUtils.deleteRecursively(datapackRoot);
+            } catch (IOException e) {
+                plugin.getLogger().warning("Failed to delete datapack folder: " + e.getMessage());
+            }
+        }
+        plugin.getServer().reloadData();
     }
 
     private void writeIfChanged(File target, String content) throws IOException {

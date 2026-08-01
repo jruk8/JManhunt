@@ -49,6 +49,10 @@ public abstract class LootTableListener<T extends Event> implements Listener, Ex
         plugin.getLogger().info("Successfully loaded custom loot table '%s.json'!".formatted(name));
     }
 
+    public void onStart() {
+        // unused
+    }
+
     public void onReload() {
         reloadTable();
     }
