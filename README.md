@@ -218,8 +218,8 @@ On Windows:
 
 The plugin jar is written to `build/libs/`. GitHub Actions builds every push
 and pull request. Pushing a `v*` tag creates a GitHub release and publishes to
-Modrinth using the repository's `MODRINTH_ID`, `MODRINTH_GAME_VERSIONS`, and
-`MODRINTH_TOKEN` settings.
+Modrinth using the repository's `MODRINTH_ID`, `MODRINTH_GAME_VERSIONS`,
+`MODRINTH_LOADERS`, and `MODRINTH_TOKEN` settings.
 
 See `CONTRIBUTING.md` for contributor setup.
 
