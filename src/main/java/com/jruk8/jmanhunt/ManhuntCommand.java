@@ -18,6 +18,9 @@ import java.util.Set;
 import java.util.HashSet;
 
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
+    private static final Set<String> RESTART_REQUIRED_SETTINGS = Set.of(
+            "extras.world-engine.enabled"
+    );
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final SoundService sounds;
@@ -146,10 +149,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
             return message(sender, "manhunt.setting-invalid-value");
         }
-        boolean value = Boolean.parseBoolean(args[2]);
         boolean oldValue = game.getSetting(setting);
+        boolean value = Boolean.parseBoolean(args[2]);
         game.setSetting(setting, value);
         message(sender, "manhunt.setting-updated", Map.of("setting", setting, "value", String.valueOf(value), "old-value", String.valueOf(oldValue)));
+        if (value && RESTART_REQUIRED_SETTINGS.contains(setting)) {
+            message(sender, "manhunt.setting-restart-required");
+        }
         neutralSound(sender);
         return true;
     }
