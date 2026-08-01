@@ -5,7 +5,9 @@ import org.bukkit.entity.Player;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /** Owns role and per-match player state, including dimension-aware sightings. */
@@ -13,6 +15,8 @@ public final class PlayerStateStore {
     private final Map<UUID, Role> roles = new HashMap<>();
     private final Map<UUID, Map<UUID, Location>> lastSeenByWorld = new HashMap<>();
     private final Map<UUID, Boolean> speedrunnerAlive = new HashMap<>();
+    private final Set<UUID> matchParticipants = new HashSet<>();
+    private final Set<UUID> matchSpectators = new HashSet<>();
 
     public Role role(Player player) {
         return roles.getOrDefault(player.getUniqueId(), Role.NONE);
@@ -52,6 +56,37 @@ public final class PlayerStateStore {
     public void clearMatch() {
         lastSeenByWorld.clear();
         speedrunnerAlive.clear();
+        matchParticipants.clear();
+        matchSpectators.clear();
+    }
+
+    public void setMatchParticipants(Collection<? extends Player> players) {
+        matchParticipants.clear();
+        matchSpectators.clear();
+        for (Player player : players) {
+            matchParticipants.add(player.getUniqueId());
+        }
+    }
+
+    public boolean isMatchParticipant(UUID playerId) {
+        return matchParticipants.contains(playerId);
+    }
+
+    public void markMatchParticipant(UUID playerId) {
+        matchParticipants.add(playerId);
+        matchSpectators.remove(playerId);
+    }
+
+    public void removeMatchParticipant(UUID playerId) {
+        if (matchParticipants.remove(playerId)) {
+            matchSpectators.add(playerId);
+        }
+    }
+
+    public void markMatchSpectator(UUID playerId) {
+        if (!matchParticipants.contains(playerId)) {
+            matchSpectators.add(playerId);
+        }
     }
 
     public void setSpeedrunnerAlive(UUID playerId, boolean alive) {

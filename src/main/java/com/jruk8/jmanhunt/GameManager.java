@@ -36,6 +36,7 @@ public final class GameManager {
     private BukkitTask autostartCountdownTask;
     private int autostartCountdownRemaining;
     private int autostartCountdownConfigured;
+    private long matchId;
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
                        PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
@@ -58,6 +59,7 @@ public final class GameManager {
     public boolean isActive() { return active; }
     public boolean isGameBegun() { return gameBegun; }
     public boolean isEnding() { return ending; }
+    public long matchId() { return matchId; }
     public Set<String> settingNames() { return configService.settingNames(); }
     public boolean getSetting(String setting) { return configService.getBoolean(setting, false); }
     public boolean setSetting(String setting, boolean value) { return configService.setBoolean(setting, value); }
@@ -70,6 +72,8 @@ public final class GameManager {
         if (players.stream().noneMatch(p -> role(p) == Role.HUNTER)
                 || players.stream().noneMatch(p -> role(p) == Role.SPEEDRUNNER)) return false;
         active = true; ending = false; gameBegun = false; stats.clear(); playerStates.clearMatch();
+        matchId++;
+        playerStates.setMatchParticipants(players);
         for (Player player : players) {
             StatsManager.Stats playerStats = stats.getOrCreate(player.getUniqueId());
             playerStats.player = player.getName();

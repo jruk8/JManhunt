@@ -1,6 +1,6 @@
 # JManhunt configuration. Reload with /manhunt reload.
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 6
+config-version: 7
 
 # Message parser used for messages.yml: minimessage or legacy.
 text-format: minimessage
@@ -101,6 +101,16 @@ game-end-delay: 10.0
 # Seconds between reminders while waiting for the first speedrunner hit.
 # Set to -1 to disable the reminders entirely while still waiting for damage.
 start-reminder-interval: 10.0
+
+# Disconnect rules for active speedrunners.
+disconnect-handling:
+  speedrunner:
+    # Seconds a disconnected speedrunner has to rejoin before they are treated
+    # as dead and removed from the match.
+    reconnect-grace-seconds: 60
+    # Disconnect strike limit before a speedrunner instantly loses.
+    # Set to 1 to disable retries entirely.
+    max-strikes: 3
 
 # End-screen sections, in display order. Available values are DAMAGE_DEALT,
 # HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based
