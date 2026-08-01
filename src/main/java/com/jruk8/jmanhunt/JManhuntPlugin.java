@@ -80,6 +80,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         BukkitTask actionbars = Bukkit.getScheduler().runTaskTimer(this,
                 () -> compass.showHeldActionbars(game.isActive()), 1L, 20L);
         Reload(); // reload again to ensure that extras are loaded after the game manager is initialized
+        for (ExtrasListener listener : extras) {
+            listener.onStart();
+        }
     }
 
     @Override public void onDisable() {

@@ -83,6 +83,14 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
     }
 
     @Override
+    public void onStart() {
+        boolean isDisabled = !configService.getBoolean("extras.world-engine.enabled", false);
+        if (isDisabled) {
+            strongholdDatapackManager.remove(WorldEngineConfig.fromConfig(plugin.getConfig()));
+        }
+    }
+
+    @Override
     public void onReload() {
         strongholdDatapackManager.apply(WorldEngineConfig.fromConfig(plugin.getConfig()));
     }
