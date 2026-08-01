@@ -25,11 +25,6 @@ Manhunt experience. The plugin is designed so that anyone comfortable with
 vanilla Minecraft commands can figure out how to create custom modifiers
 without much of a learning curve.
 
-The commands-based approach keeps things modular and dependency-free.
-Need something like a world reset between matches? Just pair JManhunt with
-a plugin that handles that, and wire it into your game-state commands. There
-is zero direct integration required.
-
 If a feature you need doesn't exist yet, contributions are welcome on our
 [GitHub page](https://github.com/jruk8/JManhunt). We're intentionally
 keeping this plugin lightweight and modular, so please keep that philosophy
