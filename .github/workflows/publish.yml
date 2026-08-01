@@ -67,7 +67,7 @@ jobs:
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
           files: |
             build/libs/!(*-plain|*-sources|*-dev).jar
-          loaders: paper
+          loaders: ${{ vars.MODRINTH_LOADERS }}
           game-versions: ${{ vars.MODRINTH_GAME_VERSIONS }}
           version: ${{ github.ref_name }}
           name: ${{ github.event.repository.name }} ${{ github.ref_name }}
