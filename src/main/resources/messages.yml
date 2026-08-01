@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 3
+messages-version: 4
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
@@ -47,6 +47,9 @@ game:
   hunter-death: "{prefix}<yellow>A hunter has died!"
   speedrunner-death: "{prefix}<yellow>A speedrunner has died! <white>({value} remaining)</white>"
   last-speedrunner-death: "{prefix}<yellow>The last speedrunner has died!"
+  speedrunner-disconnect-warning: "{prefix}<yellow>A speedrunner has disconnected! They will be removed after <white>{seconds} seconds</white> unless they rejoin."
+  speedrunner-disconnect-cancelled: "{prefix}<green>A disconnected speedrunner has rejoined the game."
+  speedrunner-disconnect-removed: "{prefix}<yellow>A speedrunner has been removed for disconnecting."
   speedrunners-win: "{prefix}<green>Speedrunners Win!"
   hunters-win: "{prefix}<red>Hunters Win!"
   hunters-title: "<red>Hunters Win!"

@@ -53,6 +53,10 @@ public final class ConfigService {
         return (float) plugin.getConfig().getDouble(setting, defaultValue);
     }
 
+    public int getInt(String setting, int defaultValue) {
+        return plugin.getConfig().getInt(setting, defaultValue);
+    }
+
     public boolean setBoolean(String setting, boolean value) {
         boolean oldValue = plugin.getConfig().getBoolean(setting);
         plugin.getConfig().set(setting, value);

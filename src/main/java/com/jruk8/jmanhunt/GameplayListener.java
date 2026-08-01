@@ -16,8 +16,11 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.scheduler.BukkitTask;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public final class GameplayListener implements Listener {
     private final JManhuntPlugin plugin;
@@ -29,6 +32,8 @@ public final class GameplayListener implements Listener {
     private final CompassManager compass;
     private final StatsManager stats;
     private final LobbyTeleporter lobbyTeleporter;
+    private final SpeedrunnerDisconnectTracker speedrunnerDisconnects = new SpeedrunnerDisconnectTracker();
+    private final Map<UUID, BukkitTask> speedrunnerDisconnectTasks = new HashMap<>();
 
     public GameplayListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
                             MessageService messages, ConfigService config, SoundService sounds, CompassManager compass,
@@ -48,6 +53,18 @@ public final class GameplayListener implements Listener {
         var player = event.getPlayer();
         playerStates.resetRolesIfAbsent(player);
 
+        if (game.isActive()) {
+            if (!playerStates.isMatchParticipant(player.getUniqueId())) {
+                playerStates.setRole(player.getUniqueId(), Role.NONE);
+                playerStates.markMatchSpectator(player.getUniqueId());
+                if (config.getBoolean("extras.set-none-gamemode-spectator.enabled", true)) {
+                    player.setGameMode(GameMode.SPECTATOR);
+                }
+            } else if (playerStates.role(player) == Role.SPEEDRUNNER) {
+                handleSpeedrunnerRejoin(player);
+            }
+        }
+
         // only if player is not in a match, teleport them to the lobby
         // TODO: hook a check to the match players
         if (!game.isActive()) {
@@ -58,6 +75,12 @@ public final class GameplayListener implements Listener {
         Player player = event.getPlayer();
         if (!game.isActive() && config.getBoolean("extras.reset-role-on-leave.enabled", false)) {
             playerStates.setRole(player.getUniqueId(), Role.NONE);
+        }
+        if (game.isActive()
+                && playerStates.role(player) == Role.SPEEDRUNNER
+                && playerStates.isActiveSpeedrunner(player.getUniqueId())
+                && playerStates.isMatchParticipant(player.getUniqueId())) {
+            handleSpeedrunnerDisconnect(player);
         }
         game.updateAutostartState();
     }
@@ -72,6 +95,8 @@ public final class GameplayListener implements Listener {
 
         if (!game.isActive() || !game.isGameBegun()) return;
         if (playerStates.role(player) == Role.SPEEDRUNNER) {
+            cancelSpeedrunnerDisconnectTask(player.getUniqueId());
+            speedrunnerDisconnects.clear(player.getUniqueId());
             playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
             if (player.getKiller() != null) stats.getOrCreate(player.getKiller().getUniqueId()).finalKills++;
             Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
@@ -131,5 +156,62 @@ public final class GameplayListener implements Listener {
                 || event.getEntity().getKiller() == null || playerStates.role(victim) == Role.NONE
                 || playerStates.role(event.getEntity().getKiller()) == Role.NONE) return;
         stats.getOrCreate(event.getEntity().getKiller().getUniqueId()).kills++;
+    }
+
+    private void handleSpeedrunnerDisconnect(Player player) {
+        int maxStrikes = config.getInt("disconnect-handling.speedrunner.max-strikes", 3);
+        int graceSeconds = Math.max(0, config.getInt("disconnect-handling.speedrunner.reconnect-grace-seconds", 60));
+        SpeedrunnerDisconnectTracker.Decision decision =
+                speedrunnerDisconnects.registerDisconnect(player.getUniqueId(), game.matchId(), maxStrikes);
+        cancelSpeedrunnerDisconnectTask(player.getUniqueId());
+        if (decision.forfeit()) {
+            eliminateDisconnectedSpeedrunner(player.getUniqueId(), game.matchId());
+            return;
+        }
+        messages.broadcast("game.speedrunner-disconnect-warning", Map.of("seconds", Integer.toString(graceSeconds)));
+        long currentMatchId = game.matchId();
+        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin,
+                () -> eliminateDisconnectedSpeedrunner(player.getUniqueId(), currentMatchId), graceSeconds * 20L);
+        speedrunnerDisconnectTasks.put(player.getUniqueId(), task);
+    }
+
+    private void eliminateDisconnectedSpeedrunner(UUID playerId, long matchId) {
+        if (!game.isActive() || game.matchId() != matchId || !playerStates.isMatchParticipant(playerId)
+                || playerStates.role(playerId) != Role.SPEEDRUNNER || !playerStates.isActiveSpeedrunner(playerId)) {
+            return;
+        }
+        cancelSpeedrunnerDisconnectTask(playerId);
+        speedrunnerDisconnects.clear(playerId);
+        playerStates.setSpeedrunnerAlive(playerId, false);
+        playerStates.setRole(playerId, Role.NONE);
+        playerStates.removeMatchParticipant(playerId);
+
+        Player onlinePlayer = Bukkit.getPlayer(playerId);
+        if (onlinePlayer != null && config.getBoolean("extras.set-none-gamemode-spectator.enabled", true)) {
+            onlinePlayer.setGameMode(GameMode.SPECTATOR);
+        }
+
+        int playerCount = playerStates.getActiveSpeedrunnerCount();
+        messages.broadcast("game.speedrunner-disconnect-removed");
+        if (playerCount == 0) {
+            messages.broadcast("game.last-speedrunner-death");
+            game.finishLater(Role.HUNTER);
+        }
+        sounds.playGlobalSound("game.speedrunner-death");
+    }
+
+    private void handleSpeedrunnerRejoin(Player player) {
+        UUID playerId = player.getUniqueId();
+        if (!speedrunnerDisconnectTasks.containsKey(playerId)) {
+            return;
+        }
+        cancelSpeedrunnerDisconnectTask(playerId);
+        speedrunnerDisconnects.clear(playerId);
+        messages.broadcast("game.speedrunner-disconnect-cancelled");
+    }
+
+    private void cancelSpeedrunnerDisconnectTask(UUID playerId) {
+        BukkitTask task = speedrunnerDisconnectTasks.remove(playerId);
+        if (task != null) task.cancel();
     }
 }
