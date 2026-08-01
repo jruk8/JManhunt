@@ -37,7 +37,7 @@ manhunt:
   modifiers-usage: "{prefix}<yellow>Usage: /manhunt modifiers <setting> <true|false>"
   setting-invalid: "{prefix}<red>Unknown setting."
   setting-invalid-value: "{prefix}<red>Setting values must be true or false."
-  setting-updated: "{prefix}<green>Set <white>{setting}<green> to <white>{value}<green>."
+  setting-updated: "{prefix}<green>Set <white>{setting}<green> to <white>{value}<green>. <gray>(was <white>{old_value}</white>)</gray>"
   setting-entry: "{prefix}<white>{setting}<gray>: <white>{value}"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
 

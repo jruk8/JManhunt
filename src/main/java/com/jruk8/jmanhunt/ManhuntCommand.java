@@ -147,8 +147,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return message(sender, "manhunt.setting-invalid-value");
         }
         boolean value = Boolean.parseBoolean(args[2]);
+        boolean oldValue = game.getSetting(setting);
         game.setSetting(setting, value);
-        message(sender, "manhunt.setting-updated", Map.of("setting", setting, "value", String.valueOf(value)));
+        message(sender, "manhunt.setting-updated", Map.of("setting", setting, "value", String.valueOf(value), "old-value", String.valueOf(oldValue)));
         neutralSound(sender);
         return true;
     }
