@@ -220,6 +220,11 @@ extras:
   # Default: true
   start-on-speedrunner-damage:
     enabled: true
+    # Seconds to wait for a speedrunner to hit a hunter before timing out.
+    # Set to 0 to begin immediately on the first hit; set to -1 to wait indefinitely.
+    delay-seconds: 30
+    # If true and the waiting period expires, cancel the match without recording statistics.
+    cancelled-on-expire: false
 
   # When true, a compass survives a speedrunner's death as a normal dropped
   # item.

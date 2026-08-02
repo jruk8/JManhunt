@@ -156,7 +156,7 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
      * Sets the world border for the overworld and its corresponding Nether world.
      */
     private void setWorldBorder(World overworld, WorldEngineConfig config, CellOrigin origin) {
-        if (configService.getBoolean("extras.world-engine.use-world-border", false)) {
+        if (!configService.getBoolean("extras.world-engine.use-world-border", false)) {
             return;
         }
 

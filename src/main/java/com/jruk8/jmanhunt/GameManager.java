@@ -33,6 +33,8 @@ public final class GameManager {
     private boolean ending;
     private boolean gameBegun;
     private BukkitTask waitingReminderTask;
+    private BukkitTask waitingExpiryTask;
+    private int waitingDelayConfigured;
     private BukkitTask autostartCountdownTask;
     private int autostartCountdownRemaining;
     private int autostartCountdownConfigured;
@@ -97,6 +99,8 @@ public final class GameManager {
         messages.broadcast("manhunt.start-success");
         sounds.playNeutralSound();
         showStatusToAllPlayers();
+        // load waiting delay configuration
+        waitingDelayConfigured = Math.max(0, plugin.getConfig().getInt("extras.start-on-speedrunner-damage.delay-seconds", 30));
         if (getSetting("extras.start-on-speedrunner-damage.enabled")) scheduleWaitingReminder();
         else beginGame();
         return true;
@@ -105,7 +109,8 @@ public final class GameManager {
     public void finish(Role winner) {
         if (ending) return;
         ending = true;
-        if (waitingReminderTask != null) waitingReminderTask.cancel();
+        if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
+        if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
 
         String winnerName = winner == Role.HUNTER ? "Hunters" : "Speedrunners";
         String winMessage = getWinMessage(winner);
@@ -147,6 +152,7 @@ public final class GameManager {
         if (gameBegun) return;
         gameBegun = true;
         if (waitingReminderTask != null) waitingReminderTask.cancel();
+        if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
         messages.broadcast("manhunt.started-by-damage"); sounds.playNeutralSound(); applyStartDebuffs();
     }
 
@@ -161,9 +167,37 @@ public final class GameManager {
         double interval = configService.getFloat("start-reminder-interval", 10.0f);
         if (interval == -1.0) return;
         long delay = Math.max(1L, Math.round(interval * 20.0));
-        messages.broadcast("manhunt.waiting-for-damage");
+        messages.broadcast("manhunt.waiting-for-damage", Map.of("seconds", String.valueOf((int) Math.round(waitingDelayConfigured))));
         waitingReminderTask = Bukkit.getScheduler().runTaskTimer(plugin,
-                () -> { if (active && !gameBegun) messages.broadcast("manhunt.waiting-for-damage"); }, delay, delay);
+                () -> { if (active && !gameBegun) messages.broadcast("manhunt.waiting-for-damage", Map.of("seconds", String.valueOf((int) Math.round(waitingDelayConfigured)))); }, delay, delay);
+
+        // schedule expiry task which ends the waiting period if no damage occurs
+        if (waitingDelayConfigured > 0) {
+            long expiryTicks = Math.max(1L, Math.round(waitingDelayConfigured * 20.0));
+            long currentMatchId = matchId;
+            waitingExpiryTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                // only cancel if still active and game hasn't begun and match unchanged
+                if (active && !gameBegun && matchId == currentMatchId) {
+                    if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
+                    messages.broadcast("manhunt.waiting-for-damage-exhausted", Map.of("seconds", String.valueOf(waitingDelayConfigured)));
+                    // end match as cancelled if configured
+                    if (plugin.getConfig().getBoolean("extras.start-on-speedrunner-damage.cancelled-on-expire", false)) {
+                        // do not save stats
+                        stats.clear();
+                        stateCommands.runConsoleCleanup("Cancelled");
+                        stateCommands.runPlayerCleanup("Cancelled");
+                        List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
+                                .map(p -> (Player) p).toList();
+                        worldEngine.onMatchEnd(participants);
+                        active = false; ending = false; gameBegun = false; playerStates.clearMatch();
+                        updateAutostartState();
+                    } else {
+                        // finish normally as hunters win
+                        finishLater(Role.HUNTER);
+                    }
+                }
+            }, expiryTicks);
+        }
     }
 
     public void updateAutostartState() {
