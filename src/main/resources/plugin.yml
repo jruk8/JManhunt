@@ -38,6 +38,9 @@ permissions:
   jmanhunt.command.modifiers:
     description: Change JManhunt modifiers and boolean settings.
     default: op
+  jmanhunt.command.worldengine:
+    description: View world-engine settings.
+    default: op
   jmanhunt.hunter:
     description: Allows a player to become a hunter.
     default: true

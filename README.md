@@ -51,15 +51,17 @@ is also accessible through the `mh` alias.
 
 ## Commands
 
-| Command | What it does | Permission |
-| --- | --- | --- |
-| `/manhunt` | Shows the current teams and match status. | `jmanhunt.command.status` |
-| `/manhunt help` | Shows the in-game command list. | `jmanhunt.command.help` |
-| `/manhunt setplayer <selector> <role>` | Assigns `hunter`, `speedrunner`, or `none`. | `jmanhunt.command.setplayer` |
-| `/manhunt start` | Starts a match. | `jmanhunt.command.start` |
-| `/manhunt end` | Ends the active match; hunters win. | `jmanhunt.command.end` |
-| `/manhunt modifiers [setting] [true\|false]` | Lists, views, or changes built-in actions and custom modifiers. | `jmanhunt.command.modifiers` |
-| `/manhunt reload` | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
+| Command                                           | What it does | Permission |
+|---------------------------------------------------| --- | --- |
+| `/manhunt`                                        | Shows the current teams and match status. | `jmanhunt.command.status` |
+| `/manhunt help`                                   | Shows the in-game command list. | `jmanhunt.command.help` |
+| `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, or `none`. | `jmanhunt.command.setplayer` |
+| `/manhunt start`                                  | Starts a match. | `jmanhunt.command.start` |
+| `/manhunt end`                                    | Ends the active match; hunters win. | `jmanhunt.command.end` |
+| `/manhunt modifiers [setting] [true\|false]`      | Lists, views, or changes built-in actions and custom modifiers. | `jmanhunt.command.modifiers` |
+| `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` |
+| `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` |
+| `/manhunt reload`                                 | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
 
 ## Custom modifiers
 

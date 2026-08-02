@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -23,14 +25,16 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     );
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final ConfigService config;
     private final SoundService sounds;
     private final PlayerStateStore playerStates;
     private final GameManager game;
     private final CompassManager compass;
 
-    public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
-                          PlayerStateStore playerStates, GameManager game, CompassManager compass) {
-        this.plugin = plugin; this.messages = messages; this.sounds = sounds;
+    public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, ConfigService config,
+                          SoundService sounds, PlayerStateStore playerStates, GameManager game,
+                          CompassManager compass) {
+        this.plugin = plugin; this.messages = messages; this.config = config; this.sounds = sounds;
         this.playerStates = playerStates; this.game = game; this.compass = compass;
     }
 
@@ -44,6 +48,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "start" -> start(sender);
             case "end" -> end(sender);
             case "modifiers" -> modifiers(sender, args);
+            case "worldengine" -> worldEngine(sender, args);
             case "reload" -> reload(sender);
             default -> message(sender, "command.invalid");
         };
@@ -55,6 +60,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt setplayer <selector> <hunter|speedrunner|none>", "assign roles"},
                 {"/manhunt start", "start a match"}, {"/manhunt end", "end a match"},
                 {"/manhunt modifiers <setting> <true|false>", "view or change a setting"},
+                {"/manhunt worldengine", "set lobby or teleport players"},
                 {"/manhunt reload", "reload files"}};
         for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
         neutralSound(sender);
@@ -160,6 +166,92 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private boolean worldEngine(CommandSender sender, String[] args) {
+        if (!config.getBoolean("extras.world-engine.enabled", false)) {
+            return message(sender, "manhunt.worldengine-disabled");
+        }
+        if (args.length == 1 || args[1].isBlank()) {
+            return message(sender, "manhunt.worldengine-usage");
+        }
+
+        String sub = args[1].toLowerCase(Locale.ROOT);
+        if (sub.equals("setlobby")) {
+            return worldEngineSetLobby(sender, args);
+        }
+        if (sub.equals("lobby")) {
+            return worldEngineLobby(sender, args);
+        }
+        return message(sender, "command.invalid");
+    }
+
+    private boolean worldEngineSetLobby(CommandSender sender, String[] args) {
+        if (args.length > 3) {
+            return message(sender, "command.invalid");
+        }
+
+        Location location;
+        if (args.length == 2 || args[2].isBlank()) {
+            if (!(sender instanceof Player player)) {
+                return message(sender, "command.player-only");
+            }
+            location = player.getLocation();
+        } else {
+            location = parseLobbyLocation(sender, args[2]);
+            if (location == null) {
+                return message(sender, "manhunt.worldengine-invalid-location");
+            }
+        }
+
+        saveLobbyLocation(location);
+        message(sender, "manhunt.worldengine-setlobby-success",
+                Map.of("location", formatLocation(location)));
+        neutralSound(sender);
+        return true;
+    }
+
+    private boolean worldEngineLobby(CommandSender sender, String[] args) {
+        if (args.length > 3) {
+            return message(sender, "command.invalid");
+        }
+
+        List<Player> targets = new ArrayList<>();
+        if (args.length == 2 || args[2].isBlank()) {
+            if (!(sender instanceof Player player)) {
+                return message(sender, "command.player-only");
+            }
+            targets.add(player);
+        } else {
+            try {
+                for (Entity entity : Bukkit.selectEntities(sender, args[2])) {
+                    if (entity instanceof Player player) {
+                        targets.add(player);
+                    }
+                }
+            } catch (IllegalArgumentException exception) {
+                return message(sender, "manhunt.worldengine-invalid-selector");
+            }
+            if (targets.isEmpty()) {
+                return message(sender, "manhunt.worldengine-no-targets");
+            }
+        }
+
+        Location lobby = resolveLobbyLocation();
+        if (lobby == null) {
+            return message(sender, "manhunt.worldengine-invalid-lobby");
+        }
+
+        for (Player target : targets) {
+            target.teleport(lobby);
+            sounds.playNeutralSound(target);
+        }
+        if (sender instanceof Player player && !targets.contains(player)) {
+            sounds.playNeutralSound(player);
+        }
+        message(sender, "manhunt.worldengine-teleport-success",
+                Map.of("target", targets.size() == 1 ? targets.get(0).getName() : String.valueOf(targets.size())));
+        return true;
+    }
+
     private boolean reload(CommandSender sender) {
         plugin.Reload();
         boolean result = message(sender, "manhunt.reload-success");
@@ -168,11 +260,24 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "modifiers", "reload"));
+        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "modifiers", "worldengine", "reload"));
         if (args.length == 2 && args[0].equalsIgnoreCase("modifiers"))
             return partial(args[1], new ArrayList<>(game.settingNames()));
         if (args.length == 3 && args[0].equalsIgnoreCase("modifiers"))
             return partial(args[2], List.of("true", "false"));
+        if (args.length == 2 && args[0].equalsIgnoreCase("worldengine"))
+            return partial(args[1], List.of("setlobby", "lobby"));
+        if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("lobby")) {
+            List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p"));
+            Bukkit.getOnlinePlayers().forEach(player -> selectors.add(player.getName()));
+            return partial(args[2], selectors);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("setlobby")) {
+            if (sender instanceof Player player) {
+                return partial(args[2], List.of(formatLocation(player.getLocation())));
+            }
+            return List.of();
+        }
         if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) {
             List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p"));
             Bukkit.getOnlinePlayers().forEach(player -> selectors.add(player.getName()));
@@ -187,6 +292,76 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         String normalized = value.toLowerCase(Locale.ROOT);
         return options.stream().filter(option -> option.toLowerCase(Locale.ROOT).startsWith(normalized)).toList();
     }
+
+    private Location parseLobbyLocation(CommandSender sender, String value) {
+        String[] parts = value.split(",");
+        if (parts.length < 3 || parts.length > 5) {
+            return null;
+        }
+
+        try {
+            double x = Double.parseDouble(parts[0].trim());
+            double y = Double.parseDouble(parts[1].trim());
+            double z = Double.parseDouble(parts[2].trim());
+            float yaw = 0.0f;
+            float pitch = 0.0f;
+            if (parts.length >= 4) {
+                yaw = Float.parseFloat(parts[3].trim());
+            } else if (sender instanceof Player player) {
+                yaw = player.getLocation().getYaw();
+                pitch = player.getLocation().getPitch();
+            }
+            if (parts.length == 5) {
+                pitch = Float.parseFloat(parts[4].trim());
+            }
+            World world = sender instanceof Player player ? player.getWorld()
+                    : Bukkit.getWorld(plugin.getConfig().getString("extras.world-engine.world-name", "world"));
+            return new Location(world, x, y, z, yaw, pitch);
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
+    private void saveLobbyLocation(Location location) {
+        String worldName = location.getWorld() == null
+                ? plugin.getConfig().getString("extras.world-engine.world-name", "world")
+                : location.getWorld().getName();
+        plugin.getConfig().set("extras.world-engine.lobby-location.world", worldName);
+        plugin.getConfig().set("extras.world-engine.lobby-location.x", location.getX());
+        plugin.getConfig().set("extras.world-engine.lobby-location.y", location.getY());
+        plugin.getConfig().set("extras.world-engine.lobby-location.z", location.getZ());
+        plugin.getConfig().set("extras.world-engine.lobby-location.yaw", location.getYaw());
+        plugin.getConfig().set("extras.world-engine.lobby-location.pitch", location.getPitch());
+        plugin.saveConfig();
+    }
+
+    private Location resolveLobbyLocation() {
+        String base = "extras.world-engine.lobby-location.";
+        String worldName = plugin.getConfig().getString(base + "world",
+                plugin.getConfig().getString("extras.world-engine.world-name", "world"));
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            return null;
+        }
+        return new Location(world,
+                plugin.getConfig().getDouble(base + "x", 0.5),
+                plugin.getConfig().getDouble(base + "y", 100.0),
+                plugin.getConfig().getDouble(base + "z", 0.5),
+                (float) plugin.getConfig().getDouble(base + "yaw", 0.0),
+                (float) plugin.getConfig().getDouble(base + "pitch", 0.0));
+    }
+
+    private String formatLocation(Location location) {
+        String worldName = location.getWorld() == null ? "null" : location.getWorld().getName();
+        String xFormatted = String.format("%.2f", location.getX());
+        String yFormatted = String.format("%.2f", location.getY());
+        String zFormatted = String.format("%.2f", location.getZ());
+        String yawFormatted = String.format("%.2f", location.getYaw());
+        String pitchFormatted = String.format("%.2f", location.getPitch());
+        return worldName + " @ " + xFormatted + ", " + yFormatted + ", " + zFormatted
+                + ", " + yawFormatted + ", " + pitchFormatted;
+    }
+
     private boolean message(CommandSender sender, String key) { sender.sendMessage(messages.component(key)); return true; }
     private void message(CommandSender sender, String key, Map<String, String> values) { sender.sendMessage(messages.component(key, values)); }
     private void neutralSound(CommandSender sender) {

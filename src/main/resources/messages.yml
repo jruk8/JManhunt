@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 4
+messages-version: 6
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
@@ -41,6 +41,14 @@ manhunt:
   setting-restart-required: "{prefix}<gray>This setting requires a server restart to take effect."
   setting-entry: "{prefix}<gray>{setting}:</gray> <white>{value}"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
+  worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|lobby>"
+  worldengine-disabled: '{prefix}<red>World engine is disabled. Enable it through <gray>"/manhunt modifiers extras.world-engine.enabled true"</gray> to use this command.'
+  worldengine-setlobby-success: "{prefix}<green>Set the world-engine lobby to <white>{location}<green>."
+  worldengine-teleport-success: "{prefix}<green>Teleported <white>{target}<green> to the world-engine lobby."
+  worldengine-no-targets: "{prefix}<yellow>No players matched that selector."
+  worldengine-invalid-location: "{prefix}<red>Invalid lobby location. Use <yellow>x,y,z,yaw,pitch<red>."
+  worldengine-invalid-selector: "{prefix}<red>Invalid selector."
+  worldengine-invalid-lobby: "{prefix}<red>The world-engine lobby world is not loaded."
 
 game:
   separator: "<strikethrough><gradient:#bababa:#dedede:#bababa>                                                    </gradient></strikethrough>"

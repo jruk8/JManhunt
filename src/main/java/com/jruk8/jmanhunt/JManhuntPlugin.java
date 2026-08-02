@@ -17,7 +17,7 @@ import java.util.List;
 
 public final class JManhuntPlugin extends JavaPlugin {
     private static final int CONFIG_VERSION = 7;
-    private static final int MESSAGES_VERSION = 4;
+    private static final int MESSAGES_VERSION = 6;
     private MessageService messages;
     private SoundService sounds;
     private PlayerStateStore playerStates;
@@ -64,11 +64,12 @@ public final class JManhuntPlugin extends JavaPlugin {
         extras.add(worldEngine);
         extras.add(piglinBarter);
 
-        ManhuntCommand command = new ManhuntCommand(this, messages, sounds, playerStates, game, compass);
+        ManhuntCommand command = new ManhuntCommand(this, messages, configService, sounds, playerStates, game, compass);
         getCommand("manhunt").setExecutor(command);
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);
-        getServer().getPluginManager().registerEvents(new GameplayListener(this, playerStates, game, messages, configService, sounds, compass, stats, worldEngine), this);
+        getServer().getPluginManager().registerEvents(new GameplayListener(
+                this, playerStates, game, messages, configService, sounds, compass, stats, worldEngine), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
 
         double refreshInterval = getConfig().getDouble("compass-refresh.compass-refresh-interval", 10.0);
