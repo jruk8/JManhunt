@@ -64,7 +64,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         extras.add(worldEngine);
         extras.add(piglinBarter);
 
-        ManhuntCommand command = new ManhuntCommand(this, messages, configService, sounds, playerStates, game, compass);
+        ManhuntCommand command = new ManhuntCommand(
+                this, messages, configService, sounds, playerStates, game, compass, worldEngine);
         getCommand("manhunt").setExecutor(command);
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);

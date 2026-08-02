@@ -27,12 +27,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final PlayerStateStore playerStates;
     private final GameManager game;
     private final CompassManager compass;
+    private final LobbyTeleporter lobbyTeleporter;
 
     public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, ConfigService config,
                           SoundService sounds, PlayerStateStore playerStates, GameManager game,
-                          CompassManager compass) {
+                          CompassManager compass, LobbyTeleporter lobbyTeleporter) {
         this.plugin = plugin; this.messages = messages; this.config = config; this.sounds = sounds;
         this.playerStates = playerStates; this.game = game; this.compass = compass;
+        this.lobbyTeleporter = lobbyTeleporter;
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -197,6 +199,25 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
 
         saveLobbyLocation(location);
+
+        // Set the world spawn to the lobby location so that new spawns and
+        // deaths without a personal respawn point go to the lobby.
+        if (location.getWorld() != null) {
+            location.getWorld().setSpawnLocation(location);
+        }
+
+        // Update respawn points for players who are not in an active match.
+        // When no match is running, all online players are updated; when a
+        // match is running, only non-participants are moved so that active
+        // hunters/speedrunners keep their in-match respawn points.
+        List<Player> targets = new ArrayList<>();
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (!game.isActive() || !playerStates.isMatchParticipant(online.getUniqueId())) {
+                targets.add(online);
+            }
+        }
+        lobbyTeleporter.setSpawnToLobby(targets);
+
         message(sender, "manhunt.worldengine-setlobby-success",
                 Map.of("location", formatLocation(location)));
         neutralSound(sender);
@@ -229,16 +250,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             }
         }
 
-        Location lobby = resolveLobbyLocation();
-        if (lobby == null) {
-            return message(sender, "manhunt.worldengine-invalid-lobby");
+        boolean teleportResult = lobbyTeleporter.teleportToLobby(targets);
+        if (!teleportResult) {
+            return message(sender, "manhunt.worldengine-teleport-failure");
         }
-
-        for (Player target : targets) {
-            target.teleport(lobby);
-            sounds.playNeutralSound(target);
-        }
-        if (sender instanceof Player player && !targets.contains(player)) {
+        if (sender instanceof Player player) {
             sounds.playNeutralSound(player);
         }
         message(sender, "manhunt.worldengine-teleport-success",
@@ -327,22 +343,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         plugin.getConfig().set("extras.world-engine.lobby-location.yaw", location.getYaw());
         plugin.getConfig().set("extras.world-engine.lobby-location.pitch", location.getPitch());
         plugin.saveConfig();
-    }
-
-    private Location resolveLobbyLocation() {
-        String base = "extras.world-engine.lobby-location.";
-        String worldName = plugin.getConfig().getString(base + "world",
-                plugin.getConfig().getString("extras.world-engine.world-name", "world"));
-        World world = Bukkit.getWorld(worldName);
-        if (world == null) {
-            return null;
-        }
-        return new Location(world,
-                plugin.getConfig().getDouble(base + "x", 0.5),
-                plugin.getConfig().getDouble(base + "y", 100.0),
-                plugin.getConfig().getDouble(base + "z", 0.5),
-                (float) plugin.getConfig().getDouble(base + "yaw", 0.0),
-                (float) plugin.getConfig().getDouble(base + "pitch", 0.0));
     }
 
     private String formatLocation(Location location) {

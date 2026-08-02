@@ -223,8 +223,10 @@ extras:
     # Seconds to wait for a speedrunner to hit a hunter before timing out.
     # Set to 0 to begin immediately on the first hit; set to -1 to wait indefinitely.
     delay-seconds: 30
-    # If true and the waiting period expires, cancel the match without recording statistics.
-    cancelled-on-expire: false
+    # What happens if delay-seconds expires before a hit occurs:
+    # CANCEL - Abort the match without recording stats.
+    # FORCE_START - Force the match to start anyway.
+    on-expire: CANCEL
 
   # When true, a compass survives a speedrunner's death as a normal dropped
   # item.

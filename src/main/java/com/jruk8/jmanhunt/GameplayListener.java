@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt;
 
-import com.jruk8.jmanhunt.extras.world_engine.LobbyTeleporter;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.World;
@@ -19,6 +18,7 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -60,15 +60,18 @@ public final class GameplayListener implements Listener {
                 if (config.getBoolean("extras.set-none-gamemode-spectator.enabled", true)) {
                     player.setGameMode(GameMode.SPECTATOR);
                 }
+                // Non-participants are sent to the lobby and respawn there
+                lobbyTeleporter.teleportToLobby(List.of(player));
+                lobbyTeleporter.setSpawnToLobby(List.of(player));
             } else if (playerStates.role(player) == Role.SPEEDRUNNER) {
                 handleSpeedrunnerRejoin(player);
             }
-        }
-
-        // only if player is not in a match, teleport them to the lobby
-        // TODO: hook a check to the match players
-        if (!game.isActive()) {
-            lobbyTeleporter.teleportToLobby(player);
+            // Active match participants (hunters/speedrunners) are not
+            // teleported to the lobby; they rejoin the match in progress
+        } else {
+            // No active match: send everyone to the lobby
+            lobbyTeleporter.teleportToLobby(List.of(player));
+            lobbyTeleporter.setSpawnToLobby(List.of(player));
         }
     }
     @EventHandler public void onQuit(PlayerQuitEvent event) {

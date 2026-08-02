@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.extras.world_engine;
 
 import com.jruk8.jmanhunt.ConfigService;
+import com.jruk8.jmanhunt.LobbyTeleporter;
 import com.jruk8.jmanhunt.StatsRepository;
 import com.jruk8.jmanhunt.extras.ExtrasListener;
 import org.bukkit.Bukkit;
@@ -10,6 +11,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -64,19 +66,42 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
 
         for (Player player : participants) {
             player.teleport(lobby);
+            player.setRespawnLocation(lobby, true);
         }
         endResetManager.reset(config, lobby);
         clearWorldBorder(lobby.getWorld());
     }
 
-    public void teleportToLobby(Player player) {
+    public boolean teleportToLobby(List<Player> targets) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        if (!config.enabled()) return;
+        if (!config.enabled()) return false;
 
         Location lobby = getValidLobby(config);
         if (lobby != null) {
-            player.teleport(lobby);
+            for (Entity entity : targets) {
+                entity.teleport(lobby);
+            }
         }
+        else {
+            plugin.getLogger().warning("Skipping lobby teleport because lobby world was not found.");
+            return false;
+        }
+        // set spawnpoints
+        return true;
+    }
+
+    @Override
+    public boolean setSpawnToLobby(List<Player> targets) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled()) return false;
+
+        Location lobby = getValidLobby(config);
+        if (lobby == null) return false;
+
+        for (Player player : targets) {
+            player.setRespawnLocation(lobby, true);
+        }
+        return true;
     }
 
     private Location getValidLobby(WorldEngineConfig config) {
@@ -140,10 +165,16 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
     }
 
     private void teleportToGame(List<Player> participants, World world, WorldEngineConfig config, CellOrigin origin) {
+        // Use the cell root as the respawn location for all participants so
+        // that deaths send them back to the cell center rather than the lobby.
+        Location cellRoot = new Location(world, origin.x() + 0.5,
+                world.getHighestBlockYAt(origin.x(), origin.z(), HeightMap.MOTION_BLOCKING) + 1,
+                origin.z() + 0.5);
         for (Player player : participants) {
             Location spawn = randomSpawnInCell(world, origin.x(), origin.z(), config.tpSpreadRadius(),
                     player.getLocation().getYaw(), player.getLocation().getPitch());
             player.teleport(spawn);
+            player.setRespawnLocation(cellRoot, true);
         }
 
         Location lobby = resolveLobby(config);

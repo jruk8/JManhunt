@@ -169,7 +169,9 @@ public final class GameManager {
         long delay = Math.max(1L, Math.round(interval * 20.0));
         messages.broadcast("manhunt.waiting-for-damage", Map.of("seconds", String.valueOf((int) Math.round(waitingDelayConfigured))));
         waitingReminderTask = Bukkit.getScheduler().runTaskTimer(plugin,
-                () -> { if (active && !gameBegun) messages.broadcast("manhunt.waiting-for-damage", Map.of("seconds", String.valueOf((int) Math.round(waitingDelayConfigured)))); }, delay, delay);
+                () -> { if (active && !gameBegun) messages.broadcast(
+                        "manhunt.waiting-for-damage", Map.of(
+                                "seconds", String.valueOf((int) Math.round(waitingDelayConfigured)))); }, delay, delay);
 
         // schedule expiry task which ends the waiting period if no damage occurs
         if (waitingDelayConfigured > 0) {
@@ -181,7 +183,7 @@ public final class GameManager {
                     if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
                     messages.broadcast("manhunt.waiting-for-damage-exhausted", Map.of("seconds", String.valueOf(waitingDelayConfigured)));
                     // end match as cancelled if configured
-                    if (plugin.getConfig().getBoolean("extras.start-on-speedrunner-damage.cancelled-on-expire", false)) {
+                    if (!plugin.getConfig().getString("extras.start-on-speedrunner-damage.on-expire", "CANCEL").equals("FORCE_START")) {
                         // do not save stats
                         stats.clear();
                         stateCommands.runConsoleCleanup("Cancelled");
@@ -192,8 +194,8 @@ public final class GameManager {
                         active = false; ending = false; gameBegun = false; playerStates.clearMatch();
                         updateAutostartState();
                     } else {
-                        // finish normally as hunters win
-                        finishLater(Role.HUNTER);
+                        // force start the game
+                        beginGame();
                     }
                 }
             }, expiryTicks);
