@@ -67,8 +67,8 @@ is also accessible through the `mh` alias.
 
 Custom modifiers are named command bundles in `config.yml` under
 `custom-modifiers`. They are disabled by default. A modifier can run commands
-when a match starts and when it ends, either from the console or once for each
-participating player.
+when a match starts, on a recurring interval during the match, and when it
+ends — either from the console or once for each participating player.
 
 To enable a modifier, use its configuration name:
 
@@ -82,24 +82,64 @@ example. You can also toggle a modifier by changing its `enabled` value in
 `config.yml`, then running `/manhunt reload`.
 
 When creating a modifier, copy the structure of an existing one. Currently
-only manual YAML file editing is supported for creation. Commands can use
-these placeholders:
+only manual YAML file editing is supported for creation.
+
+### Placeholders
+
+Commands can use these placeholders:
 
 | Placeholder | Replaced with |
 | --- | --- |
 | `<p>` | The participating player's name. Use this in player and role commands. |
 | `<winner>` | Parses as `Hunters` or `Speedrunners` in end and cleanup commands. |
+| `<random-mob>` | A random spawnable living entity type (e.g. `zombie`, `creeper`). A new roll is made for each command execution. |
+| `<random-item>` | A random item material (e.g. `diamond_sword`, `bread`). A new roll is made for each command execution. |
+
+### Relative coordinates
+
+In player and role commands (`player`, `hunter`, `speedrunner`), tildes (`~`)
+are automatically resolved to the participating player's position. For
+example, `summon zombie ~ ~ ~` becomes `summon zombie 10.5 64 -20.2` if the
+player is at `(10.5, 64.0, -20.2)`. Offsets like `~5` and `~-3` are supported.
+
+All commands are dispatched as the console sender, so there are no permission
+issues — the tilde resolution is handled by the plugin before dispatch. Local
+coordinates (`^`) are not supported.
+
+### Command lists
 
 The available command lists are:
 
 - `commands.player`: runs once for every participating player.
-- `commands.hunter-commands`: runs once for every hunter.
-- `commands.speedrunner-commands`: runs once for every speedrunner.
+- `commands.hunter`: runs once for every hunter.
+- `commands.speedrunner`: runs once for every speedrunner.
 - `commands.console`: runs once from the console.
 - `commands.console-cleanup`: runs when the match finishes.
 - `commands.player-cleanup`: runs on every player when the match finishes.
 
-For example:
+### Run timing
+
+By default, modifier commands run once when the match starts (`runs-on: ON_START`).
+For recurring effects, set `runs-on: INTERVAL` and configure the interval:
+
+```yaml
+custom-modifiers:
+  random-mob-spawner:
+    enabled: false
+    runs-on: INTERVAL
+    interval-settings:
+      interval: 60          # seconds between runs
+      run-on-start: false   # also run immediately when the game begins
+    commands:
+      speedrunner:
+        - "summon <random-mob> ~ ~ ~"
+```
+
+Interval modifiers start counting when the game actually begins (i.e. when a
+speedrunner hits a hunter, or when the match force-starts), not when `/manhunt
+start` is run. They are automatically cancelled when the match ends.
+
+### Example
 
 ```yaml
 custom-modifiers:
@@ -108,8 +148,8 @@ custom-modifiers:
     commands:
       player:
         - "give <p> cooked_beef 8"
-      hunter-commands: []
-      speedrunner-commands: []
+      hunter: []
+      speedrunner: []
       console: []
       console-cleanup: []
       player-cleanup: []

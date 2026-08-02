@@ -1,6 +1,6 @@
 # JManhunt configuration. Reload with /manhunt reload.
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 7
+config-version: 8
 
 # Message parser used for messages.yml: minimessage or legacy.
 text-format: minimessage
@@ -132,8 +132,8 @@ compass-refresh:
 
 # Optional named command bundles. Toggle a bundle in-game with
 # /manhunt modifiers custom-modifiers.<name> true|false.
-# All commands are run when the match starts, except console-cleanup
-# which runs when the match ends.
+# All commands are run when the match starts (or on interval if configured),
+# except console-cleanup and player-cleanup which run when the match ends.
 custom-modifiers:
   # Gives every participating player eight steaks when the match starts.
   everyone-gets-beef:
@@ -145,26 +145,26 @@ custom-modifiers:
   speedrunners-speed:
     enabled: false
     commands:
-      speedrunner-commands:
+      speedrunner:
         # Runs only once for each Speedrunner, with <p> replaced by their name.
         # Note the single quotes used to escape the double quotes inside the JSON.
         - 'give <p> potion[potion_contents={potion:"minecraft:strong_swiftness"}] 1'
   hunters-wooden-sword:
     enabled: false
     commands:
-      hunter-commands:
+      hunter:
         # Runs only once for each Hunter, with <p> replaced by their name.
         - "give <p> wooden_sword"
   # Speedrunners get a health advantage while hunters' health gets a debuff.
   speedrunner-health-advantage:
     enabled: false
     commands:
-      hunter-commands:
+      hunter:
         # Runs only once for each Hunter, with <p> replaced by their name.
         # Sets health to 8 full hearts for all hunters.
         - "attribute <p> minecraft:max_health base set 16"
         - "effect give <p> minecraft:instant_health 1 50 true"
-      speedrunner-commands:
+      speedrunner:
         # Runs only once for each Speedrunner, with <p> replaced by their name.
         # Sets health to 15 full hearts for all speedrunners.
         - "attribute <p> minecraft:max_health base set 30"
@@ -183,6 +183,26 @@ custom-modifiers:
       console-cleanup:
         # Ran by the console when the match ends.
         - "gamerule advance_time true"
+  # Spawns a random mob on every speedrunner every 60 seconds.
+  random-mob-spawner:
+    enabled: false
+    # How should commands other than cleanup be run?
+    # Options:
+    # ON_START - Once on start (default)
+    # INTERVAL - On a fixed interval that starts counting when the game begins
+    runs-on: INTERVAL
+    # Only applicable when "runs-on" is set to INTERVAL.
+    interval-settings:
+      # Interval duration in seconds.
+      interval: 60
+      # Runs the command on start in addition to interval.
+      # Default: false
+      run-on-start: false
+    commands:
+      speedrunner:
+        # <random-mob> is replaced with a random spawnable living entity type.
+        # Tildes (~) are resolved to the player's position automatically.
+        - "summon <random-mob> ~ ~ ~"
 
 # Features for modifying the game.
 # These can be toggled in-game with the 'modifiers' subcommand.

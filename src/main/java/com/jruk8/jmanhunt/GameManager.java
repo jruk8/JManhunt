@@ -125,6 +125,8 @@ public final class GameManager {
         sounds.playGlobalSound(winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
         stats.completeMatch(winner);
 
+        // cancel interval modifiers early so they don't fire during the end delay
+        stateCommands.cancelIntervalModifiers();
         // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
         stateCommands.runConsoleCleanup(winnerName);
         stateCommands.runPlayerCleanup(winnerName);
@@ -154,6 +156,7 @@ public final class GameManager {
         if (waitingReminderTask != null) waitingReminderTask.cancel();
         if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
         messages.broadcast("manhunt.started-by-damage"); sounds.playNeutralSound(); applyStartDebuffs();
+        stateCommands.startIntervalModifiers();
     }
 
     private String getWinMessage(Role winner) {
@@ -186,6 +189,7 @@ public final class GameManager {
                     if (!plugin.getConfig().getString("extras.start-on-speedrunner-damage.on-expire", "CANCEL").equals("FORCE_START")) {
                         // do not save stats
                         stats.clear();
+                        stateCommands.cancelIntervalModifiers();
                         stateCommands.runConsoleCleanup("Cancelled");
                         stateCommands.runPlayerCleanup("Cancelled");
                         List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)

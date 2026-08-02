@@ -16,7 +16,7 @@ import java.util.List;
 
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int CONFIG_VERSION = 7;
+    private static final int CONFIG_VERSION = 8;
     private static final int MESSAGES_VERSION = 6;
     private MessageService messages;
     private SoundService sounds;
@@ -96,6 +96,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     public void Reload() {
         YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION);
         reloadConfig();
+        migrateCustomModifierKeys();
         YamlFileUpdater.update(this, "messages.yml", "messages-version", MESSAGES_VERSION);
         saveResource("placeholders.yml", false);
 
@@ -111,6 +112,36 @@ public final class JManhuntPlugin extends JavaPlugin {
             listener.onReload();
         }
         getLogger().info("JManhunt has been reloaded.");
+    }
+
+    /**
+     * Migrates custom modifier command keys from the old -commands suffix
+     * convention to the shorter form (hunter-commands → hunter, etc.).
+     * Runs once on reload; only renames if the old key exists and the new
+     * key does not.
+     */
+    private void migrateCustomModifierKeys() {
+        var modifiers = getConfig().getConfigurationSection("custom-modifiers");
+        if (modifiers == null) return;
+        boolean changed = false;
+        for (String name : modifiers.getKeys(false)) {
+            String commandsPath = "custom-modifiers." + name + ".commands";
+            var commands = getConfig().getConfigurationSection(commandsPath);
+            if (commands == null) continue;
+            changed |= migrateKey(commandsPath, "hunter-commands", "hunter");
+            changed |= migrateKey(commandsPath, "speedrunner-commands", "speedrunner");
+        }
+        if (changed) saveConfig();
+    }
+
+    private boolean migrateKey(String basePath, String oldKey, String newKey) {
+        String oldPath = basePath + "." + oldKey;
+        String newPath = basePath + "." + newKey;
+        if (!getConfig().contains(oldPath) || getConfig().contains(newPath)) return false;
+        var value = getConfig().getList(oldPath);
+        getConfig().set(newPath, value);
+        getConfig().set(oldPath, null);
+        return true;
     }
 
     private void copySection(FileConfiguration config, String fromPath, String toPath) {

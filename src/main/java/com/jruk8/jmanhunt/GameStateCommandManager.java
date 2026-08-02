@@ -6,7 +6,9 @@ import org.bukkit.GameRules;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -15,6 +17,7 @@ public final class GameStateCommandManager {
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
     private final ConfigService configService;
+    private final List<BukkitTask> intervalTasks = new ArrayList<>();
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates, ConfigService configService) {
         this.plugin = plugin;
@@ -43,8 +46,54 @@ public final class GameStateCommandManager {
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
             for (Player player : participatingPlayers()) {
-                runCommands("custom-modifiers." + name + ".commands.player-cleanup", player.getName(), winner);
+                runCommands("custom-modifiers." + name + ".commands.player-cleanup", player, winner);
             }
+        }
+    }
+
+    /**
+     * Starts interval-based custom modifiers. Should be called when the game
+     * begins (via {@link GameManager#beginGame()}). Modifiers with
+     * {@code runs-on: INTERVAL} are scheduled on a repeating task.
+     */
+    public void startIntervalModifiers() {
+        cancelIntervalModifiers();
+        for (String name : configService.modifierNames()) {
+            if (!configService.modifierEnabled(name)) continue;
+            String base = "custom-modifiers." + name + ".";
+            String runsOn = plugin.getConfig().getString(base + "runs-on", "ON_START");
+            if (!"INTERVAL".equals(runsOn)) continue;
+
+            int intervalSeconds = plugin.getConfig().getInt(base + "interval-settings.interval", 60);
+            if (intervalSeconds <= 0) continue;
+            long intervalTicks = intervalSeconds * 20L;
+            boolean runOnStart = plugin.getConfig().getBoolean(base + "interval-settings.run-on-start", false);
+
+            if (runOnStart) {
+                runModifierCommands(name, "");
+            }
+            BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin,
+                    () -> runModifierCommands(name, ""), intervalTicks, intervalTicks);
+            intervalTasks.add(task);
+        }
+    }
+
+    /** Cancels all running interval modifier tasks. */
+    public void cancelIntervalModifiers() {
+        for (BukkitTask task : intervalTasks) {
+            task.cancel();
+        }
+        intervalTasks.clear();
+    }
+
+    private void runModifierCommands(String name, String winner) {
+        String modifier = "custom-modifiers." + name + ".commands.";
+        runCommands(modifier + "console", null, winner);
+        for (Player player : participatingPlayers()) {
+            runCommands(modifier + "player", player, winner);
+            String roleCommands = playerStates.role(player) == Role.HUNTER
+                    ? "hunter" : "speedrunner";
+            runCommands(modifier + roleCommands, player, winner);
         }
     }
 
@@ -97,30 +146,28 @@ public final class GameStateCommandManager {
         }
         if (plugin.getConfig().getBoolean(base + "player-commands.enabled", false)) {
             for (Player player : participatingPlayers()) {
-                runCommands(base + "player-commands." + phase, player.getName(), winner);
+                runCommands(base + "player-commands." + phase, player, winner);
             }
         }
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
             if (phase.equals("start")) {
-                String modifier = "custom-modifiers." + name + ".commands.";
-                runCommands(modifier + "console", null, winner);
-                for (Player player : participatingPlayers()) {
-                    runCommands(modifier + "player", player.getName(), winner);
-                    String roleCommands = playerStates.role(player) == Role.HUNTER
-                            ? "hunter-commands" : "speedrunner-commands";
-                    runCommands(modifier + roleCommands, player.getName(), winner);
-                }
+                String runsOn = plugin.getConfig().getString("custom-modifiers." + name + ".runs-on", "ON_START");
+                if ("INTERVAL".equals(runsOn)) continue; // interval modifiers are started by beginGame()
+                runModifierCommands(name, winner);
             }
         }
     }
 
-    private void runCommands(String path, String playerName, String winner) {
+    private void runCommands(String path, Player player, String winner) {
         for (String command : plugin.getConfig().getStringList(path)) {
             if (command.isBlank()) continue;
             try {
-                String parsed = command.replace("<winner>", winner == null ? "" : winner);
-                if (playerName != null) parsed = parsed.replace("<p>", playerName);
+                String playerName = player != null ? player.getName() : null;
+                double x = player != null ? player.getLocation().getX() : 0.0;
+                double y = player != null ? player.getLocation().getY() : 0.0;
+                double z = player != null ? player.getLocation().getZ() : 0.0;
+                String parsed = CommandPlaceholders.replace(command, playerName, winner, x, y, z);
                 if (parsed.startsWith("/")) parsed = parsed.substring(1);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception e) {
