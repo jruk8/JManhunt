@@ -27,11 +27,13 @@ public final class StrongholdDatapackManager {
             plugin.saveResource("extras/world-engine/strongholds.json", false);
             File source = new File(plugin.getDataFolder(), "extras/world-engine/strongholds.json");
             String content = Files.readString(source.toPath(), StandardCharsets.UTF_8);
-            writeIfChanged(structureSet, content);
+            boolean changed = writeIfChanged(structureSet, content);
+            if (changed) {
+                reloadDataPacks();
+            }
         } catch (IOException exception) {
             plugin.getLogger().warning("Failed to apply world-engine stronghold datapack: " + exception.getMessage());
         }
-        reloadDataPacks();
     }
 
     public void remove(WorldEngineConfig config) {
@@ -45,21 +47,22 @@ public final class StrongholdDatapackManager {
         if (datapackRoot.exists()) {
             try {
                 FileUtils.deleteRecursively(datapackRoot);
+                reloadDataPacks();
             } catch (IOException e) {
                 plugin.getLogger().warning("Failed to delete datapack folder: " + e.getMessage());
             }
         }
-        reloadDataPacks();
     }
 
-    private void writeIfChanged(File target, String content) throws IOException {
+    private boolean writeIfChanged(File target, String content) throws IOException {
         if (target.exists()) {
             String existing = Files.readString(target.toPath(), StandardCharsets.UTF_8);
-            if (existing.equals(content)) return;
+            if (existing.equals(content)) return false;
         } else if (target.getParentFile() != null) {
             target.getParentFile().mkdirs();
         }
         Files.writeString(target.toPath(), content, StandardCharsets.UTF_8);
+        return true;
     }
 
     private void reloadDataPacks() {
