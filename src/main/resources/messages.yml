@@ -39,7 +39,6 @@ manhunt:
   setting-invalid: "{prefix}<red>Unknown setting."
   setting-invalid-value: "{prefix}<red>Setting values must be true or false."
   setting-updated: "{prefix}<green>Set <white>{setting}<green> to <white>{value}<green>. <gray>(was <white>{old-value}</white>)</gray>"
-  setting-restart-required: "{prefix}<gray>This setting requires a server restart to take effect."
   setting-entry: "{prefix}<gray>{setting}:</gray> <white>{value}"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
   worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|lobby>"
