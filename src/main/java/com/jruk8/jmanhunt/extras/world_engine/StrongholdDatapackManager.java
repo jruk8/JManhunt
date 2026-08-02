@@ -31,7 +31,7 @@ public final class StrongholdDatapackManager {
         } catch (IOException exception) {
             plugin.getLogger().warning("Failed to apply world-engine stronghold datapack: " + exception.getMessage());
         }
-        plugin.getServer().reloadData();
+        reloadDataPacks();
     }
 
     public void remove(WorldEngineConfig config) {
@@ -49,7 +49,7 @@ public final class StrongholdDatapackManager {
                 plugin.getLogger().warning("Failed to delete datapack folder: " + e.getMessage());
             }
         }
-        plugin.getServer().reloadData();
+        reloadDataPacks();
     }
 
     private void writeIfChanged(File target, String content) throws IOException {
@@ -60,6 +60,10 @@ public final class StrongholdDatapackManager {
             target.getParentFile().mkdirs();
         }
         Files.writeString(target.toPath(), content, StandardCharsets.UTF_8);
+    }
+
+    private void reloadDataPacks() {
+        plugin.getServer().reloadData();
     }
 
     private String packMeta() {

@@ -53,6 +53,7 @@ public final class GameManager {
 
         // assign events
         configService.onChange("extras.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
+        configService.onChange("extras.world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
     }
 
     // TODO: push players to a match container, so that new players cannot join the match mid-game.

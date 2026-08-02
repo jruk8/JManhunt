@@ -66,6 +66,7 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
             player.teleport(lobby);
         }
         endResetManager.reset(config, lobby);
+        clearWorldBorder(lobby.getWorld());
     }
 
     public void teleportToLobby(Player player) {
@@ -173,6 +174,11 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
         WorldBorder netherBorder = nether.getWorldBorder();
         netherBorder.setCenter(origin.x() / 8.0, origin.z() / 8.0);
         netherBorder.setSize(config.cellSize() / 8.0);
+    }
+
+    private void clearWorldBorder(World world) {
+        WorldBorder border = world.getWorldBorder();
+        border.reset();
     }
 
     private World getNetherWorld(World overworld) {
