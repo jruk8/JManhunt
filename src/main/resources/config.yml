@@ -64,26 +64,23 @@ placeholders:
 
 # Built-in game-state actions and optional commands. All command sections are
 # disabled by default except default-commands.
+# The default-commands options below run at both match start and match end
+# when enabled.
 gamestate-commands:
   default-commands:
     enabled: true
-    start:
-      auto-set-gamemode: true
-      reset-players-stats: true
-      disable-locator-bar: true
-      set-respawn-immediate: true
-      set-daytime: true
-    end:
-      auto-set-gamemode: true
-      reset-players-stats: true
-  # Console commands run once per configured entry. <winner> is replaced with
-  # Hunters or Speedrunners in end commands.
+    auto-set-gamemode: true
+    reset-players-stats: true
+    disable-locator-bar: true
+    set-respawn-immediate: true
+    set-daytime: true
+  # Console commands run once per configured entry.
   console-commands:
     enabled: false
     start:
       - "say The hunt has begun!"
     end:
-      - "say <winner> won the hunt!"
+      - "say The hunt is over!"
   # Player commands run once for every online Hunter or Speedrunner. <p> is
   # replaced with that player's name. Commands may start with '/'.
   player-commands:
@@ -125,19 +122,6 @@ disconnect-handling:
 # HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based
 # on reliable vanilla advancements and is calculated only at match end.
 end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
-
-# Compass tracking settings. The held actionbar stays visible between interval
-# refreshes and continues showing its cached value.
-compass-refresh:
-  # Seconds between compass target/location refreshes. Set to -1 to disable
-  # scheduled refreshes (in that case use right-click refresh or the compass
-  # NEVER refreshes); right-click refreshes can still be used separately.
-  compass-refresh-interval: 10.0
-  right-click:
-    # Optional refresh-on-right-click runs alongside interval refreshes.
-    refresh-on-right-click: false
-    # Seconds between right-click refreshes. Set to -1 for no cooldown.
-    right-click-cooldown: 3.0
 
 # Optional named command bundles. Toggle a bundle in-game with
 # /manhunt modifiers custom-modifiers.<name> true|false.
@@ -195,23 +179,44 @@ custom-modifiers:
   # Spawns a random mob on every speedrunner every 60 seconds.
   random-mob-spawner:
     enabled: false
-    # How should commands other than cleanup be run?
-    # Options:
-    # ON_START - Once on start (default)
+    # When should commands other than cleanup be run? A list of any of:
+    # ON_START - Once when the match starts
     # INTERVAL - On a fixed interval that starts counting when the game begins
-    runs-on: INTERVAL
-    # Only applicable when "runs-on" is set to INTERVAL.
+    # ON_EVERY_KILL - When any participating player kills any entity (mobs included)
+    # ON_PLAYER_KILL - When a participating player kills another player
+    # ON_HUNTER_KILL - When a hunter kills a player
+    # ON_SPEEDRUNNER_KILL - When a speedrunner kills a player
+    # ON_FIRST_ENTER_NETHER - When a participating player first enters the Nether
+    # ON_FIRST_ENTER_END - When a participating player first enters the End
+    # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
+    runs-on:
+      - INTERVAL
+    # Only applicable when "runs-on" contains INTERVAL.
     interval-settings:
       # Interval duration in seconds.
       interval: 60
-      # Runs the command on start in addition to interval.
-      # Default: false
-      run-on-start: false
     commands:
       speedrunner:
         # <random-mob> is replaced with a random spawnable living entity type.
         # Tildes (~) are resolved to the player's position automatically.
         - "summon <random-mob> ~ ~ ~"
+
+# Built-in challenges. Each challenge can be toggled in-game with the
+# 'modifiers' subcommand.
+challenges:
+  # Players cannot jump for the duration of the match.
+  no-jump:
+    enabled: false
+  # All participating players have only one heart (2 health points).
+  one-heart:
+    enabled: false
+  # Breaking the configured block drops a random outcome from
+  # settings/lucky-blocks.yml instead of the block itself.
+  lucky-blocks:
+    enabled: false
+    # The block whose breaks are intercepted. Resolves to minecraft:<name>
+    # unless a namespace is specified.
+    block-definition: gold_block
 
 # Settings that modify the game.
 # These can be toggled in-game with the 'modifiers' subcommand.
@@ -233,7 +238,7 @@ settings:
       z: 0.5
       yaw: 0.0
       pitch: 0.0
-    # Size of one spiral cell in blocks. Hard-capped at 50000.
+    # Size of one spiral cell in blocks. Hard-capped at 50,000.
     # Too low values may cause issues.
     # Default: 10,000
     cell-size: 10000
@@ -246,6 +251,12 @@ settings:
     # sometimes cause server lag.
     # Default: true
     use-spawnpoint-algorithm: true
+    # When true, a datapack that boosts nether structure (fortress and
+    # bastion remnant) spawn frequency is applied to the world.
+    # Requires a server restart to take effect.
+    # Default: false
+    nether-structures:
+      enabled: false
     # World border configuration for cell confinement.
     world-border:
       # When true, the world border is used to limit the spiral cell area.
@@ -327,23 +338,40 @@ settings:
     # FORCE_START - Force the match to start anyway.
     # Default: FORCE_START
     on-expire: FORCE_START
+    # When true, all participating players are set to adventure mode during
+    # the pre-start window (before a speedrunner hits a hunter). This prevents
+    # breaking blocks while waiting. Players are restored to survival when the
+    # game begins.
+    # Default: true
+    start-with-adventure-mode: true
 
-  # When true, the hunter compass must stay in the player's inventory and
-  # cannot be dropped or placed in chests. When false, the compass behaves
-  # like a normal item and can be dropped or stored.
-  # The compass always defaults to the last hotbar slot when given, but is
-  # not locked to that slot — the player can freely move it within their
-  # inventory.
-  # Default: true
-  compass-must-be-inventory:
-    enabled: true
-
-  # When true, a compass survives a speedrunner's death as a normal dropped
-  # item.
-  # If a speedrunner gets ahold of the compass, they may track the hunters.
-  # Default: false
-  drop-compass-on-death:
-    enabled: false
+  # Compass tracking settings. The held actionbar stays visible between
+  # interval refreshes and continues showing its cached value.
+  compass:
+    # When true, the hunter compass must stay in the player's inventory and
+    # cannot be dropped or placed in chests. When false, the compass behaves
+    # like a normal item and can be dropped or stored.
+    # The compass always defaults to the last hotbar slot when given, but is
+    # not locked to that slot — the player can freely move it within their
+    # inventory.
+    # Default: true
+    must-be-inventory:
+      enabled: true
+    # When true, a compass survives a speedrunner's death as a normal dropped
+    # item.
+    # If a speedrunner gets ahold of the compass, they may track the hunters.
+    # Default: false
+    drop-on-death:
+      enabled: false
+    # Seconds between compass target/location refreshes. Set to -1 to disable
+    # scheduled refreshes (in that case use right-click refresh or the compass
+    # NEVER refreshes); right-click refreshes can still be used separately.
+    refresh-interval: 10.0
+    right-click:
+      # Optional refresh-on-right-click runs alongside interval refreshes.
+      refresh-on-right-click: false
+      # Seconds between right-click refreshes. Set to -1 for no cooldown.
+      right-click-cooldown: 3.0
 
   # Optional effects applied to every hunter when the game begins. Effect keys
   # are Bukkit PotionEffectType names. Duration is in seconds and amplifier is

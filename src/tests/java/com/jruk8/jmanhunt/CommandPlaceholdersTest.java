@@ -15,14 +15,8 @@ class CommandPlaceholdersTest {
 
     @Test
     void replaceSubstitutesPlayerName() {
-        String result = CommandPlaceholders.replace("give <p> bread", "Steve", null, 0, 0, 0);
+        String result = CommandPlaceholders.replace("give <p> bread", "Steve", 0, 0, 0);
         assertEquals("give Steve bread", result);
-    }
-
-    @Test
-    void replaceSubstitutesWinner() {
-        String result = CommandPlaceholders.replace("say <winner> won!", null, "Hunters", 0, 0, 0);
-        assertEquals("say Hunters won!", result);
     }
 
     @Test
@@ -64,19 +58,13 @@ class CommandPlaceholdersTest {
     @Test
     void replaceDoesNotResolveTildesForConsoleCommands() {
         // When playerName is null (console command), tildes should not be resolved
-        String result = CommandPlaceholders.replace("summon zombie ~ ~ ~", null, null, 10.0, 64.0, 20.0);
+        String result = CommandPlaceholders.replace("summon zombie ~ ~ ~", null, 10.0, 64.0, 20.0);
         assertEquals("summon zombie ~ ~ ~", result);
     }
 
     @Test
     void replaceResolvesTildesForPlayerCommands() {
-        String result = CommandPlaceholders.replace("summon zombie ~ ~ ~", "Steve", null, 10.5, 64.0, -20.2);
+        String result = CommandPlaceholders.replace("summon zombie ~ ~ ~", "Steve", 10.5, 64.0, -20.2);
         assertEquals("summon zombie 10.5 64 -20.2", result);
-    }
-
-    @Test
-    void replaceHandlesNullWinnerAsEmpty() {
-        String result = CommandPlaceholders.replace("say <winner> done", "Steve", null, 0, 0, 0);
-        assertEquals("say  done", result);
     }
 }

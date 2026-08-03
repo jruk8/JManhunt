@@ -27,53 +27,47 @@ public final class GameStateCommandManager {
 
     public void runStart() {
         runDefault("start");
-        runConfigured("start", "");
+        runConfigured("start");
     }
 
-    public void runEnd(String winner) {
-        runConfigured("end", winner);
+    public void runEnd() {
+        runConfigured("end");
         runDefault("end");
     }
 
-    public void runConsoleCleanup(String winner) {
+    public void runConsoleCleanup() {
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
-            runCommands("custom-modifiers." + name + ".commands.console-cleanup", null, winner);
+            runCommands("custom-modifiers." + name + ".commands.console-cleanup", null);
         }
     }
 
-    public void runPlayerCleanup(String winner) {
+    public void runPlayerCleanup() {
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
             for (Player player : participatingPlayers()) {
-                runCommands("custom-modifiers." + name + ".commands.player-cleanup", player, winner);
+                runCommands("custom-modifiers." + name + ".commands.player-cleanup", player);
             }
         }
     }
 
     /**
      * Starts interval-based custom modifiers. Should be called when the game
-     * begins (via {@link GameManager#beginGame()}). Modifiers with
-     * {@code runs-on: INTERVAL} are scheduled on a repeating task.
+     * begins (via {@link GameManager#beginGame()}). Modifiers whose
+     * {@code runs-on} list contains INTERVAL are scheduled on a repeating task.
      */
     public void startIntervalModifiers() {
         cancelIntervalModifiers();
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
             String base = "custom-modifiers." + name + ".";
-            String runsOn = plugin.getConfig().getString(base + "runs-on", "ON_START");
-            if (!"INTERVAL".equals(runsOn)) continue;
+            if (!runsOnContains(name, "INTERVAL")) continue;
 
             int intervalSeconds = plugin.getConfig().getInt(base + "interval-settings.interval", 60);
             if (intervalSeconds <= 0) continue;
             long intervalTicks = intervalSeconds * 20L;
-            boolean runOnStart = plugin.getConfig().getBoolean(base + "interval-settings.run-on-start", false);
-
-            if (runOnStart) {
-                runModifierCommands(name, "");
-            }
             BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin,
-                    () -> runModifierCommands(name, ""), intervalTicks, intervalTicks);
+                    () -> runModifierCommands(name), intervalTicks, intervalTicks);
             intervalTasks.add(task);
         }
     }
@@ -86,20 +80,48 @@ public final class GameStateCommandManager {
         intervalTasks.clear();
     }
 
-    private void runModifierCommands(String name, String winner) {
-        String modifier = "custom-modifiers." + name + ".commands.";
-        runCommands(modifier + "console", null, winner);
-        for (Player player : participatingPlayers()) {
-            runCommands(modifier + "player", player, winner);
+    /**
+     * Runs modifiers whose {@code runs-on} list contains the given event for
+     * the specific player involved in the event. The player's own
+     * {@code player}/{@code hunter}/{@code speedrunner} commands run, plus the
+     * modifier's console commands.
+     *
+     * @param event  the event name (e.g. ON_EVERY_KILL)
+     * @param player the player involved in the event
+     */
+    public void runEventModifiers(String event, Player player) {
+        if (player == null) return;
+        for (String name : configService.modifierNames()) {
+            if (!configService.modifierEnabled(name)) continue;
+            if (!runsOnContains(name, event)) continue;
+            String modifier = "custom-modifiers." + name + ".commands.";
+            runCommands(modifier + "console", null);
+            runCommands(modifier + "player", player);
             String roleCommands = playerStates.role(player) == Role.HUNTER
                     ? "hunter" : "speedrunner";
-            runCommands(modifier + roleCommands, player, winner);
+            runCommands(modifier + roleCommands, player);
+        }
+    }
+
+    private boolean runsOnContains(String name, String event) {
+        return plugin.getConfig().getStringList("custom-modifiers." + name + ".runs-on")
+                .stream().map(String::trim).anyMatch(event::equalsIgnoreCase);
+    }
+
+    private void runModifierCommands(String name) {
+        String modifier = "custom-modifiers." + name + ".commands.";
+        runCommands(modifier + "console", null);
+        for (Player player : participatingPlayers()) {
+            runCommands(modifier + "player", player);
+            String roleCommands = playerStates.role(player) == Role.HUNTER
+                    ? "hunter" : "speedrunner";
+            runCommands(modifier + roleCommands, player);
         }
     }
 
     private void runDefault(String phase) {
         if (!plugin.getConfig().getBoolean("gamestate-commands.default-commands.enabled", true)) return;
-        String path = "gamestate-commands.default-commands." + phase + ".";
+        String path = "gamestate-commands.default-commands.";
         if (plugin.getConfig().getBoolean(path + "reset-players-stats", false)) {
             participatingPlayers().forEach(player -> {
                 player.getInventory().clear();
@@ -126,10 +148,8 @@ public final class GameStateCommandManager {
         worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, !disableLocatorBar));
         worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
                 plugin.getConfig().getBoolean(path + "set-respawn-immediate", false)));
-        if (phase.equals("start")) {
-            if (plugin.getConfig().getBoolean(path + "set-daytime", false)) {
-                Bukkit.getWorlds().forEach(this::setDaytime);
-            }
+        if (plugin.getConfig().getBoolean(path + "set-daytime", false)) {
+            Bukkit.getWorlds().forEach(this::setDaytime);
         }
     }
 
@@ -141,27 +161,25 @@ public final class GameStateCommandManager {
         }
     }
 
-    private void runConfigured(String phase, String winner) {
+    private void runConfigured(String phase) {
         String base = "gamestate-commands.";
         if (plugin.getConfig().getBoolean(base + "console-commands.enabled", false)) {
-            runCommands(base + "console-commands." + phase, null, winner);
+            runCommands(base + "console-commands." + phase, null);
         }
         if (plugin.getConfig().getBoolean(base + "player-commands.enabled", false)) {
             for (Player player : participatingPlayers()) {
-                runCommands(base + "player-commands." + phase, player, winner);
+                runCommands(base + "player-commands." + phase, player);
             }
         }
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
-            if (phase.equals("start")) {
-                String runsOn = plugin.getConfig().getString("custom-modifiers." + name + ".runs-on", "ON_START");
-                if ("INTERVAL".equals(runsOn)) continue; // interval modifiers are started by beginGame()
-                runModifierCommands(name, winner);
+            if (phase.equals("start") && runsOnContains(name, "ON_START")) {
+                runModifierCommands(name);
             }
         }
     }
 
-    private void runCommands(String path, Player player, String winner) {
+    private void runCommands(String path, Player player) {
         for (String command : plugin.getConfig().getStringList(path)) {
             if (command.isBlank()) continue;
             try {
@@ -169,7 +187,7 @@ public final class GameStateCommandManager {
                 double x = player != null ? player.getLocation().getX() : 0.0;
                 double y = player != null ? player.getLocation().getY() : 0.0;
                 double z = player != null ? player.getLocation().getZ() : 0.0;
-                String parsed = CommandPlaceholders.replace(command, playerName, winner, x, y, z);
+                String parsed = CommandPlaceholders.replace(command, playerName, x, y, z);
                 if (parsed.startsWith("/")) parsed = parsed.substring(1);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception e) {

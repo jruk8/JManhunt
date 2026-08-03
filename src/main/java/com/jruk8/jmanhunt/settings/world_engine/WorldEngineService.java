@@ -29,6 +29,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private final ConfigService configService;
     private final WorldCellAllocator cellAllocator;
     private final StrongholdDatapackManager strongholdDatapackManager;
+    private final NetherStructuresDatapackManager netherStructuresDatapackManager;
     private final EndResetManager endResetManager;
 
     // Tracks the start-border state so it can be expanded when the game begins.
@@ -43,6 +44,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         this.configService = configService;
         this.cellAllocator = new WorldCellAllocator(statsRepository);
         this.strongholdDatapackManager = new StrongholdDatapackManager(plugin);
+        this.netherStructuresDatapackManager = new NetherStructuresDatapackManager(plugin);
         this.endResetManager = new EndResetManager(plugin);
     }
 
@@ -150,15 +152,33 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
 
     @Override
     public void onStart() {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         boolean isDisabled = !configService.getBoolean("settings.world-engine.enabled", false);
         if (isDisabled) {
-            strongholdDatapackManager.remove(WorldEngineConfig.fromConfig(plugin.getConfig()));
+            strongholdDatapackManager.remove(config.worldName(), false);
+            netherStructuresDatapackManager.remove(config.worldName(), false);
+            return;
         }
+        strongholdDatapackManager.apply(config.worldName(), true);
+        boolean netherEnabled = configService.getBoolean("settings.world-engine.nether-structures.enabled", false);
+        netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);
     }
 
     @Override
     public void onReload() {
-        strongholdDatapackManager.apply(WorldEngineConfig.fromConfig(plugin.getConfig()));
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        boolean worldEnabled = config.enabled();
+        strongholdDatapackManager.apply(config.worldName(), worldEnabled);
+        if (!worldEnabled) {
+            strongholdDatapackManager.remove(config.worldName(), false);
+            netherStructuresDatapackManager.remove(config.worldName(), false);
+            return;
+        }
+        boolean netherEnabled = configService.getBoolean("settings.world-engine.nether-structures.enabled", false);
+        netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);
+        if (!netherEnabled) {
+            netherStructuresDatapackManager.remove(config.worldName(), false);
+        }
     }
 
     @Override

@@ -19,8 +19,10 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public final class GameplayListener implements Listener {
@@ -35,6 +37,8 @@ public final class GameplayListener implements Listener {
     private final LobbyTeleporter lobbyTeleporter;
     private final SpeedrunnerDisconnectTracker disconnects = new SpeedrunnerDisconnectTracker();
     private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
+    private final Set<UUID> enteredNether = new HashSet<>();
+    private final Set<UUID> enteredEnd = new HashSet<>();
 
     public GameplayListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
                             MessageService messages, ConfigService config, SoundService sounds, CompassManager compass,
@@ -150,6 +154,13 @@ public final class GameplayListener implements Listener {
                 && player.getWorld().getEnvironment() == World.Environment.NORMAL) {
             game.finishLater(Role.SPEEDRUNNER);
         }
+        if (!game.isActive() || !game.isGameBegun() || playerStates.role(player) == Role.NONE) return;
+        World.Environment to = player.getWorld().getEnvironment();
+        if (to == World.Environment.NETHER && enteredNether.add(player.getUniqueId())) {
+            game.stateCommands().runEventModifiers("ON_FIRST_ENTER_NETHER", player);
+        } else if (to == World.Environment.THE_END && enteredEnd.add(player.getUniqueId())) {
+            game.stateCommands().runEventModifiers("ON_FIRST_ENTER_END", player);
+        }
     }
     @EventHandler public void onMove(PlayerMoveEvent event) {
         if (game.isActive() && playerStates.role(event.getPlayer()) != Role.NONE) {
@@ -181,10 +192,28 @@ public final class GameplayListener implements Listener {
         stats.getOrCreate(attacker.getUniqueId()).damage += event.getFinalDamage();
     }
     @EventHandler public void onEntityDeath(EntityDeathEvent event) {
-        if (!game.isActive() || !game.isGameBegun() || !(event.getEntity() instanceof Player victim)
-                || event.getEntity().getKiller() == null || playerStates.role(victim) == Role.NONE
-                || playerStates.role(event.getEntity().getKiller()) == Role.NONE) return;
-        stats.getOrCreate(event.getEntity().getKiller().getUniqueId()).kills++;
+        if (!game.isActive() || !game.isGameBegun() || event.getEntity().getKiller() == null
+                || !(event.getEntity().getKiller() instanceof Player killer)
+                || playerStates.role(killer) == Role.NONE) return;
+        boolean victimIsPlayer = event.getEntity() instanceof Player;
+        if (victimIsPlayer && playerStates.role(event.getEntity().getUniqueId()) == Role.NONE) return;
+        stats.getOrCreate(killer.getUniqueId()).kills++;
+        game.stateCommands().runEventModifiers("ON_EVERY_KILL", killer);
+        if (victimIsPlayer) {
+            game.stateCommands().runEventModifiers("ON_PLAYER_KILL", killer);
+            Role victimRole = playerStates.role(event.getEntity().getUniqueId());
+            if (victimRole == Role.HUNTER) {
+                game.stateCommands().runEventModifiers("ON_HUNTER_KILL", killer);
+            } else if (victimRole == Role.SPEEDRUNNER) {
+                game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_KILL", killer);
+            }
+        }
+    }
+
+    @EventHandler public void onAdvancement(org.bukkit.event.player.PlayerAdvancementDoneEvent event) {
+        Player player = event.getPlayer();
+        if (!game.isActive() || !game.isGameBegun() || playerStates.role(player) == Role.NONE) return;
+        game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player);
     }
 
     private void handleDisconnect(Player player, Role role) {

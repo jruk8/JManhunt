@@ -94,7 +94,6 @@ Commands can use these placeholders:
 | Placeholder | Replaced with |
 | --- | --- |
 | `<p>` | The participating player's name. Use this in player and role commands. |
-| `<winner>` | Parses as `Hunters` or `Speedrunners` in end and cleanup commands. |
 | `<random-mob>` | A random spawnable living entity type (e.g. `zombie`, `creeper`). A new roll is made for each command execution. |
 | `<random-item>` | A random item material (e.g. `diamond_sword`, `bread`). A new roll is made for each command execution. |
 
@@ -122,17 +121,32 @@ The available command lists are:
 
 ### Run timing
 
-By default, modifier commands run once when the match starts (`runs-on: ON_START`).
-For recurring effects, set `runs-on: INTERVAL` and configure the interval:
+`runs-on` is a list of events that trigger the modifier's commands. Available
+values:
+
+| Value | Trigger |
+| --- | --- |
+| `ON_START` | Once when the match starts |
+| `INTERVAL` | On a fixed interval that starts counting when the game begins |
+| `ON_EVERY_KILL` | When a participating player kills any entity (mobs included) |
+| `ON_PLAYER_KILL` | When a participating player kills another player |
+| `ON_HUNTER_KILL` | When a hunter kills a player |
+| `ON_SPEEDRUNNER_KILL` | When a speedrunner kills a player |
+| `ON_FIRST_ENTER_NETHER` | When a participating player first enters the Nether |
+| `ON_FIRST_ENTER_END` | When a participating player first enters the End |
+| `ON_EVERY_ADVANCEMENT` | When a participating player earns any advancement |
+
+Event-based modifiers run their `player`/`hunter`/`speedrunner` commands only
+for the specific player involved in the event.
 
 ```yaml
 custom-modifiers:
   random-mob-spawner:
     enabled: false
-    runs-on: INTERVAL
+    runs-on:
+      - INTERVAL
     interval-settings:
       interval: 60          # seconds between runs
-      run-on-start: false   # also run immediately when the game begins
     commands:
       speedrunner:
         - "summon <random-mob> ~ ~ ~"
@@ -158,16 +172,37 @@ custom-modifiers:
       player-cleanup: []
 ```
 
+## Challenges
+
+Built-in challenges can be toggled in-game with `/manhunt modifiers`:
+
+| Challenge | Effect |
+| --- | --- |
+| `challenges.no-jump` | Players cannot jump for the duration of the match. |
+| `challenges.one-heart` | All participating players have only one heart (2 health points). |
+| `challenges.lucky-blocks` | Breaking the configured block drops a random outcome from `settings/lucky-blocks.yml` instead of the block itself. |
+
+The lucky-blocks challenge uses `challenges.lucky-blocks.block-definition`
+(default `gold_block`) to select which block is intercepted. The outcome table
+in `settings/lucky-blocks.yml` supports `ITEM`, `NONE`, and `COMMAND` outcome
+types with weighted random selection. Commands support the same placeholders
+(`<p>`, `<random-mob>`, `<random-item>`) and tilde resolution as custom
+modifiers, with `relative-to` choosing whether tildes resolve to the broken
+block or the player.
+
 ## Settings
 The plugin provides settings that modify the game flow.
 This includes things like:
 
 - starting the game only when speedrunner hits a hunter
+- setting participants to adventure mode during the pre-start window
 - autostart when enough players join
 - custom bartering loot tables for higher ender pearl pulls
-- dropping the compass on death so the speedrunner can track hunters
+- compass tracking settings under `settings.compass`
 - optional grid-based world-engine runs with persistent spiral cell assignment,
   stronghold random spread, and automatic End resets between matches
+- optional nether-structures datapack that boosts fortress and bastion spawn
+  frequency (requires a server restart)
 
 and a lot more!
 
@@ -226,11 +261,13 @@ the relevant exception in server logs.
 
 The plugin creates `config.yml` in its data folder. It includes match
 behavior, default game actions, command bundles, custom modifiers, compass
-refreshing, end-screen statistics, sounds, text formatting, and optional
-PlaceholderAPI settings. Use `/manhunt modifiers` to browse and change the
-boolean built-in actions and modifier switches in-game.
+tracking settings under `settings.compass`, end-screen statistics, sounds,
+text formatting, and optional PlaceholderAPI settings. Use `/manhunt modifiers`
+to browse and change the boolean built-in actions and modifier switches
+in-game.
 The `settings.world-engine` section controls grid cell size, spread radius,
-target world, and lobby teleport location for the grid-based world engine.
+target world, lobby teleport location, and the optional nether-structures
+datapack for the grid-based world engine.
 
 ### World Border
 

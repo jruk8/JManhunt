@@ -142,7 +142,7 @@ public final class CompassManager {
         CompassMeta meta = (CompassMeta) item.getItemMeta();
         meta.displayName(messages.nonItalic(component("compass.compass-name")));
         meta.lore(messages.strings("compass.compass-lore").stream().map(messages::parse).map(messages::nonItalic).toList());
-        if (plugin.getConfig().getBoolean("settings.drop-compass-on-death.enabled", false)) {
+        if (plugin.getConfig().getBoolean("settings.compass.drop-on-death.enabled", false)) {
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         } else {
             meta.addEnchant(Enchantment.VANISHING_CURSE, 1, true);
@@ -216,14 +216,14 @@ public final class CompassManager {
     }
 
     public boolean mustBeInventory() {
-        return plugin.getConfig().getBoolean("settings.compass-must-be-inventory.enabled", true);
+        return plugin.getConfig().getBoolean("settings.compass.must-be-inventory.enabled", true);
     }
 
     public void handleRightClick(Player player) {
-        if (plugin.getConfig().getBoolean("compass-refresh.right-click.refresh-on-right-click", false)) {
+        if (plugin.getConfig().getBoolean("settings.compass.right-click.refresh-on-right-click", false)) {
             long now = System.currentTimeMillis();
             if (now - compassClicks.getOrDefault(player.getUniqueId(), 0L) >=
-                    plugin.getConfig().getDouble("compass-refresh.right-click.right-click-cooldown", 3.0) * 1000) {
+                    plugin.getConfig().getDouble("settings.compass.right-click.right-click-cooldown", 3.0) * 1000) {
                 compassClicks.put(player.getUniqueId(), now); refreshCompass(player);
             }
         }

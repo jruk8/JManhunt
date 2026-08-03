@@ -29,15 +29,18 @@ public final class ConfigService {
         var defaults = plugin.getConfig().getConfigurationSection("gamestate-commands.default-commands");
         if (defaults != null) {
             if (defaults.contains("enabled")) names.add("default-commands.enabled");
-            for (String phase : List.of("start", "end")) {
-                var section = defaults.getConfigurationSection(phase);
-                if (section != null) for (String key : section.getKeys(false)) {
-                    names.add("default-commands." + phase + "." + key);
-                }
+            for (String key : defaults.getKeys(false)) {
+                if (!key.equals("enabled")) names.add("default-commands." + key);
             }
         }
         for (String name : modifierNames()) names.add("custom-modifiers." + name + ".enabled");
         names.addAll(extraModifierNames());
+        var challenges = plugin.getConfig().getConfigurationSection("challenges");
+        if (challenges != null) {
+            for (String name : challenges.getKeys(false)) {
+                names.add("challenges." + name + ".enabled");
+            }
+        }
         return names;
     }
 

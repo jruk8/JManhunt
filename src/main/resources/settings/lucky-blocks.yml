@@ -1,0 +1,42 @@
+# Lucky Blocks outcome table.
+# When a player breaks the configured lucky block, one outcome is rolled
+# based on the weights below. Users can add their own outcomes by writing
+# new entries here.
+#
+# Outcome types:
+#   ITEM    - Gives the player an item.
+#   NONE    - Does nothing.
+#   COMMAND - Runs console commands.
+#
+# Reliable command generator: https://mcstacker.net/
+outcomes:
+  diamonds:
+    weight: 5.0
+    type: ITEM
+    item-settings:
+      name: diamond # unless namespace specified, default to minecraft:<name>
+      quantity: 1
+  nothing:
+    weight: 1.0
+    type: NONE # does nothing
+  pigmen:
+    weight: 1.2
+    type: COMMAND
+    command-settings:
+      relative-to: BLOCK # how tildes ~ ~ ~ resolve. choices: BLOCK or PLAYER
+      commands:
+      - "summon pig ~ ~ ~"
+      - "summon pig ~ ~ ~"
+      - "summon pig ~ ~ ~"
+      - "summon lightning_bolt ~ ~ ~"
+  tnt: # weight omitted, default to 1.0
+    type: COMMAND
+    command-settings:
+      relative-to: PLAYER
+      commands:
+      - "summon tnt ~ ~1.5 ~ {fuse:40}"
+  sharp-sword:
+    type: COMMAND
+    command-settings: # relative-to omitted, use BLOCK by default
+      commands:
+      - "give @p golden_sword[enchantments={sharpness:10},damage=5] 1"

@@ -31,15 +31,13 @@ public final class CommandPlaceholders {
      *
      * @param command    the raw command from config
      * @param playerName the participating player's name, or null for console commands
-     * @param winner     the winner string, or null
      * @param x          the player's x coordinate for tilde resolution, or 0 if no player
      * @param y          the player's y coordinate for tilde resolution, or 0 if no player
      * @param z          the player's z coordinate for tilde resolution, or 0 if no player
      * @return the parsed command ready for console dispatch
      */
-    public static String replace(String command, String playerName, String winner, double x, double y, double z) {
+    public static String replace(String command, String playerName, double x, double y, double z) {
         String parsed = command;
-        parsed = parsed.replace("<winner>", winner == null ? "" : winner);
         if (playerName != null) {
             parsed = parsed.replace("<p>", playerName);
         }

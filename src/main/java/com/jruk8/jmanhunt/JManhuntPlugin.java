@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt;
 
+import com.jruk8.jmanhunt.challenges.ChallengesListener;
 import com.jruk8.jmanhunt.settings.SettingsListener;
 import com.jruk8.jmanhunt.settings.loot_tables.PiglinBarterListener;
 import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
@@ -59,8 +60,10 @@ public final class JManhuntPlugin extends JavaPlugin {
         worldEngine = new WorldEngineService(this, configService, statsRepository);
         game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService, worldEngine);
         var piglinBarter = new PiglinBarterListener(this, game);
+        var challenges = new ChallengesListener(this, game, playerStates);
         settings.add(worldEngine);
         settings.add(piglinBarter);
+        settings.add(challenges);
 
         ManhuntCommand command = new ManhuntCommand(
                 this, messages, configService, sounds, playerStates, game, compass, worldEngine);
@@ -70,8 +73,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GameplayListener(
                 this, playerStates, game, messages, configService, sounds, compass, stats, worldEngine), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
+        getServer().getPluginManager().registerEvents(challenges, this);
 
-        double refreshInterval = getConfig().getDouble("compass-refresh.compass-refresh-interval", 10.0);
+        double refreshInterval = getConfig().getDouble("settings.compass.refresh-interval", 10.0);
         if (refreshInterval != -1.0) {
             long ticks = Math.max(1L, Math.round(refreshInterval * 20.0));
             Bukkit.getScheduler().runTaskTimer(this,

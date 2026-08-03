@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.entity.Player;
@@ -64,6 +65,7 @@ public final class GameManager {
     public boolean isGameBegun() { return gameBegun; }
     public boolean isEnding() { return ending; }
     public long matchId() { return matchId; }
+    public GameStateCommandManager stateCommands() { return stateCommands; }
     public Set<String> settingNames() { return configService.settingNames(); }
     public boolean getSetting(String setting) { return configService.getBoolean(setting, false); }
     public boolean setSetting(String setting, boolean value) { return configService.setBoolean(setting, value); }
@@ -101,6 +103,15 @@ public final class GameManager {
         for (Player player : players) {
             if (role(player) == Role.HUNTER) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
+        // Set participants to adventure mode during the pre-start window if
+        // configured, preventing block breaking while waiting for the first
+        // speedrunner hit.
+        if (getSetting("settings.start-on-speedrunner-damage.enabled")
+                && plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-with-adventure-mode", true)) {
+            for (Player player : players) {
+                player.setGameMode(GameMode.ADVENTURE);
+            }
+        }
         messages.broadcast("manhunt.start-success");
         sounds.playNeutralSound();
         showStatusToAllPlayers();
@@ -117,7 +128,6 @@ public final class GameManager {
         if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
         if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
 
-        String winnerName = winner == Role.HUNTER ? "Hunters" : "Speedrunners";
         String winMessage = getWinMessage(winner);
         String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
         messages.broadcast(winMessage);
@@ -138,13 +148,13 @@ public final class GameManager {
         // cancel interval modifiers early so they don't fire during the end delay
         stateCommands.cancelIntervalModifiers();
         // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
-        stateCommands.runConsoleCleanup(winnerName);
-        stateCommands.runPlayerCleanup(winnerName);
+        stateCommands.runConsoleCleanup();
+        stateCommands.runPlayerCleanup();
 
         long delay = Math.max(0L, Math.round(plugin.getConfig().getDouble("game-end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            stateCommands.runEnd(winnerName);
+            stateCommands.runEnd();
             List<Player> participants = onlinePlayers.stream().filter(p -> role(p) != Role.NONE)
                     .map(p -> (Player) p).toList();
             worldEngine.onMatchEnd(participants);
@@ -165,6 +175,13 @@ public final class GameManager {
         gameBegun = true;
         if (waitingReminderTask != null) waitingReminderTask.cancel();
         if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
+        // Restore participants to survival when the game begins if they were
+        // set to adventure mode during the pre-start window.
+        if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-with-adventure-mode", true)) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (role(player) != Role.NONE) player.setGameMode(GameMode.SURVIVAL);
+            }
+        }
         messages.broadcast("manhunt.started-by-damage"); sounds.playNeutralSound(); applyStartDebuffs();
         worldEngine.onBeginGame();
         stateCommands.startIntervalModifiers();
@@ -204,8 +221,8 @@ public final class GameManager {
                         // do not save stats
                         stats.clear();
                         stateCommands.cancelIntervalModifiers();
-                        stateCommands.runConsoleCleanup("Cancelled");
-                        stateCommands.runPlayerCleanup("Cancelled");
+                        stateCommands.runConsoleCleanup();
+                        stateCommands.runPlayerCleanup();
                         List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
                                 .map(p -> (Player) p).toList();
                         worldEngine.onMatchEnd(participants);
