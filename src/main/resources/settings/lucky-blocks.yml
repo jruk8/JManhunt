@@ -9,6 +9,22 @@
 #   COMMAND - Runs console commands.
 #
 # Reliable command generator: https://mcstacker.net/
+# Reliable sounds finder:
+# https://mudkipdev.github.io/minecraft-sound-explorer/
+#
+# Optional feedback section per outcome:
+#   feedback:
+#     sound:
+#       enabled: true
+#       sound: block.amethyst_block.step
+#       pitch: 2.0
+#       volume: 1.0
+#     message: "<aqua>Personal message sent only to the player.</aqua>"
+#     broadcast: "<aqua><white>{player}</white> broadcast sent to everyone else.</aqua>"
+# The sound section requires both enabled and sound. pitch defaults to 1.0
+# and volume defaults to 1.0. When no custom sound is configured, the default
+# sound from config.yml (sounds.challenges.lucky-block-default) is played.
+# {player} is replaced with the triggering player's name.
 outcomes:
   diamonds:
     weight: 5.0
@@ -16,9 +32,24 @@ outcomes:
     item-settings:
       name: diamond # unless namespace specified, default to minecraft:<name>
       quantity: 1
+    feedback:
+      sound:
+        enabled: true
+        sound: block.amethyst_block.step
+        pitch: 2.0
+        volume: 1.0
+      message: "<aqua>You fancied yourself some diamonds!</aqua>"
+      broadcast: "<aqua><white>{player}</white> fancied themselves diamonds!</aqua>"
   nothing:
     weight: 1.0
     type: NONE # does nothing
+    feedback:
+      sound:
+        enabled: true
+        sound: block.anvil.hit
+        pitch: 1.2
+        volume: 1.0
+      message: "<gray>Nothing happened. How anticlimactic.</gray>"
   pigmen:
     weight: 1.2
     type: COMMAND
@@ -29,14 +60,36 @@ outcomes:
       - "summon pig ~ ~ ~"
       - "summon pig ~ ~ ~"
       - "summon lightning_bolt ~ ~ ~"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.zombified_piglin.angry
+        pitch: 1.2
+        volume: 0.8
+      message: "<red>You angered the pigmen!</red>"
+      broadcast: "<red><white>{player}</white> angered the pigmen!</red>"
   tnt: # weight omitted, default to 1.0
     type: COMMAND
     command-settings:
       relative-to: PLAYER
       commands:
       - "summon tnt ~ ~1.5 ~ {fuse:40}"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.creeper.hurt
+        pitch: 0.8
+        volume: 1.0
+      message: "<yellow>You hear a hiss...</yellow>"
   sharp-sword:
     type: COMMAND
     command-settings: # relative-to omitted, use BLOCK by default
       commands:
       - "give @p golden_sword[enchantments={sharpness:10},damage=5] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.player.attack.sweep
+        pitch: 1.2
+        volume: 0.8
+      message: "<gold>A sharp sword materializes in your hand!</gold>"

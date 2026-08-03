@@ -15,8 +15,12 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class LuckyBlockEngine {
     public enum OutcomeType { ITEM, NONE, COMMAND }
 
+    public record Sound(boolean enabled, String sound, float pitch, float volume) {}
+
+    public record Feedback(Sound sound, String message, String broadcast) {}
+
     public record Outcome(String name, double weight, OutcomeType type, String itemName, int quantity,
-                          String relativeTo, List<String> commands) {}
+                          String relativeTo, List<String> commands, Feedback feedback) {}
 
     private final List<Outcome> outcomes = new ArrayList<>();
     private double totalWeight = 0.0;
@@ -73,7 +77,8 @@ public final class LuckyBlockEngine {
                     throw new IllegalArgumentException("Entry '" + name + "' is COMMAND but has no commands");
                 }
             }
-            outcomes.add(new Outcome(name, weight, type, itemName, quantity, relativeTo, commands));
+            Feedback feedback = parseFeedback(entry);
+            outcomes.add(new Outcome(name, weight, type, itemName, quantity, relativeTo, commands, feedback));
             totalWeight += weight;
         }
         return !outcomes.isEmpty();
@@ -93,5 +98,31 @@ public final class LuckyBlockEngine {
 
     public List<Outcome> outcomes() {
         return List.copyOf(outcomes);
+    }
+
+    private Feedback parseFeedback(ConfigurationSection entry) {
+        ConfigurationSection feedbackSection = entry.getConfigurationSection("feedback");
+        if (feedbackSection == null) return null;
+
+        Sound sound = null;
+        ConfigurationSection soundSection = feedbackSection.getConfigurationSection("sound");
+        if (soundSection != null) {
+            if (!soundSection.contains("enabled")) {
+                throw new IllegalArgumentException("Entry '" + entry.getName() + "' feedback.sound is missing 'enabled'");
+            }
+            String soundName = soundSection.getString("sound");
+            if (soundName == null || soundName.isBlank()) {
+                throw new IllegalArgumentException("Entry '" + entry.getName() + "' feedback.sound is missing 'sound'");
+            }
+            boolean enabled = soundSection.getBoolean("enabled");
+            float pitch = (float) soundSection.getDouble("pitch", 1.0);
+            float volume = (float) soundSection.getDouble("volume", 1.0);
+            sound = new Sound(enabled, soundName, pitch, volume);
+        }
+
+        String message = feedbackSection.getString("message");
+        String broadcast = feedbackSection.getString("broadcast");
+
+        return new Feedback(sound, message, broadcast);
     }
 }

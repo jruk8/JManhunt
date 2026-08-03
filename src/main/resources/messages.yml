@@ -1,8 +1,12 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 2
+messages-version: 3
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
+
+# Format used when displaying lucky block feedback messages. {value} is
+# replaced with the configured message or broadcast text.
+lucky-block-feedback-format: "\n{prefix}{value}"
 
 command:
   player-only: "{prefix}<red>Only players can use this command."

@@ -2,8 +2,10 @@ package com.jruk8.jmanhunt.challenges;
 
 import com.jruk8.jmanhunt.CommandPlaceholders;
 import com.jruk8.jmanhunt.GameManager;
+import com.jruk8.jmanhunt.MessageService;
 import com.jruk8.jmanhunt.PlayerStateStore;
 import com.jruk8.jmanhunt.Role;
+import com.jruk8.jmanhunt.SoundService;
 import com.jruk8.jmanhunt.settings.SettingsListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -23,19 +25,26 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.util.Map;
 
 /** Handles the built-in challenges: no-jump, one-heart, and lucky-blocks. */
 public final class ChallengesListener implements Listener, SettingsListener {
+    private static final String LUCKY_BLOCK_DEFAULT_SOUND_KEY = "challenges.lucky-block-default";
     private final JavaPlugin plugin;
     private final GameManager game;
     private final PlayerStateStore playerStates;
+    private final MessageService messages;
+    private final SoundService sounds;
     private final LuckyBlockEngine luckyEngine = new LuckyBlockEngine();
     private final File luckyFile;
 
-    public ChallengesListener(JavaPlugin plugin, GameManager game, PlayerStateStore playerStates) {
+    public ChallengesListener(JavaPlugin plugin, GameManager game, PlayerStateStore playerStates,
+                              MessageService messages, SoundService sounds) {
         this.plugin = plugin;
         this.game = game;
         this.playerStates = playerStates;
+        this.messages = messages;
+        this.sounds = sounds;
         this.luckyFile = new File(plugin.getDataFolder(), "settings/lucky-blocks.yml");
     }
 
@@ -96,6 +105,41 @@ public final class ChallengesListener implements Listener, SettingsListener {
                 }
             }
             case NONE -> { /* does nothing */ }
+        }
+        playFeedback(outcome, player);
+    }
+
+    private void playFeedback(LuckyBlockEngine.Outcome outcome, Player player) {
+        LuckyBlockEngine.Feedback feedback = outcome.feedback();
+        if (feedback != null && feedback.sound() != null && feedback.sound().enabled()) {
+            LuckyBlockEngine.Sound sound = feedback.sound();
+            sounds.playCustomSound(player, sound.sound(), sound.pitch(), sound.volume());
+        } else {
+            sounds.playSound(player, LUCKY_BLOCK_DEFAULT_SOUND_KEY);
+        }
+
+        if (feedback == null) return;
+        String format = messages.string("lucky-block-feedback-format", "\n{prefix}{value}");
+        String prefix = messages.string("prefix", "");
+        Map<String, String> values = Map.of("player", player.getName());
+
+        if (feedback.message() != null && !feedback.message().isBlank()) {
+            String raw = format.replace("{prefix}", prefix).replace("{value}", feedback.message());
+            for (Map.Entry<String, String> entry : values.entrySet()) {
+                raw = raw.replace("{" + entry.getKey() + "}", entry.getValue());
+            }
+            player.sendMessage(messages.parse(raw));
+        }
+
+        if (feedback.broadcast() != null && !feedback.broadcast().isBlank()) {
+            String raw = format.replace("{prefix}", prefix).replace("{value}", feedback.broadcast());
+            for (Map.Entry<String, String> entry : values.entrySet()) {
+                raw = raw.replace("{" + entry.getKey() + "}", entry.getValue());
+            }
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                if (online.equals(player)) continue;
+                online.sendMessage(messages.parse(raw));
+            }
         }
     }
 

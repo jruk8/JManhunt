@@ -454,3 +454,12 @@ sounds:
       sound: entity.wither.spawn
       pitch: 1.0
       volume: 1.0
+
+  challenges:
+    # Default sound played when a lucky block outcome has no custom feedback
+    # sound configured.
+    lucky-block-default:
+      enabled: true
+      sound: block.note_block.pling
+      pitch: 2.0
+      volume: 1.0

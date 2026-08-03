@@ -45,6 +45,21 @@ public class SoundService {
         playSound(player, NEUTRAL_SOUND_KEY);
     }
 
+    /** Plays a sound with explicit parameters, e.g. from lucky-blocks.yml feedback. */
+    public void playCustomSound(Player player, String sound, float pitch, float volume) {
+        try {
+            NamespacedKey soundKey = NamespacedKey.fromString(sound.toLowerCase(Locale.ROOT));
+            if (soundKey == null) soundKey = NamespacedKey.minecraft(sound.toLowerCase(Locale.ROOT));
+            if (Registry.SOUNDS.get(soundKey) == null) {
+                plugin.getLogger().warning("Sound '" + sound + "' is invalid. Using default sound.");
+                soundKey = NamespacedKey.fromString(FALLBACK_SOUND);
+            }
+            player.playSound(player.getLocation(), soundKey.asString(), volume, pitch);
+        } catch (IllegalArgumentException exception) {
+            plugin.getLogger().warning("Could not play sound '" + sound + "': " + exception.getMessage());
+        }
+    }
+
     private SoundSettings getSoundSettings(String configKey) {
         String soundPath = getSoundPath(configKey);
         boolean isEnabled = config.getBoolean(soundPath + ".enabled", false);

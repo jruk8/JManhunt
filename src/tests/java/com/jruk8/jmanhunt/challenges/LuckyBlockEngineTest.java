@@ -97,6 +97,104 @@ class LuckyBlockEngineTest {
     }
 
     @Test
+    void parsesFeedbackWithSoundMessageAndBroadcast() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  diamonds:
+                    type: ITEM
+                    item-settings:
+                      name: diamond
+                    feedback:
+                      sound:
+                        enabled: true
+                        sound: block.amethyst_block.step
+                        pitch: 2.0
+                        volume: 1.0
+                      message: "<aqua>You fancied yourself some diamonds!</aqua>"
+                      broadcast: "<aqua><white>{player}</white> fancied themselves diamonds!</aqua>"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        LuckyBlockEngine.Feedback feedback = outcome.feedback();
+        assertNotNull(feedback);
+        assertNotNull(feedback.sound());
+        assertTrue(feedback.sound().enabled());
+        assertEquals("block.amethyst_block.step", feedback.sound().sound());
+        assertEquals(2.0f, feedback.sound().pitch());
+        assertEquals(1.0f, feedback.sound().volume());
+        assertEquals("<aqua>You fancied yourself some diamonds!</aqua>", feedback.message());
+        assertEquals("<aqua><white>{player}</white> fancied themselves diamonds!</aqua>", feedback.broadcast());
+    }
+
+    @Test
+    void parsesFeedbackWithDefaultPitchAndVolume() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  nothing:
+                    type: NONE
+                    feedback:
+                      sound:
+                        enabled: true
+                        sound: block.anvil.hit
+                      message: "<gray>Nothing happened.</gray>"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        LuckyBlockEngine.Feedback feedback = outcome.feedback();
+        assertNotNull(feedback);
+        assertNotNull(feedback.sound());
+        assertEquals(1.0f, feedback.sound().pitch());
+        assertEquals(1.0f, feedback.sound().volume());
+        assertEquals("<gray>Nothing happened.</gray>", feedback.message());
+        assertNull(feedback.broadcast());
+    }
+
+    @Test
+    void parsesOutcomeWithoutFeedback() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  plain:
+                    type: NONE
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertNull(outcome.feedback());
+    }
+
+    @Test
+    void rejectsFeedbackSoundMissingEnabled() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  bad:
+                    type: NONE
+                    feedback:
+                      sound:
+                        sound: block.anvil.hit
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
+        assertTrue(ex.getMessage().contains("bad"));
+    }
+
+    @Test
+    void rejectsFeedbackSoundMissingSound() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  bad:
+                    type: NONE
+                    feedback:
+                      sound:
+                        enabled: true
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
+        assertTrue(ex.getMessage().contains("bad"));
+    }
+
+    @Test
     void rollReturnsOutcomeWithinWeightedRange() throws IOException {
         File file = writeYaml("""
                 outcomes:
