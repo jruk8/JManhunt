@@ -8,14 +8,14 @@ built-in actions and modifiers.
 ## Key Features
 
 - **Deep configurability** — Toggle built-in mechanics on or off, or create
-  entirely new gameplay through custom modifiers.
+  entirely new gameplay through easy-to-use custom modifiers.
 - **World reset engine** — Grid-based single-world manhunt engine with
   persistent spiral cell assignment and automatic End resets.
+- **Compass tracking** — Hunter compass with configurable refresh and
+  right-click behavior.
 - **Placeholders & statistics** — Career statistics with PlaceholderAPI
   support.
 - **Built-in challenges** — No-jump, one-heart, and lucky-blocks challenges.
-- **Compass tracking** — Hunter compass with configurable refresh and
-  right-click behavior.
 
 ## Installation
 
