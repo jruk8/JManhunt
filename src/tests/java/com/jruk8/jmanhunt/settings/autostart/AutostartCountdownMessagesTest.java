@@ -1,4 +1,4 @@
-package com.jruk8.jmanhunt.extras.autostart;
+package com.jruk8.jmanhunt.settings.autostart;
 
 import org.junit.jupiter.api.Test;
 

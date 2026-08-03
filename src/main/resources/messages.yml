@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 6
+messages-version: 1
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
@@ -34,15 +34,16 @@ manhunt:
   already-active: "{prefix}<red>A match is already active."
   not-active: "{prefix}<yellow>No match is active."
   end-success: "{prefix}<green>Manhunt ended. Hunters win!"
-  reload-success: "{prefix}<green>Reloaded config.yml, messages.yml, and extras."
+  reload-success: "{prefix}<green>Reloaded config.yml, messages.yml, and settings."
   modifiers-usage: "{prefix}<yellow>Usage: /manhunt modifiers <setting> <true|false>"
   setting-invalid: "{prefix}<red>Unknown setting."
   setting-invalid-value: "{prefix}<red>Setting values must be true or false."
   setting-updated: "{prefix}<green>Set <white>{setting}<green> to <white>{value}<green>. <gray>(was <white>{old-value}</white>)</gray>"
+  setting-restart-required: "{prefix}<gray>This setting requires a server restart to take effect."
   setting-entry: "{prefix}<gray>{setting}:</gray> <white>{value}"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
   worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|lobby>"
-  worldengine-disabled: '{prefix}<red>World engine is disabled. Enable it through <gray>"/manhunt modifiers extras.world-engine.enabled true"</gray> to use this command.'
+  worldengine-disabled: '{prefix}<red>World engine is disabled. Enable it through <gray>"/manhunt modifiers settings.world-engine.enabled true"</gray> to use this command.'
   worldengine-setlobby-success: "{prefix}<green>Set the world-engine lobby to <white>{location}<green>."
   worldengine-teleport-success: "{prefix}<green>Teleported <white>{target}<green> to the world-engine lobby."
   worldengine-no-targets: "{prefix}<yellow>No players matched that selector."

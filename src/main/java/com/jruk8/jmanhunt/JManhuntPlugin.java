@@ -1,12 +1,10 @@
 package com.jruk8.jmanhunt;
 
-import com.jruk8.jmanhunt.extras.ExtrasListener;
-import com.jruk8.jmanhunt.extras.loot_tables.PiglinBarterListener;
-import com.jruk8.jmanhunt.extras.world_engine.WorldEngineService;
+import com.jruk8.jmanhunt.settings.SettingsListener;
+import com.jruk8.jmanhunt.settings.loot_tables.PiglinBarterListener;
+import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -16,8 +14,8 @@ import java.util.List;
 
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int CONFIG_VERSION = 8;
-    private static final int MESSAGES_VERSION = 6;
+    private static final int CONFIG_VERSION = 1;
+    private static final int MESSAGES_VERSION = 1;
     private MessageService messages;
     private SoundService sounds;
     private PlayerStateStore playerStates;
@@ -28,11 +26,11 @@ public final class JManhuntPlugin extends JavaPlugin {
     private JManhuntExpansion expansion;
     private ConfigService configService;
     private WorldEngineService worldEngine;
-    private final List<ExtrasListener> extras = new ArrayList<>();
+    private final List<SettingsListener> settings = new ArrayList<>();
 
     @Override
     public void onEnable() {
-        Reload();
+        reload();
 
         playerStates = new PlayerStateStore();
         if (getConfig().getBoolean("database.enabled", true)) {
@@ -61,8 +59,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         worldEngine = new WorldEngineService(this, configService, statsRepository);
         game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService, worldEngine);
         var piglinBarter = new PiglinBarterListener(this, game);
-        extras.add(worldEngine);
-        extras.add(piglinBarter);
+        settings.add(worldEngine);
+        settings.add(piglinBarter);
 
         ManhuntCommand command = new ManhuntCommand(
                 this, messages, configService, sounds, playerStates, game, compass, worldEngine);
@@ -81,8 +79,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
         BukkitTask actionbars = Bukkit.getScheduler().runTaskTimer(this,
                 () -> compass.showHeldActionbars(game.isActive()), 1L, 20L);
-        Reload(); // reload again to ensure that extras are loaded after the game manager is initialized
-        for (ExtrasListener listener : extras) {
+        reload(); // reload again to ensure that settings are loaded after the game manager is initialized
+        for (SettingsListener listener : settings) {
             listener.onStart();
         }
     }
@@ -93,10 +91,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         if (statsRepository != null) statsRepository.close();
     }
 
-    public void Reload() {
+    public void reload() {
         YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION);
         reloadConfig();
-        migrateCustomModifierKeys();
         YamlFileUpdater.update(this, "messages.yml", "messages-version", MESSAGES_VERSION);
         saveResource("placeholders.yml", false);
 
@@ -106,57 +103,12 @@ public final class JManhuntPlugin extends JavaPlugin {
         messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")),
                 getConfig().getString("text-format", "minimessage"));
 
-        for (ExtrasListener listener : extras) {
-            var dataPath = "extras/" + listener.getDataPath();
+        for (SettingsListener listener : settings) {
+            var dataPath = "settings/" + listener.getDataPath();
             saveResource(dataPath, false);
             listener.onReload();
         }
         getLogger().info("JManhunt has been reloaded.");
     }
 
-    /**
-     * Migrates custom modifier command keys from the old -commands suffix
-     * convention to the shorter form (hunter-commands → hunter, etc.).
-     * Runs once on reload; only renames if the old key exists and the new
-     * key does not.
-     */
-    private void migrateCustomModifierKeys() {
-        var modifiers = getConfig().getConfigurationSection("custom-modifiers");
-        if (modifiers == null) return;
-        boolean changed = false;
-        for (String name : modifiers.getKeys(false)) {
-            String commandsPath = "custom-modifiers." + name + ".commands";
-            var commands = getConfig().getConfigurationSection(commandsPath);
-            if (commands == null) continue;
-            changed |= migrateKey(commandsPath, "hunter-commands", "hunter");
-            changed |= migrateKey(commandsPath, "speedrunner-commands", "speedrunner");
-        }
-        if (changed) saveConfig();
-    }
-
-    private boolean migrateKey(String basePath, String oldKey, String newKey) {
-        String oldPath = basePath + "." + oldKey;
-        String newPath = basePath + "." + newKey;
-        if (!getConfig().contains(oldPath) || getConfig().contains(newPath)) return false;
-        var value = getConfig().getList(oldPath);
-        getConfig().set(newPath, value);
-        getConfig().set(oldPath, null);
-        return true;
-    }
-
-    private void copySection(FileConfiguration config, String fromPath, String toPath) {
-        ConfigurationSection from = config.getConfigurationSection(fromPath);
-        if (from == null) return;
-        if (config.contains(toPath)) config.set(toPath, null);
-        config.createSection(toPath);
-        for (String key : from.getKeys(false)) {
-            String childPath = toPath + "." + key;
-            ConfigurationSection childSection = from.getConfigurationSection(key);
-            if (childSection != null) {
-                copySection(config, fromPath + "." + key, childPath);
-            } else {
-                config.set(childPath, from.get(key));
-            }
-        }
-    }
 }

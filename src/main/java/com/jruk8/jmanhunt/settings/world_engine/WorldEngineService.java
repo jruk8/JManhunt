@@ -1,9 +1,9 @@
-package com.jruk8.jmanhunt.extras.world_engine;
+package com.jruk8.jmanhunt.settings.world_engine;
 
 import com.jruk8.jmanhunt.ConfigService;
 import com.jruk8.jmanhunt.LobbyTeleporter;
 import com.jruk8.jmanhunt.StatsRepository;
-import com.jruk8.jmanhunt.extras.ExtrasListener;
+import com.jruk8.jmanhunt.settings.SettingsListener;
 import org.bukkit.Bukkit;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
@@ -15,12 +15,15 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import org.bukkit.scheduler.BukkitTask;
+
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.ThreadLocalRandom;
 
-public final class WorldEngineService implements ExtrasListener, LobbyTeleporter {
+public final class WorldEngineService implements SettingsListener, LobbyTeleporter {
     private static final int MAX_CELL_ALLOCATE_ATTEMPTS = 20;
 
     private final JavaPlugin plugin;
@@ -28,6 +31,13 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
     private final WorldCellAllocator cellAllocator;
     private final StrongholdDatapackManager strongholdDatapackManager;
     private final EndResetManager endResetManager;
+
+    // Tracks the start-border state so it can be expanded when the game begins.
+    private boolean startBorderActive;
+    private World startBorderWorld;
+    private CellOrigin startBorderOrigin;
+    private WorldEngineConfig startBorderConfig;
+    private BukkitTask startBorderTask;
 
     public WorldEngineService(JavaPlugin plugin, ConfigService configService, StatsRepository statsRepository) {
         this.plugin = plugin;
@@ -57,9 +67,35 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
         setWorldBorder(world, config, origin);
     }
 
+    /**
+     * Called when the game actually begins (via speedrunner damage or force start).
+     * If the start-border is active, expands it to the full cell size.
+     */
+    public void onBeginGame() {
+        if (!startBorderActive || startBorderWorld == null || startBorderConfig == null) return;
+
+        if (startBorderConfig.skipFadeout()) {
+            // Snap to cell size immediately, no animation.
+            applyCellBorderSize(startBorderWorld, startBorderConfig, startBorderOrigin);
+        } else {
+            // Animate the expansion over the configured fadeout time.
+            int fadeoutSeconds = startBorderConfig.startBorderFadeoutTime();
+            applyCellBorderSize(startBorderWorld, startBorderConfig, startBorderOrigin, fadeoutSeconds);
+        }
+
+        startBorderActive = false;
+    }
+
     public void onMatchEnd(List<Player> participants) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return;
+
+        // Cancel any pending start-border task.
+        if (startBorderTask != null) {
+            startBorderTask.cancel();
+            startBorderTask = null;
+        }
+        startBorderActive = false;
 
         Location lobby = getValidLobby(config);
         if (lobby == null) return;
@@ -115,7 +151,7 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
 
     @Override
     public void onStart() {
-        boolean isDisabled = !configService.getBoolean("extras.world-engine.enabled", false);
+        boolean isDisabled = !configService.getBoolean("settings.world-engine.enabled", false);
         if (isDisabled) {
             strongholdDatapackManager.remove(WorldEngineConfig.fromConfig(plugin.getConfig()));
         }
@@ -143,7 +179,7 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
             int originX = toBlockCoordinate(cell.x() * config.cellSize());
             int originZ = toBlockCoordinate(cell.z() * config.cellSize());
 
-            boolean useAlgo = configService.getBoolean("extras.world-engine.use-spawnpoint-algorithm", true);
+            boolean useAlgo = configService.getBoolean("settings.world-engine.use-spawnpoint-algorithm", true);
             if (useAlgo) {
                 Block centerBlock = world.getHighestBlockAt(originX, originZ);
                 Material type = centerBlock.getType();
@@ -185,15 +221,59 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
 
     /**
      * Sets the world border for the overworld and its corresponding Nether world.
+     * If start-border is active, sets the initial smaller border; otherwise sets
+     * the full cell size border directly.
      */
     private void setWorldBorder(World overworld, WorldEngineConfig config, CellOrigin origin) {
-        if (!configService.getBoolean("extras.world-engine.use-world-border", false)) {
+        if (!config.worldBorderEnabled()) {
             return;
         }
 
+        // Check if start-border should be used (requires start-on-speedrunner-damage enabled).
+        boolean startOnDamage = configService.getBoolean("settings.start-on-speedrunner-damage.enabled", false);
+        boolean useStartBorder = config.startBorderActive() && startOnDamage;
+
+        if (useStartBorder) {
+            // Set the initial smaller start border.
+            int startDiameter = config.startBorderDiameter();
+            WorldBorder border = overworld.getWorldBorder();
+            border.setCenter(origin.x(), origin.z());
+            border.setSize(startDiameter);
+            border.setDamageBuffer(config.damageBuffer());
+            border.setDamageAmount(config.damageAmount());
+
+            World nether = getNetherWorld(overworld);
+            if (nether != null) {
+                WorldBorder netherBorder = nether.getWorldBorder();
+                netherBorder.setCenter(origin.x() / 8.0, origin.z() / 8.0);
+                netherBorder.setSize(startDiameter / 8.0);
+                netherBorder.setDamageBuffer(config.damageBuffer());
+                netherBorder.setDamageAmount(config.damageAmount());
+            } else {
+                plugin.getLogger().warning("Could not find matching Nether world for '"
+                        + overworld.getName() + "'. Skipping Nether world border sync.");
+            }
+
+            // Store state for onBeginGame() to expand the border later.
+            startBorderActive = true;
+            startBorderWorld = overworld;
+            startBorderOrigin = origin;
+            startBorderConfig = config;
+        } else {
+            // Set the full cell size border directly.
+            applyCellBorderSize(overworld, config, origin);
+        }
+    }
+
+    /**
+     * Applies the full cell size border to the overworld and Nether.
+     */
+    private void applyCellBorderSize(World overworld, WorldEngineConfig config, CellOrigin origin) {
         WorldBorder border = overworld.getWorldBorder();
         border.setCenter(origin.x(), origin.z());
         border.setSize(config.cellSize());
+        border.setDamageBuffer(config.damageBuffer());
+        border.setDamageAmount(config.damageAmount());
 
         World nether = getNetherWorld(overworld);
         if (nether == null) {
@@ -205,6 +285,34 @@ public final class WorldEngineService implements ExtrasListener, LobbyTeleporter
         WorldBorder netherBorder = nether.getWorldBorder();
         netherBorder.setCenter(origin.x() / 8.0, origin.z() / 8.0);
         netherBorder.setSize(config.cellSize() / 8.0);
+        netherBorder.setDamageBuffer(config.damageBuffer());
+        netherBorder.setDamageAmount(config.damageAmount());
+    }
+
+    /**
+     * Applies the full cell size border to the overworld and Nether with
+     * an animated transition over the given duration in seconds.
+     */
+    @SuppressWarnings("removal") // setSize(double, long) is the only animated overload available
+    private void applyCellBorderSize(World overworld, WorldEngineConfig config, CellOrigin origin, int seconds) {
+        WorldBorder border = overworld.getWorldBorder();
+        border.setCenter(origin.x(), origin.z());
+        border.setSize(config.cellSize(), seconds);
+        border.setDamageBuffer(config.damageBuffer());
+        border.setDamageAmount(config.damageAmount());
+
+        World nether = getNetherWorld(overworld);
+        if (nether == null) {
+            plugin.getLogger().warning("Could not find matching Nether world for '"
+                    + overworld.getName() + "'. Skipping Nether world border sync.");
+            return;
+        }
+
+        WorldBorder netherBorder = nether.getWorldBorder();
+        netherBorder.setCenter(origin.x() / 8.0, origin.z() / 8.0);
+        netherBorder.setSize(config.cellSize() / 8.0, seconds);
+        netherBorder.setDamageBuffer(config.damageBuffer());
+        netherBorder.setDamageAmount(config.damageAmount());
     }
 
     private void clearWorldBorder(World world) {

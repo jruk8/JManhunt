@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt;
 
-import com.jruk8.jmanhunt.extras.autostart.AutostartCountdownMessages;
-import com.jruk8.jmanhunt.extras.world_engine.WorldEngineService;
+import com.jruk8.jmanhunt.settings.autostart.AutostartCountdownMessages;
+import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -54,8 +54,8 @@ public final class GameManager {
         this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService);
 
         // assign events
-        configService.onChange("extras.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
-        configService.onChange("extras.world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
+        configService.onChange("settings.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
+        configService.onChange("settings.world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
     }
 
     // TODO: push players to a match container, so that new players cannot join the match mid-game.
@@ -100,8 +100,8 @@ public final class GameManager {
         sounds.playNeutralSound();
         showStatusToAllPlayers();
         // load waiting delay configuration
-        waitingDelayConfigured = Math.max(0, plugin.getConfig().getInt("extras.start-on-speedrunner-damage.delay-seconds", 30));
-        if (getSetting("extras.start-on-speedrunner-damage.enabled")) scheduleWaitingReminder();
+        waitingDelayConfigured = Math.max(0, plugin.getConfig().getInt("settings.start-on-speedrunner-damage.delay-seconds", 30));
+        if (getSetting("settings.start-on-speedrunner-damage.enabled")) scheduleWaitingReminder();
         else beginGame();
         return true;
     }
@@ -138,7 +138,7 @@ public final class GameManager {
             List<Player> participants = onlinePlayers.stream().filter(p -> role(p) != Role.NONE)
                     .map(p -> (Player) p).toList();
             worldEngine.onMatchEnd(participants);
-            if (plugin.getConfig().getBoolean("extras.reset-roles-on-game-end.enabled", false)) {
+            if (plugin.getConfig().getBoolean("settings.reset-roles-on-game-end.enabled", false)) {
                 playerStates.resetParticipatingRoles();
             }
             active = false; ending = false; gameBegun = false; playerStates.clearMatch();
@@ -156,6 +156,7 @@ public final class GameManager {
         if (waitingReminderTask != null) waitingReminderTask.cancel();
         if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
         messages.broadcast("manhunt.started-by-damage"); sounds.playNeutralSound(); applyStartDebuffs();
+        worldEngine.onBeginGame();
         stateCommands.startIntervalModifiers();
     }
 
@@ -186,7 +187,7 @@ public final class GameManager {
                     if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
                     messages.broadcast("manhunt.waiting-for-damage-exhausted", Map.of("seconds", String.valueOf(waitingDelayConfigured)));
                     // end match as cancelled if configured
-                    if (!plugin.getConfig().getString("extras.start-on-speedrunner-damage.on-expire", "CANCEL").equals("FORCE_START")) {
+                    if (!plugin.getConfig().getString("settings.start-on-speedrunner-damage.on-expire", "CANCEL").equals("FORCE_START")) {
                         // do not save stats
                         stats.clear();
                         stateCommands.cancelIntervalModifiers();
@@ -211,7 +212,7 @@ public final class GameManager {
             Bukkit.getScheduler().runTask(plugin, this::updateAutostartState);
             return;
         }
-        if (active || ending || !plugin.getConfig().getBoolean("extras.autostart.enabled", false)) {
+        if (active || ending || !plugin.getConfig().getBoolean("settings.autostart.enabled", false)) {
             cancelAutostartCountdown();
             return;
         }
@@ -220,7 +221,7 @@ public final class GameManager {
             return;
         }
         if (autostartCountdownTask != null) return;
-        autostartCountdownConfigured = Math.max(0, plugin.getConfig().getInt("extras.autostart.countdown-seconds", 60));
+        autostartCountdownConfigured = Math.max(0, plugin.getConfig().getInt("settings.autostart.countdown-seconds", 60));
         if (autostartCountdownConfigured == 0) {
             start();
             return;
@@ -289,8 +290,8 @@ public final class GameManager {
     }
 
     private void applyStartDebuffs() {
-        if (!configService.getBoolean("extras.start-debuffs.enabled", false)) return;
-        var effects = plugin.getConfig().getConfigurationSection("extras.start-debuffs.effects");
+        if (!configService.getBoolean("settings.start-debuffs.enabled", false)) return;
+        var effects = plugin.getConfig().getConfigurationSection("settings.start-debuffs.effects");
         if (effects == null) return;
         for (Player hunter : Bukkit.getOnlinePlayers()) {
             if (role(hunter) != Role.HUNTER) continue;

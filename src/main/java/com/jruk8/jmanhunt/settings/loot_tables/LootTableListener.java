@@ -1,14 +1,14 @@
-package com.jruk8.jmanhunt.extras.loot_tables;
+package com.jruk8.jmanhunt.settings.loot_tables;
 
 import com.jruk8.jmanhunt.GameManager;
-import com.jruk8.jmanhunt.extras.ExtrasListener;
+import com.jruk8.jmanhunt.settings.SettingsListener;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 
-public abstract class LootTableListener<T extends Event> implements Listener, ExtrasListener {
+public abstract class LootTableListener<T extends Event> implements Listener, SettingsListener {
     protected final JavaPlugin plugin;
     protected final LootTableEngine engine;
     private final GameManager game;
@@ -18,17 +18,17 @@ public abstract class LootTableListener<T extends Event> implements Listener, Ex
         this.plugin = plugin;
         this.game = game;
         this.engine = new LootTableEngine();
-        this.customFile = new File(plugin.getDataFolder(), "extras/loot-tables/" + getLootTableName() + ".json");
+        this.customFile = new File(plugin.getDataFolder(), "settings/loot-tables/" + getLootTableName() + ".json");
     }
 
     protected boolean validateEvent(T event) {
         if (!game.isActive()) return false;
-        return plugin.getConfig().getBoolean("extras.loot-tables.%s".formatted(getConfigKey()), true) && customFile.exists();
+        return plugin.getConfig().getBoolean("settings.loot-tables.%s".formatted(getConfigKey()), true) && customFile.exists();
     }
 
     protected abstract void handleEvent(T event);
 
-    // As in resources/extras/loot-tables/<loot_table_name>.json.
+    // As in resources/settings/loot-tables/<loot_table_name>.json.
     protected abstract String getLootTableName();
 
     protected abstract String getConfigKey();

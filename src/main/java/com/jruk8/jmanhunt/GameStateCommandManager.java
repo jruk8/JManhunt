@@ -112,7 +112,7 @@ public final class GameStateCommandManager {
             });
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
-            boolean setNoneSpectator = plugin.getConfig().getBoolean("extras.set-none-gamemode-spectator", true);
+            boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.set-none-gamemode-spectator", true);
             Bukkit.getOnlinePlayers().forEach(player -> {
                 if (phase.equals("start") && playerStates.role(player) == Role.NONE) {
                     if (setNoneSpectator) player.setGameMode(GameMode.SPECTATOR);

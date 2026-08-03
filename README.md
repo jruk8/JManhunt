@@ -155,8 +155,8 @@ custom-modifiers:
       player-cleanup: []
 ```
 
-## Extras
-The plugin provides extra options for things that modify the game flow.
+## Settings
+The plugin provides settings that modify the game flow.
 This includes things like:
 
 - starting the game only when speedrunner hits a hunter
@@ -183,10 +183,10 @@ The world reset engine can be configured in the `config.yml` file.
 
 ### Setup Guide
 
-1. Enable the `extras.world-engine.enabled` option in `config.yml`.
-2. Set the `extras.world-engine.target-world` option to the name of the world
+1. Enable the `settings.world-engine.enabled` option in `config.yml`.
+2. Set the `settings.world-engine.target-world` option to the name of the world
 you want to reset. The default should work for most servers.
-3. Set the `extras.world-engine.lobby-teleport` option to the location you
+3. Set the `settings.world-engine.lobby-teleport` option to the location you
 want players to be teleported to after the world is reset. The default should
 work for most servers.
 4. Restart the server to apply the changes.
@@ -198,7 +198,7 @@ and cell algorithm works correctly.
 
 ### Troubleshooting
 - Q: The datapack stays red and won't enable no matter what I do.
-- A: Regenerate `JManhunt/extras/world-engine` by deleting it and restarting the 
+- A: Regenerate `JManhunt/settings/world-engine` by deleting it and restarting the 
 server. Open an issue on GitHub with the relevant exception in server logs.
 
 
@@ -210,7 +210,7 @@ point.
 
 
 - Q: I want to disable the world engine.
-- A: Set `extras.world-engine.enabled` to `false` in `config.yml` and disable the
+- A: Set `settings.world-engine.enabled` to `false` in `config.yml` and disable the
 `jmanhunt_world_engine` datapack with `/datapack disable jmanhunt_world_engine`.
 
 
@@ -226,8 +226,26 @@ behavior, default game actions, command bundles, custom modifiers, compass
 refreshing, end-screen statistics, sounds, text formatting, and optional
 PlaceholderAPI settings. Use `/manhunt modifiers` to browse and change the
 boolean built-in actions and modifier switches in-game.
-The `extras.world-engine` section controls grid cell size, spread radius,
+The `settings.world-engine` section controls grid cell size, spread radius,
 target world, and lobby teleport location for the grid-based world engine.
+
+### World Border
+
+Under `settings.world-engine.world-border`, you can enable a world border that
+confines players to their assigned cell. This prevents players from wandering
+into unused or already-used cells.
+
+The `start-border` sub-section provides a smaller initial border that expands
+to the full cell size when the game begins. This is only active when both
+`world-border.enabled` and `start-on-speedrunner-damage.enabled` are true.
+
+- `start-border.radius`: Initial border radius in blocks. The actual diameter
+  used is `max(this, tp-spread-radius + 1) * 2`, ensuring players never spawn
+  outside the border. Set to `-1` to use `tp-spread-radius + 1` only.
+  Default: `10`
+- `start-border.fadeout-time`: Time in seconds for the start border to animate
+  expanding to cell size. Set to `0` or `-1` to skip the animation and snap to
+  cell size immediately. Default: `5`
 
 The hunter compass cannot be dropped, stored in another container, moved by a
 hopper, or transferred through inventory interactions. It is restored after a

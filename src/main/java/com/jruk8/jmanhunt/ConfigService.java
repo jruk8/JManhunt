@@ -85,7 +85,7 @@ public final class ConfigService {
 
     private Set<String> extraModifierNames() {
         Set<String> names = new TreeSet<>();
-        collectExtraModifierNames(plugin.getConfig().getConfigurationSection("extras"), "", names);
+        collectExtraModifierNames(plugin.getConfig().getConfigurationSection("settings"), "", names);
         return names;
     }
 
@@ -95,11 +95,18 @@ public final class ConfigService {
             String path = prefix.isEmpty() ? key : prefix + "." + key;
             ConfigurationSection child = section.getConfigurationSection(key);
             if (child != null && child.contains("enabled")) {
-                names.add("extras." + path + ".enabled");
+                names.add("settings." + path + ".enabled");
+                // Also recurse into the section to find nested enabled keys
+                // (e.g. world-engine.world-border.enabled inside world-engine).
+                collectExtraModifierNames(child, path, names);
             } else if (child != null) {
                 collectExtraModifierNames(child, path, names);
             } else if (section.isBoolean(key)) {
-                names.add("extras." + path + ".enabled");
+                // Use the path as-is so that the "enabled" key itself resolves
+                // to settings.<path> (e.g. settings.world-engine.enabled) and
+                // plain boolean toggles resolve to their actual config path
+                // (e.g. settings.loot-tables.custom-piglin-barter).
+                names.add("settings." + path);
             }
         }
     }

@@ -1,4 +1,4 @@
-package com.jruk8.jmanhunt.extras.loot_tables;
+package com.jruk8.jmanhunt.settings.loot_tables;
 
 import com.google.gson.JsonElement;
 

@@ -20,6 +20,9 @@ import java.util.Set;
 import java.util.HashSet;
 
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
+    private static final Set<String> RESTART_REQUIRED_SETTINGS = Set.of(
+            "settings.world-engine.enabled"
+    );
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final ConfigService config;
@@ -104,7 +107,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             if (game.isActive() && role == Role.NONE) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
                 playerStates.removeMatchParticipant(player.getUniqueId());
-                if (plugin.getConfig().getBoolean("extras.set-none-gamemode-spectator.enabled", true)) {
+                if (plugin.getConfig().getBoolean("settings.set-none-gamemode-spectator.enabled", true)) {
                     player.setGameMode(GameMode.SPECTATOR);
                 }
                 compass.removeCompasses(player);
@@ -158,12 +161,15 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         boolean value = Boolean.parseBoolean(args[2]);
         game.setSetting(setting, value);
         message(sender, "manhunt.setting-updated", Map.of("setting", setting, "value", String.valueOf(value), "old-value", String.valueOf(oldValue)));
+        if (!oldValue && RESTART_REQUIRED_SETTINGS.contains(setting)) {
+            message(sender, "manhunt.setting-restart-required");
+        }
         neutralSound(sender);
         return true;
     }
 
     private boolean worldEngine(CommandSender sender, String[] args) {
-        if (!config.getBoolean("extras.world-engine.enabled", false)) {
+        if (!config.getBoolean("settings.world-engine.enabled", false)) {
             return message(sender, "manhunt.worldengine-disabled");
         }
         if (args.length == 1 || args[1].isBlank()) {
@@ -263,7 +269,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean reload(CommandSender sender) {
-        plugin.Reload();
+        plugin.reload();
         boolean result = message(sender, "manhunt.reload-success");
         neutralSound(sender);
         return result;
@@ -325,7 +331,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 pitch = Float.parseFloat(parts[4].trim());
             }
             World world = sender instanceof Player player ? player.getWorld()
-                    : Bukkit.getWorld(plugin.getConfig().getString("extras.world-engine.world-name", "world"));
+                    : Bukkit.getWorld(plugin.getConfig().getString("settings.world-engine.world-name", "world"));
             return new Location(world, x, y, z, yaw, pitch);
         } catch (NumberFormatException exception) {
             return null;
@@ -334,14 +340,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     private void saveLobbyLocation(Location location) {
         String worldName = location.getWorld() == null
-                ? plugin.getConfig().getString("extras.world-engine.world-name", "world")
+                ? plugin.getConfig().getString("settings.world-engine.world-name", "world")
                 : location.getWorld().getName();
-        plugin.getConfig().set("extras.world-engine.lobby-location.world", worldName);
-        plugin.getConfig().set("extras.world-engine.lobby-location.x", location.getX());
-        plugin.getConfig().set("extras.world-engine.lobby-location.y", location.getY());
-        plugin.getConfig().set("extras.world-engine.lobby-location.z", location.getZ());
-        plugin.getConfig().set("extras.world-engine.lobby-location.yaw", location.getYaw());
-        plugin.getConfig().set("extras.world-engine.lobby-location.pitch", location.getPitch());
+        plugin.getConfig().set("settings.world-engine.lobby-location.world", worldName);
+        plugin.getConfig().set("settings.world-engine.lobby-location.x", location.getX());
+        plugin.getConfig().set("settings.world-engine.lobby-location.y", location.getY());
+        plugin.getConfig().set("settings.world-engine.lobby-location.z", location.getZ());
+        plugin.getConfig().set("settings.world-engine.lobby-location.yaw", location.getYaw());
+        plugin.getConfig().set("settings.world-engine.lobby-location.pitch", location.getPitch());
         plugin.saveConfig();
     }
 

@@ -1,4 +1,4 @@
-package com.jruk8.jmanhunt.extras.world_engine;
+package com.jruk8.jmanhunt.settings.world_engine;
 
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -24,8 +24,8 @@ public final class StrongholdDatapackManager {
         try {
             if (structureSet.getParentFile() != null) structureSet.getParentFile().mkdirs();
             writeIfChanged(mcMeta, packMeta());
-            plugin.saveResource("extras/world-engine/strongholds.json", false);
-            File source = new File(plugin.getDataFolder(), "extras/world-engine/strongholds.json");
+            plugin.saveResource("settings/world-engine/strongholds.json", false);
+            File source = new File(plugin.getDataFolder(), "settings/world-engine/strongholds.json");
             String content = Files.readString(source.toPath(), StandardCharsets.UTF_8);
             boolean changed = writeIfChanged(structureSet, content);
             if (changed) {
@@ -38,7 +38,7 @@ public final class StrongholdDatapackManager {
 
     public void remove(WorldEngineConfig config) {
         if (config.enabled()) {
-            plugin.getLogger().info("Attempted remove datapack with world engine enabled. " +
+            plugin.getLogger().warning("Attempted remove datapack with world engine enabled. " +
                     "This message should not happen. Contact an admin.");
             return;
         }

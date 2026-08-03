@@ -1,4 +1,4 @@
-package com.jruk8.jmanhunt.extras.world_engine;
+package com.jruk8.jmanhunt.settings.world_engine;
 
 public final class SpiralCoordinateMapper {
     private SpiralCoordinateMapper() {}
