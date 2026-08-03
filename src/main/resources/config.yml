@@ -142,7 +142,7 @@ custom-modifiers:
       player:
         # Runs for every participating player (only hunters and speedrunners, not including NONE)
         - "give <p> minecraft:cooked_beef 8"
-  speedrunners-speed:
+  speedrunners-speed-potion:
     enabled: false
     commands:
       speedrunner:
