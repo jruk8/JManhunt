@@ -35,6 +35,7 @@ public final class GameManager {
     private BukkitTask waitingReminderTask;
     private BukkitTask waitingExpiryTask;
     private int waitingDelayConfigured;
+    private long waitingStartTime;
     private BukkitTask autostartCountdownTask;
     private int autostartCountdownRemaining;
     private int autostartCountdownConfigured;
@@ -171,11 +172,14 @@ public final class GameManager {
         double interval = configService.getFloat("start-reminder-interval", 10.0f);
         if (interval == -1.0) return;
         long delay = Math.max(1L, Math.round(interval * 20.0));
-        messages.broadcast("manhunt.waiting-for-damage", Map.of("seconds", String.valueOf((int) Math.round(waitingDelayConfigured))));
+        waitingStartTime = System.currentTimeMillis();
+        messages.broadcast("manhunt.waiting-for-damage", Map.of("seconds", String.valueOf(waitingDelayConfigured)));
         waitingReminderTask = Bukkit.getScheduler().runTaskTimer(plugin,
-                () -> { if (active && !gameBegun) messages.broadcast(
-                        "manhunt.waiting-for-damage", Map.of(
-                                "seconds", String.valueOf((int) Math.round(waitingDelayConfigured)))); }, delay, delay);
+                () -> { if (active && !gameBegun) {
+                    long elapsedMillis = System.currentTimeMillis() - waitingStartTime;
+                    int remaining = Math.max(0, (int) Math.round(waitingDelayConfigured - elapsedMillis / 1000.0));
+                    messages.broadcast("manhunt.waiting-for-damage", Map.of("seconds", String.valueOf(remaining)));
+                } }, delay, delay);
 
         // schedule expiry task which ends the waiting period if no damage occurs
         if (waitingDelayConfigured > 0) {
