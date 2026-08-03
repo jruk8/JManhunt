@@ -4,9 +4,12 @@
 # new entries here.
 #
 # Outcome types:
-#   ITEM    - Gives the player an item.
-#   NONE    - Does nothing.
-#   COMMAND - Runs console commands.
+#   ITEM      - Gives the player an item.
+#   NONE      - Does nothing.
+#   COMMAND   - Runs console commands.
+#   STRUCTURE - Places a structure from challenges/lucky-block/structures/<name>.nbt.
+#               If loading or placing fails, the roll is rerolled (up to 20 times).
+#               Optional random-rotation: true rotates the structure randomly.
 #
 # Reliable command generator: https://mcstacker.net/
 # Reliable sounds finder:
@@ -21,6 +24,7 @@
 #       volume: 1.0
 #     message: "<aqua>Personal message sent only to the player.</aqua>"
 #     broadcast: "<aqua><white>{player}</white> broadcast sent to everyone else.</aqua>"
+#
 # The sound section requires both enabled and sound. pitch defaults to 1.0
 # and volume defaults to 1.0. When no custom sound is configured, the default
 # sound from config.yml (sounds.challenges.lucky-block-default) is played.
@@ -85,7 +89,7 @@ outcomes:
     type: COMMAND
     command-settings: # relative-to omitted, use BLOCK by default
       commands:
-      - "give @p golden_sword[enchantments={sharpness:10},damage=5] 1"
+      - "give <p> golden_sword[enchantments={sharpness:10},damage=29] 1"
     feedback:
       sound:
         enabled: true
@@ -93,3 +97,18 @@ outcomes:
         pitch: 1.2
         volume: 0.8
       message: "<gold>A sharp sword materializes in your hand!</gold>"
+  coin-well:
+    weight: 1.0
+    type: STRUCTURE
+
+    structure-settings:
+      name: coin-well
+
+    feedback:
+      sound:
+        enabled: true
+        sound: block.bubble_column.whirlpool_inside
+        pitch: 1.2
+        volume: 1.0
+
+      message: "<gray>Well, well, well..</gray>"

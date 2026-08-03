@@ -13,17 +13,26 @@ import java.util.concurrent.ThreadLocalRandom;
  * rolling a random outcome. Does not depend on a running server.
  */
 public final class LuckyBlockEngine {
-    public enum OutcomeType { ITEM, NONE, COMMAND }
+    public enum OutcomeType { ITEM, NONE, COMMAND, STRUCTURE }
 
     public record Sound(boolean enabled, String sound, float pitch, float volume) {}
 
     public record Feedback(Sound sound, String message, String broadcast) {}
 
+    public record StructureSettings(String name, boolean randomRotation) {}
+
     public record Outcome(String name, double weight, OutcomeType type, String itemName, int quantity,
-                          String relativeTo, List<String> commands, Feedback feedback) {}
+                          String relativeTo, List<String> commands, StructureSettings structureSettings,
+                          Feedback feedback) {}
 
     private final List<Outcome> outcomes = new ArrayList<>();
     private double totalWeight = 0.0;
+
+    /** Clears all loaded outcomes and resets total weight. */
+    public void clear() {
+        outcomes.clear();
+        totalWeight = 0.0;
+    }
 
     /** Loads outcomes from the given YAML file. Returns false on parse failure. */
     public boolean load(File file) {
@@ -53,6 +62,7 @@ public final class LuckyBlockEngine {
             int quantity = 1;
             String relativeTo = "BLOCK";
             List<String> commands = List.of();
+            StructureSettings structureSettings = null;
             if (type == OutcomeType.ITEM) {
                 ConfigurationSection item = entry.getConfigurationSection("item-settings");
                 if (item == null) {
@@ -76,9 +86,22 @@ public final class LuckyBlockEngine {
                 if (commands.isEmpty()) {
                     throw new IllegalArgumentException("Entry '" + name + "' is COMMAND but has no commands");
                 }
+            } else if (type == OutcomeType.STRUCTURE) {
+                ConfigurationSection struct = entry.getConfigurationSection("structure-settings");
+                if (struct == null) {
+                    throw new IllegalArgumentException("Entry '" + name + "' is STRUCTURE but missing structure-settings");
+                }
+                String structName = struct.getString("name");
+                if (structName == null || structName.isBlank()) {
+                    throw new IllegalArgumentException(
+                            "Entry '" + name + "' is STRUCTURE but missing structure-settings.name");
+                }
+                boolean randomRotation = struct.getBoolean("random-rotation", false);
+                structureSettings = new StructureSettings(structName, randomRotation);
             }
             Feedback feedback = parseFeedback(entry);
-            outcomes.add(new Outcome(name, weight, type, itemName, quantity, relativeTo, commands, feedback));
+            outcomes.add(new Outcome(name, weight, type, itemName, quantity, relativeTo, commands,
+                    structureSettings, feedback));
             totalWeight += weight;
         }
         return !outcomes.isEmpty();

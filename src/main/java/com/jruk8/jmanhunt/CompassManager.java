@@ -36,14 +36,14 @@ public final class CompassManager {
 
     public void refreshAllCompasses(boolean active) {
         if (active) Bukkit.getOnlinePlayers().stream()
-                .filter(p -> role(p) != Role.NONE)
+                .filter(p -> role(p).isParticipant())
                 .filter(this::hasCompass)
                 .forEach(this::refreshCompass);
     }
 
     public void showHeldActionbars(boolean active) {
         if (!active) return;
-        Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
+        Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
                 .filter(p -> isCompass(p.getInventory().getItemInMainHand()) || isCompass(p.getInventory().getItemInOffHand()))
                 .forEach(p -> p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
                         component("compass.no-target-actionbar",
@@ -58,7 +58,7 @@ public final class CompassManager {
         if (!isCompass(item)) return;
 
         Role holderRole = role(holder);
-        if (holderRole == Role.NONE) return;
+        if (!holderRole.isParticipant()) return;
         Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
         String targetRoleString = targetRole == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
 

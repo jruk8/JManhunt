@@ -9,9 +9,11 @@
 | `jmanhunt.command.setplayer` | Assign players to Manhunt roles. | OP |
 | `jmanhunt.command.start` | Start a Manhunt match. | OP |
 | `jmanhunt.command.end` | End an active Manhunt match. | OP |
+| `jmanhunt.command.quickstart` | Quick-start a match with auto team assignment. | OP |
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |
 | `jmanhunt.command.modifiers` | Change JManhunt modifiers and boolean settings. | OP |
 | `jmanhunt.command.worldengine` | View world-engine settings. | OP |
+| `jmanhunt.command.schem` | Manage schematics. | OP |
 
 ## Role Permissions
 

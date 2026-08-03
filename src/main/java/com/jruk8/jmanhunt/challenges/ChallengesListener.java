@@ -1,10 +1,10 @@
 package com.jruk8.jmanhunt.challenges;
 
 import com.jruk8.jmanhunt.CommandPlaceholders;
+import com.jruk8.jmanhunt.ConfigService;
 import com.jruk8.jmanhunt.GameManager;
 import com.jruk8.jmanhunt.MessageService;
 import com.jruk8.jmanhunt.PlayerStateStore;
-import com.jruk8.jmanhunt.Role;
 import com.jruk8.jmanhunt.SoundService;
 import com.jruk8.jmanhunt.settings.SettingsListener;
 import org.bukkit.Bukkit;
@@ -23,29 +23,42 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.block.structure.Mirror;
+import org.bukkit.block.structure.StructureRotation;
+import org.bukkit.structure.Structure;
+import org.bukkit.structure.StructureManager;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /** Handles the built-in challenges: no-jump, one-heart, and lucky-blocks. */
 public final class ChallengesListener implements Listener, SettingsListener {
+    private static final int MAX_REROLLS = 20;
     private static final String LUCKY_BLOCK_DEFAULT_SOUND_KEY = "challenges.lucky-block-default";
     private final JavaPlugin plugin;
     private final GameManager game;
     private final PlayerStateStore playerStates;
     private final MessageService messages;
     private final SoundService sounds;
+    private final ConfigService configService;
     private final LuckyBlockEngine luckyEngine = new LuckyBlockEngine();
     private final File luckyFile;
+    private final File structuresDir;
 
     public ChallengesListener(JavaPlugin plugin, GameManager game, PlayerStateStore playerStates,
-                              MessageService messages, SoundService sounds) {
+                              MessageService messages, SoundService sounds, ConfigService configService) {
         this.plugin = plugin;
         this.game = game;
         this.playerStates = playerStates;
         this.messages = messages;
         this.sounds = sounds;
-        this.luckyFile = new File(plugin.getDataFolder(), "settings/lucky-blocks.yml");
+        this.configService = configService;
+        this.luckyFile = new File(plugin.getDataFolder(), "challenges/lucky-block/lucky-blocks.yml");
+        this.structuresDir = new File(plugin.getDataFolder(), "challenges/lucky-block/structures");
+        configService.onChange("challenges.lucky-blocks.enabled", (oldValue, newValue) -> onReload());
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
@@ -59,7 +72,7 @@ public final class ChallengesListener implements Listener, SettingsListener {
     private void applyOneHeart(Player player) {
         if (!plugin.getConfig().getBoolean("challenges.one-heart.enabled", false)) return;
         if (!game.isActive() || !game.isGameBegun()) return;
-        if (playerStates.role(player) == Role.NONE) return;
+        if (!playerStates.role(player).isParticipant()) return;
         player.getAttribute(Attribute.MAX_HEALTH).setBaseValue(2.0);
         player.setHealth(2.0);
     }
@@ -68,7 +81,7 @@ public final class ChallengesListener implements Listener, SettingsListener {
         if (!plugin.getConfig().getBoolean("challenges.no-jump.enabled", false)) return;
         if (!game.isActive() || !game.isGameBegun()) return;
         Player player = event.getPlayer();
-        if (playerStates.role(player) == Role.NONE) return;
+        if (!playerStates.role(player).isParticipant()) return;
         if (event.getFrom().getY() < event.getTo().getY() && player.getVelocity().getY() > 0) {
             event.setCancelled(true);
         }
@@ -78,12 +91,44 @@ public final class ChallengesListener implements Listener, SettingsListener {
         if (!plugin.getConfig().getBoolean("challenges.lucky-blocks.enabled", false)) return;
         if (!game.isActive() || !game.isGameBegun()) return;
         Player player = event.getPlayer();
-        if (playerStates.role(player) == Role.NONE) return;
+        if (!playerStates.role(player).isParticipant()) return;
         Block block = event.getBlock();
         if (!isLuckyBlock(block.getType())) return;
         event.setDropItems(false);
-        LuckyBlockEngine.Outcome outcome = luckyEngine.roll();
+        LuckyBlockEngine.Outcome outcome = rollWithRerolls(block, player);
         if (outcome == null) return;
+        executeOutcome(outcome, block, player);
+        playFeedback(outcome, player);
+    }
+
+    /**
+     * Rolls a lucky block outcome, rerolling if a STRUCTURE outcome fails to
+     * load or place. Returns null if all rerolls are exhausted.
+     */
+    private LuckyBlockEngine.Outcome rollWithRerolls(Block block, Player player) {
+        for (int i = 0; i <= MAX_REROLLS; i++) {
+            LuckyBlockEngine.Outcome outcome = luckyEngine.roll();
+            if (outcome == null) return null;
+            if (outcome.type() != LuckyBlockEngine.OutcomeType.STRUCTURE) {
+                return outcome;
+            }
+            try {
+                placeStructure(outcome, block);
+                return outcome;
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to place structure '" + outcome.structureSettings().name()
+                        + "' for lucky block outcome '" + outcome.name() + "': " + e.getMessage());
+                if (i == MAX_REROLLS) {
+                    plugin.getLogger().warning("Lucky block roll aborted after exhausting all "
+                            + MAX_REROLLS + " rerolls.");
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    private void executeOutcome(LuckyBlockEngine.Outcome outcome, Block block, Player player) {
         switch (outcome.type()) {
             case ITEM -> {
                 String name = outcome.itemName();
@@ -104,9 +149,35 @@ public final class ChallengesListener implements Listener, SettingsListener {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
                 }
             }
+            case STRUCTURE -> { /* already placed in rollWithRerolls */ }
             case NONE -> { /* does nothing */ }
         }
-        playFeedback(outcome, player);
+    }
+
+    /**
+     * Loads and places a structure at the lucky block location.
+     * Throws if loading or placement fails.
+     */
+    private void placeStructure(LuckyBlockEngine.Outcome outcome, Block block) throws Exception {
+        LuckyBlockEngine.StructureSettings settings = outcome.structureSettings();
+        if (settings == null) {
+            throw new IllegalStateException("STRUCTURE outcome '" + outcome.name() + "' has no structure settings");
+        }
+        File structureFile = new File(structuresDir, settings.name() + ".nbt");
+        if (!structureFile.exists()) {
+            throw new FileNotFoundException("Structure file not found: " + structureFile.getAbsolutePath());
+        }
+        StructureManager structureManager = Bukkit.getStructureManager();
+        Structure structure = structureManager.loadStructure(structureFile);
+        if (structure == null) {
+            throw new IllegalStateException("Failed to load structure from: " + structureFile.getAbsolutePath());
+        }
+        StructureRotation rotation = StructureRotation.NONE;
+        if (settings.randomRotation()) {
+            StructureRotation[] rotations = StructureRotation.values();
+            rotation = rotations[ThreadLocalRandom.current().nextInt(rotations.length)];
+        }
+        structure.place(block.getLocation(), true, rotation, Mirror.NONE, 0, 1.0f, new Random());
     }
 
     private void playFeedback(LuckyBlockEngine.Outcome outcome, Player player) {
@@ -159,18 +230,21 @@ public final class ChallengesListener implements Listener, SettingsListener {
 
     @Override
     public void onReload() {
+        luckyEngine.clear();
         if (!plugin.getConfig().getBoolean("challenges.lucky-blocks.enabled", false)) return;
         try {
             if (!luckyEngine.load(luckyFile)) {
-                plugin.getLogger().severe("Lucky blocks challenge is enabled but settings/lucky-blocks.yml could not be loaded.");
+                plugin.getLogger().severe("Lucky blocks challenge is enabled but "
+                        + "challenges/lucky-block/lucky-blocks.yml could not be loaded.");
             }
         } catch (IllegalArgumentException e) {
-            plugin.getLogger().severe("Lucky blocks challenge is enabled but settings/lucky-blocks.yml is invalid: " + e.getMessage());
+            plugin.getLogger().severe("Lucky blocks challenge is enabled but "
+                    + "challenges/lucky-block/lucky-blocks.yml is invalid: " + e.getMessage());
         }
     }
 
     @Override
     public String getDataPath() {
-        return "lucky-blocks.yml";
+        return "challenges/lucky-block/lucky-blocks.yml";
     }
 }

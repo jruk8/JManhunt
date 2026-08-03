@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -293,5 +294,81 @@ class LuckyBlockEngineTest {
         LuckyBlockEngine engine = new LuckyBlockEngine();
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
         assertTrue(ex.getMessage().contains("bad"));
+    }
+
+    @Test
+    void parsesStructureOutcome() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  coin-well:
+                    weight: 1.0
+                    type: STRUCTURE
+                    structure-settings:
+                      name: coin-well
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals(LuckyBlockEngine.OutcomeType.STRUCTURE, outcome.type());
+        assertNotNull(outcome.structureSettings());
+        assertEquals("coin-well", outcome.structureSettings().name());
+        assertFalse(outcome.structureSettings().randomRotation());
+    }
+
+    @Test
+    void parsesStructureOutcomeWithRandomRotation() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  coin-well:
+                    type: STRUCTURE
+                    structure-settings:
+                      name: coin-well
+                      random-rotation: true
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertTrue(outcome.structureSettings().randomRotation());
+    }
+
+    @Test
+    void rejectsStructureMissingSettings() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  bad:
+                    type: STRUCTURE
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
+        assertTrue(ex.getMessage().contains("bad"));
+    }
+
+    @Test
+    void rejectsStructureMissingName() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  bad:
+                    type: STRUCTURE
+                    structure-settings:
+                      random-rotation: true
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
+        assertTrue(ex.getMessage().contains("bad"));
+    }
+
+    @Test
+    void clearResetsOutcomes() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  a:
+                    type: NONE
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        assertEquals(1, engine.outcomes().size());
+        engine.clear();
+        assertEquals(0, engine.outcomes().size());
+        assertNull(engine.roll());
     }
 }

@@ -32,13 +32,15 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final GameManager game;
     private final CompassManager compass;
     private final LobbyTeleporter lobbyTeleporter;
+    private final SchemCommand schem;
 
     public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, ConfigService config,
                           SoundService sounds, PlayerStateStore playerStates, GameManager game,
-                          CompassManager compass, LobbyTeleporter lobbyTeleporter) {
+                          CompassManager compass, LobbyTeleporter lobbyTeleporter, SchemCommand schem) {
         this.plugin = plugin; this.messages = messages; this.config = config; this.sounds = sounds;
         this.playerStates = playerStates; this.game = game; this.compass = compass;
         this.lobbyTeleporter = lobbyTeleporter;
+        this.schem = schem;
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -52,6 +54,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "end" -> end(sender);
             case "modifiers" -> modifiers(sender, args);
             case "worldengine" -> worldEngine(sender, args);
+            case "schem" -> schem.onCommand(sender, args);
+            case "quickstart" -> quickStart(sender, args);
             case "reload" -> reload(sender);
             default -> message(sender, "command.invalid");
         };
@@ -60,10 +64,12 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private boolean help(CommandSender sender) {
         message(sender, "manhunt.help-header");
         String[][] lines = {{"/manhunt help", "show commands"}, {"/manhunt", "show match status"},
-                {"/manhunt setplayer <selector> <hunter|speedrunner|none>", "assign roles"},
+                {"/manhunt setplayer <selector> <hunter|speedrunner|afk|none>", "assign roles"},
                 {"/manhunt start", "start a match"}, {"/manhunt end", "end a match"},
+                {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt modifiers <setting> <true|false>", "view or change a setting"},
                 {"/manhunt worldengine", "set lobby or teleport players"},
+                {"/manhunt schem <save|list|delete>", "manage schematics"},
                 {"/manhunt reload", "reload files"}};
         for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
         neutralSound(sender);
@@ -74,6 +80,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         message(sender, "manhunt.status-header", Map.of("status", game.isActive() ? "ACTIVE" : "INACTIVE"));
         sendRoleSection(sender, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
         sendRoleSection(sender, Role.HUNTER, "manhunt.hunters-header");
+        sendRoleSection(sender, Role.AFK, "manhunt.afk-header");
         sendRoleSection(sender, Role.NONE, "manhunt.none-header");
         neutralSound(sender);
         return true;
@@ -105,7 +112,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             assigned.add(player.getUniqueId());
             message(player, "manhunt.role-assigned", Map.of("role", role.name()));
             sounds.playNeutralSound(player);
-            if (game.isActive() && role == Role.NONE) {
+            if (game.isActive() && !role.isParticipant()) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
                 playerStates.removeMatchParticipant(player.getUniqueId());
                 if (plugin.getConfig().getBoolean("settings.set-none-gamemode-spectator.enabled", true)) {
@@ -113,11 +120,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 }
                 compass.removeCompasses(player);
             }
-            if (game.isActive() && role != Role.NONE) {
+            if (game.isActive() && role.isParticipant()) {
                 playerStates.markMatchParticipant(player.getUniqueId());
             }
             if (game.isActive() && role == Role.HUNTER) compass.giveCompass(player);
-            if (role == Role.NONE) {
+            if (!role.isParticipant()) {
                 Bukkit.broadcast(messages.component("manhunt.queue-left", Map.of("player", player.getName())));
             }
         }
@@ -277,7 +284,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start", "end", "modifiers", "worldengine", "reload"));
+        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start",
+                "end", "modifiers", "worldengine", "schem", "quickstart", "reload"));
         if (args.length == 2 && args[0].equalsIgnoreCase("modifiers"))
             return partial(args[1], new ArrayList<>(game.settingNames()));
         if (args.length == 3 && args[0].equalsIgnoreCase("modifiers"))
@@ -301,7 +309,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             if (args[1].startsWith("@a[")) return partial(args[1], List.of("@a[distance=", "@a[limit=", "@a[name=", "@a[gamemode="));
             return partial(args[1], selectors);
         }
-        if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) return partial(args[2], List.of("hunter", "speedrunner", "none"));
+        if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) return partial(args[2], List.of("hunter", "speedrunner", "afk", "none"));
+        if (args.length >= 2 && args[0].equalsIgnoreCase("schem")) return schem.onTabComplete(sender, args);
         return List.of();
     }
 
@@ -361,6 +370,21 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         String pitchFormatted = String.format("%.2f", location.getPitch());
         return worldName + " @ " + xFormatted + ", " + yFormatted + ", " + zFormatted
                 + ", " + yawFormatted + ", " + pitchFormatted;
+    }
+
+    private boolean quickStart(CommandSender sender, String[] args) {
+        if (game.isActive()) return message(sender, "manhunt.already-active");
+        int percent = -1;
+        if (args.length >= 2) {
+            try {
+                percent = Integer.parseInt(args[1]);
+                if (percent < 0 || percent > 100) return message(sender, "manhunt.quickstart-invalid-percent");
+            } catch (NumberFormatException e) {
+                return message(sender, "manhunt.quickstart-invalid-percent");
+            }
+        }
+        if (!game.quickStart(percent)) return message(sender, "manhunt.quickstart-failed");
+        return true;
     }
 
     private boolean message(CommandSender sender, String key) { sender.sendMessage(messages.component(key)); return true; }

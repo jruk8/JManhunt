@@ -41,6 +41,12 @@ permissions:
   jmanhunt.command.worldengine:
     description: View world-engine settings.
     default: op
+  jmanhunt.command.schem:
+    description: Manage schematics.
+    default: op
+  jmanhunt.command.quickstart:
+    description: Quick-start a match.
+    default: op
   jmanhunt.hunter:
     description: Allows a player to become a hunter.
     default: true

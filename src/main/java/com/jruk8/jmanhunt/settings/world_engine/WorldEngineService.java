@@ -183,7 +183,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
 
     @Override
     public String getDataPath() {
-        return "world-engine/strongholds.json";
+        return "settings/world-engine/strongholds.json";
     }
 
     private record CellOrigin(int x, int z) {}

@@ -134,10 +134,63 @@ Each sound entry supports `enabled`, `sound`, `pitch`, and `volume`.
 
 ## Lucky Blocks
 
-The lucky-blocks challenge uses `challenges.lucky-blocks.block-definition`
-(default `gold_block`) to select which block is intercepted. The outcome table
-in `settings/lucky-blocks.yml` supports `ITEM`, `NONE`, and `COMMAND` outcome
-types with weighted random selection.
+The lucky-blocks challenge uses `challenges.lucky-blocks.enabled`
+(default `false`) to toggle the challenge and
+`challenges.lucky-blocks.block-definition` (default `gold_block`) to select
+which block is intercepted. The outcome table is in
+`challenges/lucky-block/lucky-blocks.yml` and supports `ITEM`, `NONE`,
+`COMMAND`, and `STRUCTURE` outcome types with weighted random selection.
+
+### Outcome Types
+
+| Type | Effect |
+| --- | --- |
+| `ITEM` | Gives the player an item. |
+| `NONE` | Does nothing. |
+| `COMMAND` | Runs console commands. |
+| `STRUCTURE` | Places a structure from the structures directory. |
+
+### Structure Outcomes
+
+Structure outcomes load `.nbt` files from
+`plugins/JManhunt/challenges/lucky-block/structures/<name>.nbt`. The structure
+is placed relative to the broken lucky block using Bukkit's intended pivot
+behavior.
+
+```yaml
+outcomes:
+  coin-well:
+    weight: 1.0
+    type: STRUCTURE
+
+    structure-settings:
+      name: coin-well
+      random-rotation: false
+
+    feedback:
+      sound:
+        enabled: true
+        sound: block.bubble_column.whirlpool_inside
+        pitch: 1.2
+        volume: 1.0
+
+      message: "<gray>Well, well, well..</gray>"
+```
+
+- `structure-settings.name` (required): the file name without the `.nbt`
+  extension.
+- `structure-settings.random-rotation` (optional, default `false`): when
+  `true`, the structure is placed with a random rotation.
+
+### Reroll Behavior
+
+If a `STRUCTURE` outcome fails to load or place (e.g. the `.nbt` file is
+missing or corrupt), the Lucky Block engine automatically rerolls another
+outcome. Up to 20 rerolls are attempted. If all rerolls are exhausted, a
+warning is logged to the console and the Lucky Block roll is gracefully
+aborted — no items or effects are applied.
+
+### Feedback
 
 Each outcome can optionally define a `feedback` section with a custom sound,
 a personal message, and a broadcast:
@@ -173,3 +226,19 @@ outcomes:
 The feedback message format is configured in `messages.yml` under
 `lucky-block-feedback-format` and supports both MiniMessage and Legacy
 formatting.
+
+### Schematic Management
+
+Schematics (structure `.nbt` files) are stored in
+`plugins/JManhunt/challenges/lucky-block/structures/`. Use the
+`/jmanhunt schem` command to manage them:
+
+- `/jmanhunt schem save <name>` — saves the selected region as a schematic.
+  Select two corners with a wooden axe (left-click for position 1, right-click
+  for position 2), then run the command. If the file already exists, run the
+  command again within 5 seconds to confirm overwrite.
+- `/jmanhunt schem list` — lists all available schematics.
+- `/jmanhunt schem delete <name>` — deletes a schematic. Run the command twice
+  within 5 seconds to confirm deletion.
+
+These commands are reusable by future features, not just Lucky Blocks.

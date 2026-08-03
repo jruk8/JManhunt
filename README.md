@@ -3,8 +3,8 @@
 # JManhunt
 
 JManhunt is a deeply configurable Paper plugin for 26.2+ Manhunts. It comes
-with a lean world reset engine, placeholders, statistics, and a variety of
-built-in actions and modifiers.
+with a lean world reset engine, compass tracking, placeholders, statistics,
+and a variety of built-in actions and custom modifiers.
 
 ## Key Features
 

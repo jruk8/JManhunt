@@ -211,7 +211,7 @@ challenges:
   one-heart:
     enabled: false
   # Breaking the configured block drops a random outcome from
-  # settings/lucky-blocks.yml instead of the block itself.
+  # challenges/lucky-block/lucky-blocks.yml instead of the block itself.
   lucky-blocks:
     enabled: false
     # The block whose breaks are intercepted. Resolves to minecraft:<name>

@@ -38,7 +38,8 @@ public final class PlayerStateStore {
     public int resetParticipatingRoles() {
         int reset = 0;
         for (Map.Entry<UUID, Role> entry : roles.entrySet()) {
-            if (entry.getValue() == Role.NONE) continue;
+            Role role = entry.getValue();
+            if (role == Role.NONE || role == Role.AFK) continue;
             entry.setValue(Role.NONE);
             reset++;
         }
@@ -48,7 +49,7 @@ public final class PlayerStateStore {
     public void resetOfflinePlayers(Collection<? extends Player> onlinePlayers) {
         for (UUID playerId : roles.keySet()) {
             boolean isOnline = onlinePlayers.stream().anyMatch(p -> p.getUniqueId().equals(playerId));
-            if (!isOnline) {
+            if (!isOnline && roles.get(playerId) != Role.AFK) {
                 roles.put(playerId, Role.NONE);
             }
         }

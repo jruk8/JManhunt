@@ -60,7 +60,10 @@ public final class GameplayListener implements Listener {
 
         if (game.isActive()) {
             if (!playerStates.isMatchParticipant(player.getUniqueId())) {
-                playerStates.setRole(player.getUniqueId(), Role.NONE);
+                // Preserve AFK role; only reset non-AFK non-participants to NONE
+                if (playerStates.role(player) != Role.AFK) {
+                    playerStates.setRole(player.getUniqueId(), Role.NONE);
+                }
                 playerStates.markMatchSpectator(player.getUniqueId());
                 if (config.getBoolean("settings.set-none-gamemode-spectator.enabled", true)) {
                     player.setGameMode(GameMode.SPECTATOR);
@@ -82,7 +85,8 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        if (!game.isActive() && config.getBoolean("settings.reset-role-on-leave.enabled", false)) {
+        if (!game.isActive() && config.getBoolean("settings.reset-role-on-leave.enabled", false)
+                && playerStates.role(player) != Role.AFK) {
             playerStates.setRole(player.getUniqueId(), Role.NONE);
         }
         if (game.isActive() && playerStates.isMatchParticipant(player.getUniqueId())) {
@@ -133,7 +137,7 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
-        if (game.isActive() && playerStates.role(player) != Role.NONE) {
+        if (game.isActive() && playerStates.role(player).isParticipant()) {
             playerStates.recordLastSeen(player, event.getTo());
         }
         if (game.isActive() && game.isGameBegun() && playerStates.role(player) == Role.SPEEDRUNNER
@@ -154,7 +158,7 @@ public final class GameplayListener implements Listener {
                 && player.getWorld().getEnvironment() == World.Environment.NORMAL) {
             game.finishLater(Role.SPEEDRUNNER);
         }
-        if (!game.isActive() || !game.isGameBegun() || playerStates.role(player) == Role.NONE) return;
+        if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
         World.Environment to = player.getWorld().getEnvironment();
         if (to == World.Environment.NETHER && enteredNether.add(player.getUniqueId())) {
             game.stateCommands().runEventModifiers("ON_FIRST_ENTER_NETHER", player);
@@ -163,15 +167,15 @@ public final class GameplayListener implements Listener {
         }
     }
     @EventHandler public void onMove(PlayerMoveEvent event) {
-        if (game.isActive() && playerStates.role(event.getPlayer()) != Role.NONE) {
+        if (game.isActive() && playerStates.role(event.getPlayer()).isParticipant()) {
             playerStates.recordLastSeen(event.getPlayer(), event.getTo());
         }
     }
     @EventHandler public void onDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player victim)) return;
 
-        // NONE players are always invulnerable if configured
-        if (playerStates.role(victim) == Role.NONE
+        // NONE and AFK players are always invulnerable if configured
+        if (!playerStates.role(victim).isParticipant()
                 && config.getBoolean("settings.invulnerability.none-players.enabled", true)) {
             event.setCancelled(true);
             return;
@@ -187,16 +191,16 @@ public final class GameplayListener implements Listener {
                 || !(byEntity.getDamager() instanceof Player attacker)) return;
         if (game.isActive() && !game.isGameBegun() && playerStates.role(attacker) == Role.SPEEDRUNNER
                 && playerStates.role(victim) == Role.HUNTER) game.beginGame();
-        if (!game.isActive() || !game.isGameBegun() || playerStates.role(attacker) == Role.NONE
-                || playerStates.role(victim) == Role.NONE) return;
+        if (!game.isActive() || !game.isGameBegun() || !playerStates.role(attacker).isParticipant()
+                || !playerStates.role(victim).isParticipant()) return;
         stats.getOrCreate(attacker.getUniqueId()).damage += event.getFinalDamage();
     }
     @EventHandler public void onEntityDeath(EntityDeathEvent event) {
         if (!game.isActive() || !game.isGameBegun() || event.getEntity().getKiller() == null
                 || !(event.getEntity().getKiller() instanceof Player killer)
-                || playerStates.role(killer) == Role.NONE) return;
+                || !playerStates.role(killer).isParticipant()) return;
         boolean victimIsPlayer = event.getEntity() instanceof Player;
-        if (victimIsPlayer && playerStates.role(event.getEntity().getUniqueId()) == Role.NONE) return;
+        if (victimIsPlayer && !playerStates.role(event.getEntity().getUniqueId()).isParticipant()) return;
         stats.getOrCreate(killer.getUniqueId()).kills++;
         game.stateCommands().runEventModifiers("ON_EVERY_KILL", killer);
         if (victimIsPlayer) {
@@ -212,7 +216,7 @@ public final class GameplayListener implements Listener {
 
     @EventHandler public void onAdvancement(org.bukkit.event.player.PlayerAdvancementDoneEvent event) {
         Player player = event.getPlayer();
-        if (!game.isActive() || !game.isGameBegun() || playerStates.role(player) == Role.NONE) return;
+        if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
         game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player);
     }
 

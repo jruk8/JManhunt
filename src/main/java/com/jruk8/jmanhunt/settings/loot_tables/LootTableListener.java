@@ -58,6 +58,6 @@ public abstract class LootTableListener<T extends Event> implements Listener, Se
     }
 
     public String getDataPath() {
-        return "loot-tables/%s.json".formatted(getLootTableName());
+        return "settings/loot-tables/%s.json".formatted(getLootTableName());
     }
 }

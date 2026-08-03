@@ -6,13 +6,63 @@ All commands are available under `/manhunt` and its alias `/mh`.
 |---------------------------------------------------| --- | --- |
 | `/manhunt`                                        | Shows the current teams and match status. | `jmanhunt.command.status` |
 | `/manhunt help`                                   | Shows the in-game command list. | `jmanhunt.command.help` |
-| `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, or `none`. | `jmanhunt.command.setplayer` |
+| `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `afk`, or `none`. | `jmanhunt.command.setplayer` |
 | `/manhunt start`                                  | Starts a match. | `jmanhunt.command.start` |
 | `/manhunt end`                                    | Ends the active match; hunters win. | `jmanhunt.command.end` |
+| `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
 | `/manhunt modifiers [setting] [true\|false]`      | Lists, views, or changes built-in actions and custom modifiers. | `jmanhunt.command.modifiers` |
 | `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` |
 | `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` |
+| `/manhunt schem save <name>`                      | Saves the selected region as a schematic. | `jmanhunt.command.schem` |
+| `/manhunt schem list`                             | Lists all available schematics. | `jmanhunt.command.schem` |
+| `/manhunt schem delete <name>`                    | Deletes a schematic. | `jmanhunt.command.schem` |
 | `/manhunt reload`                                 | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
+
+## Roles
+
+The `setplayer` command accepts the following roles:
+
+| Role | Description |
+| --- | --- |
+| `hunter` | Participates as a hunter. Requires `jmanhunt.hunter` permission. |
+| `speedrunner` | Participates as a speedrunner. Requires `jmanhunt.speedrunner` permission. |
+| `afk` | Excluded from the match entirely. AFK players never become hunters or speedrunners, are excluded from Quick Start, and are ignored by automatic team assignment. They can still be assigned through `/setplayer`. |
+| `none` | Not participating. Sent to spectator mode if a match is active. |
+
+## Quick Start
+
+`/manhunt quickstart [percentage]` is a convenience command for larger servers
+that want to start a match without manually assigning roles. It can only be
+used when no match is active.
+
+- **Without arguments:** assigns every eligible online player (excluding AFK)
+  as a Hunter, randomly chooses one Speedrunner, and immediately starts the
+  game.
+- **With a percentage:** interprets the value as the percentage of eligible
+  players that should become Speedrunners. For example, `50` with 16 eligible
+  players results in 8 Speedrunners and 8 Hunters. Fractional results are
+  rounded to the nearest whole player, and there is always at least one
+  Speedrunner.
+
+Quick Start bypasses the autostart system entirely — no countdowns or
+autostart messages are displayed.
+
+## Schematic Management
+
+The `/jmanhunt schem` command manages structure `.nbt` files stored in
+`plugins/JManhunt/challenges/lucky-block/structures/`. These are used by
+Lucky Block `STRUCTURE` outcomes and can be reused by future features.
+
+- **Save:** Select two corners with a wooden axe (left-click for position 1,
+  right-click for position 2), then run `/jmanhunt schem save <name>`. If the
+  file already exists, run the command again within 5 seconds to confirm
+  overwrite.
+- **List:** `/jmanhunt schem list` displays all available schematics.
+- **Delete:** `/jmanhunt schem delete <name>` deletes a schematic. Run the
+  command twice within 5 seconds to confirm deletion.
+
+Confirmation is tracked per executor and expires after 5 seconds. Feedback
+messages work correctly for both players and the console.
 
 ## Custom Modifiers
 
@@ -128,12 +178,15 @@ Built-in challenges can be toggled in-game with `/manhunt modifiers`:
 | --- | --- |
 | `challenges.no-jump` | Players cannot jump for the duration of the match. |
 | `challenges.one-heart` | All participating players have only one heart (2 health points). |
-| `challenges.lucky-blocks` | Breaking the configured block drops a random outcome from `settings/lucky-blocks.yml` instead of the block itself. |
+| `challenges.lucky-blocks` | Breaking the configured block drops a random outcome from `challenges/lucky-block/lucky-blocks.yml` instead of the block itself. |
 
 The lucky-blocks challenge uses `challenges.lucky-blocks.block-definition`
 (default `gold_block`) to select which block is intercepted. The outcome table
-in `settings/lucky-blocks.yml` supports `ITEM`, `NONE`, and `COMMAND` outcome
-types with weighted random selection. Commands support the same placeholders
-(`<p>`, `<random-mob>`, `<random-item>`) and tilde resolution as custom
-modifiers, with `relative-to` choosing whether tildes resolve to the broken
-block or the player.
+in `challenges/lucky-block/lucky-blocks.yml` supports `ITEM`, `NONE`,
+`COMMAND`, and `STRUCTURE` outcome types with weighted random selection.
+Commands support the same placeholders (`<p>`, `<random-mob>`,
+`<random-item>`) and tilde resolution as custom modifiers, with `relative-to`
+choosing whether tildes resolve to the broken block or the player.
+
+See [configuration.md](configuration.md#lucky-blocks) for full details on
+outcome types, structure placement, reroll behavior, and feedback.

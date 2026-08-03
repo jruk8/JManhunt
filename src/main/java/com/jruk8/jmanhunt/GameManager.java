@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class GameManager {
     private final JManhuntPlugin plugin;
@@ -73,7 +74,7 @@ public final class GameManager {
     public boolean start() {
         if (active) return false;
         cancelAutostartCountdown();
-        List<Player> players = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
+        List<Player> players = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
                 .map(p -> (Player) p).toList();
         if (players.stream().noneMatch(p -> role(p) == Role.HUNTER)
                 || players.stream().noneMatch(p -> role(p) == Role.SPEEDRUNNER)) return false;
@@ -91,7 +92,7 @@ public final class GameManager {
             if (role(player) == Role.SPEEDRUNNER) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
             }
-            if (role(player) != Role.NONE) {
+            if (role(player).isParticipant()) {
                 playerStates.recordLastSeen(player, player.getLocation());
             }
         }
@@ -155,7 +156,7 @@ public final class GameManager {
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             stateCommands.runEnd();
-            List<Player> participants = onlinePlayers.stream().filter(p -> role(p) != Role.NONE)
+            List<Player> participants = onlinePlayers.stream().filter(p -> role(p).isParticipant())
                     .map(p -> (Player) p).toList();
             worldEngine.onMatchEnd(participants);
             if (plugin.getConfig().getBoolean("settings.reset-roles-on-game-end.enabled", false)) {
@@ -179,7 +180,7 @@ public final class GameManager {
         // set to adventure mode during the pre-start window.
         if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-with-adventure-mode", true)) {
             for (Player player : Bukkit.getOnlinePlayers()) {
-                if (role(player) != Role.NONE) player.setGameMode(GameMode.SURVIVAL);
+                if (role(player).isParticipant()) player.setGameMode(GameMode.SURVIVAL);
             }
         }
         messages.broadcast("manhunt.started-by-damage"); sounds.playNeutralSound(); applyStartDebuffs();
@@ -223,7 +224,7 @@ public final class GameManager {
                         stateCommands.cancelIntervalModifiers();
                         stateCommands.runConsoleCleanup();
                         stateCommands.runPlayerCleanup();
-                        List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
+                        List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
                                 .map(p -> (Player) p).toList();
                         worldEngine.onMatchEnd(participants);
                         active = false; ending = false; gameBegun = false; playerStates.clearMatch();
@@ -305,6 +306,7 @@ public final class GameManager {
             messages.message(player, "manhunt.status-header", Map.of("status", active ? "ACTIVE" : "INACTIVE"));
             sendRoleSection(player, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
             sendRoleSection(player, Role.HUNTER, "manhunt.hunters-header");
+            sendRoleSection(player, Role.AFK, "manhunt.afk-header");
             sendRoleSection(player, Role.NONE, "manhunt.none-header");
         }
     }
@@ -344,4 +346,53 @@ public final class GameManager {
     }
 
     private Role role(Player player) { return playerStates.role(player); }
+
+    /**
+     * Quick-starts a match by assigning eligible players to teams and
+     * immediately starting the game, bypassing the autostart system.
+     *
+     * @param speedrunnerPercent the percentage of eligible players that should
+     *                           become speedrunners (0-100), or -1 for default
+     *                           (all hunters, one random speedrunner)
+     * @return true if the match was started successfully
+     */
+    public boolean quickStart(int speedrunnerPercent) {
+        if (active) return false;
+        // Get eligible players (not AFK, not NONE)
+        List<Player> eligible = Bukkit.getOnlinePlayers().stream()
+                .filter(p -> {
+                    Role r = role(p);
+                    return r != Role.AFK && r != Role.NONE;
+                })
+                .map(p -> (Player) p)
+                .toList();
+        if (eligible.size() < 2) return false;
+        // Reset all eligible players to NONE first, then assign
+        for (Player p : eligible) {
+            playerStates.setRole(p, Role.NONE);
+        }
+        if (speedrunnerPercent < 0) {
+            // Default: all hunters, one random speedrunner
+            for (Player p : eligible) {
+                playerStates.setRole(p, Role.HUNTER);
+            }
+            Player speedrunner = eligible.get(ThreadLocalRandom.current().nextInt(eligible.size()));
+            playerStates.setRole(speedrunner, Role.SPEEDRUNNER);
+        } else {
+            // Percentage-based assignment
+            int speedrunnerCount = Math.max(1, (int) Math.round(eligible.size() * speedrunnerPercent / 100.0));
+            // Shuffle and assign
+            List<Player> shuffled = new ArrayList<>(eligible);
+            java.util.Collections.shuffle(shuffled);
+            for (int i = 0; i < shuffled.size(); i++) {
+                playerStates.setRole(shuffled.get(i), i < speedrunnerCount ? Role.SPEEDRUNNER : Role.HUNTER);
+            }
+        }
+        // Cancel any autostart countdown silently
+        if (autostartCountdownTask != null) {
+            autostartCountdownTask.cancel();
+            autostartCountdownTask = null;
+        }
+        return start();
+    }
 }

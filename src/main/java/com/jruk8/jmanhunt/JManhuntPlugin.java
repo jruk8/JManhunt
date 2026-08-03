@@ -60,13 +60,14 @@ public final class JManhuntPlugin extends JavaPlugin {
         worldEngine = new WorldEngineService(this, configService, statsRepository);
         game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService, worldEngine);
         var piglinBarter = new PiglinBarterListener(this, game);
-        var challenges = new ChallengesListener(this, game, playerStates, messages, sounds);
+        var challenges = new ChallengesListener(this, game, playerStates, messages, sounds, configService);
         settings.add(worldEngine);
         settings.add(piglinBarter);
         settings.add(challenges);
 
+        var schemCommand = new SchemCommand(this, messages, sounds);
         ManhuntCommand command = new ManhuntCommand(
-                this, messages, configService, sounds, playerStates, game, compass, worldEngine);
+                this, messages, configService, sounds, playerStates, game, compass, worldEngine, schemCommand);
         getCommand("manhunt").setExecutor(command);
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);
@@ -74,6 +75,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 this, playerStates, game, messages, configService, sounds, compass, stats, worldEngine), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
         getServer().getPluginManager().registerEvents(challenges, this);
+        getServer().getPluginManager().registerEvents(schemCommand, this);
 
         double refreshInterval = getConfig().getDouble("settings.compass.refresh-interval", 10.0);
         if (refreshInterval != -1.0) {
@@ -108,8 +110,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 getConfig().getString("text-format", "minimessage"));
 
         for (SettingsListener listener : settings) {
-            var dataPath = "settings/" + listener.getDataPath();
-            saveResource(dataPath, false);
+            saveResource(listener.getDataPath(), false);
             listener.onReload();
         }
         getLogger().info("JManhunt has been reloaded.");

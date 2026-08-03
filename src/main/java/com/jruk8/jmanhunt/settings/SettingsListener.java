@@ -5,6 +5,6 @@ public interface SettingsListener {
 
     void onReload();
 
-    // such that resources\settings\<dataPath>
+    // Full resource path relative to src/main/resources/
     String getDataPath();
 }

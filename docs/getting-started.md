@@ -36,6 +36,32 @@ Players need `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive the
 corresponding role. Both permissions are granted by default. The `/manhunt`
 command is also accessible through the `mh` alias.
 
+### Quick Start (Convenience for Larger Servers)
+
+For larger servers that want to start a match without manually assigning
+roles, use Quick Start:
+
+```text
+/manhunt quickstart
+```
+
+This assigns every eligible online player (excluding AFK) as a Hunter,
+randomly chooses one Speedrunner, and immediately starts the game — bypassing
+the autostart system entirely.
+
+You can also specify a percentage of eligible players to become Speedrunners:
+
+```text
+/manhunt quickstart 50
+```
+
+With 16 eligible players and `50`, this results in 8 Speedrunners and 8
+Hunters. Fractional results are rounded to the nearest whole player, and there
+is always at least one Speedrunner.
+
+Quick Start can only be used when no match is active. See
+[Commands](commands.md#quick-start) for more details.
+
 ## Next Steps
 
 After playing a few matches, check out the built-in settings and custom
