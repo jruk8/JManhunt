@@ -1,4 +1,6 @@
 # JManhunt's built-in PlaceholderAPI identifiers.
+# All placeholders must be used with the prefix %jmanhunt_<placeholder>%
+# (e.g. %jmanhunt_total_kills%, %jmanhunt_time_as_hunter%).
 # Formatting, aliases, and enabled/disabled state are configured in config.yml.
 # Values are resolved for the player passed by PlaceholderAPI.
 placeholders:

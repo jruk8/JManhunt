@@ -75,6 +75,8 @@ public final class GameManager {
                 .map(p -> (Player) p).toList();
         if (players.stream().noneMatch(p -> role(p) == Role.HUNTER)
                 || players.stream().noneMatch(p -> role(p) == Role.SPEEDRUNNER)) return false;
+        // Remove any lingering invulnerability from a previous game end
+        Bukkit.getOnlinePlayers().forEach(p -> p.setInvulnerable(false));
         active = true; ending = false; gameBegun = false; stats.clear(); playerStates.clearMatch();
         matchId++;
         playerStates.setMatchParticipants(players);
@@ -127,6 +129,11 @@ public final class GameManager {
         playerStates.resetOfflinePlayers(onlinePlayers);
         sounds.playGlobalSound(winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
         stats.completeMatch(winner);
+
+        // Make all players invulnerable on game end if configured
+        if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
+            onlinePlayers.forEach(p -> p.setInvulnerable(true));
+        }
 
         // cancel interval modifiers early so they don't fire during the end delay
         stateCommands.cancelIntervalModifiers();

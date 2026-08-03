@@ -20,10 +20,10 @@ touch a single YAML file to get started. The default settings work out of
 the box for anyone who just wants to start playing.
 
 ### Deep Configurability
-Advanced users can toggle any default off and build a completely unique
-Manhunt experience. The plugin is designed so that anyone comfortable with
-vanilla Minecraft commands can figure out how to create custom modifiers
-without much of a learning curve.
+Toggle built-in mechanics on or off, or create entirely new gameplay 
+through custom modifiers. The plugin is designed so that anyone comfortable 
+with vanilla Minecraft commands can figure out how to create custom 
+modifiers without much of a learning curve.
 
 If a feature you need doesn't exist yet, contributions are welcome on our
 [GitHub page](https://github.com/jruk8/JManhunt). We're intentionally
@@ -41,13 +41,16 @@ in mind when contributing.
 
    Selectors such as `@a`, `@p`, and `@a[distance=..10]` are supported.
 2. Start the match with `/manhunt start`.
-3. Check the teams at any time with `/manhunt`.
+3. Check the teams at any time with `/manhunt status`.
 4. The match ends when all speedrunners have died, or manually through
    `/manhunt end`.
 
 Players need `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive the
 corresponding role. Both permissions are granted by default. The `/manhunt` 
 is also accessible through the `mh` alias.
+
+After playing a few matches, check out the built-in settings and custom
+modifiers to enhance your experience.
 
 ## Commands
 
@@ -110,11 +113,11 @@ coordinates (`^`) are not supported.
 
 The available command lists are:
 
-- `commands.player`: runs once for every participating player.
-- `commands.hunter`: runs once for every hunter.
-- `commands.speedrunner`: runs once for every speedrunner.
-- `commands.console`: runs once from the console.
-- `commands.console-cleanup`: runs when the match finishes.
+- `commands.player`: runs at the start for every participating player.
+- `commands.hunter`: runs at the start for every hunter.
+- `commands.speedrunner`: runs at the start for every speedrunner.
+- `commands.console`: runs at the start from the console.
+- `commands.console-cleanup`: runs on the console when the match finishes.
 - `commands.player-cleanup`: runs on every player when the match finishes.
 
 ### Run timing
@@ -135,9 +138,9 @@ custom-modifiers:
         - "summon <random-mob> ~ ~ ~"
 ```
 
-Interval modifiers start counting when the game actually begins (i.e. when a
+Interval modifiers start counting when the game actually begins (i.e., when a
 speedrunner hits a hunter, or when the match force-starts), not when `/manhunt
-start` is run. They are automatically cancelled when the match ends.
+start` is run. They are automatically canceled when the match ends.
 
 ### Example
 

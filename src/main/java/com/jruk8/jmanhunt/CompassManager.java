@@ -51,9 +51,10 @@ public final class CompassManager {
     }
 
     public void refreshCompass(Player holder) {
-        ItemStack item = holder.getInventory().getItem(8);
-        enforceCompassSlot(holder);
-        item = holder.getInventory().getItem(8);
+        deduplicateCompasses(holder);
+        int slot = findCompassSlot(holder);
+        if (slot < 0) return;
+        ItemStack item = holder.getInventory().getItem(slot);
         if (!isCompass(item)) return;
 
         Role holderRole = role(holder);
@@ -70,6 +71,7 @@ public final class CompassManager {
 
         if (target != null) {
             setLodestone(item, target.getLocation());
+            holder.getInventory().setItem(slot, item);
             compassActionbars.put(holder.getUniqueId(), component("compass.compass-actionbar",
                     Map.of("player", target.getName(),
                             "distance", String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
@@ -80,6 +82,7 @@ public final class CompassManager {
         LastSeenResult lastSeen = findNearestLastSeen(holder, targetRole);
         if (lastSeen != null) {
             setLodestone(item, lastSeen.location());
+            holder.getInventory().setItem(slot, item);
             String reason = lastSeen.online() ? "Another Dimension" : "Log-Out";
             compassActionbars.put(holder.getUniqueId(), component("compass.compass-last-seen-actionbar",
                     Map.of("player", lastSeen.name(),
@@ -134,6 +137,7 @@ public final class CompassManager {
 
     public void giveCompass(Player player) {
         if (role(player) != Role.HUNTER) return;
+        removeCompasses(player);
         ItemStack item = new ItemStack(Material.COMPASS);
         CompassMeta meta = (CompassMeta) item.getItemMeta();
         meta.displayName(messages.nonItalic(component("compass.compass-name")));
@@ -145,16 +149,59 @@ public final class CompassManager {
         }
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
         meta.getPersistentDataContainer().set(compassKey, PersistentDataType.BYTE, (byte) 1);
-        item.setItemMeta(meta); player.getInventory().setItem(8, item);
+        item.setItemMeta(meta);
+
+        // Try last slot (8) first, then find next available slot without overriding
+        int slot = findAvailableSlot(player, 8);
+        if (slot >= 0) {
+            player.getInventory().setItem(slot, item);
+        } else {
+            player.getWorld().dropItemNaturally(player.getLocation(), item);
+        }
     }
 
-    public void enforceCompassSlot(Player player) {
-        ItemStack found = null;
+    /**
+     * Finds an available inventory slot, preferring the given slot first.
+     * Returns -1 if no slot is available.
+     */
+    private int findAvailableSlot(Player player, int preferredSlot) {
+        ItemStack preferred = player.getInventory().getItem(preferredSlot);
+        if (preferred == null || preferred.getType() == Material.AIR) return preferredSlot;
         for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
             ItemStack item = player.getInventory().getItem(slot);
-            if (isCompass(item)) { if (found == null) found = item; player.getInventory().setItem(slot, null); }
+            if (item == null || item.getType() == Material.AIR) return slot;
         }
-        if (found != null) player.getInventory().setItem(8, found);
+        return -1;
+    }
+
+    /**
+     * Finds the slot containing the first compass in the player's inventory.
+     * Returns -1 if no compass is found.
+     */
+    private int findCompassSlot(Player player) {
+        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+            if (isCompass(player.getInventory().getItem(slot))) return slot;
+        }
+        return -1;
+    }
+
+    /**
+     * Removes all but the first compass from the player's inventory.
+     * Handles any number of duplicate compasses, including multiple picked
+     * up in a single tick.
+     */
+    public void deduplicateCompasses(Player player) {
+        boolean found = false;
+        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+            ItemStack item = player.getInventory().getItem(slot);
+            if (isCompass(item)) {
+                if (found) {
+                    player.getInventory().setItem(slot, null);
+                } else {
+                    found = true;
+                }
+            }
+        }
     }
 
     public void removeCompasses(Player player) {
@@ -166,6 +213,10 @@ public final class CompassManager {
     public boolean isCompass(ItemStack item) {
         return item != null && item.getType() == Material.COMPASS && item.hasItemMeta()
                 && item.getItemMeta().getPersistentDataContainer().has(compassKey, PersistentDataType.BYTE);
+    }
+
+    public boolean mustBeInventory() {
+        return plugin.getConfig().getBoolean("settings.compass-must-be-inventory.enabled", true);
     }
 
     public void handleRightClick(Player player) {

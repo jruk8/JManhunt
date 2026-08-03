@@ -21,6 +21,8 @@ database:
     ssl: false
   pool-size: 4
 
+# PlaceholderAPI placeholders. All placeholders must be used with the prefix
+# %jmanhunt_<placeholder>% (e.g. %jmanhunt_total_kills%).
 # Formatting is applied before PlaceholderAPI returns a value. {value} is the
 # built-in value; formatting uses the selected text-format above. Values are
 # disabled individually by setting enabled to false.
@@ -102,13 +104,20 @@ game-end-delay: 10.0
 # Set to -1 to disable the reminders entirely while still waiting for damage.
 start-reminder-interval: 10.0
 
-# Disconnect rules for active speedrunners.
+# Disconnect rules for active participants.
 disconnect-handling:
   speedrunner:
     # Seconds a disconnected speedrunner has to rejoin before they are treated
     # as dead and removed from the match.
     reconnect-grace-seconds: 60
     # Disconnect strike limit before a speedrunner instantly loses.
+    # Set to 1 to disable retries entirely.
+    max-strikes: 3
+  hunter:
+    # Seconds a disconnected hunter has to rejoin before they are removed
+    # from the match.
+    reconnect-grace-seconds: 60
+    # Disconnect strike limit before a hunter instantly loses.
     # Set to 1 to disable retries entirely.
     max-strikes: 3
 
@@ -319,6 +328,16 @@ settings:
     # Default: FORCE_START
     on-expire: FORCE_START
 
+  # When true, the hunter compass must stay in the player's inventory and
+  # cannot be dropped or placed in chests. When false, the compass behaves
+  # like a normal item and can be dropped or stored.
+  # The compass always defaults to the last hotbar slot when given, but is
+  # not locked to that slot — the player can freely move it within their
+  # inventory.
+  # Default: true
+  compass-must-be-inventory:
+    enabled: true
+
   # When true, a compass survives a speedrunner's death as a normal dropped
   # item.
   # If a speedrunner gets ahold of the compass, they may track the hunters.
@@ -352,6 +371,18 @@ settings:
     # This may help in balancing the game.
     # Default: false
     custom-piglin-barter: false
+
+  # Invulnerability settings.
+  invulnerability:
+    # Makes all online players invulnerable when the game ends.
+    # Invulnerability is removed when the next match starts.
+    # Default: true
+    on-game-end:
+      enabled: true
+    # Makes players with role NONE (spectators) invulnerable at all times.
+    # Default: true
+    none-players:
+      enabled: true
 
 # Sound names are namespaced Minecraft keys.
 # eg. block.note_block.pling

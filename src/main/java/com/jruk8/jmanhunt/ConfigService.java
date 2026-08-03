@@ -36,7 +36,7 @@ public final class ConfigService {
                 }
             }
         }
-        for (String name : modifierNames()) names.add("custom-modifiers." + name);
+        for (String name : modifierNames()) names.add("custom-modifiers." + name + ".enabled");
         names.addAll(extraModifierNames());
         return names;
     }

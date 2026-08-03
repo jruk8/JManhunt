@@ -112,7 +112,7 @@ public final class GameStateCommandManager {
             });
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
-            boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.set-none-gamemode-spectator", true);
+            boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.set-none-gamemode-spectator.enabled", true);
             Bukkit.getOnlinePlayers().forEach(player -> {
                 if (phase.equals("start") && playerStates.role(player) == Role.NONE) {
                     if (setNoneSpectator) player.setGameMode(GameMode.SPECTATOR);
@@ -122,8 +122,10 @@ public final class GameStateCommandManager {
             });
         }
         var worlds = Bukkit.getWorlds();
-        worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, configService.getBoolean(path + "locator-bar", false)));
-        worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN, configService.getBoolean(path + "set-respawn-immediate", false)));
+        boolean disableLocatorBar = plugin.getConfig().getBoolean(path + "disable-locator-bar", false);
+        worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, !disableLocatorBar));
+        worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
+                plugin.getConfig().getBoolean(path + "set-respawn-immediate", false)));
         if (phase.equals("start")) {
             if (plugin.getConfig().getBoolean(path + "set-daytime", false)) {
                 Bukkit.getWorlds().forEach(this::setDaytime);
