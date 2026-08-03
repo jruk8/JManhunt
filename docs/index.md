@@ -1,5 +1,3 @@
-![JManhunt banner](banner-1280x640.png)
-
 # JManhunt
 
 JManhunt is a deeply configurable Paper plugin for 26.2+ Manhunts. It comes
@@ -27,8 +25,12 @@ configuration files.
 
 ## Documentation
 
-Full documentation is available at the
-[JManhunt documentation site](https://jruk8.github.io/JManhunt/).
+- [Getting Started](getting-started.md)
+- [Commands](commands.md)
+- [Permissions](permissions.md)
+- [Configuration](configuration.md)
+- [Placeholders](placeholders.md)
+- [API](api.md)
 
 ## Download / Build
 
@@ -52,7 +54,8 @@ The plugin jar is written to `build/libs/`.
 ## Contributing
 
 Contributions are welcome! See
-[CONTRIBUTING.md](CONTRIBUTING.md) for contributor setup and the
+[CONTRIBUTING.md](https://github.com/jruk8/JManhunt/blob/main/CONTRIBUTING.md)
+for contributor setup and the
 [GitHub repository](https://github.com/jruk8/JManhunt) for issues and pull
 requests.
 

@@ -3,6 +3,9 @@
 /out/
 /.gradle/
 
+# MkDocs output
+/site/
+
 # Gradle wrapper cache/runtime downloads
 /gradle/wrapper/dists/
 
