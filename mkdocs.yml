@@ -23,6 +23,7 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
+    - social
     - navigation.instant
     - navigation.tracking
     - navigation.top
@@ -53,3 +54,8 @@ nav:
   - Configuration: configuration.md
   - Placeholders: placeholders.md
   - API: api.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/jruk8/JManhunt

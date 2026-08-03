@@ -1,4 +1,4 @@
-![JManhunt banner](banner-1280x640.png)
+![JManhunt banner](docs/assets/banner-1280x640.png)
 
 # JManhunt
 
