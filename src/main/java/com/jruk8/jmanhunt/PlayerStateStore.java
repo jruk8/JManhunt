@@ -14,6 +14,7 @@ import java.util.UUID;
 public final class PlayerStateStore {
     private final Map<UUID, Role> roles = new HashMap<>();
     private final Map<UUID, Map<UUID, Location>> lastSeenByWorld = new HashMap<>();
+    private final Map<UUID, String> playerNames = new HashMap<>();
     private final Map<UUID, Boolean> speedrunnerAlive = new HashMap<>();
     private final Set<UUID> matchParticipants = new HashSet<>();
     private final Set<UUID> matchSpectators = new HashSet<>();
@@ -55,6 +56,7 @@ public final class PlayerStateStore {
 
     public void clearMatch() {
         lastSeenByWorld.clear();
+        playerNames.clear();
         speedrunnerAlive.clear();
         matchParticipants.clear();
         matchSpectators.clear();
@@ -111,8 +113,13 @@ public final class PlayerStateStore {
 
     public void recordLastSeen(Player player, Location location) {
         if (location == null || location.getWorld() == null) return;
+        playerNames.put(player.getUniqueId(), player.getName());
         lastSeenByWorld.computeIfAbsent(player.getUniqueId(), ignored -> new HashMap<>())
                 .put(location.getWorld().getUID(), location.clone());
+    }
+
+    public String playerName(UUID playerId) {
+        return playerNames.getOrDefault(playerId, "Unknown");
     }
 
     public void resetRolesIfAbsent(Player player) {

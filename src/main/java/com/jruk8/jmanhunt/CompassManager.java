@@ -37,7 +37,7 @@ public final class CompassManager {
     public void refreshAllCompasses(boolean active) {
         if (active) Bukkit.getOnlinePlayers().stream()
                 .filter(p -> role(p) != Role.NONE)
-                .filter(p -> isCompass(p.getInventory().getItem(8)))
+                .filter(this::hasCompass)
                 .forEach(this::refreshCompass);
     }
 
@@ -46,7 +46,8 @@ public final class CompassManager {
         Bukkit.getOnlinePlayers().stream().filter(p -> role(p) != Role.NONE)
                 .filter(p -> isCompass(p.getInventory().getItemInMainHand()) || isCompass(p.getInventory().getItemInOffHand()))
                 .forEach(p -> p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
-                        component("compass.no-target-actionbar"))));
+                        component("compass.no-target-actionbar",
+                                Map.of("role", role(p) == Role.HUNTER ? "speedrunner" : "hunter")))));
     }
 
     public void refreshCompass(Player holder) {
@@ -54,22 +55,81 @@ public final class CompassManager {
         enforceCompassSlot(holder);
         item = holder.getInventory().getItem(8);
         if (!isCompass(item)) return;
-        Player target = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.SPEEDRUNNER
-                        && playerStates.isActiveSpeedrunner(p.getUniqueId()) && p.getGameMode() != GameMode.SPECTATOR
+
+        Role holderRole = role(holder);
+        if (holderRole == Role.NONE) return;
+        Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
+        String targetRoleString = targetRole == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
+
+        // Find nearest online target in the same world
+        Player target = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == targetRole
+                        && isTrackableTarget(p.getUniqueId(), targetRole) && p.getGameMode() != GameMode.SPECTATOR
                         && !p.getUniqueId().equals(holder.getUniqueId())
                         && p.getWorld().equals(holder.getWorld()))
                 .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(holder.getLocation()))).orElse(null);
-        Location location = target == null ? playerStates.sightings().entrySet().stream()
-                .filter(entry -> playerStates.isActiveSpeedrunner(entry.getKey())
-                        && !entry.getKey().equals(holder.getUniqueId())).map(Map.Entry::getValue)
-                .map(worlds -> worlds.get(holder.getWorld().getUID())).filter(l -> l != null && l.getWorld() != null)
-                .min(Comparator.comparingDouble(l -> l.distanceSquared(holder.getLocation()))).orElse(null) : target.getLocation();
-        if (location != null && item != null && item.getItemMeta() instanceof CompassMeta meta) {
-            meta.setLodestone(location); meta.setLodestoneTracked(false); item.setItemMeta(meta);
+
+        if (target != null) {
+            setLodestone(item, target.getLocation());
+            compassActionbars.put(holder.getUniqueId(), component("compass.compass-actionbar",
+                    Map.of("player", target.getName(),
+                            "distance", String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
+            return;
         }
-        compassActionbars.put(holder.getUniqueId(), target == null ? component("compass.no-target-actionbar")
-                : component("compass.compass-actionbar", Map.of("player", target.getName(),
-                "distance", String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
+
+        // Last seen fallback - find nearest last seen location
+        LastSeenResult lastSeen = findNearestLastSeen(holder, targetRole);
+        if (lastSeen != null) {
+            setLodestone(item, lastSeen.location());
+            String reason = lastSeen.online() ? "Another Dimension" : "Log-Out";
+            compassActionbars.put(holder.getUniqueId(), component("compass.compass-last-seen-actionbar",
+                    Map.of("player", lastSeen.name(),
+                            "distance", String.valueOf(Math.round(holder.getLocation().distance(lastSeen.location()))),
+                            "reason", reason)));
+            return;
+        }
+
+        // Truly no location available
+        compassActionbars.put(holder.getUniqueId(), component("compass.no-target-actionbar",
+                Map.of("role", targetRoleString)));
+    }
+
+    private void setLodestone(ItemStack item, Location location) {
+        if (item != null && item.getItemMeta() instanceof CompassMeta meta) {
+            meta.setLodestone(location);
+            meta.setLodestoneTracked(false);
+            item.setItemMeta(meta);
+        }
+    }
+
+    private boolean hasCompass(Player player) {
+        for (ItemStack item : player.getInventory().getContents()) {
+            if (isCompass(item)) return true;
+        }
+        return false;
+    }
+
+    private boolean isTrackableTarget(UUID playerId, Role targetRole) {
+        if (playerStates.role(playerId) != targetRole) return false;
+        if (targetRole == Role.SPEEDRUNNER) return playerStates.isActiveSpeedrunner(playerId);
+        return playerStates.isMatchParticipant(playerId);
+    }
+
+    private record LastSeenResult(String name, Location location, boolean online) {}
+
+    private LastSeenResult findNearestLastSeen(Player holder, Role targetRole) {
+        return playerStates.sightings().entrySet().stream()
+                .filter(entry -> isTrackableTarget(entry.getKey(), targetRole))
+                .filter(entry -> !entry.getKey().equals(holder.getUniqueId()))
+                .map(entry -> {
+                    Location loc = entry.getValue().get(holder.getWorld().getUID());
+                    if (loc == null || loc.getWorld() == null) return null;
+                    Player player = Bukkit.getPlayer(entry.getKey());
+                    String name = player != null ? player.getName() : playerStates.playerName(entry.getKey());
+                    return new LastSeenResult(name, loc, player != null);
+                })
+                .filter(result -> result != null)
+                .min(Comparator.comparingDouble(result -> result.location().distanceSquared(holder.getLocation())))
+                .orElse(null);
     }
 
     public void giveCompass(Player player) {

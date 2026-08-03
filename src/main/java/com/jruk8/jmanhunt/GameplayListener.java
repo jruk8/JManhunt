@@ -10,6 +10,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -123,19 +124,30 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
-        if (game.isActive() && playerStates.role(player) == Role.SPEEDRUNNER) {
+        if (game.isActive() && playerStates.role(player) != Role.NONE) {
             playerStates.recordLastSeen(player, event.getTo());
         }
         if (game.isActive() && game.isGameBegun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
                 && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL
+                && event.getFrom().getWorld() != null
                 && event.getFrom().getWorld().getEnvironment() == World.Environment.THE_END
+                && event.getTo() != null && event.getTo().getWorld() != null
                 && event.getTo().getWorld().getEnvironment() == World.Environment.NORMAL) {
             game.finishLater(Role.SPEEDRUNNER);
         }
     }
+    @EventHandler public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        if (game.isActive() && game.isGameBegun() && playerStates.role(player) == Role.SPEEDRUNNER
+                && playerStates.isActiveSpeedrunner(player.getUniqueId())
+                && event.getFrom().getEnvironment() == World.Environment.THE_END
+                && player.getWorld().getEnvironment() == World.Environment.NORMAL) {
+            game.finishLater(Role.SPEEDRUNNER);
+        }
+    }
     @EventHandler public void onMove(PlayerMoveEvent event) {
-        if (game.isActive() && playerStates.role(event.getPlayer()) == Role.SPEEDRUNNER) {
+        if (game.isActive() && playerStates.role(event.getPlayer()) != Role.NONE) {
             playerStates.recordLastSeen(event.getPlayer(), event.getTo());
         }
     }
@@ -209,7 +221,8 @@ public final class GameplayListener implements Listener {
             return;
         }
         cancelSpeedrunnerDisconnectTask(playerId);
-        speedrunnerDisconnects.clear(playerId);
+        // Strikes are intentionally NOT cleared here so that repeated
+        // disconnect/reconnect cycles accumulate toward the max-strikes limit.
         messages.broadcast("game.speedrunner-disconnect-cancelled");
     }
 

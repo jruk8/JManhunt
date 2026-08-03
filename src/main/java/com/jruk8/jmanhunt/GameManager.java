@@ -86,6 +86,8 @@ public final class GameManager {
             playerStats.matchStartedAt = System.currentTimeMillis();
             if (role(player) == Role.SPEEDRUNNER) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
+            }
+            if (role(player) != Role.NONE) {
                 playerStates.recordLastSeen(player, player.getLocation());
             }
         }
