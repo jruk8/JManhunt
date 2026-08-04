@@ -16,7 +16,7 @@
 #                 tildes (~) resolve.
 #
 #   structure   - A section with a structure name and optional random-rotation.
-#                 Loads .nbt from challenges/lucky-block/structures/<name>.nbt.
+#                 Loads .nbt from challenges/structures/<name>.nbt.
 #                 If loading or placing fails, the roll is rerolled (up to 20
 #                 times).
 #

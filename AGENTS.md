@@ -33,6 +33,7 @@ Project guidance for AI coding agents working on the JManhunt repository.
 Whenever user-facing behaviour changes:
 
 - Update the relevant MkDocs page.
+- Don't be afraid to add new pages for new features.
 - Keep README.md concise.
 - Update CONTRIBUTORS.md if contributor workflow changes.
 

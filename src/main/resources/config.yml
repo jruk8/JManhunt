@@ -189,6 +189,7 @@ custom-modifiers:
     # ON_FIRST_ENTER_NETHER - When a participating player first enters the Nether
     # ON_FIRST_ENTER_END - When a participating player first enters the End
     # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
+    # If omitted, defaults to ON_START.
     runs-on:
       - INTERVAL
     # Only applicable when "runs-on" contains INTERVAL.

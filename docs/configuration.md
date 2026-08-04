@@ -189,7 +189,7 @@ outcomes:
 #### Structure
 
 Structure outcomes load `.nbt` files from
-`plugins/JManhunt/challenges/lucky-block/structures/<name>.nbt`. The structure
+`plugins/JManhunt/challenges/structures/<name>.nbt`. The structure
 is placed relative to the broken lucky block using Bukkit's intended pivot
 behavior.
 
@@ -325,7 +325,7 @@ outcomes:
 ### Schematic Management
 
 Schematics (structure `.nbt` files) are stored in
-`plugins/JManhunt/challenges/lucky-block/structures/`. Use the
+`plugins/JManhunt/challenges/structures/`. Use the
 `/jmanhunt schem` command to manage them:
 
 - `/jmanhunt schem wand` — gives you the schematic wand.

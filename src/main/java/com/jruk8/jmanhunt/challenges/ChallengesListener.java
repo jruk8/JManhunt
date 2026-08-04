@@ -57,7 +57,7 @@ public final class ChallengesListener implements Listener, SettingsListener {
         this.sounds = sounds;
         this.configService = configService;
         this.luckyFile = new File(plugin.getDataFolder(), "challenges/lucky-block/lucky-blocks.yml");
-        this.structuresDir = new File(plugin.getDataFolder(), "challenges/lucky-block/structures");
+        this.structuresDir = new File(plugin.getDataFolder(), "challenges/structures");
         configService.onChange("challenges.lucky-blocks.enabled", (oldValue, newValue) -> onReload());
     }
 

@@ -5,6 +5,7 @@ import org.bukkit.entity.EntityType;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -111,11 +112,11 @@ public final class CommandPlaceholders {
 
     private static String randomMob() {
         List<EntityType> mobs = spawnableLivingEntities();
-        return mobs.get(ThreadLocalRandom.current().nextInt(mobs.size())).name();
+        return mobs.get(ThreadLocalRandom.current().nextInt(mobs.size())).name().toLowerCase(Locale.ROOT);
     }
 
     private static String randomItem() {
         List<Material> itemList = items();
-        return itemList.get(ThreadLocalRandom.current().nextInt(itemList.size())).name();
+        return itemList.get(ThreadLocalRandom.current().nextInt(itemList.size())).name().toLowerCase(Locale.ROOT);
     }
 }

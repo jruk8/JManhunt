@@ -36,9 +36,9 @@ The `setplayer` command accepts the following roles:
 that want to start a match without manually assigning roles. It can only be
 used when no match is active.
 
-- **Without arguments:** assigns every eligible online player (excluding AFK)
-  as a Hunter, randomly chooses one Speedrunner, and immediately starts the
-  game.
+- **Without arguments:** assigns every eligible online player (excluding AFK,
+  including NONE) as a Hunter, randomly chooses one Speedrunner, and
+  immediately starts the game.
 - **With a percentage:** interprets the value as the percentage of eligible
   players that should become Speedrunners. For example, `50` with 16 eligible
   players results in 8 Speedrunners and 8 Hunters. Fractional results are
@@ -51,7 +51,7 @@ autostart messages are displayed.
 ## Schematic Management
 
 The `/jmanhunt schem` command manages structure `.nbt` files stored in
-`plugins/JManhunt/challenges/lucky-block/structures/`. These are used by
+`plugins/JManhunt/challenges/structures/`. These are used by
 Lucky Block `STRUCTURE` outcomes and can be reused by future features.
 
 - **Save:** Obtain the schematic wand with `/jmanhunt schem wand`, then select
@@ -93,8 +93,8 @@ Commands can use these placeholders:
 | Placeholder | Replaced with |
 | --- | --- |
 | `<p>` | The participating player's name. Use this in player and role commands. |
-| `<random-mob>` | A random spawnable living entity type (e.g. `zombie`, `creeper`). A new roll is made for each command execution. |
-| `<random-item>` | A random item material (e.g. `diamond_sword`, `bread`). A new roll is made for each command execution. |
+| `<random-mob>` | A random spawnable living entity type in lowercase (e.g. `zombie`, `creeper`). A new roll is made for each command execution. |
+| `<random-item>` | A random item material in lowercase (e.g. `diamond_sword`, `bread`). A new roll is made for each command execution. |
 
 ### Relative Coordinates
 
@@ -120,8 +120,8 @@ The available command lists are:
 
 ### Run Timing
 
-`runs-on` is a list of events that trigger the modifier's commands. Available
-values:
+`runs-on` is a list of events that trigger the modifier's commands. If
+`runs-on` is omitted, the modifier defaults to `ON_START`. Available values:
 
 | Value | Trigger |
 | --- | --- |

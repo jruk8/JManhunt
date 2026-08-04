@@ -104,8 +104,12 @@ public final class GameStateCommandManager {
     }
 
     private boolean runsOnContains(String name, String event) {
-        return plugin.getConfig().getStringList("custom-modifiers." + name + ".runs-on")
-                .stream().map(String::trim).anyMatch(event::equalsIgnoreCase);
+        List<String> runsOn = plugin.getConfig().getStringList("custom-modifiers." + name + ".runs-on");
+        // When runs-on is omitted, default to ON_START.
+        if (runsOn.isEmpty()) {
+            return event.equalsIgnoreCase("ON_START");
+        }
+        return runsOn.stream().map(String::trim).anyMatch(event::equalsIgnoreCase);
     }
 
     private void runModifierCommands(String name) {

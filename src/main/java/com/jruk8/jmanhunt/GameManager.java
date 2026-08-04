@@ -358,12 +358,10 @@ public final class GameManager {
      */
     public boolean quickStart(int speedrunnerPercent) {
         if (active) return false;
-        // Get eligible players (not AFK, not NONE)
+        // Get eligible players (not AFK). NONE players are included so that
+        // quickstart can assign them to teams.
         List<Player> eligible = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> {
-                    Role r = role(p);
-                    return r != Role.AFK && r != Role.NONE;
-                })
+                .filter(p -> role(p) != Role.AFK)
                 .map(p -> (Player) p)
                 .toList();
         if (eligible.size() < 2) return false;

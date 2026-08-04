@@ -48,7 +48,7 @@ public final class SchemCommand implements Listener {
         this.plugin = plugin;
         this.messages = messages;
         this.sounds = sounds;
-        this.structuresDir = new File(plugin.getDataFolder(), "challenges/lucky-block/structures");
+        this.structuresDir = new File(plugin.getDataFolder(), "challenges/structures");
         this.wandKey = new NamespacedKey(plugin, WAND_PDC_KEY);
     }
 
@@ -84,14 +84,29 @@ public final class SchemCommand implements Listener {
         if (!isWandItem(player)) return;
         Action action = event.getAction();
         if (action == Action.LEFT_CLICK_BLOCK) {
-            pos1.put(player.getUniqueId(), event.getClickedBlock().getLocation());
-            message(player, "manhunt.schem-pos1", Map.of("pos", formatLocation(event.getClickedBlock().getLocation())));
+            Location newPos = event.getClickedBlock().getLocation();
+            Location current = pos1.get(player.getUniqueId());
+            if (current == null || !sameBlock(current, newPos)) {
+                pos1.put(player.getUniqueId(), newPos);
+                message(player, "manhunt.schem-pos1", Map.of("pos", formatLocation(newPos)));
+            }
             event.setCancelled(true);
         } else if (action == Action.RIGHT_CLICK_BLOCK) {
-            pos2.put(player.getUniqueId(), event.getClickedBlock().getLocation());
-            message(player, "manhunt.schem-pos2", Map.of("pos", formatLocation(event.getClickedBlock().getLocation())));
+            Location newPos = event.getClickedBlock().getLocation();
+            Location current = pos2.get(player.getUniqueId());
+            if (current == null || !sameBlock(current, newPos)) {
+                pos2.put(player.getUniqueId(), newPos);
+                message(player, "manhunt.schem-pos2", Map.of("pos", formatLocation(newPos)));
+            }
             event.setCancelled(true);
         }
+    }
+
+    private static boolean sameBlock(Location a, Location b) {
+        return a.getWorld().equals(b.getWorld())
+                && a.getBlockX() == b.getBlockX()
+                && a.getBlockY() == b.getBlockY()
+                && a.getBlockZ() == b.getBlockZ();
     }
 
     private boolean wand(CommandSender sender) {
@@ -171,7 +186,17 @@ public final class SchemCommand implements Listener {
             structuresDir.mkdirs();
             StructureManager sm = Bukkit.getStructureManager();
             Structure structure = sm.createStructure();
-            structure.fill(loc1, loc2, true);
+            // Structure.fill treats the second corner as exclusive, so expand
+            // the max corner by one block to capture the full selection.
+            Location min = new Location(loc1.getWorld(),
+                    Math.min(loc1.getBlockX(), loc2.getBlockX()),
+                    Math.min(loc1.getBlockY(), loc2.getBlockY()),
+                    Math.min(loc1.getBlockZ(), loc2.getBlockZ()));
+            Location max = new Location(loc1.getWorld(),
+                    Math.max(loc1.getBlockX(), loc2.getBlockX()) + 1,
+                    Math.max(loc1.getBlockY(), loc2.getBlockY()) + 1,
+                    Math.max(loc1.getBlockZ(), loc2.getBlockZ()) + 1);
+            structure.fill(min, max, true);
             sm.saveStructure(targetFile, structure);
             message(sender, "manhunt.schem-save-success", Map.of("name", name));
             if (sender instanceof Player p) sounds.playNeutralSound(p);
