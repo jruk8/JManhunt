@@ -2,12 +2,17 @@ package com.jruk8.jmanhunt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.structure.Structure;
 import org.bukkit.structure.StructureManager;
 
@@ -22,14 +27,18 @@ import java.util.UUID;
 
 /**
  * Handles the /jmanhunt schem subcommand for saving, listing, and deleting
- * structure (.nbt) files. Also tracks wooden-axe selections for region capture.
+ * structure (.nbt) files. Also tracks wand selections for region capture.
  */
 public final class SchemCommand implements Listener {
     private static final long CONFIRMATION_TIMEOUT_MS = 5000;
+    /** Display name for the schematic wand, shared as a static constant. */
+    public static final String WAND_DISPLAY_NAME = "Manhunt Schematic Wand";
+    private static final String WAND_PDC_KEY = "schematic_wand";
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final SoundService sounds;
     private final File structuresDir;
+    private final NamespacedKey wandKey;
     private final Map<UUID, Location> pos1 = new HashMap<>();
     private final Map<UUID, Location> pos2 = new HashMap<>();
     private final Map<String, Long> pendingSaveConfirmations = new HashMap<>();
@@ -40,6 +49,7 @@ public final class SchemCommand implements Listener {
         this.messages = messages;
         this.sounds = sounds;
         this.structuresDir = new File(plugin.getDataFolder(), "challenges/lucky-block/structures");
+        this.wandKey = new NamespacedKey(plugin, WAND_PDC_KEY);
     }
 
     public boolean onCommand(CommandSender sender, String[] args) {
@@ -52,13 +62,14 @@ public final class SchemCommand implements Listener {
             case "save" -> save(sender, args);
             case "list" -> list(sender);
             case "delete" -> delete(sender, args);
+            case "wand" -> wand(sender);
             default -> message(sender, "command.invalid");
         };
     }
 
     public List<String> onTabComplete(CommandSender sender, String[] args) {
         if (args.length == 2) {
-            return partial(args[1], List.of("save", "list", "delete"));
+            return partial(args[1], List.of("save", "list", "delete", "wand"));
         }
         if (args.length == 3 && (args[1].equalsIgnoreCase("save") || args[1].equalsIgnoreCase("delete"))) {
             return partial(args[2], listSchematicNames());
@@ -70,7 +81,7 @@ public final class SchemCommand implements Listener {
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
         if (!player.hasPermission("jmanhunt.command.schem")) return;
-        if (!isWoodenAxe(player)) return;
+        if (!isWandItem(player)) return;
         Action action = event.getAction();
         if (action == Action.LEFT_CLICK_BLOCK) {
             pos1.put(player.getUniqueId(), event.getClickedBlock().getLocation());
@@ -81,6 +92,45 @@ public final class SchemCommand implements Listener {
             message(player, "manhunt.schem-pos2", Map.of("pos", formatLocation(event.getClickedBlock().getLocation())));
             event.setCancelled(true);
         }
+    }
+
+    private boolean wand(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            message(sender, "command.player-only");
+            return true;
+        }
+        if (!player.hasPermission("jmanhunt.command.schem")) {
+            message(sender, "command.no-permission");
+            return true;
+        }
+        ItemStack wand = createWand();
+        // Try to place in the player's hand first, then inventory.
+        if (player.getInventory().firstEmpty() != -1) {
+            player.getInventory().addItem(wand);
+        } else {
+            player.getWorld().dropItemNaturally(player.getLocation(), wand);
+        }
+        message(sender, "manhunt.schem-wand-given");
+        sounds.playNeutralSound(player);
+        return true;
+    }
+
+    /** Creates the schematic wand item with plugin-owned persistent data. */
+    public ItemStack createWand() {
+        ItemStack item = new ItemStack(Material.BREEZE_ROD);
+        ItemMeta meta = item.getItemMeta();
+        meta.displayName(messages.parse(WAND_DISPLAY_NAME));
+        meta.lore(messages.strings("schem-wand-lore").stream().map(messages::parse).toList());
+        meta.getPersistentDataContainer().set(wandKey, PersistentDataType.BYTE, (byte) 1);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    /** Checks whether the player is holding the schematic wand in their main hand. */
+    public boolean isWandItem(Player player) {
+        ItemStack item = player.getInventory().getItemInMainHand();
+        return item != null && item.hasItemMeta()
+                && item.getItemMeta().getPersistentDataContainer().has(wandKey, PersistentDataType.BYTE);
     }
 
     private boolean save(CommandSender sender, String[] args) {
@@ -198,10 +248,6 @@ public final class SchemCommand implements Listener {
 
     private static String getConfirmKey(CommandSender sender, String name) {
         return (sender instanceof Player p ? p.getUniqueId().toString() : "console") + ":" + name;
-    }
-
-    private boolean isWoodenAxe(Player player) {
-        return player.getInventory().getItemInMainHand().getType().name().equals("WOODEN_AXE");
     }
 
     private String formatLocation(Location loc) {

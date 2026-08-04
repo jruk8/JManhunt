@@ -27,69 +27,85 @@ class LuckyBlockEngineTest {
     }
 
     @Test
-    void parsesItemOutcome() throws IOException {
+    void parsesItemsOutcome() throws IOException {
         File file = writeYaml("""
                 outcomes:
                   diamonds:
                     weight: 5.0
-                    type: ITEM
-                    item-settings:
-                      name: diamond
-                      quantity: 2
+                    items:
+                      - diamond 2
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
         assertEquals("diamonds", outcome.name());
         assertEquals(5.0, outcome.weight());
-        assertEquals(LuckyBlockEngine.OutcomeType.ITEM, outcome.type());
-        assertEquals("diamond", outcome.itemName());
-        assertEquals(2, outcome.quantity());
+        assertEquals(1, outcome.items().size());
+        assertEquals("diamond", outcome.items().get(0).name());
+        assertEquals(2, outcome.items().get(0).quantity());
+        assertTrue(outcome.commands().isEmpty());
+        assertNull(outcome.structure());
+        assertNull(outcome.feedback());
     }
 
     @Test
-    void parsesNoneOutcomeWithDefaultWeight() throws IOException {
+    void parsesItemWithDefaultQuantity() throws IOException {
         File file = writeYaml("""
                 outcomes:
-                  nothing:
-                    type: NONE
+                  gold:
+                    items:
+                      - gold_ingot
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
-        assertEquals(LuckyBlockEngine.OutcomeType.NONE, outcome.type());
-        assertEquals(1.0, outcome.weight());
+        assertEquals(1, outcome.items().size());
+        assertEquals("gold_ingot", outcome.items().get(0).name());
+        assertEquals(1, outcome.items().get(0).quantity());
     }
 
     @Test
-    void parsesCommandOutcomeWithDefaultRelativeTo() throws IOException {
+    void parsesEmptyOutcomeWithDefaultWeight() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  nothing: {}
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals(1.0, outcome.weight());
+        assertTrue(outcome.items().isEmpty());
+        assertTrue(outcome.commands().isEmpty());
+        assertNull(outcome.structure());
+        assertNull(outcome.feedback());
+    }
+
+    @Test
+    void parsesCommandsOutcomeWithDefaultRelativeTo() throws IOException {
         File file = writeYaml("""
                 outcomes:
                   sharp-sword:
-                    type: COMMAND
-                    command-settings:
+                    commands:
                       commands:
-                      - "give @p golden_sword 1"
+                        - "give @p golden_sword 1"
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
-        assertEquals(LuckyBlockEngine.OutcomeType.COMMAND, outcome.type());
         assertEquals("BLOCK", outcome.relativeTo());
         assertEquals(1, outcome.commands().size());
         assertEquals("give @p golden_sword 1", outcome.commands().get(0));
     }
 
     @Test
-    void parsesCommandOutcomeWithPlayerRelativeTo() throws IOException {
+    void parsesCommandsOutcomeWithPlayerRelativeTo() throws IOException {
         File file = writeYaml("""
                 outcomes:
                   tnt:
-                    type: COMMAND
-                    command-settings:
+                    commands:
                       relative-to: PLAYER
                       commands:
-                      - "summon tnt ~ ~1.5 ~ {fuse:40}"
+                        - "summon tnt ~ ~1.5 ~ {fuse:40}"
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));
@@ -102,9 +118,8 @@ class LuckyBlockEngineTest {
         File file = writeYaml("""
                 outcomes:
                   diamonds:
-                    type: ITEM
-                    item-settings:
-                      name: diamond
+                    items:
+                      - diamond 1
                     feedback:
                       sound:
                         enabled: true
@@ -133,7 +148,6 @@ class LuckyBlockEngineTest {
         File file = writeYaml("""
                 outcomes:
                   nothing:
-                    type: NONE
                     feedback:
                       sound:
                         enabled: true
@@ -156,8 +170,7 @@ class LuckyBlockEngineTest {
     void parsesOutcomeWithoutFeedback() throws IOException {
         File file = writeYaml("""
                 outcomes:
-                  plain:
-                    type: NONE
+                  plain: {}
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));
@@ -170,7 +183,6 @@ class LuckyBlockEngineTest {
         File file = writeYaml("""
                 outcomes:
                   bad:
-                    type: NONE
                     feedback:
                       sound:
                         sound: block.anvil.hit
@@ -185,7 +197,6 @@ class LuckyBlockEngineTest {
         File file = writeYaml("""
                 outcomes:
                   bad:
-                    type: NONE
                     feedback:
                       sound:
                         enabled: true
@@ -201,10 +212,8 @@ class LuckyBlockEngineTest {
                 outcomes:
                   a:
                     weight: 1.0
-                    type: NONE
                   b:
                     weight: 3.0
-                    type: NONE
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));
@@ -228,52 +237,11 @@ class LuckyBlockEngineTest {
     }
 
     @Test
-    void rejectsInvalidType() throws IOException {
-        File file = writeYaml("""
-                outcomes:
-                  bad:
-                    type: EXPLODE
-                """);
-        LuckyBlockEngine engine = new LuckyBlockEngine();
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
-        assertTrue(ex.getMessage().contains("bad"));
-    }
-
-    @Test
-    void rejectsItemMissingName() throws IOException {
-        File file = writeYaml("""
-                outcomes:
-                  bad:
-                    type: ITEM
-                    item-settings:
-                      quantity: 1
-                """);
-        LuckyBlockEngine engine = new LuckyBlockEngine();
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
-        assertTrue(ex.getMessage().contains("bad"));
-    }
-
-    @Test
-    void rejectsCommandMissingCommands() throws IOException {
-        File file = writeYaml("""
-                outcomes:
-                  bad:
-                    type: COMMAND
-                    command-settings:
-                      relative-to: BLOCK
-                """);
-        LuckyBlockEngine engine = new LuckyBlockEngine();
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
-        assertTrue(ex.getMessage().contains("bad"));
-    }
-
-    @Test
     void rejectsNonPositiveWeight() throws IOException {
         File file = writeYaml("""
                 outcomes:
                   bad:
                     weight: 0.0
-                    type: NONE
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
@@ -285,11 +253,23 @@ class LuckyBlockEngineTest {
         File file = writeYaml("""
                 outcomes:
                   bad:
-                    type: COMMAND
-                    command-settings:
+                    commands:
                       relative-to: SELF
                       commands:
-                      - "say hi"
+                        - "say hi"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
+        assertTrue(ex.getMessage().contains("bad"));
+    }
+
+    @Test
+    void rejectsCommandsSectionWithoutCommands() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  bad:
+                    commands:
+                      relative-to: BLOCK
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
@@ -302,17 +282,15 @@ class LuckyBlockEngineTest {
                 outcomes:
                   coin-well:
                     weight: 1.0
-                    type: STRUCTURE
-                    structure-settings:
+                    structure:
                       name: coin-well
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
-        assertEquals(LuckyBlockEngine.OutcomeType.STRUCTURE, outcome.type());
-        assertNotNull(outcome.structureSettings());
-        assertEquals("coin-well", outcome.structureSettings().name());
-        assertFalse(outcome.structureSettings().randomRotation());
+        assertNotNull(outcome.structure());
+        assertEquals("coin-well", outcome.structure().name());
+        assertFalse(outcome.structure().randomRotation());
     }
 
     @Test
@@ -320,27 +298,14 @@ class LuckyBlockEngineTest {
         File file = writeYaml("""
                 outcomes:
                   coin-well:
-                    type: STRUCTURE
-                    structure-settings:
+                    structure:
                       name: coin-well
                       random-rotation: true
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
-        assertTrue(outcome.structureSettings().randomRotation());
-    }
-
-    @Test
-    void rejectsStructureMissingSettings() throws IOException {
-        File file = writeYaml("""
-                outcomes:
-                  bad:
-                    type: STRUCTURE
-                """);
-        LuckyBlockEngine engine = new LuckyBlockEngine();
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
-        assertTrue(ex.getMessage().contains("bad"));
+        assertTrue(outcome.structure().randomRotation());
     }
 
     @Test
@@ -348,8 +313,7 @@ class LuckyBlockEngineTest {
         File file = writeYaml("""
                 outcomes:
                   bad:
-                    type: STRUCTURE
-                    structure-settings:
+                    structure:
                       random-rotation: true
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
@@ -358,11 +322,156 @@ class LuckyBlockEngineTest {
     }
 
     @Test
+    void parsesComposableOutcomeWithAllSections() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  pirate-ship:
+                    weight: 2
+                    structure:
+                      name: pirate-ship
+                    commands:
+                      relative-to: BLOCK
+                      commands:
+                        - "summon pillager ~ ~ ~"
+                    items:
+                      - spyglass 1
+                      - cooked_cod 16
+                    feedback:
+                      message: "<gold>Land ho!</gold>"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals("pirate-ship", outcome.name());
+        assertEquals(2.0, outcome.weight());
+        assertEquals(2, outcome.items().size());
+        assertEquals("spyglass", outcome.items().get(0).name());
+        assertEquals(1, outcome.items().get(0).quantity());
+        assertEquals("cooked_cod", outcome.items().get(1).name());
+        assertEquals(16, outcome.items().get(1).quantity());
+        assertEquals(1, outcome.commands().size());
+        assertEquals("summon pillager ~ ~ ~", outcome.commands().get(0));
+        assertEquals("BLOCK", outcome.relativeTo());
+        assertNotNull(outcome.structure());
+        assertEquals("pirate-ship", outcome.structure().name());
+        assertNotNull(outcome.feedback());
+        assertEquals("<gold>Land ho!</gold>", outcome.feedback().message());
+    }
+
+    @Test
+    void parsesComposableOutcomeWithItemsAndCommands() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  combo:
+                    items:
+                      - diamond 3
+                    commands:
+                      commands:
+                        - "give <p> golden_sword 1"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals(1, outcome.items().size());
+        assertEquals("diamond", outcome.items().get(0).name());
+        assertEquals(3, outcome.items().get(0).quantity());
+        assertEquals(1, outcome.commands().size());
+        assertNull(outcome.structure());
+    }
+
+    @Test
+    void parsesComposableOutcomeWithStructureAndCommands() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  combo:
+                    structure:
+                      name: castle
+                    commands:
+                      commands:
+                        - "say A castle appeared!"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertNotNull(outcome.structure());
+        assertEquals("castle", outcome.structure().name());
+        assertEquals(1, outcome.commands().size());
+    }
+
+    @Test
+    void parsesComposableOutcomeWithItemsAndFeedback() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  combo:
+                    items:
+                      - diamond 1
+                    feedback:
+                      message: "<gold>Shiny!</gold>"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals(1, outcome.items().size());
+        assertNotNull(outcome.feedback());
+        assertEquals("<gold>Shiny!</gold>", outcome.feedback().message());
+    }
+
+    @Test
+    void parsesComposableOutcomeWithStructureOnly() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  castle:
+                    structure:
+                      name: castle
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertNotNull(outcome.structure());
+        assertTrue(outcome.items().isEmpty());
+        assertTrue(outcome.commands().isEmpty());
+        assertNull(outcome.feedback());
+    }
+
+    @Test
+    void parsesComposableOutcomeWithCommandsOnly() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  say-hi:
+                    commands:
+                      commands:
+                        - "say hello"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals(1, outcome.commands().size());
+        assertTrue(outcome.items().isEmpty());
+        assertNull(outcome.structure());
+    }
+
+    @Test
+    void parsesComposableOutcomeWithItemsOnly() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  loot:
+                    items:
+                      - diamond 5
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals(1, outcome.items().size());
+        assertEquals(5, outcome.items().get(0).quantity());
+        assertTrue(outcome.commands().isEmpty());
+        assertNull(outcome.structure());
+    }
+
+    @Test
     void clearResetsOutcomes() throws IOException {
         File file = writeYaml("""
                 outcomes:
-                  a:
-                    type: NONE
+                  a: {}
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));

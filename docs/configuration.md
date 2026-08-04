@@ -138,19 +138,55 @@ The lucky-blocks challenge uses `challenges.lucky-blocks.enabled`
 (default `false`) to toggle the challenge and
 `challenges.lucky-blocks.block-definition` (default `gold_block`) to select
 which block is intercepted. The outcome table is in
-`challenges/lucky-block/lucky-blocks.yml` and supports `ITEM`, `NONE`,
-`COMMAND`, and `STRUCTURE` outcome types with weighted random selection.
+`challenges/lucky-block/lucky-blocks.yml` and uses weighted random selection.
 
-### Outcome Types
+### Composable Outcomes
 
-| Type | Effect |
+Outcomes are composable: each outcome may contain any combination of the
+following optional action sections. Any combination is valid, and an outcome
+with none of these sections is a valid empty outcome that does nothing
+(unless feedback is configured).
+
+| Section | Effect |
 | --- | --- |
-| `ITEM` | Gives the player an item. |
-| `NONE` | Does nothing. |
-| `COMMAND` | Runs console commands. |
-| `STRUCTURE` | Places a structure from the structures directory. |
+| `items` | Drops the configured items at the broken block's location, replacing the Lucky Block's normal drops. |
+| `commands` | Runs console commands. |
+| `structure` | Places a structure from the structures directory. |
+| `feedback` | Plays a custom sound and/or sends messages. |
 
-### Structure Outcomes
+#### Items
+
+The `items` section is a list of strings in the format `<item> <quantity>`
+(quantity defaults to 1). Item names default to `minecraft:<name>` unless a
+namespace is specified.
+
+```yaml
+outcomes:
+  diamonds:
+    weight: 5.0
+    items:
+      - diamond 1
+```
+
+#### Commands
+
+The `commands` section is a map with an optional `relative-to` key and a
+`commands` list. `relative-to` controls how tildes (`~`) resolve: `BLOCK`
+(default) resolves to the broken block, `PLAYER` resolves to the triggering
+player.
+
+```yaml
+outcomes:
+  pigmen:
+    weight: 1.2
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon pig ~ ~ ~"
+        - "summon lightning_bolt ~ ~ ~"
+```
+
+#### Structure
 
 Structure outcomes load `.nbt` files from
 `plugins/JManhunt/challenges/lucky-block/structures/<name>.nbt`. The structure
@@ -161,36 +197,16 @@ behavior.
 outcomes:
   coin-well:
     weight: 1.0
-    type: STRUCTURE
-
-    structure-settings:
+    structure:
       name: coin-well
       random-rotation: false
-
-    feedback:
-      sound:
-        enabled: true
-        sound: block.bubble_column.whirlpool_inside
-        pitch: 1.2
-        volume: 1.0
-
-      message: "<gray>Well, well, well..</gray>"
 ```
 
-- `structure-settings.name` (required): the file name without the `.nbt`
-  extension.
-- `structure-settings.random-rotation` (optional, default `false`): when
-  `true`, the structure is placed with a random rotation.
+- `structure.name` (required): the file name without the `.nbt` extension.
+- `structure.random-rotation` (optional, default `false`): when `true`, the
+  structure is placed with a random rotation.
 
-### Reroll Behavior
-
-If a `STRUCTURE` outcome fails to load or place (e.g. the `.nbt` file is
-missing or corrupt), the Lucky Block engine automatically rerolls another
-outcome. Up to 20 rerolls are attempted. If all rerolls are exhausted, a
-warning is logged to the console and the Lucky Block roll is gracefully
-aborted — no items or effects are applied.
-
-### Feedback
+#### Feedback
 
 Each outcome can optionally define a `feedback` section with a custom sound,
 a personal message, and a broadcast:
@@ -199,10 +215,8 @@ a personal message, and a broadcast:
 outcomes:
   diamonds:
     weight: 5.0
-    type: ITEM
-    item-settings:
-      name: diamond
-      quantity: 1
+    items:
+      - diamond 1
     feedback:
       sound:
         enabled: true
@@ -227,16 +241,98 @@ The feedback message format is configured in `messages.yml` under
 `lucky-block-feedback-format` and supports both MiniMessage and Legacy
 formatting.
 
+### Reroll Behavior
+
+If a `structure` outcome fails to load or place (e.g. the `.nbt` file is
+missing or corrupt), the Lucky Block engine automatically rerolls another
+outcome. Up to 20 rerolls are attempted. If all rerolls are exhausted, a
+warning is logged to the console and the Lucky Block roll is gracefully
+aborted — no items or effects are applied.
+
+### Composable Examples
+
+All sections are optional and can be combined freely:
+
+```yaml
+# items only
+outcomes:
+  loot:
+    items:
+      - diamond 3
+
+# structure only
+outcomes:
+  castle:
+    structure:
+      name: castle
+
+# commands only
+outcomes:
+  say-hi:
+    commands:
+      commands:
+        - "say hello"
+
+# structure + commands
+outcomes:
+  combo:
+    structure:
+      name: castle
+    commands:
+      commands:
+        - "say A castle appeared!"
+
+# items + commands
+outcomes:
+  combo:
+    items:
+      - diamond 3
+    commands:
+      commands:
+        - "give <p> golden_sword 1"
+
+# items + structure + feedback
+outcomes:
+  combo:
+    items:
+      - diamond 1
+    structure:
+      name: castle
+    feedback:
+      message: "<gold>Shiny!</gold>"
+
+# all sections together
+outcomes:
+  pirate-ship:
+    weight: 2
+    structure:
+      name: pirate-ship
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon pillager ~ ~ ~"
+    items:
+      - spyglass 1
+      - cooked_cod 16
+    feedback:
+      message: "<gold>Land ho!</gold>"
+
+# no action sections (empty outcome)
+outcomes:
+  nothing: {}
+```
+
 ### Schematic Management
 
 Schematics (structure `.nbt` files) are stored in
 `plugins/JManhunt/challenges/lucky-block/structures/`. Use the
 `/jmanhunt schem` command to manage them:
 
+- `/jmanhunt schem wand` — gives you the schematic wand.
 - `/jmanhunt schem save <name>` — saves the selected region as a schematic.
-  Select two corners with a wooden axe (left-click for position 1, right-click
-  for position 2), then run the command. If the file already exists, run the
-  command again within 5 seconds to confirm overwrite.
+  Select two corners with the schematic wand (left-click for position 1,
+  right-click for position 2), then run the command. If the file already
+  exists, run the command again within 5 seconds to confirm overwrite.
 - `/jmanhunt schem list` — lists all available schematics.
 - `/jmanhunt schem delete <name>` — deletes a schematic. Run the command twice
   within 5 seconds to confirm deletion.

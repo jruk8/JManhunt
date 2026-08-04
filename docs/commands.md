@@ -13,6 +13,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt modifiers [setting] [true\|false]`      | Lists, views, or changes built-in actions and custom modifiers. | `jmanhunt.command.modifiers` |
 | `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` |
 | `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` |
+| `/manhunt schem wand`                             | Gives you the schematic wand. | `jmanhunt.command.schem` |
 | `/manhunt schem save <name>`                      | Saves the selected region as a schematic. | `jmanhunt.command.schem` |
 | `/manhunt schem list`                             | Lists all available schematics. | `jmanhunt.command.schem` |
 | `/manhunt schem delete <name>`                    | Deletes a schematic. | `jmanhunt.command.schem` |
@@ -53,10 +54,10 @@ The `/jmanhunt schem` command manages structure `.nbt` files stored in
 `plugins/JManhunt/challenges/lucky-block/structures/`. These are used by
 Lucky Block `STRUCTURE` outcomes and can be reused by future features.
 
-- **Save:** Select two corners with a wooden axe (left-click for position 1,
-  right-click for position 2), then run `/jmanhunt schem save <name>`. If the
-  file already exists, run the command again within 5 seconds to confirm
-  overwrite.
+- **Save:** Obtain the schematic wand with `/jmanhunt schem wand`, then select
+  two corners (left-click for position 1, right-click for position 2), and run
+  `/jmanhunt schem save <name>`. If the file already exists, run the command
+  again within 5 seconds to confirm overwrite.
 - **List:** `/jmanhunt schem list` displays all available schematics.
 - **Delete:** `/jmanhunt schem delete <name>` deletes a schematic. Run the
   command twice within 5 seconds to confirm deletion.
@@ -182,11 +183,12 @@ Built-in challenges can be toggled in-game with `/manhunt modifiers`:
 
 The lucky-blocks challenge uses `challenges.lucky-blocks.block-definition`
 (default `gold_block`) to select which block is intercepted. The outcome table
-in `challenges/lucky-block/lucky-blocks.yml` supports `ITEM`, `NONE`,
-`COMMAND`, and `STRUCTURE` outcome types with weighted random selection.
-Commands support the same placeholders (`<p>`, `<random-mob>`,
-`<random-item>`) and tilde resolution as custom modifiers, with `relative-to`
-choosing whether tildes resolve to the broken block or the player.
+in `challenges/lucky-block/lucky-blocks.yml` uses composable outcomes with
+weighted random selection. Each outcome may contain any combination of
+`items`, `commands`, `structure`, and `feedback` sections. Commands support
+the same placeholders (`<p>`, `<random-mob>`, `<random-item>`) and tilde
+resolution as custom modifiers, with `relative-to` choosing whether tildes
+resolve to the broken block or the player.
 
 See [configuration.md](configuration.md#lucky-blocks) for full details on
-outcome types, structure placement, reroll behavior, and feedback.
+composable outcomes, structure placement, reroll behavior, and feedback.

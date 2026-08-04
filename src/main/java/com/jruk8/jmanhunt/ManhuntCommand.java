@@ -69,7 +69,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt modifiers <setting> <true|false>", "view or change a setting"},
                 {"/manhunt worldengine", "set lobby or teleport players"},
-                {"/manhunt schem <save|list|delete>", "manage schematics"},
+                {"/manhunt schem <save|list|delete|wand>", "manage schematics"},
                 {"/manhunt reload", "reload files"}};
         for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
         neutralSound(sender);

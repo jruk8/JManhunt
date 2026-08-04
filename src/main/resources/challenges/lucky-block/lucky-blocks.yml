@@ -3,13 +3,28 @@
 # based on the weights below. Users can add their own outcomes by writing
 # new entries here.
 #
-# Outcome types:
-#   ITEM      - Gives the player an item.
-#   NONE      - Does nothing.
-#   COMMAND   - Runs console commands.
-#   STRUCTURE - Places a structure from challenges/lucky-block/structures/<name>.nbt.
-#               If loading or placing fails, the roll is rerolled (up to 20 times).
-#               Optional random-rotation: true rotates the structure randomly.
+# Outcomes are composable: each outcome may contain any combination of the
+# following optional action sections:
+#
+#   items       - A list of items to drop at the block location.
+#                 Format: "<item> <quantity>" (quantity defaults to 1).
+#                 Item names default to minecraft:<name> unless a namespace
+#                 is specified (e.g. minecraft:diamond).
+#
+#   commands    - A section with a list of console commands to run.
+#                 relative-to: BLOCK (default) or PLAYER determines how
+#                 tildes (~) resolve.
+#
+#   structure   - A section with a structure name and optional random-rotation.
+#                 Loads .nbt from challenges/lucky-block/structures/<name>.nbt.
+#                 If loading or placing fails, the roll is rerolled (up to 20
+#                 times).
+#
+#   feedback    - Optional custom sound, personal message, and broadcast.
+#
+# Any combination of sections is valid. An outcome with none of these
+# sections is a valid empty outcome — the Lucky Block simply does nothing
+# (unless feedback is configured).
 #
 # Reliable command generator: https://mcstacker.net/
 # Reliable sounds finder:
@@ -32,10 +47,8 @@
 outcomes:
   diamonds:
     weight: 5.0
-    type: ITEM
-    item-settings:
-      name: diamond # unless namespace specified, default to minecraft:<name>
-      quantity: 1
+    items:
+      - diamond 1
     feedback:
       sound:
         enabled: true
@@ -46,7 +59,6 @@ outcomes:
       broadcast: "<aqua><white>{player}</white> fancied themselves diamonds!</aqua>"
   nothing:
     weight: 1.0
-    type: NONE # does nothing
     feedback:
       sound:
         enabled: true
@@ -56,14 +68,13 @@ outcomes:
       message: "<gray>Nothing happened. How anticlimactic.</gray>"
   pigmen:
     weight: 1.2
-    type: COMMAND
-    command-settings:
+    commands:
       relative-to: BLOCK # how tildes ~ ~ ~ resolve. choices: BLOCK or PLAYER
       commands:
-      - "summon pig ~ ~ ~"
-      - "summon pig ~ ~ ~"
-      - "summon pig ~ ~ ~"
-      - "summon lightning_bolt ~ ~ ~"
+        - "summon pig ~ ~ ~"
+        - "summon pig ~ ~ ~"
+        - "summon pig ~ ~ ~"
+        - "summon lightning_bolt ~ ~ ~"
     feedback:
       sound:
         enabled: true
@@ -73,11 +84,10 @@ outcomes:
       message: "<red>You angered the pigmen!</red>"
       broadcast: "<red><white>{player}</white> angered the pigmen!</red>"
   tnt: # weight omitted, default to 1.0
-    type: COMMAND
-    command-settings:
+    commands:
       relative-to: PLAYER
       commands:
-      - "summon tnt ~ ~1.5 ~ {fuse:40}"
+        - "summon tnt ~ ~1.5 ~ {fuse:40}"
     feedback:
       sound:
         enabled: true
@@ -86,10 +96,9 @@ outcomes:
         volume: 1.0
       message: "<yellow>You hear a hiss...</yellow>"
   sharp-sword:
-    type: COMMAND
-    command-settings: # relative-to omitted, use BLOCK by default
-      commands:
-      - "give <p> golden_sword[enchantments={sharpness:10},damage=29] 1"
+    commands:
+      commands: # relative-to omitted, use BLOCK by default
+        - "give <p> golden_sword[enchantments={sharpness:10},damage=29] 1"
     feedback:
       sound:
         enabled: true
@@ -99,16 +108,12 @@ outcomes:
       message: "<gold>A sharp sword materializes in your hand!</gold>"
   coin-well:
     weight: 1.0
-    type: STRUCTURE
-
-    structure-settings:
+    structure:
       name: coin-well
-
     feedback:
       sound:
         enabled: true
         sound: block.bubble_column.whirlpool_inside
         pitch: 1.2
         volume: 1.0
-
       message: "<gray>Well, well, well..</gray>"

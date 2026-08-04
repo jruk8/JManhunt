@@ -49,7 +49,7 @@ public final class ChallengesListener implements Listener, SettingsListener {
     private final File structuresDir;
 
     public ChallengesListener(JavaPlugin plugin, GameManager game, PlayerStateStore playerStates,
-                              MessageService messages, SoundService sounds, ConfigService configService) {
+                               MessageService messages, SoundService sounds, ConfigService configService) {
         this.plugin = plugin;
         this.game = game;
         this.playerStates = playerStates;
@@ -102,21 +102,21 @@ public final class ChallengesListener implements Listener, SettingsListener {
     }
 
     /**
-     * Rolls a lucky block outcome, rerolling if a STRUCTURE outcome fails to
+     * Rolls a lucky block outcome, rerolling if a structure outcome fails to
      * load or place. Returns null if all rerolls are exhausted.
      */
     private LuckyBlockEngine.Outcome rollWithRerolls(Block block, Player player) {
         for (int i = 0; i <= MAX_REROLLS; i++) {
             LuckyBlockEngine.Outcome outcome = luckyEngine.roll();
             if (outcome == null) return null;
-            if (outcome.type() != LuckyBlockEngine.OutcomeType.STRUCTURE) {
+            if (outcome.structure() == null) {
                 return outcome;
             }
             try {
                 placeStructure(outcome, block);
                 return outcome;
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to place structure '" + outcome.structureSettings().name()
+                plugin.getLogger().warning("Failed to place structure '" + outcome.structure().name()
                         + "' for lucky block outcome '" + outcome.name() + "': " + e.getMessage());
                 if (i == MAX_REROLLS) {
                     plugin.getLogger().warning("Lucky block roll aborted after exhausting all "
@@ -129,29 +129,30 @@ public final class ChallengesListener implements Listener, SettingsListener {
     }
 
     private void executeOutcome(LuckyBlockEngine.Outcome outcome, Block block, Player player) {
-        switch (outcome.type()) {
-            case ITEM -> {
-                String name = outcome.itemName();
-                if (!name.contains(":")) name = "minecraft:" + name;
-                Material material = Registry.MATERIAL.get(NamespacedKey.fromString(name));
-                if (material != null) {
-                    player.getInventory().addItem(new ItemStack(material, outcome.quantity()));
-                }
+        // Items: drop at the block location, replacing the Lucky Block's normal drops.
+        for (LuckyBlockEngine.ItemEntry item : outcome.items()) {
+            String name = item.name();
+            if (!name.contains(":")) name = "minecraft:" + name;
+            Material material = Registry.MATERIAL.get(NamespacedKey.fromString(name));
+            if (material != null && material.isItem()) {
+                block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(material, item.quantity()));
             }
-            case COMMAND -> {
-                Location origin = outcome.relativeTo().equals("PLAYER")
-                        ? player.getLocation()
-                        : block.getLocation();
-                for (String command : outcome.commands()) {
-                    String parsed = CommandPlaceholders.replace(command, player.getName(),
-                            origin.getX(), origin.getY(), origin.getZ());
-                    if (parsed.startsWith("/")) parsed = parsed.substring(1);
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
-                }
-            }
-            case STRUCTURE -> { /* already placed in rollWithRerolls */ }
-            case NONE -> { /* does nothing */ }
         }
+
+        // Commands: dispatch as console, resolving tildes relative to block or player.
+        if (!outcome.commands().isEmpty()) {
+            Location origin = outcome.relativeTo().equals("PLAYER")
+                    ? player.getLocation()
+                    : block.getLocation();
+            for (String command : outcome.commands()) {
+                String parsed = CommandPlaceholders.replace(command, player.getName(),
+                        origin.getX(), origin.getY(), origin.getZ());
+                if (parsed.startsWith("/")) parsed = parsed.substring(1);
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+            }
+        }
+
+        // Structure: already placed in rollWithRerolls.
     }
 
     /**
@@ -159,9 +160,9 @@ public final class ChallengesListener implements Listener, SettingsListener {
      * Throws if loading or placement fails.
      */
     private void placeStructure(LuckyBlockEngine.Outcome outcome, Block block) throws Exception {
-        LuckyBlockEngine.StructureSettings settings = outcome.structureSettings();
+        LuckyBlockEngine.StructureSettings settings = outcome.structure();
         if (settings == null) {
-            throw new IllegalStateException("STRUCTURE outcome '" + outcome.name() + "' has no structure settings");
+            throw new IllegalStateException("Outcome '" + outcome.name() + "' has no structure settings");
         }
         File structureFile = new File(structuresDir, settings.name() + ".nbt");
         if (!structureFile.exists()) {

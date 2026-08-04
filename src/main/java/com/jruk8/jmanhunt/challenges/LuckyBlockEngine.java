@@ -11,18 +11,31 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * Pure-logic engine for parsing the lucky-blocks.yml outcome table and
  * rolling a random outcome. Does not depend on a running server.
+ *
+ * <p>Outcomes are composable: each outcome may contain any combination of
+ * {@code items}, {@code commands}, {@code structure}, and {@code feedback}
+ * sections. An outcome with none of these sections is a valid empty outcome
+ * that does nothing (unless feedback is configured).</p>
  */
 public final class LuckyBlockEngine {
-    public enum OutcomeType { ITEM, NONE, COMMAND, STRUCTURE }
-
     public record Sound(boolean enabled, String sound, float pitch, float volume) {}
 
     public record Feedback(Sound sound, String message, String broadcast) {}
 
     public record StructureSettings(String name, boolean randomRotation) {}
 
-    public record Outcome(String name, double weight, OutcomeType type, String itemName, int quantity,
-                          String relativeTo, List<String> commands, StructureSettings structureSettings,
+    /** A single item entry parsed from the {@code items} section. */
+    public record ItemEntry(String name, int quantity) {}
+
+    /**
+     * A composable lucky block outcome. Any of the action fields may be null
+     * or empty; an outcome with no actions is a valid empty outcome.
+     */
+    public record Outcome(String name, double weight,
+                          List<ItemEntry> items,
+                          List<String> commands,
+                          String relativeTo,
+                          StructureSettings structure,
                           Feedback feedback) {}
 
     private final List<Outcome> outcomes = new ArrayList<>();
@@ -47,61 +60,30 @@ public final class LuckyBlockEngine {
             if (entry == null) {
                 throw new IllegalArgumentException("Entry '" + name + "' is not a section");
             }
-            String typeStr = entry.getString("type", "NONE").toUpperCase();
-            OutcomeType type;
-            try {
-                type = OutcomeType.valueOf(typeStr);
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException("Entry '" + name + "' has invalid type '" + typeStr + "'");
-            }
             double weight = entry.getDouble("weight", 1.0);
             if (weight <= 0) {
                 throw new IllegalArgumentException("Entry '" + name + "' has non-positive weight " + weight);
             }
-            String itemName = null;
-            int quantity = 1;
-            String relativeTo = "BLOCK";
+
+            List<ItemEntry> items = parseItems(entry, name);
             List<String> commands = List.of();
-            StructureSettings structureSettings = null;
-            if (type == OutcomeType.ITEM) {
-                ConfigurationSection item = entry.getConfigurationSection("item-settings");
-                if (item == null) {
-                    throw new IllegalArgumentException("Entry '" + name + "' is ITEM but missing item-settings");
-                }
-                itemName = item.getString("name");
-                if (itemName == null || itemName.isBlank()) {
-                    throw new IllegalArgumentException("Entry '" + name + "' is ITEM but missing item-settings.name");
-                }
-                quantity = Math.max(1, item.getInt("quantity", 1));
-            } else if (type == OutcomeType.COMMAND) {
-                ConfigurationSection cmd = entry.getConfigurationSection("command-settings");
-                if (cmd == null) {
-                    throw new IllegalArgumentException("Entry '" + name + "' is COMMAND but missing command-settings");
-                }
-                relativeTo = cmd.getString("relative-to", "BLOCK").toUpperCase();
+            String relativeTo = "BLOCK";
+            ConfigurationSection cmdSection = entry.getConfigurationSection("commands");
+            if (cmdSection != null) {
+                relativeTo = cmdSection.getString("relative-to", "BLOCK").toUpperCase();
                 if (!relativeTo.equals("BLOCK") && !relativeTo.equals("PLAYER")) {
                     throw new IllegalArgumentException("Entry '" + name + "' has invalid relative-to '" + relativeTo + "'");
                 }
-                commands = cmd.getStringList("commands");
+                commands = cmdSection.getStringList("commands");
                 if (commands.isEmpty()) {
-                    throw new IllegalArgumentException("Entry '" + name + "' is COMMAND but has no commands");
+                    throw new IllegalArgumentException("Entry '" + name + "' has a commands section but no commands");
                 }
-            } else if (type == OutcomeType.STRUCTURE) {
-                ConfigurationSection struct = entry.getConfigurationSection("structure-settings");
-                if (struct == null) {
-                    throw new IllegalArgumentException("Entry '" + name + "' is STRUCTURE but missing structure-settings");
-                }
-                String structName = struct.getString("name");
-                if (structName == null || structName.isBlank()) {
-                    throw new IllegalArgumentException(
-                            "Entry '" + name + "' is STRUCTURE but missing structure-settings.name");
-                }
-                boolean randomRotation = struct.getBoolean("random-rotation", false);
-                structureSettings = new StructureSettings(structName, randomRotation);
             }
+
+            StructureSettings structure = parseStructure(entry, name);
             Feedback feedback = parseFeedback(entry);
-            outcomes.add(new Outcome(name, weight, type, itemName, quantity, relativeTo, commands,
-                    structureSettings, feedback));
+
+            outcomes.add(new Outcome(name, weight, items, commands, relativeTo, structure, feedback));
             totalWeight += weight;
         }
         return !outcomes.isEmpty();
@@ -121,6 +103,39 @@ public final class LuckyBlockEngine {
 
     public List<Outcome> outcomes() {
         return List.copyOf(outcomes);
+    }
+
+    private List<ItemEntry> parseItems(ConfigurationSection entry, String name) {
+        List<String> raw = entry.getStringList("items");
+        if (raw.isEmpty()) return List.of();
+        List<ItemEntry> parsed = new ArrayList<>();
+        for (String line : raw) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) continue;
+            String[] parts = trimmed.split("\\s+");
+            String itemName = parts[0];
+            int quantity = 1;
+            if (parts.length > 1) {
+                try {
+                    quantity = Math.max(1, Integer.parseInt(parts[1]));
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Entry '" + name + "' has invalid item quantity in '" + line + "'");
+                }
+            }
+            parsed.add(new ItemEntry(itemName, quantity));
+        }
+        return parsed;
+    }
+
+    private StructureSettings parseStructure(ConfigurationSection entry, String name) {
+        ConfigurationSection struct = entry.getConfigurationSection("structure");
+        if (struct == null) return null;
+        String structName = struct.getString("name");
+        if (structName == null || structName.isBlank()) {
+            throw new IllegalArgumentException("Entry '" + name + "' has a structure section but is missing structure.name");
+        }
+        boolean randomRotation = struct.getBoolean("random-rotation", false);
+        return new StructureSettings(structName, randomRotation);
     }
 
     private Feedback parseFeedback(ConfigurationSection entry) {
