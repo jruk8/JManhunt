@@ -4,7 +4,9 @@ main: ${main}
 api-version: "${apiVersion}"
 author: ${author}
 description: ${description}
-softdepend: [PlaceholderAPI]
+website: ${website}
+softdepend:
+  - PlaceholderAPI
 libraries:
   - org.postgresql:postgresql:42.7.7
   - org.xerial:sqlite-jdbc:3.50.3.0

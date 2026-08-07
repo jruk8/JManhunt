@@ -1,39 +1,7 @@
 name: Build
 
-on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
-      - 'src/main/resources/**'
-      - 'docs/**'
-      - '.gitignore'
-      - 'LICENSE'
-  pull_request:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up JDK 25
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '25'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-
-      - name: Build
-        run: |
-          chmod +x gradlew
-          ./gradlew build
+    uses: jruk8/plugin-conventions/.github/workflows/build.yml@v1.1.8

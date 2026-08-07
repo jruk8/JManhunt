@@ -1,74 +1,19 @@
 plugins {
-    id 'java'
-    id 'checkstyle'
-}
-
-group = project.property('pluginGroup')
-version = project.property('pluginVersion')
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
+    id 'com.github.jruk8.plugin-conventions' version 'v1.1.8'
 }
 
 repositories {
-    mavenCentral()
-    maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
     maven {
-        url = 'https://repo.papermc.io/repository/maven-public/'
+        name = 'placeholderapi'
+        url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
     }
 }
 
 dependencies {
-    compileOnly "io.papermc.paper:paper-api:${paperApiVersion}"
+    // PlaceholderAPI
     compileOnly 'me.clip:placeholderapi:2.12.3'
 
     compileOnly 'com.zaxxer:HikariCP:7.1.0'
     compileOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
     compileOnly 'org.postgresql:postgresql:42.7.13'
-
-    testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
-    testImplementation "io.papermc.paper:paper-api:${paperApiVersion}"
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:6.1.2'
-}
-
-sourceSets {
-    test {
-        java.srcDirs += 'src/tests/java'
-    }
-}
-
-checkstyle {
-    toolVersion = '10.17.0'
-    configFile = file('config/checkstyle/checkstyle.xml')
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-    options.release = 25
-    options.compilerArgs += '-Xlint:deprecation'
-}
-
-test {
-    useJUnitPlatform()
-}
-
-check {
-    dependsOn 'checkstyleMain', 'checkstyleTest'
-}
-
-processResources {
-    def pluginProperties = [
-        version: project.version,
-        name: pluginName,
-        main: pluginMain,
-        apiVersion: paperApiVersion.split('\\.build\\.')[0],
-        author: pluginAuthor,
-        description: pluginDescription
-    ]
-    inputs.properties(pluginProperties)
-    filesMatching('plugin.yml') {
-        expand(pluginProperties)
-    }
 }
