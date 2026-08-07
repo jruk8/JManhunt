@@ -137,7 +137,12 @@ Each sound entry supports `enabled`, `sound`, `pitch`, and `volume`.
 The lucky-blocks challenge uses `challenges.lucky-blocks.enabled`
 (default `false`) to toggle the challenge and
 `challenges.lucky-blocks.block-definition` (default `gold_block`) to select
-which block is intercepted. The outcome table is in
+which block is intercepted. The definition accepts `minecraft:<name>` (or a
+bare `<name>`) and the special value `random`. When set to `random`, a random
+registered block is chosen each time a match starts, excluding unobtainable
+blocks (air, barriers, command blocks, structure voids, etc.). The chosen
+block is announced to all players when the match starts using its display
+name (e.g. "Gold Block"). The outcome table is in
 `challenges/lucky-block/lucky-blocks.yml` and uses weighted random selection.
 
 ### Composable Outcomes
@@ -334,6 +339,9 @@ Schematics (structure `.nbt` files) are stored in
   right-click for position 2), then run the command. If the file already
   exists, run the command again within 5 seconds to confirm overwrite.
 - `/jmanhunt schem list` — lists all available schematics.
+- `/jmanhunt schem load <name> [player]` — loads a schematic centered on the
+  sender's location (or the selected player's location when a selector is
+  provided, so console execution is supported).
 - `/jmanhunt schem delete <name>` — deletes a schematic. Run the command twice
   within 5 seconds to confirm deletion.
 

@@ -182,15 +182,23 @@ public final class GameplayListener implements Listener {
         }
 
         if (event.getFinalDamage() <= 0) return;
-        if (game.isActive() && !game.isGameBegun()
-                && playerStates.role(victim) == Role.SPEEDRUNNER) {
-            event.setCancelled(true);
+        if (game.isActive() && !game.isGameBegun()) {
+            // During the pre-start window, all participants are protected from
+            // damage (including fall damage from wacky world-engine spawns).
+            // A speedrunner hitting a hunter still starts the game.
+            if (playerStates.role(victim).isParticipant()) {
+                event.setCancelled(true);
+            }
+            if (event instanceof EntityDamageByEntityEvent byEntity
+                    && byEntity.getDamager() instanceof Player attacker
+                    && playerStates.role(attacker) == Role.SPEEDRUNNER
+                    && playerStates.role(victim) == Role.HUNTER) {
+                game.beginGame();
+            }
             return;
         }
         if (!(event instanceof EntityDamageByEntityEvent byEntity)
                 || !(byEntity.getDamager() instanceof Player attacker)) return;
-        if (game.isActive() && !game.isGameBegun() && playerStates.role(attacker) == Role.SPEEDRUNNER
-                && playerStates.role(victim) == Role.HUNTER) game.beginGame();
         if (!game.isActive() || !game.isGameBegun() || !playerStates.role(attacker).isParticipant()
                 || !playerStates.role(victim).isParticipant()) return;
         stats.getOrCreate(attacker.getUniqueId()).damage += event.getFinalDamage();

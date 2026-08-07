@@ -47,6 +47,7 @@ public final class ChallengesListener implements Listener, SettingsListener {
     private final LuckyBlockEngine luckyEngine = new LuckyBlockEngine();
     private final File luckyFile;
     private final File structuresDir;
+    private Material currentLuckyBlock;
 
     public ChallengesListener(JavaPlugin plugin, GameManager game, PlayerStateStore playerStates,
                                MessageService messages, SoundService sounds, ConfigService configService) {
@@ -59,6 +60,24 @@ public final class ChallengesListener implements Listener, SettingsListener {
         this.luckyFile = new File(plugin.getDataFolder(), "challenges/lucky-block/lucky-blocks.yml");
         this.structuresDir = new File(plugin.getDataFolder(), "challenges/structures");
         configService.onChange("challenges.lucky-blocks.enabled", (oldValue, newValue) -> onReload());
+    }
+
+    /**
+     * Called when a match starts. Resolves the lucky block definition (a
+     * random block if configured) and announces the chosen block.
+     */
+    public void onGameStart() {
+        if (!plugin.getConfig().getBoolean("challenges.lucky-blocks.enabled", false)) return;
+        String definition = plugin.getConfig().getString("challenges.lucky-blocks.block-definition", "gold_block");
+        Material block = LuckyBlockResolver.resolve(definition);
+        if (block == null) {
+            plugin.getLogger().severe("Lucky blocks challenge is enabled but the block definition '"
+                    + definition + "' is not a valid block.");
+            return;
+        }
+        currentLuckyBlock = block;
+        messages.broadcast("manhunt.lucky-block-announce",
+                Map.of("block", LuckyBlockResolver.displayName(block)));
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
@@ -90,13 +109,20 @@ public final class ChallengesListener implements Listener, SettingsListener {
     @EventHandler public void onBlockBreak(BlockBreakEvent event) {
         if (!plugin.getConfig().getBoolean("challenges.lucky-blocks.enabled", false)) return;
         if (!game.isActive() || !game.isGameBegun()) return;
-        Player player = event.getPlayer();
-        if (!playerStates.role(player).isParticipant()) return;
+        if (!event.isDropItems()) {
+            // Block break did not yield drops
+            return;
+        }
         Block block = event.getBlock();
         if (!isLuckyBlock(block.getType())) return;
+
+        Player player = event.getPlayer();
+        if (!playerStates.role(player).isParticipant()) return;
+
         event.setDropItems(false);
         LuckyBlockEngine.Outcome outcome = rollWithRerolls(block, player);
         if (outcome == null) return;
+
         executeOutcome(outcome, block, player);
         playFeedback(outcome, player);
     }
@@ -216,12 +242,12 @@ public final class ChallengesListener implements Listener, SettingsListener {
     }
 
     private boolean isLuckyBlock(Material type) {
-        String definition = plugin.getConfig().getString("challenges.lucky-blocks.block-definition", "gold_block");
-        if (!definition.contains(":")) definition = "minecraft:" + definition;
-        NamespacedKey key = NamespacedKey.fromString(definition);
-        if (key == null) return false;
-        Material material = Registry.MATERIAL.get(key);
-        return material != null && material == type;
+        if (currentLuckyBlock == null) {
+            // Fall back to the resolved definition when no match has started yet.
+            currentLuckyBlock = LuckyBlockResolver.resolve(
+                    plugin.getConfig().getString("challenges.lucky-blocks.block-definition", "gold_block"));
+        }
+        return currentLuckyBlock != null && currentLuckyBlock == type;
     }
 
     @Override

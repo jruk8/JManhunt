@@ -4,7 +4,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.structure.Mirror;
+import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -23,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 
 /**
@@ -62,6 +66,7 @@ public final class SchemCommand implements Listener {
             case "save" -> save(sender, args);
             case "list" -> list(sender);
             case "delete" -> delete(sender, args);
+            case "load" -> load(sender, args);
             case "wand" -> wand(sender);
             default -> message(sender, "command.invalid");
         };
@@ -69,9 +74,10 @@ public final class SchemCommand implements Listener {
 
     public List<String> onTabComplete(CommandSender sender, String[] args) {
         if (args.length == 2) {
-            return partial(args[1], List.of("save", "list", "delete", "wand"));
+            return partial(args[1], List.of("save", "list", "delete", "load", "wand"));
         }
-        if (args.length == 3 && (args[1].equalsIgnoreCase("save") || args[1].equalsIgnoreCase("delete"))) {
+        if (args.length == 3 && (args[1].equalsIgnoreCase("save")
+                || args[1].equalsIgnoreCase("delete") || args[1].equalsIgnoreCase("load"))) {
             return partial(args[2], listSchematicNames());
         }
         return List.of();
@@ -203,6 +209,56 @@ public final class SchemCommand implements Listener {
         } catch (IOException e) {
             message(sender, "manhunt.schem-save-failed", Map.of("error", e.getMessage() != null ? e.getMessage() : "unknown"));
             plugin.getLogger().severe("Failed to save schematic '" + name + "': " + e.getMessage());
+        }
+        return true;
+    }
+
+    private boolean load(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            message(sender, "manhunt.schem-load-usage");
+            return true;
+        }
+        String name = args[2];
+        if (!name.matches("[a-zA-Z0-9_\\-]+")) {
+            message(sender, "manhunt.schem-invalid-name");
+            return true;
+        }
+        File structureFile = new File(structuresDir, name + ".nbt");
+        if (!structureFile.exists()) {
+            message(sender, "manhunt.schem-not-found", Map.of("name", name));
+            return true;
+        }
+        Player target;
+        if (args.length >= 4) {
+            // Optional player selector so console execution is supported.
+            List<Entity> selected;
+            try { selected = Bukkit.selectEntities(sender, args[3]); }
+            catch (IllegalArgumentException exception) { return message(sender, "command.invalid"); }
+            if (selected.isEmpty() || !(selected.get(0) instanceof Player player)) {
+                return message(sender, "command.invalid");
+            }
+            target = player;
+        } else {
+            if (!(sender instanceof Player player)) {
+                message(sender, "command.player-only");
+                return true;
+            }
+            target = player;
+        }
+        try {
+            StructureManager structureManager = Bukkit.getStructureManager();
+            Structure structure = structureManager.loadStructure(structureFile);
+            if (structure == null) {
+                message(sender, "manhunt.schem-load-failed", Map.of("name", name));
+                return true;
+            }
+            structure.place(target.getLocation(), true, StructureRotation.NONE, Mirror.NONE, 0, 1.0f, new Random());
+            message(sender, "manhunt.schem-load-success", Map.of("name", name, "player", target.getName()));
+            if (sender instanceof Player p) sounds.playNeutralSound(p);
+        } catch (Exception e) {
+            message(sender, "manhunt.schem-load-failed", Map.of("name", name));
+            plugin.getLogger().severe("Failed to load schematic '" + name + "': "
+                    + (e.getMessage() != null ? e.getMessage() : "unknown"));
         }
         return true;
     }

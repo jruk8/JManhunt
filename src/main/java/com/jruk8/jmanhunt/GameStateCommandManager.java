@@ -10,7 +10,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /** Executes built-in and configured actions at match state transitions. */
 public final class GameStateCommandManager {
@@ -127,15 +126,7 @@ public final class GameStateCommandManager {
         if (!plugin.getConfig().getBoolean("gamestate-commands.default-commands.enabled", true)) return;
         String path = "gamestate-commands.default-commands.";
         if (plugin.getConfig().getBoolean(path + "reset-players-stats", false)) {
-            participatingPlayers().forEach(player -> {
-                player.getInventory().clear();
-                player.setLevel(0);
-                player.setExp(0.0f);
-                player.clearActivePotionEffects();
-                player.setHealth(Objects.requireNonNull(player.getAttribute(Attribute.MAX_HEALTH)).getValue());
-                player.setFoodLevel(20);
-                clearAdvancements();
-            });
+            participatingPlayers().forEach(this::resetPlayerStats);
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
             boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.set-none-gamemode-spectator.enabled", true);
@@ -207,9 +198,20 @@ public final class GameStateCommandManager {
                 .map(player -> (Player) player).toList();
     }
 
-    private void clearAdvancements() {
-        Bukkit.getOnlinePlayers().forEach(player -> Bukkit.advancementIterator().forEachRemaining(advancement ->
+    private void resetPlayerStats(Player player) {
+        player.getInventory().clear();
+        player.setLevel(0);
+        player.setExp(0.0f);
+        player.clearActivePotionEffects();
+        player.getAttribute(Attribute.MAX_HEALTH).setBaseValue(20.0);
+        player.setHealth(20.0);
+        player.setFoodLevel(20);
+        clearAdvancements(player);
+    }
+
+    private void clearAdvancements(Player player) {
+        Bukkit.advancementIterator().forEachRemaining(advancement ->
                 player.getAdvancementProgress(advancement).getAwardedCriteria().forEach(criteria ->
-                        player.getAdvancementProgress(advancement).revokeCriteria(criteria))));
+                        player.getAdvancementProgress(advancement).revokeCriteria(criteria)));
     }
 }

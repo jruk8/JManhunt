@@ -98,6 +98,9 @@ gamestate-commands:
 game-end-delay: 10.0
 
 # Seconds between reminders while waiting for the first speedrunner hit.
+# For finite delays, exactly three reminders are shown at the delay and two
+# equally-sized slices (e.g. 30s -> 30, 20, 10). This value is only used as
+# the repeat interval when delay-seconds is -1 (wait indefinitely).
 # Set to -1 to disable the reminders entirely while still waiting for damage.
 start-reminder-interval: 10.0
 
@@ -217,6 +220,11 @@ challenges:
     enabled: false
     # The block whose breaks are intercepted. Resolves to minecraft:<name>
     # unless a namespace is specified.
+    # If set to random, a random block is chosen from the list of all
+    # registered blocks each time the game starts (except unobtainable
+    # blocks).
+    #
+    # Supported values: minecraft:<name>, random
     block-definition: gold_block
 
 # Settings that modify the game.
@@ -331,7 +339,7 @@ settings:
   start-on-speedrunner-damage:
     enabled: true
     # Seconds to wait for a speedrunner to hit a hunter before timing out.
-    # Set to 0 to begin immediately on the first hit; set to -1 to wait indefinitely.
+    # Values below 5 are clamped to 5 seconds. Set to -1 to wait indefinitely.
     # Default: 30 seconds
     delay-seconds: 30
     # What happens if delay-seconds expires before a hit occurs:

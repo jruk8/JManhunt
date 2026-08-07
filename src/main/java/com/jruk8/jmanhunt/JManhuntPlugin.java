@@ -61,6 +61,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService, worldEngine);
         var piglinBarter = new PiglinBarterListener(this, game);
         var challenges = new ChallengesListener(this, game, playerStates, messages, sounds, configService);
+        game.addGameStartListener(challenges::onGameStart);
         settings.add(worldEngine);
         settings.add(piglinBarter);
         settings.add(challenges);

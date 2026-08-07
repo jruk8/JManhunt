@@ -16,6 +16,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt schem wand`                             | Gives you the schematic wand. | `jmanhunt.command.schem` |
 | `/manhunt schem save <name>`                      | Saves the selected region as a schematic. | `jmanhunt.command.schem` |
 | `/manhunt schem list`                             | Lists all available schematics. | `jmanhunt.command.schem` |
+| `/manhunt schem load <name> [player]`             | Loads a schematic centered on the sender or a selected player. | `jmanhunt.command.schem` |
 | `/manhunt schem delete <name>`                    | Deletes a schematic. | `jmanhunt.command.schem` |
 | `/manhunt reload`                                 | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
 
@@ -36,14 +37,19 @@ The `setplayer` command accepts the following roles:
 that want to start a match without manually assigning roles. It can only be
 used when no match is active.
 
-- **Without arguments:** assigns every eligible online player (excluding AFK,
-  including NONE) as a Hunter, randomly chooses one Speedrunner, and
-  immediately starts the game.
+- **Without arguments:** assigns every online player with role `none` as a
+  Hunter, randomly chooses one Speedrunner (unless a Speedrunner is already
+  queued), and immediately starts the game.
 - **With a percentage:** interprets the value as the percentage of eligible
-  players that should become Speedrunners. For example, `50` with 16 eligible
-  players results in 8 Speedrunners and 8 Hunters. Fractional results are
-  rounded to the nearest whole player, and there is always at least one
+  `none` players that should become Speedrunners. For example, `50` with 16
+  eligible players results in 8 Speedrunners and 8 Hunters. Fractional results
+  are rounded to the nearest whole player, and there is always at least one
   Speedrunner.
+
+Only players with role `none` are assigned. Existing Hunters and Speedrunners
+keep their roles, and AFK players are never touched. The match is validated
+after assignment: it requires at least one Hunter and one Speedrunner, so a
+server with two online players where one is AFK will fail to start.
 
 Quick Start bypasses the autostart system entirely — no countdowns or
 autostart messages are displayed.
@@ -59,6 +65,10 @@ Lucky Block `STRUCTURE` outcomes and can be reused by future features.
   `/jmanhunt schem save <name>`. If the file already exists, run the command
   again within 5 seconds to confirm overwrite.
 - **List:** `/jmanhunt schem list` displays all available schematics.
+- **Load:** `/jmanhunt schem load <name> [player]` loads a schematic centered
+  on the sender's location (or the selected player's location when a selector
+  is provided, so console execution is supported). The structure is placed
+  with the same anchor behavior used by Lucky Block structure outcomes.
 - **Delete:** `/jmanhunt schem delete <name>` deletes a schematic. Run the
   command twice within 5 seconds to confirm deletion.
 
