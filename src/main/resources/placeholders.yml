@@ -31,6 +31,9 @@ placeholders:
   total_damage_dealt:
     type: DECIMAL
     description: Career damage dealt in hearts.
+  total_wins:
+    type: INTEGER
+    description: Career total wins.
   total_wins_as_hunter:
     type: INTEGER
     description: Career wins as a hunter.

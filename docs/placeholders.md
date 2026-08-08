@@ -21,6 +21,7 @@ PlaceholderAPI.
 | `%jmanhunt_total_kills_as_speedrunner%` | INTEGER | Career kills while playing as a speedrunner. |
 | `%jmanhunt_total_final_kills%` | INTEGER | Career final kills. |
 | `%jmanhunt_total_damage_dealt%` | DECIMAL | Career damage dealt in hearts. |
+| `%jmanhunt_total_wins%` | INTEGER | Career total wins. |
 | `%jmanhunt_total_wins_as_hunter%` | INTEGER | Career wins as a hunter. |
 | `%jmanhunt_total_wins_as_speedrunner%` | INTEGER | Career wins as a speedrunner. |
 | `%jmanhunt_total_game_sessions%` | INTEGER | Career total matches played as a participant. |

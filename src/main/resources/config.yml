@@ -54,6 +54,9 @@ placeholders:
   total_damage_dealt:
     enabled: true
     format: "{value}"
+  total_wins:
+    enabled: true
+    format: "{value}"
   total_wins_as_hunter:
     enabled: true
     format: "{value}"

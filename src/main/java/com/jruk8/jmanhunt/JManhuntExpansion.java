@@ -37,6 +37,7 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
             case "total_kills_as_speedrunner" -> String.valueOf(value.speedrunnerKills);
             case "total_final_kills" -> String.valueOf(value.finalKills);
             case "total_damage_dealt" -> String.format(Locale.ROOT, "%.1f", value.damage);
+            case "total_wins" -> String.valueOf(value.wins);
             case "total_wins_as_hunter" -> String.valueOf(value.hunterWins);
             case "total_wins_as_speedrunner" -> String.valueOf(value.speedrunnerWins);
             case "total_game_sessions" -> String.valueOf(value.sessions);
