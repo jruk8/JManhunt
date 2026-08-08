@@ -169,7 +169,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         boolean value = Boolean.parseBoolean(args[2]);
         game.setSetting(setting, value);
         message(sender, "manhunt.setting-updated", Map.of("setting", setting, "value", String.valueOf(value), "old-value", String.valueOf(oldValue)));
-        if (!oldValue && RESTART_REQUIRED_SETTINGS.contains(setting)) {
+        if (RESTART_REQUIRED_SETTINGS.contains(setting)) {
             message(sender, "manhunt.setting-restart-required");
         }
         neutralSound(sender);

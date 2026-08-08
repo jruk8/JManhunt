@@ -40,8 +40,9 @@ class LuckyBlockEngineTest {
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
         assertEquals("diamonds", outcome.name());
         assertEquals(5.0, outcome.weight());
+        assertEquals("common", outcome.rarity());
         assertEquals(1, outcome.items().size());
-        assertEquals("diamond", outcome.items().get(0).name());
+        assertEquals("diamond", outcome.items().get(0).item());
         assertEquals(2, outcome.items().get(0).quantity());
         assertTrue(outcome.commands().isEmpty());
         assertNull(outcome.structure());
@@ -60,12 +61,12 @@ class LuckyBlockEngineTest {
         assertTrue(engine.load(file));
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
         assertEquals(1, outcome.items().size());
-        assertEquals("gold_ingot", outcome.items().get(0).name());
+        assertEquals("gold_ingot", outcome.items().get(0).item());
         assertEquals(1, outcome.items().get(0).quantity());
     }
 
     @Test
-    void parsesEmptyOutcomeWithDefaultWeight() throws IOException {
+    void parsesEmptyOutcomeWithDefaultWeightAndRarity() throws IOException {
         File file = writeYaml("""
                 outcomes:
                   nothing: {}
@@ -74,6 +75,7 @@ class LuckyBlockEngineTest {
         assertTrue(engine.load(file));
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
         assertEquals(1.0, outcome.weight());
+        assertEquals("common", outcome.rarity());
         assertTrue(outcome.items().isEmpty());
         assertTrue(outcome.commands().isEmpty());
         assertNull(outcome.structure());
@@ -94,7 +96,10 @@ class LuckyBlockEngineTest {
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
         assertEquals("BLOCK", outcome.relativeTo());
         assertEquals(1, outcome.commands().size());
-        assertEquals("give @p golden_sword 1", outcome.commands().get(0));
+        LuckyBlockEngine.CommandStep step = outcome.commands().get(0);
+        assertTrue(step instanceof LuckyBlockEngine.CommandStep.Command);
+        assertEquals("give @p golden_sword 1",
+                ((LuckyBlockEngine.CommandStep.Command) step).command());
     }
 
     @Test
@@ -345,12 +350,15 @@ class LuckyBlockEngineTest {
         assertEquals("pirate-ship", outcome.name());
         assertEquals(2.0, outcome.weight());
         assertEquals(2, outcome.items().size());
-        assertEquals("spyglass", outcome.items().get(0).name());
+        assertEquals("spyglass", outcome.items().get(0).item());
         assertEquals(1, outcome.items().get(0).quantity());
-        assertEquals("cooked_cod", outcome.items().get(1).name());
+        assertEquals("cooked_cod", outcome.items().get(1).item());
         assertEquals(16, outcome.items().get(1).quantity());
         assertEquals(1, outcome.commands().size());
-        assertEquals("summon pillager ~ ~ ~", outcome.commands().get(0));
+        LuckyBlockEngine.CommandStep step = outcome.commands().get(0);
+        assertTrue(step instanceof LuckyBlockEngine.CommandStep.Command);
+        assertEquals("summon pillager ~ ~ ~",
+                ((LuckyBlockEngine.CommandStep.Command) step).command());
         assertEquals("BLOCK", outcome.relativeTo());
         assertNotNull(outcome.structure());
         assertEquals("pirate-ship", outcome.structure().name());
@@ -373,7 +381,7 @@ class LuckyBlockEngineTest {
         assertTrue(engine.load(file));
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
         assertEquals(1, outcome.items().size());
-        assertEquals("diamond", outcome.items().get(0).name());
+        assertEquals("diamond", outcome.items().get(0).item());
         assertEquals(3, outcome.items().get(0).quantity());
         assertEquals(1, outcome.commands().size());
         assertNull(outcome.structure());
@@ -479,5 +487,242 @@ class LuckyBlockEngineTest {
         engine.clear();
         assertEquals(0, engine.outcomes().size());
         assertNull(engine.roll());
+    }
+
+    // ===================== Rarity tests =====================
+
+    @Test
+    void parsesRaritiesSection() throws IOException {
+        File file = writeYaml("""
+                rarities:
+                  common: 60
+                  rare: 22
+                  epic: 12
+                  legendary: 6
+                outcomes:
+                  a:
+                    rarity: rare
+                    items:
+                      - diamond 1
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals("rare", outcome.rarity());
+    }
+
+    @Test
+    void parsesOutcomeWithExplicitRarity() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  epic-stuff:
+                    rarity: epic
+                    weight: 2.0
+                    items:
+                      - netherite_ingot 1
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals("epic", outcome.rarity());
+        assertEquals(2.0, outcome.weight());
+    }
+
+    @Test
+    void defaultsMissingRarityToCommon() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  plain:
+                    items:
+                      - dirt 1
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        assertEquals("common", engine.outcomes().get(0).rarity());
+    }
+
+    @Test
+    void rollOnlySelectsWithinRarity() throws IOException {
+        File file = writeYaml("""
+                rarities:
+                  common: 1
+                  legendary: 1
+                outcomes:
+                  common-a:
+                    rarity: common
+                    weight: 1.0
+                  common-b:
+                    rarity: common
+                    weight: 1.0
+                  legendary-a:
+                    rarity: legendary
+                    weight: 100.0
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        // Both rarities have equal weight, so over many rolls we should see
+        // outcomes from both tiers. Whenever a legendary rarity is rolled, the
+        // only legendary outcome (legendary-a) must be selected.
+        boolean sawCommon = false;
+        boolean sawLegendary = false;
+        String last = null;
+        for (int i = 0; i < 2000; i++) {
+            LuckyBlockEngine.Outcome outcome = engine.roll();
+            assertNotNull(outcome);
+            if (outcome.rarity().equals("common")) sawCommon = true;
+            if (outcome.rarity().equals("legendary")) {
+                sawLegendary = true;
+                assertEquals("legendary-a", outcome.name());
+            }
+            last = outcome.rarity();
+        }
+        assertTrue(last != null);
+        assertTrue(sawCommon);
+        assertTrue(sawLegendary);
+    }
+
+    @Test
+    void unknownRarityFallsBackToCommonWithWarning() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  odd-ball:
+                    rarity: mythic
+                    items:
+                      - dirt 1
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        assertEquals("common", engine.outcomes().get(0).rarity());
+        assertEquals(1, engine.warnings().size());
+        assertTrue(engine.warnings().get(0).contains("odd-ball"));
+        assertTrue(engine.warnings().get(0).contains("mythic"));
+    }
+
+    @Test
+    void rejectsNonPositiveRarityWeight() throws IOException {
+        File file = writeYaml("""
+                rarities:
+                  common: 0
+                outcomes:
+                  a: {}
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
+        assertTrue(ex.getMessage().contains("common"));
+    }
+
+    @Test
+    void defaultsRaritiesWhenSectionMissing() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  a: {}
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        assertEquals("common", engine.outcomes().get(0).rarity());
+    }
+
+    // ===================== Rich item tests =====================
+
+    @Test
+    void parsesItemWithComponentSuffixAfterQuantity() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  sharp-sword:
+                    items:
+                      - "golden_sword 1 enchantments={sharpness:10},damage=29"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.ItemEntry item = engine.outcomes().get(0).items().get(0);
+        assertEquals("golden_sword[enchantments={sharpness:10},damage=29]", item.item());
+        assertEquals(1, item.quantity());
+    }
+
+    @Test
+    void parsesItemWithBracketComponentSyntax() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  sword:
+                    items:
+                      - "minecraft:golden_sword[enchantments={sharpness:10},damage=29] 1"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.ItemEntry item = engine.outcomes().get(0).items().get(0);
+        assertEquals("minecraft:golden_sword[enchantments={sharpness:10},damage=29]", item.item());
+        assertEquals(1, item.quantity());
+    }
+
+    @Test
+    void parsesPlainItemWithQuantityAndNoComponents() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  loot:
+                    items:
+                      - diamond 4
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.ItemEntry item = engine.outcomes().get(0).items().get(0);
+        assertEquals("diamond", item.item());
+        assertEquals(4, item.quantity());
+    }
+
+    // ===================== Delay tests =====================
+
+    @Test
+    void parsesDelayBetweenCommands() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  rainbow:
+                    commands:
+                      commands:
+                        - "summon falling_block ~ ~10 ~"
+                        - "delay: 2"
+                        - "summon falling_block ~ ~10 ~"
+                        - "delay: 10"
+                        - "summon lightning_bolt ~ ~15 ~"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        assertTrue(engine.load(file));
+        LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
+        assertEquals(5, outcome.commands().size());
+        assertTrue(outcome.commands().get(0) instanceof LuckyBlockEngine.CommandStep.Command);
+        assertTrue(outcome.commands().get(1) instanceof LuckyBlockEngine.CommandStep.Delay);
+        assertEquals(2, ((LuckyBlockEngine.CommandStep.Delay) outcome.commands().get(1)).ticks());
+        assertTrue(outcome.commands().get(2) instanceof LuckyBlockEngine.CommandStep.Command);
+        assertTrue(outcome.commands().get(3) instanceof LuckyBlockEngine.CommandStep.Delay);
+        assertEquals(10, ((LuckyBlockEngine.CommandStep.Delay) outcome.commands().get(3)).ticks());
+        assertTrue(outcome.commands().get(4) instanceof LuckyBlockEngine.CommandStep.Command);
+    }
+
+    @Test
+    void rejectsNonPositiveDelay() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  bad:
+                    commands:
+                      commands:
+                        - "say hi"
+                        - "delay: 0"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
+        assertTrue(ex.getMessage().contains("bad"));
+    }
+
+    @Test
+    void rejectsInvalidDelay() throws IOException {
+        File file = writeYaml("""
+                outcomes:
+                  bad:
+                    commands:
+                      commands:
+                        - "delay: soon"
+                """);
+        LuckyBlockEngine engine = new LuckyBlockEngine();
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));
+        assertTrue(ex.getMessage().contains("bad"));
     }
 }

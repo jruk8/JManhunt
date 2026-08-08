@@ -3,6 +3,13 @@
 # based on the weights below. Users can add their own outcomes by writing
 # new entries here.
 #
+# Rarities
+# --------
+# The top-level `rarities` section defines rarity tiers and their weights.
+# Selection is two-stage: first a rarity is rolled using these weights, then
+# an outcome within that rarity is rolled using the outcome's own `weight`
+# (default 1.0). Outcomes without an explicit `rarity` default to `common`.
+#
 # Outcomes are composable: each outcome may contain any combination of the
 # following optional action sections:
 #
@@ -10,10 +17,17 @@
 #                 Format: "<item> <quantity>" (quantity defaults to 1).
 #                 Item names default to minecraft:<name> unless a namespace
 #                 is specified (e.g. minecraft:diamond).
+#                 Items also support the modern data-component syntax used by
+#                 the /give command, e.g.
+#                 "minecraft:golden_sword[enchantments={sharpness:10},damage=29] 1"
+#                 or "golden_sword 1 enchantments={sharpness:10},damage=29".
 #
 #   commands    - A section with a list of console commands to run.
 #                 relative-to: BLOCK (default) or PLAYER determines how
 #                 tildes (~) resolve.
+#                 A command entry of "delay: <ticks>" pauses the sequence for
+#                 that many ticks before the next command runs. This enables
+#                 choreographed sequences like rainbows.
 #
 #   structure   - A section with a structure name and optional random-rotation.
 #                 Loads .nbt from challenges/structures/<name>.nbt.
@@ -44,20 +58,291 @@
 # and volume defaults to 1.0. When no custom sound is configured, the default
 # sound from config.yml (sounds.challenges.lucky-block-default) is played.
 # {player} is replaced with the triggering player's name.
+rarities:
+  common: 60
+  rare: 23
+  epic: 13
+  legendary: 4
+
 outcomes:
+  # ============================== ITEM DROPS ==============================
+  # 20 item drop outcomes. Most are common/rare; the best gear is epic/legendary.
   diamonds:
-    weight: 5.0
+    rarity: common
+    weight: 1.0
     items:
-      - diamond 1
+      - diamond 2
     feedback:
       sound:
         enabled: true
         sound: block.amethyst_block.step
         pitch: 2.0
         volume: 1.0
-      message: "<aqua>You fancied yourself some diamonds!</aqua>"
-      broadcast: "<aqua><white>{player}</white> fancied themselves diamonds!</aqua>"
+      message: "<aqua>Diamonds!</aqua>"
+  dirt-cobble:
+    rarity: common
+    weight: 3.0
+    items:
+      - dirt 16
+      - cobblestone 16
+    feedback:
+      sound:
+        enabled: true
+        sound: block.grass.break
+        pitch: 0.8
+        volume: 1.0
+      message: "<gray>Dirt and cobble. The classic starter pack.</gray>"
+  iron-loot:
+    rarity: common
+    weight: 2.0
+    items:
+      - iron_ingot 8
+      - iron_pickaxe 1
+    feedback:
+      sound:
+        enabled: true
+        sound: block.metal.break
+        pitch: 1.0
+        volume: 1.0
+      message: "<white>Some iron to get you going.</white>"
+  bread-basket:
+    rarity: common
+    weight: 2.0
+    items:
+      - bread 8
+      - cooked_beef 4
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.generic.eat
+        pitch: 1.2
+        volume: 1.0
+      message: "<gold>A basket of food. Stay fed!</gold>"
+  coal-bonanza:
+    rarity: common
+    weight: 2.0
+    items:
+      - coal 16
+      - torch 16
+    feedback:
+      sound:
+        enabled: true
+        sound: block.stone.break
+        pitch: 0.9
+        volume: 1.0
+      message: "<dark_gray>Coal and torches. Light up your path.</dark_gray>"
+  wood-starter:
+    rarity: common
+    weight: 2.0
+    items:
+      - oak_log 16
+      - oak_planks 16
+    feedback:
+      sound:
+        enabled: true
+        sound: block.wood.break
+        pitch: 1.0
+        volume: 1.0
+      message: "<gold>Wood! The foundation of civilization.</gold>"
+  golden-apple:
+    rarity: rare
+    weight: 1.0
+    items:
+      - golden_apple 1
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.player.levelup
+        pitch: 1.5
+        volume: 1.0
+      message: "<gold>A golden apple! Absorbing it feels wise.</gold>"
+  emerald-stash:
+    rarity: rare
+    weight: 1.0
+    items:
+      - emerald 8
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.villager.celebrate
+        pitch: 1.2
+        volume: 1.0
+      message: "<green>Emeralds! The villagers would be jealous.</green>"
+  enchanted-book:
+    rarity: rare
+    weight: 1.0
+    items:
+      - "minecraft:enchanted_book[enchantments={sharpness:5}] 1"
+      - "minecraft:enchanted_book[enchantments={unbreaking:3}] 1"
+      - "minecraft:enchanted_book[enchantments={power:5}] 1"
+      - "minecraft:enchanted_book[enchantments={protection:4}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: block.enchantment_table.use
+        pitch: 1.0
+        volume: 1.0
+      message: "<light_purple>Books upon books upon books. Very handy.</light_purple>"
+  lapis-luck:
+    rarity: rare
+    weight: 1.0
+    items:
+      - lapis_lazuli 16
+      - experience_bottle 8
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.experience_orb.pickup
+        pitch: 1.5
+        volume: 1.0
+      message: "<blue>Lapis and bottled XP. Enchant away!</blue>"
+  diamond-armor-1:
+    rarity: rare
+    weight: 0.8
+    items:
+      - diamond_leggings 1
+      - diamond_boots 1
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.item.pickup
+        pitch: 1.2
+        volume: 1.0
+      message: "<aqua>Diamond armor pieces! You're getting protected.</aqua>"
+  diamond-armor-2:
+    rarity: rare
+    weight: 0.8
+    items:
+      - diamond_helmet 1
+      - diamond_chestplate 1
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.item.pickup
+        pitch: 1.2
+        volume: 1.0
+      message: "<aqua>Diamond armor pieces! You're getting protected.</aqua>"
+  netherite-scrap:
+    rarity: epic
+    weight: 1.0
+    items:
+      - netherite_scrap 4
+    feedback:
+      sound:
+        enabled: true
+        sound: block.ancient_debris.break
+        pitch: 0.7
+        volume: 1.0
+      message: "<dark_red>Netherite scrap! The hunt for ancient debris pays off.</dark_red>"
+  mace-drop:
+    rarity: epic
+    weight: 0.8
+    items:
+      - "minecraft:mace[enchantments={wind_burst:2}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.player.attack.crit
+        pitch: 1.0
+        volume: 1.0
+      message: "<red>A mace with Wind Burst! Smash from above!</red>"
+  totem:
+    rarity: epic
+    weight: 0.8
+    items:
+      - totem_of_undying 1
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.illusioner.mirror_move
+        pitch: 1.0
+        volume: 1.0
+      message: "<gold>A totem of undying! Death cheated once more.</gold>"
+  god-apple:
+    rarity: epic
+    weight: 0.6
+    items:
+      - enchanted_golden_apple 1
+    feedback:
+      sound:
+        enabled: true
+        sound: block.beacon.activate
+        pitch: 1.0
+        volume: 1.0
+      message: "<gold><bold>AN ENCHANTED GOLDEN APPLE!</bold></gold>"
+      broadcast: "<gold><white>{player}</white> found an enchanted golden apple!</gold>"
+  trident:
+    rarity: epic
+    weight: 0.6
+    items:
+      - "minecraft:trident[enchantments={loyalty:3,impaling:5}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.drowned.ambient
+        pitch: 0.8
+        volume: 1.0
+      message: "<aqua>A loyal trident! It always comes back.</aqua>"
+  elytra:
+    rarity: legendary
+    weight: 1.0
+    items:
+      - elytra 1
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.ender_dragon.flap
+        pitch: 1.0
+        volume: 1.0
+      message: "<light_purple><bold>ELYTRA!</bold> Take to the skies!</light_purple>"
+      broadcast: "<light_purple><white>{player}</white> found an elytra!</light_purple>"
+  netherite-set:
+    rarity: legendary
+    weight: 0.1
+    items:
+      - "minecraft:netherite_helmet[enchantments={protection:4},unbreakable={}] 1"
+      - "minecraft:netherite_chestplate[enchantments={protection:4},unbreakable={}] 1"
+      - "minecraft:netherite_leggings[enchantments={protection:4},unbreakable={}] 1"
+      - "minecraft:netherite_boots[enchantments={protection:4},unbreakable={}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.wither.spawn
+        pitch: 0.6
+        volume: 1.0
+      message: "<dark_red><bold>FULL NETHERITE ARMOR!</bold> You are unstoppable.</dark_red>"
+      broadcast: "<dark_red><white>{player}</white> obtained a full netherite armor set!</dark_red>"
+  beacon:
+    rarity: legendary
+    weight: 0.5
+    items:
+      - beacon 1
+    feedback:
+      sound:
+        enabled: true
+        sound: block.beacon.activate
+        pitch: 1.5
+        volume: 1.0
+      message: "<yellow>A beacon! Build something magnificent.</yellow>"
+      broadcast: "<yellow><white>{player}</white> found a beacon!</yellow>"
+  dragon-egg:
+    rarity: legendary
+    weight: 0.3
+    items:
+      - dragon_egg 1
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.ender_dragon.growl
+        pitch: 0.8
+        volume: 1.0
+      message: "<dark_purple><bold>THE DRAGON EGG!</bold> How?!</dark_purple>"
+      broadcast: "<dark_purple><white>{player}</white> obtained the dragon egg!</dark_purple>"
+
+  # ============================== COMMANDS ==============================
+  # 12 command outcomes. Most are rare/epic; the rainbow is legendary.
   nothing:
+    rarity: common
     weight: 1.0
     feedback:
       sound:
@@ -67,13 +352,14 @@ outcomes:
         volume: 1.0
       message: "<gray>Nothing happened. How anticlimactic.</gray>"
   pigmen:
+    rarity: rare
     weight: 1.2
     commands:
       relative-to: BLOCK # how tildes ~ ~ ~ resolve. choices: BLOCK or PLAYER
       commands:
+        - "summon pig ~1 ~ ~"
         - "summon pig ~ ~ ~"
-        - "summon pig ~ ~ ~"
-        - "summon pig ~ ~ ~"
+        - "summon pig ~-1 ~ ~"
         - "summon lightning_bolt ~ ~ ~"
     feedback:
       sound:
@@ -84,6 +370,7 @@ outcomes:
       message: "<red>You angered the pigmen!</red>"
       broadcast: "<red><white>{player}</white> angered the pigmen!</red>"
   tnt: # weight omitted, default to 1.0
+    rarity: rare
     commands:
       relative-to: PLAYER
       commands:
@@ -96,6 +383,7 @@ outcomes:
         volume: 1.0
       message: "<yellow>You hear a hiss...</yellow>"
   sharp-sword:
+    rarity: rare
     commands:
       commands: # relative-to omitted, use BLOCK by default
         - "give <p> golden_sword[enchantments={sharpness:10},damage=29] 1"
@@ -106,7 +394,209 @@ outcomes:
         pitch: 1.2
         volume: 0.8
       message: "<gold>A sharp sword materializes in your hand!</gold>"
+  zombie-horde:
+    rarity: common
+    weight: 1.5
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon zombie ~-2 ~ ~1"
+        - "delay: 10"
+        - "summon zombie ~1 ~ ~-2"
+        - "delay: 10"
+        - "summon zombie ~0 ~ ~2"
+        - "delay: 10"
+        - "summon zombie ~2 ~ ~-1"
+        - "delay: 10"
+        - "summon zombie ~-1 ~ ~-2"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.zombie.ambient
+        pitch: 0.8
+        volume: 1.0
+      message: "<green>Braaaaains... A zombie horde approaches!</green>"
+      broadcast: "<green><white>{player}</white> attracted a zombie horde!</green>"
+  skeleton-ambush:
+    rarity: rare
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon skeleton ~1 ~ ~"
+        - "summon skeleton ~-1 ~ ~"
+        - "summon skeleton_horse ~ ~ ~"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.skeleton.ambient
+        pitch: 1.0
+        volume: 1.0
+      message: "<gray>Bones rattle around you...</gray>"
+  creeper-party:
+    rarity: rare
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon creeper ~1 ~ ~"
+        - "summon creeper ~ ~ ~"
+        - "summon creeper ~-1 ~ ~"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.creeper.primed
+        pitch: 0.6
+        volume: 1.0
+      message: "<green>Hiss... hiss... hiss... RUN!</green>"
+      broadcast: "<green><white>{player}</white> started a creeper party!</green>"
+  ender-pearl:
+    rarity: rare
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "give <p> ender_pearl 4"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.enderman.teleport
+        pitch: 1.0
+        volume: 1.0
+      message: "<dark_purple>Ender pearls! Teleport away!</dark_purple>"
+  lightning-storm:
+    rarity: epic
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon lightning_bolt ~-4 ~ ~2"
+        - "delay: 5"
+        - "summon lightning_bolt ~5 ~ ~-3"
+        - "delay: 5"
+        - "summon lightning_bolt ~-1 ~ ~5"
+        - "delay: 5"
+        - "summon lightning_bolt ~3 ~ ~-5"
+        - "delay: 5"
+        - "summon lightning_bolt ~-5 ~ ~-2"
+        - "delay: 5"
+        - "summon lightning_bolt ~1 ~ ~4"
+        - "delay: 5"
+        - "summon lightning_bolt ~-3 ~ ~-1"
+        - "delay: 5"
+        - "summon lightning_bolt ~4 ~ ~3"
+        - "delay: 5"
+        - "summon lightning_bolt ~-2 ~ ~-4"
+        - "delay: 5"
+        - "summon lightning_bolt ~0 ~ ~5"
+        - "delay: 5"
+        - "summon lightning_bolt ~5 ~ ~-1"
+        - "delay: 5"
+        - "summon lightning_bolt ~-4 ~ ~-5"
+        - "delay: 5"
+        - "summon lightning_bolt ~2 ~ ~3"
+        - "delay: 5"
+        - "summon lightning_bolt ~-5 ~ ~1"
+        - "delay: 5"
+        - "summon lightning_bolt ~3 ~ ~-3"
+        - "delay: 5"
+        - "summon lightning_bolt ~-1 ~ ~-2"
+        - "delay: 5"
+        - "summon lightning_bolt ~4 ~ ~5"
+        - "delay: 5"
+        - "summon lightning_bolt ~-3 ~ ~4"
+        - "delay: 5"
+        - "summon lightning_bolt ~1 ~ ~-5"
+        - "delay: 5"
+        - "summon lightning_bolt ~5 ~ ~2"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.lightning_bolt.thunder
+        pitch: 0.8
+        volume: 1.0
+      message: "<yellow><bold>A LIGHTNING STORM!</bold> Take cover!</yellow>"
+      broadcast: "<yellow><white>{player}</white> summoned a lightning storm!</yellow>"
+  wither-summon:
+    rarity: epic
+    weight: 0.8
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon wither ~ ~2 ~"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.wither.spawn
+        pitch: 0.5
+        volume: 1.0
+      message: "<dark_red><bold>THE WITHER RISES!</bold> Run!</dark_red>"
+      broadcast: "<dark_red><white>{player}</white> summoned the WITHER!</dark_red>"
+  debuff:
+    rarity: rare
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> wither 10 1"
+        - "effect give <p> blindness 10 1"
+        - "effect give <p> nausea 10 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.warden.roar
+        pitch: 0.7
+        volume: 1.0
+      message: "<dark_gray>You feel.. cursed.</dark_gray>"
+  rainbow-tower:
+    rarity: legendary
+    weight: 0.8
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:white_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:light_gray_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:gray_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:black_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:red_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:orange_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:yellow_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:lime_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:green_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:cyan_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:light_blue_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:blue_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:purple_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:magenta_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:pink_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:brown_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon lightning_bolt ~ ~15 ~"
+        - "delay: 20"
+        - "give <p> wind_charge 6"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.firework_rocket.blast
+        pitch: 1.0
+        volume: 1.0
+      message: "<gradient:red:orange:yellow:green:blue:purple><bold>A RAINBOW TOWER!</bold></gradient>"
+      broadcast: "<gradient:red:orange:yellow:green:blue:purple><white>{player}</white> summoned a rainbow tower!</gradient>"
+
+  # ============================== STRUCTURES ==============================
+  # 8 structure outcomes. Load .nbt from challenges/structures/<name>.nbt.
   coin-well:
+    rarity: rare
     weight: 1.0
     structure:
       name: coin-well
@@ -117,3 +607,94 @@ outcomes:
         pitch: 1.2
         volume: 1.0
       message: "<gray>Well, well, well..</gray>"
+  mushroom-hut:
+    rarity: common
+    weight: 1.0
+    structure:
+      name: mushroom-hut
+      random-rotation: true
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.mooshroom.ambient
+        pitch: 1.0
+        volume: 1.0
+      message: "<red>A cozy mushroom hut appears!</red>"
+  trapped-redstone:
+    rarity: rare
+    weight: 1.0
+    structure:
+      name: trapped-redstone
+      random-rotation: true
+    feedback:
+      sound:
+        enabled: true
+        sound: block.tripwire.click
+        pitch: 1.0
+        volume: 1.0
+      message: "<yellow>Careful... that structure looks trapped.</yellow>"
+  parkour-loot:
+    rarity: rare
+    weight: 0.8
+    structure:
+      name: parkour-loot
+      random-rotation: true
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.rabbit.jump
+        pitch: 1.2
+        volume: 1.0
+      message: "<green>A parkour course! The loot is at the top.</green>"
+  vertical-tower:
+    rarity: epic
+    weight: 1.0
+    structure:
+      name: vertical-tower
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.ender_dragon.flap
+        pitch: 0.8
+        volume: 1.0
+      message: "<light_purple>A towering structure pierces the sky!</light_purple>"
+      broadcast: "<light_purple><white>{player}</white> revealed a vertical tower!</light_purple>"
+  spawner-room:
+    rarity: epic
+    weight: 0.8
+    structure:
+      name: spawner-room
+    feedback:
+      sound:
+        enabled: true
+        sound: block.spawner.ambient
+        pitch: 0.8
+        volume: 1.0
+      message: "<dark_red>A monster spawner room! Brace yourself!</dark_red>"
+      broadcast: "<dark_red><white>{player}</white> uncovered a monster spawner room!</dark_red>"
+  treasure-vault:
+    rarity: legendary
+    weight: 0.8
+    structure:
+      name: treasure-vault
+    feedback:
+      sound:
+        enabled: true
+        sound: block.chest.open
+        pitch: 1.0
+        volume: 1.0
+      message: "<gold><bold>A TREASURE VAULT!</bold> The riches are yours!</gold>"
+      broadcast: "<gold><white>{player}</white> found a treasure vault!</gold>"
+  giant-beacon:
+    rarity: legendary
+    weight: 0.6
+    structure:
+      name: giant-beacon
+    feedback:
+      sound:
+        enabled: true
+        sound: block.beacon.activate
+        pitch: 1.5
+        volume: 1.0
+      message: "<yellow><bold>A GIANT BEACON!</bold> Its light reaches the sky!</yellow>"
+      broadcast: "<yellow><white>{player}</white> activated a giant beacon!</yellow>"

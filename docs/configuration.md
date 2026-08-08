@@ -143,7 +143,38 @@ registered block is chosen each time a match starts, excluding unobtainable
 blocks (air, barriers, command blocks, structure voids, etc.). The chosen
 block is announced to all players when the match starts using its display
 name (e.g. "Gold Block"). The outcome table is in
-`challenges/lucky-block/lucky-blocks.yml` and uses weighted random selection.
+`challenges/lucky-block/lucky-blocks.yml` and uses two-stage weighted random
+selection.
+
+### Rarities
+
+The top-level `rarities` section defines rarity tiers and their weights.
+Selection is two-stage: first a rarity is rolled using these weights, then an
+outcome within that rarity is rolled using the outcome's own `weight`
+(default `1.0`). Outcomes without an explicit `rarity` default to `common`.
+
+```yaml
+rarities:
+  common: 60
+  rare: 22
+  epic: 12
+  legendary: 6
+```
+
+Each outcome may set a `rarity` field:
+
+```yaml
+outcomes:
+  elytra:
+    rarity: legendary
+    weight: 1.0
+    items:
+      - elytra 1
+```
+
+Unknown rarity names fall back to `common` and log a warning on reload.
+The default rarities (common 60, rare 22, epic 12, legendary 6) are used when
+the `rarities` section is omitted.
 
 ### Composable Outcomes
 
@@ -173,6 +204,21 @@ outcomes:
       - diamond 1
 ```
 
+Items also support the modern data-component syntax used by the `/give`
+command. Components can be written inline in brackets after the item name, or
+as trailing tokens after the quantity:
+
+```yaml
+outcomes:
+  sharp-sword:
+    items:
+      - "minecraft:golden_sword[enchantments={sharpness:10},damage=29] 1"
+      - "golden_sword 1 enchantments={sharpness:10},damage=29"
+```
+
+Both forms produce the same item. The component string is parsed by the
+server's item parser, so anything accepted by `/give` works here.
+
 #### Commands
 
 The `commands` section is a map with an optional `relative-to` key and a
@@ -190,6 +236,29 @@ outcomes:
         - "summon pig ~ ~ ~"
         - "summon lightning_bolt ~ ~ ~"
 ```
+
+A command entry of `delay: <ticks>` pauses the sequence for that many ticks
+before the next command runs. This enables choreographed sequences like
+rainbow towers:
+
+```yaml
+outcomes:
+  rainbow-tower:
+    rarity: legendary
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:red_concrete_powder\"},Time:1}"
+        - "delay: 2"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:orange_concrete_powder\"},Time:1}"
+        - "delay: 2"
+        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:yellow_concrete_powder\"},Time:1}"
+        - "delay: 10"
+        - "summon lightning_bolt ~ ~15 ~"
+```
+
+Delays must be positive integers; invalid or non-positive delays are rejected
+at load time.
 
 #### Structure
 

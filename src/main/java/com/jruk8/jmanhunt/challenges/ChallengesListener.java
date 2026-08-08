@@ -157,28 +157,70 @@ public final class ChallengesListener implements Listener, SettingsListener {
     private void executeOutcome(LuckyBlockEngine.Outcome outcome, Block block, Player player) {
         // Items: drop at the block location, replacing the Lucky Block's normal drops.
         for (LuckyBlockEngine.ItemEntry item : outcome.items()) {
-            String name = item.name();
-            if (!name.contains(":")) name = "minecraft:" + name;
-            Material material = Registry.MATERIAL.get(NamespacedKey.fromString(name));
-            if (material != null && material.isItem()) {
-                block.getWorld().dropItemNaturally(block.getLocation(), new ItemStack(material, item.quantity()));
+            ItemStack stack = parseItemStack(item.item(), item.quantity());
+            if (stack != null) {
+                block.getWorld().dropItemNaturally(block.getLocation(), stack);
             }
         }
 
-        // Commands: dispatch as console, resolving tildes relative to block or player.
+        // Commands: dispatch as console, resolving tildes relative to block or
+        // player. "delay: <ticks>" entries pause the sequence.
         if (!outcome.commands().isEmpty()) {
             Location origin = outcome.relativeTo().equals("PLAYER")
                     ? player.getLocation()
                     : block.getLocation();
-            for (String command : outcome.commands()) {
-                String parsed = CommandPlaceholders.replace(command, player.getName(),
-                        origin.getX(), origin.getY(), origin.getZ());
-                if (parsed.startsWith("/")) parsed = parsed.substring(1);
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+            long accumulatedDelay = 0;
+            for (LuckyBlockEngine.CommandStep step : outcome.commands()) {
+                if (step instanceof LuckyBlockEngine.CommandStep.Delay delay) {
+                    accumulatedDelay += delay.ticks();
+                } else if (step instanceof LuckyBlockEngine.CommandStep.Command command) {
+                    String parsed = CommandPlaceholders.replace(command.command(), player.getName(),
+                            origin.getX(), origin.getY(), origin.getZ());
+                    if (parsed.startsWith("/")) parsed = parsed.substring(1);
+                    final String finalCommand = parsed;
+                    if (accumulatedDelay > 0) {
+                        Bukkit.getScheduler().runTaskLater(plugin, () ->
+                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand), accumulatedDelay);
+                    } else {
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
+                    }
+                }
             }
         }
 
         // Structure: already placed in rollWithRerolls.
+    }
+
+    /**
+     * Parses an item entry into an ItemStack. Supports the modern
+     * give-command data-component form (e.g.
+     * {@code minecraft:golden_sword[enchantments={sharpness:10},damage=29]})
+     * as well as plain material names. Returns null if the item cannot be
+     * resolved.
+     */
+    private ItemStack parseItemStack(String item, int quantity) {
+        boolean hasComponents = item.contains("[") || item.contains("{");
+        try {
+            String full = item.contains(":") ? item : "minecraft:" + item;
+            ItemStack stack = Bukkit.getItemFactory().createItemStack(full);
+            if (stack != null) {
+                stack.setAmount(quantity);
+                return stack;
+            }
+        } catch (IllegalArgumentException e) {
+            if (hasComponents) {
+                plugin.getLogger().warning("Lucky block outcome references invalid item '" + item + "': " + e.getMessage());
+                return null;
+            }
+            // Fall through to plain material lookup.
+        }
+        String name = item.contains(":") ? item : "minecraft:" + item;
+        Material material = Registry.MATERIAL.get(NamespacedKey.fromString(name));
+        if (material != null && material.isItem()) {
+            return new ItemStack(material, quantity);
+        }
+        plugin.getLogger().warning("Lucky block outcome references unknown item '" + item + "'.");
+        return null;
     }
 
     /**
@@ -263,6 +305,9 @@ public final class ChallengesListener implements Listener, SettingsListener {
             if (!luckyEngine.load(luckyFile)) {
                 plugin.getLogger().severe("Lucky blocks challenge is enabled but "
                         + "challenges/lucky-block/lucky-blocks.yml could not be loaded.");
+            }
+            for (String warning : luckyEngine.warnings()) {
+                plugin.getLogger().warning(warning);
             }
         } catch (IllegalArgumentException e) {
             plugin.getLogger().severe("Lucky blocks challenge is enabled but "
