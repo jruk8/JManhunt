@@ -46,7 +46,7 @@ JManhunt is a Minecraft Manhunt plugin built on Paper. The project values:
   dependencies where needed.
 - **Do not add runtime or integration tests.** Tests that require a live
   server, a database, or network access will be rejected.
-- Place tests in `src/tests/java/` mirroring the main source package structure.
+- Place tests in `src/test/java/` mirroring the main source package structure.
 - Run tests with `./gradlew test` before submitting.
 
 ## Commit Message Style
