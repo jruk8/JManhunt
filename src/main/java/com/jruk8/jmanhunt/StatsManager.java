@@ -68,6 +68,18 @@ public final class StatsManager {
         return career.computeIfAbsent(id, ignored -> new CareerStats());
     }
 
+    /** Records a career death for the given player (persisted with the next match save). */
+    public void recordDeath(UUID id) {
+        CareerStats total = career(id);
+        synchronized (total) {
+            total.deaths++;
+            CareerStats delta = new CareerStats();
+            delta.player = total.player;
+            delta.deaths = 1;
+            saveAsync(id, delta);
+        }
+    }
+
     public void completeMatch(Role winner) {
         long now = System.currentTimeMillis();
         for (Map.Entry<UUID, Stats> entry : stats.entrySet()) {
@@ -79,25 +91,31 @@ public final class StatsManager {
                 if (match.role == Role.HUNTER) {
                     total.timeHunter += elapsed;
                     total.hunterKills += match.kills;
+                    total.hunterSessions++;
                     if (winner == Role.HUNTER) total.hunterWins++;
                 } else if (match.role == Role.SPEEDRUNNER) {
                     total.timeSpeedrunner += elapsed;
                     total.speedrunnerKills += match.kills;
+                    total.speedrunnerSessions++;
                     if (winner == Role.SPEEDRUNNER) total.speedrunnerWins++;
                 }
                 total.kills += match.kills;
                 total.finalKills += match.finalKills;
                 total.damage += match.damage / 2.0;
+                if (match.role.isParticipant()) total.sessions++;
                 CareerStats delta = new CareerStats();
                 delta.player = match.player;
                 if (match.role == Role.HUNTER) {
                     delta.timeHunter = elapsed; delta.hunterKills = match.kills;
+                    delta.hunterSessions = 1;
                     if (winner == Role.HUNTER) delta.hunterWins = 1;
                 } else if (match.role == Role.SPEEDRUNNER) {
                     delta.timeSpeedrunner = elapsed; delta.speedrunnerKills = match.kills;
+                    delta.speedrunnerSessions = 1;
                     if (winner == Role.SPEEDRUNNER) delta.speedrunnerWins = 1;
                 }
                 delta.kills = match.kills; delta.finalKills = match.finalKills; delta.damage = match.damage / 2.0;
+                if (match.role.isParticipant()) delta.sessions = 1;
                 saveAsync(entry.getKey(), delta);
             }
         }
@@ -154,7 +172,6 @@ public final class StatsManager {
         milestones.put("found_fortress", "nether/find_fortress"); milestones.put("entered_stronghold", "story/follow_ender_eye");
         milestones.put("entered_end", "story/enter_the_end");
         for (Stats stat : stats.values()) {
-            if (stat.role != Role.SPEEDRUNNER) continue;
             Player player = Bukkit.getPlayer(stat.uuid);
             if (player == null) continue;
             stat.progression = 0; stat.progressionKey = null; int rank = 0;
@@ -179,30 +196,41 @@ public final class StatsManager {
         public double damage;
         public int hunterWins;
         public int speedrunnerWins;
+        public int sessions;
+        public int speedrunnerSessions;
+        public int hunterSessions;
+        public int deaths;
 
         public boolean isEmpty() {
             return timeSpeedrunner == 0 && timeHunter == 0 && kills == 0 && hunterKills == 0
-                    && speedrunnerKills == 0 && finalKills == 0 && damage == 0 && hunterWins == 0 && speedrunnerWins == 0;
+                    && speedrunnerKills == 0 && finalKills == 0 && damage == 0 && hunterWins == 0 && speedrunnerWins == 0
+                    && sessions == 0 && speedrunnerSessions == 0 && hunterSessions == 0 && deaths == 0;
         }
 
         public void copyFrom(CareerStats source) {
             player = source.player; timeSpeedrunner = source.timeSpeedrunner; timeHunter = source.timeHunter;
             kills = source.kills; hunterKills = source.hunterKills; speedrunnerKills = source.speedrunnerKills;
             finalKills = source.finalKills; damage = source.damage; hunterWins = source.hunterWins;
-            speedrunnerWins = source.speedrunnerWins;
+            speedrunnerWins = source.speedrunnerWins; sessions = source.sessions;
+            speedrunnerSessions = source.speedrunnerSessions; hunterSessions = source.hunterSessions;
+            deaths = source.deaths;
         }
 
         public void add(CareerStats source) {
             timeSpeedrunner += source.timeSpeedrunner; timeHunter += source.timeHunter; kills += source.kills;
             hunterKills += source.hunterKills; speedrunnerKills += source.speedrunnerKills; finalKills += source.finalKills;
             damage += source.damage; hunterWins += source.hunterWins; speedrunnerWins += source.speedrunnerWins;
+            sessions += source.sessions; speedrunnerSessions += source.speedrunnerSessions;
+            hunterSessions += source.hunterSessions; deaths += source.deaths;
         }
 
         public CareerStats copy() {
             CareerStats copy = new CareerStats(); copy.player = player; copy.timeSpeedrunner = timeSpeedrunner;
             copy.timeHunter = timeHunter; copy.kills = kills; copy.hunterKills = hunterKills;
             copy.speedrunnerKills = speedrunnerKills; copy.finalKills = finalKills; copy.damage = damage;
-            copy.hunterWins = hunterWins; copy.speedrunnerWins = speedrunnerWins; return copy;
+            copy.hunterWins = hunterWins; copy.speedrunnerWins = speedrunnerWins; copy.sessions = sessions;
+            copy.speedrunnerSessions = speedrunnerSessions; copy.hunterSessions = hunterSessions; copy.deaths = deaths;
+            return copy;
         }
     }
 
@@ -227,7 +255,7 @@ public final class StatsManager {
         public boolean appliesTo(String statistic) {
             return switch (statistic.toUpperCase(Locale.ROOT)) {
                 case "HUNTER_FINAL_KILLS", "FINAL_KILLS" -> role == Role.HUNTER;
-                case "SPEEDRUNNER_KILLS", "KILLS", "PROGRESSION" -> role == Role.SPEEDRUNNER;
+                case "SPEEDRUNNER_KILLS", "KILLS" -> role == Role.SPEEDRUNNER;
                 default -> true;
             };
         }

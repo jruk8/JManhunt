@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 3
+messages-version: 4
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
@@ -89,6 +89,12 @@ game:
   separator: "<strikethrough><gradient:#bababa:#dedede:#bababa>                                                    </gradient></strikethrough>"
   debuff-applied: "{prefix}<gray>You have been given debuffs for the start of the game."
   hunter-death: "{prefix}<yellow>A hunter has died!"
+  hunter-respawn-scheduled: "{prefix}<yellow>{player} will respawn in <white>{seconds}s</white>."
+  hunter-respawn-imminent: "{prefix}<green>{player} has respawned."
+  hunter-out-of-lives: "{prefix}<yellow>{player} has run out of lives and is eliminated."
+  speedrunner-out-of-lives: "{prefix}<yellow>{player} has run out of lives and is eliminated."
+  speedrunners-unlimited-lives: "{prefix}<yellow>Speedrunners have unlimited lives."
+  hunters-unlimited-lives: "{prefix}<yellow>Hunters have unlimited lives."
   speedrunner-death: "{prefix}<yellow>A speedrunner has died! <white>({value} remaining)</white>"
   last-speedrunner-death: "{prefix}<yellow>The last speedrunner has died!"
   last-hunter-removed: "{prefix}<yellow>The last hunter has been removed for disconnecting!"
@@ -132,3 +138,4 @@ compass:
   compass-actionbar: "<gold>Tracking <white>{player}<gold> • <white>{distance}m"
   compass-last-seen-actionbar: "<gold>Tracking <white>{player}<gold>'s Last Seen • <white>{distance}m <gray>({reason})"
   no-target-actionbar: "<gray>No {role} location available."
+  nearby-actionbar: "<green>{player} is nearby! The compass is disabled."

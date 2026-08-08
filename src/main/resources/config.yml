@@ -60,6 +60,24 @@ placeholders:
   total_wins_as_speedrunner:
     enabled: true
     format: "{value}"
+  total_game_sessions:
+    enabled: true
+    format: "{value}"
+  sessions_as_speedrunner:
+    enabled: true
+    format: "{value}"
+  sessions_as_hunter:
+    enabled: true
+    format: "{value}"
+  formatted_total_playtime:
+    enabled: true
+    format: "{value}"
+  total_kd_as_speedrunner:
+    enabled: true
+    format: "{value}"
+  total_kd_as_hunter:
+    enabled: true
+    format: "{value}"
 
 
 # Built-in game-state actions and optional commands. All command sections are
@@ -266,6 +284,13 @@ settings:
     # Default: false
     nether-structures:
       enabled: false
+    # When true, a datapack that boosts overworld structure (village,
+    # shipwreck, buried treasure, dungeon, ruined portal) spawn frequency is
+    # applied to the world.
+    # Requires a server restart to take effect.
+    # Default: false
+    overworld-structures:
+      enabled: false
     # World border configuration for cell confinement.
     world-border:
       # When true, the world border is used to limit the spiral cell area.
@@ -381,6 +406,41 @@ settings:
       refresh-on-right-click: false
       # Seconds between right-click refreshes. Set to -1 for no cooldown.
       right-click-cooldown: 3.0
+    # When true, the compass stops tracking when the targeted player is within
+    # the configured flat distance. Only X/Z coordinates are compared, so the
+    # target may still be above or below the holder. Applies to both hunters
+    # and speedrunners who got ahold of the compass.
+    # Default: true
+    disable-when-nearby:
+      enabled: true
+      # The flat distance in blocks at which the compass stops tracking.
+      # Default: 25
+      distance: 25.0
+
+  # Friendly fire rules for participants. When disabled for a role, players of
+  # that role cannot damage players of the same role once the game has begun.
+  # Friendly fire is never active during the pre-start window.
+  # Default: false for both
+  friendly-fire:
+    speedrunner: false
+    hunter: false
+
+  # Delayed hunter respawn and per-role lives.
+  hunter-respawn:
+    # When true, deceased hunters wait before respawning instead of respawning
+    # immediately.
+    # Default: false
+    enabled: false
+    # Seconds a hunter must wait before respawning after death.
+    # Set to -1 for no delay (respawn immediately).
+    # Default: 60
+    delay-seconds: 60
+    # Lives per role. A player is eliminated when their lives run out.
+    # Set to -1 for unlimited lives.
+    # Default: one speedrunner life, unlimited hunter lives.
+    lives:
+      speedrunner: 1
+      hunter: -1
 
   # Optional effects applied to every hunter when the game begins. Effect keys
   # are Bukkit PotionEffectType names. Duration is in seconds and amplifier is

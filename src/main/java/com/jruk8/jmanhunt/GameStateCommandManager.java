@@ -152,6 +152,10 @@ public final class GameStateCommandManager {
     private void setDaytime(World world) {
         try {
             world.setTime(0L);
+            // Clear any ongoing rain/storm so a fresh match starts with clear
+            // skies, matching the behaviour of a newly generated world.
+            world.setStorm(false);
+            world.setWeatherDuration(0);
         } catch (IllegalArgumentException exception) {
             plugin.getLogger().fine("Skipping daytime reset in world without a world clock: " + world.getName());
         }

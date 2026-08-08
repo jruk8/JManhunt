@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -37,6 +38,7 @@ public final class GameplayListener implements Listener {
     private final LobbyTeleporter lobbyTeleporter;
     private final SpeedrunnerDisconnectTracker disconnects = new SpeedrunnerDisconnectTracker();
     private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
+    private final Map<UUID, BukkitTask> respawnTasks = new HashMap<>();
     private final Set<UUID> enteredNether = new HashSet<>();
     private final Set<UUID> enteredEnd = new HashSet<>();
 
@@ -109,30 +111,131 @@ public final class GameplayListener implements Listener {
         playerStates.recordLastSeen(player, player.getLocation());
 
         if (!game.isActive() || !game.isGameBegun()) return;
-        if (playerStates.role(player) == Role.SPEEDRUNNER) {
-            cancelDisconnectTask(player.getUniqueId());
-            disconnects.clear(player.getUniqueId());
-            playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
-            if (player.getKiller() != null) stats.getOrCreate(player.getKiller().getUniqueId()).finalKills++;
-            Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
-            if (Bukkit.getOnlinePlayers().stream().filter(p -> playerStates.role(p) == Role.SPEEDRUNNER)
-                    .filter(p -> playerStates.isActiveSpeedrunner(p.getUniqueId())).count() == 0) game.finishLater(Role.HUNTER);
-
-            int playerCount = playerStates.getActiveSpeedrunnerCount();
-            if (playerCount > 0) {
-                messages.broadcast("game.speedrunner-death", Map.of("value", Integer.toString(playerCount)));
-            }
-            else {
-                messages.broadcast("game.last-speedrunner-death");
-            }
-
-            sounds.playGlobalSound("game.speedrunner-death");
+        stats.recordDeath(player.getUniqueId());
+        Role role = playerStates.role(player);
+        if (role == Role.SPEEDRUNNER) {
+            handleSpeedrunnerDeath(player);
+        } else if (role == Role.HUNTER) {
+            handleHunterDeath(player);
         }
-        else if (playerStates.role(player) == Role.HUNTER) {
-            cancelDisconnectTask(player.getUniqueId());
-            disconnects.clear(player.getUniqueId());
-            messages.broadcast("game.hunter-death");
-            sounds.playGlobalSound("game.hunter-death");
+    }
+
+    private void handleSpeedrunnerDeath(Player player) {
+        cancelDisconnectTask(player.getUniqueId());
+        disconnects.clear(player.getUniqueId());
+        playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
+        int lives = playerStates.getLives(player.getUniqueId());
+        if (lives != -1) {
+            playerStates.decrementLives(player.getUniqueId());
+            if (playerStates.getLives(player.getUniqueId()) <= 0) {
+                // Out of lives: eliminate permanently.
+                if (player.getKiller() != null) stats.getOrCreate(player.getKiller().getUniqueId()).finalKills++;
+                Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
+                messages.broadcast("game.speedrunner-out-of-lives");
+                if (Bukkit.getOnlinePlayers().stream().filter(p -> playerStates.role(p) == Role.SPEEDRUNNER)
+                        .filter(p -> playerStates.isActiveSpeedrunner(p.getUniqueId())).count() == 0) game.finishLater(Role.HUNTER);
+                int playerCount = playerStates.getActiveSpeedrunnerCount();
+                if (playerCount > 0) {
+                    messages.broadcast("game.speedrunner-death", Map.of("value", Integer.toString(playerCount)));
+                } else {
+                    messages.broadcast("game.last-speedrunner-death");
+                }
+                sounds.playGlobalSound("game.speedrunner-death");
+                return;
+            }
+            // Lives remain: keep the speedrunner in the game.
+            messages.broadcast("game.speedrunner-death", Map.of("value", Integer.toString(playerStates.getActiveSpeedrunnerCount())));
+            sounds.playGlobalSound("game.speedrunner-death");
+            respawnParticipant(player, 0);
+            return;
+        }
+        // Unlimited lives (-1): never eliminated permanently by lives.
+        messages.broadcast("game.speedrunners-unlimited-lives");
+        messages.broadcast("game.speedrunner-death", Map.of("value", Integer.toString(playerStates.getActiveSpeedrunnerCount())));
+        sounds.playGlobalSound("game.speedrunner-death");
+        respawnParticipant(player, 0);
+    }
+
+    private void handleHunterDeath(Player player) {
+        cancelDisconnectTask(player.getUniqueId());
+        disconnects.clear(player.getUniqueId());
+        int lives = playerStates.getLives(player.getUniqueId());
+        boolean delayed = plugin.getConfig().getBoolean("settings.hunter-respawn.enabled", false);
+        int delaySeconds = plugin.getConfig().getInt("settings.hunter-respawn.delay-seconds", 60);
+        if (lives != -1) {
+            playerStates.decrementLives(player.getUniqueId());
+            if (playerStates.getLives(player.getUniqueId()) <= 0) {
+                // Out of lives: eliminate permanently.
+                messages.broadcast("game.hunter-out-of-lives");
+                playerStates.setRole(player.getUniqueId(), Role.NONE);
+                playerStates.removeMatchParticipant(player.getUniqueId());
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    player.setGameMode(GameMode.SPECTATOR);
+                    compass.removeCompasses(player);
+                });
+                checkHuntersRemaining();
+                sounds.playGlobalSound("game.hunter-death");
+                return;
+            }
+        }
+        messages.broadcast("game.hunter-death");
+        sounds.playGlobalSound("game.hunter-death");
+        if (lives == -1) {
+            messages.broadcast("game.hunters-unlimited-lives");
+        }
+        if (delayed && delaySeconds > 0) {
+            messages.broadcast("game.hunter-respawn-scheduled",
+                    Map.of("player", player.getName(), "seconds", Integer.toString(delaySeconds)));
+            respawnParticipant(player, delaySeconds);
+        }
+    }
+
+    /**
+     * Puts the player in spectator mode, then revives them after the given
+     * delay (in seconds). A delay of 0 or less revives them immediately.
+     */
+    private void respawnParticipant(Player player, int delaySeconds) {
+        UUID playerId = player.getUniqueId();
+        BukkitTask existing = respawnTasks.remove(playerId);
+        if (existing != null) existing.cancel();
+        Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
+        if (delaySeconds <= 0) {
+            Bukkit.getScheduler().runTask(plugin, () -> revivePlayer(player));
+            return;
+        }
+        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            respawnTasks.remove(playerId);
+            if (!game.isActive() || !playerStates.isMatchParticipant(playerId)) return;
+            revivePlayer(player);
+        }, delaySeconds * 20L);
+        respawnTasks.put(playerId, task);
+    }
+
+    private void revivePlayer(Player player) {
+        if (playerStates.role(player) == Role.SPEEDRUNNER) {
+            playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
+        }
+        player.setGameMode(GameMode.SURVIVAL);
+        player.setHealth(player.getMaxHealth());
+        player.setFoodLevel(20);
+        Location respawn = player.getBedSpawnLocation();
+        if (respawn != null) player.teleport(respawn);
+        else player.teleport(player.getWorld().getSpawnLocation());
+        if (playerStates.role(player) == Role.HUNTER) {
+            compass.giveCompass(player);
+            compass.refreshCompass(player);
+            messages.broadcast("game.hunter-respawn-imminent", Map.of("player", player.getName()));
+        }
+    }
+
+    private void checkHuntersRemaining() {
+        int hunterCount = (int) Bukkit.getOnlinePlayers().stream()
+                .filter(p -> playerStates.role(p) == Role.HUNTER)
+                .filter(p -> playerStates.isMatchParticipant(p.getUniqueId()))
+                .count();
+        if (hunterCount == 0) {
+            messages.broadcast("game.last-hunter-removed");
+            game.finishLater(Role.SPEEDRUNNER);
         }
     }
     @EventHandler public void onTeleport(PlayerTeleportEvent event) {
@@ -183,16 +286,19 @@ public final class GameplayListener implements Listener {
 
         if (event.getFinalDamage() <= 0) return;
         if (game.isActive() && !game.isGameBegun()) {
-            // During the pre-start window, all participants are protected from
-            // damage (including fall damage from wacky world-engine spawns).
-            // A speedrunner hitting a hunter still starts the game.
-            if (playerStates.role(victim).isParticipant()) {
-                event.setCancelled(true);
-            }
-            if (event instanceof EntityDamageByEntityEvent byEntity
+            // A speedrunner hitting a hunter starts the game. That specific hit
+            // is allowed through so the first hit actually deals damage
+            // (fixes the first-hit-deals-no-damage bug).
+            boolean startsGame = event instanceof EntityDamageByEntityEvent byEntity
                     && byEntity.getDamager() instanceof Player attacker
                     && playerStates.role(attacker) == Role.SPEEDRUNNER
-                    && playerStates.role(victim) == Role.HUNTER) {
+                    && playerStates.role(victim) == Role.HUNTER;
+            // During the pre-start window, all participants are protected from
+            // damage (including fall damage from wacky world-engine spawns).
+            if (playerStates.role(victim).isParticipant() && !startsGame) {
+                event.setCancelled(true);
+            }
+            if (startsGame) {
                 game.beginGame();
             }
             return;
@@ -201,6 +307,18 @@ public final class GameplayListener implements Listener {
                 || !(byEntity.getDamager() instanceof Player attacker)) return;
         if (!game.isActive() || !game.isGameBegun() || !playerStates.role(attacker).isParticipant()
                 || !playerStates.role(victim).isParticipant()) return;
+        // Friendly fire: participants cannot damage their own team unless
+        // enabled for their role. This only applies once the game has begun,
+        // so it is never active during the pre-start window.
+        if (playerStates.role(attacker) == playerStates.role(victim)) {
+            boolean friendlyFire = playerStates.role(attacker) == Role.HUNTER
+                    ? config.getBoolean("settings.friendly-fire.hunter", false)
+                    : config.getBoolean("settings.friendly-fire.speedrunner", false);
+            if (!friendlyFire) {
+                event.setCancelled(true);
+                return;
+            }
+        }
         stats.getOrCreate(attacker.getUniqueId()).damage += event.getFinalDamage();
     }
     @EventHandler public void onEntityDeath(EntityDeathEvent event) {
@@ -208,7 +326,9 @@ public final class GameplayListener implements Listener {
                 || !(event.getEntity().getKiller() instanceof Player killer)
                 || !playerStates.role(killer).isParticipant()) return;
         boolean victimIsPlayer = event.getEntity() instanceof Player;
-        if (victimIsPlayer && !playerStates.role(event.getEntity().getUniqueId()).isParticipant()) return;
+        if (!victimIsPlayer || !playerStates.role(event.getEntity().getUniqueId()).isParticipant()) {
+            return;
+        }
         stats.getOrCreate(killer.getUniqueId()).kills++;
         game.stateCommands().runEventModifiers("ON_EVERY_KILL", killer);
         if (victimIsPlayer) {

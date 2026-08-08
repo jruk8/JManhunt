@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Map;
 
 /** Base class for datapacks that override vanilla structure sets. */
 public abstract class DatapackManager {
@@ -19,15 +20,20 @@ public abstract class DatapackManager {
         if (!enabled) return;
         File worldFolder = new File(plugin.getServer().getWorldContainer(), worldName);
         File datapackRoot = new File(worldFolder, "datapacks/" + datapackFolderName());
-        File structureSet = new File(datapackRoot, structureSetPath());
         File mcMeta = new File(datapackRoot, "pack.mcmeta");
         try {
-            if (structureSet.getParentFile() != null) structureSet.getParentFile().mkdirs();
             writeIfChanged(mcMeta, packMeta());
-            plugin.saveResource(resourcePath(), false);
-            File source = new File(plugin.getDataFolder(), resourcePath());
-            String content = Files.readString(source.toPath(), StandardCharsets.UTF_8);
-            boolean changed = writeIfChanged(structureSet, content);
+            boolean changed = false;
+            for (Map.Entry<String, String> entry : structureSetFiles().entrySet()) {
+                String targetPath = entry.getKey();
+                String resource = entry.getValue();
+                File structureSet = new File(datapackRoot, targetPath);
+                if (structureSet.getParentFile() != null) structureSet.getParentFile().mkdirs();
+                plugin.saveResource(resource, false);
+                File source = new File(plugin.getDataFolder(), resource);
+                String content = Files.readString(source.toPath(), StandardCharsets.UTF_8);
+                changed |= writeIfChanged(structureSet, content);
+            }
             if (changed) reloadDataPacks();
         } catch (IOException exception) {
             plugin.getLogger().warning("Failed to apply " + datapackFolderName() + " datapack: " + exception.getMessage());
@@ -50,6 +56,17 @@ public abstract class DatapackManager {
                 plugin.getLogger().warning("Failed to delete datapack folder: " + e.getMessage());
             }
         }
+    }
+
+    /**
+     * Returns map of datapack target path (e.g.
+     * {@code data/minecraft/worldgen/structure_set/villages.json}) to plugin
+     * resource path (e.g. {@code settings/world-engine/villages.json}).
+     * Defaults to the single {@link #structureSetPath()}/{@link #resourcePath()}
+     * pair; subclasses managing multiple structure sets may override.
+     */
+    protected Map<String, String> structureSetFiles() {
+        return Map.of(structureSetPath(), resourcePath());
     }
 
     protected abstract String datapackFolderName();

@@ -30,6 +30,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private final WorldCellAllocator cellAllocator;
     private final StrongholdDatapackManager strongholdDatapackManager;
     private final NetherStructuresDatapackManager netherStructuresDatapackManager;
+    private final OverworldStructuresDatapackManager overworldStructuresDatapackManager;
     private final EndResetManager endResetManager;
 
     // Tracks the start-border state so it can be expanded when the game begins.
@@ -45,6 +46,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         this.cellAllocator = new WorldCellAllocator(statsRepository);
         this.strongholdDatapackManager = new StrongholdDatapackManager(plugin);
         this.netherStructuresDatapackManager = new NetherStructuresDatapackManager(plugin);
+        this.overworldStructuresDatapackManager = new OverworldStructuresDatapackManager(plugin);
         this.endResetManager = new EndResetManager(plugin);
     }
 
@@ -157,11 +159,14 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         if (isDisabled) {
             strongholdDatapackManager.remove(config.worldName(), false);
             netherStructuresDatapackManager.remove(config.worldName(), false);
+            overworldStructuresDatapackManager.remove(config.worldName(), false);
             return;
         }
         strongholdDatapackManager.apply(config.worldName(), true);
         boolean netherEnabled = configService.getBoolean("settings.world-engine.nether-structures.enabled", false);
         netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);
+        boolean overworldEnabled = configService.getBoolean("settings.world-engine.overworld-structures.enabled", false);
+        overworldStructuresDatapackManager.apply(config.worldName(), overworldEnabled);
     }
 
     @Override
@@ -172,12 +177,18 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         if (!worldEnabled) {
             strongholdDatapackManager.remove(config.worldName(), false);
             netherStructuresDatapackManager.remove(config.worldName(), false);
+            overworldStructuresDatapackManager.remove(config.worldName(), false);
             return;
         }
         boolean netherEnabled = configService.getBoolean("settings.world-engine.nether-structures.enabled", false);
         netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);
         if (!netherEnabled) {
             netherStructuresDatapackManager.remove(config.worldName(), false);
+        }
+        boolean overworldEnabled = configService.getBoolean("settings.world-engine.overworld-structures.enabled", false);
+        overworldStructuresDatapackManager.apply(config.worldName(), overworldEnabled);
+        if (!overworldEnabled) {
+            overworldStructuresDatapackManager.remove(config.worldName(), false);
         }
     }
 

@@ -39,6 +39,12 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
             case "total_damage_dealt" -> String.format(Locale.ROOT, "%.1f", value.damage);
             case "total_wins_as_hunter" -> String.valueOf(value.hunterWins);
             case "total_wins_as_speedrunner" -> String.valueOf(value.speedrunnerWins);
+            case "total_game_sessions" -> String.valueOf(value.sessions);
+            case "sessions_as_speedrunner" -> String.valueOf(value.speedrunnerSessions);
+            case "sessions_as_hunter" -> String.valueOf(value.hunterSessions);
+            case "formatted_total_playtime" -> formatTime(value.timeSpeedrunner + value.timeHunter);
+            case "total_kd_as_speedrunner" -> formatKd(value.speedrunnerKills, value.speedrunnerSessions);
+            case "total_kd_as_hunter" -> formatKd(value.hunterKills, value.hunterSessions);
             default -> null;
         };
         if (raw == null) return null;
@@ -52,5 +58,10 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
         long hours = seconds / 3600; seconds %= 3600;
         long minutes = seconds / 60; seconds %= 60;
         return days + "d " + hours + "h " + minutes + "m " + seconds + "s";
+    }
+
+    private String formatKd(int kills, int sessions) {
+        if (sessions <= 0) return "0.00";
+        return String.format(Locale.ROOT, "%.2f", (double) kills / sessions);
     }
 }

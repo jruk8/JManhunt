@@ -70,6 +70,20 @@ public final class CompassManager {
                 .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(holder.getLocation()))).orElse(null);
 
         if (target != null) {
+            // Check if the compass should be disabled when the target is
+            // nearby. Comparison is X/Z only (ignoring Y), as configured.
+            double threshold = plugin.getConfig().getDouble("settings.compass.disable-when-nearby.distance", 25.0);
+            boolean disableNearby = plugin.getConfig().getBoolean("settings.compass.disable-when-nearby.enabled", false);
+            if (disableNearby && threshold > 0) {
+                double dx = holder.getLocation().getX() - target.getLocation().getX();
+                double dz = holder.getLocation().getZ() - target.getLocation().getZ();
+                double flatDistance = Math.sqrt(dx * dx + dz * dz);
+                if (flatDistance <= threshold) {
+                    compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
+                            Map.of("player", target.getName())));
+                    return;
+                }
+            }
             setLodestone(item, target.getLocation());
             holder.getInventory().setItem(slot, item);
             compassActionbars.put(holder.getUniqueId(), component("compass.compass-actionbar",

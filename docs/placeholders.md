@@ -23,6 +23,12 @@ PlaceholderAPI.
 | `%jmanhunt_total_damage_dealt%` | DECIMAL | Career damage dealt in hearts. |
 | `%jmanhunt_total_wins_as_hunter%` | INTEGER | Career wins as a hunter. |
 | `%jmanhunt_total_wins_as_speedrunner%` | INTEGER | Career wins as a speedrunner. |
+| `%jmanhunt_total_game_sessions%` | INTEGER | Career total matches played as a participant. |
+| `%jmanhunt_sessions_as_speedrunner%` | INTEGER | Career matches played as a speedrunner. |
+| `%jmanhunt_sessions_as_hunter%` | INTEGER | Career matches played as a hunter. |
+| `%jmanhunt_formatted_total_playtime%` | TEXT | Career total playtime (speedrunner + hunter) formatted as days, hours, minutes, seconds. |
+| `%jmanhunt_total_kd_as_speedrunner%` | DECIMAL | Career K/D ratio as a speedrunner (kills per session). |
+| `%jmanhunt_total_kd_as_hunter%` | DECIMAL | Career K/D ratio as a hunter (kills per session). |
 
 ## Configuration
 

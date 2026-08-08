@@ -99,6 +99,11 @@ public final class GameManager {
             if (role(player).isParticipant()) {
                 playerStates.recordLastSeen(player, player.getLocation());
             }
+            // Initialize per-role lives from config. -1 means unlimited.
+            int lives = role(player) == Role.HUNTER
+                    ? plugin.getConfig().getInt("settings.hunter-respawn.lives.hunter", -1)
+                    : plugin.getConfig().getInt("settings.hunter-respawn.lives.speedrunner", 1);
+            playerStates.setLives(player.getUniqueId(), lives);
         }
         // Apply the configured default state and custom start commands before
         // giving role equipment. In particular, default clear-inventory must

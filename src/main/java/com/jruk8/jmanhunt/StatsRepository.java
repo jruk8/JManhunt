@@ -71,7 +71,9 @@ public final class StatsRepository implements AutoCloseable {
                     + "kills INTEGER NOT NULL DEFAULT 0, hunter_kills INTEGER NOT NULL DEFAULT 0, "
                     + "speedrunner_kills INTEGER NOT NULL DEFAULT 0, final_kills INTEGER NOT NULL DEFAULT 0, "
                     + "damage_dealt DOUBLE PRECISION NOT NULL DEFAULT 0, hunter_wins INTEGER NOT NULL DEFAULT 0, "
-                    + "speedrunner_wins INTEGER NOT NULL DEFAULT 0, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+                    + "speedrunner_wins INTEGER NOT NULL DEFAULT 0, sessions INTEGER NOT NULL DEFAULT 0, "
+                    + "speedrunner_sessions INTEGER NOT NULL DEFAULT 0, hunter_sessions INTEGER NOT NULL DEFAULT 0, "
+                    + "deaths INTEGER NOT NULL DEFAULT 0, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS jmanhunt_state ("
                     + "state_key VARCHAR(64) PRIMARY KEY, state_value BIGINT NOT NULL)");
         }
@@ -124,7 +126,8 @@ public final class StatsRepository implements AutoCloseable {
     public StatsManager.CareerStats load(UUID uuid) throws SQLException {
         try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(
                 "SELECT player_name, time_speedrunner, time_hunter, kills, hunter_kills, speedrunner_kills, "
-                        + "final_kills, damage_dealt, hunter_wins, speedrunner_wins FROM jmanhunt_player_stats WHERE uuid=?")) {
+                        + "final_kills, damage_dealt, hunter_wins, speedrunner_wins, sessions, "
+                        + "speedrunner_sessions, hunter_sessions, deaths FROM jmanhunt_player_stats WHERE uuid=?")) {
             statement.setString(1, uuid.toString());
             try (ResultSet result = statement.executeQuery()) {
                 if (!result.next()) return new StatsManager.CareerStats();
@@ -139,6 +142,10 @@ public final class StatsRepository implements AutoCloseable {
                 stats.damage = result.getDouble(8);
                 stats.hunterWins = result.getInt(9);
                 stats.speedrunnerWins = result.getInt(10);
+                stats.sessions = result.getInt(11);
+                stats.speedrunnerSessions = result.getInt(12);
+                stats.hunterSessions = result.getInt(13);
+                stats.deaths = result.getInt(14);
                 return stats;
             }
         }
@@ -147,13 +154,17 @@ public final class StatsRepository implements AutoCloseable {
     public void save(UUID uuid, StatsManager.CareerStats stats) throws SQLException {
         String sql = postgres
                 ? "INSERT INTO jmanhunt_player_stats (uuid,player_name,time_speedrunner,time_hunter,kills,hunter_kills,"
-                + "speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins) VALUES (?,?,?,?,?,?,?,?,?,?,?) "
+                + "speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins,sessions,"
+                + "speedrunner_sessions,hunter_sessions,deaths) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (uuid) DO UPDATE SET player_name=EXCLUDED.player_name,time_speedrunner=EXCLUDED.time_speedrunner,"
                 + "time_hunter=EXCLUDED.time_hunter,kills=EXCLUDED.kills,hunter_kills=EXCLUDED.hunter_kills,"
                 + "speedrunner_kills=EXCLUDED.speedrunner_kills,final_kills=EXCLUDED.final_kills,damage_dealt=EXCLUDED.damage_dealt,"
-                + "hunter_wins=EXCLUDED.hunter_wins,speedrunner_wins=EXCLUDED.speedrunner_wins,updated_at=CURRENT_TIMESTAMP"
+                + "hunter_wins=EXCLUDED.hunter_wins,speedrunner_wins=EXCLUDED.speedrunner_wins,"
+                + "sessions=EXCLUDED.sessions,speedrunner_sessions=EXCLUDED.speedrunner_sessions,"
+                + "hunter_sessions=EXCLUDED.hunter_sessions,deaths=EXCLUDED.deaths,updated_at=CURRENT_TIMESTAMP"
                 : "INSERT OR REPLACE INTO jmanhunt_player_stats (uuid,player_name,time_speedrunner,time_hunter,kills,hunter_kills,"
-                + "speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+                + "speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins,sessions,"
+                + "speedrunner_sessions,hunter_sessions,deaths) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, uuid.toString());
             statement.setString(2, stats.player);
@@ -166,13 +177,18 @@ public final class StatsRepository implements AutoCloseable {
             statement.setDouble(9, stats.damage);
             statement.setInt(10, stats.hunterWins);
             statement.setInt(11, stats.speedrunnerWins);
+            statement.setInt(12, stats.sessions);
+            statement.setInt(13, stats.speedrunnerSessions);
+            statement.setInt(14, stats.hunterSessions);
+            statement.setInt(15, stats.deaths);
             statement.executeUpdate();
         }
     }
 
     public void increment(UUID uuid, StatsManager.CareerStats delta) throws SQLException {
         String sql = "INSERT INTO jmanhunt_player_stats (uuid,player_name,time_speedrunner,time_hunter,kills,hunter_kills,"
-                + "speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins) VALUES (?,?,?,?,?,?,?,?,?,?,?) "
+                + "speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins,sessions,"
+                + "speedrunner_sessions,hunter_sessions,deaths) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (uuid) DO UPDATE SET player_name=EXCLUDED.player_name,"
                 + "time_speedrunner=jmanhunt_player_stats.time_speedrunner+EXCLUDED.time_speedrunner,"
                 + "time_hunter=jmanhunt_player_stats.time_hunter+EXCLUDED.time_hunter,"
@@ -181,13 +197,19 @@ public final class StatsRepository implements AutoCloseable {
                 + "final_kills=jmanhunt_player_stats.final_kills+EXCLUDED.final_kills,"
                 + "damage_dealt=jmanhunt_player_stats.damage_dealt+EXCLUDED.damage_dealt,"
                 + "hunter_wins=jmanhunt_player_stats.hunter_wins+EXCLUDED.hunter_wins,"
-                + "speedrunner_wins=jmanhunt_player_stats.speedrunner_wins+EXCLUDED.speedrunner_wins,updated_at=CURRENT_TIMESTAMP";
+                + "speedrunner_wins=jmanhunt_player_stats.speedrunner_wins+EXCLUDED.speedrunner_wins,"
+                + "sessions=jmanhunt_player_stats.sessions+EXCLUDED.sessions,"
+                + "speedrunner_sessions=jmanhunt_player_stats.speedrunner_sessions+EXCLUDED.speedrunner_sessions,"
+                + "hunter_sessions=jmanhunt_player_stats.hunter_sessions+EXCLUDED.hunter_sessions,"
+                + "deaths=jmanhunt_player_stats.deaths+EXCLUDED.deaths,updated_at=CURRENT_TIMESTAMP";
         try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, uuid.toString()); statement.setString(2, delta.player);
             statement.setLong(3, delta.timeSpeedrunner); statement.setLong(4, delta.timeHunter);
             statement.setInt(5, delta.kills); statement.setInt(6, delta.hunterKills); statement.setInt(7, delta.speedrunnerKills);
             statement.setInt(8, delta.finalKills); statement.setDouble(9, delta.damage);
             statement.setInt(10, delta.hunterWins); statement.setInt(11, delta.speedrunnerWins);
+            statement.setInt(12, delta.sessions); statement.setInt(13, delta.speedrunnerSessions);
+            statement.setInt(14, delta.hunterSessions); statement.setInt(15, delta.deaths);
             statement.executeUpdate();
         }
     }

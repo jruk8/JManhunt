@@ -37,3 +37,21 @@ placeholders:
   total_wins_as_speedrunner:
     type: INTEGER
     description: Career wins as a speedrunner.
+  total_game_sessions:
+    type: INTEGER
+    description: Career total matches played as a participant.
+  sessions_as_speedrunner:
+    type: INTEGER
+    description: Career matches played as a speedrunner.
+  sessions_as_hunter:
+    type: INTEGER
+    description: Career matches played as a hunter.
+  formatted_total_playtime:
+    type: TEXT
+    description: Career total playtime (speedrunner + hunter) formatted as days, hours, minutes, seconds.
+  total_kd_as_speedrunner:
+    type: DECIMAL
+    description: Career K/D ratio as a speedrunner (kills per session).
+  total_kd_as_hunter:
+    type: DECIMAL
+    description: Career K/D ratio as a hunter (kills per session).

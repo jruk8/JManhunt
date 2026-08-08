@@ -8,8 +8,8 @@ to browse and change the boolean built-in actions and modifier switches
 in-game.
 
 The `settings.world-engine` section controls grid cell size, spread radius,
-target world, lobby teleport location, and the optional nether-structures
-datapack for the grid-based world engine.
+target world, lobby teleport location, and the optional nether-structures and
+overworld-structures datapacks for the grid-based world engine.
 
 ## Settings
 
@@ -25,6 +25,13 @@ like:
   stronghold random spread, and automatic End resets between matches
 - optional nether-structures datapack that boosts fortress and bastion spawn
   frequency (requires a server restart)
+- optional overworld-structures datapack that boosts village, shipwreck,
+  buried treasure, dungeon, and ruined portal spawn frequency (requires a
+  server restart)
+- compass disable-when-nearby that stops tracking when the target is within a
+  configurable flat distance
+- friendly fire rules for hunters and speedrunners
+- delayed hunter respawn and per-role lives
 
 and a lot more!
 

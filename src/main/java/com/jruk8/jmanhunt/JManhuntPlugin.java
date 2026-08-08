@@ -16,7 +16,7 @@ import java.util.List;
 
 public final class JManhuntPlugin extends JavaPlugin {
     private static final int CONFIG_VERSION = 1;
-    private static final int MESSAGES_VERSION = 3;
+    private static final int MESSAGES_VERSION = 4;
     private MessageService messages;
     private SoundService sounds;
     private PlayerStateStore playerStates;

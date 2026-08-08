@@ -22,7 +22,8 @@ import java.util.HashSet;
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private static final Set<String> RESTART_REQUIRED_SETTINGS = Set.of(
             "settings.world-engine.enabled",
-            "settings.world-engine.nether-structures.enabled"
+            "settings.world-engine.nether-structures.enabled",
+            "settings.world-engine.overworld-structures.enabled"
     );
     private final JManhuntPlugin plugin;
     private final MessageService messages;

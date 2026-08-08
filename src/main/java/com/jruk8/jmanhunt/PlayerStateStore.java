@@ -16,6 +16,7 @@ public final class PlayerStateStore {
     private final Map<UUID, Map<UUID, Location>> lastSeenByWorld = new HashMap<>();
     private final Map<UUID, String> playerNames = new HashMap<>();
     private final Map<UUID, Boolean> speedrunnerAlive = new HashMap<>();
+    private final Map<UUID, Integer> lives = new HashMap<>();
     private final Set<UUID> matchParticipants = new HashSet<>();
     private final Set<UUID> matchSpectators = new HashSet<>();
 
@@ -59,6 +60,7 @@ public final class PlayerStateStore {
         lastSeenByWorld.clear();
         playerNames.clear();
         speedrunnerAlive.clear();
+        lives.clear();
         matchParticipants.clear();
         matchSpectators.clear();
     }
@@ -106,6 +108,18 @@ public final class PlayerStateStore {
             if (alive) count++;
         }
         return count;
+    }
+
+    public void setLives(UUID playerId, int lives) {
+        this.lives.put(playerId, lives);
+    }
+
+    public int getLives(UUID playerId) {
+        return lives.getOrDefault(playerId, -1);
+    }
+
+    public void decrementLives(UUID playerId) {
+        lives.computeIfPresent(playerId, (id, value) -> value - 1);
     }
 
     public Map<UUID, Map<UUID, Location>> sightings() {
