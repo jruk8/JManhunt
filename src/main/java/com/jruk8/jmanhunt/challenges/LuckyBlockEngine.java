@@ -1,9 +1,11 @@
 package com.jruk8.jmanhunt.challenges;
 
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -85,27 +87,35 @@ public final class LuckyBlockEngine {
     public boolean load(File file) {
         clear();
         if (file == null || !file.exists()) return false;
-        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        Map<String, Object> root;
+        try (InputStream in = new FileInputStream(file)) {
+            Object loaded = new Yaml().load(in);
+            if (loaded == null) return false;
+            if (!(loaded instanceof Map<?, ?> map)) return false;
+            root = castMap(map);
+        } catch (IOException e) {
+            return false;
+        }
 
-        loadRarities(yaml.getConfigurationSection("rarities"));
+        loadRarities(asSection(root.get("rarities")));
         if (rarities.isEmpty()) {
             rarities.putAll(DEFAULT_RARITIES);
             totalRarityWeight = DEFAULT_RARITIES.values().stream().mapToDouble(Double::doubleValue).sum();
         }
 
-        ConfigurationSection section = yaml.getConfigurationSection("outcomes");
+        Map<String, Object> section = asSection(root.get("outcomes"));
         if (section == null) return false;
-        for (String name : section.getKeys(false)) {
-            ConfigurationSection entry = section.getConfigurationSection(name);
+        for (String name : section.keySet()) {
+            Map<String, Object> entry = asSection(section.get(name));
             if (entry == null) {
                 throw new IllegalArgumentException("Entry '" + name + "' is not a section");
             }
-            double weight = entry.getDouble("weight", 1.0);
+            double weight = getDouble(entry.get("weight"), 1.0);
             if (weight <= 0) {
                 throw new IllegalArgumentException("Entry '" + name + "' has non-positive weight " + weight);
             }
 
-            String rarity = entry.getString("rarity", DEFAULT_RARITY).toLowerCase();
+            String rarity = getString(entry.get("rarity"), DEFAULT_RARITY).toLowerCase();
             if (!rarities.containsKey(rarity)) {
                 warnings.add("Entry '" + name + "' uses unknown rarity '" + rarity
                         + "'; defaulting to '" + DEFAULT_RARITY + "'.");
@@ -115,17 +125,17 @@ public final class LuckyBlockEngine {
             List<ItemEntry> items = parseItems(entry, name);
             List<CommandStep> commands = List.of();
             String relativeTo = "BLOCK";
-            ConfigurationSection cmdSection = entry.getConfigurationSection("commands");
+            Map<String, Object> cmdSection = asSection(entry.get("commands"));
             if (cmdSection != null) {
-                relativeTo = cmdSection.getString("relative-to", "BLOCK").toUpperCase();
+                relativeTo = getString(cmdSection.get("relative-to"), "BLOCK").toUpperCase();
                 if (!relativeTo.equals("BLOCK") && !relativeTo.equals("PLAYER")) {
                     throw new IllegalArgumentException("Entry '" + name + "' has invalid relative-to '" + relativeTo + "'");
                 }
-                commands = parseCommands(cmdSection.getStringList("commands"), name);
+                commands = parseCommands(getStringList(cmdSection.get("commands")), name);
             }
 
             StructureSettings structure = parseStructure(entry, name);
-            Feedback feedback = parseFeedback(entry);
+            Feedback feedback = parseFeedback(entry, name);
 
             outcomes.add(new Outcome(name, rarity, weight, items, commands, relativeTo, structure, feedback));
         }
@@ -156,11 +166,11 @@ public final class LuckyBlockEngine {
         return List.copyOf(warnings);
     }
 
-    private void loadRarities(ConfigurationSection section) {
+    private void loadRarities(Map<String, Object> section) {
         if (section == null) return;
-        for (String key : section.getKeys(false)) {
+        for (String key : section.keySet()) {
             String rarity = key.toLowerCase();
-            double weight = section.getDouble(key, 0.0);
+            double weight = getDouble(section.get(key), 0.0);
             if (weight <= 0) {
                 throw new IllegalArgumentException("Rarity '" + rarity + "' has non-positive weight " + weight);
             }
@@ -208,8 +218,8 @@ public final class LuckyBlockEngine {
      *       {@code golden_sword 1 enchantments={sharpness:3},damage=29}</li>
      * </ul>
      */
-    private List<ItemEntry> parseItems(ConfigurationSection entry, String name) {
-        List<String> raw = entry.getStringList("items");
+    private List<ItemEntry> parseItems(Map<String, Object> entry, String name) {
+        List<String> raw = getStringList(entry.get("items"));
         if (raw.isEmpty()) return List.of();
         List<ItemEntry> parsed = new ArrayList<>();
         for (String line : raw) {
@@ -276,40 +286,94 @@ public final class LuckyBlockEngine {
         return parsed;
     }
 
-    private StructureSettings parseStructure(ConfigurationSection entry, String name) {
-        ConfigurationSection struct = entry.getConfigurationSection("structure");
+    private StructureSettings parseStructure(Map<String, Object> entry, String name) {
+        Map<String, Object> struct = asSection(entry.get("structure"));
         if (struct == null) return null;
-        String structName = struct.getString("name");
+        String structName = getString(struct.get("name"), null);
         if (structName == null || structName.isBlank()) {
             throw new IllegalArgumentException("Entry '" + name + "' has a structure section but is missing structure.name");
         }
-        boolean randomRotation = struct.getBoolean("random-rotation", false);
+        boolean randomRotation = getBoolean(struct.get("random-rotation"), false);
         return new StructureSettings(structName, randomRotation);
     }
 
-    private Feedback parseFeedback(ConfigurationSection entry) {
-        ConfigurationSection feedbackSection = entry.getConfigurationSection("feedback");
+    private Feedback parseFeedback(Map<String, Object> entry, String name) {
+        Map<String, Object> feedbackSection = asSection(entry.get("feedback"));
         if (feedbackSection == null) return null;
 
         Sound sound = null;
-        ConfigurationSection soundSection = feedbackSection.getConfigurationSection("sound");
+        Map<String, Object> soundSection = asSection(feedbackSection.get("sound"));
         if (soundSection != null) {
-            if (!soundSection.contains("enabled")) {
-                throw new IllegalArgumentException("Entry '" + entry.getName() + "' feedback.sound is missing 'enabled'");
+            if (!soundSection.containsKey("enabled")) {
+                throw new IllegalArgumentException("Entry '" + name + "' feedback.sound is missing 'enabled'");
             }
-            String soundName = soundSection.getString("sound");
+            String soundName = getString(soundSection.get("sound"), null);
             if (soundName == null || soundName.isBlank()) {
-                throw new IllegalArgumentException("Entry '" + entry.getName() + "' feedback.sound is missing 'sound'");
+                throw new IllegalArgumentException("Entry '" + name + "' feedback.sound is missing 'sound'");
             }
-            boolean enabled = soundSection.getBoolean("enabled");
-            float pitch = (float) soundSection.getDouble("pitch", 1.0);
-            float volume = (float) soundSection.getDouble("volume", 1.0);
+            boolean enabled = getBoolean(soundSection.get("enabled"), false);
+            float pitch = (float) getDouble(soundSection.get("pitch"), 1.0);
+            float volume = (float) getDouble(soundSection.get("volume"), 1.0);
             sound = new Sound(enabled, soundName, pitch, volume);
         }
 
-        String message = feedbackSection.getString("message");
-        String broadcast = feedbackSection.getString("broadcast");
+        String message = getString(feedbackSection.get("message"), null);
+        String broadcast = getString(feedbackSection.get("broadcast"), null);
 
         return new Feedback(sound, message, broadcast);
     }
+
+    // ===================== YAML helper methods =====================
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> castMap(Map<?, ?> map) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> e : map.entrySet()) {
+            result.put(String.valueOf(e.getKey()), e.getValue());
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> asSection(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            return castMap(map);
+        }
+        return null;
+    }
+
+    private static String getString(Object value, String defaultValue) {
+        if (value == null) return defaultValue;
+        return String.valueOf(value);
+    }
+
+    private static double getDouble(Object value, double defaultValue) {
+        if (value == null) return defaultValue;
+        if (value instanceof Number number) return number.doubleValue();
+        try {
+            return Double.parseDouble(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private static boolean getBoolean(Object value, boolean defaultValue) {
+        if (value == null) return defaultValue;
+        if (value instanceof Boolean bool) return bool;
+        return Boolean.parseBoolean(String.valueOf(value));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> getStringList(Object value) {
+        if (value == null) return List.of();
+        if (value instanceof List<?> list) {
+            List<String> result = new ArrayList<>();
+            for (Object item : list) {
+                result.add(String.valueOf(item));
+            }
+            return result;
+        }
+        return List.of();
+    }
+
 }
