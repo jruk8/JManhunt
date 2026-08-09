@@ -1,3 +1,12 @@
+## [3.2.1] - 2026-08-09
+
+### 💼 Other
+
+- Plugin-conventions v1.2.5
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for main [skip ci]
 ## [3.2.0] - 2026-08-09
 
 ### 🚀 Features
