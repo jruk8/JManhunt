@@ -16,7 +16,7 @@ import java.util.List;
 
 public final class JManhuntPlugin extends JavaPlugin {
     private static final int CONFIG_VERSION = 1;
-    private static final int MESSAGES_VERSION = 4;
+    private static final int MESSAGES_VERSION = 5;
     private MessageService messages;
     private SoundService sounds;
     private PlayerStateStore playerStates;
@@ -62,6 +62,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         var piglinBarter = new PiglinBarterListener(this, game);
         var challenges = new ChallengesListener(this, game, playerStates, messages, sounds, configService);
         game.addGameStartListener(challenges::onGameStart);
+        game.addBeginGameListener(challenges::onBeginGame);
         settings.add(worldEngine);
         settings.add(piglinBarter);
         settings.add(challenges);

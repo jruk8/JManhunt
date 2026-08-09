@@ -84,6 +84,16 @@ public final class CompassManager {
                     return;
                 }
             }
+            // Check if the target is beyond the configured tracking distance.
+            double trackingDistance = plugin.getConfig().getDouble("settings.compass.tracking-distance", -1.0);
+            if (trackingDistance >= 0) {
+                double distance = holder.getLocation().distance(target.getLocation());
+                if (distance > trackingDistance) {
+                    compassActionbars.put(holder.getUniqueId(), component("compass.too-far-actionbar",
+                            Map.of("player", target.getName(), "distance", String.valueOf(Math.round(distance)))));
+                    return;
+                }
+            }
             setLodestone(item, target.getLocation());
             holder.getInventory().setItem(slot, item);
             compassActionbars.put(holder.getUniqueId(), component("compass.compass-actionbar",

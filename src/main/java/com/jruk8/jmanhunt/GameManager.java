@@ -43,6 +43,7 @@ public final class GameManager {
     private int autostartCountdownConfigured;
     private long matchId;
     private final List<Runnable> gameStartListeners = new ArrayList<>();
+    private final List<Runnable> beginGameListeners = new ArrayList<>();
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
                        PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
@@ -74,6 +75,9 @@ public final class GameManager {
 
     /** Registers a listener invoked whenever a match starts. */
     public void addGameStartListener(Runnable listener) { gameStartListeners.add(listener); }
+
+    /** Registers a listener invoked when the game actually begins (after pre-start window). */
+    public void addBeginGameListener(Runnable listener) { beginGameListeners.add(listener); }
 
     public boolean start() {
         if (active) return false;
@@ -197,6 +201,9 @@ public final class GameManager {
         }
         messages.broadcast("manhunt.started-by-damage"); sounds.playNeutralSound(); applyStartDebuffs();
         worldEngine.onBeginGame();
+        for (Runnable listener : beginGameListeners) {
+            listener.run();
+        }
         stateCommands.startIntervalModifiers();
     }
 

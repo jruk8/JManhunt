@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 4
+messages-version: 5
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
@@ -139,3 +139,4 @@ compass:
   compass-last-seen-actionbar: "<gold>Tracking <white>{player}<gold>'s Last Seen • <white>{distance}m <gray>({reason})"
   no-target-actionbar: "<gray>No {role} location available."
   nearby-actionbar: "<green>{player} is nearby! The compass is disabled."
+  too-far-actionbar: "<yellow>{player} is out of tracking range • <white>{distance}m"

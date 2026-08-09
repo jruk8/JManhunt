@@ -294,6 +294,14 @@ settings:
     # Default: false
     overworld-structures:
       enabled: false
+    # Optional console commands run whenever a new cell is fetched for a
+    # match. <cellX> and <cellZ> are replaced with the cell's block
+    # coordinates. This is useful for chunk-generation plugins such as Chunky
+    # to pre-generate the cell area before players teleport in.
+    # The commands only run when the cell is actually new (i.e. the previous
+    # cell was not already regenerated), avoiding unnecessary regeneration.
+    # Default: empty
+    on-fetch-new-cell: []
     # World border configuration for cell confinement.
     world-border:
       # When true, the world border is used to limit the spiral cell area.
@@ -419,6 +427,12 @@ settings:
       # The flat distance in blocks at which the compass stops tracking.
       # Default: 25
       distance: 25.0
+    # Maximum distance at which the compass can track a player. When the target
+    # is beyond this distance the compass shows an out-of-range actionbar
+    # instead of pointing at the target.
+    # Set to -1 for unlimited distance.
+    # Default: -1
+    tracking-distance: -1.0
 
   # Friendly fire rules for participants. When disabled for a role, players of
   # that role cannot damage players of the same role once the game has begun.

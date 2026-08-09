@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.challenges;
 
+import com.destroystokyo.paper.event.player.PlayerJumpEvent;
 import com.jruk8.jmanhunt.CommandPlaceholders;
 import com.jruk8.jmanhunt.ConfigService;
 import com.jruk8.jmanhunt.GameManager;
@@ -19,7 +20,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -80,6 +80,14 @@ public final class ChallengesListener implements Listener, SettingsListener {
                 Map.of("block", LuckyBlockResolver.displayName(block)));
     }
 
+    /** Applies one-heart to all participants when the game actually begins. */
+    public void onBeginGame() {
+        if (!plugin.getConfig().getBoolean("challenges.one-heart.enabled", false)) return;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            applyOneHeart(player);
+        }
+    }
+
     @EventHandler public void onJoin(PlayerJoinEvent event) {
         applyOneHeart(event.getPlayer());
     }
@@ -96,28 +104,28 @@ public final class ChallengesListener implements Listener, SettingsListener {
         player.setHealth(2.0);
     }
 
-    @EventHandler public void onMove(PlayerMoveEvent event) {
+    @EventHandler public void onJump(PlayerJumpEvent event) {
         if (!plugin.getConfig().getBoolean("challenges.no-jump.enabled", false)) return;
         if (!game.isActive() || !game.isGameBegun()) return;
         Player player = event.getPlayer();
         if (!playerStates.role(player).isParticipant()) return;
-        if (event.getFrom().getY() < event.getTo().getY() && player.getVelocity().getY() > 0) {
-            event.setCancelled(true);
-        }
+        event.setCancelled(true);
     }
 
     @EventHandler public void onBlockBreak(BlockBreakEvent event) {
         if (!plugin.getConfig().getBoolean("challenges.lucky-blocks.enabled", false)) return;
         if (!game.isActive() || !game.isGameBegun()) return;
-        if (!event.isDropItems()) {
-            // Block break did not yield drops
-            return;
-        }
         Block block = event.getBlock();
         if (!isLuckyBlock(block.getType())) return;
 
         Player player = event.getPlayer();
         if (!playerStates.role(player).isParticipant()) return;
+
+        // Only trigger the lucky block outcome if the block would actually
+        // drop something with the player's current tool. This prevents
+        // outcomes from firing when the player uses the wrong tool (e.g.
+        // breaking stone with an axe).
+        if (block.getDrops(player.getInventory().getItemInMainHand()).isEmpty()) return;
 
         event.setDropItems(false);
         LuckyBlockEngine.Outcome outcome = rollWithRerolls(block, player);

@@ -26,10 +26,16 @@ like:
 - optional nether-structures datapack that boosts fortress and bastion spawn
   frequency (requires a server restart)
 - optional overworld-structures datapack that boosts village, shipwreck,
-  buried treasure, dungeon, and ruined portal spawn frequency (requires a
-  server restart)
+  buried treasure, dungeon, ruined portal, desert pyramid, mineshaft, and
+  mesa mineshaft spawn frequency (requires a server restart)
 - compass disable-when-nearby that stops tracking when the target is within a
   configurable flat distance
+- compass tracking-distance that limits how far away the compass can track a
+  player (default `-1` for unlimited)
+- on-fetch-new-cell console commands that run when a new world-engine cell is
+  allocated, useful for pre-generating chunks with plugins such as Chunky
+- native `spectators_generate_chunks` gamerule is set to `false` during a
+  match to prevent spectators from generating chunks
 - friendly fire rules for hunters and speedrunners
 - delayed hunter respawn and per-role lives
 
@@ -63,6 +69,25 @@ The world reset engine can be configured in the `config.yml` file.
 6. Test the world engine by starting a match and checking if the teleportation
    and cell algorithm works correctly.
 
+### On-Fetch-New-Cell Commands
+
+Under `settings.world-engine.on-fetch-new-cell`, you can configure console
+commands that run whenever a new cell is allocated for a match. The
+placeholders `<cellX>` and `<cellZ>` are replaced with the cell's block
+coordinates. This is useful for pre-generating the cell area with
+chunk-generation plugins such as Chunky before players teleport in.
+
+```yaml
+settings:
+  world-engine:
+    on-fetch-new-cell:
+      - "chunky radius 500"
+      - "chunky start"
+```
+
+The commands only run when a genuinely new cell is allocated, avoiding
+unnecessary regeneration of cells that were already fetched.
+
 ### World Border
 
 Under `settings.world-engine.world-border`, you can enable a world border that
@@ -80,6 +105,21 @@ to the full cell size when the game begins. This is only active when both
 - `start-border.fadeout-time`: Time in seconds for the start border to animate
   expanding to cell size. Set to `0` or `-1` to skip the animation and snap to
   cell size immediately. Default: `5`
+
+### Compass Tracking Distance
+
+Under `settings.compass.tracking-distance`, you can limit how far away the
+compass can track a player. When the target is beyond this distance, the
+compass shows an out-of-range actionbar instead of pointing at the target.
+
+```yaml
+settings:
+  compass:
+    tracking-distance: -1.0
+```
+
+Set to `-1` (the default) for unlimited distance. Any non-negative value
+limits tracking to that many blocks.
 
 ### Troubleshooting
 

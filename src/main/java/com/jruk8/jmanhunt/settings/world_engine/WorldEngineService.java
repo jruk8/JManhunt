@@ -40,6 +40,10 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private WorldEngineConfig startBorderConfig;
     private BukkitTask startBorderTask;
 
+    // Tracks the last fetched cell so on-fetch-new-cell commands only run when
+    // a genuinely new cell is allocated (cleanliness flag).
+    private CellOrigin lastFetchedCell;
+
     public WorldEngineService(JavaPlugin plugin, ConfigService configService, StatsRepository statsRepository) {
         this.plugin = plugin;
         this.configService = configService;
@@ -64,6 +68,13 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             plugin.getLogger().severe("Could not find a valid spawn cell for world-engine after "
                     + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Skipping teleport.");
             return;
+        }
+
+        // Run on-fetch-new-cell commands only when a genuinely new cell is
+        // allocated, avoiding unnecessary chunk regeneration.
+        if (lastFetchedCell == null || lastFetchedCell.x() != origin.x() || lastFetchedCell.z() != origin.z()) {
+            runOnFetchNewCell(origin);
+            lastFetchedCell = origin;
         }
 
         teleportToGame(participants, world, config, origin);
@@ -380,5 +391,28 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         if (value > Integer.MAX_VALUE) return Integer.MAX_VALUE;
         if (value < Integer.MIN_VALUE) return Integer.MIN_VALUE;
         return (int) value;
+    }
+
+    /**
+     * Runs the configured on-fetch-new-cell console commands, replacing
+     * {@code <cellX>} and {@code <cellZ>} with the cell's block coordinates.
+     * Used to pre-generate the cell area with chunk-generation plugins such
+     * as Chunky before players teleport in.
+     */
+    private void runOnFetchNewCell(CellOrigin origin) {
+        List<String> commands = plugin.getConfig().getStringList("settings.world-engine.on-fetch-new-cell");
+        if (commands.isEmpty()) return;
+        for (String command : commands) {
+            if (command.isBlank()) continue;
+            String parsed = command.replace("<cellX>", String.valueOf(origin.x()))
+                    .replace("<cellZ>", String.valueOf(origin.z()));
+            if (parsed.startsWith("/")) parsed = parsed.substring(1);
+            try {
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to run on-fetch-new-cell command '%s'. Skipping..".formatted(command));
+                e.printStackTrace();
+            }
+        }
     }
 }

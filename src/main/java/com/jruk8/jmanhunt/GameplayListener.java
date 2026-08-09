@@ -240,7 +240,7 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
-        if (game.isActive() && playerStates.role(player).isParticipant()) {
+        if (game.isActive() && playerStates.role(player).isParticipant() && player.getGameMode() != GameMode.SPECTATOR) {
             playerStates.recordLastSeen(player, event.getTo());
         }
         if (game.isActive() && game.isGameBegun() && playerStates.role(player) == Role.SPEEDRUNNER
@@ -270,7 +270,8 @@ public final class GameplayListener implements Listener {
         }
     }
     @EventHandler public void onMove(PlayerMoveEvent event) {
-        if (game.isActive() && playerStates.role(event.getPlayer()).isParticipant()) {
+        if (game.isActive() && playerStates.role(event.getPlayer()).isParticipant()
+                && event.getPlayer().getGameMode() != GameMode.SPECTATOR) {
             playerStates.recordLastSeen(event.getPlayer(), event.getTo());
         }
     }

@@ -7,9 +7,10 @@ import java.util.Map;
 
 /**
  * Applies the world-engine overworld structures datapack that boosts the
- * spawn frequency of villages, shipwrecks, buried treasure, dungeons and
- * ruined portals. Each vanilla structure set is overridden with tighter
- * spacing/separation so more structures generate in the overworld.
+ * spawn frequency of villages, shipwrecks, buried treasure, ruined portals,
+ * desert pyramids, mineshafts and mesa mineshafts. Each vanilla structure
+ * set is overridden with tighter spacing/separation so more structures
+ * generate in the overworld.
  */
 public final class OverworldStructuresDatapackManager extends DatapackManager {
     public OverworldStructuresDatapackManager(JavaPlugin plugin) {
@@ -46,6 +47,9 @@ public final class OverworldStructuresDatapackManager extends DatapackManager {
         files.put("data/minecraft/worldgen/structure_set/shipwrecks.json", base + "shipwrecks.json");
         files.put("data/minecraft/worldgen/structure_set/buried_treasures.json", base + "buried-treasures.json");
         files.put("data/minecraft/worldgen/structure_set/ruined_portals.json", base + "ruined-portals.json");
+        files.put("data/minecraft/worldgen/structure_set/desert_pyramids.json", base + "desert-pyramids.json");
+        files.put("data/minecraft/worldgen/structure_set/mineshafts.json", base + "mineshafts.json");
+        files.put("data/minecraft/worldgen/structure_set/mesa_mineshafts.json", base + "mesa-mineshafts.json");
         return files;
     }
 }

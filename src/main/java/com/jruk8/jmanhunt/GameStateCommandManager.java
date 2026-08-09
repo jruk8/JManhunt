@@ -144,6 +144,10 @@ public final class GameStateCommandManager {
         worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, !disableLocatorBar));
         worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
                 plugin.getConfig().getBoolean(path + "set-respawn-immediate", false)));
+        // Prevent spectators from generating chunks while the match is active.
+        // This is the native gamerule equivalent of the old spectator chunk
+        // generation toggle and avoids lag from spectators exploring.
+        worlds.forEach(world -> world.setGameRule(GameRules.SPECTATORS_GENERATE_CHUNKS, false));
         if (plugin.getConfig().getBoolean(path + "set-daytime", false)) {
             Bukkit.getWorlds().forEach(this::setDaytime);
         }

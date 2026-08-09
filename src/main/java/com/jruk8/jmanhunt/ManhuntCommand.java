@@ -56,7 +56,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "modifiers" -> modifiers(sender, args);
             case "worldengine" -> worldEngine(sender, args);
             case "schem" -> schem.onCommand(sender, args);
-            case "quickstart" -> quickStart(sender, args);
+            case "quickstart", "qs" -> quickStart(sender, args);
             case "reload" -> reload(sender);
             default -> message(sender, "command.invalid");
         };
@@ -286,7 +286,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start",
-                "end", "modifiers", "worldengine", "schem", "quickstart", "reload"));
+                "end", "modifiers", "worldengine", "schem", "quickstart", "qs", "reload"));
         if (args.length == 2 && args[0].equalsIgnoreCase("modifiers"))
             return partial(args[1], new ArrayList<>(game.settingNames()));
         if (args.length == 3 && args[0].equalsIgnoreCase("modifiers"))

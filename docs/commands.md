@@ -10,6 +10,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt start`                                  | Starts a match. | `jmanhunt.command.start` |
 | `/manhunt end`                                    | Ends the active match; hunters win. | `jmanhunt.command.end` |
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
+| `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
 | `/manhunt modifiers [setting] [true\|false]`      | Lists, views, or changes built-in actions and custom modifiers. | `jmanhunt.command.modifiers` |
 | `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` |
 | `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` |
@@ -33,9 +34,9 @@ The `setplayer` command accepts the following roles:
 
 ## Quick Start
 
-`/manhunt quickstart [percentage]` is a convenience command for larger servers
-that want to start a match without manually assigning roles. It can only be
-used when no match is active.
+`/manhunt quickstart [percentage]` (alias `/manhunt qs [percentage]`) is a
+convenience command for larger servers that want to start a match without
+manually assigning roles. It can only be used when no match is active.
 
 - **Without arguments:** assigns every online player with role `none` as a
   Hunter, randomly chooses one Speedrunner (unless a Speedrunner is already
