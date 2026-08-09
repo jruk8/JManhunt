@@ -21,4 +21,4 @@ concurrency:
 
 jobs:
   build:
-    uses: jruk8/plugin-conventions/.github/workflows/docs.yml@v1.2.3
+    uses: jruk8/plugin-conventions/.github/workflows/docs.yml@v1.2.5
