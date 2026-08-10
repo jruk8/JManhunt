@@ -1,3 +1,12 @@
+## [3.3.0] - 2026-08-10
+
+### 🚀 Features
+
+- Additions and bug fixes
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for v3.2.1 [skip ci]
 ## [3.2.0] - 2026-08-09
 
 ### 🚀 Features
