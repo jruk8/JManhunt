@@ -38,6 +38,8 @@ like:
   match to prevent spectators from generating chunks
 - friendly fire rules for hunters and speedrunners
 - delayed hunter respawn and per-role lives
+- start delay for speedrunners (hunters in spectator for a configurable head start)
+- alternate win conditions (exit End, survive time, acquire item, reach advancement)
 
 and a lot more!
 

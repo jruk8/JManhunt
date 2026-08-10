@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.block.Block;
 import org.bukkit.block.structure.Mirror;
 import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.command.CommandSender;
@@ -18,6 +19,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.structure.Structure;
 import org.bukkit.structure.StructureManager;
+import org.bukkit.util.BlockVector;
 
 import java.io.File;
 import java.io.IOException;
@@ -203,6 +205,17 @@ public final class SchemCommand implements Listener {
                     Math.max(loc1.getBlockY(), loc2.getBlockY()) + 1,
                     Math.max(loc1.getBlockZ(), loc2.getBlockZ()) + 1);
             structure.fill(min, max, true);
+            // Capture the door/pivot block: try the player's target block first,
+            // then fall back to scanning the region for a door or gate.
+            Location doorLocation = findDoorLocation(player, min, max);
+            if (doorLocation != null) {
+                int[] pivot = SchematicPivot.savePivotOffset(min, doorLocation);
+                structure.getPersistentDataContainer().set(
+                        new NamespacedKey(plugin, "schematic_pivot"),
+                        PersistentDataType.INTEGER_ARRAY,
+                        pivot
+                );
+            }
             sm.saveStructure(targetFile, structure);
             message(sender, "manhunt.schem-save-success", Map.of("name", name));
             if (sender instanceof Player p) sounds.playNeutralSound(p);
@@ -252,7 +265,17 @@ public final class SchemCommand implements Listener {
                 message(sender, "manhunt.schem-load-failed", Map.of("name", name));
                 return true;
             }
-            structure.place(target.getLocation(), true, StructureRotation.NONE, Mirror.NONE, 0, 1.0f, new Random());
+            // Read the pivot offset stored at save time (defaults to origin).
+            int[] rawPivot = structure.getPersistentDataContainer()
+                    .getOrDefault(new NamespacedKey(plugin, "schematic_pivot"),
+                            PersistentDataType.INTEGER_ARRAY, new int[]{0, 0, 0});
+            BlockVector size = structure.getSize();
+            StructureRotation rotation = SchematicPivot.yawToRotation(target.getLocation().getYaw());
+            int[] rotatedPivot = SchematicPivot.rotateOffset(rawPivot, size, rotation);
+            // Paste so the door block lands on the player's block position.
+            Location pasteLocation = target.getLocation().getBlock().getLocation()
+                    .clone().subtract(rotatedPivot[0], rotatedPivot[1], rotatedPivot[2]);
+            structure.place(pasteLocation, true, rotation, Mirror.NONE, 0, 1.0f, new Random());
             message(sender, "manhunt.schem-load-success", Map.of("name", name, "player", target.getName()));
             if (sender instanceof Player p) sounds.playNeutralSound(p);
         } catch (Exception e) {
@@ -261,6 +284,33 @@ public final class SchemCommand implements Listener {
                     + (e.getMessage() != null ? e.getMessage() : "unknown"));
         }
         return true;
+    }
+
+    /**
+     * Finds the door/gate block to use as the pivot. Tries the player's
+     * target block first, then falls back to scanning the filled region.
+     */
+    private Location findDoorLocation(Player player, Location min, Location max) {
+        Block target = player.getTargetBlockExact(10);
+        if (target != null && isDoorBlock(target.getType())) {
+            return target.getLocation();
+        }
+        for (int x = min.getBlockX(); x <= max.getBlockX(); x++) {
+            for (int y = min.getBlockY(); y <= max.getBlockY(); y++) {
+                for (int z = min.getBlockZ(); z <= max.getBlockZ(); z++) {
+                    Block block = min.getWorld().getBlockAt(x, y, z);
+                    if (isDoorBlock(block.getType())) {
+                        return block.getLocation();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean isDoorBlock(Material type) {
+        String name = type.name();
+        return name.endsWith("DOOR") || name.endsWith("GATE");
     }
 
     private boolean list(CommandSender sender) {

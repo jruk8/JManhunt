@@ -31,6 +31,7 @@ public final class GameManager {
     private final ConfigService configService;
     private final SoundService sounds;
     private final WorldEngineService worldEngine;
+    private final WinConditionEngine winConditionEngine;
     private boolean active;
     private boolean ending;
     private boolean gameBegun;
@@ -44,10 +45,15 @@ public final class GameManager {
     private long matchId;
     private final List<Runnable> gameStartListeners = new ArrayList<>();
     private final List<Runnable> beginGameListeners = new ArrayList<>();
+    private BukkitTask startDelayTask;
+    private int startDelayRemaining;
+    private boolean startDelayActive;
+    private BukkitTask surviveTimeTask;
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
                        PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
-                       ConfigService configService, WorldEngineService worldEngine) {
+                       ConfigService configService, WorldEngineService worldEngine,
+                       WinConditionEngine winConditionEngine) {
         this.plugin = plugin;
         this.messages = messages;
         this.sounds = sounds;
@@ -56,7 +62,8 @@ public final class GameManager {
         this.stats = stats;
         this.configService = configService;
         this.worldEngine = worldEngine;
-        this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService);
+        this.winConditionEngine = winConditionEngine;
+        this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService, worldEngine);
 
         // assign events
         configService.onChange("settings.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
@@ -126,6 +133,35 @@ public final class GameManager {
                 player.setGameMode(GameMode.ADVENTURE);
             }
         }
+        // Start delay: hunters go to spectator for the initial delay of the
+        // match, giving speedrunners a head start.
+        if (plugin.getConfig().getBoolean("settings.start-delay.enabled", false)) {
+            int delaySeconds = plugin.getConfig().getInt("settings.start-delay.delay-seconds", 30);
+            if (delaySeconds > 0) {
+                for (Player player : players) {
+                    if (role(player) == Role.HUNTER) {
+                        player.setGameMode(GameMode.SPECTATOR);
+                    }
+                }
+                startDelayRemaining = delaySeconds;
+                startDelayActive = true;
+                // If start-on-speedrunner-damage is disabled, begin the
+                // countdown immediately. Otherwise it starts in beginGame().
+                if (!getSetting("settings.start-on-speedrunner-damage.enabled")) {
+                    beginStartDelay();
+                }
+            }
+        }
+        // Survive time win condition: speedrunners win if they survive long enough.
+        if (winConditionEngine.isSurviveTimeEnabled()) {
+            long ticks = Math.round(winConditionEngine.surviveTimeSeconds() * 20.0);
+            long currentMatchId = matchId;
+            surviveTimeTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (active && matchId == currentMatchId) {
+                    finish(Role.SPEEDRUNNER);
+                }
+            }, ticks);
+        }
         messages.broadcast("manhunt.start-success");
         gameStartListeners.forEach(Runnable::run);
         sounds.playNeutralSound();
@@ -144,6 +180,9 @@ public final class GameManager {
         ending = true;
         if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
         if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
+        if (startDelayTask != null) { startDelayTask.cancel(); startDelayTask = null; }
+        if (surviveTimeTask != null) { surviveTimeTask.cancel(); surviveTimeTask = null; }
+        startDelayActive = false;
 
         String winMessage = getWinMessage(winner);
         String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
@@ -193,10 +232,13 @@ public final class GameManager {
         if (waitingReminderTask != null) waitingReminderTask.cancel();
         if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
         // Restore participants to survival when the game begins if they were
-        // set to adventure mode during the pre-start window.
+        // set to adventure mode during the pre-start window. Hunters stay in
+        // spectator if a start delay is active.
         if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-with-adventure-mode", true)) {
             for (Player player : Bukkit.getOnlinePlayers()) {
-                if (role(player).isParticipant()) player.setGameMode(GameMode.SURVIVAL);
+                if (role(player).isParticipant() && !(role(player) == Role.HUNTER && startDelayActive)) {
+                    player.setGameMode(GameMode.SURVIVAL);
+                }
             }
         }
         messages.broadcast("manhunt.started-by-damage"); sounds.playNeutralSound(); applyStartDebuffs();
@@ -205,6 +247,54 @@ public final class GameManager {
             listener.run();
         }
         stateCommands.startIntervalModifiers();
+        // If a start delay is active, begin the countdown now (the delay only
+        // starts counting when the speedrunner first damages a hunter).
+        if (startDelayActive) {
+            beginStartDelay();
+        }
+    }
+
+    /**
+     * Starts the start-delay countdown. Hunters remain in spectator mode
+     * until the delay expires, then are restored to survival.
+     */
+    private void beginStartDelay() {
+        if (startDelayTask != null) return;
+        messages.broadcast("manhunt.start-delay-active", Map.of("seconds", String.valueOf(startDelayRemaining)));
+        long currentMatchId = matchId;
+        startDelayTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (!active || matchId != currentMatchId) {
+                cancelStartDelay();
+                return;
+            }
+            startDelayRemaining--;
+            if (startDelayRemaining <= 0) {
+                endStartDelay();
+            } else if (startDelayRemaining <= 5) {
+                messages.broadcast("manhunt.start-delay-ending", Map.of("seconds", String.valueOf(startDelayRemaining)));
+            }
+        }, 20L, 20L);
+    }
+
+    /**
+     * Ends the start delay, restoring hunters to survival mode.
+     */
+    private void endStartDelay() {
+        cancelStartDelay();
+        startDelayActive = false;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (role(player) == Role.HUNTER) {
+                player.setGameMode(GameMode.SURVIVAL);
+            }
+        }
+        messages.broadcast("manhunt.start-delay-ended");
+    }
+
+    private void cancelStartDelay() {
+        if (startDelayTask != null) {
+            startDelayTask.cancel();
+            startDelayTask = null;
+        }
     }
 
     private String getWinMessage(Role winner) {

@@ -68,8 +68,10 @@ Lucky Block `STRUCTURE` outcomes and can be reused by future features.
 - **List:** `/jmanhunt schem list` displays all available schematics.
 - **Load:** `/jmanhunt schem load <name> [player]` loads a schematic centered
   on the sender's location (or the selected player's location when a selector
-  is provided, so console execution is supported). The structure is placed
-  with the same anchor behavior used by Lucky Block structure outcomes.
+  is provided, so console execution is supported). The structure is rotated to
+  match the player's facing and pasted so the saved pivot (door/gate block)
+  lands on the player. If no pivot was saved, the structure is placed with its
+  origin corner at the player's block position.
 - **Delete:** `/jmanhunt schem delete <name>` deletes a schematic. Run the
   command twice within 5 seconds to confirm deletion.
 

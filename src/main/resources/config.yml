@@ -390,6 +390,43 @@ settings:
     # Default: true
     start-with-adventure-mode: true
 
+  # Start delay for speedrunners. When enabled, all hunters are set to
+  # spectator mode for the configured delay, giving speedrunners a head start.
+  # If start-on-speedrunner-damage is also enabled, the delay countdown only
+  # starts when the speedrunner first damages a hunter.
+  # Default: false
+  start-delay:
+    enabled: false
+    # Delay in seconds. Values <= 0 mean no delay.
+    # Default: 30
+    delay-seconds: 30
+
+  # Alternate win conditions. Multiple conditions can be enabled at the same
+  # time; speedrunners win as soon as any one is satisfied.
+  # Default: exitEnd enabled, all others disabled
+  win-conditions:
+    # Speedrunners win by entering the End and returning to the Overworld.
+    exitEnd:
+      enabled: true
+    # Speedrunners win by surviving for the configured time.
+    surviveTime:
+      enabled: false
+      # Time in seconds the speedrunner(s) must survive.
+      # Default: 3600.0
+      time: 3600.0
+    # Speedrunners win by acquiring the configured item.
+    acquireItem:
+      enabled: false
+      # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
+      # Default: minecraft:netherite_ingot
+      item: "minecraft:netherite_ingot"
+    # Speedrunners win by completing the configured advancement.
+    reachAdvancement:
+      enabled: false
+      # The advancement to reach (namespaced key, e.g. minecraft:story/enter_the_nether).
+      # Default: minecraft:story/enter_the_nether
+      advancement: "minecraft:story/enter_the_nether"
+
   # Compass tracking settings. The held actionbar stays visible between
   # interval refreshes and continues showing its cached value.
   compass:

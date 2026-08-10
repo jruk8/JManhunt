@@ -64,7 +64,7 @@ public final class ChallengesListener implements Listener, SettingsListener {
 
     /**
      * Called when a match starts. Resolves the lucky block definition (a
-     * random block if configured) and announces the chosen block.
+     * random block if configured) so it is ready when the game begins.
      */
     public void onGameStart() {
         if (!plugin.getConfig().getBoolean("challenges.lucky-blocks.enabled", false)) return;
@@ -76,16 +76,24 @@ public final class ChallengesListener implements Listener, SettingsListener {
             return;
         }
         currentLuckyBlock = block;
-        messages.broadcast("manhunt.lucky-block-announce",
-                Map.of("block", LuckyBlockResolver.displayName(block)));
     }
 
-    /** Applies one-heart to all participants when the game actually begins. */
+    /** Applies one-heart to all participants and announces the lucky block when the game begins. */
     public void onBeginGame() {
         if (!plugin.getConfig().getBoolean("challenges.one-heart.enabled", false)) return;
         for (Player player : Bukkit.getOnlinePlayers()) {
             applyOneHeart(player);
         }
+    }
+
+    /**
+     * Announces the resolved lucky block to all players. Called after the
+     * match status is shown so the announcement does not push it out of view.
+     */
+    public void announceLuckyBlock() {
+        if (currentLuckyBlock == null) return;
+        messages.broadcast("manhunt.lucky-block-announce",
+                Map.of("block", LuckyBlockResolver.displayName(currentLuckyBlock)));
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {

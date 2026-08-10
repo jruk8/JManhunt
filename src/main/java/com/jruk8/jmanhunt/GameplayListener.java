@@ -15,6 +15,7 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitTask;
@@ -36,6 +37,7 @@ public final class GameplayListener implements Listener {
     private final CompassManager compass;
     private final StatsManager stats;
     private final LobbyTeleporter lobbyTeleporter;
+    private final WinConditionEngine winConditionEngine;
     private final SpeedrunnerDisconnectTracker disconnects = new SpeedrunnerDisconnectTracker();
     private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
     private final Map<UUID, BukkitTask> respawnTasks = new HashMap<>();
@@ -44,7 +46,8 @@ public final class GameplayListener implements Listener {
 
     public GameplayListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
                             MessageService messages, ConfigService config, SoundService sounds, CompassManager compass,
-                            StatsManager stats, LobbyTeleporter lobbyTeleporter) {
+                            StatsManager stats, LobbyTeleporter lobbyTeleporter,
+                            WinConditionEngine winConditionEngine) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.game = game;
@@ -54,6 +57,7 @@ public final class GameplayListener implements Listener {
         this.compass = compass;
         this.stats = stats;
         this.lobbyTeleporter = lobbyTeleporter;
+        this.winConditionEngine = winConditionEngine;
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
@@ -243,7 +247,8 @@ public final class GameplayListener implements Listener {
         if (game.isActive() && playerStates.role(player).isParticipant() && player.getGameMode() != GameMode.SPECTATOR) {
             playerStates.recordLastSeen(player, event.getTo());
         }
-        if (game.isActive() && game.isGameBegun() && playerStates.role(player) == Role.SPEEDRUNNER
+        if (winConditionEngine.isExitEndEnabled()
+                && game.isActive() && game.isGameBegun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
                 && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL
                 && event.getFrom().getWorld() != null
@@ -255,7 +260,8 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
-        if (game.isActive() && game.isGameBegun() && playerStates.role(player) == Role.SPEEDRUNNER
+        if (winConditionEngine.isExitEndEnabled()
+                && game.isActive() && game.isGameBegun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
                 && event.getFrom().getEnvironment() == World.Environment.THE_END
                 && player.getWorld().getEnvironment() == World.Environment.NORMAL) {
@@ -343,10 +349,21 @@ public final class GameplayListener implements Listener {
         }
     }
 
+    @EventHandler public void onPickupItem(PlayerPickupItemEvent event) {
+        Player player = event.getPlayer();
+        if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
+        if (winConditionEngine.hasAcquireItem(player)) {
+            game.finishLater(Role.SPEEDRUNNER);
+        }
+    }
+
     @EventHandler public void onAdvancement(org.bukkit.event.player.PlayerAdvancementDoneEvent event) {
         Player player = event.getPlayer();
         if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
         game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player);
+        if (winConditionEngine.hasReachAdvancement(player)) {
+            game.finishLater(Role.SPEEDRUNNER);
+        }
     }
 
     private void handleDisconnect(Player player, Role role) {

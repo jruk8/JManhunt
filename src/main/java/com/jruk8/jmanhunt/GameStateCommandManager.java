@@ -16,12 +16,15 @@ public final class GameStateCommandManager {
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
     private final ConfigService configService;
+    private final LobbyTeleporter lobbyTeleporter;
     private final List<BukkitTask> intervalTasks = new ArrayList<>();
 
-    public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates, ConfigService configService) {
+    public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
+                                   ConfigService configService, LobbyTeleporter lobbyTeleporter) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.configService = configService;
+        this.lobbyTeleporter = lobbyTeleporter;
     }
 
     public void runStart() {
@@ -130,14 +133,21 @@ public final class GameStateCommandManager {
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
             boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.set-none-gamemode-spectator.enabled", true);
+            List<Player> nonePlayers = new ArrayList<>();
             Bukkit.getOnlinePlayers().forEach(player -> {
                 Role role = playerStates.role(player);
+                if (role == Role.AFK) return; // AFK players are left alone
                 if (phase.equals("start") && !role.isParticipant()) {
                     if (setNoneSpectator) player.setGameMode(GameMode.SPECTATOR);
+                    nonePlayers.add(player);
                     return;
                 }
                 player.setGameMode(GameMode.SURVIVAL);
             });
+            if (!nonePlayers.isEmpty()) {
+                lobbyTeleporter.teleportToLobby(nonePlayers);
+                lobbyTeleporter.setSpawnToLobby(nonePlayers);
+            }
         }
         var worlds = Bukkit.getWorlds();
         boolean disableLocatorBar = plugin.getConfig().getBoolean(path + "disable-locator-bar", false);

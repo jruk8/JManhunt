@@ -172,10 +172,10 @@ outcomes:
     rarity: rare
     weight: 1.0
     items:
-      - "minecraft:enchanted_book[enchantments={sharpness:5}] 1"
-      - "minecraft:enchanted_book[enchantments={unbreaking:3}] 1"
-      - "minecraft:enchanted_book[enchantments={power:5}] 1"
-      - "minecraft:enchanted_book[enchantments={protection:4}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"sharpness\":5}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"unbreaking\":3}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"power\":5}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"protection\":4}] 1"
     feedback:
       sound:
         enabled: true
@@ -549,37 +549,21 @@ outcomes:
     commands:
       relative-to: BLOCK
       commands:
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:white_concrete_powder\"},Time:1}"
+        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:green_concrete_powder\"},Time:1}"
         - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:light_gray_concrete_powder\"},Time:1}"
+        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:cyan_concrete_powder\"},Time:1}"
         - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:gray_concrete_powder\"},Time:1}"
+        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:light_blue_concrete_powder\"},Time:1}"
         - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:black_concrete_powder\"},Time:1}"
+        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:blue_concrete_powder\"},Time:1}"
         - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:red_concrete_powder\"},Time:1}"
+        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:purple_concrete_powder\"},Time:1}"
         - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:orange_concrete_powder\"},Time:1}"
+        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:magenta_concrete_powder\"},Time:1}"
         - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:yellow_concrete_powder\"},Time:1}"
+        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:pink_concrete_powder\"},Time:1}"
         - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:lime_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:green_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:cyan_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:light_blue_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:blue_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:purple_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:magenta_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:pink_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {block_state:{Name:\"minecraft:brown_concrete_powder\"},Time:1}"
+        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:brown_concrete_powder\"},Time:1}"
         - "delay: 10"
         - "summon lightning_bolt ~ ~15 ~"
         - "delay: 20"
@@ -590,8 +574,8 @@ outcomes:
         sound: entity.firework_rocket.blast
         pitch: 1.0
         volume: 1.0
-      message: "<gradient:red:orange:yellow:green:blue:purple><bold>A RAINBOW TOWER!</bold></gradient>"
-      broadcast: "<gradient:red:orange:yellow:green:blue:purple><white>{player}</white> summoned a rainbow tower!</gradient>"
+      message: "<gradient:red:gold:yellow:green:blue><bold>A RAINBOW TOWER!</bold></gradient>"
+      broadcast: "<white>{player}</white> <gradient:red:gold:yellow:green:blue:white>summoned a rainbow tower!</gradient>"
 
   # ============================== STRUCTURES ==============================
   # 8 structure outcomes. Load .nbt from challenges/structures/<name>.nbt.

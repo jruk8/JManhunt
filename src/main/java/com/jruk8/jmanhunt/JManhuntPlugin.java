@@ -27,6 +27,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private JManhuntExpansion expansion;
     private ConfigService configService;
     private WorldEngineService worldEngine;
+    private WinConditionEngine winConditionEngine;
     private final List<SettingsListener> settings = new ArrayList<>();
 
     @Override
@@ -58,11 +59,13 @@ public final class JManhuntPlugin extends JavaPlugin {
         configService = new ConfigService(this);
         sounds = new SoundService(this, configService);
         worldEngine = new WorldEngineService(this, configService, statsRepository);
-        game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService, worldEngine);
+        winConditionEngine = new WinConditionEngine(getConfig());
+        game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService, worldEngine, winConditionEngine);
         var piglinBarter = new PiglinBarterListener(this, game);
         var challenges = new ChallengesListener(this, game, playerStates, messages, sounds, configService);
         game.addGameStartListener(challenges::onGameStart);
         game.addBeginGameListener(challenges::onBeginGame);
+        game.addBeginGameListener(challenges::announceLuckyBlock);
         settings.add(worldEngine);
         settings.add(piglinBarter);
         settings.add(challenges);
@@ -74,7 +77,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);
         getServer().getPluginManager().registerEvents(new GameplayListener(
-                this, playerStates, game, messages, configService, sounds, compass, stats, worldEngine), this);
+                this, playerStates, game, messages, configService, sounds, compass, stats, worldEngine, winConditionEngine), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
         getServer().getPluginManager().registerEvents(challenges, this);
         getServer().getPluginManager().registerEvents(schemCommand, this);
@@ -91,6 +94,10 @@ public final class JManhuntPlugin extends JavaPlugin {
         for (SettingsListener listener : settings) {
             listener.onStart();
         }
+
+        // Initialize bStats
+        var metricsBootstrap = new MetricsBootstrap(this);
+        metricsBootstrap.register();
     }
 
     @Override public void onDisable() {
@@ -110,6 +117,10 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
         messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")),
                 getConfig().getString("text-format", "minimessage"));
+
+        if (winConditionEngine != null) {
+            winConditionEngine.reload(getConfig());
+        }
 
         for (SettingsListener listener : settings) {
             saveResource(listener.getDataPath(), false);
