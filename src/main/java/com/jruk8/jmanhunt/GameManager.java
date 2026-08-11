@@ -134,15 +134,13 @@ public final class GameManager {
             }
         }
         // Start delay: hunters go to spectator for the initial delay of the
-        // match, giving speedrunners a head start.
+        // match, giving speedrunners a head start. Hunters are only moved to
+        // spectator when the countdown actually begins; when
+        // start-on-speedrunner-damage is enabled, that happens only after the
+        // speedrunner first damages a hunter.
         if (plugin.getConfig().getBoolean("settings.start-delay.enabled", false)) {
             int delaySeconds = plugin.getConfig().getInt("settings.start-delay.delay-seconds", 30);
             if (delaySeconds > 0) {
-                for (Player player : players) {
-                    if (role(player) == Role.HUNTER) {
-                        player.setGameMode(GameMode.SPECTATOR);
-                    }
-                }
                 startDelayRemaining = delaySeconds;
                 startDelayActive = true;
                 // If start-on-speedrunner-damage is disabled, begin the
@@ -260,6 +258,13 @@ public final class GameManager {
      */
     private void beginStartDelay() {
         if (startDelayTask != null) return;
+        // Hunters stay in spectator for the duration of the delay and are
+        // restored to survival in endStartDelay().
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (role(player) == Role.HUNTER) {
+                player.setGameMode(GameMode.SPECTATOR);
+            }
+        }
         messages.broadcast("manhunt.start-delay-active", Map.of("seconds", String.valueOf(startDelayRemaining)));
         long currentMatchId = matchId;
         startDelayTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {

@@ -1,5 +1,11 @@
 ## [3.3.0] - 2026-08-10
 
+### 🐛 Bug Fixes
+
+- Fix start delay setting hunters to spectator too early when `start-on-speedrunner-damage` is also enabled. Hunters now only enter spectator when the delay countdown actually begins, after the speedrunner deals first damage.
+- Fix lucky block definition being broadcast even when the challenge is disabled. `currentLuckyBlock` is now reset at the start of each game.
+- Fix custom modifier command arrays not resetting properly on reload. `YamlFileUpdater` no longer resurrects removed default command role keys under `custom-modifiers.*.commands`, and interval modifier tasks are now cancelled before settings reload.
+
 ### 🚀 Features
 
 - Additions and bug fixes

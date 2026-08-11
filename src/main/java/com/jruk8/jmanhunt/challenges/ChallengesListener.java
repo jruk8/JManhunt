@@ -67,6 +67,9 @@ public final class ChallengesListener implements Listener, SettingsListener {
      * random block if configured) so it is ready when the game begins.
      */
     public void onGameStart() {
+        // Reset the resolved block so a previously announced lucky block does
+        // not persist when the challenge has been disabled.
+        currentLuckyBlock = null;
         if (!plugin.getConfig().getBoolean("challenges.lucky-blocks.enabled", false)) return;
         String definition = plugin.getConfig().getString("challenges.lucky-blocks.block-definition", "gold_block");
         Material block = LuckyBlockResolver.resolve(definition);

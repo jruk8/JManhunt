@@ -122,6 +122,11 @@ public final class JManhuntPlugin extends JavaPlugin {
             winConditionEngine.reload(getConfig());
         }
 
+        // Cancel any running interval modifier tasks before reloading settings
+        // so stale tasks do not keep firing against a partially updated config.
+        if (game != null) {
+            game.stateCommands().cancelIntervalModifiers();
+        }
         for (SettingsListener listener : settings) {
             saveResource(listener.getDataPath(), false);
             listener.onReload();
