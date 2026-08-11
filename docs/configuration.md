@@ -34,8 +34,11 @@ like:
   player (default `-1` for unlimited)
 - on-fetch-new-cell console commands that run when a new world-engine cell is
   allocated, useful for pre-generating chunks with plugins such as Chunky
-- native `spectators_generate_chunks` gamerule is set to `false` during a
-  match to prevent spectators from generating chunks
+ - native `spectators_generate_chunks` gamerule is set to `false` during a
+   match to prevent spectators from generating chunks
+ - `gamestate-commands.default-commands.disable-phantoms` disables the
+   `doInsomnia` gamerule during a match so phantoms cannot spawn while players
+   are away from a bed; it is restored when the match ends
 - friendly fire rules for hunters and speedrunners
 - delayed hunter respawn and per-role lives
 - start delay for speedrunners (hunters in spectator for a configurable head start)

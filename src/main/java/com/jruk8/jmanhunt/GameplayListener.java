@@ -106,8 +106,17 @@ public final class GameplayListener implements Listener {
         game.updateAutostartState();
     }
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
-        if (game.isActive() && playerStates.role(event.getPlayer()) == Role.HUNTER) {
-            Bukkit.getScheduler().runTask(plugin, () -> compass.giveCompass(event.getPlayer()));
+        Player player = event.getPlayer();
+        if (game.isActive() && playerStates.role(player) == Role.HUNTER) {
+            Bukkit.getScheduler().runTask(plugin, () -> compass.giveCompass(player));
+        }
+        if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
+        game.stateCommands().runEventModifiers("ON_RESPAWN", player);
+        Role role = playerStates.role(player);
+        if (role == Role.HUNTER) {
+            game.stateCommands().runEventModifiers("ON_HUNTER_RESPAWN", player);
+        } else if (role == Role.SPEEDRUNNER) {
+            game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_RESPAWN", player);
         }
     }
     @EventHandler public void onDeath(PlayerDeathEvent event) {
@@ -229,6 +238,14 @@ public final class GameplayListener implements Listener {
             compass.giveCompass(player);
             compass.refreshCompass(player);
             messages.broadcast("game.hunter-respawn-imminent", Map.of("player", player.getName()));
+        }
+        if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
+        game.stateCommands().runEventModifiers("ON_RESPAWN", player);
+        Role role = playerStates.role(player);
+        if (role == Role.HUNTER) {
+            game.stateCommands().runEventModifiers("ON_HUNTER_RESPAWN", player);
+        } else if (role == Role.SPEEDRUNNER) {
+            game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_RESPAWN", player);
         }
     }
 

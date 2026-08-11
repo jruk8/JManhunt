@@ -356,6 +356,7 @@ public final class GameManager {
                         stateCommands.cancelIntervalModifiers();
                         stateCommands.runConsoleCleanup();
                         stateCommands.runPlayerCleanup();
+                        stateCommands.runEnd();
                         List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
                                 .map(p -> (Player) p).toList();
                         worldEngine.onMatchEnd(participants);

@@ -2,7 +2,10 @@ package com.jruk8.jmanhunt;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.GameRule;
 import org.bukkit.GameRules;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
@@ -57,6 +60,8 @@ public final class GameStateCommandManager {
      * Starts interval-based custom modifiers. Should be called when the game
      * begins (via {@link GameManager#beginGame()}). Modifiers whose
      * {@code runs-on} list contains INTERVAL are scheduled on a repeating task.
+     * Supports decimal intervals: 0-0.05 seconds executes every tick, rounds to
+     * the nearest tick.
      */
     public void startIntervalModifiers() {
         cancelIntervalModifiers();
@@ -65,9 +70,10 @@ public final class GameStateCommandManager {
             String base = "custom-modifiers." + name + ".";
             if (!runsOnContains(name, "INTERVAL")) continue;
 
-            int intervalSeconds = plugin.getConfig().getInt(base + "interval-settings.interval", 60);
-            if (intervalSeconds <= 0) continue;
-            long intervalTicks = intervalSeconds * 20L;
+            double intervalSeconds = plugin.getConfig().getDouble(base + "interval-settings.interval", 60.0);
+            if (intervalSeconds < 0) continue;
+            // Round to nearest tick, with 0-0.05 seconds executing every tick (1 tick)
+            long intervalTicks = Math.max(1, (long) Math.round(intervalSeconds * 20D));
             BukkitTask task = Bukkit.getScheduler().runTaskTimer(plugin,
                     () -> runModifierCommands(name), intervalTicks, intervalTicks);
             intervalTasks.add(task);
@@ -152,6 +158,14 @@ public final class GameStateCommandManager {
         var worlds = Bukkit.getWorlds();
         boolean disableLocatorBar = plugin.getConfig().getBoolean(path + "disable-locator-bar", false);
         worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, !disableLocatorBar));
+        // Disable phantom spawning while a match runs and restore it when the
+        // match ends. The gamerule is re-enabled on the end phase.
+        boolean disablePhantoms = plugin.getConfig().getBoolean(path + "disable-phantoms", false);
+        GameRule doInsomnia = Registry.GAME_RULE.get(NamespacedKey.minecraft("doInsomnia"));
+        if (doInsomnia != null) {
+            boolean phantomsEnabled = phase.equals("end") || !disablePhantoms;
+            worlds.forEach(world -> world.setGameRule(doInsomnia, phantomsEnabled));
+        }
         worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
                 plugin.getConfig().getBoolean(path + "set-respawn-immediate", false)));
         // Prevent spectators from generating chunks while the match is active.

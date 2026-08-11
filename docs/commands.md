@@ -138,7 +138,7 @@ The available command lists are:
 
 | Value | Trigger |
 | --- | --- |
-| `ON_START` | Once when the match starts |
+| `ON_START` | Once when the match starts (runs for all participants) |
 | `INTERVAL` | On a fixed interval that starts counting when the game begins |
 | `ON_EVERY_KILL` | When a participating player kills any entity (mobs included) |
 | `ON_PLAYER_KILL` | When a participating player kills another player |
@@ -147,9 +147,17 @@ The available command lists are:
 | `ON_FIRST_ENTER_NETHER` | When a participating player first enters the Nether |
 | `ON_FIRST_ENTER_END` | When a participating player first enters the End |
 | `ON_EVERY_ADVANCEMENT` | When a participating player earns any advancement |
+| `ON_RESPAWN` | When a player respawns (only the executing player) |
+| `ON_SPEEDRUNNER_RESPAWN` | When a speedrunner respawns (only the executing player) |
+| `ON_HUNTER_RESPAWN` | When a hunter respawns (only the executing player) |
 
-Event-based modifiers run their `player`/`hunter`/`speedrunner` commands only
-for the specific player involved in the event.
+Except for `ON_START`, all event-based modifiers run their `player`,
+`hunter`, and `speedrunner` commands only for the specific player involved in
+the event. `ON_START` and `INTERVAL` run for all participating players. The
+role-specific commands (`hunter`/`speedrunner`) only run when the executing
+player has that role — for example, if a hunter enters the Nether and only a
+`speedrunner` command block is configured, that block does not run. Console
+commands run in parallel regardless of the player's role.
 
 ```yaml
 custom-modifiers:
@@ -167,6 +175,12 @@ custom-modifiers:
 Interval modifiers start counting when the game actually begins (i.e., when a
 speedrunner hits a hunter, or when the match force-starts), not when `/manhunt
 start` is run. They are automatically canceled when the match ends.
+
+The `interval-settings.interval` value supports decimals and is rounded to the
+nearest tick (1 tick = 0.05 seconds). Values between `0` and `0.05` execute
+every tick. For example, `0.5` runs every 10 ticks (0.5 seconds), and `1.5`
+runs every 30 ticks (1.5 seconds). Set to `0` or `0.05` for every-tick
+execution.
 
 ### Example
 

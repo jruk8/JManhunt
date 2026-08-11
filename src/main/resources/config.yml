@@ -95,6 +95,9 @@ gamestate-commands:
     disable-locator-bar: true
     set-respawn-immediate: true
     set-daytime: true
+    # When true, the doInsomnia gamerule is disabled while a match runs to
+    # prevent phantom spawning. It is restored to enabled when the match ends.
+    disable-phantoms: true
   # Console commands run once per configured entry.
   console-commands:
     enabled: false
@@ -172,6 +175,20 @@ custom-modifiers:
       hunter:
         # Runs only once for each Hunter, with <p> replaced by their name.
         - "give <p> wooden_sword"
+  full-iron-kit:
+    enabled: true
+    commands:
+      player:
+        - "give <p> iron_sword 1"
+        - "give <p> iron_pickaxe 1"
+        - "give <p> iron_axe 1"
+        - "give <p> iron_shovel 1"
+        - "give <p> shield 1"
+        - "give <p> iron_boots 1"
+        - "give <p> iron_leggings 1"
+        - "give <p> iron_chestplate 1"
+        - "give <p> iron_helmet 1"
+        - "give <p> cooked_beef 8"
   # Speedrunners get a health advantage while hunters' health gets a debuff.
   speedrunner-health-advantage:
     enabled: false
@@ -204,7 +221,7 @@ custom-modifiers:
   random-mob-spawner:
     enabled: false
     # When should commands other than cleanup be run? A list of any of:
-    # ON_START - Once when the match starts
+    # ON_START - Once when the match starts (runs for all participants)
     # INTERVAL - On a fixed interval that starts counting when the game begins
     # ON_EVERY_KILL - When any participating player kills any entity (mobs included)
     # ON_PLAYER_KILL - When a participating player kills another player
@@ -213,18 +230,23 @@ custom-modifiers:
     # ON_FIRST_ENTER_NETHER - When a participating player first enters the Nether
     # ON_FIRST_ENTER_END - When a participating player first enters the End
     # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
+    # ON_RESPAWN - When a player respawns (only the executing player)
+    # ON_SPEEDRUNNER_RESPAWN - When a speedrunner respawns (only the executing player)
+    # ON_HUNTER_RESPAWN - When a hunter respawns (only the executing player)
     # If omitted, defaults to ON_START.
     runs-on:
       - INTERVAL
     # Only applicable when "runs-on" contains INTERVAL.
     interval-settings:
-      # Interval duration in seconds.
+      # Interval duration in seconds. Supports decimals; rounds to the nearest
+      # tick. Values between 0 and 0.05 execute every tick.
       interval: 60
     commands:
       player:
         # <random-mob> is replaced with a random spawnable living entity type.
         # Tildes (~) are resolved to the player's position automatically.
         - "summon <random-mob> ~ ~ ~"
+  # Gives every participating player a random item every 30 seconds.
   random-item-giver:
     enabled: false
     runs-on:
@@ -235,6 +257,36 @@ custom-modifiers:
       player:
         # <random-item> is replaced with a random item type.
         - "give <p> <random-item> 1"
+  regen-on-kill:
+    enabled: false
+    runs-on:
+      - ON_PLAYER_KILL
+    commands:
+      player:
+        - "effect give <p> minecraft:regeneration 10 1 true"
+  diamond-on-advancement:
+    enabled: false
+    runs-on:
+      - ON_EVERY_ADVANCEMENT
+    commands:
+      player:
+        - "give <p> minecraft:diamond 1"
+  fireres-on-nether-enter:
+    enabled: false
+    runs-on:
+      - ON_NETHER_ENTER
+    commands:
+      player:
+        - "give <p> potion[potion_contents={potion:\"minecraft:night_vision\",custom_effects:[{id:\"minecraft:night_vision\",amplifier:0,duration:6000,show_particles:1b,show_icon:1b}]}] 1"
+  tpall-on-end:
+    enabled: false
+    runs-on:
+      - ON_FIRST_ENTER_END
+    commands:
+      speedrunner:
+        - "delay: 100" # delay in case speedrunner lags when loading into The End
+        - "tp @a <p>"
+
 
 # Built-in challenges. Each challenge can be toggled in-game with the
 # 'modifiers' subcommand.
@@ -265,6 +317,11 @@ settings:
   # Uses persistent square-spiral cell indexing and teleports participants to
   # randomized points near each cell center.
   # Avoids manual world restarting entirely.
+  #
+  # Setting this to true will additionally modify stronghold generation,
+  # such that to bypass the 128-per-world limit and spread them around
+  # like normal structures. You can tweak the rates in
+  # settings/world-engine/strongholds.json.
   # Default: false
   world-engine:
     enabled: false
