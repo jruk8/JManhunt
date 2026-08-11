@@ -1,3 +1,12 @@
+## [3.5.0] - 2026-08-11
+
+### 🚀 Features
+
+- Add full-iron-kit modifier, add 3 new runs-on sequences, fix bug with cleanup on autostart running out on cancel option
+
+### 📚 Documentation
+
+- Add gallery images and update banner
 ## [3.4.0] - 2026-08-11
 
 ### 🚀 Features
