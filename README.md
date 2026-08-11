@@ -59,4 +59,4 @@ Contributions are welcome! See
 [GitHub repository](https://github.com/jruk8/JManhunt) for issues and pull
 requests.
 
-© 2026 jruk8. Licensed under GNU GPLv3.
+© 2026 jruk8. Licensed under GNU AGPLv3.
