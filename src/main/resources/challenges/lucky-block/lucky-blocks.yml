@@ -66,7 +66,7 @@ rarities:
 
 outcomes:
   # ============================== ITEM DROPS ==============================
-  # 20 item drop outcomes. Most are common/rare; the best gear is epic/legendary.
+  # 72 item drop outcomes. Most are common/rare; the best gear is epic/legendary.
   diamonds:
     rarity: common
     weight: 1.0
@@ -339,8 +339,672 @@ outcomes:
       message: "<dark_purple><bold>THE DRAGON EGG!</bold> How?!</dark_purple>"
       broadcast: "<dark_purple><white>{player}</white> obtained the dragon egg!</dark_purple>"
 
+  # ---- NEW: basic utility items ----
+  tnt-blocks:
+    rarity: common
+    weight: 1.5
+    items:
+      - tnt 16
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.tnt.primed
+        pitch: 1.0
+        volume: 1.0
+      message: "<red>A stack of TNT. Use responsibly (or don't).</red>"
+  flint-and-steel:
+    rarity: common
+    weight: 1.5
+    items:
+      - flint_and_steel 1
+      - flint 8
+    feedback:
+      sound:
+        enabled: true
+        sound: item.flintandsteel.use
+        pitch: 1.0
+        volume: 1.0
+      message: "<gold>Flint and steel. Spark something up.</gold>"
+  lava-bucket:
+    rarity: common
+    weight: 1.2
+    items:
+      - lava_bucket 1
+    feedback:
+      sound:
+        enabled: true
+        sound: item.bucket.fill_lava
+        pitch: 0.8
+        volume: 1.0
+      message: "<red>A bucket of lava. Handle with care.</red>"
+  water-bucket:
+    rarity: common
+    weight: 1.2
+    items:
+      - water_bucket 1
+    feedback:
+      sound:
+        enabled: true
+        sound: item.bucket.fill
+        pitch: 1.0
+        volume: 1.0
+      message: "<blue>A bucket of water. Refreshing.</blue>"
+  snow-bucket:
+    rarity: common
+    weight: 1.2
+    items:
+      - powder_snow_bucket 1
+    feedback:
+      sound:
+        enabled: true
+        sound: item.bucket.fill_powder_snow
+        pitch: 1.2
+        volume: 1.0
+      message: "<white>A bucket of powder snow. Stay frosty.</white>"
+  ender-chest:
+    rarity: rare
+    weight: 1.0
+    items:
+      - ender_chest 1
+    feedback:
+      sound:
+        enabled: true
+        sound: block.ender_chest.open
+        pitch: 1.0
+        volume: 1.0
+      message: "<dark_purple>An ender chest! Storage across dimensions.</dark_purple>"
+  shulker-box:
+    rarity: epic
+    weight: 0.8
+    items:
+      - shulker_box 1
+    feedback:
+      sound:
+        enabled: true
+        sound: block.shulker_box.open
+        pitch: 1.0
+        volume: 1.0
+      message: "<light_purple>A shulker box! Portable storage, never spills.</light_purple>"
+  nether-kit:
+    rarity: rare
+    weight: 1.0
+    items:
+      - blaze_rod 3
+      - ender_eye 4
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.blaze.shoot
+        pitch: 1.0
+        volume: 1.0
+      message: "<gold>Blaze rods and ender eyes. The Stronghold awaits.</gold>"
+  utility-explorer-kit:
+    rarity: rare
+    weight: 0.9
+    items:
+      - spyglass 1
+      - compass 1
+      - clock 1
+      - map 1
+    feedback:
+      sound:
+        enabled: true
+        sound: item.spyglass.use
+        pitch: 1.2
+        volume: 1.0
+      message: "<white>An explorer's kit. Never get lost again.</white>"
+  saddle-and-lead:
+    rarity: common
+    weight: 1.2
+    items:
+      - saddle 1
+      - lead 2
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.horse.saddle
+        pitch: 1.0
+        volume: 1.0
+      message: "<gold>A saddle and some leads. Time to tame something.</gold>"
+  horse-armor:
+    rarity: epic
+    weight: 0.6
+    items:
+      - diamond_horse_armor 1
+    feedback:
+      sound:
+        enabled: true
+        sound: item.armor.equip_diamond
+        pitch: 1.0
+        volume: 1.0
+      message: "<aqua>Diamond horse armor! Your steed is now unstoppable.</aqua>"
+  name-tag:
+    rarity: common
+    weight: 1.0
+    items:
+      - name_tag 2
+    feedback:
+      sound:
+        enabled: true
+        sound: block.anvil.use
+        pitch: 1.2
+        volume: 1.0
+      message: "<white>Name tags. Time to name every mob \"Steve\".</white>"
+  amethyst-cluster:
+    rarity: rare
+    weight: 1.0
+    items:
+      - amethyst_cluster 4
+    feedback:
+      sound:
+        enabled: true
+        sound: block.amethyst_cluster.break
+        pitch: 1.2
+        volume: 1.0
+      message: "<light_purple>Amethyst clusters. Chime softly in the wind.</light_purple>"
+  echo-shard:
+    rarity: epic
+    weight: 0.6
+    items:
+      - echo_shard 2
+    feedback:
+      sound:
+        enabled: true
+        sound: item.sculk_sensor.clicking
+        pitch: 0.8
+        volume: 1.0
+      message: "<dark_aqua>Echo shards. Something out in the deep dark stirs.</dark_aqua>"
+      broadcast: "<dark_aqua><white>{player}</white> recovered echo shards from the deep dark!</dark_aqua>"
+  music-disc:
+    rarity: epic
+    weight: 0.4
+    items:
+      - music_disc_pigstep 1
+    feedback:
+      sound:
+        enabled: true
+        sound: block.note_block.pling
+        pitch: 1.5
+        volume: 1.0
+      message: "<gradient:light_purple:aqua><bold>Pigstep!</bold> A rare music disc.</gradient>"
+      broadcast: "<gradient:light_purple:aqua>{player} found a rare music disc!</gradient>"
+  respawn-anchor-kit:
+    rarity: rare
+    weight: 0.8
+    items:
+      - respawn_anchor 1
+      - glowstone 8
+    feedback:
+      sound:
+        enabled: true
+        sound: block.respawn_anchor.charge
+        pitch: 1.0
+        volume: 1.0
+      message: "<light_purple>A respawn anchor and glowstone. New spawnpoint, nether-style.</light_purple>"
+  glow-item-frame-kit:
+    rarity: common
+    weight: 1.2
+    items:
+      - glow_item_frame 4
+      - glow_ink_sac 4
+    feedback:
+      sound:
+        enabled: true
+        sound: item.glow_ink_sac.use
+        pitch: 1.2
+        volume: 1.0
+      message: "<green>Glowing item frames. Show off your loot in style.</green>"
+
+  # ---- NEW: diamond tools & netherite ----
+  diamond-tools-1:
+    rarity: rare
+    weight: 0.8
+    items:
+      - "minecraft:diamond_pickaxe[enchantments={efficiency:5,unbreaking:5,fortune:5}] 1"
+      - "minecraft:diamond_shovel[enchantments={efficiency:5,unbreaking:5}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.item.pickup
+        pitch: 1.2
+        volume: 1.0
+      message: "<aqua>Maxed-out diamond mining tools!</aqua>"
+  diamond-tools-2:
+    rarity: rare
+    weight: 0.8
+    items:
+      - "minecraft:diamond_axe[enchantments={efficiency:5,sharpness:7,unbreaking:5}] 1"
+      - "minecraft:diamond_hoe[enchantments={efficiency:5,unbreaking:5}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.item.pickup
+        pitch: 1.2
+        volume: 1.0
+      message: "<aqua>Maxed-out diamond axe and hoe!</aqua>"
+  netherite-ingot:
+    rarity: epic
+    weight: 0.8
+    items:
+      - netherite_ingot 3
+    feedback:
+      sound:
+        enabled: true
+        sound: item.trident.hit_ground
+        pitch: 0.7
+        volume: 1.0
+      message: "<gradient:gray:dark_red><bold>Netherite ingots!</bold> Smithing time.</gradient>"
+      broadcast: "<gradient:gray:dark_red>{player} pulled netherite ingots from the block!</gradient>"
+
+  # ---- NEW: enchanted book bundles (near-max / exceeded-max enchant levels) ----
+  enchanted-book-mining:
+    rarity: rare
+    weight: 1.0
+    items:
+      - "minecraft:enchanted_book[stored_enchantments={\"fortune\":5}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"efficiency\":7}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"silk_touch\":1}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"mending\":1}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: block.enchantment_table.use
+        pitch: 1.1
+        volume: 1.0
+      message: "<light_purple>A miner's library. Fortune, Efficiency, Silk Touch, Mending.</light_purple>"
+  enchanted-book-aquatic:
+    rarity: rare
+    weight: 1.0
+    items:
+      - "minecraft:enchanted_book[stored_enchantments={\"riptide\":5}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"depth_strider\":5}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"frost_walker\":5}] 1"
+      - "minecraft:enchanted_book[stored_enchantments={\"luck_of_the_sea\":7}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: block.enchantment_table.use
+        pitch: 0.9
+        volume: 1.0
+      message: "<aqua>An aquatic library. Riptide, Depth Strider, Frost Walker, Luck of the Sea.</aqua>"
+
+  # ---- NEW: fireworks ----
+  fireworks-creeper:
+    rarity: common
+    weight: 1.0
+    items:
+      - "firework_rocket[fireworks={flight_duration:3,explosions:[{shape:\"creeper\",colors:[I;16711680],fade_colors:[I;1517311]}]}] 8"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.firework_rocket.launch
+        pitch: 1.0
+        volume: 1.0
+      message: "<green>Creeper-shaped fireworks. Aw man.</green>"
+  fireworks-star:
+    rarity: common
+    weight: 1.0
+    items:
+      - "firework_rocket[fireworks={flight_duration:2,explosions:[{shape:\"star\",colors:[I;16766720],fade_colors:[I;16777215]}]}] 8"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.firework_rocket.launch
+        pitch: 1.2
+        volume: 1.0
+      message: "<gold>Star-shaped fireworks, gold fading to white.</gold>"
+  fireworks-burst:
+    rarity: rare
+    weight: 0.8
+    items:
+      - "firework_rocket[fireworks={flight_duration:3,explosions:[{shape:\"burst\",colors:[I;8388736],fade_colors:[I;16761035]}]}] 8"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.firework_rocket.blast
+        pitch: 1.0
+        volume: 1.0
+      message: "<light_purple>Burst fireworks, purple fading to pink.</light_purple>"
+
+  # ---- NEW: junk / dogshit items (common, high weight, low value) ----
+  junk-cobweb:
+    rarity: common
+    weight: 2.5
+    items:
+      - cobweb 8
+    feedback:
+      sound:
+        enabled: true
+        sound: block.cobweb.break
+        pitch: 1.0
+        volume: 1.0
+      message: "<gray>Cobwebs. Great. Thanks.</gray>"
+  junk-rotten-flesh:
+    rarity: common
+    weight: 2.5
+    items:
+      - rotten_flesh 8
+      - bone 4
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.zombie.ambient
+        pitch: 0.8
+        volume: 1.0
+      message: "<dark_gray>Rotten flesh and bones. Delightful.</dark_gray>"
+  junk-raw-chicken:
+    rarity: common
+    weight: 2.5
+    items:
+      - chicken 4
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.chicken.ambient
+        pitch: 1.0
+        volume: 1.0
+      message: "<gray>Raw chicken. Cook it or risk it.</gray>"
+  junk-mud:
+    rarity: common
+    weight: 2.5
+    items:
+      - mud 16
+    feedback:
+      sound:
+        enabled: true
+        sound: block.mud.break
+        pitch: 0.9
+        volume: 1.0
+      message: "<dark_gray>Mud. So much mud.</dark_gray>"
+  junk-flowers:
+    rarity: common
+    weight: 2.0
+    items:
+      - poppy 4
+      - dandelion 4
+      - blue_orchid 2
+      - allium 2
+    feedback:
+      sound:
+        enabled: true
+        sound: block.grass.break
+        pitch: 1.2
+        volume: 1.0
+      message: "<green>A handful of flowers. At least it's pretty.</green>"
+  junk-ice:
+    rarity: common
+    weight: 2.5
+    items:
+      - ice 8
+    feedback:
+      sound:
+        enabled: true
+        sound: block.glass.break
+        pitch: 1.3
+        volume: 1.0
+      message: "<aqua>Ice. Cool, I guess.</aqua>"
+  junk-wooden-sword:
+    rarity: common
+    weight: 2.5
+    items:
+      - wooden_sword 1
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.item.pickup
+        pitch: 0.7
+        volume: 1.0
+      message: "<gray>A wooden sword. Truly the pinnacle of loot.</gray>"
+  junk-iron-axe:
+    rarity: common
+    weight: 2.5
+    items:
+      - iron_axe 1
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.item.pickup
+        pitch: 0.9
+        volume: 1.0
+      message: "<white>A plain iron axe. Could be worse.</white>"
+  junk-gravel-sand:
+    rarity: common
+    weight: 2.5
+    items:
+      - gravel 16
+      - sand 16
+    feedback:
+      sound:
+        enabled: true
+        sound: block.gravel.break
+        pitch: 0.9
+        volume: 1.0
+      message: "<gray>Gravel and sand. Riveting.</gray>"
+  junk-string-feather:
+    rarity: common
+    weight: 2.5
+    items:
+      - string 8
+      - feather 8
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.spider.ambient
+        pitch: 1.1
+        volume: 1.0
+      message: "<gray>String and feathers. At least it's arrow parts.</gray>"
+  junk-leather:
+    rarity: common
+    weight: 2.5
+    items:
+      - leather 8
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.cow.ambient
+        pitch: 0.9
+        volume: 1.0
+      message: "<gold>Leather. Somewhere a cow is upset.</gold>"
+  junk-kelp-seagrass:
+    rarity: common
+    weight: 2.5
+    items:
+      - kelp 16
+      - seagrass 8
+    feedback:
+      sound:
+        enabled: true
+        sound: block.wet_grass.break
+        pitch: 1.0
+        volume: 1.0
+      message: "<green>Kelp and seagrass. Very oceanic. Very useless.</green>"
+
+  # ---- NEW: potions ----
+  potion-night-vision:
+    rarity: rare
+    weight: 1.0
+    items:
+      - "potion[potion_contents={potion:\"minecraft:night_vision\",custom_effects:[{id:\"minecraft:night_vision\",amplifier:0,duration:6000,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.spider.ambient
+        pitch: 1.2
+        volume: 1.0
+      message: "<dark_purple>A potion of Night Vision. See in the dark for 5 minutes.</dark_purple>"
+  potion-regeneration:
+    rarity: rare
+    weight: 1.0
+    items:
+      - "potion[potion_contents={potion:\"minecraft:strong_regeneration\",custom_effects:[{id:\"minecraft:regeneration\",amplifier:1,duration:900,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.player.levelup
+        pitch: 1.3
+        volume: 1.0
+      message: "<light_purple>A potion of Regeneration II. Heal up fast.</light_purple>"
+  potion-fire-resistance:
+    rarity: rare
+    weight: 1.0
+    items:
+      - "potion[potion_contents={potion:\"minecraft:fire_resistance\",custom_effects:[{id:\"minecraft:fire_resistance\",amplifier:0,duration:3600,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: item.firecharge.use
+        pitch: 1.0
+        volume: 1.0
+      message: "<gold>A potion of Fire Resistance. The Nether can't touch you now.</gold>"
+  potion-water-breathing:
+    rarity: rare
+    weight: 1.0
+    items:
+      - "potion[potion_contents={potion:\"minecraft:water_breathing\",custom_effects:[{id:\"minecraft:water_breathing\",amplifier:0,duration:3600,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: item.bucket.fill_fish
+        pitch: 1.2
+        volume: 1.0
+      message: "<blue>A potion of Water Breathing. Explore the depths.</blue>"
+  potion-invisibility:
+    rarity: rare
+    weight: 0.8
+    items:
+      - "potion[potion_contents={potion:\"minecraft:invisibility\",custom_effects:[{id:\"minecraft:invisibility\",amplifier:0,duration:3600,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.enderman.teleport
+        pitch: 1.0
+        volume: 1.0
+      message: "<gray>A potion of Invisibility. Now you see me...</gray>"
+  potion-speed:
+    rarity: common
+    weight: 1.2
+    items:
+      - "potion[potion_contents={potion:\"minecraft:swiftness\",custom_effects:[{id:\"minecraft:speed\",amplifier:1,duration:3600,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.rabbit.jump
+        pitch: 1.4
+        volume: 1.0
+      message: "<white>A potion of Swiftness II. Gotta go fast.</white>"
+  potion-luck:
+    rarity: rare
+    weight: 0.8
+    items:
+      - "potion[potion_contents={potion:\"minecraft:luck\",custom_effects:[{id:\"minecraft:luck\",amplifier:0,duration:6000,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.player.levelup
+        pitch: 1.6
+        volume: 1.0
+      message: "<green>A potion of Luck. Fortune favors you for 5 minutes.</green>"
+  potion-slow-falling:
+    rarity: common
+    weight: 1.0
+    items:
+      - "potion[potion_contents={potion:\"minecraft:slow_falling\",custom_effects:[{id:\"minecraft:slow_falling\",amplifier:0,duration:1800,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: item.elytra.flying
+        pitch: 1.2
+        volume: 1.0
+      message: "<white>A potion of Slow Falling. Float on down.</white>"
+
+  # ---- NEW: splash potions ----
+  splash-instant-health:
+    rarity: epic
+    weight: 0.8
+    items:
+      - "splash_potion[potion_contents={potion:\"minecraft:strong_healing\",custom_effects:[{id:\"minecraft:instant_health\",amplifier:1,duration:1,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.splash_potion.break
+        pitch: 1.3
+        volume: 1.0
+      message: "<light_purple><bold>Splash Instant Health II!</bold> Emergency heal.</light_purple>"
+  splash-regeneration:
+    rarity: epic
+    weight: 0.8
+    items:
+      - "splash_potion[potion_contents={potion:\"minecraft:regeneration\",custom_effects:[{id:\"minecraft:regeneration\",amplifier:1,duration:450,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.splash_potion.break
+        pitch: 1.1
+        volume: 1.0
+      message: "<light_purple>Splash Regeneration II. Share the health.</light_purple>"
+  splash-swiftness:
+    rarity: rare
+    weight: 0.8
+    items:
+      - "splash_potion[potion_contents={potion:\"minecraft:swiftness\",custom_effects:[{id:\"minecraft:speed\",amplifier:1,duration:1800,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.splash_potion.break
+        pitch: 1.4
+        volume: 1.0
+      message: "<white>Splash Swiftness II. Speed for the squad.</white>"
+  splash-turtle-master:
+    rarity: epic
+    weight: 0.6
+    items:
+      - "splash_potion[potion_contents={potion:\"minecraft:turtle_master\",custom_effects:[{id:\"minecraft:slowness\",amplifier:3,duration:400,show_particles:1b,show_icon:1b},{id:\"minecraft:resistance\",amplifier:2,duration:400,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.splash_potion.break
+        pitch: 0.8
+        volume: 1.0
+      message: "<green>Splash Turtle Master. Slow, but nearly invincible.</green>"
+  splash-poison-junk:
+    rarity: common
+    weight: 1.8
+    items:
+      - "splash_potion[potion_contents={potion:\"minecraft:poison\",custom_effects:[{id:\"minecraft:poison\",amplifier:0,duration:900,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.splash_potion.break
+        pitch: 0.7
+        volume: 1.0
+      message: "<dark_green>A splash potion of Poison. Thanks, I hate it.</dark_green>"
+  splash-weakness-junk:
+    rarity: common
+    weight: 1.8
+    items:
+      - "splash_potion[potion_contents={potion:\"minecraft:weakness\",custom_effects:[{id:\"minecraft:weakness\",amplifier:0,duration:1800,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.splash_potion.break
+        pitch: 0.6
+        volume: 1.0
+      message: "<gray>A splash potion of Weakness. Great, thanks.</gray>"
+  splash-harming-curse:
+    rarity: rare
+    weight: 0.6
+    items:
+      - "splash_potion[potion_contents={potion:\"minecraft:strong_harming\",custom_effects:[{id:\"minecraft:instant_damage\",amplifier:1,duration:1,show_particles:1b,show_icon:1b}]}] 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.splash_potion.break
+        pitch: 0.5
+        volume: 1.0
+      message: "<dark_red>A splash potion of Harming II. This one's cursed.</dark_red>"
+
   # ============================== COMMANDS ==============================
-  # 12 command outcomes. Most are rare/epic; the rainbow is legendary.
+  # 35 command outcomes. Most are rare/epic; the rainbow and tsar bomba are legendary.
   nothing:
     rarity: common
     weight: 1.0
@@ -549,24 +1213,24 @@ outcomes:
     commands:
       relative-to: BLOCK
       commands:
-        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:green_concrete_powder\"},Time:1}"
+        - "summon falling_block ~ ~8 ~ {BlockState:{Name:\"minecraft:green_concrete_powder\"},Time:1}"
+        - "delay: 5"
+        - "summon falling_block ~ ~8 ~ {BlockState:{Name:\"minecraft:cyan_concrete_powder\"},Time:1}"
+        - "delay: 5"
+        - "summon falling_block ~ ~8 ~ {BlockState:{Name:\"minecraft:light_blue_concrete_powder\"},Time:1}"
+        - "delay: 5"
+        - "summon falling_block ~ ~8 ~ {BlockState:{Name:\"minecraft:blue_concrete_powder\"},Time:1}"
+        - "delay: 5"
+        - "summon falling_block ~ ~8 ~ {BlockState:{Name:\"minecraft:purple_concrete_powder\"},Time:1}"
+        - "delay: 5"
+        - "summon falling_block ~ ~8 ~ {BlockState:{Name:\"minecraft:magenta_concrete_powder\"},Time:1}"
+        - "delay: 5"
+        - "summon falling_block ~ ~8 ~ {BlockState:{Name:\"minecraft:pink_concrete_powder\"},Time:1}"
+        - "delay: 5"
+        - "summon falling_block ~ ~8 ~ {BlockState:{Name:\"minecraft:brown_concrete_powder\"},Time:1}"
+        - "delay: 5"
+        - "summon lightning_bolt ~ ~8 ~"
         - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:cyan_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:light_blue_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:blue_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:purple_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:magenta_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:pink_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon falling_block ~ ~10 ~ {BlockState:{Name:\"minecraft:brown_concrete_powder\"},Time:1}"
-        - "delay: 10"
-        - "summon lightning_bolt ~ ~15 ~"
-        - "delay: 20"
         - "give <p> wind_charge 6"
     feedback:
       sound:
@@ -577,8 +1241,432 @@ outcomes:
       message: "<gradient:red:gold:yellow:green:blue><bold>A RAINBOW TOWER!</bold></gradient>"
       broadcast: "<white>{player}</white> <gradient:red:gold:yellow:green:blue:white>summoned a rainbow tower!</gradient>"
 
+  # ---- NEW: active effect commands ----
+  levitation-curse:
+    rarity: rare
+    weight: 0.9
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> levitation 10 3"
+    feedback:
+      sound:
+        enabled: true
+        sound: item.trident.riptide_3
+        pitch: 1.4
+        volume: 1.0
+      message: "<light_purple>You're floating away! Levitation IV for 10 seconds.</light_purple>"
+  haste-boost:
+    rarity: epic
+    weight: 1.5
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> haste 20 9"
+    feedback:
+      sound:
+        enabled: true
+        sound: block.stone.hit
+        pitch: 1.2
+        volume: 1.0
+      message: "<gold>Haste X. Time to dig, dig, dig!</gold>"
+  speed-boost:
+    rarity: common
+    weight: 1.5
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> speed 30 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.rabbit.jump
+        pitch: 1.4
+        volume: 1.0
+      message: "<white>Speed II. Zoom!</white>"
+  jump-boost:
+    rarity: common
+    weight: 1.5
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> jump_boost 30 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.rabbit.jump
+        pitch: 1.6
+        volume: 1.0
+      message: "<green>Jump Boost II. Bounce around.</green>"
+  night-vision-effect:
+    rarity: common
+    weight: 1.2
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> night_vision 60 0"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.spider.ambient
+        pitch: 1.0
+        volume: 1.0
+      message: "<dark_purple>Night Vision for a minute.</dark_purple>"
+  glowing-curse:
+    rarity: common
+    weight: 2.0
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> glowing 60 0"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.enderman.stare
+        pitch: 1.0
+        volume: 1.0
+      message: "<white>You're glowing! Everyone can see you now.</white>"
+  slowness-curse:
+    rarity: common
+    weight: 2.0
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> slowness 15 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: block.mud.step
+        pitch: 0.6
+        volume: 1.0
+      message: "<gray>Slowness II. Ugh, moving through mud.</gray>"
+  nausea-curse:
+    rarity: common
+    weight: 2.0
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> nausea 10 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.warden.roar
+        pitch: 0.7
+        volume: 1.0
+      message: "<dark_green>Nausea. The world spins.</dark_green>"
+  blindness-curse:
+    rarity: common
+    weight: 2.0
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> blindness 25 0"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.zombie.infect
+        pitch: 0.8
+        volume: 1.0
+      message: "<dark_gray>Blindness. Everything goes dark.</dark_gray>"
+  resistance-buff:
+    rarity: rare
+    weight: 1.0
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> resistance 30 2"
+    feedback:
+      sound:
+        enabled: true
+        sound: item.armor.equip_diamond
+        pitch: 1.0
+        volume: 1.0
+      message: "<aqua>Resistance III. Take a hit or two.</aqua>"
+  strength-buff:
+    rarity: rare
+    weight: 1.0
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> strength 30 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.player.attack.strong
+        pitch: 0.9
+        volume: 1.0
+      message: "<red>Strength II. Hit harder.</red>"
+  regeneration-buff:
+    rarity: rare
+    weight: 1.0
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> regeneration 20 2"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.player.levelup
+        pitch: 1.3
+        volume: 1.0
+      message: "<light_purple>Regeneration III. Heal up fast.</light_purple>"
+  saturation-buff:
+    rarity: common
+    weight: 1.5
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> saturation 5 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.generic.eat
+        pitch: 1.2
+        volume: 1.0
+      message: "<gold>Saturation. Full and topped up.</gold>"
+  fire-resistance-buff:
+    rarity: rare
+    weight: 1.0
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> fire_resistance 60 0"
+    feedback:
+      sound:
+        enabled: true
+        sound: item.firecharge.use
+        pitch: 1.0
+        volume: 1.0
+      message: "<gold>Fire Resistance for a minute. Walk through lava (don't).</gold>"
+  absorption-buff:
+    rarity: rare
+    weight: 0.8
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> absorption 30 2"
+    feedback:
+      sound:
+        enabled: true
+        sound: item.totem.use
+        pitch: 1.0
+        volume: 1.0
+      message: "<yellow>Absorption III. Extra shield hearts.</yellow>"
+  ultimate-buff:
+    rarity: legendary
+    weight: 0.9
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> health_boost 180 24 true"
+        - "effect give <p> regeneration 2 255 true"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.player.levelup
+        pitch: 1.5
+        volume: 1.0
+      message: "<gold><bold>ULTIMATE BUFF!</bold> 50 extra hearts for 3 minutes.</gold>"
+      broadcast: "<gold><white>{player}</white> activated the ULTIMATE BUFF!</gold>"
+  poison-effect-curse:
+    rarity: common
+    weight: 1.8
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> poison 10 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.spider.hurt
+        pitch: 0.7
+        volume: 1.0
+      message: "<dark_green>Poison II. That's unfortunate.</dark_green>"
+  weakness-effect-curse:
+    rarity: common
+    weight: 1.8
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> weakness 20 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.zombie.ambient
+        pitch: 0.6
+        volume: 1.0
+      message: "<gray>Weakness II. Your punches feel sad now.</gray>"
+  water-breathing-effect:
+    rarity: rare
+    weight: 0.8
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> water_breathing 60 0"
+    feedback:
+      sound:
+        enabled: true
+        sound: item.bucket.fill_fish
+        pitch: 1.2
+        volume: 1.0
+      message: "<blue>Water Breathing for a minute. Go dive.</blue>"
+  conduit-power-effect:
+    rarity: rare
+    weight: 0.6
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "effect give <p> conduit_power 45 1"
+    feedback:
+      sound:
+        enabled: true
+        sound: block.conduit.ambient
+        pitch: 1.0
+        volume: 1.0
+      message: "<aqua>Conduit Power II, without the conduit.</aqua>"
+
+  # ---- NEW: mob swarms ----
+  spider-swarm:
+    rarity: rare
+    weight: 1.0
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon spider ~2 ~1 ~1"
+        - "delay: 10"
+        - "summon spider ~-2 ~1 ~-1"
+        - "delay: 10"
+        - "summon spider ~0 ~1 ~2"
+        - "delay: 10"
+        - "summon cave_spider ~1 ~1 ~-2"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.spider.ambient
+        pitch: 0.8
+        volume: 1.0
+      message: "<dark_green>Something's crawling around you...</dark_green>"
+      broadcast: "<dark_green><white>{player}</white> stirred up a spider swarm!</dark_green>"
+  phantom-swarm:
+    rarity: epic
+    weight: 0.7
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon phantom ~2 ~3 ~1"
+        - "delay: 8"
+        - "summon phantom ~-2 ~4 ~-1"
+        - "delay: 8"
+        - "summon phantom ~1 ~3 ~-2"
+        - "delay: 8"
+        - "summon phantom ~-1 ~4 ~2"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.phantom.ambient
+        pitch: 0.7
+        volume: 1.0
+      message: "<dark_gray>Shrieking wings circle overhead...</dark_gray>"
+      broadcast: "<dark_gray><white>{player}</white> summoned a phantom swarm!</dark_gray>"
+  pillager-patrol:
+    rarity: epic
+    weight: 0.6
+    commands:
+      relative-to: BLOCK
+      commands:
+        - "summon pillager ~1 ~ ~1"
+        - "delay: 10"
+        - "summon pillager ~-1 ~ ~1"
+        - "delay: 10"
+        - "summon pillager ~0 ~ ~-2"
+        - "delay: 10"
+        - "summon ravager ~ ~ ~2"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.ravager.roar
+        pitch: 0.7
+        volume: 1.0
+      message: "<gray>A pillager patrol, and something bigger with them...</gray>"
+      broadcast: "<gray><white>{player}</white> triggered a pillager patrol with a ravager!</gray>"
+
+  # ---- NEW: tsar bomba ----
+  tsar-bomba:
+    rarity: legendary
+    weight: 0.05
+    commands:
+      relative-to: PLAYER
+      commands:
+        - "summon tnt ~3 ~2 ~-7 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-8 ~5 ~1 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~6 ~-3 ~9 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-2 ~8 ~-5 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~9 ~-9 ~3 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-6 ~1 ~7 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~4 ~-7 ~-8 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-10 ~6 ~2 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~7 ~3 ~-1 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-3 ~-5 ~10 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~1 ~9 ~-9 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-9 ~-2 ~5 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~5 ~7 ~-3 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-5 ~-8 ~-6 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~8 ~2 ~4 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-1 ~-10 ~-2 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~2 ~6 ~8 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-7 ~4 ~-10 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~10 ~-4 ~6 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-4 ~10 ~-7 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~3 ~-6 ~1 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-8 ~-1 ~-4 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~6 ~8 ~-9 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-2 ~3 ~10 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~9 ~-8 ~-3 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-6 ~7 ~5 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~4 ~-2 ~-10 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-10 ~-6 ~8 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~7 ~5 ~2 {fuse:60}"
+        - "delay: 5"
+        - "summon tnt ~-3 ~9 ~-5 {fuse:60}"
+    feedback:
+      sound:
+        enabled: true
+        sound: entity.generic.explode
+        pitch: 0.5
+        volume: 1.0
+      message: "<shadow:black><gradient:dark_red:red:gold><bold>TSAR BOMBA.</bold> Thirty charges, scattered, counting down.</gradient></shadow>"
+      broadcast: "<shadow:black><gradient:dark_red:red:gold:yellow>{player} armed the Tsar Bomba. Thirty TNT charges are falling around them. RUN.</gradient></shadow>"
+
   # ============================== STRUCTURES ==============================
-  # 8 structure outcomes. Load .nbt from challenges/structures/<name>.nbt.
+  # 9 structure outcomes. Load .nbt from challenges/structures/<name>.nbt.
   coin-well:
     rarity: rare
     weight: 1.0
@@ -616,7 +1704,7 @@ outcomes:
         sound: block.tripwire.click
         pitch: 1.0
         volume: 1.0
-      message: "<yellow>Careful... that structure looks trapped.</yellow>"
+      message: "<yellow>Dare to enter?</yellow>"
   parkour-loot:
     rarity: rare
     weight: 0.8
@@ -682,3 +1770,17 @@ outcomes:
         volume: 1.0
       message: "<yellow><bold>A GIANT BEACON!</bold> Its light reaches the sky!</yellow>"
       broadcast: "<yellow><white>{player}</white> activated a giant beacon!</yellow>"
+  nether-portal:
+    rarity: epic
+    weight: 0.6
+    structure:
+      name: nether-portal
+      random-rotation: true
+    feedback:
+      sound:
+        enabled: true
+        sound: block.portal.trigger
+        pitch: 0.8
+        volume: 1.0
+      message: "<shadow:black><gradient:dark_purple:light_purple><bold>A NETHER PORTAL!</bold> Already lit and ready.</gradient></shadow>"
+      broadcast: "<gradient:dark_purple:light_purple>{player} tore open a nether portal!</gradient>"
