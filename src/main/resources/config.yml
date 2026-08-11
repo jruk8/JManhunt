@@ -221,10 +221,20 @@ custom-modifiers:
       # Interval duration in seconds.
       interval: 60
     commands:
-      speedrunner:
+      player:
         # <random-mob> is replaced with a random spawnable living entity type.
         # Tildes (~) are resolved to the player's position automatically.
         - "summon <random-mob> ~ ~ ~"
+  random-item-giver:
+    enabled: false
+    runs-on:
+      - INTERVAL
+    interval-settings:
+      interval: 30
+    commands:
+      player:
+        # <random-item> is replaced with a random item type.
+        - "give <p> <random-item> 1"
 
 # Built-in challenges. Each challenge can be toggled in-game with the
 # 'modifiers' subcommand.
