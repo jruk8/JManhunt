@@ -1,5 +1,7 @@
 ![JManhunt banner](docs/assets/banner-1280x640.png)
 
+(Try out the latest version of the plugin at server IP: `play.alttari.games`)
+
 # JManhunt
 
 JManhunt is a deeply configurable Paper plugin for 26.2+ Manhunts. It comes
