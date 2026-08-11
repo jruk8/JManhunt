@@ -27,6 +27,7 @@ configuration files.
 ## Documentation
 
 - [Getting Started](getting-started.md)
+- [Gallery](gallery.md)
 - [Commands](commands.md)
 - [Permissions](permissions.md)
 - [Configuration](configuration.md)
