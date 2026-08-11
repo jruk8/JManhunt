@@ -1,3 +1,13 @@
+## [3.4.0] - 2026-08-11
+
+### 🚀 Features
+
+- Tons of new lucky block outcomes
+
+### 🐛 Bug Fixes
+
+- Added random item giver to custom modifiers, fixed existing syntax
+- General gamecycle fixes
 ## [3.3.0] - 2026-08-10
 
 ### 🐛 Bug Fixes
