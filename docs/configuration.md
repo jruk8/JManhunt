@@ -9,7 +9,7 @@ in-game.
 
 See the individual configuration pages for detailed documentation:
 
-- [General Configuration](general.md)
+- [General Configuration](configuration/general.md)
 - [World Reset Engine](configuration/world-engine.md)
 - [Statistics and PlaceholderAPI](configuration/statistics.md)
 - [Lucky Blocks](configuration/lucky-blocks.md)
