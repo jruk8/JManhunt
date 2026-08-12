@@ -110,7 +110,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION);
         reloadConfig();
         YamlFileUpdater.update(this, "messages.yml", "messages-version", MESSAGES_VERSION);
-        saveResource("placeholders.yml", false);
+        if (!new java.io.File(getDataFolder(), "placeholders.yml").exists()) {
+            saveResource("placeholders.yml", false);
+        }
 
         if (messages == null) {
             messages = new MessageService();
@@ -128,7 +130,9 @@ public final class JManhuntPlugin extends JavaPlugin {
             game.stateCommands().cancelIntervalModifiers();
         }
         for (SettingsListener listener : settings) {
-            saveResource(listener.getDataPath(), false);
+            if (!new java.io.File(getDataFolder(), listener.getDataPath()).exists()) {
+                saveResource(listener.getDataPath(), false);
+            }
             listener.onReload();
         }
         getLogger().info("JManhunt has been reloaded.");

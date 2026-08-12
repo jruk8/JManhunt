@@ -29,8 +29,10 @@ public abstract class DatapackManager {
                 String resource = entry.getValue();
                 File structureSet = new File(datapackRoot, targetPath);
                 if (structureSet.getParentFile() != null) structureSet.getParentFile().mkdirs();
-                plugin.saveResource(resource, false);
                 File source = new File(plugin.getDataFolder(), resource);
+                if (!source.exists()) {
+                    plugin.saveResource(resource, false);
+                }
                 String content = Files.readString(source.toPath(), StandardCharsets.UTF_8);
                 changed |= writeIfChanged(structureSet, content);
             }

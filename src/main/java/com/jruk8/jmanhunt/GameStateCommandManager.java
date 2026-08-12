@@ -161,7 +161,7 @@ public final class GameStateCommandManager {
         // Disable phantom spawning while a match runs and restore it when the
         // match ends. The gamerule is re-enabled on the end phase.
         boolean disablePhantoms = plugin.getConfig().getBoolean(path + "disable-phantoms", false);
-        GameRule doInsomnia = Registry.GAME_RULE.get(NamespacedKey.minecraft("doInsomnia"));
+        GameRule doInsomnia = Registry.GAME_RULE.get(NamespacedKey.minecraft("do_insomnia"));
         if (doInsomnia != null) {
             boolean phantomsEnabled = phase.equals("end") || !disablePhantoms;
             worlds.forEach(world -> world.setGameRule(doInsomnia, phantomsEnabled));
