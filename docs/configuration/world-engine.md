@@ -42,8 +42,10 @@ settings:
       - "chunky start"
 ```
 
-The commands only run when a genuinely new cell is allocated, avoiding
-unnecessary regeneration of cells that were already fetched.
+The commands run when a match ends (after the match goes inactive) and when
+the autostart countdown begins, giving chunk-generation plugins time to
+pre-generate the next cell before players teleport in. They only run once per
+match intermission, so the cell is fetched exactly once between matches.
 
 ## World Border
 

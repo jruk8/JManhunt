@@ -45,6 +45,7 @@ public final class GameManager {
     private long matchId;
     private final List<Runnable> gameStartListeners = new ArrayList<>();
     private final List<Runnable> beginGameListeners = new ArrayList<>();
+    private final List<Runnable> gameEndListeners = new ArrayList<>();
     private BukkitTask startDelayTask;
     private int startDelayRemaining;
     private boolean startDelayActive;
@@ -85,6 +86,9 @@ public final class GameManager {
 
     /** Registers a listener invoked when the game actually begins (after pre-start window). */
     public void addBeginGameListener(Runnable listener) { beginGameListeners.add(listener); }
+
+    /** Registers a listener invoked when a match ends. */
+    public void addGameEndListener(Runnable listener) { gameEndListeners.add(listener); }
 
     public boolean start() {
         if (active) return false;
@@ -176,6 +180,7 @@ public final class GameManager {
     public void finish(Role winner) {
         if (ending) return;
         ending = true;
+        gameEndListeners.forEach(Runnable::run);
         if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
         if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
         if (startDelayTask != null) { startDelayTask.cancel(); startDelayTask = null; }
@@ -216,6 +221,7 @@ public final class GameManager {
                 playerStates.resetParticipatingRoles();
             }
             active = false; ending = false; gameBegun = false; playerStates.clearMatch();
+            worldEngine.prepareNextCell();
             updateAutostartState();
         }, delay);
     }
@@ -367,6 +373,7 @@ public final class GameManager {
                             Bukkit.getOnlinePlayers().forEach(p -> p.setInvulnerable(true));
                         }
                         active = false; ending = false; gameBegun = false; playerStates.clearMatch();
+                        worldEngine.prepareNextCell();
                         updateAutostartState();
                     } else {
                         // force start the game
@@ -396,6 +403,7 @@ public final class GameManager {
             start();
             return;
         }
+        worldEngine.prepareNextCell();
         autostartCountdownRemaining = autostartCountdownConfigured;
         messages.broadcast("manhunt.autostart-eligible", Map.of("seconds", String.valueOf(autostartCountdownConfigured)));
         sounds.playGlobalSound("game.autostart-countdown");

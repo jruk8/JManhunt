@@ -58,6 +58,9 @@ public final class GameplayListener implements Listener {
         this.stats = stats;
         this.lobbyTeleporter = lobbyTeleporter;
         this.winConditionEngine = winConditionEngine;
+        // Cancel any pending respawn tasks when the match ends so players
+        // are not revived during the end sequence or after the match.
+        game.addGameEndListener(this::cancelAllRespawnTasks);
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
@@ -460,5 +463,12 @@ public final class GameplayListener implements Listener {
     private void cancelDisconnectTask(UUID playerId) {
         BukkitTask task = disconnectTasks.remove(playerId);
         if (task != null) task.cancel();
+    }
+
+    private void cancelAllRespawnTasks() {
+        for (BukkitTask task : respawnTasks.values()) {
+            task.cancel();
+        }
+        respawnTasks.clear();
     }
 }

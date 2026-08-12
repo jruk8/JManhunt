@@ -176,7 +176,7 @@ custom-modifiers:
         # Runs only once for each Hunter, with <p> replaced by their name.
         - "give <p> wooden_sword"
   full-iron-kit:
-    enabled: true
+    enabled: false
     commands:
       player:
         - "give <p> iron_sword 1"
@@ -368,7 +368,10 @@ settings:
     # The commands only run when the cell is actually new (i.e. the previous
     # cell was not already regenerated), avoiding unnecessary regeneration.
     # Default: empty
-    on-fetch-new-cell: []
+    on-fetch-new-cell:
+#    - "chunky center <cellX> <cellZ>"
+#    - "chunky radius 150"
+#    - "chunky start"
     # World border configuration for cell confinement.
     world-border:
       # When true, the world border is used to limit the spiral cell area.

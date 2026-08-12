@@ -40,9 +40,11 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private WorldEngineConfig startBorderConfig;
     private BukkitTask startBorderTask;
 
-    // Tracks the last fetched cell so on-fetch-new-cell commands only run when
-    // a genuinely new cell is allocated (cleanliness flag).
-    private CellOrigin lastFetchedCell;
+    // Tracks whether a new cell has been fetched for the current intermission,
+    // so on-fetch-new-cell commands only run once per intermission.
+    private boolean cellFetchedForIntermission;
+    // The cell allocated during the intermission, used by the next match start.
+    private CellOrigin pendingCell;
 
     public WorldEngineService(JavaPlugin plugin, ConfigService configService, StatsRepository statsRepository) {
         this.plugin = plugin;
@@ -61,24 +63,50 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         if (world == null) return;
 
         CellOrigin origin;
-        try {
-            origin = findValidOrigin(world, config)
-                    .orElseThrow(Exception::new);
-        } catch (Exception e) {
-            plugin.getLogger().severe("Could not find a valid spawn cell for world-engine after "
-                    + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Skipping teleport.");
-            return;
-        }
-
-        // Run on-fetch-new-cell commands only when a genuinely new cell is
-        // allocated, avoiding unnecessary chunk regeneration.
-        if (lastFetchedCell == null || lastFetchedCell.x() != origin.x() || lastFetchedCell.z() != origin.z()) {
-            runOnFetchNewCell(origin);
-            lastFetchedCell = origin;
+        if (pendingCell != null) {
+            origin = pendingCell;
+            pendingCell = null;
+        } else {
+            try {
+                origin = findValidOrigin(world, config)
+                        .orElseThrow(Exception::new);
+            } catch (Exception e) {
+                plugin.getLogger().severe("Could not find a valid spawn cell for world-engine after "
+                        + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Skipping teleport.");
+                return;
+            }
         }
 
         teleportToGame(participants, world, config, origin);
         setWorldBorder(world, config, origin);
+        // Reset the intermission fetch flag for the next match.
+        cellFetchedForIntermission = false;
+    }
+
+    /**
+     * Allocates a new cell and runs the on-fetch-new-cell commands to
+     * pre-generate the area. Called when a match ends (after the match goes
+     * inactive) and when the autostart countdown begins. Only runs once per
+     * match intermission.
+     */
+    public void prepareNextCell() {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled()) return;
+        if (cellFetchedForIntermission) return;
+        World world = Bukkit.getWorld(config.worldName());
+        if (world == null) return;
+
+        try {
+            pendingCell = findValidOrigin(world, config)
+                    .orElseThrow(Exception::new);
+        } catch (Exception e) {
+            plugin.getLogger().severe("Could not find a valid spawn cell for world-engine after "
+                    + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Skipping cell fetch.");
+            return;
+        }
+
+        runOnFetchNewCell(pendingCell);
+        cellFetchedForIntermission = true;
     }
 
     /**
