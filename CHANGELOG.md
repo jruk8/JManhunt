@@ -1,3 +1,12 @@
+## [3.5.2] - 2026-08-12
+
+### 🐛 Bug Fixes
+
+- Gamerule bug and reload warn messages
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for v3.5.1 [skip ci]
 ## [3.5.1] - 2026-08-12
 
 ### 📚 Documentation
