@@ -1,3 +1,12 @@
+## [3.5.3] - 2026-08-12
+
+### 🐛 Bug Fixes
+
+- Respawn scheduler not reset, on-fetch-new-cell timing
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for main [skip ci]
 ## [3.5.2] - 2026-08-12
 
 ### 🐛 Bug Fixes
