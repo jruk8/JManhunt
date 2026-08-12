@@ -4,4 +4,4 @@ on: [push, pull_request]
 
 jobs:
   build:
-    uses: jruk8/plugin-conventions/.github/workflows/build.yml@v1.3.0
+    uses: jruk8/plugin-conventions/.github/workflows/build.yml@v1.3.4

@@ -12,4 +12,8 @@ on:
 
 jobs:
   build:
-    uses: jruk8/plugin-conventions/.github/workflows/docs.yml@v1.3.0
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: jruk8/plugin-conventions/.github/workflows/docs.yml@v1.3.4
