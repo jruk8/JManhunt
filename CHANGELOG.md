@@ -1,3 +1,15 @@
+## [3.5.1] - 2026-08-12
+
+### 📚 Documentation
+
+- Update README.md
+- Split configuration.md into separate files for better organization
+- Clean up general.md and remove duplicate content
+- Update mkdocs files
+
+### ⚙️ Miscellaneous Tasks
+
+- *(bump)* Plugin conventions 1.3.4
 ## [3.5.0] - 2026-08-11
 
 ### 🚀 Features
