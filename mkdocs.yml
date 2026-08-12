@@ -52,7 +52,13 @@ nav:
   - Gallery: gallery.md
   - Commands: commands.md
   - Permissions: permissions.md
-  - Configuration: configuration.md
+  - Configuration:
+      - Overview: configuration.md
+      - Settings: configuration/settings.md
+      - World Reset Engine: configuration/world-engine.md
+      - Statistics & PlaceholderAPI: configuration/statistics.md
+      - Sounds: configuration/sounds.md
+      - Lucky Blocks: configuration/lucky-blocks.md
   - Placeholders: placeholders.md
   - API: api.md
 

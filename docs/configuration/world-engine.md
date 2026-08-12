@@ -11,7 +11,7 @@ matches to run on just one world, which is:
 
 The world reset engine can be configured in the `config.yml` file.
 
-### Setup Guide
+## Setup Guide
 
 1. Enable the `settings.world-engine.enabled` option in `config.yml`.
 2. Set the `settings.world-engine.target-world` option to the name of the
@@ -26,7 +26,7 @@ The world reset engine can be configured in the `config.yml` file.
 6. Test the world engine by starting a match and checking if the teleportation
    and cell algorithm works correctly.
 
-### On-Fetch-New-Cell Commands
+## On-Fetch-New-Cell Commands
 
 Under `settings.world-engine.on-fetch-new-cell`, you can configure console
 commands that run whenever a new cell is allocated for a match. The
@@ -45,7 +45,7 @@ settings:
 The commands only run when a genuinely new cell is allocated, avoiding
 unnecessary regeneration of cells that were already fetched.
 
-### World Border
+## World Border
 
 Under `settings.world-engine.world-border`, you can enable a world border that
 confines players to their assigned cell. This prevents players from wandering
@@ -62,3 +62,30 @@ to the full cell size when the game begins. This is only active when both
 - `start-border.fadeout-time`: Time in seconds for the start border to animate
   expanding to cell size. Set to `0` or `-1` to skip the animation and snap to
   cell size immediately. Default: `5`
+
+## Troubleshooting
+
+**Q: The datapack stays red and won't enable no matter what I do.**
+
+A: Regenerate `JManhunt/settings/world-engine` by deleting it and restarting
+the server. Open an issue on GitHub with the relevant exception in server
+logs.
+
+**Q: Strongholds are generating in non-vanilla places.**
+
+A: This is a deliberate feature, not a bug. The world engine uses a custom
+stronghold spread algorithm. You cannot switch to the vanilla stronghold
+spread algorithm because this would make certain cells unbeatable after a
+certain point.
+
+**Q: I want to disable the world engine.**
+
+A: Set `settings.world-engine.enabled` to `false` in `config.yml` and disable
+the `jmanhunt_world_engine` datapack with
+`/datapack disable jmanhunt_world_engine`.
+
+**Q: Will this work in [specific Minecraft version]?**
+
+A: This feature is tested to work on 26.2. If the plugin is marked to support
+a newer version and you encounter issues, please open an issue on GitHub with
+the relevant exception in server logs.

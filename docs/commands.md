@@ -217,5 +217,5 @@ the same placeholders (`<p>`, `<random-mob>`, `<random-item>`) and tilde
 resolution as custom modifiers, with `relative-to` choosing whether tildes
 resolve to the broken block or the player.
 
-See [configuration.md](configuration.md#lucky-blocks) for full details on
+See [Lucky Blocks](configuration/lucky-blocks.md) for full details on
 composable outcomes, structure placement, reroll behavior, and feedback.

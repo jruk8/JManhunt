@@ -68,5 +68,6 @@ After playing a few matches, check out the built-in settings and custom
 modifiers to enhance your experience:
 
 - [Commands](commands.md)
-- [Configuration](configuration.md)
+- [Configuration](configuration.md) — overview, settings, world engine,
+  statistics, sounds, and lucky blocks.
 - [Placeholders](placeholders.md)

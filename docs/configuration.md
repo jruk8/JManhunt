@@ -9,8 +9,14 @@ in-game.
 
 See the individual configuration pages for detailed documentation:
 
-- [General Configuration](configuration/general.md)
-- [World Reset Engine](configuration/world-engine.md)
-- [Statistics and PlaceholderAPI](configuration/statistics.md)
-- [Lucky Blocks](configuration/lucky-blocks.md)
-- [Schematic Management](configuration/schematics.md)
+## Sections
+
+- [Settings](configuration/settings.md) — game flow settings, compass
+  tracking, friendly fire, lives, start delay, and win conditions.
+- [World Reset Engine](configuration/world-engine.md) — grid-based world
+  engine setup, on-fetch-new-cell commands, world border, and troubleshooting.
+- [Statistics & PlaceholderAPI](configuration/statistics.md) — career
+  statistics database and placeholder configuration.
+- [Sounds](configuration/sounds.md) — sound configuration for game events.
+- [Lucky Blocks](configuration/lucky-blocks.md) — the lucky-blocks challenge,
+  rarities, composable outcomes, reroll behavior, and schematic management.

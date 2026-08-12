@@ -30,7 +30,8 @@ configuration files.
 - [Gallery](gallery.md)
 - [Commands](commands.md)
 - [Permissions](permissions.md)
-- [Configuration](configuration.md)
+- [Configuration](configuration.md) — overview, settings, world engine,
+  statistics, sounds, and lucky blocks.
 - [Placeholders](placeholders.md)
 - [API](api.md)
 
