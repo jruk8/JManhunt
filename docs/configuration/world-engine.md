@@ -38,6 +38,7 @@ chunk-generation plugins such as Chunky before players teleport in.
 settings:
   world-engine:
     on-fetch-new-cell:
+      - "chunky center <cellX> <cellZ>"
       - "chunky radius 500"
       - "chunky start"
 ```
