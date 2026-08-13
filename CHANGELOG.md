@@ -1,3 +1,8 @@
+## [3.6.0] - 2026-08-13
+
+### 🚀 Features
+
+- Compass start configs, float/string/enum modifiers modification in-game
 ## [3.5.3] - 2026-08-12
 
 ### 🐛 Bug Fixes
