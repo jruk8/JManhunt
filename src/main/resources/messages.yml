@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 5
+messages-version: 6
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
@@ -44,9 +44,10 @@ manhunt:
   not-active: "{prefix}<yellow>No match is active."
   end-success: "{prefix}<green>Manhunt ended. Hunters win!"
   reload-success: "{prefix}<green>Reloaded config.yml, messages.yml, and settings."
-  modifiers-usage: "{prefix}<yellow>Usage: /manhunt modifiers <setting> <true|false>"
+  modifiers-usage: "{prefix}<yellow>Usage: /manhunt modifiers <setting> <value>"
   setting-invalid: "{prefix}<red>Unknown setting."
   setting-invalid-value: "{prefix}<red>Setting values must be true or false."
+  setting-invalid-number: "{prefix}<red>That value is not valid for this setting."
   setting-updated: "{prefix}<green>Set <white>{setting}<green> to <white>{value}<green>. <gray>(was <white>{old-value}</white>)</gray>"
   setting-restart-required: "{prefix}<gray>This setting requires a server restart to take effect."
   setting-entry: "{prefix}<gray>{setting}:</gray> <white>{value}"

@@ -40,7 +40,9 @@ public final class PlayerStateStore {
         int reset = 0;
         for (Map.Entry<UUID, Role> entry : roles.entrySet()) {
             Role role = entry.getValue();
-            if (role == Role.NONE || role == Role.AFK) continue;
+            if (role == Role.NONE || role == Role.AFK) {
+                continue;
+            }
             entry.setValue(Role.NONE);
             reset++;
         }
@@ -105,7 +107,9 @@ public final class PlayerStateStore {
     public int getActiveSpeedrunnerCount() {
         int count = 0;
         for (boolean alive : speedrunnerAlive.values()) {
-            if (alive) count++;
+            if (alive) {
+                count++;
+            }
         }
         return count;
     }
@@ -127,7 +131,9 @@ public final class PlayerStateStore {
     }
 
     public void recordLastSeen(Player player, Location location) {
-        if (location == null || location.getWorld() == null) return;
+        if (location == null || location.getWorld() == null) {
+            return;
+        }
         playerNames.put(player.getUniqueId(), player.getName());
         lastSeenByWorld.computeIfAbsent(player.getUniqueId(), ignored -> new HashMap<>())
                 .put(location.getWorld().getUID(), location.clone());

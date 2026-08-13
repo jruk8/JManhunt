@@ -15,7 +15,9 @@ public final class WorldCellAllocator {
 
     public OptionalLong reserveStartIndex(int amount) {
         int size = Math.max(0, amount);
-        if (size == 0) return OptionalLong.empty();
+        if (size == 0) {
+            return OptionalLong.empty();
+        }
         if (repository == null) {
             long start = fallbackIndex;
             fallbackIndex += size;

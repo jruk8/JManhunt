@@ -50,7 +50,9 @@ public final class WinConditionEngine {
     }
 
     public String reachAdvancement() {
-        return config.getString("settings.win-conditions.reachAdvancement.advancement", "minecraft:story/enter_the_nether");
+        return config.getString(
+                "settings.win-conditions.reachAdvancement.advancement",
+                "minecraft:story/enter_the_nether");
     }
 
     /**
@@ -58,14 +60,22 @@ public final class WinConditionEngine {
      * for the acquireItem win condition.
      */
     public boolean hasAcquireItem(Player player) {
-        if (!isAcquireItemEnabled()) return false;
+        if (!isAcquireItemEnabled()) {
+            return false;
+        }
         String item = acquireItem();
         NamespacedKey key = NamespacedKey.fromString(item);
-        if (key == null) key = NamespacedKey.minecraft(item.replace("minecraft:", ""));
+        if (key == null) {
+            key = NamespacedKey.minecraft(item.replace("minecraft:", ""));
+        }
         Material material = Registry.MATERIAL.get(key);
-        if (material == null) return false;
+        if (material == null) {
+            return false;
+        }
         for (ItemStack stack : player.getInventory().getContents()) {
-            if (stack != null && stack.getType() == material) return true;
+            if (stack != null && stack.getType() == material) {
+                return true;
+            }
         }
         return false;
     }
@@ -75,9 +85,13 @@ public final class WinConditionEngine {
      * for the reachAdvancement win condition.
      */
     public boolean hasReachAdvancement(Player player) {
-        if (!isReachAdvancementEnabled()) return false;
+        if (!isReachAdvancementEnabled()) {
+            return false;
+        }
         NamespacedKey key = NamespacedKey.fromString(reachAdvancement());
-        if (key == null) return false;
+        if (key == null) {
+            return false;
+        }
         var advancement = Bukkit.getAdvancement(key);
         return advancement != null && player.getAdvancementProgress(advancement).isDone();
     }

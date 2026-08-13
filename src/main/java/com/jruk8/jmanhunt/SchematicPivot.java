@@ -62,9 +62,15 @@ public final class SchematicPivot {
      */
     public static StructureRotation yawToRotation(float yaw) {
         float y = (yaw % 360 + 360) % 360;
-        if (y >= 315 || y < 45) return StructureRotation.NONE;
-        if (y >= 45 && y < 135) return StructureRotation.CLOCKWISE_90;
-        if (y >= 135 && y < 225) return StructureRotation.CLOCKWISE_180;
+        if (y >= 315 || y < 45) {
+            return StructureRotation.NONE;
+        }
+        if (y >= 45 && y < 135) {
+            return StructureRotation.CLOCKWISE_90;
+        }
+        if (y >= 135 && y < 225) {
+            return StructureRotation.CLOCKWISE_180;
+        }
         return StructureRotation.COUNTERCLOCKWISE_90;
     }
 }

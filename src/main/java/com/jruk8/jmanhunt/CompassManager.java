@@ -15,6 +15,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -35,16 +36,21 @@ public final class CompassManager {
     }
 
     public void refreshAllCompasses(boolean active) {
-        if (active) Bukkit.getOnlinePlayers().stream()
-                .filter(p -> role(p).isParticipant())
-                .filter(this::hasCompass)
-                .forEach(this::refreshCompass);
+        if (active) {
+            Bukkit.getOnlinePlayers().stream()
+                    .filter(p -> role(p).isParticipant())
+                    .filter(this::hasCompass)
+                    .forEach(this::refreshCompass);
+        }
     }
 
     public void showHeldActionbars(boolean active) {
-        if (!active) return;
+        if (!active) {
+            return;
+        }
         Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
-                .filter(p -> isCompass(p.getInventory().getItemInMainHand()) || isCompass(p.getInventory().getItemInOffHand()))
+                .filter(p -> isCompass(p.getInventory().getItemInMainHand())
+                        || isCompass(p.getInventory().getItemInOffHand()))
                 .forEach(p -> p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
                         component("compass.no-target-actionbar",
                                 Map.of("role", role(p) == Role.HUNTER ? "speedrunner" : "hunter")))));
@@ -53,52 +59,32 @@ public final class CompassManager {
     public void refreshCompass(Player holder) {
         deduplicateCompasses(holder);
         int slot = findCompassSlot(holder);
-        if (slot < 0) return;
+        if (slot < 0) {
+            return;
+        }
         ItemStack item = holder.getInventory().getItem(slot);
-        if (!isCompass(item)) return;
+        if (!isCompass(item)) {
+            return;
+        }
 
         Role holderRole = role(holder);
-        if (!holderRole.isParticipant()) return;
+        if (!holderRole.isParticipant()) {
+            return;
+        }
         Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
         String targetRoleString = targetRole == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
 
-        // Find nearest online target in the same world
-        Player target = Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == targetRole
-                        && isTrackableTarget(p.getUniqueId(), targetRole) && p.getGameMode() != GameMode.SPECTATOR
-                        && !p.getUniqueId().equals(holder.getUniqueId())
-                        && p.getWorld().equals(holder.getWorld()))
-                .min(Comparator.comparingDouble(p -> p.getLocation().distanceSquared(holder.getLocation()))).orElse(null);
-
+        Player target = findTarget(holder, targetRole);
         if (target != null) {
-            // Check if the compass should be disabled when the target is
-            // nearby. Comparison is X/Z only (ignoring Y), as configured.
-            double threshold = plugin.getConfig().getDouble("settings.compass.disable-when-nearby.distance", 25.0);
-            boolean disableNearby = plugin.getConfig().getBoolean("settings.compass.disable-when-nearby.enabled", false);
-            if (disableNearby && threshold > 0) {
-                double dx = holder.getLocation().getX() - target.getLocation().getX();
-                double dz = holder.getLocation().getZ() - target.getLocation().getZ();
-                double flatDistance = Math.sqrt(dx * dx + dz * dz);
-                if (flatDistance <= threshold) {
-                    compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
-                            Map.of("player", target.getName())));
-                    return;
-                }
-            }
-            // Check if the target is beyond the configured tracking distance.
-            double trackingDistance = plugin.getConfig().getDouble("settings.compass.tracking-distance", -1.0);
-            if (trackingDistance >= 0) {
-                double distance = holder.getLocation().distance(target.getLocation());
-                if (distance > trackingDistance) {
-                    compassActionbars.put(holder.getUniqueId(), component("compass.too-far-actionbar",
-                            Map.of("player", target.getName(), "distance", String.valueOf(Math.round(distance)))));
-                    return;
-                }
+            if (handleNearbyOrTooFar(holder, target)) {
+                return;
             }
             setLodestone(item, target.getLocation());
             holder.getInventory().setItem(slot, item);
             compassActionbars.put(holder.getUniqueId(), component("compass.compass-actionbar",
                     Map.of("player", target.getName(),
-                            "distance", String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
+                            "distance",
+                            String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
             return;
         }
 
@@ -110,7 +96,8 @@ public final class CompassManager {
             String reason = lastSeen.online() ? "Another Dimension" : "Log-Out";
             compassActionbars.put(holder.getUniqueId(), component("compass.compass-last-seen-actionbar",
                     Map.of("player", lastSeen.name(),
-                            "distance", String.valueOf(Math.round(holder.getLocation().distance(lastSeen.location()))),
+                            "distance",
+                            String.valueOf(Math.round(holder.getLocation().distance(lastSeen.location()))),
                             "reason", reason)));
             return;
         }
@@ -118,6 +105,58 @@ public final class CompassManager {
         // Truly no location available
         compassActionbars.put(holder.getUniqueId(), component("compass.no-target-actionbar",
                 Map.of("role", targetRoleString)));
+    }
+
+    /**
+     * Finds the nearest online target for the given role in the same world.
+     */
+    private Player findTarget(Player holder, Role targetRole) {
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(p -> role(p) == targetRole
+                        && isTrackableTarget(p.getUniqueId(), targetRole)
+                        && p.getGameMode() != GameMode.SPECTATOR
+                        && !p.getUniqueId().equals(holder.getUniqueId())
+                        && p.getWorld().equals(holder.getWorld()))
+                .min(Comparator.comparingDouble(
+                        p -> p.getLocation().distanceSquared(holder.getLocation())))
+                .orElse(null);
+    }
+
+    /**
+     * Handles the disable-when-nearby and tracking-distance config checks.
+     * Returns true when the compass should not be updated (target too close
+     * or too far).
+     */
+    private boolean handleNearbyOrTooFar(Player holder, Player target) {
+        // Check if the compass should be disabled when the target is
+        // nearby. Comparison is X/Z only (ignoring Y), as configured.
+        double threshold = plugin.getConfig()
+                .getDouble("settings.compass.disable-when-nearby.distance", 25.0);
+        boolean disableNearby = plugin.getConfig()
+                .getBoolean("settings.compass.disable-when-nearby.enabled", false);
+        if (disableNearby && threshold > 0) {
+            double dx = holder.getLocation().getX() - target.getLocation().getX();
+            double dz = holder.getLocation().getZ() - target.getLocation().getZ();
+            double flatDistance = Math.sqrt(dx * dx + dz * dz);
+            if (flatDistance <= threshold) {
+                compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
+                        Map.of("player", target.getName())));
+                return true;
+            }
+        }
+        // Check if the target is beyond the configured tracking distance.
+        double trackingDistance = plugin.getConfig()
+                .getDouble("settings.compass.tracking-distance", -1.0);
+        if (trackingDistance >= 0) {
+            double distance = holder.getLocation().distance(target.getLocation());
+            if (distance > trackingDistance) {
+                compassActionbars.put(holder.getUniqueId(), component("compass.too-far-actionbar",
+                        Map.of("player", target.getName(),
+                                "distance", String.valueOf(Math.round(distance)))));
+                return true;
+            }
+        }
+        return false;
     }
 
     private void setLodestone(ItemStack item, Location location) {
@@ -130,14 +169,20 @@ public final class CompassManager {
 
     private boolean hasCompass(Player player) {
         for (ItemStack item : player.getInventory().getContents()) {
-            if (isCompass(item)) return true;
+            if (isCompass(item)) {
+                return true;
+            }
         }
         return false;
     }
 
     private boolean isTrackableTarget(UUID playerId, Role targetRole) {
-        if (playerStates.role(playerId) != targetRole) return false;
-        if (targetRole == Role.SPEEDRUNNER) return playerStates.isActiveSpeedrunner(playerId);
+        if (playerStates.role(playerId) != targetRole) {
+            return false;
+        }
+        if (targetRole == Role.SPEEDRUNNER) {
+            return playerStates.isActiveSpeedrunner(playerId);
+        }
         return playerStates.isMatchParticipant(playerId);
     }
 
@@ -149,23 +194,36 @@ public final class CompassManager {
                 .filter(entry -> !entry.getKey().equals(holder.getUniqueId()))
                 .map(entry -> {
                     Location loc = entry.getValue().get(holder.getWorld().getUID());
-                    if (loc == null || loc.getWorld() == null) return null;
+                    if (loc == null || loc.getWorld() == null) {
+                        return null;
+                    }
                     Player player = Bukkit.getPlayer(entry.getKey());
-                    String name = player != null ? player.getName() : playerStates.playerName(entry.getKey());
+                    String name = player != null
+                            ? player.getName() : playerStates.playerName(entry.getKey());
                     return new LastSeenResult(name, loc, player != null);
                 })
                 .filter(result -> result != null)
-                .min(Comparator.comparingDouble(result -> result.location().distanceSquared(holder.getLocation())))
+                .min(Comparator.comparingDouble(
+                        result -> result.location().distanceSquared(holder.getLocation())))
                 .orElse(null);
     }
 
+    public boolean shouldReceiveCompass(Role role) {
+        return plugin.getConfig()
+                .getBoolean("settings.compass.given-to." + role.name().toLowerCase(Locale.ROOT),
+                        role == Role.HUNTER);
+    }
+
     public void giveCompass(Player player) {
-        if (role(player) != Role.HUNTER) return;
+        if (!shouldReceiveCompass(role(player))) {
+            return;
+        }
         removeCompasses(player);
         ItemStack item = new ItemStack(Material.COMPASS);
         CompassMeta meta = (CompassMeta) item.getItemMeta();
         meta.displayName(messages.nonItalic(component("compass.compass-name")));
-        meta.lore(messages.strings("compass.compass-lore").stream().map(messages::parse).map(messages::nonItalic).toList());
+        meta.lore(messages.strings("compass.compass-lore").stream()
+                .map(messages::parse).map(messages::nonItalic).toList());
         if (plugin.getConfig().getBoolean("settings.compass.drop-on-death.enabled", false)) {
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         } else {
@@ -190,10 +248,14 @@ public final class CompassManager {
      */
     private int findAvailableSlot(Player player, int preferredSlot) {
         ItemStack preferred = player.getInventory().getItem(preferredSlot);
-        if (preferred == null || preferred.getType() == Material.AIR) return preferredSlot;
+        if (preferred == null || preferred.getType() == Material.AIR) {
+            return preferredSlot;
+        }
         for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
             ItemStack item = player.getInventory().getItem(slot);
-            if (item == null || item.getType() == Material.AIR) return slot;
+            if (item == null || item.getType() == Material.AIR) {
+                return slot;
+            }
         }
         return -1;
     }
@@ -204,7 +266,9 @@ public final class CompassManager {
      */
     private int findCompassSlot(Player player) {
         for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
-            if (isCompass(player.getInventory().getItem(slot))) return slot;
+            if (isCompass(player.getInventory().getItem(slot))) {
+                return slot;
+            }
         }
         return -1;
     }
@@ -230,13 +294,16 @@ public final class CompassManager {
 
     public void removeCompasses(Player player) {
         for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
-            if (isCompass(player.getInventory().getItem(slot))) player.getInventory().setItem(slot, null);
+            if (isCompass(player.getInventory().getItem(slot))) {
+                player.getInventory().setItem(slot, null);
+            }
         }
     }
 
     public boolean isCompass(ItemStack item) {
         return item != null && item.getType() == Material.COMPASS && item.hasItemMeta()
-                && item.getItemMeta().getPersistentDataContainer().has(compassKey, PersistentDataType.BYTE);
+                && item.getItemMeta().getPersistentDataContainer()
+                        .has(compassKey, PersistentDataType.BYTE);
     }
 
     public boolean mustBeInventory() {
@@ -244,16 +311,27 @@ public final class CompassManager {
     }
 
     public void handleRightClick(Player player) {
-        if (plugin.getConfig().getBoolean("settings.compass.right-click.refresh-on-right-click", false)) {
+        if (plugin.getConfig()
+                .getBoolean("settings.compass.right-click.refresh-on-right-click", false)) {
             long now = System.currentTimeMillis();
-            if (now - compassClicks.getOrDefault(player.getUniqueId(), 0L) >=
-                    plugin.getConfig().getDouble("settings.compass.right-click.right-click-cooldown", 3.0) * 1000) {
-                compassClicks.put(player.getUniqueId(), now); refreshCompass(player);
+            long cooldownMs = (long) (plugin.getConfig()
+                    .getDouble("settings.compass.right-click.right-click-cooldown", 3.0) * 1000);
+            if (now - compassClicks.getOrDefault(player.getUniqueId(), 0L) >= cooldownMs) {
+                compassClicks.put(player.getUniqueId(), now);
+                refreshCompass(player);
             }
         }
     }
 
-    private Role role(Player player) { return playerStates.role(player); }
-    private Component component(String key) { return messages.component(key); }
-    private Component component(String key, Map<String, String> values) { return messages.component(key, values); }
+    private Role role(Player player) {
+        return playerStates.role(player);
+    }
+
+    private Component component(String key) {
+        return messages.component(key);
+    }
+
+    private Component component(String key, Map<String, String> values) {
+        return messages.component(key, values);
+    }
 }

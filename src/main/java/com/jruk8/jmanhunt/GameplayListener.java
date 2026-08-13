@@ -110,7 +110,7 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
-        if (game.isActive() && playerStates.role(player) == Role.HUNTER) {
+        if (game.isActive() && playerStates.role(player).isParticipant()) {
             Bukkit.getScheduler().runTask(plugin, () -> compass.giveCompass(player));
         }
         if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
@@ -237,10 +237,12 @@ public final class GameplayListener implements Listener {
         Location respawn = player.getBedSpawnLocation();
         if (respawn != null) player.teleport(respawn);
         else player.teleport(player.getWorld().getSpawnLocation());
-        if (playerStates.role(player) == Role.HUNTER) {
+        if (playerStates.role(player).isParticipant()) {
             compass.giveCompass(player);
             compass.refreshCompass(player);
-            messages.broadcast("game.hunter-respawn-imminent", Map.of("player", player.getName()));
+            if (playerStates.role(player) == Role.HUNTER) {
+                messages.broadcast("game.hunter-respawn-imminent", Map.of("player", player.getName()));
+            }
         }
         if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
         game.stateCommands().runEventModifiers("ON_RESPAWN", player);

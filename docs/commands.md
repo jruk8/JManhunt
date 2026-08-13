@@ -11,7 +11,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt end`                                    | Ends the active match; hunters win. | `jmanhunt.command.end` |
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
 | `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
-| `/manhunt modifiers [setting] [true\|false]`      | Lists, views, or changes built-in actions and custom modifiers. | `jmanhunt.command.modifiers` |
+| `/manhunt modifiers [setting] [value]`            | Lists, views, or changes built-in actions and settings. | `jmanhunt.command.modifiers` |
 | `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` |
 | `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` |
 | `/manhunt schem wand`                             | Gives you the schematic wand. | `jmanhunt.command.schem` |
@@ -77,6 +77,41 @@ Lucky Block `STRUCTURE` outcomes and can be reused by future features.
 
 Confirmation is tracked per executor and expires after 5 seconds. Feedback
 messages work correctly for both players and the console.
+
+## Editing Settings In-Game
+
+`/manhunt modifiers` can browse and change scalar settings in-game. Boolean
+toggles accept `true` or `false`:
+
+```text
+/manhunt modifiers settings.start-delay.enabled true
+```
+
+Numerical settings (ints, floats, doubles) accept their numeric value:
+
+```text
+/manhunt modifiers settings.compass.refresh-interval 5.0
+/manhunt modifiers settings.win-conditions.surviveTime.time 1800.0
+/manhunt modifiers settings.world-engine.cell-size 20000
+```
+
+Strings and enum-like values are stored verbatim:
+
+```text
+/manhunt modifiers settings.start-on-speedrunner-damage.on-expire FORCE_START
+/manhunt modifiers settings.win-conditions.acquireItem.item minecraft:diamond
+```
+
+Setting names are matched case-insensitively. When tab-completing a value,
+non-boolean settings suggest the **default value from the bundled default
+config**.
+
+> **Known limitation:** JManhunt does not use a type-safe configuration
+> framework (such as Cloud). Values are parsed against the current type in
+> `config.yml` only — booleans and numbers are validated, but strings and
+> enums are stored verbatim with **no schema validation**. If you need
+> guaranteed-valid enum keys or strict type checking, edit `config.yml`
+> directly and run `/manhunt reload`.
 
 ## Custom Modifiers
 

@@ -28,7 +28,9 @@ public record WorldEngineConfig(
         int cellSize = Math.clamp(configuredCellSize, 1, MAX_CELL_SIZE);
         int spreadRadius = Math.clamp(config.getInt(base + "tp-spread-radius", 5), 0, cellSize / 2);
         String worldName = config.getString(base + "world-name", "world");
-        if (worldName.isBlank()) worldName = "world";
+        if (worldName.isBlank()) {
+            worldName = "world";
+        }
         String lobbyWorld = config.getString(base + "lobby-location.world", worldName);
         Location lobby = new Location(
                 org.bukkit.Bukkit.getWorld(lobbyWorld),

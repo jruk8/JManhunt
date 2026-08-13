@@ -35,24 +35,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         reload();
 
         playerStates = new PlayerStateStore();
-        if (getConfig().getBoolean("database.enabled", true)) {
-            try {
-                statsRepository = StatsRepository.open(this);
-                getLogger().info("Career statistics database initialized.");
-            } catch (Exception exception) {
-                getLogger().severe("Career statistics are disabled because the database could not be initialized: "
-                        + exception.getMessage());
-            }
-        }
+        setupDatabase();
         stats = new StatsManager(this, messages, statsRepository);
-        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            expansion = new JManhuntExpansion(this, stats, messages);
-            expansion.register();
-            getLogger().info("Hooked into PlaceholderAPI as the %jmanhunt_<placeholder>% expansion.");
-        } else {
-            getLogger().warning("PlaceholderAPI is not installed; JManhunt placeholders will not be hooked into.");
-        }
-
+        setupPlaceholderApi();
 
         compass = new CompassManager(this, messages, playerStates,
                 new NamespacedKey(this, "hunters_compass"));
@@ -60,7 +45,48 @@ public final class JManhuntPlugin extends JavaPlugin {
         sounds = new SoundService(this, configService);
         worldEngine = new WorldEngineService(this, configService, statsRepository);
         winConditionEngine = new WinConditionEngine(getConfig());
-        game = new GameManager(this, messages, sounds, playerStates, compass, stats, configService, worldEngine, winConditionEngine);
+        game = new GameManager(
+                this, messages, sounds, playerStates, compass, stats,
+                configService, worldEngine, winConditionEngine);
+        setupListeners();
+
+        setupScheduling();
+        reload(); // reload again to ensure that settings are loaded after the game manager is initialized
+        for (SettingsListener listener : settings) {
+            listener.onStart();
+        }
+
+        // Initialize bStats
+        var metricsBootstrap = new MetricsBootstrap(this);
+        metricsBootstrap.register();
+    }
+
+    private void setupDatabase() {
+        if (!getConfig().getBoolean("database.enabled", true)) {
+            return;
+        }
+        try {
+            statsRepository = StatsRepository.open(this);
+            getLogger().info("Career statistics database initialized.");
+        } catch (Exception exception) {
+            getLogger().severe(
+                    "Career statistics are disabled because the database could not be initialized: "
+                            + exception.getMessage());
+        }
+    }
+
+    private void setupPlaceholderApi() {
+        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            expansion = new JManhuntExpansion(this, stats, messages);
+            expansion.register();
+            getLogger().info("Hooked into PlaceholderAPI as the %jmanhunt_<placeholder>% expansion.");
+        } else {
+            getLogger().warning(
+                    "PlaceholderAPI is not installed; JManhunt placeholders will not be hooked into.");
+        }
+    }
+
+    private void setupListeners() {
         var piglinBarter = new PiglinBarterListener(this, game);
         var challenges = new ChallengesListener(this, game, playerStates, messages, sounds, configService);
         game.addGameStartListener(challenges::onGameStart);
@@ -77,11 +103,14 @@ public final class JManhuntPlugin extends JavaPlugin {
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);
         getServer().getPluginManager().registerEvents(new GameplayListener(
-                this, playerStates, game, messages, configService, sounds, compass, stats, worldEngine, winConditionEngine), this);
+                this, playerStates, game, messages, configService, sounds,
+                compass, stats, worldEngine, winConditionEngine), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
         getServer().getPluginManager().registerEvents(challenges, this);
         getServer().getPluginManager().registerEvents(schemCommand, this);
+    }
 
+    private void setupScheduling() {
         double refreshInterval = getConfig().getDouble("settings.compass.refresh-interval", 10.0);
         if (refreshInterval != -1.0) {
             long ticks = Math.max(1L, Math.round(refreshInterval * 20.0));
@@ -90,20 +119,18 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
         BukkitTask actionbars = Bukkit.getScheduler().runTaskTimer(this,
                 () -> compass.showHeldActionbars(game.isActive()), 1L, 20L);
-        reload(); // reload again to ensure that settings are loaded after the game manager is initialized
-        for (SettingsListener listener : settings) {
-            listener.onStart();
-        }
-
-        // Initialize bStats
-        var metricsBootstrap = new MetricsBootstrap(this);
-        metricsBootstrap.register();
     }
 
     @Override public void onDisable() {
-        if (expansion != null) expansion.unregister();
-        if (stats != null) stats.flush();
-        if (statsRepository != null) statsRepository.close();
+        if (expansion != null) {
+            expansion.unregister();
+        }
+        if (stats != null) {
+            stats.flush();
+        }
+        if (statsRepository != null) {
+            statsRepository.close();
+        }
     }
 
     public void reload() {

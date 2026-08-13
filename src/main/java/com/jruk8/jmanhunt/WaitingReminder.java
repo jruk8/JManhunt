@@ -16,7 +16,9 @@ public final class WaitingReminder {
      * @return the effective delay, or -1 for indefinite
      */
     public static int clampDelay(int configured) {
-        if (configured < 0) return -1;
+        if (configured < 0) {
+            return -1;
+        }
         return Math.max(MIN_DELAY_SECONDS, configured);
     }
 
@@ -28,7 +30,9 @@ public final class WaitingReminder {
      * @return the slice in seconds
      */
     public static int sliceSeconds(int effectiveDelay) {
-        if (effectiveDelay <= 0) return Math.max(1, effectiveDelay);
+        if (effectiveDelay <= 0) {
+            return Math.max(1, effectiveDelay);
+        }
         return Math.max(1, (int) Math.round(effectiveDelay / (double) REMINDER_COUNT));
     }
 }

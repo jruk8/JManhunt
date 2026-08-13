@@ -17,7 +17,9 @@ public abstract class DatapackManager {
     }
 
     public void apply(String worldName, boolean enabled) {
-        if (!enabled) return;
+        if (!enabled) {
+            return;
+        }
         File worldFolder = new File(plugin.getServer().getWorldContainer(), worldName);
         File datapackRoot = new File(worldFolder, "datapacks/" + datapackFolderName());
         File mcMeta = new File(datapackRoot, "pack.mcmeta");
@@ -28,7 +30,9 @@ public abstract class DatapackManager {
                 String targetPath = entry.getKey();
                 String resource = entry.getValue();
                 File structureSet = new File(datapackRoot, targetPath);
-                if (structureSet.getParentFile() != null) structureSet.getParentFile().mkdirs();
+                if (structureSet.getParentFile() != null) {
+                    structureSet.getParentFile().mkdirs();
+                }
                 File source = new File(plugin.getDataFolder(), resource);
                 if (!source.exists()) {
                     plugin.saveResource(resource, false);
@@ -36,9 +40,12 @@ public abstract class DatapackManager {
                 String content = Files.readString(source.toPath(), StandardCharsets.UTF_8);
                 changed |= writeIfChanged(structureSet, content);
             }
-            if (changed) reloadDataPacks();
+            if (changed) {
+                reloadDataPacks();
+            }
         } catch (IOException exception) {
-            plugin.getLogger().warning("Failed to apply " + datapackFolderName() + " datapack: " + exception.getMessage());
+            plugin.getLogger().warning(
+                    "Failed to apply " + datapackFolderName() + " datapack: " + exception.getMessage());
         }
     }
 
@@ -79,7 +86,9 @@ public abstract class DatapackManager {
     private boolean writeIfChanged(File target, String content) throws IOException {
         if (target.exists()) {
             String existing = Files.readString(target.toPath(), StandardCharsets.UTF_8);
-            if (existing.equals(content)) return false;
+            if (existing.equals(content)) {
+                return false;
+            }
         } else if (target.getParentFile() != null) {
             target.getParentFile().mkdirs();
         }

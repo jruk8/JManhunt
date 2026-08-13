@@ -55,50 +55,65 @@ public final class LootTableEngine {
         parsedTable.clear();
         totalWeight = 0;
 
-        if (!jsonFile.exists()) return false;
+        if (!jsonFile.exists()) {
+            return false;
+        }
 
         try (FileReader reader = new FileReader(jsonFile)) {
             JsonObject root = GSON.fromJson(reader, JsonObject.class);
-            if (root == null) return false;
+            if (root == null) {
+                return false;
+            }
 
             LootTableSchema.LootTable table = GSON.fromJson(root, LootTableSchema.LootTable.class);
-
-            if (table == null || table.pools() == null) return false;
-
-            for (LootTableSchema.Pool pool : table.pools()) {
-                if (pool.entries() == null) continue;
-
-                for (LootTableSchema.Entry entry : pool.entries()) {
-                    if (entry.name() == null) continue;
-
-                    String rawMat = entry.name().replace("minecraft:", "").toUpperCase();
-                    Material mat = Material.matchMaterial(rawMat);
-
-                    if (mat == null) continue;
-
-                    int weight = entry.weight() > 0 ? entry.weight() : 1;
-                    int min = 1;
-                    int max = 1;
-
-                    if (entry.functions() != null) {
-                        for (LootTableSchema.Function func : entry.functions()) {
-                            if (!"minecraft:set_count".equals(func.function()) || func.count() == null) continue;
-
-                            int[] countRange = parseCountRange(func.count());
-                            min = countRange[0];
-                            max = countRange[1];
-                        }
-                    }
-
-                    parsedTable.add(new ParsedEntry(weight, mat, min, max));
-                    totalWeight += weight;
-                }
+            if (table == null || table.pools() == null) {
+                return false;
             }
+
+            parsePools(table);
             return true;
 
         } catch (IOException | RuntimeException e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    private void parsePools(LootTableSchema.LootTable table) {
+        for (LootTableSchema.Pool pool : table.pools()) {
+            if (pool.entries() == null) {
+                continue;
+            }
+
+            for (LootTableSchema.Entry entry : pool.entries()) {
+                if (entry.name() == null) {
+                    continue;
+                }
+
+                String rawMat = entry.name().replace("minecraft:", "").toUpperCase();
+                Material mat = Material.matchMaterial(rawMat);
+                if (mat == null) {
+                    continue;
+                }
+
+                int weight = entry.weight() > 0 ? entry.weight() : 1;
+                int min = 1;
+                int max = 1;
+
+                if (entry.functions() != null) {
+                    for (LootTableSchema.Function func : entry.functions()) {
+                        if (!"minecraft:set_count".equals(func.function()) || func.count() == null) {
+                            continue;
+                        }
+                        int[] countRange = parseCountRange(func.count());
+                        min = countRange[0];
+                        max = countRange[1];
+                    }
+                }
+
+                parsedTable.add(new ParsedEntry(weight, mat, min, max));
+                totalWeight += weight;
+            }
         }
     }
 
@@ -122,6 +137,5 @@ public final class LootTableEngine {
         }
 
         return List.of(new ItemStack(Material.GRAVEL, 8));
-
     }
 }

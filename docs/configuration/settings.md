@@ -33,6 +33,23 @@ like:
 
 and a lot more!
 
+## Compass Given-To
+
+Under `settings.compass.given-to`, you can configure which roles receive a
+compass when a match starts (and on respawn):
+
+```yaml
+settings:
+  compass:
+    given-to:
+      hunters: true
+      speedrunners: false
+```
+
+`hunters` is enabled by default, `speedrunners` is disabled by default.
+Hunters always track speedrunners and speedrunners always track hunters, as
+per the existing tracking logic.
+
 ## Compass Tracking Distance
 
 Under `settings.compass.tracking-distance`, you can limit how far away the

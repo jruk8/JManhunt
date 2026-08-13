@@ -500,6 +500,13 @@ settings:
   # Compass tracking settings. The held actionbar stays visible between
   # interval refreshes and continues showing its cached value.
   compass:
+    # Which roles receive a compass when a match starts (and on respawn).
+    # Hunters track speedrunners; speedrunners track hunters, as per the
+    # existing tracking logic.
+    # Default: hunters true, speedrunners false
+    given-to:
+      hunters: true
+      speedrunners: false
     # When true, the hunter compass must stay in the player's inventory and
     # cannot be dropped or placed in chests. When false, the compass behaves
     # like a normal item and can be dropped or stored.

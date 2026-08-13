@@ -79,7 +79,9 @@ public final class GameManager {
     public GameStateCommandManager stateCommands() { return stateCommands; }
     public Set<String> settingNames() { return configService.settingNames(); }
     public boolean getSetting(String setting) { return configService.getBoolean(setting, false); }
-    public boolean setSetting(String setting, boolean value) { return configService.setBoolean(setting, value); }
+    public Object getSettingValue(String setting) { return configService.getValue(setting); }
+    /** Sets a scalar setting parsed from a raw string. Returns false on invalid input. */
+    public boolean setSetting(String setting, String rawValue) { return configService.setValue(setting, rawValue); }
 
     /** Registers a listener invoked whenever a match starts. */
     public void addGameStartListener(Runnable listener) { gameStartListeners.add(listener); }
@@ -126,7 +128,7 @@ public final class GameManager {
         stateCommands.runStart();
         worldEngine.onMatchStart(players);
         for (Player player : players) {
-            if (role(player) == Role.HUNTER) { compass.giveCompass(player); compass.refreshCompass(player); }
+            if (role(player).isParticipant()) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
         // Set participants to adventure mode during the pre-start window if
         // configured, preventing block breaking while waiting for the first

@@ -39,9 +39,11 @@ public final class MessageService {
 
     public String formatPlaceholder(String raw) {
         if ("legacy".equalsIgnoreCase(format)) {
-            return LegacyComponentSerializer.legacySection().serialize(LegacyComponentSerializer.legacyAmpersand().deserialize(raw));
+            return LegacyComponentSerializer.legacySection().serialize(
+                    LegacyComponentSerializer.legacyAmpersand().deserialize(raw));
         }
-        return LegacyComponentSerializer.legacySection().serialize(MiniMessage.miniMessage().deserialize(raw));
+        return LegacyComponentSerializer.legacySection().serialize(
+                MiniMessage.miniMessage().deserialize(raw));
     }
 
     public String addSeparators(String text) {
@@ -65,5 +67,7 @@ public final class MessageService {
     public void broadcast(String key, Map<String, String> values) { Bukkit.broadcast(component(key, values)); }
 
     public void message(CommandSender sender, String key) { sender.sendMessage(component(key)); }
-    public void message(CommandSender sender, String key, Map<String, String> values) { sender.sendMessage(component(key, values)); }
+    public void message(CommandSender sender, String key, Map<String, String> values) {
+        sender.sendMessage(component(key, values));
+    }
 }

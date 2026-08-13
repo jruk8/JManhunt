@@ -22,10 +22,14 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
     @Override public boolean canRegister() { return true; }
 
     @Override public String onRequest(OfflinePlayer player, String params) {
-        if (player == null) return "";
+        if (player == null) {
+            return "";
+        }
         String key = params.toLowerCase(Locale.ROOT);
         String path = "placeholders." + key;
-        if (!plugin.getConfig().getBoolean(path + ".enabled", true)) return "";
+        if (!plugin.getConfig().getBoolean(path + ".enabled", true)) {
+            return "";
+        }
         StatsManager.CareerStats value = stats.career(player.getUniqueId());
         String raw = switch (key) {
             case "time_as_speedrunner" -> String.valueOf(value.timeSpeedrunner);
@@ -48,7 +52,9 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
             case "total_kd_as_hunter" -> formatKd(value.hunterKills, value.hunterSessions);
             default -> null;
         };
-        if (raw == null) return null;
+        if (raw == null) {
+            return null;
+        }
         String format = plugin.getConfig().getString(path + ".format", "{value}");
         return messages.formatPlaceholder(format.replace("{value}", raw));
     }
@@ -62,7 +68,9 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
     }
 
     private String formatKd(int kills, int sessions) {
-        if (sessions <= 0) return "0.00";
+        if (sessions <= 0) {
+            return "0.00";
+        }
         return String.format(Locale.ROOT, "%.2f", (double) kills / sessions);
     }
 }

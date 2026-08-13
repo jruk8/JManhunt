@@ -30,10 +30,13 @@ public class SoundService {
     public void playSound(Player player, String configKey) {
         SoundSettings settings = getSoundSettings(configKey);
         try {
-            if (!settings.enabled() || settings.sound() == null) return;
+            if (!settings.enabled() || settings.sound() == null) {
+                return;
+            }
             player.playSound(player.getLocation(), settings.sound(), settings.volume(), settings.pitch());
         } catch (IllegalArgumentException exception) {
-            plugin.getLogger().warning("Could not play configured sound '" + settings.configKey() + "': " + exception.getMessage());
+            plugin.getLogger().warning(
+                    "Could not play configured sound '" + settings.configKey() + "': " + exception.getMessage());
         }
     }
 
@@ -49,7 +52,9 @@ public class SoundService {
     public void playCustomSound(Player player, String sound, float pitch, float volume) {
         try {
             NamespacedKey soundKey = NamespacedKey.fromString(sound.toLowerCase(Locale.ROOT));
-            if (soundKey == null) soundKey = NamespacedKey.minecraft(sound.toLowerCase(Locale.ROOT));
+            if (soundKey == null) {
+                soundKey = NamespacedKey.minecraft(sound.toLowerCase(Locale.ROOT));
+            }
             if (Registry.SOUNDS.get(soundKey) == null) {
                 plugin.getLogger().warning("Sound '" + sound + "' is invalid. Using default sound.");
                 soundKey = NamespacedKey.fromString(FALLBACK_SOUND);
@@ -66,10 +71,14 @@ public class SoundService {
 
         String soundInput = config.getString(soundPath + ".sound", FALLBACK_SOUND);
         NamespacedKey soundKey = NamespacedKey.fromString(soundInput.toLowerCase(Locale.ROOT));
-        if (soundKey == null) soundKey = NamespacedKey.minecraft(soundInput.toLowerCase(Locale.ROOT));
+        if (soundKey == null) {
+            soundKey = NamespacedKey.minecraft(soundInput.toLowerCase(Locale.ROOT));
+        }
         String sound = (Registry.SOUNDS.get(soundKey) == null) ? null : soundKey.asString();
         if (sound == null) {
-            plugin.getLogger().warning("Sound '" + soundInput + "' for config key '" + configKey + "' is invalid. Using default sound.");
+            plugin.getLogger().warning(
+                    "Sound '" + soundInput + "' for config key '" + configKey + "' is invalid."
+                            + " Using default sound.");
             sound = FALLBACK_SOUND;
         }
 

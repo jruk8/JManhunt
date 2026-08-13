@@ -16,7 +16,8 @@ public final class YamlFileUpdater {
     private YamlFileUpdater() {
     }
 
-    public static FileConfiguration update(JavaPlugin plugin, String resourceName, String versionKey, int currentVersion) {
+    public static FileConfiguration update(
+            JavaPlugin plugin, String resourceName, String versionKey, int currentVersion) {
         File file = new File(plugin.getDataFolder(), resourceName);
         if (!file.exists()) {
             plugin.saveResource(resourceName, false);
@@ -53,7 +54,9 @@ public final class YamlFileUpdater {
                 // renamed or removed keys are not resurrected on reload.
                 if (isCustomModifierCommands(prefix)) {
                     ConfigurationSection commandsSection = user.getConfigurationSection(prefix);
-                    if (commandsSection != null) continue;
+                    if (commandsSection != null) {
+                        continue;
+                    }
                 }
                 user.set(path, defaults.get(path));
             }
@@ -61,7 +64,9 @@ public final class YamlFileUpdater {
     }
 
     private static boolean isCustomModifierCommands(String prefix) {
-        if (!prefix.startsWith("custom-modifiers.")) return false;
+        if (!prefix.startsWith("custom-modifiers.")) {
+            return false;
+        }
         return prefix.contains(".commands");
     }
 }

@@ -228,8 +228,12 @@ class LuckyBlockEngineTest {
         for (int i = 0; i < 1000; i++) {
             LuckyBlockEngine.Outcome outcome = engine.roll();
             assertNotNull(outcome);
-            if (outcome.name().equals("a")) sawA = true;
-            if (outcome.name().equals("b")) sawB = true;
+            if (outcome.name().equals("a")) {
+                sawA = true;
+            }
+            if (outcome.name().equals("b")) {
+                sawB = true;
+            }
         }
         assertTrue(sawA);
         assertTrue(sawB);
@@ -569,7 +573,9 @@ class LuckyBlockEngineTest {
         for (int i = 0; i < 2000; i++) {
             LuckyBlockEngine.Outcome outcome = engine.roll();
             assertNotNull(outcome);
-            if (outcome.rarity().equals("common")) sawCommon = true;
+            if (outcome.rarity().equals("common")) {
+                sawCommon = true;
+            }
             if (outcome.rarity().equals("legendary")) {
                 sawLegendary = true;
                 assertEquals("legendary-a", outcome.name());

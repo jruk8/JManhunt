@@ -24,7 +24,9 @@ public final class EndResetManager {
     public void reset(WorldEngineConfig config, Location lobbyLocation) {
         String endWorldName = config.worldName() + "_the_end";
         World endWorld = Bukkit.getWorld(endWorldName);
-        if (endWorld == null) return;
+        if (endWorld == null) {
+            return;
+        }
 
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (player.getWorld().equals(endWorld)) {
@@ -50,10 +52,14 @@ public final class EndResetManager {
     }
 
     private void deleteFolder(File folder) {
-        if (!folder.exists()) return;
+        if (!folder.exists()) {
+            return;
+        }
         try {
             List<Path> paths = Files.walk(folder.toPath()).sorted(Comparator.reverseOrder()).toList();
-            for (Path path : paths) Files.deleteIfExists(path);
+            for (Path path : paths) {
+                Files.deleteIfExists(path);
+            }
         } catch (IOException exception) {
             plugin.getLogger().warning("Failed to clean end data at " + folder + ": " + exception.getMessage());
         }

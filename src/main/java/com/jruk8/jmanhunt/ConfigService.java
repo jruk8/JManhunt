@@ -28,12 +28,18 @@ public final class ConfigService {
         Set<String> names = new TreeSet<>();
         var defaults = plugin.getConfig().getConfigurationSection("gamestate-commands.default-commands");
         if (defaults != null) {
-            if (defaults.contains("enabled")) names.add("default-commands.enabled");
+            if (defaults.contains("enabled")) {
+                names.add("default-commands.enabled");
+            }
             for (String key : defaults.getKeys(false)) {
-                if (!key.equals("enabled")) names.add("default-commands." + key);
+                if (!key.equals("enabled")) {
+                    names.add("default-commands." + key);
+                }
             }
         }
-        for (String name : modifierNames()) names.add("custom-modifiers." + name + ".enabled");
+        for (String name : modifierNames()) {
+            names.add("custom-modifiers." + name + ".enabled");
+        }
         names.addAll(extraModifierNames());
         var challenges = plugin.getConfig().getConfigurationSection("challenges");
         if (challenges != null) {
@@ -60,6 +66,28 @@ public final class ConfigService {
         return plugin.getConfig().getInt(setting, defaultValue);
     }
 
+    /** Returns the raw config value for the given path, or null if absent. */
+    public Object getValue(String setting) {
+        return plugin.getConfig().get(setting);
+    }
+
+    /**
+     * Sets a scalar config value parsed from a raw string. Values are parsed
+     * against the current type in config.yml: booleans and numbers are
+     * validated, strings/enums are stored verbatim. Returns true on success.
+     */
+    public boolean setValue(String setting, String raw) {
+        Object current = plugin.getConfig().get(setting);
+        return SettingValueParser.parse(current, raw, (oldValue, newValue) -> {
+            if (newValue instanceof Boolean bool) {
+                setBoolean(setting, bool);
+            } else {
+                plugin.getConfig().set(setting, newValue);
+                plugin.saveConfig();
+            }
+        });
+    }
+
     public boolean setBoolean(String setting, boolean value) {
         boolean oldValue = plugin.getConfig().getBoolean(setting);
         plugin.getConfig().set(setting, value);
@@ -80,7 +108,9 @@ public final class ConfigService {
 
     private void fireChange(String setting, boolean oldValue, boolean newValue) {
         List<BiConsumer<Boolean, Boolean>> list = listeners.get(setting);
-        if (list == null) return;
+        if (list == null) {
+            return;
+        }
         for (BiConsumer<Boolean, Boolean> listener : list) {
             listener.accept(oldValue, newValue);
         }
@@ -93,22 +123,24 @@ public final class ConfigService {
     }
 
     private void collectExtraModifierNames(ConfigurationSection section, String prefix, Set<String> names) {
-        if (section == null) return;
+        if (section == null) {
+            return;
+        }
         for (String key : section.getKeys(false)) {
             String path = prefix.isEmpty() ? key : prefix + "." + key;
             ConfigurationSection child = section.getConfigurationSection(key);
-            if (child != null && child.contains("enabled")) {
-                names.add("settings." + path + ".enabled");
-                // Also recurse into the section to find nested enabled keys
-                // (e.g. world-engine.world-border.enabled inside world-engine).
+            if (child != null) {
+                // Recurse into nested sections. Also add explicit "enabled"
+                // toggles so that boolean switches are listed under their
+                // .enabled path as before.
+                if (child.contains("enabled")) {
+                    names.add("settings." + path + ".enabled");
+                }
                 collectExtraModifierNames(child, path, names);
-            } else if (child != null) {
-                collectExtraModifierNames(child, path, names);
-            } else if (section.isBoolean(key)) {
-                // Use the path as-is so that the "enabled" key itself resolves
-                // to settings.<path> (e.g. settings.world-engine.enabled) and
-                // plain boolean toggles resolve to their actual config path
-                // (e.g. settings.loot-tables.custom-piglin-barter).
+            } else {
+                // Scalar leaf: booleans, ints, doubles, floats and strings
+                // (including enums) are all editable in-game via /manhunt
+                // modifiers. Lists and maps are excluded.
                 names.add("settings." + path);
             }
         }

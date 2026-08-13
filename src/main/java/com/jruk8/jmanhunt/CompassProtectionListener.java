@@ -25,17 +25,25 @@ public final class CompassProtectionListener implements Listener {
     }
 
     @EventHandler public void onDrop(PlayerDropItemEvent event) {
-        if (!compass.mustBeInventory()) return;
-        if (compass.isCompass(event.getItemDrop().getItemStack())) event.setCancelled(true);
+        if (!compass.mustBeInventory()) {
+            return;
+        }
+        if (compass.isCompass(event.getItemDrop().getItemStack())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler public void onClick(InventoryClickEvent event) {
-        if (!compass.mustBeInventory()) return;
+        if (!compass.mustBeInventory()) {
+            return;
+        }
         boolean involvesCompass = compass.isCompass(event.getCurrentItem())
                 || compass.isCompass(event.getCursor())
                 || (event.getHotbarButton() >= 0
                     && compass.isCompass(event.getWhoClicked().getInventory().getItem(event.getHotbarButton())));
-        if (!involvesCompass) return;
+        if (!involvesCompass) {
+            return;
+        }
 
         // Allow non-shift-clicks within the player's own inventory
         if (event.getClickedInventory() != null
@@ -48,9 +56,13 @@ public final class CompassProtectionListener implements Listener {
     }
 
     @EventHandler public void onDrag(InventoryDragEvent event) {
-        if (!compass.mustBeInventory()) return;
+        if (!compass.mustBeInventory()) {
+            return;
+        }
         if (!compass.isCompass(event.getOldCursor())
-                && !event.getNewItems().values().stream().anyMatch(compass::isCompass)) return;
+                && !event.getNewItems().values().stream().anyMatch(compass::isCompass)) {
+            return;
+        }
 
         // Cancel if any drag slot is in the top inventory (chest, crafting grid, etc.)
         int topSize = event.getView().getTopInventory().getSize();
@@ -61,25 +73,39 @@ public final class CompassProtectionListener implements Listener {
     }
 
     @EventHandler public void onMove(InventoryMoveItemEvent event) {
-        if (!compass.mustBeInventory()) return;
-        if (compass.isCompass(event.getItem())) event.setCancelled(true);
+        if (!compass.mustBeInventory()) {
+            return;
+        }
+        if (compass.isCompass(event.getItem())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler public void onPickup(InventoryPickupItemEvent event) {
-        if (!compass.mustBeInventory()) return;
-        if (compass.isCompass(event.getItem().getItemStack())) event.setCancelled(true);
+        if (!compass.mustBeInventory()) {
+            return;
+        }
+        if (compass.isCompass(event.getItem().getItemStack())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler public void onEntityPickup(EntityPickupItemEvent event) {
-        if (!(event.getEntity() instanceof Player player)) return;
-        if (!compass.isCompass(event.getItem().getItemStack())) return;
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+        if (!compass.isCompass(event.getItem().getItemStack())) {
+            return;
+        }
         // Schedule deduplication next tick to handle multiple compasses
         // picked up in the same tick
         Bukkit.getScheduler().runTask(plugin, () -> compass.deduplicateCompasses(player));
     }
 
     @EventHandler public void onInteract(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND || !compass.isCompass(event.getItem()) || !game.isActive()) return;
+        if (event.getHand() != EquipmentSlot.HAND || !compass.isCompass(event.getItem()) || !game.isActive()) {
+            return;
+        }
         compass.handleRightClick(event.getPlayer());
     }
 }

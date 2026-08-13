@@ -4,6 +4,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -68,7 +69,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt setplayer <selector> <hunter|speedrunner|afk|none>", "assign roles"},
                 {"/manhunt start", "start a match"}, {"/manhunt end", "end a match"},
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
-                {"/manhunt modifiers <setting> <true|false>", "view or change a setting"},
+                {"/manhunt modifiers <setting> <value>", "view or change a setting"},
                 {"/manhunt worldengine", "set lobby or teleport players"},
                 {"/manhunt schem <save|list|delete|load|wand>", "manage schematics"},
                 {"/manhunt reload", "reload files"}};
@@ -124,7 +125,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             if (game.isActive() && role.isParticipant()) {
                 playerStates.markMatchParticipant(player.getUniqueId());
             }
-            if (game.isActive() && role == Role.HUNTER) compass.giveCompass(player);
+            if (game.isActive() && role.isParticipant()) compass.giveCompass(player);
             if (!role.isParticipant()) {
                 Bukkit.broadcast(messages.component("manhunt.queue-left", Map.of("player", player.getName())));
             }
@@ -152,24 +153,28 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             for (String setting : game.settingNames()) {
                 sender.sendMessage(messages.component("manhunt.setting-entry",
-                        Map.of("setting", setting, "value", String.valueOf(game.getSetting(setting)))));
+                        Map.of("setting", setting, "value", String.valueOf(game.getSettingValue(setting)))));
             }
             return true;
         }
-        String setting = args[1].toLowerCase(Locale.ROOT);
-        if (!game.settingNames().contains(setting)) return message(sender, "manhunt.setting-invalid");
+        String setting = resolveSetting(args[1]);
+        if (setting == null) return message(sender, "manhunt.setting-invalid");
+        Object oldValue = game.getSettingValue(setting);
         if (args.length < 3) {
             message(sender, "manhunt.setting-status",
-                    Map.of("setting", setting, "value", String.valueOf(game.getSetting(setting))));
+                    Map.of("setting", setting, "value", String.valueOf(oldValue)));
             return true;
         }
-        if (!args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
+        boolean isBoolean = oldValue instanceof Boolean;
+        if (isBoolean && !args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
             return message(sender, "manhunt.setting-invalid-value");
         }
-        boolean oldValue = game.getSetting(setting);
-        boolean value = Boolean.parseBoolean(args[2]);
-        game.setSetting(setting, value);
-        message(sender, "manhunt.setting-updated", Map.of("setting", setting, "value", String.valueOf(value), "old-value", String.valueOf(oldValue)));
+        if (!game.setSetting(setting, args[2])) {
+            return message(sender, "manhunt.setting-invalid-number");
+        }
+        Object newValue = game.getSettingValue(setting);
+        message(sender, "manhunt.setting-updated", Map.of("setting", setting,
+                "value", String.valueOf(newValue), "old-value", String.valueOf(oldValue)));
         if (RESTART_REQUIRED_SETTINGS.contains(setting)) {
             message(sender, "manhunt.setting-restart-required");
         }
@@ -289,8 +294,20 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 "end", "modifiers", "worldengine", "schem", "quickstart", "qs", "reload"));
         if (args.length == 2 && args[0].equalsIgnoreCase("modifiers"))
             return partial(args[1], new ArrayList<>(game.settingNames()));
-        if (args.length == 3 && args[0].equalsIgnoreCase("modifiers"))
-            return partial(args[2], List.of("true", "false"));
+        if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {
+            String setting = resolveSetting(args[1]);
+            if (setting == null) return List.of();
+            Object current = game.getSettingValue(setting);
+            if (current instanceof Boolean) {
+                return partial(args[2], List.of("true", "false"));
+            }
+            // Tab-complete the default value from the bundled default config.
+            Object defaultValue = defaultConfigValue(setting);
+            if (defaultValue != null) {
+                return partial(args[2], List.of(String.valueOf(defaultValue)));
+            }
+            return List.of();
+        }
         if (args.length == 2 && args[0].equalsIgnoreCase("worldengine"))
             return partial(args[1], List.of("setlobby", "lobby"));
         if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("lobby")) {
@@ -313,6 +330,20 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) return partial(args[2], List.of("hunter", "speedrunner", "afk", "none"));
         if (args.length >= 2 && args[0].equalsIgnoreCase("schem")) return schem.onTabComplete(sender, args);
         return List.of();
+    }
+
+    /**
+     * Resolves a case-insensitive setting name to its real config path
+     * (e.g. "settings.win-conditions.survivetime.time" matches
+     * "settings.win-conditions.surviveTime.time"). Returns null if no
+     * setting matches.
+     */
+    private String resolveSetting(String raw) {
+        String normalized = raw.toLowerCase(Locale.ROOT);
+        for (String name : game.settingNames()) {
+            if (name.toLowerCase(Locale.ROOT).equals(normalized)) return name;
+        }
+        return null;
     }
 
     private List<String> partial(String value, List<String> options) {
@@ -371,6 +402,20 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         String pitchFormatted = String.format("%.2f", location.getPitch());
         return worldName + " @ " + xFormatted + ", " + yFormatted + ", " + zFormatted
                 + ", " + yawFormatted + ", " + pitchFormatted;
+    }
+
+    /**
+     * Loads the default value for a setting from the bundled default
+     * config.yml so that tab completion can suggest the default entry.
+     */
+    private Object defaultConfigValue(String setting) {
+        try (var stream = plugin.getResource("config.yml")) {
+            if (stream == null) return null;
+            return YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(stream,
+                    java.nio.charset.StandardCharsets.UTF_8)).get(setting);
+        } catch (java.io.IOException e) {
+            return null;
+        }
     }
 
     private boolean quickStart(CommandSender sender, String[] args) {
