@@ -1,3 +1,9 @@
+## [3.6.2] - 2026-08-15
+
+### 🐛 Bug Fixes
+
+- *(deps)* Bump gradle-wrapper in the gradle-dependencies group (#51)
+- Publish
 ## [3.6.0] - 2026-08-13
 
 ### 🚀 Features
