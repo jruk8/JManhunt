@@ -1,3 +1,12 @@
+## [3.7.0] - 2026-08-15
+
+### 🚀 Features
+
+- Convert schems to use worldedit as soft dep
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for main [skip ci]
 ## [3.6.2] - 2026-08-15
 
 ### 🐛 Bug Fixes
