@@ -503,6 +503,7 @@ settings:
     # Which roles receive a compass when a match starts (and on respawn).
     # Hunters track speedrunners; speedrunners track hunters, as per the
     # existing tracking logic.
+    # Set both to false to disable the compass entirely.
     # Default: hunters true, speedrunners false
     given-to:
       hunters: true
