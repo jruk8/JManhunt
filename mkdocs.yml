@@ -59,6 +59,7 @@ nav:
       - Statistics & PlaceholderAPI: configuration/statistics.md
       - Sounds: configuration/sounds.md
       - Lucky Blocks: configuration/lucky-blocks.md
+      - Schematics: configuration/schematics.md
   - Placeholders: placeholders.md
   - API: api.md
 

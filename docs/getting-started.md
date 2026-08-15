@@ -5,6 +5,8 @@
 
 - Paper 26.2 or newer
 - Java 25
+- WorldEdit 7.3.0 or newer (optional — required only for the schematic
+  commands and Lucky Block `structure` outcomes)
 
 ## Installation
 
@@ -15,6 +17,10 @@
    in `plugins/JManhunt/`.
 4. (Optional) Install [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/)
    to use JManhunt's placeholders.
+5. (Optional) Install [WorldEdit](https://www.curseforge.com/minecraft/bukkit-plugins/worldedit)
+   7.3.0 or newer to use the `/manhunt schem` commands and Lucky Block
+   structure outcomes. Without it those features are skipped gracefully and
+   the console is told the required version.
 
 ## Your First Match
 

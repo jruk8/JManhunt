@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -299,11 +298,12 @@ class LuckyBlockEngineTest {
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
         assertNotNull(outcome.structure());
         assertEquals("coin-well", outcome.structure().name());
-        assertFalse(outcome.structure().randomRotation());
     }
 
     @Test
-    void parsesStructureOutcomeWithRandomRotation() throws IOException {
+    void parsesStructureOutcomeIgnoringLegacyRandomRotation() throws IOException {
+        // Old configs may still carry random-rotation; it must be ignored
+        // without breaking parsing (rotation was removed).
         File file = writeYaml("""
                 outcomes:
                   coin-well:
@@ -314,7 +314,7 @@ class LuckyBlockEngineTest {
         LuckyBlockEngine engine = new LuckyBlockEngine();
         assertTrue(engine.load(file));
         LuckyBlockEngine.Outcome outcome = engine.outcomes().get(0);
-        assertTrue(outcome.structure().randomRotation());
+        assertEquals("coin-well", outcome.structure().name());
     }
 
     @Test
@@ -323,7 +323,7 @@ class LuckyBlockEngineTest {
                 outcomes:
                   bad:
                     structure:
-                      random-rotation: true
+                      name: ""
                 """);
         LuckyBlockEngine engine = new LuckyBlockEngine();
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> engine.load(file));

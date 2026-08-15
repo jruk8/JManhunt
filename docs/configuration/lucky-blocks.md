@@ -128,10 +128,15 @@ at load time.
 
 ### Structure
 
-Structure outcomes load `.nbt` files from
-`plugins/JManhunt/challenges/structures/<name>.nbt`. The structure
-is placed relative to the broken lucky block using Bukkit's intended pivot
-behavior.
+Structure outcomes load WorldEdit `.schem` files from
+`plugins/JManhunt/challenges/structures/<name>.schem`. This requires
+**WorldEdit 7.3.0 or newer** to be installed — WorldEdit is a soft dependency
+used by lucky blocks (and the schematic commands) only; the rest of the plugin
+works without it.
+
+The schematic is anchored by its pivot point: the block position the structure
+was saved from with `/jmanhunt schem save`. When a lucky block breaks, the
+schematic is pasted so that pivot lands on the broken block.
 
 ```yaml
 outcomes:
@@ -139,12 +144,9 @@ outcomes:
     weight: 1.0
     structure:
       name: coin-well
-      random-rotation: false
 ```
 
-- `structure.name` (required): the file name without the `.nbt` extension.
-- `structure.random-rotation` (optional, default `false`): when `true`, the
-  structure is placed with a random rotation.
+- `structure.name` (required): the file name without the `.schem` extension.
 
 ### Feedback
 
@@ -183,11 +185,15 @@ formatting.
 
 ## Reroll Behavior
 
-If a `structure` outcome fails to load or place (e.g. the `.nbt` file is
+If a `structure` outcome fails to load or place (e.g. the `.schem` file is
 missing or corrupt), the Lucky Block engine automatically rerolls another
-outcome. Up to 20 rerolls are attempted. If all rerolls are exhausted, a
-warning is logged to the console and the Lucky Block roll is gracefully
-aborted — no items or effects are applied.
+outcome. This also applies when WorldEdit is not installed (or is older than
+7.3.0): the structure is skipped and another outcome is chosen, so the Lucky
+Block still drops its items, runs its commands, and plays feedback. The
+console is warned about missing structures and a missing or outdated WorldEdit
+install on reload and at roll time. Up to 20 rerolls are attempted. If all
+rerolls are exhausted, a warning is logged to the console and the Lucky Block
+roll is gracefully aborted — no items or effects are applied.
 
 ## Composable Examples
 
@@ -264,20 +270,25 @@ outcomes:
 
 ## Schematic Management
 
-Schematics (structure `.nbt` files) are stored in
-`plugins/JManhunt/challenges/structures/`. Use the
+Schematics (WorldEdit `.schem` files) are stored in
+`plugins/JManhunt/challenges/structures/`. They require **WorldEdit 7.3.0 or
+newer** (a soft dependency for lucky blocks only). Use the
 `/jmanhunt schem` command to manage them:
 
 - `/jmanhunt schem wand` — gives you the schematic wand.
 - `/jmanhunt schem save <name>` — saves the selected region as a schematic.
   Select two corners with the schematic wand (left-click for position 1,
-  right-click for position 2), then run the command. If the file already
-  exists, run the command again within 5 seconds to confirm overwrite.
+  right-click for position 2), then run the command. The schematic is saved
+  relative to you: the block you are standing on becomes its pivot point. If
+  the file already exists, run the command again within 5 seconds to confirm
+  overwrite.
 - `/jmanhunt schem list` — lists all available schematics.
-- `/jmanhunt schem load <name> [player]` — loads a schematic centered on the
-  sender's location (or the selected player's location when a selector is
-  provided, so console execution is supported).
+- `/jmanhunt schem load <name> [player]` — loads a schematic so its saved
+  pivot lands on the sender's location (or the selected player's location when
+  a selector is provided, so console execution is supported).
 - `/jmanhunt schem delete <name>` — deletes a schematic. Run the command twice
   within 5 seconds to confirm deletion.
 
-These commands are reusable by future features, not just Lucky Blocks.
+These commands are reusable by future features, not just Lucky Blocks. Without
+WorldEdit, `wand`, `save`, and `load` tell you the required version in chat
+and log a warning to the console; `list` and `delete` keep working.

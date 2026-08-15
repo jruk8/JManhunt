@@ -28,6 +28,11 @@ Download the latest release from
 server's `plugins/` folder. Restart the server to generate the default
 configuration files.
 
+(Optional) Install [WorldEdit](https://www.curseforge.com/minecraft/bukkit-plugins/worldedit)
+7.3.0 or newer for the `/manhunt schem` commands and Lucky Block structure
+outcomes. It is a soft dependency for lucky blocks only — the rest of the
+plugin works without it.
+
 ## Documentation
 
 Full documentation is available at the

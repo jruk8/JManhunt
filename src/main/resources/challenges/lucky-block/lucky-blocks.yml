@@ -29,10 +29,12 @@
 #                 that many ticks before the next command runs. This enables
 #                 choreographed sequences like rainbows.
 #
-#   structure   - A section with a structure name and optional random-rotation.
-#                 Loads .nbt from challenges/structures/<name>.nbt.
-#                 If loading or placing fails, the roll is rerolled (up to 20
-#                 times).
+#   structure   - A section with a structure name. Loads a WorldEdit .schem
+#                 schematic from challenges/structures/<name>.schem. Requires
+#                 WorldEdit 7.3.0 or newer (a soft dependency used by lucky
+#                 blocks only). The schematic is placed so the position it
+#                 was saved from lands on the lucky block. If loading or
+#                 placing fails, the roll is rerolled (up to 20 times).
 #
 #   feedback    - Optional custom sound, personal message, and broadcast.
 #
@@ -1666,7 +1668,10 @@ outcomes:
       broadcast: "<shadow:black><gradient:dark_red:red:gold:yellow>{player} armed the Tsar Bomba. Thirty TNT charges are falling around them. RUN.</gradient></shadow>"
 
   # ============================== STRUCTURES ==============================
-  # 9 structure outcomes. Load .nbt from challenges/structures/<name>.nbt.
+  # 9 structure outcomes. Load WorldEdit .schem files from
+  # challenges/structures/<name>.schem. Requires WorldEdit 7.3.0 or newer
+  # (soft dependency for lucky blocks only); missing files are skipped and
+  # rerolled, and the console is warned on reload.
   coin-well:
     rarity: rare
     weight: 1.0
@@ -1684,7 +1689,6 @@ outcomes:
     weight: 1.0
     structure:
       name: mushroom-hut
-      random-rotation: true
     feedback:
       sound:
         enabled: true
@@ -1697,7 +1701,6 @@ outcomes:
     weight: 1.0
     structure:
       name: trapped-redstone
-      random-rotation: true
     feedback:
       sound:
         enabled: true
@@ -1710,7 +1713,6 @@ outcomes:
     weight: 0.8
     structure:
       name: parkour-loot
-      random-rotation: true
     feedback:
       sound:
         enabled: true
@@ -1775,7 +1777,6 @@ outcomes:
     weight: 0.6
     structure:
       name: nether-portal
-      random-rotation: true
     feedback:
       sound:
         enabled: true

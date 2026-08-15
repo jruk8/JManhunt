@@ -31,7 +31,7 @@ public final class LuckyBlockEngine {
 
     public record Feedback(Sound sound, String message, String broadcast) {}
 
-    public record StructureSettings(String name, boolean randomRotation) {}
+    public record StructureSettings(String name) {}
 
     /**
      * A single item entry parsed from the {@code items} section. The item
@@ -293,8 +293,7 @@ public final class LuckyBlockEngine {
         if (structName == null || structName.isBlank()) {
             throw new IllegalArgumentException("Entry '" + name + "' has a structure section but is missing structure.name");
         }
-        boolean randomRotation = getBoolean(struct.get("random-rotation"), false);
-        return new StructureSettings(structName, randomRotation);
+        return new StructureSettings(structName);
     }
 
     private Feedback parseFeedback(Map<String, Object> entry, String name) {

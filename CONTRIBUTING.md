@@ -73,9 +73,9 @@ Example:
 ```
 feat: add STRUCTURE lucky block outcome type
 
-Add support for placing .nbt structures from the lucky-block
+Add support for placing WorldEdit .schem structures from the lucky-block
 challenges/lucky-block/structures/ directory. Includes reroll
-logic for failed placements and random rotation support.
+logic for failed placements and a pivot point anchored to the lucky block.
 ```
 
 ## Documentation Expectations

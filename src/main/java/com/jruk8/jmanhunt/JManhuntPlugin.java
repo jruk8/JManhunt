@@ -34,6 +34,13 @@ public final class JManhuntPlugin extends JavaPlugin {
     public void onEnable() {
         reload();
 
+        if (!WorldEditAvailability.isAvailable()) {
+            getLogger().warning("WorldEdit is not installed. The /manhunt schem commands and "
+                    + "Lucky Block structure outcomes require WorldEdit "
+                    + WorldEditAvailability.MINIMUM_VERSION
+                    + " or newer (a soft dependency for lucky blocks only).");
+        }
+
         playerStates = new PlayerStateStore();
         setupDatabase();
         stats = new StatsManager(this, messages, statsRepository);

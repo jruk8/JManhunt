@@ -87,6 +87,8 @@ manhunt:
   schem-delete-failed: "{prefix}<red>Failed to delete schematic <white>{name}<red>."
   schem-pos1: "{prefix}<green>Position 1 set to <white>{pos}<green>."
   schem-pos2: "{prefix}<green>Position 2 set to <white>{pos}<green>."
+  worldedit-missing: "{prefix}<red>WorldEdit is not installed. JManhunt schematics require WorldEdit <white>{version}<red> or newer - install it and restart the server."
+  worldedit-outdated: "{prefix}<red>WorldEdit <white>{installed}<red> is too old. JManhunt schematics require <white>{version}<red> or newer."
   lucky-block-announce: "{prefix}<gold>Lucky Block: <white>{block}"
 
 game:

@@ -17,7 +17,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt schem wand`                             | Gives you the schematic wand. | `jmanhunt.command.schem` |
 | `/manhunt schem save <name>`                      | Saves the selected region as a schematic. | `jmanhunt.command.schem` |
 | `/manhunt schem list`                             | Lists all available schematics. | `jmanhunt.command.schem` |
-| `/manhunt schem load <name> [player]`             | Loads a schematic centered on the sender or a selected player. | `jmanhunt.command.schem` |
+| `/manhunt schem load <name> [player]`             | Loads a schematic so its saved pivot lands on the sender or a selected player. | `jmanhunt.command.schem` |
 | `/manhunt schem delete <name>`                    | Deletes a schematic. | `jmanhunt.command.schem` |
 | `/manhunt reload`                                 | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
 
@@ -57,26 +57,28 @@ autostart messages are displayed.
 
 ## Schematic Management
 
-The `/jmanhunt schem` command manages structure `.nbt` files stored in
-`plugins/JManhunt/challenges/structures/`. These are used by
-Lucky Block `STRUCTURE` outcomes and can be reused by future features.
+The `/jmanhunt schem` command manages WorldEdit schematic `.schem` files
+stored in `plugins/JManhunt/challenges/structures/`. These are used by
+Lucky Block `STRUCTURE` outcomes and can be reused by future features. They
+require **WorldEdit 7.3.0 or newer** (a soft dependency for lucky blocks only).
 
 - **Save:** Obtain the schematic wand with `/jmanhunt schem wand`, then select
   two corners (left-click for position 1, right-click for position 2), and run
-  `/jmanhunt schem save <name>`. If the file already exists, run the command
-  again within 5 seconds to confirm overwrite.
+  `/jmanhunt schem save <name>`. The schematic is saved relative to you — the
+  block you are standing on becomes its pivot point. If the file already
+  exists, run the command again within 5 seconds to confirm overwrite.
 - **List:** `/jmanhunt schem list` displays all available schematics.
-- **Load:** `/jmanhunt schem load <name> [player]` loads a schematic centered
-  on the sender's location (or the selected player's location when a selector
-  is provided, so console execution is supported). The structure is rotated to
-  match the player's facing and pasted so the saved pivot (door/gate block)
-  lands on the player. If no pivot was saved, the structure is placed with its
-  origin corner at the player's block position.
+- **Load:** `/jmanhunt schem load <name> [player]` loads a schematic so its
+  saved pivot (the saver's position) lands exactly on the sender's block
+  position, or the selected player's position when a selector is provided so
+  console execution is supported. No rotation is applied.
 - **Delete:** `/jmanhunt schem delete <name>` deletes a schematic. Run the
   command twice within 5 seconds to confirm deletion.
 
 Confirmation is tracked per executor and expires after 5 seconds. Feedback
-messages work correctly for both players and the console.
+messages work correctly for both players and the console. Without WorldEdit,
+`wand`, `save`, and `load` tell you the required version in chat and warn the
+console; `list` and `delete` keep working.
 
 ## Editing Settings In-Game
 

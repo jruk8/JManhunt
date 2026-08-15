@@ -7,6 +7,10 @@ repositories {
         name = 'placeholderapi'
         url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
     }
+    maven {
+        name = 'enginehub'
+        url = 'https://maven.enginehub.org/repo/'
+    }
 }
 
 dependencies {
@@ -16,6 +20,12 @@ dependencies {
     compileOnly 'com.zaxxer:HikariCP:7.1.0'
     compileOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
     compileOnly 'org.postgresql:postgresql:42.7.13'
+
+    // WorldEdit is a SOFT dependency used only by the schematic system and
+    // Lucky Block `structure` outcomes. Compiled against the latest release
+    // but never bundled; the plugin gracefully degrades when it is absent.
+    // Minimum supported runtime version: 7.3.0.
+    compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.4.5'
 
     // SnakeYAML for pure-logic YAML parsing (LuckyBlockEngine)
     testImplementation 'org.yaml:snakeyaml:2.2'

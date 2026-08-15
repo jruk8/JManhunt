@@ -7,6 +7,8 @@ import com.jruk8.jmanhunt.GameManager;
 import com.jruk8.jmanhunt.MessageService;
 import com.jruk8.jmanhunt.PlayerStateStore;
 import com.jruk8.jmanhunt.SoundService;
+import com.jruk8.jmanhunt.WorldEditAvailability;
+import com.jruk8.jmanhunt.WorldEditSchematicService;
 import com.jruk8.jmanhunt.settings.SettingsListener;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -23,21 +25,26 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.block.structure.Mirror;
-import org.bukkit.block.structure.StructureRotation;
-import org.bukkit.structure.Structure;
-import org.bukkit.structure.StructureManager;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Set;
 
 /** Handles the built-in challenges: no-jump, one-heart, and lucky-blocks. */
 public final class ChallengesListener implements Listener, SettingsListener {
     private static final int MAX_REROLLS = 20;
     private static final String LUCKY_BLOCK_DEFAULT_SOUND_KEY = "challenges.lucky-block-default";
+    /** Jar resource root containing the shipped default structure files. */
+    private static final String DEFAULT_STRUCTURES_ROOT = "challenges/lucky-block/structures";
+    /**
+     * Default structure files shipped inside the plugin jar and copied to the
+     * data folder when missing. Ships nothing until a real WorldEdit .schem
+     * default is added to the resources.
+     */
+    private static final List<String> DEFAULT_STRUCTURE_FILES = List.of();
     private final JavaPlugin plugin;
     private final GameManager game;
     private final PlayerStateStore playerStates;
@@ -151,11 +158,35 @@ public final class ChallengesListener implements Listener, SettingsListener {
      * load or place. Returns null if all rerolls are exhausted.
      */
     private LuckyBlockEngine.Outcome rollWithRerolls(Block block, Player player) {
+        boolean worldEditWarned = false;
         for (int i = 0; i <= MAX_REROLLS; i++) {
             LuckyBlockEngine.Outcome outcome = luckyEngine.roll();
             if (outcome == null) return null;
             if (outcome.structure() == null) {
                 return outcome;
+            }
+            // WorldEdit is a soft dependency for structure outcomes: when it
+            // is missing or too old, gracefully skip the structure and choose
+            // a new outcome instead of ruining the lucky block. The console
+            // is warned once per roll.
+            if (!WorldEditAvailability.isAvailable()) {
+                if (!worldEditWarned) {
+                    worldEditWarned = true;
+                    plugin.getLogger().warning("WorldEdit " + WorldEditAvailability.MINIMUM_VERSION
+                            + " or newer is not installed; skipping lucky block structure outcome '"
+                            + outcome.structure().name() + "' and rerolling.");
+                }
+                continue;
+            }
+            if (!WorldEditSchematicService.isWorldEditSupported()) {
+                if (!worldEditWarned) {
+                    worldEditWarned = true;
+                    plugin.getLogger().warning("WorldEdit " + WorldEditSchematicService.installedVersion()
+                            + " is too old; lucky block structure outcomes require WorldEdit "
+                            + WorldEditAvailability.MINIMUM_VERSION + " or newer. Skipping '"
+                            + outcome.structure().name() + "' and rerolling.");
+                }
+                continue;
             }
             try {
                 placeStructure(outcome, block);
@@ -243,29 +274,22 @@ public final class ChallengesListener implements Listener, SettingsListener {
     }
 
     /**
-     * Loads and places a structure at the lucky block location.
-     * Throws if loading or placement fails.
+     * Loads and places a WorldEdit .schem structure at the lucky block
+     * location. The schematic's pivot (the position it was saved from) lands
+     * on the broken lucky block. Throws if loading or placement fails.
      */
     private void placeStructure(LuckyBlockEngine.Outcome outcome, Block block) throws Exception {
         LuckyBlockEngine.StructureSettings settings = outcome.structure();
         if (settings == null) {
             throw new IllegalStateException("Outcome '" + outcome.name() + "' has no structure settings");
         }
-        File structureFile = new File(structuresDir, settings.name() + ".nbt");
+        File structureFile = new File(structuresDir, settings.name() + ".schem");
         if (!structureFile.exists()) {
             throw new FileNotFoundException("Structure file not found: " + structureFile.getAbsolutePath());
         }
-        StructureManager structureManager = Bukkit.getStructureManager();
-        Structure structure = structureManager.loadStructure(structureFile);
-        if (structure == null) {
-            throw new IllegalStateException("Failed to load structure from: " + structureFile.getAbsolutePath());
-        }
-        StructureRotation rotation = StructureRotation.NONE;
-        if (settings.randomRotation()) {
-            StructureRotation[] rotations = StructureRotation.values();
-            rotation = rotations[ThreadLocalRandom.current().nextInt(rotations.length)];
-        }
-        structure.place(block.getLocation(), true, rotation, Mirror.NONE, 0, 1.0f, new Random());
+        // Requires WorldEdit (soft dependency); throws a descriptive
+        // IOException when it is missing or too old.
+        WorldEditSchematicService.loadSchematic(structureFile, block.getLocation());
     }
 
     private void playFeedback(LuckyBlockEngine.Outcome outcome, Player player) {
@@ -319,6 +343,9 @@ public final class ChallengesListener implements Listener, SettingsListener {
     @Override
     public void onReload() {
         luckyEngine.clear();
+        // Make sure the structures directory exists and any shipped default
+        // structure files are present before validating outcome references.
+        ensureDefaultStructures();
         if (!plugin.getConfig().getBoolean("challenges.lucky-blocks.enabled", false)) return;
         try {
             if (!luckyEngine.load(luckyFile)) {
@@ -328,9 +355,62 @@ public final class ChallengesListener implements Listener, SettingsListener {
             for (String warning : luckyEngine.warnings()) {
                 plugin.getLogger().warning(warning);
             }
+            validateStructureOutcomes();
         } catch (IllegalArgumentException e) {
             plugin.getLogger().severe("Lucky blocks challenge is enabled but "
                     + "challenges/lucky-block/lucky-blocks.yml is invalid: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Creates the structures directory and copies default structure files
+     * shipped inside the plugin jar into it when they are missing.
+     */
+    private void ensureDefaultStructures() {
+        structuresDir.mkdirs();
+        for (String fileName : DEFAULT_STRUCTURE_FILES) {
+            File target = new File(structuresDir, fileName);
+            if (target.exists()) continue;
+            String resourcePath = DEFAULT_STRUCTURES_ROOT + "/" + fileName;
+            if (plugin.getResource(resourcePath) == null) continue;
+            try {
+                plugin.saveResource(resourcePath, false);
+                plugin.getLogger().info("Copied default structure '" + fileName + "' to challenges/structures/.");
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Could not copy default structure '" + fileName + "': " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Warns the console about lucky block structure outcomes whose .schem
+     * files are missing, and about a missing or too old WorldEdit install, so
+     * missing structures are visible at plugin load instead of failing
+     * silently at runtime.
+     */
+    private void validateStructureOutcomes() {
+        Set<String> missing = new LinkedHashSet<>();
+        boolean hasStructures = false;
+        for (LuckyBlockEngine.Outcome outcome : luckyEngine.outcomes()) {
+            if (outcome.structure() == null) continue;
+            hasStructures = true;
+            if (!new File(structuresDir, outcome.structure().name() + ".schem").exists()) {
+                missing.add(outcome.structure().name());
+            }
+        }
+        if (!hasStructures) return;
+        if (!missing.isEmpty()) {
+            plugin.getLogger().warning("Lucky block structure outcomes reference missing schematic files in "
+                    + "challenges/structures/: " + String.join(", ", missing)
+                    + ". Create them with /jmanhunt schem save; they will be skipped and rerolled until then.");
+        }
+        if (!WorldEditAvailability.isAvailable()) {
+            plugin.getLogger().warning("WorldEdit " + WorldEditAvailability.MINIMUM_VERSION + " or newer is not "
+                    + "installed; lucky block structure outcomes require it and will be skipped and rerolled.");
+        } else if (!WorldEditSchematicService.isWorldEditSupported()) {
+            plugin.getLogger().warning("WorldEdit " + WorldEditSchematicService.installedVersion() + " is too old; "
+                    + "lucky block structure outcomes require WorldEdit "
+                    + WorldEditAvailability.MINIMUM_VERSION + " or newer and will be skipped and rerolled.");
         }
     }
 

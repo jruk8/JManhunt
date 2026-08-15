@@ -4,9 +4,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.block.Block;
-import org.bukkit.block.structure.Mirror;
-import org.bukkit.block.structure.StructureRotation;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -17,23 +14,24 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.structure.Structure;
-import org.bukkit.structure.StructureManager;
-import org.bukkit.util.BlockVector;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 
 /**
- * Handles the /jmanhunt schem subcommand for saving, listing, and deleting
- * structure (.nbt) files. Also tracks wand selections for region capture.
+ * Handles the /jmanhunt schem subcommand for saving, listing, loading and
+ * deleting WorldEdit schematic (.schem) files. Also tracks wand selections
+ * for region capture.
+ *
+ * <p>WorldEdit is a soft dependency: {@code wand}, {@code save} and
+ * {@code load} require it, while {@code list} and {@code delete} do not. When
+ * WorldEdit is missing or too old, the sender is told so in chat and the
+ * console is warned instead of the command failing silently.</p>
  */
 public final class SchemCommand implements Listener {
     private static final long CONFIRMATION_TIMEOUT_MS = 5000;
@@ -117,6 +115,7 @@ public final class SchemCommand implements Listener {
                 && a.getBlockZ() == b.getBlockZ();
     }
 
+
     private boolean wand(CommandSender sender) {
         if (!(sender instanceof Player player)) {
             message(sender, "command.player-only");
@@ -126,6 +125,7 @@ public final class SchemCommand implements Listener {
             message(sender, "command.no-permission");
             return true;
         }
+        if (!requireWorldEdit(sender)) return true;
         ItemStack wand = createWand();
         // Try to place in the player's hand first, then inventory.
         if (player.getInventory().firstEmpty() != -1) {
@@ -166,7 +166,8 @@ public final class SchemCommand implements Listener {
             message(sender, "manhunt.schem-invalid-name");
             return true;
         }
-        File targetFile = new File(structuresDir, name + ".nbt");
+        if (!requireWorldEdit(sender)) return true;
+        File targetFile = new File(structuresDir, name + ".schem");
         String confirmKey = getConfirmKey(sender, name);
         if (targetFile.exists() && !isConfirmationPending(pendingSaveConfirmations, confirmKey)) {
             pendingSaveConfirmations.put(confirmKey, System.currentTimeMillis());
@@ -192,35 +193,14 @@ public final class SchemCommand implements Listener {
         }
         try {
             structuresDir.mkdirs();
-            StructureManager sm = Bukkit.getStructureManager();
-            Structure structure = sm.createStructure();
-            // Structure.fill treats the second corner as exclusive, so expand
-            // the max corner by one block to capture the full selection.
-            Location min = new Location(loc1.getWorld(),
-                    Math.min(loc1.getBlockX(), loc2.getBlockX()),
-                    Math.min(loc1.getBlockY(), loc2.getBlockY()),
-                    Math.min(loc1.getBlockZ(), loc2.getBlockZ()));
-            Location max = new Location(loc1.getWorld(),
-                    Math.max(loc1.getBlockX(), loc2.getBlockX()) + 1,
-                    Math.max(loc1.getBlockY(), loc2.getBlockY()) + 1,
-                    Math.max(loc1.getBlockZ(), loc2.getBlockZ()) + 1);
-            structure.fill(min, max, true);
-            // Capture the door/pivot block: try the player's target block first,
-            // then fall back to scanning the region for a door or gate.
-            Location doorLocation = findDoorLocation(player, min, max);
-            if (doorLocation != null) {
-                int[] pivot = SchematicPivot.savePivotOffset(min, doorLocation);
-                structure.getPersistentDataContainer().set(
-                        new NamespacedKey(plugin, "schematic_pivot"),
-                        PersistentDataType.INTEGER_ARRAY,
-                        pivot
-                );
-            }
-            sm.saveStructure(targetFile, structure);
+            // Save relative to the player: the pivot point is the saver's
+            // block position, so loading places the region at that offset.
+            WorldEditSchematicService.saveSchematic(loc1, loc2, player.getLocation(), targetFile);
             message(sender, "manhunt.schem-save-success", Map.of("name", name));
             if (sender instanceof Player p) sounds.playNeutralSound(p);
-        } catch (IOException e) {
-            message(sender, "manhunt.schem-save-failed", Map.of("error", e.getMessage() != null ? e.getMessage() : "unknown"));
+        } catch (Exception e) {
+            message(sender, "manhunt.schem-save-failed",
+                    Map.of("error", e.getMessage() != null ? e.getMessage() : "unknown"));
             plugin.getLogger().severe("Failed to save schematic '" + name + "': " + e.getMessage());
         }
         return true;
@@ -236,7 +216,8 @@ public final class SchemCommand implements Listener {
             message(sender, "manhunt.schem-invalid-name");
             return true;
         }
-        File structureFile = new File(structuresDir, name + ".nbt");
+        if (!requireWorldEdit(sender)) return true;
+        File structureFile = new File(structuresDir, name + ".schem");
         if (!structureFile.exists()) {
             message(sender, "manhunt.schem-not-found", Map.of("name", name));
             return true;
@@ -259,23 +240,9 @@ public final class SchemCommand implements Listener {
             target = player;
         }
         try {
-            StructureManager structureManager = Bukkit.getStructureManager();
-            Structure structure = structureManager.loadStructure(structureFile);
-            if (structure == null) {
-                message(sender, "manhunt.schem-load-failed", Map.of("name", name));
-                return true;
-            }
-            // Read the pivot offset stored at save time (defaults to origin).
-            int[] rawPivot = structure.getPersistentDataContainer()
-                    .getOrDefault(new NamespacedKey(plugin, "schematic_pivot"),
-                            PersistentDataType.INTEGER_ARRAY, new int[]{0, 0, 0});
-            BlockVector size = structure.getSize();
-            StructureRotation rotation = SchematicPivot.yawToRotation(target.getLocation().getYaw());
-            int[] rotatedPivot = SchematicPivot.rotateOffset(rawPivot, size, rotation);
-            // Paste so the door block lands on the player's block position.
-            Location pasteLocation = target.getLocation().getBlock().getLocation()
-                    .clone().subtract(rotatedPivot[0], rotatedPivot[1], rotatedPivot[2]);
-            structure.place(pasteLocation, true, rotation, Mirror.NONE, 0, 1.0f, new Random());
+            // Paste so the saved pivot (the saver's position) lands exactly
+            // on the target player's block position.
+            WorldEditSchematicService.loadSchematic(structureFile, target.getLocation());
             message(sender, "manhunt.schem-load-success", Map.of("name", name, "player", target.getName()));
             if (sender instanceof Player p) sounds.playNeutralSound(p);
         } catch (Exception e) {
@@ -284,33 +251,6 @@ public final class SchemCommand implements Listener {
                     + (e.getMessage() != null ? e.getMessage() : "unknown"));
         }
         return true;
-    }
-
-    /**
-     * Finds the door/gate block to use as the pivot. Tries the player's
-     * target block first, then falls back to scanning the filled region.
-     */
-    private Location findDoorLocation(Player player, Location min, Location max) {
-        Block target = player.getTargetBlockExact(10);
-        if (target != null && isDoorBlock(target.getType())) {
-            return target.getLocation();
-        }
-        for (int x = min.getBlockX(); x <= max.getBlockX(); x++) {
-            for (int y = min.getBlockY(); y <= max.getBlockY(); y++) {
-                for (int z = min.getBlockZ(); z <= max.getBlockZ(); z++) {
-                    Block block = min.getWorld().getBlockAt(x, y, z);
-                    if (isDoorBlock(block.getType())) {
-                        return block.getLocation();
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    private static boolean isDoorBlock(Material type) {
-        String name = type.name();
-        return name.endsWith("DOOR") || name.endsWith("GATE");
     }
 
     private boolean list(CommandSender sender) {
@@ -333,7 +273,7 @@ public final class SchemCommand implements Listener {
             return true;
         }
         String name = args[2];
-        File targetFile = new File(structuresDir, name + ".nbt");
+        File targetFile = new File(structuresDir, name + ".schem");
         if (!targetFile.exists()) {
             message(sender, "manhunt.schem-not-found", Map.of("name", name));
             return true;
@@ -356,11 +296,11 @@ public final class SchemCommand implements Listener {
 
     private List<String> listSchematicNames() {
         List<String> names = new ArrayList<>();
-        File[] files = structuresDir.listFiles((dir, filename) -> filename.endsWith(".nbt"));
+        File[] files = structuresDir.listFiles((dir, filename) -> filename.endsWith(".schem"));
         if (files != null) {
             for (File file : files) {
-                String name = file.getName();
-                names.add(name.substring(0, name.length() - 4));
+                String fileName = file.getName();
+                names.add(fileName.substring(0, fileName.length() - 6));
             }
         }
         names.sort(String::compareToIgnoreCase);
@@ -385,6 +325,32 @@ public final class SchemCommand implements Listener {
         return loc.getWorld().getName() + " @ " + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ();
     }
 
+
+    /**
+     * Blocks schematic actions that need WorldEdit and tells the sender (in
+     * chat for players, on the console otherwise) what minimum version to
+     * install. Also warns the console so the failure is not silent.
+     */
+    private boolean requireWorldEdit(CommandSender sender) {
+        if (WorldEditAvailability.isAvailable()) {
+            if (WorldEditSchematicService.isWorldEditSupported()) return true;
+            String installed = WorldEditSchematicService.installedVersion();
+            message(sender, "manhunt.worldedit-outdated", Map.of(
+                    "installed", installed,
+                    "version", WorldEditAvailability.MINIMUM_VERSION));
+            plugin.getLogger().warning("WorldEdit " + installed + " is too old; JManhunt schematics require "
+                    + "WorldEdit " + WorldEditAvailability.MINIMUM_VERSION + " or newer.");
+            return false;
+        }
+        message(sender, "manhunt.worldedit-missing", Map.of(
+                "version", WorldEditAvailability.MINIMUM_VERSION));
+        plugin.getLogger().warning("WorldEdit is not installed; JManhunt schematics require "
+                + "WorldEdit " + WorldEditAvailability.MINIMUM_VERSION + " or newer. "
+                + "WorldEdit is a soft dependency used only by the schematic commands and "
+                + "Lucky Block structure outcomes.");
+        return false;
+    }
+
     private List<String> partial(String value, List<String> options) {
         String normalized = value.toLowerCase(Locale.ROOT);
         return options.stream().filter(o -> o.toLowerCase(Locale.ROOT).startsWith(normalized)).toList();
@@ -399,3 +365,4 @@ public final class SchemCommand implements Listener {
         sender.sendMessage(messages.component(key, values));
     }
 }
+
