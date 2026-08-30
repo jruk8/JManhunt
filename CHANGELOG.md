@@ -1,3 +1,12 @@
+## [3.8.1] - 2026-08-30
+
+### 🐛 Bug Fixes
+
+- Update readme and default config
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for main [skip ci]
 ## [3.8.0] - 2026-08-30
 
 ### 🚀 Features
