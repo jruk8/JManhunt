@@ -286,8 +286,8 @@ custom-modifiers:
       speedrunner:
         - "delay: 100" # delay in case speedrunner lags when loading into The End
         - "tp @a <p>"
-  start-with-luckyblocks:
-    enabled: true
+  start-with-luckyblocks-requires-challenges-plugin:
+    enabled: false
     commands:
       player:
         - "give <p> sponge 16"

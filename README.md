@@ -19,9 +19,13 @@ and a variety of built-in actions and custom modifiers.
 - **Placeholders & statistics** — Career statistics with PlaceholderAPI
   support.
 - **Public API** — Read match state and react to lifecycle events from other
-  plugins; the companion plugin
-  [JManhunt-Challenges](https://github.com/jruk8/JManhunt-Challenges) implements
-  the built-in challenges (no-jump, one-heart and lucky-blocks) on top of it.
+  plugins.
+
+## Challenges
+Install the
+[JManhunt-Challenges](https://builtbybit.com/resources/jmanhunt-challenges.121574)
+plugin to enable custom challenges for additional gameplay such as lucky blocks
+balanced to fit the game's difficulty. This plugin helps support the development of JManhunt.
 
 ## Installation
 
@@ -30,10 +34,6 @@ Download the latest release from
 [Modrinth](https://modrinth.com/plugin/jmanhunt) and place the jar in your
 server's `plugins/` folder. Restart the server to generate the default
 configuration files.
-
-(Optional) Install
-[JManhunt-Challenges](https://github.com/jruk8/JManhunt-Challenges) to enable
-the built-in challenges (no-jump, one-heart and lucky-blocks).
 
 ## Documentation
 
