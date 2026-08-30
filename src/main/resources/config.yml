@@ -95,8 +95,6 @@ gamestate-commands:
     disable-locator-bar: true
     set-respawn-immediate: true
     set-daytime: true
-    # When true, the doInsomnia gamerule is disabled while a match runs to
-    # prevent phantom spawning. It is restored to enabled when the match ends.
     disable-phantoms: true
   # Console commands run once per configured entry.
   console-commands:
@@ -238,8 +236,7 @@ custom-modifiers:
       - INTERVAL
     # Only applicable when "runs-on" contains INTERVAL.
     interval-settings:
-      # Interval duration in seconds. Supports decimals; rounds to the nearest
-      # tick. Values between 0 and 0.05 execute every tick.
+      # Interval duration in seconds.
       interval: 60
     commands:
       player:
@@ -277,7 +274,7 @@ custom-modifiers:
       - ON_NETHER_ENTER
     commands:
       player:
-        - "give <p> potion[potion_contents={potion:\"minecraft:night_vision\",custom_effects:[{id:\"minecraft:night_vision\",amplifier:0,duration:6000,show_particles:1b,show_icon:1b}]}] 1"
+        - "give <p> potion[potion_contents={potion:\"minecraft:fire_resistance\",custom_effects:[{id:\"minecraft:fire_resistance\",amplifier:0,duration:6000,show_particles:1b,show_icon:1b}]}] 1"
   tpall-on-end:
     enabled: false
     runs-on:
@@ -286,11 +283,11 @@ custom-modifiers:
       speedrunner:
         - "delay: 100" # delay in case speedrunner lags when loading into The End
         - "tp @a <p>"
-  start-with-luckyblocks-requires-challenges-plugin:
+  start-with-luckyblocks-requires-challenges-addon:
     enabled: false
     commands:
       player:
-        - "give <p> sponge 16"
+        - "give <p> sponge 32"
 
 
 # Settings that modify the game.
@@ -350,11 +347,13 @@ settings:
     # to pre-generate the cell area before players teleport in.
     # The commands only run when the cell is actually new (i.e. the previous
     # cell was not already regenerated), avoiding unnecessary regeneration.
-    # Default: empty
-    on-fetch-new-cell:
-#    - "chunky center <cellX> <cellZ>"
-#    - "chunky radius 150"
-#    - "chunky start"
+    # Try something like:
+    #      - chunky world world
+    #      - chunky center <cellX> <cellZ>
+    #      - chunky radius 150
+    #      - chunky start
+    #      - chunky confirm
+    on-fetch-new-cell: []
     # World border configuration for cell confinement.
     world-border:
       # When true, the world border is used to limit the spiral cell area.
@@ -484,8 +483,7 @@ settings:
   # interval refreshes and continues showing its cached value.
   compass:
     # Which roles receive a compass when a match starts (and on respawn).
-    # Hunters track speedrunners; speedrunners track hunters, as per the
-    # existing tracking logic.
+    # Hunters track speedrunners; speedrunners track hunters.
     # Set both to false to disable the compass entirely.
     # Default: hunters true, speedrunners false
     given-to:
