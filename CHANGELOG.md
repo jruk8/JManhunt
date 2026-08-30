@@ -1,3 +1,23 @@
+## [Unreleased]
+
+### 🚀 Features
+
+- Public plugin API (`com.jruk8.jmanhunt.api`): read match state via
+  `JManhuntApi` (ServicesManager) and react to `JMatchStartEvent`,
+  `JGameBeginEvent` and `JMatchEndEvent`.
+- Built-in challenges (no-jump, one-heart and lucky-blocks) and the schematic
+  commands have moved to the companion plugin
+  [JManhunt-Challenges](https://github.com/jruk8/JManhunt-Challenges), which
+  now hooks into the JManhunt API.
+
+### 💥 Breaking Changes
+
+- JManhunt no longer bundles the built-in challenges or the `/manhunt schem`
+  commands. Install JManhunt-Challenges to keep using them. The
+  `challenges.*` and `sounds.challenges.*` config sections, the
+  `jmanhunt.command.schem` permission, and the WorldEdit soft dependency were
+  removed from JManhunt.
+
 ## [3.6.2] - 2026-08-15
 
 ### 🐛 Bug Fixes

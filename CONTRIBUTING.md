@@ -71,11 +71,11 @@ Types:
 Example:
 
 ```
-feat: add STRUCTURE lucky block outcome type
+feat: expose public match API to other plugins
 
-Add support for placing WorldEdit .schem structures from the lucky-block
-challenges/lucky-block/structures/ directory. Includes reroll
-logic for failed placements and a pivot point anchored to the lucky block.
+Adds JManhuntApi (ServicesManager) plus match lifecycle events, so
+companion plugins like JManhunt-Challenges can implement challenges
+without touching JManhunt internals.
 ```
 
 ## Documentation Expectations

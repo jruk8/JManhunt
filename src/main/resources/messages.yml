@@ -4,10 +4,6 @@ messages-version: 6
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
 
-# Format used when displaying lucky block feedback messages. {value} is
-# replaced with the configured message or broadcast text.
-lucky-block-feedback-format: "\n{prefix}{value}"
-
 command:
   player-only: "{prefix}<red>Only players can use this command."
   no-permission: "{prefix}<red>You do not have permission to use this command."
@@ -62,34 +58,6 @@ manhunt:
   worldengine-invalid-lobby: "{prefix}<red>The world-engine lobby world is not loaded."
   quickstart-invalid-percent: "{prefix}<red>Quick start percentage must be a number between 0 and 100."
   quickstart-failed: "{prefix}<red>Quick start requires at least one hunter and one speedrunner. AFK players are not assigned roles."
-  schem-usage: "{prefix}<yellow>Usage: /manhunt schem <save|list|delete|load|wand>"
-  schem-save-usage: "{prefix}<yellow>Usage: /manhunt schem save <name>"
-  schem-load-usage: "{prefix}<yellow>Usage: /manhunt schem load <name> [player]"
-  schem-load-success: "{prefix}<green>Loaded schematic <white>{name}<green> centered on <white>{player}<green>."
-  schem-load-failed: "{prefix}<red>Failed to load schematic <white>{name}<red>."
-  schem-delete-usage: "{prefix}<yellow>Usage: /manhunt schem delete <name>"
-  schem-invalid-name: "{prefix}<red>Invalid schematic name. Use letters, numbers, underscores, and hyphens only."
-  schem-no-selection: "{prefix}<red>Select a region first with the schematic wand (left-click pos1, right-click pos2)."
-  schem-wand-given: "{prefix}<green>You have been given the schematic wand."
-  schem-wand-lore:
-    - "<gray>Select two corners to save a schematic."
-    - "<gray>Left-click for position 1, right-click for position 2."
-  schem-different-worlds: "{prefix}<red>Both selection points must be in the same world."
-  schem-save-confirm: "{prefix}<yellow>Schematic <white>{name}<yellow> already exists. Run the command again within 5 seconds to overwrite."
-  schem-save-success: "{prefix}<green>Saved schematic <white>{name}<green>."
-  schem-save-failed: "{prefix}<red>Failed to save schematic: <white>{error}"
-  schem-list-empty: "{prefix}<yellow>No schematics found."
-  schem-list-header: "{prefix}<gold>Available schematics:"
-  schem-list-entry: "{prefix}<gray>- <white>{name}"
-  schem-not-found: "{prefix}<red>Schematic <white>{name}<red> not found."
-  schem-delete-confirm: "{prefix}<yellow>Delete schematic <white>{name}<yellow>? Run the command again within 5 seconds to confirm."
-  schem-delete-success: "{prefix}<green>Deleted schematic <white>{name}<green>."
-  schem-delete-failed: "{prefix}<red>Failed to delete schematic <white>{name}<red>."
-  schem-pos1: "{prefix}<green>Position 1 set to <white>{pos}<green>."
-  schem-pos2: "{prefix}<green>Position 2 set to <white>{pos}<green>."
-  worldedit-missing: "{prefix}<red>WorldEdit is not installed. JManhunt schematics require WorldEdit <white>{version}<red> or newer - install it and restart the server."
-  worldedit-outdated: "{prefix}<red>WorldEdit <white>{installed}<red> is too old. JManhunt schematics require <white>{version}<red> or newer."
-  lucky-block-announce: "{prefix}<gold>Lucky Block: <white>{block}"
 
 game:
   separator: "<strikethrough><gradient:#bababa:#dedede:#bababa>                                                    </gradient></strikethrough>"
@@ -97,8 +65,8 @@ game:
   hunter-death: "{prefix}<yellow>A hunter has died!"
   hunter-respawn-scheduled: "{prefix}<yellow>{player} will respawn in <white>{seconds}s</white>."
   hunter-respawn-imminent: "{prefix}<green>{player} has respawned."
-  hunter-out-of-lives: "{prefix}<yellow>{player} has run out of lives and is eliminated."
-  speedrunner-out-of-lives: "{prefix}<yellow>{player} has run out of lives and is eliminated."
+  hunter-out-of-lives: "{prefix}<yellow>A hunter has run out of lives and is eliminated."
+  speedrunner-out-of-lives: "{prefix}<yellow>A speedrunner has run out of lives and is eliminated."
   speedrunners-unlimited-lives: "{prefix}<yellow>Speedrunners have unlimited lives."
   hunters-unlimited-lives: "{prefix}<yellow>Hunters have unlimited lives."
   speedrunner-death: "{prefix}<yellow>A speedrunner has died! <white>({value} remaining)</white>"

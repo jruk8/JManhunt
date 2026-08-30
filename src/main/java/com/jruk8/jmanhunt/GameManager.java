@@ -1,5 +1,8 @@
 package com.jruk8.jmanhunt;
 
+import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
+import com.jruk8.jmanhunt.api.events.JMatchEndEvent;
+import com.jruk8.jmanhunt.api.events.JMatchStartEvent;
 import com.jruk8.jmanhunt.settings.autostart.AutostartCountdownMessages;
 import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
 import net.kyori.adventure.text.Component;
@@ -168,6 +171,7 @@ public final class GameManager {
         }
         messages.broadcast("manhunt.start-success");
         gameStartListeners.forEach(Runnable::run);
+        Bukkit.getPluginManager().callEvent(new JMatchStartEvent(matchId));
         sounds.playNeutralSound();
         showStatusToAllPlayers();
         // load waiting delay configuration (enforces a 5 second minimum;
@@ -183,6 +187,7 @@ public final class GameManager {
         if (ending) return;
         ending = true;
         gameEndListeners.forEach(Runnable::run);
+        Bukkit.getPluginManager().callEvent(new JMatchEndEvent(matchId, roleToPlayerRole(winner)));
         if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
         if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
         if (startDelayTask != null) { startDelayTask.cancel(); startDelayTask = null; }
@@ -252,6 +257,7 @@ public final class GameManager {
         for (Runnable listener : beginGameListeners) {
             listener.run();
         }
+        Bukkit.getPluginManager().callEvent(new JGameBeginEvent(matchId));
         stateCommands.startIntervalModifiers();
         // If a start delay is active, begin the countdown now (the delay only
         // starts counting when the speedrunner first damages a hunter).
@@ -500,6 +506,19 @@ public final class GameManager {
     }
 
     private Role role(Player player) { return playerStates.role(player); }
+
+    /** Maps an internal role to the API player role, defaulting to the winner role of NONE. */
+    private static com.jruk8.jmanhunt.api.PlayerRole roleToPlayerRole(Role role) {
+        if (role == null) {
+            return com.jruk8.jmanhunt.api.PlayerRole.NONE;
+        }
+        return switch (role) {
+            case HUNTER -> com.jruk8.jmanhunt.api.PlayerRole.HUNTER;
+            case SPEEDRUNNER -> com.jruk8.jmanhunt.api.PlayerRole.SPEEDRUNNER;
+            case AFK -> com.jruk8.jmanhunt.api.PlayerRole.AFK;
+            case NONE -> com.jruk8.jmanhunt.api.PlayerRole.NONE;
+        };
+    }
 
     /**
      * Quick-starts a match by assigning eligible players to teams and

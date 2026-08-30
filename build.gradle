@@ -1,15 +1,12 @@
 plugins {
     id 'com.github.jruk8.plugin-conventions' version 'v1.3.4'
+    id 'maven-publish'
 }
 
 repositories {
     maven {
         name = 'placeholderapi'
         url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
-    }
-    maven {
-        name = 'enginehub'
-        url = 'https://maven.enginehub.org/repo/'
     }
 }
 
@@ -20,13 +17,18 @@ dependencies {
     compileOnly 'com.zaxxer:HikariCP:7.1.0'
     compileOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
     compileOnly 'org.postgresql:postgresql:42.7.13'
+}
 
-    // WorldEdit is a SOFT dependency used only by the schematic system and
-    // Lucky Block `structure` outcomes. Compiled against the latest release
-    // but never bundled; the plugin gracefully degrades when it is absent.
-    // Minimum supported runtime version: 7.3.0.
-    compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.4.5'
-
-    // SnakeYAML for pure-logic YAML parsing (LuckyBlockEngine)
-    testImplementation 'org.yaml:snakeyaml:2.2'
+// Publishes the JManhunt API so other plugins (e.g. JManhunt-Challenges) can
+// depend on it. The coordinate matches the JitPack coordinate for this
+// repository (com.github.jruk8:JManhunt:<tag>); locally, run
+// `./gradlew publishToMavenLocal` and add `mavenLocal()` to the consumer.
+publishing {
+    publications {
+        jmanhunt(MavenPublication) {
+            groupId = 'com.github.jruk8'
+            artifactId = 'JManhunt'
+            artifact shadowJar
+        }
+    }
 }

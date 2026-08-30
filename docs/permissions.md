@@ -13,7 +13,6 @@
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |
 | `jmanhunt.command.modifiers` | Change JManhunt modifiers and settings. | OP |
 | `jmanhunt.command.worldengine` | View world-engine settings. | OP |
-| `jmanhunt.command.schem` | Manage schematics. | OP |
 
 ## Role Permissions
 

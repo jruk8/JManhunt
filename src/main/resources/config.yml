@@ -286,29 +286,12 @@ custom-modifiers:
       speedrunner:
         - "delay: 100" # delay in case speedrunner lags when loading into The End
         - "tp @a <p>"
+  start-with-luckyblocks:
+    enabled: true
+    commands:
+      player:
+        - "give <p> sponge 16"
 
-
-# Built-in challenges. Each challenge can be toggled in-game with the
-# 'modifiers' subcommand.
-challenges:
-  # Players cannot jump for the duration of the match.
-  no-jump:
-    enabled: false
-  # All participating players have only one heart (2 health points).
-  one-heart:
-    enabled: false
-  # Breaking the configured block drops a random outcome from
-  # challenges/lucky-block/lucky-blocks.yml instead of the block itself.
-  lucky-blocks:
-    enabled: false
-    # The block whose breaks are intercepted. Resolves to minecraft:<name>
-    # unless a namespace is specified.
-    # If set to random, a random block is chosen from the list of all
-    # registered blocks each time the game starts (except unobtainable
-    # blocks).
-    #
-    # Supported values: minecraft:<name>, random
-    block-definition: gold_block
 
 # Settings that modify the game.
 # These can be toggled in-game with the 'modifiers' subcommand.
@@ -654,13 +637,4 @@ sounds:
       enabled: true
       sound: entity.wither.spawn
       pitch: 1.0
-      volume: 1.0
-
-  challenges:
-    # Default sound played when a lucky block outcome has no custom feedback
-    # sound configured.
-    lucky-block-default:
-      enabled: true
-      sound: block.note_block.pling
-      pitch: 2.0
       volume: 1.0

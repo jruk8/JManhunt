@@ -34,15 +34,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final GameManager game;
     private final CompassManager compass;
     private final LobbyTeleporter lobbyTeleporter;
-    private final SchemCommand schem;
 
     public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, ConfigService config,
                           SoundService sounds, PlayerStateStore playerStates, GameManager game,
-                          CompassManager compass, LobbyTeleporter lobbyTeleporter, SchemCommand schem) {
+                          CompassManager compass, LobbyTeleporter lobbyTeleporter) {
         this.plugin = plugin; this.messages = messages; this.config = config; this.sounds = sounds;
         this.playerStates = playerStates; this.game = game; this.compass = compass;
         this.lobbyTeleporter = lobbyTeleporter;
-        this.schem = schem;
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -56,7 +54,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "end" -> end(sender);
             case "modifiers" -> modifiers(sender, args);
             case "worldengine" -> worldEngine(sender, args);
-            case "schem" -> schem.onCommand(sender, args);
             case "quickstart", "qs" -> quickStart(sender, args);
             case "reload" -> reload(sender);
             default -> message(sender, "command.invalid");
@@ -71,7 +68,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt modifiers <setting> <value>", "view or change a setting"},
                 {"/manhunt worldengine", "set lobby or teleport players"},
-                {"/manhunt schem <save|list|delete|load|wand>", "manage schematics"},
                 {"/manhunt reload", "reload files"}};
         for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
         neutralSound(sender);
@@ -291,7 +287,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start",
-                "end", "modifiers", "worldengine", "schem", "quickstart", "qs", "reload"));
+                "end", "modifiers", "worldengine", "quickstart", "qs", "reload"));
         if (args.length == 2 && args[0].equalsIgnoreCase("modifiers"))
             return partial(args[1], new ArrayList<>(game.settingNames()));
         if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {
@@ -328,7 +324,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[1], selectors);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) return partial(args[2], List.of("hunter", "speedrunner", "afk", "none"));
-        if (args.length >= 2 && args[0].equalsIgnoreCase("schem")) return schem.onTabComplete(sender, args);
         return List.of();
     }
 

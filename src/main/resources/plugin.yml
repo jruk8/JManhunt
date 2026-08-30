@@ -7,7 +7,6 @@ description: ${description}
 website: ${website}
 softdepend:
   - PlaceholderAPI
-  - WorldEdit # soft dependency for schematic commands and lucky block structure outcomes only
 libraries:
   - org.postgresql:postgresql:42.7.7
   - org.xerial:sqlite-jdbc:3.50.3.0
@@ -43,9 +42,6 @@ permissions:
     default: op
   jmanhunt.command.worldengine:
     description: View world-engine settings.
-    default: op
-  jmanhunt.command.schem:
-    description: Manage schematics.
     default: op
   jmanhunt.command.quickstart:
     description: Quick-start a match.

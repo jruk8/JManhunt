@@ -21,4 +21,7 @@ like:
 - start delay for speedrunners (hunters in spectator for a configurable head start)
 - alternate win conditions (exit End, survive time, acquire item, reach advancement)
 
-The world reset engine, compass tracking distance, statistics, lucky blocks, and schematic management are documented in their respective configuration pages.
+The world reset engine, compass tracking distance, and statistics are
+documented in their respective configuration pages. The built-in challenges
+(no-jump, one-heart and lucky-blocks) are provided by the companion plugin
+[JManhunt-Challenges](https://github.com/jruk8/JManhunt-Challenges).

@@ -15,7 +15,9 @@ and a variety of built-in actions and custom modifiers.
   right-click behavior.
 - **Placeholders & statistics** — Career statistics with PlaceholderAPI
   support.
-- **Built-in challenges** — No-jump, one-heart, and lucky-blocks challenges.
+- **Public API** — Read match state and react to lifecycle events from other
+  plugins; the companion plugin JManhunt-Challenges implements the built-in
+  challenges on top of it.
 
 ## Installation
 
@@ -31,7 +33,7 @@ configuration files.
 - [Commands](commands.md)
 - [Permissions](permissions.md)
 - [Configuration](configuration.md) — overview, settings, world engine,
-  statistics, sounds, and lucky blocks.
+  statistics, and sounds.
 - [Placeholders](placeholders.md)
 - [API](api.md)
 

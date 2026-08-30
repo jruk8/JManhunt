@@ -41,12 +41,6 @@ public final class ConfigService {
             names.add("custom-modifiers." + name + ".enabled");
         }
         names.addAll(extraModifierNames());
-        var challenges = plugin.getConfig().getConfigurationSection("challenges");
-        if (challenges != null) {
-            for (String name : challenges.getKeys(false)) {
-                names.add("challenges." + name + ".enabled");
-            }
-        }
         return names;
     }
 

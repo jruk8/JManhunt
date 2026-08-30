@@ -14,11 +14,6 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt modifiers [setting] [value]`            | Lists, views, or changes built-in actions and settings. | `jmanhunt.command.modifiers` |
 | `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` |
 | `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` |
-| `/manhunt schem wand`                             | Gives you the schematic wand. | `jmanhunt.command.schem` |
-| `/manhunt schem save <name>`                      | Saves the selected region as a schematic. | `jmanhunt.command.schem` |
-| `/manhunt schem list`                             | Lists all available schematics. | `jmanhunt.command.schem` |
-| `/manhunt schem load <name> [player]`             | Loads a schematic so its saved pivot lands on the sender or a selected player. | `jmanhunt.command.schem` |
-| `/manhunt schem delete <name>`                    | Deletes a schematic. | `jmanhunt.command.schem` |
 | `/manhunt reload`                                 | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
 
 ## Roles
@@ -54,31 +49,6 @@ server with two online players where one is AFK will fail to start.
 
 Quick Start bypasses the autostart system entirely — no countdowns or
 autostart messages are displayed.
-
-## Schematic Management
-
-The `/jmanhunt schem` command manages WorldEdit schematic `.schem` files
-stored in `plugins/JManhunt/challenges/structures/`. These are used by
-Lucky Block `STRUCTURE` outcomes and can be reused by future features. They
-require **WorldEdit 7.3.0 or newer** (a soft dependency for lucky blocks only).
-
-- **Save:** Obtain the schematic wand with `/jmanhunt schem wand`, then select
-  two corners (left-click for position 1, right-click for position 2), and run
-  `/jmanhunt schem save <name>`. The schematic is saved relative to you — the
-  block you are standing on becomes its pivot point. If the file already
-  exists, run the command again within 5 seconds to confirm overwrite.
-- **List:** `/jmanhunt schem list` displays all available schematics.
-- **Load:** `/jmanhunt schem load <name> [player]` loads a schematic so its
-  saved pivot (the saver's position) lands exactly on the sender's block
-  position, or the selected player's position when a selector is provided so
-  console execution is supported. No rotation is applied.
-- **Delete:** `/jmanhunt schem delete <name>` deletes a schematic. Run the
-  command twice within 5 seconds to confirm deletion.
-
-Confirmation is tracked per executor and expires after 5 seconds. Feedback
-messages work correctly for both players and the console. Without WorldEdit,
-`wand`, `save`, and `load` tell you the required version in chat and warn the
-console; `list` and `delete` keep working.
 
 ## Editing Settings In-Game
 
@@ -237,22 +207,7 @@ custom-modifiers:
 
 ## Challenges
 
-Built-in challenges can be toggled in-game with `/manhunt modifiers`:
-
-| Challenge | Effect |
-| --- | --- |
-| `challenges.no-jump` | Players cannot jump for the duration of the match. |
-| `challenges.one-heart` | All participating players have only one heart (2 health points). |
-| `challenges.lucky-blocks` | Breaking the configured block drops a random outcome from `challenges/lucky-block/lucky-blocks.yml` instead of the block itself. |
-
-The lucky-blocks challenge uses `challenges.lucky-blocks.block-definition`
-(default `gold_block`) to select which block is intercepted. The outcome table
-in `challenges/lucky-block/lucky-blocks.yml` uses composable outcomes with
-weighted random selection. Each outcome may contain any combination of
-`items`, `commands`, `structure`, and `feedback` sections. Commands support
-the same placeholders (`<p>`, `<random-mob>`, `<random-item>`) and tilde
-resolution as custom modifiers, with `relative-to` choosing whether tildes
-resolve to the broken block or the player.
-
-See [Lucky Blocks](configuration/lucky-blocks.md) for full details on
-composable outcomes, structure placement, reroll behavior, and feedback.
+The built-in challenges (no-jump, one-heart and lucky-blocks) have moved to the
+companion plugin [**JManhunt-Challenges**](https://github.com/jruk8/JManhunt-Challenges),
+which hooks into the [JManhunt API](api.md) to implement them. Install it
+alongside JManhunt and toggle challenges with `/jmhchallenges toggle`.

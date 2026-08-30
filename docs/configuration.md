@@ -17,5 +17,3 @@ See the individual configuration pages for detailed documentation:
 - [Statistics & PlaceholderAPI](configuration/statistics.md) — career
   statistics database and placeholder configuration.
 - [Sounds](configuration/sounds.md) — sound configuration for game events.
-- [Lucky Blocks](configuration/lucky-blocks.md) — the lucky-blocks challenge,
-  rarities, composable outcomes, reroll behavior, and schematic management.

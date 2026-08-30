@@ -1,12 +1,14 @@
 package com.jruk8.jmanhunt;
 
-import com.jruk8.jmanhunt.challenges.ChallengesListener;
+import com.jruk8.jmanhunt.api.JManhuntApi;
+import com.jruk8.jmanhunt.api.JManhuntApiImpl;
 import com.jruk8.jmanhunt.settings.SettingsListener;
 import com.jruk8.jmanhunt.settings.loot_tables.PiglinBarterListener;
 import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -34,13 +36,6 @@ public final class JManhuntPlugin extends JavaPlugin {
     public void onEnable() {
         reload();
 
-        if (!WorldEditAvailability.isAvailable()) {
-            getLogger().warning("WorldEdit is not installed. The /manhunt schem commands and "
-                    + "Lucky Block structure outcomes require WorldEdit "
-                    + WorldEditAvailability.MINIMUM_VERSION
-                    + " or newer (a soft dependency for lucky blocks only).");
-        }
-
         playerStates = new PlayerStateStore();
         setupDatabase();
         stats = new StatsManager(this, messages, statsRepository);
@@ -56,6 +51,9 @@ public final class JManhuntPlugin extends JavaPlugin {
                 this, messages, sounds, playerStates, compass, stats,
                 configService, worldEngine, winConditionEngine);
         setupListeners();
+
+        Bukkit.getServicesManager().register(JManhuntApi.class,
+                new JManhuntApiImpl(game, playerStates), this, ServicePriority.High);
 
         setupScheduling();
         reload(); // reload again to ensure that settings are loaded after the game manager is initialized
@@ -95,17 +93,11 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     private void setupListeners() {
         var piglinBarter = new PiglinBarterListener(this, game);
-        var challenges = new ChallengesListener(this, game, playerStates, messages, sounds, configService);
-        game.addGameStartListener(challenges::onGameStart);
-        game.addBeginGameListener(challenges::onBeginGame);
-        game.addBeginGameListener(challenges::announceLuckyBlock);
         settings.add(worldEngine);
         settings.add(piglinBarter);
-        settings.add(challenges);
 
-        var schemCommand = new SchemCommand(this, messages, sounds);
         ManhuntCommand command = new ManhuntCommand(
-                this, messages, configService, sounds, playerStates, game, compass, worldEngine, schemCommand);
+                this, messages, configService, sounds, playerStates, game, compass, worldEngine);
         getCommand("manhunt").setExecutor(command);
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);
@@ -113,8 +105,6 @@ public final class JManhuntPlugin extends JavaPlugin {
                 this, playerStates, game, messages, configService, sounds,
                 compass, stats, worldEngine, winConditionEngine), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
-        getServer().getPluginManager().registerEvents(challenges, this);
-        getServer().getPluginManager().registerEvents(schemCommand, this);
     }
 
     private void setupScheduling() {
@@ -129,6 +119,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     }
 
     @Override public void onDisable() {
+        Bukkit.getServicesManager().unregister(JManhuntApi.class);
         if (expansion != null) {
             expansion.unregister();
         }

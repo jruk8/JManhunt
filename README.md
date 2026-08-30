@@ -18,7 +18,10 @@ and a variety of built-in actions and custom modifiers.
   right-click behavior.
 - **Placeholders & statistics** — Career statistics with PlaceholderAPI
   support.
-- **Built-in challenges** — No-jump, one-heart, and lucky-blocks challenges.
+- **Public API** — Read match state and react to lifecycle events from other
+  plugins; the companion plugin
+  [JManhunt-Challenges](https://github.com/jruk8/JManhunt-Challenges) implements
+  the built-in challenges (no-jump, one-heart and lucky-blocks) on top of it.
 
 ## Installation
 
@@ -28,10 +31,9 @@ Download the latest release from
 server's `plugins/` folder. Restart the server to generate the default
 configuration files.
 
-(Optional) Install [WorldEdit](https://www.curseforge.com/minecraft/bukkit-plugins/worldedit)
-7.3.0 or newer for the `/manhunt schem` commands and Lucky Block structure
-outcomes. It is a soft dependency for lucky blocks only — the rest of the
-plugin works without it.
+(Optional) Install
+[JManhunt-Challenges](https://github.com/jruk8/JManhunt-Challenges) to enable
+the built-in challenges (no-jump, one-heart and lucky-blocks).
 
 ## Documentation
 
