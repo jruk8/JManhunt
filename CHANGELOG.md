@@ -1,3 +1,12 @@
+## [3.8.0] - 2026-08-30
+
+### 🚀 Features
+
+- Expose a public API and extract challenges to JManhunt-Challenges
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for main [skip ci]
 ## [Unreleased]
 
 ### 🚀 Features
