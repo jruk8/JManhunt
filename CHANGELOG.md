@@ -1,3 +1,12 @@
+## [3.8.2] - 2026-08-30
+
+### 🐛 Bug Fixes
+
+- Update partially broken default config
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for main [skip ci]
 ## [3.8.1] - 2026-08-30
 
 ### 🐛 Bug Fixes
