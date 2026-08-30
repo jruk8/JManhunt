@@ -14,5 +14,5 @@ jobs:
     permissions:
       contents: write
       packages: read
-    uses: jruk8/plugin-conventions/.github/workflows/publish.yml@v1.3.4
+    uses: jruk8/plugin-conventions/.github/workflows/publish.yml@v1.4.0
     secrets: inherit
