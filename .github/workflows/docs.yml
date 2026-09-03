@@ -16,4 +16,4 @@ jobs:
       contents: read
       pages: write
       id-token: write
-    uses: jruk8/plugin-conventions/.github/workflows/docs.yml@v1.4.0
+    uses: jruk8/plugin-conventions/.github/workflows/docs.yml@v1.4.1
