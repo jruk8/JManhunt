@@ -25,6 +25,9 @@ permissions:
   jmanhunt.command.status:
     description: View the current Manhunt status.
     default: true
+  jmanhunt.command.challenges:
+    description: Show info about the optional JManhunt Challenges addon.
+    default: true
   jmanhunt.command.setplayer:
     description: Assign players to Manhunt roles.
     default: op

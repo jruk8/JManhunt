@@ -36,6 +36,11 @@
   commands have moved to the companion plugin
   [JManhunt-Challenges](https://github.com/jruk8/JManhunt-Challenges), which
   now hooks into the JManhunt API.
+- New `/manhunt challenges` command that prints a fixed chat notice (not
+  configurable via `messages.yml`) with a clickable link to the optional
+  [JManhunt-Challenges addon](https://builtbybit.com/resources/jmanhunt-challenges.121574/)
+  and an ACTIVE/INACTIVE status line reflecting whether the companion plugin
+  is installed and enabled.
 
 ### 💥 Breaking Changes
 

@@ -6,6 +6,7 @@
 | --- | --- | --- |
 | `jmanhunt.command.help` | Use `/manhunt help`. | Everyone |
 | `jmanhunt.command.status` | View the current Manhunt status. | Everyone |
+| `jmanhunt.command.challenges` | Show the Challenges addon notice with `/manhunt challenges`. | Everyone |
 | `jmanhunt.command.setplayer` | Assign players to Manhunt roles. | OP |
 | `jmanhunt.command.start` | Start a Manhunt match. | OP |
 | `jmanhunt.command.end` | End an active Manhunt match. | OP |

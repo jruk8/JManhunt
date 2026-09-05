@@ -37,6 +37,14 @@ public final class MessageService {
                 : MiniMessage.miniMessage().deserialize(raw);
     }
 
+    /**
+     * Parses raw text as MiniMessage regardless of the configured text-format,
+     * for hard-coded messages that embed MiniMessage tags.
+     */
+    public Component miniMessage(String raw) {
+        return MiniMessage.miniMessage().deserialize(raw);
+    }
+
     public String formatPlaceholder(String raw) {
         if ("legacy".equalsIgnoreCase(format)) {
             return LegacyComponentSerializer.legacySection().serialize(

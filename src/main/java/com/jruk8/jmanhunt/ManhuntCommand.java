@@ -1,5 +1,10 @@
 package com.jruk8.jmanhunt;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -26,6 +31,33 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             "settings.world-engine.nether-structures.enabled",
             "settings.world-engine.overworld-structures.enabled"
     );
+
+    /**
+     * Readonly announcement printed by the challenges subcommand. This text is
+     * intentionally not loaded from messages.yml so it cannot be edited or
+     * removed by server owners; change it here instead. It is always parsed as
+     * MiniMessage; the {link} token becomes a clickable link to
+     * {@link #CHALLENGES_URL} and {status} becomes the companion plugin status.
+     */
+    static final String CHALLENGES_MESSAGE = """
+            
+            <gray>[<gradient:#5e42f4:#b742f4>JMHChallenges</gradient>]</gray>
+            <gold>JManhunt</gold> is a free plugin for configurable manhunts. For lucky blocks and other fun challenges, you can find the optional addon {link}.
+            
+            <gray> » Challenges status: [{status}<gray>]</gray>
+            
+            <dark_gray>Looking for modifiers instead? Try <white>/mh modifiers <setting> <value></white>.</dark_gray>
+            """;
+    static final String CHALLENGES_URL = "https://builtbybit.com/resources/jmanhunt-challenges.121574/";
+    private static final String CHALLENGES_LINK_TOKEN = "{link}";
+    private static final String CHALLENGES_LINK_TEXT = "here";
+    private static final String CHALLENGES_STATUS_TOKEN = "{status}";
+    private static final String CHALLENGES_STATUS_ACTIVE = "ACTIVE";
+    private static final String CHALLENGES_STATUS_INACTIVE = "INACTIVE";
+    // Candidate plugin.yml names of the JManhunt-Challenges companion plugin;
+    // the status line shows ACTIVE when any of these is loaded and enabled.
+    private static final Set<String> CHALLENGES_PLUGIN_NAMES =
+            Set.of("JManhunt-Challenges", "JManhuntChallenges", "JMHChallenges");
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final ConfigService config;
@@ -49,6 +81,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return switch (sub) {
             case "help" -> help(sender);
             case "status" -> status(sender);
+            case "challenges" -> challenges(sender);
             case "setplayer" -> setPlayer(sender, args);
             case "start" -> start(sender);
             case "end" -> end(sender);
@@ -68,6 +101,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt modifiers <setting> <value>", "view or change a setting"},
                 {"/manhunt worldengine", "set lobby or teleport players"},
+                {"/manhunt challenges", "show Challenges addon info"},
                 {"/manhunt reload", "reload files"}};
         for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
         neutralSound(sender);
@@ -90,6 +124,80 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (players.isEmpty()) return;
         message(sender, header); players.forEach(player -> message(sender, "manhunt.status-player",
                 Map.of("player", player.getName())));
+    }
+
+    private boolean challenges(CommandSender sender) {
+        for (Component line : challengesComponents(messages, isCompanionEnabled())) {
+            sender.sendMessage(line);
+        }
+        neutralSound(sender);
+        return true;
+    }
+
+    /**
+     * The announcement lines from {@link #CHALLENGES_MESSAGE}, with the {link}
+     * token turned into a clickable link and the {status} token turned into the
+     * companion plugin status.
+     */
+    static List<Component> challengesComponents(MessageService messages, boolean companionEnabled) {
+        List<Component> lines = new ArrayList<>();
+        for (String line : CHALLENGES_MESSAGE.split("\n")) {
+            lines.add(renderChallengesLine(messages, line, companionEnabled));
+        }
+        return lines;
+    }
+
+    /**
+     * Renders one line of {@link #CHALLENGES_MESSAGE}, replacing every
+     * braced {token} with its dynamic component and parsing the rest of the
+     * text as MiniMessage.
+     */
+    private static Component renderChallengesLine(MessageService messages, String line, boolean companionEnabled) {
+        Component rendered = Component.empty();
+        int cursor = 0;
+        while (cursor < line.length()) {
+            int open = line.indexOf('{', cursor);
+            int close = open < 0 ? -1 : line.indexOf('}', open);
+            if (open < 0 || close < 0) {
+                rendered = rendered.append(messages.miniMessage(line.substring(cursor)));
+                break;
+            }
+            if (open > cursor) {
+                rendered = rendered.append(messages.miniMessage(line.substring(cursor, open)));
+            }
+            rendered = rendered.append(tokenComponent(messages, line.substring(open, close + 1), companionEnabled));
+            cursor = close + 1;
+        }
+        return rendered;
+    }
+
+    private static Component tokenComponent(MessageService messages, String token, boolean companionEnabled) {
+        return switch (token) {
+            case CHALLENGES_LINK_TOKEN -> challengesLink();
+            case CHALLENGES_STATUS_TOKEN -> challengesStatus(companionEnabled);
+            default -> messages.miniMessage(token);
+        };
+    }
+
+    private static Component challengesLink() {
+        return Component.text(CHALLENGES_LINK_TEXT, NamedTextColor.GOLD, TextDecoration.UNDERLINED)
+                .clickEvent(ClickEvent.openUrl(CHALLENGES_URL))
+                .hoverEvent(HoverEvent.showText(Component.text(CHALLENGES_URL, NamedTextColor.GRAY)));
+    }
+
+    private static Component challengesStatus(boolean companionEnabled) {
+        String status = companionEnabled ? CHALLENGES_STATUS_ACTIVE : CHALLENGES_STATUS_INACTIVE;
+        NamedTextColor color = companionEnabled ? NamedTextColor.GREEN : NamedTextColor.RED;
+        return Component.text(status, color);
+    }
+
+    private boolean isCompanionEnabled() {
+        for (String name : CHALLENGES_PLUGIN_NAMES) {
+            if (Bukkit.getPluginManager().isPluginEnabled(name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean setPlayer(CommandSender sender, String[] args) {
@@ -286,8 +394,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return partial(args[0], List.of("help", "status", "setplayer", "start",
-                "end", "modifiers", "worldengine", "quickstart", "qs", "reload"));
+        if (args.length == 1) return partial(args[0], List.of("help", "status", "challenges", "setplayer",
+                "start", "end", "modifiers", "worldengine", "quickstart", "qs", "reload"));
         if (args.length == 2 && args[0].equalsIgnoreCase("modifiers"))
             return partial(args[1], new ArrayList<>(game.settingNames()));
         if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {

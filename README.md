@@ -24,8 +24,8 @@ and a variety of built-in actions and custom modifiers.
 ## Challenges
 Install the
 [JManhunt-Challenges](https://builtbybit.com/resources/jmanhunt-challenges.121574)
-plugin to enable custom challenges for additional gameplay such as lucky blocks
-balanced to fit the game's difficulty. This plugin helps support the development of JManhunt.
+companion plugin to enable custom challenges for spicing up the game. 
+Downloading this plugin helps support the development of JManhunt.
 
 ## Installation
 

@@ -6,6 +6,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 |---------------------------------------------------| --- | --- |
 | `/manhunt`                                        | Shows the current teams and match status. | `jmanhunt.command.status` |
 | `/manhunt help`                                   | Shows the in-game command list. | `jmanhunt.command.help` |
+| `/manhunt challenges`                             | Shows a chat notice with a clickable link to the optional Challenges addon. | `jmanhunt.command.challenges` |
 | `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `afk`, or `none`. | `jmanhunt.command.setplayer` |
 | `/manhunt start`                                  | Starts a match. | `jmanhunt.command.start` |
 | `/manhunt end`                                    | Ends the active match; hunters win. | `jmanhunt.command.end` |
@@ -207,7 +208,7 @@ custom-modifiers:
 
 ## Challenges
 
-The built-in challenges (no-jump, one-heart and lucky-blocks) have moved to the
+Play built-in challenges through our
 companion plugin [**JManhunt-Challenges**](https://github.com/jruk8/JManhunt-Challenges),
-which hooks into the [JManhunt API](api.md) to implement them. Install it
-alongside JManhunt and toggle challenges with `/jmhchallenges toggle`.
+which natively hooks into the [JManhunt API](api.md). Install 
+alongside JManhunt and toggle with `/jmhchallenges toggle <challenge>`.

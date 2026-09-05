@@ -1,5 +1,5 @@
 plugins {
-    id 'com.github.jruk8.plugin-conventions' version 'v1.3.4'
+    id 'com.github.jruk8.plugin-conventions' version 'v1.4.2'
     id 'maven-publish'
 }
 
