@@ -1,3 +1,16 @@
+## [3.9.0] - 2026-09-05
+
+### 🚀 Features
+
+- Challenges subcommand for aiding in finding the companion plugin
+
+### 🐛 Bug Fixes
+
+- *(deps)* Bump gradle-wrapper in the gradle-dependencies group (#54)
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for main [skip ci]
 ## [3.8.2] - 2026-08-30
 
 ### 🐛 Bug Fixes
