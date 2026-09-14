@@ -155,9 +155,6 @@ custom-modifiers:
   # Gives every participating player eight steaks when the match starts.
   everyone-gets-beef:
     enabled: false
-    # Ticks to wait after triggering before this modifier's commands run.
-    # Applies to start, interval, and event triggers, but not to cleanup.
-    delay: 0
     commands:
       player:
         # Runs for every participating player (only hunters and speedrunners, not including NONE)
@@ -285,9 +282,11 @@ custom-modifiers:
     enabled: false
     runs-on:
       - ON_FIRST_ENTER_END
+    # Ticks to wait after triggering before this modifier's commands run.
+    # Applies to start, interval, and event triggers, but not to cleanup.
+    delay: 100 # delay in case speedrunner lags when loading into The End
     commands:
       speedrunner:
-        - "delay: 100" # delay in case speedrunner lags when loading into The End
         - "tp @a <p>"
   start-with-luckyblocks-requires-challenges-addon:
     enabled: false

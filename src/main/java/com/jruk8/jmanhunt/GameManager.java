@@ -177,11 +177,11 @@ public final class GameManager {
             }, ticks);
         }
         messages.broadcast("manhunt.start-success");
-        announceRoles(players);
         gameStartListeners.forEach(Runnable::run);
         Bukkit.getPluginManager().callEvent(new JMatchStartEvent(matchId));
         sounds.playNeutralSound();
         showStatusToAllPlayers();
+        announceRoles(players);
         // load waiting delay configuration (enforces a 5 second minimum;
         // -1 waits indefinitely)
         waitingDelayConfigured = WaitingReminder.clampDelay(
@@ -193,10 +193,11 @@ public final class GameManager {
 
     /**
      * Tells each participant their own role when a match starts. This runs
-     * inside {@link #start()}, before the pre-start window opens, so it always
-     * plays before any damage can occur. Non-participants are skipped. Sounds
-     * play as part of the announcement: when both chat and title are disabled,
-     * nothing plays at all.
+     * inside {@link #start()} after the match status is shown, but still
+     * before the pre-start window opens, so it always plays before any damage
+     * can occur. Non-participants are skipped. Sounds play as part of the
+     * announcement: when both chat and title are disabled, nothing plays at
+     * all.
      */
     private void announceRoles(List<Player> players) {
         boolean chat = configService.getBoolean("settings.announce-roles.chat.enabled", true);

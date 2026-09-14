@@ -2,7 +2,8 @@
 
 Under `settings.game-boosts`, a set of settings that skew world generation
 and loot odds in the speedrunners' favor, without touching any actual
-gameplay rules.
+gameplay rules. The structure boosts work whether or not the world engine is
+enabled: each datapack follows only its own flag.
 
 ```yaml
 settings:

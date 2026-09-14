@@ -20,6 +20,7 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -118,6 +119,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt challenges", "show Challenges addon info"},
                 {"/manhunt reload", "reload files"}};
         for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
+        // Clickable links need MiniMessage parsing regardless of text-format,
+        // so this footer stays hardcoded instead of living in messages.yml.
+        sender.sendMessage(messages.miniMessage(
+                "\n<white>» Still need help? Join our <gold><click:open_url:'https://discord.gg/hkWmCVmWDC'>"
+                        + "<underline>Discord server</underline></click></gold>."));
         neutralSound(sender);
         return true;
     }
@@ -280,7 +286,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             segments.add(args[i]);
         }
         if (segments.isEmpty()) {
-            listEntries(sender, "config", drillCategories(plugin.getConfig()));
+            Map<String, String> categories = new LinkedHashMap<>();
+            for (String category : drillCategories(plugin.getConfig())) {
+                categories.put(category, "");
+            }
+            listEntries(sender, "config", categories);
             neutralSound(sender);
             return true;
         }
@@ -294,10 +304,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (!resolved.section() || !resolved.remainder().isEmpty()) {
             return message(sender, "command.invalid");
         }
-        List<String> entries = new ArrayList<>();
+        Map<String, String> entries = new LinkedHashMap<>();
         for (String setting : game.settingNames()) {
             if (isUnder(setting, resolved.path())) {
-                entries.add(setting + ": " + game.getSettingValue(setting));
+                entries.put(setting, ": " + game.getSettingValue(setting));
             }
         }
         listEntries(sender, resolved.path(), entries);
@@ -309,16 +319,17 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * Lists entries dir-style under one header, so browsing never spams one
      * prefixed line per entry.
      */
-    private void listEntries(CommandSender sender, String key, List<String> names) {
-        String template = messages.string("manhunt.configuration-entry", "\n<white>» <gray>{key}</gray></white>");
+    private void listEntries(CommandSender sender, String key, Map<String, String> entries) {
+        String template = messages.string("manhunt.configuration-entry",
+                "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>");
         message(sender, "manhunt.configuration-list",
-                Map.of("key", key, "entries", renderEntries(names, template)));
+                Map.of("key", key, "entries", renderEntries(entries, template)));
     }
 
-    static String renderEntries(List<String> names, String entryTemplate) {
+    static String renderEntries(Map<String, String> entries, String entryTemplate) {
         StringBuilder out = new StringBuilder();
-        for (String name : names) {
-            out.append(entryTemplate.replace("{key}", name));
+        for (Map.Entry<String, String> entry : entries.entrySet()) {
+            out.append(entryTemplate.replace("{key}", entry.getKey()).replace("{suffix}", entry.getValue()));
         }
         return out.toString();
     }

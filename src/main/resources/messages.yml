@@ -11,7 +11,7 @@ command:
 
 manhunt:
   help-header: "{prefix}<gold>JManhunt commands:"
-  help-line: "{prefix}<white>{command} <gray>- {description}"
+  help-line: "\n<white>» {command}<gray>: {description}</gray></white>"
   status-header: "{prefix}<gold>Manhunt status: <white>{status}"
   speedrunners-header: "\n{prefix}<gold>Speedrunners:"
   hunters-header: "\n{prefix}<gold>Hunters:"
@@ -23,7 +23,7 @@ manhunt:
   set-success-unchanged: "{prefix}<green>Updated <white>{count}<green> player(s) to <white>{role}<green> (<white>{unchanged}<green> unchanged)."
   role-assigned: "{prefix}<green>You have been assigned the role <white>{role}<green>."
   set-skipped: "{prefix}<yellow>Skipped <white>{count}<yellow> player(s) without the required permission."
-  start-success: "{prefix}<green>Manhunt has started."
+  start-success: "\n{prefix}<green>Manhunt has started."
   role-announce-chat: "{prefix}<green>You are a <white>{role}<green>."
   role-announce-title: "<gray>Role: <white>{role}"
   role-announce-subtitle-hunter: "<red>Kill all Speedrunners"
@@ -51,7 +51,7 @@ manhunt:
   setting-restart-required: "{prefix}<gray>This setting requires a server restart to take effect."
   setting-entry: "{prefix}<gray>{setting}:</gray> <white>{value}"
   configuration-list: "\n{prefix}<white>Available configs in <gray>{key}:{entries}"
-  configuration-entry: "\n<white>» <gray>{key}</gray></white>"
+  configuration-entry: "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
   worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|lobby>"
   worldengine-disabled: '{prefix}<red>World engine is disabled. Enable it through <gray>"/manhunt configuration world-engine enabled true"</gray> to use this command.'

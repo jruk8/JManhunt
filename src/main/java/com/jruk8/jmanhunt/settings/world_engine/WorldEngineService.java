@@ -200,31 +200,25 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
 
     @Override
     public void onStart() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        boolean isDisabled = !configService.getBoolean("world-engine.enabled", false);
-        if (isDisabled) {
-            strongholdDatapackManager.remove(config.worldName(), false);
-            netherStructuresDatapackManager.remove(config.worldName(), false);
-            overworldStructuresDatapackManager.remove(config.worldName(), false);
-            return;
-        }
-        strongholdDatapackManager.apply(config.worldName(), true);
-        boolean netherEnabled = configService.getBoolean("settings.game-boosts.nether-structures.enabled", false);
-        netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);
-        boolean overworldEnabled = configService.getBoolean("settings.game-boosts.overworld-structures.enabled", false);
-        overworldStructuresDatapackManager.apply(config.worldName(), overworldEnabled);
+        refreshDatapacks();
     }
 
     @Override
     public void onReload() {
+        refreshDatapacks();
+    }
+
+    /**
+     * Applies or removes every datapack from its own flag. Structure boosts
+     * are independent of the world engine: each pack follows only its own
+     * enabled state.
+     */
+    private void refreshDatapacks() {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        boolean worldEnabled = config.enabled();
+        boolean worldEnabled = configService.getBoolean("world-engine.enabled", false);
         strongholdDatapackManager.apply(config.worldName(), worldEnabled);
         if (!worldEnabled) {
             strongholdDatapackManager.remove(config.worldName(), false);
-            netherStructuresDatapackManager.remove(config.worldName(), false);
-            overworldStructuresDatapackManager.remove(config.worldName(), false);
-            return;
         }
         boolean netherEnabled = configService.getBoolean("settings.game-boosts.nether-structures.enabled", false);
         netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);

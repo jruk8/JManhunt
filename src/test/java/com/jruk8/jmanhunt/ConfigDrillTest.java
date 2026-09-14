@@ -3,7 +3,9 @@ package com.jruk8.jmanhunt;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -124,15 +126,19 @@ class ConfigDrillTest {
     }
 
     @Test
-    void entriesRenderOnePerLine() {
-        assertEquals("\n<white>» <gray>a</gray></white>\n<white>» <gray>b</gray></white>",
+    void entriesRenderKeyWhiteAndValueGray() {
+        Map<String, String> entries = new LinkedHashMap<>();
+        entries.put("settings.autostart.enabled", ": true");
+        entries.put("settings", "");
+        assertEquals("\n<green>» <white>settings.autostart.enabled</white><gray>: true</gray></white>"
+                        + "\n<green>» <white>settings</white><gray></gray></white>",
                 ManhuntCommand.renderEntries(
-                        List.of("a", "b"), "\n<white>» <gray>{key}</gray></white>"));
+                        entries, "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>"));
     }
 
     @Test
     void emptyEntriesRenderEmpty() {
         assertEquals("", ManhuntCommand.renderEntries(
-                List.of(), "\n<white>» <gray>{key}</gray></white>"));
+                Map.of(), "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>"));
     }
 }

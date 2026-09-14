@@ -97,8 +97,9 @@ settings:
       fade-out-seconds: 0.5
 ```
 
-The announcement runs inside match start, before the pre-start window opens,
-so players always learn their roles before anything can happen, even when
+The announcement runs inside match start after the match status is shown,
+but still before the pre-start window opens, so players always learn their
+roles before anything can happen, even when
 [Start on Speedrunner Damage](#start-on-speedrunner-damage) is enabled.
 Players without a participating role are skipped.
 
