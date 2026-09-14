@@ -20,11 +20,10 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 public final class GameplayListener implements Listener {
@@ -41,8 +40,7 @@ public final class GameplayListener implements Listener {
     private final SpeedrunnerDisconnectTracker disconnects = new SpeedrunnerDisconnectTracker();
     private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
     private final Map<UUID, BukkitTask> respawnTasks = new HashMap<>();
-    private final Set<UUID> enteredNether = new HashSet<>();
-    private final Set<UUID> enteredEnd = new HashSet<>();
+    private final DimensionEnterTracker dimensionEnterTracker = new DimensionEnterTracker();
 
     public GameplayListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
                             MessageService messages, ConfigService config, SoundService sounds, CompassManager compass,
@@ -61,6 +59,9 @@ public final class GameplayListener implements Listener {
         // Cancel any pending respawn tasks when the match ends so players
         // are not revived during the end sequence or after the match.
         game.addGameEndListener(this::cancelAllRespawnTasks);
+        // Dimension-enter triggers fire once per player (and once globally)
+        // per match, so tracking resets whenever a new match starts.
+        game.addGameStartListener(dimensionEnterTracker::reset);
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
@@ -291,10 +292,24 @@ public final class GameplayListener implements Listener {
         }
         if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
         World.Environment to = player.getWorld().getEnvironment();
-        if (to == World.Environment.NETHER && enteredNether.add(player.getUniqueId())) {
-            game.stateCommands().runEventModifiers("ON_FIRST_ENTER_NETHER", player);
-        } else if (to == World.Environment.THE_END && enteredEnd.add(player.getUniqueId())) {
-            game.stateCommands().runEventModifiers("ON_FIRST_ENTER_END", player);
+        if (to == World.Environment.NETHER) {
+            EnumSet<DimensionEnterTracker.Fire> fire = dimensionEnterTracker.onEnter(
+                    DimensionEnterTracker.Dimension.NETHER, player.getUniqueId());
+            if (!fire.isEmpty()) {
+                game.stateCommands().runEventModifiers("ON_NETHER_ENTER", player);
+                if (fire.contains(DimensionEnterTracker.Fire.GLOBAL_FIRST)) {
+                    game.stateCommands().runEventModifiers("ON_FIRST_NETHER_ENTER", player);
+                }
+            }
+        } else if (to == World.Environment.THE_END) {
+            EnumSet<DimensionEnterTracker.Fire> fire = dimensionEnterTracker.onEnter(
+                    DimensionEnterTracker.Dimension.END, player.getUniqueId());
+            if (!fire.isEmpty()) {
+                game.stateCommands().runEventModifiers("ON_END_ENTER", player);
+                if (fire.contains(DimensionEnterTracker.Fire.GLOBAL_FIRST)) {
+                    game.stateCommands().runEventModifiers("ON_FIRST_END_ENTER", player);
+                }
+            }
         }
     }
     @EventHandler public void onMove(PlayerMoveEvent event) {

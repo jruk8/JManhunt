@@ -111,13 +111,33 @@ public final class GameStateCommandManager {
         }
     }
 
+    /**
+     * Canonicalizes a {@code runs-on} trigger name. Legacy dimension-enter
+     * keys ({@code ON_FIRST_ENTER_NETHER}, {@code ON_FIRST_ENTER_END}) behave
+     * as once-per-player triggers and map to their canonical names.
+     */
+    static String normalizeTrigger(String trigger) {
+        if (trigger == null) {
+            return null;
+        }
+        String key = trigger.trim();
+        if (key.equalsIgnoreCase("ON_FIRST_ENTER_NETHER")) {
+            return "ON_NETHER_ENTER";
+        }
+        if (key.equalsIgnoreCase("ON_FIRST_ENTER_END")) {
+            return "ON_END_ENTER";
+        }
+        return key;
+    }
+
     private boolean runsOnContains(String name, String event) {
         List<String> runsOn = plugin.getConfig().getStringList("custom-modifiers." + name + ".runs-on");
+        String canonical = normalizeTrigger(event);
         // When runs-on is omitted, default to ON_START.
         if (runsOn.isEmpty()) {
-            return event.equalsIgnoreCase("ON_START");
+            return "ON_START".equalsIgnoreCase(canonical);
         }
-        return runsOn.stream().map(String::trim).anyMatch(event::equalsIgnoreCase);
+        return runsOn.stream().map(GameStateCommandManager::normalizeTrigger).anyMatch(canonical::equalsIgnoreCase);
     }
 
     private void runModifierCommands(String name) {

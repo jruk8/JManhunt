@@ -225,8 +225,12 @@ custom-modifiers:
     # ON_PLAYER_KILL - When a participating player kills another player
     # ON_HUNTER_KILL - When a hunter kills a player
     # ON_SPEEDRUNNER_KILL - When a speedrunner kills a player
-    # ON_FIRST_ENTER_NETHER - When a participating player first enters the Nether
-    # ON_FIRST_ENTER_END - When a participating player first enters the End
+    # ON_NETHER_ENTER - When a participating player enters the Nether (once per player per match)
+    # ON_END_ENTER - When a participating player enters the End (once per player per match)
+    # ON_FIRST_NETHER_ENTER - When the first participating player enters the Nether (once per match)
+    # ON_FIRST_END_ENTER - When the first participating player enters the End (once per match)
+    # ON_FIRST_ENTER_NETHER and ON_FIRST_ENTER_END are legacy aliases of ON_NETHER_ENTER
+    # and ON_END_ENTER (once per player per match, not once per match).
     # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
     # ON_RESPAWN - When a player respawns (only the executing player)
     # ON_SPEEDRUNNER_RESPAWN - When a speedrunner respawns (only the executing player)

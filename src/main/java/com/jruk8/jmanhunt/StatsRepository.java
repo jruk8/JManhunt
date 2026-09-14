@@ -142,6 +142,7 @@ public final class StatsRepository implements AutoCloseable {
                 stats.damage = result.getDouble(8);
                 stats.hunterWins = result.getInt(9);
                 stats.speedrunnerWins = result.getInt(10);
+                stats.wins = stats.hunterWins + stats.speedrunnerWins;
                 stats.sessions = result.getInt(11);
                 stats.speedrunnerSessions = result.getInt(12);
                 stats.hunterSessions = result.getInt(13);
