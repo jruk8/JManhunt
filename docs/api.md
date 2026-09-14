@@ -1,10 +1,8 @@
 # API
 
 JManhunt exposes a small public API so other plugins can read match state and
-react to match lifecycle changes. It is the integration point used by
-[**JManhunt-Challenges**](https://github.com/jruk8/JManhunt-Challenges) — the
-companion plugin that provides the built-in challenges (no-jump, one-heart and
-lucky-blocks).
+react to match lifecycle changes. An example usage is the paid
+[**JManhunt-Challenges**](https://builtbybit.com/resources/jmanhunt-challenges.121574/) addon for dedicated challenges.
 
 ## Getting the API
 
@@ -38,6 +36,10 @@ local Maven repository from the JManhunt checkout:
 ```
 
 and add `mavenLocal()` to your repositories.
+
+> **Note:** The JitPack coordinates may not build properly on JManhunt. This will
+> not be fixed by the main author. It is recommended to publish JManhunt locally and
+> use the local repository to find the API.
 
 ## API surface
 
@@ -126,7 +128,4 @@ public class OneHeartChallenge implements Listener {
 
 ## Versioning
 
-The API follows the plugin's versioning (SemVer via the existing
-axion-release setup). Breaking changes to `com.jruk8.jmanhunt.api` bump the
-plugin's major or minor version and are described in the
-[CHANGELOG](https://github.com/jruk8/JManhunt/blob/main/CHANGELOG.md).
+The API follows the JManhunt's versioning (`v1.2.3`).

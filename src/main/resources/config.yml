@@ -425,7 +425,7 @@ settings:
     # cannot be dropped or placed in chests. When false, the compass behaves
     # like a normal item and can be dropped or stored.
     # The compass always defaults to the last hotbar slot when given, but is
-    # not locked to that slot — the player can freely move it within their
+    # not locked to that slot. The player can freely move it within their
     # inventory.
     # Default: true
     must-be-inventory:

@@ -16,3 +16,16 @@ sounds:
 ```
 
 Each sound entry supports `enabled`, `sound`, `pitch`, and `volume`.
+
+## Game Sounds
+
+Under `sounds.game`, each entry plays at a fixed moment in the match:
+
+- `autostart-countdown`: during the autostart countdown.
+- `speedrunner-death`: when a speedrunner dies, by any means.
+- `hunter-death`: when a hunter dies, by any means.
+- `win-sound`: when the speedrunners win.
+- `fail-sound`: when the hunters win.
+
+Under `sounds.neutral-sound`, the default sound plays for general feedback
+such as match start and command confirmations.

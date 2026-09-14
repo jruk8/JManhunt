@@ -7,15 +7,15 @@ and a variety of built-in actions and custom modifiers.
 
 ## Key Features
 
-- **Deep configurability** — Toggle built-in mechanics on or off, or create
+- **Deep configurability**: Toggle built-in mechanics on or off, or create
   entirely new gameplay through easy-to-use custom modifiers.
-- **World reset engine** — Grid-based single-world manhunt engine with
+- **World reset engine**: Grid-based single-world manhunt engine with
   persistent spiral cell assignment and automatic End resets.
-- **Compass tracking** — Hunter compass with configurable refresh and
+- **Compass tracking**: Hunter compass with configurable refresh and
   right-click behavior.
-- **Placeholders & statistics** — Career statistics with PlaceholderAPI
+- **Placeholders & statistics**: Career statistics with PlaceholderAPI
   support.
-- **Public API** — Read match state and react to lifecycle events from other
+- **Public API**: Read match state and react to lifecycle events from other
   plugins; the companion plugin JManhunt-Challenges implements the built-in
   challenges on top of it.
 
@@ -30,10 +30,10 @@ configuration files.
 
 - [Getting Started](getting-started.md)
 - [Gallery](gallery.md)
+- [Configuration](configuration.md): overview, settings, world engine,
+  statistics, and sounds.
 - [Commands](commands.md)
 - [Permissions](permissions.md)
-- [Configuration](configuration.md) — overview, settings, world engine,
-  statistics, and sounds.
 - [Placeholders](placeholders.md)
 - [API](api.md)
 

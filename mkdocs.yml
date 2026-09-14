@@ -54,8 +54,21 @@ nav:
   - Permissions: permissions.md
   - Configuration:
       - Overview: configuration.md
-      - Settings: configuration/settings.md
-      - World Engine: configuration/world-engine.md
+      - Settings:
+          - Overview: configuration/settings.md
+          - Match Start & End: configuration/settings/match-start-end.md
+          - Compass Tracking: configuration/settings/compass-tracking.md
+          - Roles: configuration/settings/roles.md
+          - Win Conditions & End Screen: configuration/settings/win-conditions-end-screen.md
+          - Game Boosts: configuration/settings/game-boosts.md
+      - World Engine:
+          - Overview: configuration/world-engine.md
+          - Cells & Spawns: configuration/world-engine/cells-spawns.md
+          - Pre-generating Cells: configuration/world-engine/pregenerating-cells.md
+          - Borders: configuration/world-engine/borders.md
+          - Troubleshooting: configuration/world-engine/troubleshooting.md
+      - Custom Modifiers: configuration/modifiers.md
+      - Built-in Match Commands: configuration/match-commands.md
       - Statistics & PlaceholderAPI: configuration/statistics.md
       - Sounds: configuration/sounds.md
   - Placeholders: placeholders.md
