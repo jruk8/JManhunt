@@ -14,11 +14,22 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int CONFIG_VERSION = 2;
+    private static final int CONFIG_VERSION = 3;
     private static final int MESSAGES_VERSION = 5;
+    /**
+     * Relocated config paths, applied on reload. Every key must live under a
+     * real category so the in-game config command can drill into it.
+     */
+    private static final Map<String, String> CONFIG_MOVES = Map.of(
+            "game-end-delay", "match.end-delay",
+            "start-reminder-interval", "match.start-reminder-interval",
+            "end-statistics", "match.end-statistics",
+            "disconnect-handling", "match.disconnect-handling",
+            "text-format", "settings.text-format");
     private MessageService messages;
     private SoundService sounds;
     private PlayerStateStore playerStates;
@@ -132,7 +143,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     }
 
     public void reload() {
-        YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION);
+        YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION, CONFIG_MOVES);
         reloadConfig();
         YamlFileUpdater.update(this, "messages.yml", "messages-version", MESSAGES_VERSION);
         if (!new java.io.File(getDataFolder(), "placeholders.yml").exists()) {
@@ -143,7 +154,7 @@ public final class JManhuntPlugin extends JavaPlugin {
             messages = new MessageService();
         }
         messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")),
-                getConfig().getString("text-format", "minimessage"));
+                getConfig().getString("settings.text-format", "minimessage"));
 
         if (winConditionEngine != null) {
             winConditionEngine.reload(getConfig());

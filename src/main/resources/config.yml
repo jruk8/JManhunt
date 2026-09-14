@@ -1,9 +1,6 @@
 # JManhunt configuration. Reload with /manhunt reload.
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 2
-
-# Message parser used for messages.yml: minimessage or legacy.
-text-format: minimessage
+config-version: 3
 
 # Persistent career statistics. SQLite is local and requires no setup. Use
 # PostgreSQL when several JManhunt servers should share the same statistics.
@@ -112,50 +109,55 @@ gamestate-commands:
     end:
       - "clear <p>"
 
-# The following timing options control reminders and end-of-match cleanup.
-# Seconds between the win announcement and final inventory cleanup. Statistics
-# are displayed halfway through this delay.
-# Set to -1 to skip the delay (cleanup is immediate); other negative values are
-# also treated as zero.
-game-end-delay: 10.0
+# Match lifecycle settings: end-of-match delay, pre-start reminders,
+# disconnect rules, and end-screen statistics.
+match:
+  # Seconds between the win announcement and final inventory cleanup. Statistics
+  # are displayed halfway through this delay.
+  # Set to -1 to skip the delay (cleanup is immediate); other negative values are
+  # also treated as zero.
+  end-delay: 10.0
 
-# Seconds between reminders while waiting for the first speedrunner hit.
-# For finite delays, exactly three reminders are shown at the delay and two
-# equally-sized slices (e.g. 30s -> 30, 20, 10). This value is only used as
-# the repeat interval when delay-seconds is -1 (wait indefinitely).
-# Set to -1 to disable the reminders entirely while still waiting for damage.
-start-reminder-interval: 10.0
+  # Seconds between reminders while waiting for the first speedrunner hit.
+  # For finite delays, exactly three reminders are shown at the delay and two
+  # equally-sized slices (e.g. 30s -> 30, 20, 10). This value is only used as
+  # the repeat interval when delay-seconds is -1 (wait indefinitely).
+  # Set to -1 to disable the reminders entirely while still waiting for damage.
+  start-reminder-interval: 10.0
 
-# Disconnect rules for active participants.
-disconnect-handling:
-  speedrunner:
-    # Seconds a disconnected speedrunner has to rejoin before they are treated
-    # as dead and removed from the match.
-    reconnect-grace-seconds: 60
-    # Disconnect strike limit before a speedrunner instantly loses.
-    # Set to 1 to disable retries entirely.
-    max-strikes: 3
-  hunter:
-    # Seconds a disconnected hunter has to rejoin before they are removed
-    # from the match.
-    reconnect-grace-seconds: 60
-    # Disconnect strike limit before a hunter instantly loses.
-    # Set to 1 to disable retries entirely.
-    max-strikes: 3
+  # Disconnect rules for active participants.
+  disconnect-handling:
+    speedrunner:
+      # Seconds a disconnected speedrunner has to rejoin before they are treated
+      # as dead and removed from the match.
+      reconnect-grace-seconds: 60
+      # Disconnect strike limit before a speedrunner instantly loses.
+      # Set to 1 to disable retries entirely.
+      max-strikes: 3
+    hunter:
+      # Seconds a disconnected hunter has to rejoin before they are removed
+      # from the match.
+      reconnect-grace-seconds: 60
+      # Disconnect strike limit before a hunter instantly loses.
+      # Set to 1 to disable retries entirely.
+      max-strikes: 3
 
-# End-screen sections, in display order. Available values are DAMAGE_DEALT,
-# HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based
-# on reliable vanilla advancements and is calculated only at match end.
-end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
+  # End-screen sections, in display order. Available values are DAMAGE_DEALT,
+  # HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based
+  # on reliable vanilla advancements and is calculated only at match end.
+  end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
 
 # Optional named command bundles. Toggle a bundle in-game with
-# /manhunt modifiers custom-modifiers.<name> true|false.
+# /manhunt configuration custom-modifiers <name> enabled true|false.
 # All commands are run when the match starts (or on interval if configured),
 # except console-cleanup and player-cleanup which run when the match ends.
 custom-modifiers:
   # Gives every participating player eight steaks when the match starts.
   everyone-gets-beef:
     enabled: false
+    # Ticks to wait after triggering before this modifier's commands run.
+    # Applies to start, interval, and event triggers, but not to cleanup.
+    delay: 0
     commands:
       player:
         # Runs for every participating player (only hunters and speedrunners, not including NONE)
@@ -295,8 +297,11 @@ custom-modifiers:
 
 
 # Settings that modify the game.
-# These can be toggled in-game with the 'modifiers' subcommand.
+# These can be toggled in-game with the 'configuration' subcommand.
 settings:
+  # Message parser used for messages.yml: minimessage or legacy.
+  text-format: minimessage
+
   # Game boosts that skew world generation and loot odds in the speedrunners'
   # favor, without touching any actual gameplay rules.
   game-boosts:
@@ -475,11 +480,11 @@ settings:
     # When true, deceased hunters wait before respawning instead of respawning
     # immediately.
     # Default: false
-    enabled: false
+    enabled: true
     # Seconds a hunter must wait before respawning after death.
     # Set to -1 for no delay (respawn immediately).
     # Default: 60
-    delay-seconds: 60
+    delay-seconds: 15
     # Lives per role. A player is eliminated when their lives run out.
     # Set to -1 for unlimited lives.
     # Default: one speedrunner life, unlimited hunter lives.
@@ -514,6 +519,20 @@ settings:
     # Default: true
     none-players:
       enabled: true
+
+  # Announces each participant's role when a match starts, in chat and/or as a
+  # title. Both are toggled independently; when both are off, no announcement
+  # (including sounds) plays.
+  # Default: both enabled
+  announce-roles:
+    chat:
+      enabled: true
+    title:
+      enabled: true
+      # Title timing in seconds.
+      fade-in-seconds: 0.5
+      stay-seconds: 3.0
+      fade-out-seconds: 0.5
 
 # Grid-based single-world manhunt engine.
 # Uses persistent square-spiral cell indexing and teleports participants to
@@ -642,5 +661,20 @@ sounds:
     fail-sound:
       enabled: true
       sound: entity.wither.spawn
+      pitch: 1.0
+      volume: 1.0
+  # Per-role sounds for the start-of-match role announcement. Each participant
+  # hears their own role's sound.
+  announce:
+    # Heard by each hunter when roles are announced.
+    hunter:
+      enabled: true
+      sound: entity.wither.break_block
+      pitch: 1.3
+      volume: 0.8
+    # Heard by each speedrunner when roles are announced.
+    speedrunner:
+      enabled: true
+      sound: block.copper_chest.close
       pitch: 1.0
       volume: 1.0

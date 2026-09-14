@@ -12,7 +12,7 @@
 | `jmanhunt.command.end` | End an active Manhunt match. | OP |
 | `jmanhunt.command.quickstart` | Quick-start a match with auto team assignment. | OP |
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |
-| `jmanhunt.command.modifiers` | Change JManhunt modifiers and settings. | OP |
+| `jmanhunt.command.configuration` | View or change configuration by category. | OP |
 | `jmanhunt.command.worldengine` | View world-engine settings. | OP |
 
 ## Role Permissions

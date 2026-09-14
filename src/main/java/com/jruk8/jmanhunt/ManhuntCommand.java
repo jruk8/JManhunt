@@ -7,6 +7,7 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -29,7 +30,17 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private static final Set<String> RESTART_REQUIRED_SETTINGS = Set.of(
             "world-engine.enabled",
             "settings.game-boosts.nether-structures.enabled",
-            "settings.game-boosts.overworld-structures.enabled"
+            "settings.game-boosts.overworld-structures.enabled",
+            "database.enabled",
+            "database.type",
+            "database.sqlite.file",
+            "database.postgresql.host",
+            "database.postgresql.port",
+            "database.postgresql.database",
+            "database.postgresql.username",
+            "database.postgresql.password",
+            "database.postgresql.ssl",
+            "database.pool-size"
     );
 
     /**
@@ -46,7 +57,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             
             <gray> » Challenges status: [{status}<gray>]</gray>
             
-            <dark_gray>Looking for modifiers instead? Try <white>/mh modifiers <setting> <value></white>.</dark_gray>
+            <gray>Looking for settings instead? Try <white>/mh configuration <category> <key> <value></white>.</gray>
             """;
     static final String CHALLENGES_URL = "https://builtbybit.com/resources/jmanhunt-challenges.121574/";
     private static final String CHALLENGES_LINK_TOKEN = "{link}";
@@ -77,7 +88,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
-        if (!sender.hasPermission("jmanhunt.command." + sub)) return message(sender, "command.no-permission");
+        // The config alias shares the configuration permission node; every
+        // other subcommand keeps its own jmanhunt.command.<sub> node.
+        String node = sub.equals("config") ? "configuration" : sub;
+        if (!sender.hasPermission("jmanhunt.command." + node)) return message(sender, "command.no-permission");
         return switch (sub) {
             case "help" -> help(sender);
             case "status" -> status(sender);
@@ -85,7 +99,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "setplayer" -> setPlayer(sender, args);
             case "start" -> start(sender);
             case "end" -> end(sender);
-            case "modifiers" -> modifiers(sender, args);
+            case "configuration", "config" -> configuration(sender, args);
             case "worldengine" -> worldEngine(sender, args);
             case "quickstart", "qs" -> quickStart(sender, args);
             case "reload" -> reload(sender);
@@ -99,7 +113,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt setplayer <selector> <hunter|speedrunner|afk|none>", "assign roles"},
                 {"/manhunt start", "start a match"}, {"/manhunt end", "end a match"},
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
-                {"/manhunt modifiers <setting> <value>", "view or change a setting"},
+                {"/manhunt configuration <category> <key...> <value>", "view or change a setting"},
                 {"/manhunt worldengine", "set lobby or teleport players"},
                 {"/manhunt challenges", "show Challenges addon info"},
                 {"/manhunt reload", "reload files"}};
@@ -253,27 +267,79 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         game.end(); return true;
     }
 
-    private boolean modifiers(CommandSender sender, String[] args) {
-        if (args.length == 1) {
-            for (String setting : game.settingNames()) {
-                sender.sendMessage(messages.component("manhunt.setting-entry",
-                        Map.of("setting", setting, "value", String.valueOf(game.getSettingValue(setting)))));
-            }
+    /**
+     * Views or changes configuration by category: /manhunt configuration
+     * &lt;category&gt; &lt;path...&gt; [value]. Every argument drills one level
+     * deeper and tab completion only suggests the children of the current
+     * level. A path resolving to a section lists its settings; a path
+     * resolving to an editable leaf views it, or sets it when a value follows.
+     */
+    private boolean configuration(CommandSender sender, String[] args) {
+        List<String> segments = new ArrayList<>();
+        for (int i = 1; i < args.length; i++) {
+            segments.add(args[i]);
+        }
+        if (segments.isEmpty()) {
+            listEntries(sender, "config", drillCategories(plugin.getConfig()));
+            neutralSound(sender);
             return true;
         }
-        String setting = resolveSetting(args[1]);
-        if (setting == null) return message(sender, "manhunt.setting-invalid");
+        DrillResolve resolved = resolveDrill(plugin.getConfig(), game.settingNames(), segments);
+        if (resolved == null) {
+            return message(sender, "manhunt.setting-invalid");
+        }
+        if (resolved.leaf()) {
+            return showOrUpdateSetting(sender, resolved.path(), resolved.remainder());
+        }
+        if (!resolved.section() || !resolved.remainder().isEmpty()) {
+            return message(sender, "command.invalid");
+        }
+        List<String> entries = new ArrayList<>();
+        for (String setting : game.settingNames()) {
+            if (isUnder(setting, resolved.path())) {
+                entries.add(setting + ": " + game.getSettingValue(setting));
+            }
+        }
+        listEntries(sender, resolved.path(), entries);
+        neutralSound(sender);
+        return true;
+    }
+
+    /**
+     * Lists entries dir-style under one header, so browsing never spams one
+     * prefixed line per entry.
+     */
+    private void listEntries(CommandSender sender, String key, List<String> names) {
+        String template = messages.string("manhunt.configuration-entry", "\n<white>» <gray>{key}</gray></white>");
+        message(sender, "manhunt.configuration-list",
+                Map.of("key", key, "entries", renderEntries(names, template)));
+    }
+
+    static String renderEntries(List<String> names, String entryTemplate) {
+        StringBuilder out = new StringBuilder();
+        for (String name : names) {
+            out.append(entryTemplate.replace("{key}", name));
+        }
+        return out.toString();
+    }
+
+    private boolean showOrUpdateSetting(CommandSender sender, String setting, List<String> values) {
         Object oldValue = game.getSettingValue(setting);
-        if (args.length < 3) {
+        if (values.isEmpty()) {
             message(sender, "manhunt.setting-status",
                     Map.of("setting", setting, "value", String.valueOf(oldValue)));
+            neutralSound(sender);
             return true;
         }
+        if (values.size() > 1) {
+            return message(sender, "command.invalid");
+        }
+        String raw = values.get(0);
         boolean isBoolean = oldValue instanceof Boolean;
-        if (isBoolean && !args[2].equalsIgnoreCase("true") && !args[2].equalsIgnoreCase("false")) {
+        if (isBoolean && !raw.equalsIgnoreCase("true") && !raw.equalsIgnoreCase("false")) {
             return message(sender, "manhunt.setting-invalid-value");
         }
-        if (!game.setSetting(setting, args[2])) {
+        if (!game.setSetting(setting, raw)) {
             return message(sender, "manhunt.setting-invalid-number");
         }
         Object newValue = game.getSettingValue(setting);
@@ -284,6 +350,126 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         neutralSound(sender);
         return true;
+    }
+
+    /**
+     * Result of resolving drill-down path segments against the live config:
+     * the canonical path, whether it is an editable leaf or a section, and
+     * any segments left over after the longest resolvable prefix.
+     */
+    record DrillResolve(String path, boolean leaf, boolean section, List<String> remainder) {
+    }
+
+    static DrillResolve resolveDrill(
+            ConfigurationSection root, Set<String> editable, List<String> segments) {
+        ConfigurationSection current = root;
+        StringBuilder path = new StringBuilder();
+        int consumed = 0;
+        for (String segment : segments) {
+            String child = findChild(current, segment);
+            if (child == null) {
+                break;
+            }
+            if (!path.isEmpty()) {
+                path.append('.');
+            }
+            path.append(child);
+            consumed++;
+            ConfigurationSection next = current.getConfigurationSection(child);
+            if (next == null) {
+                break;
+            }
+            current = next;
+        }
+        if (consumed == 0) {
+            return null;
+        }
+        String canonical = path.toString();
+        boolean section = root.getConfigurationSection(canonical) != null;
+        return new DrillResolve(canonical, isEditable(editable, canonical), section,
+                List.copyOf(segments.subList(consumed, segments.size())));
+    }
+
+    private static String findChild(ConfigurationSection section, String segment) {
+        for (String key : section.getKeys(false)) {
+            if (key.equalsIgnoreCase(segment)) {
+                return key;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isEditable(Set<String> editable, String path) {
+        for (String name : editable) {
+            if (name.equalsIgnoreCase(path)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isUnder(String setting, String path) {
+        return setting.length() > path.length()
+                && setting.regionMatches(true, 0, path, 0, path.length())
+                && setting.charAt(path.length()) == '.';
+    }
+
+    /** Categories are the top-level config sections, excluding the version key. */
+    static List<String> drillCategories(ConfigurationSection root) {
+        List<String> categories = new ArrayList<>();
+        for (String key : root.getKeys(false)) {
+            if (!key.equals("config-version") && root.getConfigurationSection(key) != null) {
+                categories.add(key);
+            }
+        }
+        categories.sort(String.CASE_INSENSITIVE_ORDER);
+        return categories;
+    }
+
+    /**
+     * Next-level completion options for the given resolved prefix: children
+     * that are editable themselves or lead to an editable setting, so
+     * completion never suggests dead ends.
+     */
+    static List<String> drillChildren(
+            ConfigurationSection root, Set<String> editable, List<String> prefix) {
+        ConfigurationSection current = root;
+        StringBuilder path = new StringBuilder();
+        for (String segment : prefix) {
+            String child = findChild(current, segment);
+            if (child == null) {
+                return List.of();
+            }
+            if (!path.isEmpty()) {
+                path.append('.');
+            }
+            path.append(child);
+            ConfigurationSection next = current.getConfigurationSection(child);
+            if (next == null) {
+                return List.of();
+            }
+            current = next;
+        }
+        String base = path.toString();
+        List<String> options = new ArrayList<>();
+        for (String key : current.getKeys(false)) {
+            String full = base.isEmpty() ? key : base + "." + key;
+            if (isEditable(editable, full) || leadsToEditable(editable, full)) {
+                options.add(key);
+            }
+        }
+        options.sort(String.CASE_INSENSITIVE_ORDER);
+        return options;
+    }
+
+    private static boolean leadsToEditable(Set<String> editable, String path) {
+        String prefix = path + ".";
+        for (String name : editable) {
+            if (name.length() > path.length() && name.regionMatches(true, 0, prefix, 0, prefix.length())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean worldEngine(CommandSender sender, String[] args) {
@@ -395,22 +581,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) return partial(args[0], List.of("help", "status", "challenges", "setplayer",
-                "start", "end", "modifiers", "worldengine", "quickstart", "qs", "reload"));
-        if (args.length == 2 && args[0].equalsIgnoreCase("modifiers"))
-            return partial(args[1], new ArrayList<>(game.settingNames()));
-        if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {
-            String setting = resolveSetting(args[1]);
-            if (setting == null) return List.of();
-            Object current = game.getSettingValue(setting);
-            if (current instanceof Boolean) {
-                return partial(args[2], List.of("true", "false"));
-            }
-            // Tab-complete the default value from the bundled default config.
-            Object defaultValue = defaultConfigValue(setting);
-            if (defaultValue != null) {
-                return partial(args[2], List.of(String.valueOf(defaultValue)));
-            }
-            return List.of();
+                "start", "end", "configuration", "config", "worldengine", "quickstart", "qs", "reload"));
+        if (args.length >= 2
+                && (args[0].equalsIgnoreCase("configuration") || args[0].equalsIgnoreCase("config"))) {
+            return completeDrill(args);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("worldengine"))
             return partial(args[1], List.of("setlobby", "lobby"));
@@ -436,17 +610,33 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Resolves a case-insensitive setting name to its real config path
-     * (e.g. "settings.win-conditions.survivetime.time" matches
-     * "settings.win-conditions.surviveTime.time"). Returns null if no
-     * setting matches.
+     * Completes one drill-down argument: categories at the first position,
+     * value candidates after an editable leaf, otherwise only the children of
+     * the resolved prefix.
      */
-    private String resolveSetting(String raw) {
-        String normalized = raw.toLowerCase(Locale.ROOT);
-        for (String name : game.settingNames()) {
-            if (name.toLowerCase(Locale.ROOT).equals(normalized)) return name;
+    private List<String> completeDrill(String[] args) {
+        List<String> prefix = new ArrayList<>();
+        for (int i = 1; i < args.length - 1; i++) {
+            prefix.add(args[i]);
         }
-        return null;
+        String completing = args[args.length - 1];
+        if (prefix.isEmpty()) {
+            return partial(completing, drillCategories(plugin.getConfig()));
+        }
+        DrillResolve resolved = resolveDrill(plugin.getConfig(), game.settingNames(), prefix);
+        if (resolved != null && resolved.leaf() && resolved.remainder().isEmpty()) {
+            Object current = game.getSettingValue(resolved.path());
+            if (current instanceof Boolean) {
+                return partial(completing, List.of("true", "false"));
+            }
+            // Tab-complete the default value from the bundled default config.
+            Object defaultValue = defaultConfigValue(resolved.path());
+            if (defaultValue != null) {
+                return partial(completing, List.of(String.valueOf(defaultValue)));
+            }
+            return List.of();
+        }
+        return partial(completing, drillChildren(plugin.getConfig(), game.settingNames(), prefix));
     }
 
     private List<String> partial(String value, List<String> options) {

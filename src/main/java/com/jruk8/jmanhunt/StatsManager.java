@@ -145,7 +145,7 @@ public final class StatsManager {
     }
 
     public void showStats(Role winner) {
-        for (String statistic : plugin.getConfig().getStringList("end-statistics")) {
+        for (String statistic : plugin.getConfig().getStringList("match.end-statistics")) {
             if (statistic.equalsIgnoreCase("PROGRESSION")) updateProgression();
             var ranked = stats.values().stream()
                     .sorted(Comparator.comparingDouble((Stats stat) -> stat.value(statistic)).reversed())

@@ -80,14 +80,44 @@ then continue waiting out this delay on top of it.
 `delay-seconds` sets the head start length in seconds. Values of `0` or below
 disable the delay entirely.
 
+# Role Announcement
+
+Under `settings.announce-roles`, every participant is told their own role the
+moment a match starts, in chat and as a title. Both are toggled independently:
+
+```yaml
+settings:
+  announce-roles:
+    chat:
+      enabled: true
+    title:
+      enabled: true
+      fade-in-seconds: 0.5
+      stay-seconds: 3.0
+      fade-out-seconds: 0.5
+```
+
+The announcement runs inside match start, before the pre-start window opens,
+so players always learn their roles before anything can happen, even when
+[Start on Speedrunner Damage](#start-on-speedrunner-damage) is enabled.
+Players without a participating role are skipped.
+
+The title shows `manhunt.role-announce-title` (`Role: {role}` by default) with a
+per-role subtitle from `messages.yml`, and follows the configured fade, stay,
+and fade-out times. Each role also hears its own sound
+(`sounds.announce.hunter` and `sounds.announce.speedrunner`), toggled per role
+like any other sound. When both chat and title are disabled, no announcement
+plays at all.
+
 # Match End Delay
 
-Under `game-end-delay`, you can configure how long the plugin waits between
+Under `match.end-delay`, you can configure how long the plugin waits between
 the win announcement and the final cleanup (running end commands, returning
 players to the lobby, and deactivating the match):
 
 ```yaml
-game-end-delay: 10.0        # in seconds
+match:
+  end-delay: 10.0        # in seconds
 ```
 
 Match statistics are broadcast halfway through this delay. Interval modifiers
@@ -97,11 +127,12 @@ negative values are treated as zero.
 
 # Start Reminders
 
-Under `start-reminder-interval`, you can configure how often players are
+Under `match.start-reminder-interval`, you can configure how often players are
 reminded while waiting for the first speedrunner hit:
 
 ```yaml
-start-reminder-interval: 10.0        # in seconds
+match:
+  start-reminder-interval: 10.0        # in seconds
 ```
 
 For finite pre-start timeouts this value is not used directly. Instead,
@@ -113,17 +144,18 @@ entirely while still waiting.
 
 # Disconnect Handling
 
-Under `disconnect-handling`, you can configure what happens when a participant
+Under `match.disconnect-handling`, you can configure what happens when a participant
 disconnects mid-match, per role:
 
 ```yaml
-disconnect-handling:
-  speedrunner:
-    reconnect-grace-seconds: 60
-    max-strikes: 3
-  hunter:
-    reconnect-grace-seconds: 60
-    max-strikes: 3
+match:
+  disconnect-handling:
+    speedrunner:
+      reconnect-grace-seconds: 60
+      max-strikes: 3
+    hunter:
+      reconnect-grace-seconds: 60
+      max-strikes: 3
 ```
 
 `reconnect-grace-seconds` is how long a disconnected player has to rejoin

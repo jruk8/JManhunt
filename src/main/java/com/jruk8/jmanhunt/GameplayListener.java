@@ -397,6 +397,10 @@ public final class GameplayListener implements Listener {
     @EventHandler public void onAdvancement(org.bukkit.event.player.PlayerAdvancementDoneEvent event) {
         Player player = event.getPlayer();
         if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
+        // Recipe book unlocks are advancement events too, but they are not
+        // real advancements: neither triggers nor the advancement win
+        // condition should react to them.
+        if (event.getAdvancement().getKey().getKey().startsWith("recipes/")) return;
         game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player);
         if (winConditionEngine.hasReachAdvancement(player)) {
             game.finishLater(Role.SPEEDRUNNER);
@@ -405,8 +409,8 @@ public final class GameplayListener implements Listener {
 
     private void handleDisconnect(Player player, Role role) {
         String roleKey = role == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
-        int maxStrikes = config.getInt("disconnect-handling." + roleKey + ".max-strikes", 3);
-        int graceSeconds = Math.max(0, config.getInt("disconnect-handling." + roleKey + ".reconnect-grace-seconds", 60));
+        int maxStrikes = config.getInt("match.disconnect-handling." + roleKey + ".max-strikes", 3);
+        int graceSeconds = Math.max(0, config.getInt("match.disconnect-handling." + roleKey + ".reconnect-grace-seconds", 60));
         SpeedrunnerDisconnectTracker.Decision decision =
                 disconnects.registerDisconnect(player.getUniqueId(), game.matchId(), maxStrikes);
         cancelDisconnectTask(player.getUniqueId());

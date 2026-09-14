@@ -25,7 +25,7 @@ Under `custom-modifiers.<name>`, the `enabled` flag decides whether the
 bundle runs at all. Toggle a bundle in-game with:
 
 ```text
-/manhunt modifiers custom-modifiers.everyone-gets-beef true
+/manhunt configuration custom-modifiers everyone-gets-beef enabled true
 ```
 
 You can also flip `enabled` in `config.yml` directly, then run
@@ -83,7 +83,7 @@ Under `custom-modifiers.<name>.runs-on`, you can configure when the commands
 | `ON_END_ENTER` | When a participating player enters the End (once per player per match) |
 | `ON_FIRST_NETHER_ENTER` | When the first participating player enters the Nether (once per match) |
 | `ON_FIRST_END_ENTER` | When the first participating player enters the End (once per match) |
-| `ON_EVERY_ADVANCEMENT` | When a participating player earns any advancement |
+| `ON_EVERY_ADVANCEMENT` | When a participating player earns any advancement (recipe book unlocks excluded) |
 | `ON_RESPAWN` | When a player respawns (only the executing player) |
 | `ON_SPEEDRUNNER_RESPAWN` | When a speedrunner respawns (only the executing player) |
 | `ON_HUNTER_RESPAWN` | When a hunter respawns (only the executing player) |
@@ -124,6 +124,22 @@ speedrunner hits a hunter, or when the match force-starts), not when
 The `interval` value supports decimals and is rounded to the nearest tick (1
 tick = 0.05 seconds). Values between `0` and `0.05` execute every tick. Set to
 `0` or `0.05` for every-tick execution. Negative values disable the modifier.
+
+## Command Delay
+
+Under `custom-modifiers.<name>.delay`, you can delay the modifier's commands
+by a number of ticks after they trigger:
+
+```yaml
+custom-modifiers:
+  everyone-gets-beef:
+    delay: 5
+```
+
+The delay applies to start, interval, and event triggers, but never to
+cleanup commands. Player positions and roles resolve when the delayed commands
+fire, not when they trigger. If the match ends before the delay elapses, the
+commands are dropped.
 
 ## Placeholders in Commands
 

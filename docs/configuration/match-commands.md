@@ -4,7 +4,7 @@
 optional command lists, all configured in `config.yml` under
 `gamestate-commands`. Everything here is disabled by default except
 `default-commands`. Like custom modifiers, these can be browsed and toggled
-in-game with `/manhunt modifiers`.
+in-game with `/manhunt configuration`.
 
 All command examples are the default config settings. Some defaults may be outdated
 (typically not), in

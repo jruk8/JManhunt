@@ -12,7 +12,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt end`                                    | Ends the active match; hunters win. | `jmanhunt.command.end` |
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
 | `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
-| `/manhunt modifiers [setting] [value]`            | Lists, views, or changes built-in actions and settings. | `jmanhunt.command.modifiers` |
+| `/manhunt configuration <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.configuration` |
 | `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` |
 | `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` |
 | `/manhunt reload`                                 | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
@@ -53,26 +53,36 @@ autostart messages are displayed.
 
 ## Editing Settings In-Game
 
-`/manhunt modifiers` can browse and change scalar settings in-game. Boolean
-toggles accept `true` or `false`:
+`/manhunt configuration` (alias `/mh config`) browses and changes scalar
+settings in-game, one category at a time. Each argument drills one level
+deeper, and tab completion only suggests the children of the current level.
+Boolean toggles accept `true` or `false`:
 
 ```text
-/manhunt modifiers settings.start-delay.enabled true
+/manhunt configuration settings start-delay enabled true
 ```
 
 Numerical settings (ints, floats, doubles) accept their numeric value:
 
 ```text
-/manhunt modifiers settings.compass.refresh-interval 5.0
-/manhunt modifiers settings.win-conditions.surviveTime.time 1800.0
-/manhunt modifiers settings.world-engine.cell-size 20000
+/manhunt configuration settings compass refresh-interval 5.0
+/manhunt configuration settings win-conditions surviveTime time 1800.0
+/manhunt configuration world-engine cell-size 20000
 ```
 
 Strings and enum-like values are stored verbatim:
 
 ```text
-/manhunt modifiers settings.start-on-speedrunner-damage.on-expire FORCE_START
-/manhunt modifiers settings.win-conditions.acquireItem.item minecraft:diamond
+/manhunt configuration settings start-on-speedrunner-damage on-expire FORCE_START
+/manhunt configuration settings win-conditions acquireItem item minecraft:diamond
+```
+
+With no category, the command lists categories; with a section path, it lists
+that section's settings:
+
+```text
+/manhunt configuration
+/manhunt configuration settings compass
 ```
 
 Setting names are matched case-insensitively. When tab-completing a value,
@@ -96,7 +106,7 @@ ends, either from the console or once for each participating player.
 To enable a modifier, use its configuration name:
 
 ```text
-/manhunt modifiers custom-modifiers.everyone-gets-beef true
+/manhunt configuration custom-modifiers everyone-gets-beef enabled true
 ```
 
 The example modifier in the default config gives players food and applies

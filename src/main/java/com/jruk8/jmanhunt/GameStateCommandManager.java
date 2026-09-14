@@ -13,6 +13,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 /** Executes built-in and configured actions at match state transitions. */
 public final class GameStateCommandManager {
@@ -21,6 +22,7 @@ public final class GameStateCommandManager {
     private final ConfigService configService;
     private final LobbyTeleporter lobbyTeleporter;
     private final List<BukkitTask> intervalTasks = new ArrayList<>();
+    private final List<BukkitTask> pendingDelayed = new ArrayList<>();
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
                                    ConfigService configService, LobbyTeleporter lobbyTeleporter) {
@@ -31,13 +33,23 @@ public final class GameStateCommandManager {
     }
 
     public void runStart() {
+        cancelPendingDelayed();
         runDefault("start");
         runConfigured("start");
     }
 
     public void runEnd() {
+        cancelPendingDelayed();
         runConfigured("end");
         runDefault("end");
+    }
+
+    /** Drops delayed modifier commands that never fired, e.g. at match end. */
+    private void cancelPendingDelayed() {
+        for (BukkitTask task : pendingDelayed) {
+            task.cancel();
+        }
+        pendingDelayed.clear();
     }
 
     public void runConsoleCleanup() {
@@ -102,13 +114,37 @@ public final class GameStateCommandManager {
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
             if (!runsOnContains(name, event)) continue;
-            String modifier = "custom-modifiers." + name + ".commands.";
-            runCommands(modifier + "console", null);
-            runCommands(modifier + "player", player);
-            String roleCommands = playerStates.role(player) == Role.HUNTER
-                    ? "hunter" : "speedrunner";
-            runCommands(modifier + roleCommands, player);
+            runModifierWithDelay(name, () -> {
+                String modifier = "custom-modifiers." + name + ".commands.";
+                runCommands(modifier + "console", null);
+                runCommands(modifier + "player", player);
+                String roleCommands = playerStates.role(player) == Role.HUNTER
+                        ? "hunter" : "speedrunner";
+                runCommands(modifier + roleCommands, player);
+            });
         }
+    }
+
+    /**
+     * Runs a modifier's trigger dispatch after its configured {@code delay}
+     * in ticks. Positions and roles resolve when delayed commands fire, not
+     * when they trigger. Cleanup commands never go through here.
+     */
+    private void runModifierWithDelay(String name, Runnable dispatch) {
+        long delay = Math.max(0L, plugin.getConfig().getLong("custom-modifiers." + name + ".delay", 0L));
+        if (delay <= 0L) {
+            dispatch.run();
+            return;
+        }
+        AtomicReference<BukkitTask> ref = new AtomicReference<>();
+        ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            try {
+                dispatch.run();
+            } finally {
+                pendingDelayed.remove(ref.get());
+            }
+        }, delay));
+        pendingDelayed.add(ref.get());
     }
 
     /**
@@ -141,14 +177,16 @@ public final class GameStateCommandManager {
     }
 
     private void runModifierCommands(String name) {
-        String modifier = "custom-modifiers." + name + ".commands.";
-        runCommands(modifier + "console", null);
-        for (Player player : participatingPlayers()) {
-            runCommands(modifier + "player", player);
-            String roleCommands = playerStates.role(player) == Role.HUNTER
-                    ? "hunter" : "speedrunner";
-            runCommands(modifier + roleCommands, player);
-        }
+        runModifierWithDelay(name, () -> {
+            String modifier = "custom-modifiers." + name + ".commands.";
+            runCommands(modifier + "console", null);
+            for (Player player : participatingPlayers()) {
+                runCommands(modifier + "player", player);
+                String roleCommands = playerStates.role(player) == Role.HUNTER
+                        ? "hunter" : "speedrunner";
+                runCommands(modifier + roleCommands, player);
+            }
+        });
     }
 
     private void runDefault(String phase) {

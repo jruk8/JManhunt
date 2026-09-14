@@ -112,8 +112,20 @@ public final class ConfigService {
 
     private Set<String> extraModifierNames() {
         Set<String> names = new TreeSet<>();
-        collectExtraModifierNames(plugin.getConfig().getConfigurationSection("settings"), "", "settings.", names);
-        collectExtraModifierNames(plugin.getConfig().getConfigurationSection("world-engine"), "", "world-engine.", names);
+        var root = plugin.getConfig();
+        for (String key : root.getKeys(false)) {
+            // config-version is not editable and custom-modifiers internals
+            // stay .enabled-only (see settingNames above).
+            if (key.equals("config-version") || key.equals("custom-modifiers")) {
+                continue;
+            }
+            ConfigurationSection child = root.getConfigurationSection(key);
+            if (child != null) {
+                collectExtraModifierNames(child, "", key + ".", names);
+            } else {
+                names.add(key);
+            }
+        }
         return names;
     }
 

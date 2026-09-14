@@ -72,6 +72,13 @@ public final class GameManager {
         // assign events
         configService.onChange("settings.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
         configService.onChange("world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
+        // Structure datapacks refresh exactly like the world-engine datapack:
+        // toggling in-game applies or removes the files immediately instead of
+        // waiting for a restart.
+        configService.onChange("settings.game-boosts.nether-structures.enabled",
+                (oldValue, newValue) -> worldEngine.onReload());
+        configService.onChange("settings.game-boosts.overworld-structures.enabled",
+                (oldValue, newValue) -> worldEngine.onReload());
     }
 
     // TODO: push players to a match container, so that new players cannot join the match mid-game.
@@ -170,6 +177,7 @@ public final class GameManager {
             }, ticks);
         }
         messages.broadcast("manhunt.start-success");
+        announceRoles(players);
         gameStartListeners.forEach(Runnable::run);
         Bukkit.getPluginManager().callEvent(new JMatchStartEvent(matchId));
         sounds.playNeutralSound();
@@ -181,6 +189,48 @@ public final class GameManager {
         if (getSetting("settings.start-on-speedrunner-damage.enabled")) scheduleWaitingReminder();
         else beginGame();
         return true;
+    }
+
+    /**
+     * Tells each participant their own role when a match starts. This runs
+     * inside {@link #start()}, before the pre-start window opens, so it always
+     * plays before any damage can occur. Non-participants are skipped. Sounds
+     * play as part of the announcement: when both chat and title are disabled,
+     * nothing plays at all.
+     */
+    private void announceRoles(List<Player> players) {
+        boolean chat = configService.getBoolean("settings.announce-roles.chat.enabled", true);
+        boolean title = configService.getBoolean("settings.announce-roles.title.enabled", true);
+        if (!chat && !title) {
+            return;
+        }
+        long fadeIn = toMillis(plugin.getConfig().getDouble("settings.announce-roles.title.fade-in-seconds", 0.5));
+        long stay = toMillis(plugin.getConfig().getDouble("settings.announce-roles.title.stay-seconds", 3.0));
+        long fadeOut = toMillis(plugin.getConfig().getDouble("settings.announce-roles.title.fade-out-seconds", 0.5));
+        Title.Times times = Title.Times.times(
+                Duration.ofMillis(fadeIn), Duration.ofMillis(stay), Duration.ofMillis(fadeOut));
+        for (Player player : players) {
+            Role playerRole = role(player);
+            if (!playerRole.isParticipant()) {
+                continue;
+            }
+            Map<String, String> values = Map.of("role", playerRole.name());
+            if (chat) {
+                player.sendMessage(messages.component("manhunt.role-announce-chat", values));
+            }
+            if (title) {
+                String subtitleKey = playerRole == Role.HUNTER
+                        ? "manhunt.role-announce-subtitle-hunter" : "manhunt.role-announce-subtitle-speedrunner";
+                player.showTitle(Title.title(
+                        messages.component("manhunt.role-announce-title", values),
+                        messages.component(subtitleKey), times));
+            }
+            sounds.playSound(player, playerRole == Role.HUNTER ? "announce.hunter" : "announce.speedrunner");
+        }
+    }
+
+    private static long toMillis(double seconds) {
+        return Math.max(0L, Math.round(seconds * 1000.0));
     }
 
     public void finish(Role winner) {
@@ -217,7 +267,7 @@ public final class GameManager {
         stateCommands.runConsoleCleanup();
         stateCommands.runPlayerCleanup();
 
-        long delay = Math.max(0L, Math.round(plugin.getConfig().getDouble("game-end-delay", 10.0) * 20.0));
+        long delay = Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             stateCommands.runEnd();
@@ -344,7 +394,7 @@ public final class GameManager {
         } else {
             // Indefinite waiting (-1): use the configured reminder interval and
             // never schedule an expiry.
-            double interval = configService.getFloat("start-reminder-interval", 10.0f);
+            double interval = configService.getFloat("match.start-reminder-interval", 10.0f);
             if (interval == -1.0) return;
             long delay = Math.max(1L, Math.round(interval * 20.0));
             messages.broadcast("manhunt.waiting-for-damage-indefinite", Map.of());

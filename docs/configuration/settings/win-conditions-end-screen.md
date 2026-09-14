@@ -43,11 +43,12 @@ advancement named in `advancement`, given as a namespaced key (e.g.
 
 # End-Screen Statistics
 
-Under `end-statistics`, you can configure which match statistics are broadcast
+Under `match.end-statistics`, you can configure which match statistics are broadcast
 after a match ends, and in what order:
 
 ```yaml
-end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
+match:
+  end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
 ```
 
 Available values are `DAMAGE_DEALT`, `HUNTER_FINAL_KILLS`,

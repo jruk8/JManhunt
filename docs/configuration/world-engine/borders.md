@@ -2,7 +2,10 @@
 
 Under `world-engine.world-border`, you can enable a world border that
 confines players to their assigned cell. This prevents players from
-wandering into unused or already-used cells.
+wandering into unused or already-used cells. When the border is disabled, or
+when the world engine is disabled while the border is on, every touched world
+is restored to the vanilla defaults (center 0, 0 and size 59999968) at match
+start and end, so no shrunken border survives into the next match.
 
 ```yaml
 world-engine:

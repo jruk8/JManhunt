@@ -40,8 +40,8 @@ permissions:
   jmanhunt.command.reload:
     description: Reload JManhunt configuration.
     default: op
-  jmanhunt.command.modifiers:
-    description: Change JManhunt modifiers and settings.
+  jmanhunt.command.configuration:
+    description: View or change configuration by category.
     default: op
   jmanhunt.command.worldengine:
     description: View world-engine settings.

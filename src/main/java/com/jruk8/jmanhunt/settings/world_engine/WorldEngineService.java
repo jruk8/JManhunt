@@ -17,6 +17,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -39,6 +40,11 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private CellOrigin startBorderOrigin;
     private WorldEngineConfig startBorderConfig;
     private BukkitTask startBorderTask;
+
+    // Names of the worlds whose borders this match touched, so they can be
+    // restored to vanilla defaults even when the engine or the border itself
+    // is disabled afterwards.
+    private final List<String> borderedWorldNames = new ArrayList<>();
 
     // Tracks whether a new cell has been fetched for the current intermission,
     // so on-fetch-new-cell commands only run once per intermission.
@@ -129,6 +135,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     }
 
     public void onMatchEnd(List<Player> participants) {
+        resetTrackedBorders();
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return;
 
@@ -295,8 +302,11 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
      */
     private void setWorldBorder(World overworld, WorldEngineConfig config, CellOrigin origin) {
         if (!config.worldBorderEnabled()) {
+            // A border from an earlier match must not survive being disabled.
+            resetTrackedBorders();
             return;
         }
+        trackBorderedWorlds(overworld);
 
         // Check if start-border should be used (requires start-on-speedrunner-damage enabled).
         boolean startOnDamage = configService.getBoolean("settings.start-on-speedrunner-damage.enabled", false);
@@ -387,6 +397,34 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private void clearWorldBorder(World world) {
         WorldBorder border = world.getWorldBorder();
         border.reset();
+    }
+
+    private void trackBorderedWorlds(World overworld) {
+        trackBorderedWorld(overworld);
+        World nether = getNetherWorld(overworld);
+        if (nether != null) {
+            trackBorderedWorld(nether);
+        }
+    }
+
+    private void trackBorderedWorld(World world) {
+        if (!borderedWorldNames.contains(world.getName())) {
+            borderedWorldNames.add(world.getName());
+        }
+    }
+
+    /**
+     * Restores vanilla border defaults (center 0, 0, size 59999968) on every
+     * world bordered during the match.
+     */
+    private void resetTrackedBorders() {
+        for (String name : borderedWorldNames) {
+            World world = Bukkit.getWorld(name);
+            if (world != null) {
+                world.getWorldBorder().reset();
+            }
+        }
+        borderedWorldNames.clear();
     }
 
     private World getNetherWorld(World overworld) {

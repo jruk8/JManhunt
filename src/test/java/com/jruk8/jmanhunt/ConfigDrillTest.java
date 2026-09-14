@@ -1,0 +1,138 @@
+package com.jruk8.jmanhunt;
+
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Tests for the /manhunt configuration drill-down resolution. YamlConfiguration
+ * is a pure YAML wrapper, so these tests run without a Bukkit server.
+ */
+class ConfigDrillTest {
+
+    private static YamlConfiguration fixture() {
+        YamlConfiguration root = new YamlConfiguration();
+        root.set("settings.compass.given-to.hunters", true);
+        root.set("settings.compass.given-to.speedrunners", false);
+        root.set("settings.compass.tracking-distance", -1.0);
+        root.set("settings.autostart.enabled", false);
+        root.set("match.end-delay", 10.0);
+        root.set("config-version", 3);
+        return root;
+    }
+
+    private static Set<String> editable() {
+        return Set.of(
+                "settings.compass.given-to.hunters",
+                "settings.compass.given-to.speedrunners",
+                "settings.autostart.enabled",
+                "match.end-delay");
+    }
+
+    @Test
+    void fullLeafPathResolvesWithEmptyRemainder() {
+        ManhuntCommand.DrillResolve resolved = ManhuntCommand.resolveDrill(
+                fixture(), editable(), List.of("settings", "compass", "given-to", "hunters"));
+
+        assertEquals("settings.compass.given-to.hunters", resolved.path());
+        assertTrue(resolved.leaf());
+        assertTrue(resolved.remainder().isEmpty());
+    }
+
+    @Test
+    void trailingValueStaysAsRemainder() {
+        ManhuntCommand.DrillResolve resolved = ManhuntCommand.resolveDrill(
+                fixture(), editable(), List.of("settings", "compass", "given-to", "hunters", "true"));
+
+        assertEquals("settings.compass.given-to.hunters", resolved.path());
+        assertTrue(resolved.leaf());
+        assertEquals(List.of("true"), resolved.remainder());
+    }
+
+    @Test
+    void sectionResolvesAsSection() {
+        ManhuntCommand.DrillResolve resolved = ManhuntCommand.resolveDrill(
+                fixture(), editable(), List.of("settings", "compass"));
+
+        assertEquals("settings.compass", resolved.path());
+        assertFalse(resolved.leaf());
+        assertTrue(resolved.section());
+    }
+
+    @Test
+    void unknownFirstSegmentResolvesToNull() {
+        assertNull(ManhuntCommand.resolveDrill(fixture(), editable(), List.of("bogus")));
+    }
+
+    @Test
+    void unknownDeeperSegmentLeavesSectionRemainder() {
+        ManhuntCommand.DrillResolve resolved = ManhuntCommand.resolveDrill(
+                fixture(), editable(), List.of("settings", "bogus"));
+
+        assertEquals("settings", resolved.path());
+        assertFalse(resolved.leaf());
+        assertEquals(List.of("bogus"), resolved.remainder());
+    }
+
+    @Test
+    void matchingIsCaseInsensitiveButCanonical() {
+        ManhuntCommand.DrillResolve resolved = ManhuntCommand.resolveDrill(
+                fixture(), editable(), List.of("SETTINGS", "Compass", "Given-To", "HUNTERS"));
+
+        assertEquals("settings.compass.given-to.hunters", resolved.path());
+        assertTrue(resolved.leaf());
+    }
+
+    @Test
+    void categoriesExcludeTheVersionKey() {
+        List<String> categories = ManhuntCommand.drillCategories(fixture());
+
+        assertEquals(List.of("match", "settings"), categories);
+    }
+
+    @Test
+    void childrenOnlyOfferEditablePaths() {
+        YamlConfiguration root = fixture();
+
+        assertEquals(List.of("autostart", "compass"),
+                ManhuntCommand.drillChildren(root, editable(), List.of("settings")));
+        assertEquals(List.of("hunters", "speedrunners"),
+                ManhuntCommand.drillChildren(root, editable(),
+                        List.of("settings", "compass", "given-to")));
+    }
+
+    @Test
+    void childrenHideScalarLeavesOutsideTheEditableSet() {
+        YamlConfiguration root = fixture();
+
+        // tracking-distance exists in config but is not editable, so the
+        // compass level only offers given-to.
+        assertEquals(List.of("given-to"),
+                ManhuntCommand.drillChildren(root, editable(), List.of("settings", "compass")));
+    }
+
+    @Test
+    void childrenOfUnknownPrefixAreEmpty() {
+        assertTrue(ManhuntCommand.drillChildren(fixture(), editable(), List.of("bogus")).isEmpty());
+    }
+
+    @Test
+    void entriesRenderOnePerLine() {
+        assertEquals("\n<white>» <gray>a</gray></white>\n<white>» <gray>b</gray></white>",
+                ManhuntCommand.renderEntries(
+                        List.of("a", "b"), "\n<white>» <gray>{key}</gray></white>"));
+    }
+
+    @Test
+    void emptyEntriesRenderEmpty() {
+        assertEquals("", ManhuntCommand.renderEntries(
+                List.of(), "\n<white>» <gray>{key}</gray></white>"));
+    }
+}

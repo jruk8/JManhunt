@@ -26,6 +26,8 @@ Under `sounds.game`, each entry plays at a fixed moment in the match:
 - `hunter-death`: when a hunter dies, by any means.
 - `win-sound`: when the speedrunners win.
 - `fail-sound`: when the hunters win.
+- `announce.hunter`: heard by each hunter when roles are announced.
+- `announce.speedrunner`: heard by each speedrunner when roles are announced.
 
 Under `sounds.neutral-sound`, the default sound plays for general feedback
 such as match start and command confirmations.
