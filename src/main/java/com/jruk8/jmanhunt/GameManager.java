@@ -71,7 +71,7 @@ public final class GameManager {
 
         // assign events
         configService.onChange("settings.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
-        configService.onChange("settings.world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
+        configService.onChange("world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
     }
 
     // TODO: push players to a match container, so that new players cannot join the match mid-game.
@@ -224,7 +224,7 @@ public final class GameManager {
             List<Player> participants = onlinePlayers.stream().filter(p -> role(p).isParticipant())
                     .map(p -> (Player) p).toList();
             worldEngine.onMatchEnd(participants);
-            if (plugin.getConfig().getBoolean("settings.reset-roles-on-game-end.enabled", false)) {
+            if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
                 playerStates.resetParticipatingRoles();
             }
             active = false; ending = false; gameBegun = false; playerStates.clearMatch();
@@ -374,7 +374,7 @@ public final class GameManager {
                         List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
                                 .map(p -> (Player) p).toList();
                         worldEngine.onMatchEnd(participants);
-                        if (plugin.getConfig().getBoolean("settings.reset-roles-on-game-end.enabled", false)) {
+                        if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
                             playerStates.resetParticipatingRoles();
                         }
                         if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {

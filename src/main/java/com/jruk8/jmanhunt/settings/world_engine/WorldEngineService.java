@@ -194,7 +194,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     @Override
     public void onStart() {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        boolean isDisabled = !configService.getBoolean("settings.world-engine.enabled", false);
+        boolean isDisabled = !configService.getBoolean("world-engine.enabled", false);
         if (isDisabled) {
             strongholdDatapackManager.remove(config.worldName(), false);
             netherStructuresDatapackManager.remove(config.worldName(), false);
@@ -202,9 +202,9 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             return;
         }
         strongholdDatapackManager.apply(config.worldName(), true);
-        boolean netherEnabled = configService.getBoolean("settings.world-engine.nether-structures.enabled", false);
+        boolean netherEnabled = configService.getBoolean("settings.game-boosts.nether-structures.enabled", false);
         netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);
-        boolean overworldEnabled = configService.getBoolean("settings.world-engine.overworld-structures.enabled", false);
+        boolean overworldEnabled = configService.getBoolean("settings.game-boosts.overworld-structures.enabled", false);
         overworldStructuresDatapackManager.apply(config.worldName(), overworldEnabled);
     }
 
@@ -219,12 +219,12 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             overworldStructuresDatapackManager.remove(config.worldName(), false);
             return;
         }
-        boolean netherEnabled = configService.getBoolean("settings.world-engine.nether-structures.enabled", false);
+        boolean netherEnabled = configService.getBoolean("settings.game-boosts.nether-structures.enabled", false);
         netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);
         if (!netherEnabled) {
             netherStructuresDatapackManager.remove(config.worldName(), false);
         }
-        boolean overworldEnabled = configService.getBoolean("settings.world-engine.overworld-structures.enabled", false);
+        boolean overworldEnabled = configService.getBoolean("settings.game-boosts.overworld-structures.enabled", false);
         overworldStructuresDatapackManager.apply(config.worldName(), overworldEnabled);
         if (!overworldEnabled) {
             overworldStructuresDatapackManager.remove(config.worldName(), false);
@@ -248,7 +248,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             int originX = toBlockCoordinate(cell.x() * config.cellSize());
             int originZ = toBlockCoordinate(cell.z() * config.cellSize());
 
-            boolean useAlgo = configService.getBoolean("settings.world-engine.use-spawnpoint-algorithm", true);
+            boolean useAlgo = configService.getBoolean("world-engine.use-spawnpoint-algorithm", true);
             if (useAlgo) {
                 Block centerBlock = world.getHighestBlockAt(originX, originZ);
                 Material type = centerBlock.getType();
@@ -428,7 +428,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
      * as Chunky before players teleport in.
      */
     private void runOnFetchNewCell(CellOrigin origin) {
-        List<String> commands = plugin.getConfig().getStringList("settings.world-engine.on-fetch-new-cell");
+        List<String> commands = plugin.getConfig().getStringList("world-engine.on-fetch-new-cell");
         if (commands.isEmpty()) return;
         for (String command : commands) {
             if (command.isBlank()) continue;

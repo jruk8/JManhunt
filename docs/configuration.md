@@ -1,17 +1,14 @@
 # Configuration
 
-The plugin creates `config.yml` in its data folder. It includes match
-behavior, default game actions, command bundles, custom modifiers, compass
-tracking settings under `settings.compass`, end-screen statistics, sounds,
-text formatting, and optional PlaceholderAPI settings. Use `/manhunt modifiers`
-to browse and change built-in actions and settings in-game.
+The plugin creates `config.yml` in its data folder. You can find it in
+`plugins/JManhunt/config.yml`.
 
 See the individual configuration pages for detailed documentation:
 
 ## Sections
 
 - [Settings](configuration/settings.md) — game flow settings, compass
-  tracking, friendly fire, lives, start delay, and win conditions.
+  tracking, and role behavior
 - [World Reset Engine](configuration/world-engine.md) — grid-based world
   engine setup, on-fetch-new-cell commands, world border, and troubleshooting.
 - [Statistics & PlaceholderAPI](configuration/statistics.md) — career

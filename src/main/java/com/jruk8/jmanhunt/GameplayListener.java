@@ -74,7 +74,7 @@ public final class GameplayListener implements Listener {
                     playerStates.setRole(player.getUniqueId(), Role.NONE);
                 }
                 playerStates.markMatchSpectator(player.getUniqueId());
-                if (config.getBoolean("settings.set-none-gamemode-spectator.enabled", true)) {
+                if (config.getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
                     player.setGameMode(GameMode.SPECTATOR);
                 }
                 // Non-participants are sent to the lobby and respawn there
@@ -94,7 +94,7 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        if (!game.isActive() && config.getBoolean("settings.reset-role-on-leave.enabled", false)
+        if (!game.isActive() && config.getBoolean("settings.roles.reset-on-leave.enabled", true)
                 && playerStates.role(player) != Role.AFK) {
             playerStates.setRole(player.getUniqueId(), Role.NONE);
         }
@@ -421,7 +421,7 @@ public final class GameplayListener implements Listener {
         playerStates.removeMatchParticipant(playerId);
 
         Player onlinePlayer = Bukkit.getPlayer(playerId);
-        if (onlinePlayer != null && config.getBoolean("settings.set-none-gamemode-spectator.enabled", true)) {
+        if (onlinePlayer != null && config.getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
             onlinePlayer.setGameMode(GameMode.SPECTATOR);
         }
 

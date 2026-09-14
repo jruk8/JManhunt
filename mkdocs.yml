@@ -55,7 +55,7 @@ nav:
   - Configuration:
       - Overview: configuration.md
       - Settings: configuration/settings.md
-      - World Reset Engine: configuration/world-engine.md
+      - World Engine: configuration/world-engine.md
       - Statistics & PlaceholderAPI: configuration/statistics.md
       - Sounds: configuration/sounds.md
   - Placeholders: placeholders.md

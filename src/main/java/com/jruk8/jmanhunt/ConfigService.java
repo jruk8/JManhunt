@@ -112,11 +112,12 @@ public final class ConfigService {
 
     private Set<String> extraModifierNames() {
         Set<String> names = new TreeSet<>();
-        collectExtraModifierNames(plugin.getConfig().getConfigurationSection("settings"), "", names);
+        collectExtraModifierNames(plugin.getConfig().getConfigurationSection("settings"), "", "settings.", names);
+        collectExtraModifierNames(plugin.getConfig().getConfigurationSection("world-engine"), "", "world-engine.", names);
         return names;
     }
 
-    private void collectExtraModifierNames(ConfigurationSection section, String prefix, Set<String> names) {
+    private void collectExtraModifierNames(ConfigurationSection section, String prefix, String root, Set<String> names) {
         if (section == null) {
             return;
         }
@@ -128,14 +129,14 @@ public final class ConfigService {
                 // toggles so that boolean switches are listed under their
                 // .enabled path as before.
                 if (child.contains("enabled")) {
-                    names.add("settings." + path + ".enabled");
+                    names.add(root + path + ".enabled");
                 }
-                collectExtraModifierNames(child, path, names);
+                collectExtraModifierNames(child, path, root, names);
             } else {
                 // Scalar leaf: booleans, ints, doubles, floats and strings
                 // (including enums) are all editable in-game via /manhunt
                 // modifiers. Lists and maps are excluded.
-                names.add("settings." + path);
+                names.add(root + path);
             }
         }
     }

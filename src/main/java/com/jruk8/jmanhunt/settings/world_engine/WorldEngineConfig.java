@@ -23,7 +23,7 @@ public record WorldEngineConfig(
     private static final double DEFAULT_DAMAGE_AMOUNT = 1.0;
 
     public static WorldEngineConfig fromConfig(FileConfiguration config) {
-        String base = "settings.world-engine.";
+        String base = "world-engine.";
         int configuredCellSize = config.getInt(base + "cell-size", DEFAULT_CELL_SIZE);
         int cellSize = Math.clamp(configuredCellSize, 1, MAX_CELL_SIZE);
         int spreadRadius = Math.clamp(config.getInt(base + "tp-spread-radius", 5), 0, cellSize / 2);

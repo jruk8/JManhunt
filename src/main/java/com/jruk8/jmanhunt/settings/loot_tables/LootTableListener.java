@@ -25,7 +25,7 @@ public abstract class LootTableListener<T extends Event> implements Listener, Se
         if (!game.isActive()) {
             return false;
         }
-        return plugin.getConfig().getBoolean("settings.loot-tables.%s".formatted(getConfigKey()), true)
+        return plugin.getConfig().getBoolean("settings.game-boosts.%s".formatted(getConfigKey()), true)
                 && customFile.exists();
     }
 

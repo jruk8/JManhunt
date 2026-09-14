@@ -49,7 +49,7 @@ manhunt:
   setting-entry: "{prefix}<gray>{setting}:</gray> <white>{value}"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
   worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|lobby>"
-  worldengine-disabled: '{prefix}<red>World engine is disabled. Enable it through <gray>"/manhunt modifiers settings.world-engine.enabled true"</gray> to use this command.'
+  worldengine-disabled: '{prefix}<red>World engine is disabled. Enable it through <gray>"/manhunt modifiers world-engine.enabled true"</gray> to use this command.'
   worldengine-setlobby-success: "{prefix}<green>Set the world-engine lobby to <white>{location}<green>."
   worldengine-teleport-success: "{prefix}<green>Teleported <white>{target}<green> to the world-engine lobby."
   worldengine-no-targets: "{prefix}<yellow>No players matched that selector."

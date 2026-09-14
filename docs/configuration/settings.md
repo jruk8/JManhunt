@@ -4,8 +4,8 @@
 off to keep the game simple for new users. However, everything included is fully functional
 and designed to enhance the experience.
 
-All command examples are the default config settings. Some defaults may be outdated, in
-which case you should refer to the latest version of `config.yml` in the 
+All command examples are the default config settings. Some defaults may be outdated (typically not),
+in which case you should refer to the latest version of `config.yml` in the 
 [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
 
 # Compass
@@ -255,8 +255,6 @@ advancement named in `advancement`, given as a namespaced key (e.g.
 
 # Roles
 
-*Proposed grouping — see note below.*
-
 Under `settings.roles`, you can control how player roles are assigned and
 reset around the lifecycle of a match.
 
@@ -270,13 +268,6 @@ settings:
     none-gamemode-spectator:
       enabled: true
 ```
-
-> **Note:** in the current `config.yml` these three settings live as separate
-> top-level keys — `reset-roles-on-game-end`, `reset-role-on-leave`, and
-> `set-none-gamemode-spectator`. They're documented together here under a
-> proposed `settings.roles` namespace since they all govern the same thing
-> (role assignment/reset), which makes them easier to find as a set. Adjust
-> the paths below to match whichever layout you end up shipping.
 
 ## Reset on Game End
 
@@ -338,7 +329,7 @@ settings:
 ```
 
 > **Note:** despite the section's name, `lives` configures both roles, not
-> just hunters — worth keeping in mind if this section ever gets split up.
+> just hunters.
 
 ## Respawn Delay
 
@@ -380,11 +371,9 @@ name, with:
 - `amplifier` — the effect's level, zero-indexed (`0` = level I, `1` = level
   II, and so on).
 
-Add or remove entries freely — only the effects you list are applied.
+Add or remove entries freely. Only the effects listed are applied.
 
 # Game Boosts
-
-*Refactored from `world-engine` and `loot-tables` — see note below.*
 
 Under `settings.game-boosts`, a set of settings that skew world generation
 and loot odds in the speedrunners' favor, without touching any actual
@@ -399,13 +388,6 @@ settings:
       enabled: false
     custom-piglin-barter: false
 ```
-
-> **Note:** `nether-structures` and `overworld-structures` currently live
-> under `settings.world-engine` in `config.yml`, and `custom-piglin-barter`
-> lives under `settings.loot-tables`. They're grouped here because all three
-> boost generation or loot rates rather than change game rules, which makes
-> `settings.game-boosts` a more discoverable home for them regardless of
-> whether world-engine is even enabled.
 
 ## Nether Structures
 

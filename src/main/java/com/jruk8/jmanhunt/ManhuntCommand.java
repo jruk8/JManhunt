@@ -27,9 +27,9 @@ import java.util.HashSet;
 
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private static final Set<String> RESTART_REQUIRED_SETTINGS = Set.of(
-            "settings.world-engine.enabled",
-            "settings.world-engine.nether-structures.enabled",
-            "settings.world-engine.overworld-structures.enabled"
+            "world-engine.enabled",
+            "settings.game-boosts.nether-structures.enabled",
+            "settings.game-boosts.overworld-structures.enabled"
     );
 
     /**
@@ -221,7 +221,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             if (game.isActive() && !role.isParticipant()) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
                 playerStates.removeMatchParticipant(player.getUniqueId());
-                if (plugin.getConfig().getBoolean("settings.set-none-gamemode-spectator.enabled", true)) {
+                if (plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
                     player.setGameMode(GameMode.SPECTATOR);
                 }
                 compass.removeCompasses(player);
@@ -287,7 +287,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean worldEngine(CommandSender sender, String[] args) {
-        if (!config.getBoolean("settings.world-engine.enabled", false)) {
+        if (!config.getBoolean("world-engine.enabled", false)) {
             return message(sender, "manhunt.worldengine-disabled");
         }
         if (args.length == 1 || args[1].isBlank()) {
@@ -476,7 +476,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 pitch = Float.parseFloat(parts[4].trim());
             }
             World world = sender instanceof Player player ? player.getWorld()
-                    : Bukkit.getWorld(plugin.getConfig().getString("settings.world-engine.world-name", "world"));
+                    : Bukkit.getWorld(plugin.getConfig().getString("world-engine.world-name", "world"));
             return new Location(world, x, y, z, yaw, pitch);
         } catch (NumberFormatException exception) {
             return null;
@@ -485,14 +485,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     private void saveLobbyLocation(Location location) {
         String worldName = location.getWorld() == null
-                ? plugin.getConfig().getString("settings.world-engine.world-name", "world")
+                ? plugin.getConfig().getString("world-engine.world-name", "world")
                 : location.getWorld().getName();
-        plugin.getConfig().set("settings.world-engine.lobby-location.world", worldName);
-        plugin.getConfig().set("settings.world-engine.lobby-location.x", location.getX());
-        plugin.getConfig().set("settings.world-engine.lobby-location.y", location.getY());
-        plugin.getConfig().set("settings.world-engine.lobby-location.z", location.getZ());
-        plugin.getConfig().set("settings.world-engine.lobby-location.yaw", location.getYaw());
-        plugin.getConfig().set("settings.world-engine.lobby-location.pitch", location.getPitch());
+        plugin.getConfig().set("world-engine.lobby-location.world", worldName);
+        plugin.getConfig().set("world-engine.lobby-location.x", location.getX());
+        plugin.getConfig().set("world-engine.lobby-location.y", location.getY());
+        plugin.getConfig().set("world-engine.lobby-location.z", location.getZ());
+        plugin.getConfig().set("world-engine.lobby-location.yaw", location.getYaw());
+        plugin.getConfig().set("world-engine.lobby-location.pitch", location.getPitch());
         plugin.saveConfig();
     }
 

@@ -4,7 +4,7 @@
 ## Requirements
 
 - Paper 26.2 or newer
-- Java 25
+- Java 25 or newer
 
 ## Installation
 
@@ -16,7 +16,7 @@
 4. (Optional) Install [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/)
    to use JManhunt's placeholders.
 5. (Optional) Install [JManhunt-Challenges](https://github.com/jruk8/JManhunt-Challenges)
-   to enable the built-in challenges (no-jump, one-heart and lucky-blocks).
+   to play built-in challenges (no-jump, one-heart and lucky-blocks).
 
 ## Your First Match
 
@@ -29,40 +29,17 @@
 
    Selectors such as `@a`, `@p`, and `@a[distance=..10]` are supported.
 
+   You may also run `/manhunt quickstart` (or `/mh qs`) to quickly start a match
+   with one random speedrunner and the rest being hunters.
+
 2. Start the match with `/manhunt start`.
-3. Check the teams at any time with `/manhunt status`.
+3. Check the teams at any time with `/manhunt status` (or simply `/manhunt`.)
 4. The match ends when all speedrunners have died, or manually through
    `/manhunt end`.
 
-Players need `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive the
+Players need permission `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive the
 corresponding role. Both permissions are granted by default. The `/manhunt`
 command is also accessible through the `mh` alias.
-
-### Quick Start (Convenience for Larger Servers)
-
-For larger servers that want to start a match without manually assigning
-roles, use Quick Start:
-
-```text
-/manhunt quickstart
-```
-
-This assigns every eligible online player (excluding AFK) as a Hunter,
-randomly chooses one Speedrunner, and immediately starts the game — bypassing
-the autostart system entirely.
-
-You can also specify a percentage of eligible players to become Speedrunners:
-
-```text
-/manhunt quickstart 50
-```
-
-With 16 eligible players and `50`, this results in 8 Speedrunners and 8
-Hunters. Fractional results are rounded to the nearest whole player, and there
-is always at least one Speedrunner.
-
-Quick Start can only be used when no match is active. See
-[Commands](commands.md#quick-start) for more details.
 
 ## Next Steps
 

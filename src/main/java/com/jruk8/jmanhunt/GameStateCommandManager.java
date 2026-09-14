@@ -138,7 +138,7 @@ public final class GameStateCommandManager {
             participatingPlayers().forEach(this::resetPlayerStats);
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
-            boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.set-none-gamemode-spectator.enabled", true);
+            boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true);
             List<Player> nonePlayers = new ArrayList<>();
             Bukkit.getOnlinePlayers().forEach(player -> {
                 Role role = playerStates.role(player);
