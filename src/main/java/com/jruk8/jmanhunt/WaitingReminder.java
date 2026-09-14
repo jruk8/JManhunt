@@ -29,6 +29,18 @@ public final class WaitingReminder {
      * @param effectiveDelay the clamped delay in seconds (must be > 0)
      * @return the slice in seconds
      */
+    /**
+     * Returns the message key broadcast when the pre-start waiting period
+     * expires without a hit. Force-start expiry announces the automatic start
+     * instead of the cancellation message.
+     *
+     * @param forceStart true when on-expire is set to force start
+     * @return the message key to broadcast
+     */
+    public static String expiryMessageKey(boolean forceStart) {
+        return forceStart ? "manhunt.waiting-for-damage-force-started" : "manhunt.waiting-for-damage-exhausted";
+    }
+
     public static int sliceSeconds(int effectiveDelay) {
         if (effectiveDelay <= 0) {
             return Math.max(1, effectiveDelay);

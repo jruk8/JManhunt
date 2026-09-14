@@ -9,6 +9,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.entity.Player;
@@ -18,10 +19,12 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public final class GameManager {
@@ -52,6 +55,7 @@ public final class GameManager {
     private BukkitTask startDelayTask;
     private int startDelayRemaining;
     private boolean startDelayActive;
+    private final Map<UUID, Location> startDelayReturnPoints = new HashMap<>();
     private BukkitTask surviveTimeTask;
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
@@ -319,14 +323,19 @@ public final class GameManager {
 
     /**
      * Starts the start-delay countdown. Hunters remain in spectator mode
-     * until the delay expires, then are restored to survival.
+     * until the delay expires, then are teleported back to their recorded
+     * spawnpoints and restored to survival.
      */
     private void beginStartDelay() {
         if (startDelayTask != null) return;
-        // Hunters stay in spectator for the duration of the delay and are
-        // restored to survival in endStartDelay().
+        // Hunters stay in spectator for the duration of the delay. Each
+        // hunter's current location is recorded so endStartDelay() can return
+        // them to their spawnpoint even if they flew elsewhere, including
+        // across dimensions since the location carries its world.
+        startDelayReturnPoints.clear();
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (role(player) == Role.HUNTER) {
+                startDelayReturnPoints.put(player.getUniqueId(), player.getLocation());
                 player.setGameMode(GameMode.SPECTATOR);
             }
         }
@@ -347,16 +356,22 @@ public final class GameManager {
     }
 
     /**
-     * Ends the start delay, restoring hunters to survival mode.
+     * Ends the start delay, returning hunters to their recorded spawnpoints
+     * and restoring them to survival mode.
      */
     private void endStartDelay() {
         cancelStartDelay();
         startDelayActive = false;
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (role(player) == Role.HUNTER) {
+                Location returnPoint = startDelayReturnPoints.remove(player.getUniqueId());
+                if (returnPoint != null && returnPoint.getWorld() != null) {
+                    player.teleport(returnPoint);
+                }
                 player.setGameMode(GameMode.SURVIVAL);
             }
         }
+        startDelayReturnPoints.clear();
         messages.broadcast("manhunt.start-delay-ended");
     }
 
@@ -413,9 +428,14 @@ public final class GameManager {
                 // only cancel if still active and game hasn't begun and match unchanged
                 if (active && !gameBegun && matchId == currentMatchId) {
                     if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
-                    messages.broadcast("manhunt.waiting-for-damage-exhausted", Map.of("seconds", String.valueOf(waitingDelayConfigured)));
+                    boolean forceStart = plugin.getConfig().getString("settings.start-on-speedrunner-damage.on-expire", "CANCEL").equals("FORCE_START");
+                    if (forceStart) {
+                        messages.broadcast(WaitingReminder.expiryMessageKey(true));
+                    } else {
+                        messages.broadcast(WaitingReminder.expiryMessageKey(false), Map.of("seconds", String.valueOf(waitingDelayConfigured)));
+                    }
                     // end match as cancelled if configured
-                    if (!plugin.getConfig().getString("settings.start-on-speedrunner-damage.on-expire", "CANCEL").equals("FORCE_START")) {
+                    if (!forceStart) {
                         // do not save stats
                         stats.clear();
                         stateCommands.cancelIntervalModifiers();
@@ -575,17 +595,19 @@ public final class GameManager {
      * Quick-starts a match by assigning eligible players to teams and
      * immediately starting the game, bypassing the autostart system.
      *
-     * @param speedrunnerPercent the percentage of eligible players that should
-     *                           become speedrunners (0-100), or -1 for default
-     *                           (all hunters, one random speedrunner)
+     * @param speedrunnerPercent the percentage of convertible players that
+     *                           should become speedrunners (0-100), or -1 for
+     *                           default (keep teams, converting only what is
+     *                           missing to start)
      * @return true if the match was started successfully
      */
     public boolean quickStart(int speedrunnerPercent) {
         if (active) return false;
-        // Only NONE players are assignable. Existing hunters and speedrunners
-        // keep their roles, and AFK players are never touched.
-        List<Player> eligible = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> role(p) == Role.NONE)
+        // Every online non-AFK player is convertible: NONE players are
+        // assigned fresh, while existing hunters and speedrunners keep their
+        // roles unless conversion is needed. AFK players are never touched.
+        List<Player> pool = Bukkit.getOnlinePlayers().stream()
+                .filter(p -> role(p) != Role.AFK)
                 .map(p -> (Player) p)
                 .toList();
         // Cancel any autostart countdown silently
@@ -593,24 +615,17 @@ public final class GameManager {
             autostartCountdownTask.cancel();
             autostartCountdownTask = null;
         }
-        boolean hasExistingSpeedrunner = Bukkit.getOnlinePlayers().stream()
-                .anyMatch(p -> role(p) == Role.SPEEDRUNNER);
-        if (eligible.isEmpty()) return start();
+        // A match needs at least one hunter and one speedrunner, so with
+        // fewer than two convertible players there is nothing to assign.
+        if (pool.size() < 2) return start();
         if (speedrunnerPercent < 0) {
-            // Default: all eligible NONE players become hunters. If no
-            // speedrunner is queued yet, one random eligible player becomes
-            // the speedrunner.
-            for (Player p : eligible) {
-                playerStates.setRole(p, Role.HUNTER);
-            }
-            if (!hasExistingSpeedrunner) {
-                Player speedrunner = eligible.get(ThreadLocalRandom.current().nextInt(eligible.size()));
-                playerStates.setRole(speedrunner, Role.SPEEDRUNNER);
-            }
+            ensureMinimumTeams(pool);
         } else {
-            // Percentage-based assignment of the eligible NONE pool.
-            int speedrunnerCount = Math.max(1, (int) Math.round(eligible.size() * speedrunnerPercent / 100.0));
-            List<Player> shuffled = new ArrayList<>(eligible);
+            // Percentage-based assignment over the whole convertible pool:
+            // random selection, the first N become speedrunners and the rest
+            // become hunters.
+            int speedrunnerCount = quickStartSpeedrunnerCount(pool.size(), speedrunnerPercent);
+            List<Player> shuffled = new ArrayList<>(pool);
             java.util.Collections.shuffle(shuffled);
             for (int i = 0; i < shuffled.size(); i++) {
                 playerStates.setRole(shuffled.get(i), i < speedrunnerCount ? Role.SPEEDRUNNER : Role.HUNTER);
@@ -619,5 +634,55 @@ public final class GameManager {
         // Validate after assignment: start() requires at least one hunter and
         // one speedrunner, so e.g. two players online with one AFK will fail.
         return start();
+    }
+
+    /**
+     * Computes how many players of a convertible pool become speedrunners for
+     * a quick-start percentage. Fractional results are rounded to the nearest
+     * whole player, with always at least one speedrunner.
+     *
+     * @param poolSize the number of convertible players (must be positive)
+     * @param percent the requested speedrunner percentage (0-100)
+     * @return the number of speedrunners to assign
+     */
+    static int quickStartSpeedrunnerCount(int poolSize, int percent) {
+        return Math.max(1, (int) Math.round(poolSize * percent / 100.0));
+    }
+
+    /**
+     * Guarantees at least one hunter and one speedrunner by converting random
+     * pool members only where a team is missing, so an all-hunter or an
+     * all-speedrunner lobby still starts. NONE players become hunters and
+     * everyone else keeps their current role.
+     */
+    private void ensureMinimumTeams(List<Player> pool) {
+        boolean hasHunter = pool.stream().anyMatch(p -> role(p) == Role.HUNTER);
+        boolean hasSpeedrunner = pool.stream().anyMatch(p -> role(p) == Role.SPEEDRUNNER);
+        Player converted = null;
+        if (!hasSpeedrunner) {
+            converted = pickConvertible(pool, null);
+            if (converted != null) playerStates.setRole(converted, Role.SPEEDRUNNER);
+        }
+        if (!hasHunter) {
+            Player hunter = pickConvertible(pool, converted);
+            if (hunter != null) playerStates.setRole(hunter, Role.HUNTER);
+        }
+        for (Player p : pool) {
+            if (role(p) == Role.NONE) playerStates.setRole(p, Role.HUNTER);
+        }
+    }
+
+    /**
+     * Picks a random convertible pool member, preferring NONE players so
+     * queued roles are only disturbed when no unassigned player is left.
+     *
+     * @return the picked player, or null if the pool holds only the exclusion
+     */
+    private Player pickConvertible(List<Player> pool, Player exclude) {
+        List<Player> candidates = pool.stream().filter(p -> !p.equals(exclude)).toList();
+        List<Player> unassigned = candidates.stream().filter(p -> role(p) == Role.NONE).toList();
+        List<Player> preferred = unassigned.isEmpty() ? candidates : unassigned;
+        if (preferred.isEmpty()) return null;
+        return preferred.get(ThreadLocalRandom.current().nextInt(preferred.size()));
     }
 }

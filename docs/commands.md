@@ -34,19 +34,24 @@ The `setplayer` command accepts the following roles:
 convenience command for larger servers that want to start a match without
 manually assigning roles. It can only be used when no match is active.
 
-- **Without arguments:** assigns every online player with role `none` as a
-  Hunter, randomly chooses one Speedrunner (unless a Speedrunner is already
-  queued), and immediately starts the game.
-- **With a percentage:** interprets the value as the percentage of eligible
-  `none` players that should become Speedrunners. For example, `50` with 16
-  eligible players results in 8 Speedrunners and 8 Hunters. Fractional results
+- **Without arguments:** keeps existing teams and converts only what is
+  missing to start. If no Speedrunner is queued, a random player becomes one;
+  if no Hunter is queued, a random player becomes one. Players with role
+  `none` become Hunters. An all-Hunter or all-Speedrunner lobby therefore
+  still starts.
+- **With a percentage:** interprets the value as the percentage of all
+  convertible players that should become Speedrunners, assigned by random
+  selection with the rest becoming Hunters. For example, `50` with 16
+  players results in 8 Speedrunners and 8 Hunters. Fractional results
   are rounded to the nearest whole player, and there is always at least one
   Speedrunner.
 
-Only players with role `none` are assigned. Existing Hunters and Speedrunners
-keep their roles, and AFK players are never touched. The match is validated
-after assignment: it requires at least one Hunter and one Speedrunner, so a
-server with two online players where one is AFK will fail to start.
+Every online player except AFK is convertible, including existing Hunters
+and Speedrunners; default mode preserves queued roles and only converts the
+minimum needed, preferring `none` players for conversion. AFK players are
+never touched. The match is validated after assignment: it requires at least
+one Hunter and one Speedrunner, so a server with two online players where
+one is AFK will fail to start.
 
 Quick Start bypasses the autostart system entirely: no countdowns or
 autostart messages are displayed.
@@ -88,6 +93,10 @@ that section's settings:
 Setting names are matched case-insensitively. When tab-completing a value,
 non-boolean settings suggest the **default value from the bundled default
 config**.
+
+When `settings.announce-config-changes` is enabled, every successful change
+is announced to all online players except the one who made it
+(`manhunt.setting-change-announced`). It is disabled by default.
 
 > **Known limitation:** JManhunt does not use a type-safe configuration
 > framework (such as Cloud). Values are parsed against the current type in

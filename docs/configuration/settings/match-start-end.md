@@ -47,8 +47,11 @@ clamped up to `5` seconds. Set to `-1` to wait indefinitely for a hit.
 
 `on-expire` decides what happens if the timeout above passes with no hit:
 
-- `CANCEL`: abort the match without recording any stats.
-- `FORCE_START`: start the match anyway.
+- `CANCEL`: abort the match without recording any stats. Chat sees
+  `manhunt.waiting-for-damage-exhausted`, which says the game will not start.
+- `FORCE_START`: start the match anyway. Chat sees
+  `manhunt.waiting-for-damage-force-started` instead, which says the game
+  automatically started, followed by the normal game-start announcement.
 
 ## Adventure Mode Lock
 
@@ -74,6 +77,11 @@ If [Start on Speedrunner Damage](#start-on-speedrunner-damage) is also
 enabled, this delay's countdown doesn't begin until the speedrunner lands
 that first hit, so hunters stay in spectator through the pre-start window,
 then continue waiting out this delay on top of it.
+
+Each hunter's location is recorded when the delay begins. Spectating hunters
+can fly around freely during the delay, but once it expires they are
+teleported back to their recorded spawnpoint, including its dimension, and
+restored to survival mode.
 
 ## Delay Length
 

@@ -135,5 +135,5 @@ settings:
 `on-game-end` refers to the period after a game ends, but where feedback 
 (like chat statistics) has not yet finished broadcasting. 
 
-`none-players` refers to players with the `NONE` role. Generally, they are
-set to spectators, but this setting guarantees they may never take damage.
+`none-players` refers to players with the `NONE` role. This makes players
+who are not in a game immune to damage.

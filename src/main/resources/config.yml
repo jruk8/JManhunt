@@ -1,4 +1,27 @@
-# JManhunt configuration. Reload with /manhunt reload.
+#       ██╗  ███╗   ███╗ █████╗ ███╗   ██╗██╗  ██╗██╗   ██╗███╗   ██╗████████╗
+#       ██║  ████╗ ████║██╔══██╗████╗  ██║██║  ██║██║   ██║████╗  ██║╚══██╔══╝
+#       ██║  ██╔████╔██║███████║██╔██╗ ██║███████║██║   ██║██╔██╗ ██║   ██║
+#       ██║  ██║╚██╔╝██║██╔══██║██║╚██╗██║██╔══██║██║   ██║██║╚██╗██║   ██║
+#  ██████╔╝  ██║ ╚═╝ ██║██║  ██║██║ ╚████║██║  ██║╚██████╔╝██║ ╚████║   ██║
+#  ╚═════╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝
+# A Deeply Configurable Manhunt plugin for modern servers.
+# Homepage: https://modrinth.com/plugin/jmanhunt
+# Challenges Addon: https://builtbybit.com/resources/jmanhunt-challenges.121574/
+#
+# Save and apply your changes with /manhunt reload.
+# Stuck? Refer to the documentation:
+# - https://jruk8.github.io/JManhunt/
+#
+# Issues? Report them on GitHub:
+# - https://github.com/jruk8/JManhunt/issues
+# For quick assistance, join our Discord server:
+# - https://discord.gg/hkWmCVmWDC
+#
+# Built by Starburst Studios
+# © 2026 jruk8. Licensed under GNU AGPLv3.
+# **--**--**--**--**--**--**--**--**--**--**--**--**--**--**
+#
+
 # Used for config updates, don't change unless you know what you're doing.
 config-version: 3
 
@@ -300,6 +323,11 @@ custom-modifiers:
 settings:
   # Message parser used for messages.yml: minimessage or legacy.
   text-format: minimessage
+
+  # When true, every in-game config change is announced to all online
+  # players except the one who made the change.
+  # Default: false
+  announce-config-changes: false
 
   # Game boosts that skew world generation and loot odds in the speedrunners'
   # favor, without touching any actual gameplay rules.

@@ -122,8 +122,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         // Clickable links need MiniMessage parsing regardless of text-format,
         // so this footer stays hardcoded instead of living in messages.yml.
         sender.sendMessage(messages.miniMessage(
-                "\n<white>» Still need help? Join our <gold><click:open_url:'https://discord.gg/hkWmCVmWDC'>"
-                        + "<underline>Discord server</underline></click></gold>."));
+                "\n<green>Still need help? Join our <gold><click:open_url:'https://discord.gg/hkWmCVmWDC'>"
+                        + "<underlined>Discord server</underlined></click></gold>!</green>"));
         neutralSound(sender);
         return true;
     }
@@ -359,8 +359,27 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (RESTART_REQUIRED_SETTINGS.contains(setting)) {
             message(sender, "manhunt.setting-restart-required");
         }
+        announceSettingChange(sender, setting, newValue);
         neutralSound(sender);
         return true;
+    }
+
+    /**
+     * Broadcasts a config change to every online player except the one who
+     * made it, when settings.announce-config-changes is enabled. Changes made
+     * from the console reach every online player.
+     */
+    private void announceSettingChange(CommandSender sender, String setting, Object newValue) {
+        if (!plugin.getConfig().getBoolean("settings.announce-config-changes", false)) {
+            return;
+        }
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (sender instanceof Player changer && online.getUniqueId().equals(changer.getUniqueId())) {
+                continue;
+            }
+            online.sendMessage(messages.component("manhunt.setting-change-announced",
+                    Map.of("player", sender.getName(), "key", setting, "value", String.valueOf(newValue))));
+        }
     }
 
     /**
