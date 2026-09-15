@@ -134,6 +134,10 @@ are stopped as soon as the match ends, so they never fire during the delay.
 Set to `-1` to skip the delay entirely (cleanup runs immediately); other
 negative values are treated as zero.
 
+To end a match right away without waiting out the delay, run
+`/mh end -i` (alias `-immediate`). It runs the same end sequence with no
+waiting: stats post instantly, then end commands, cleanup, and deactivation.
+
 # Start Reminders
 
 Under `match.start-reminder-interval`, you can configure how often players are

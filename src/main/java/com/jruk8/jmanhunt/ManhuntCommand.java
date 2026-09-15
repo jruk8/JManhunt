@@ -99,7 +99,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "challenges" -> challenges(sender);
             case "setplayer" -> setPlayer(sender, args);
             case "start" -> start(sender);
-            case "end" -> end(sender);
+            case "end" -> end(sender, args);
             case "configuration", "config" -> configuration(sender, args);
             case "worldengine" -> worldEngine(sender, args);
             case "quickstart", "qs" -> quickStart(sender, args);
@@ -112,7 +112,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         message(sender, "manhunt.help-header");
         String[][] lines = {{"/manhunt help", "show commands"}, {"/manhunt", "show match status"},
                 {"/manhunt setplayer <selector> <hunter|speedrunner|afk|none>", "assign roles"},
-                {"/manhunt start", "start a match"}, {"/manhunt end", "end a match"},
+                {"/manhunt start", "start a match"}, {"/manhunt end [-i|-immediate]", "end a match"},
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt configuration <category> <key...> <value>", "view or change a setting"},
                 {"/manhunt worldengine", "set lobby or teleport players"},
@@ -268,9 +268,16 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean end(CommandSender sender) {
+    private boolean end(CommandSender sender, String[] args) {
         if (!game.isActive()) return message(sender, "manhunt.not-active");
-        game.end(); return true;
+        boolean immediate = false;
+        if (args.length >= 2) {
+            if (args.length > 2 || (!args[1].equalsIgnoreCase("-i") && !args[1].equalsIgnoreCase("-immediate"))) {
+                return message(sender, "command.invalid");
+            }
+            immediate = true;
+        }
+        game.end(immediate); return true;
     }
 
     /**
@@ -612,6 +619,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) return partial(args[0], List.of("help", "status", "challenges", "setplayer",
                 "start", "end", "configuration", "config", "worldengine", "quickstart", "qs", "reload"));
+        if (args.length == 2 && args[0].equalsIgnoreCase("end"))
+            return partial(args[1], List.of("-i", "-immediate"));
         if (args.length >= 2
                 && (args[0].equalsIgnoreCase("configuration") || args[0].equalsIgnoreCase("config"))) {
             return completeDrill(args);

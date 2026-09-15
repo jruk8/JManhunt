@@ -90,15 +90,55 @@ Under `custom-modifiers.<name>.runs-on`, you can configure when the commands
 
 If `runs-on` is omitted, the modifier defaults to `ON_START`.
 
-> **Note:** `ON_FIRST_ENTER_NETHER` and `ON_FIRST_ENTER_END` are legacy
-> aliases of `ON_NETHER_ENTER` and `ON_END_ENTER`. They mean once per player
-> per match, not once per match. Use the `ON_FIRST_NETHER_ENTER` /
-> `ON_FIRST_END_ENTER` keys when you want the bundle to run a single time for
-> the whole match.
-
 Except for `ON_START`, every event trigger runs the `player`, `hunter`, and
 `speedrunner` commands only for the specific player involved in the event.
 `ON_START` and `INTERVAL` run for all participating players instead.
+
+## Success Chance
+
+Under `custom-modifiers.<name>.success-chance`, you can make the modifier run
+only sometimes:
+
+```yaml
+custom-modifiers:
+  gear-dice:
+    success-chance:
+      # Chance to run, from 0.0 (never) to 1.0 (always). This is a fraction,
+      # not a percent: use 0.5 for 50%. Defaults to 1.0.
+      chance: 0.5
+      # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls the console
+      # and each player separately. Defaults to PER_INVOKE.
+      behavior: PER_EXECUTOR
+```
+
+Without this section the modifier always runs. The roll happens on every
+trigger, including each interval firing. Cleanup commands always run and are
+never rolled.
+
+## Command Execution
+
+Under `custom-modifiers.<name>.commands.execution`, you can run a random line
+from a command list instead of every line:
+
+```yaml
+custom-modifiers:
+  gear-dice:
+    commands:
+      execution:
+        # IN_ORDER runs every line. PICK_RANDOM runs a random few instead.
+        # Defaults to IN_ORDER.
+        selection: PICK_RANDOM
+        pick-random:
+          # How many lines to pick. Minimum 1. Defaults to 1.
+          count: 1
+          # PER_INVOKE picks once for everyone; PER_EXECUTOR picks separately
+          # for the console and each player. Defaults to PER_INVOKE.
+          behavior: PER_EXECUTOR
+```
+
+This applies to each command list on its own. If you ask for more lines than
+the list has, the whole list runs. Cleanup lists always run every line so
+changes are reliably undone.
 
 ## Interval Settings
 
@@ -115,11 +155,19 @@ custom-modifiers:
     interval-settings:
       # Interval duration in seconds.
       interval: 60
+      # Random spread in seconds. 60 and 15 means every 45 to 75 seconds.
+      # Cannot go above interval. Defaults to 0.
+      deviation: 15
+      # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
+      # console their own timer. Defaults to PER_INVOKE.
+      behavior: PER_INVOKE
 ```
 
 Interval modifiers start counting when the game actually begins (when a
 speedrunner hits a hunter, or when the match force-starts), not when
-`/manhunt start` is run. They are automatically canceled when the match ends.
+`/manhunt start` is run. 
+With `PER_EXECUTOR` deviation, each player has their own timer, so players
+who join mid-match get timed in as well.
 
 The `interval` value supports decimals and is rounded to the nearest tick (1
 tick = 0.05 seconds). Values between `0` and `0.05` execute every tick. Set to
@@ -159,8 +207,7 @@ example, `summon zombie ~ ~ ~` becomes `summon zombie 10.5 64 -20.2` if the
 player is at `(10.5, 64.0, -20.2)`. Offsets like `~5` and `~-3` are supported.
 
 All commands are dispatched as the console sender, so there are no permission
-issues. The tilde resolution is handled by the plugin before dispatch. Local
-coordinates (`^`) are not supported.
+issues. The tilde resolution is handled by the plugin before dispatch.
 
 # Match-End Cleanup
 
@@ -207,4 +254,5 @@ custom-modifiers:
 
 The default `config.yml` ships more examples to copy from: `full-iron-kit`,
 `speedrunner-health-advantage`, `random-mob-spawner`, `random-item-giver`,
-`regen-on-kill`, `diamond-on-advancement`, and `fireres-on-nether-enter`.
+`gear-dice`, `regen-on-kill`, `diamond-on-advancement`, and
+`fireres-on-nether-enter`.

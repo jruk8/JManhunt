@@ -239,6 +239,15 @@ public final class GameManager {
     }
 
     public void finish(Role winner) {
+        finish(winner, false);
+    }
+
+    /**
+     * Ends the match. When {@code immediate} is true the configured
+     * {@code match.end-delay} is skipped: statistics post instantly and the
+     * final cleanup runs at once instead of after the delay.
+     */
+    public void finish(Role winner, boolean immediate) {
         if (ending) return;
         ending = true;
         gameEndListeners.forEach(Runnable::run);
@@ -272,7 +281,9 @@ public final class GameManager {
         stateCommands.runConsoleCleanup();
         stateCommands.runPlayerCleanup();
 
-        long delay = Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
+        long delay = immediate
+                ? 0L
+                : Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             stateCommands.runEnd();
@@ -289,6 +300,8 @@ public final class GameManager {
     }
 
     public void end() { finish(Role.HUNTER); }
+
+    public void end(boolean immediate) { finish(Role.HUNTER, immediate); }
 
     public void finishLater(Role winner) { Bukkit.getScheduler().runTask(plugin, () -> finish(winner)); }
 

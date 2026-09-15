@@ -10,6 +10,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `afk`, or `none`. | `jmanhunt.command.setplayer` |
 | `/manhunt start`                                  | Starts a match. | `jmanhunt.command.start` |
 | `/manhunt end`                                    | Ends the active match; hunters win. | `jmanhunt.command.end` |
+| `/manhunt end -i` / `-immediate`                | Ends the match immediately, skipping the end delay (stats post instantly). | `jmanhunt.command.end` |
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
 | `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
 | `/manhunt configuration <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.configuration` |

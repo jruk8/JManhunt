@@ -251,7 +251,6 @@ custom-modifiers:
     # ON_END_ENTER - When a participating player enters the End (once per player per match)
     # ON_FIRST_NETHER_ENTER - When the first participating player enters the Nether (once per match)
     # ON_FIRST_END_ENTER - When the first participating player enters the End (once per match)
-    # ON_FIRST_ENTER_NETHER and ON_FIRST_ENTER_END are legacy aliases of ON_NETHER_ENTER
     # and ON_END_ENTER (once per player per match, not once per match).
     # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
     # ON_RESPAWN - When a player respawns (only the executing player)
@@ -264,6 +263,8 @@ custom-modifiers:
     interval-settings:
       # Interval duration in seconds.
       interval: 60
+      deviation: 5
+      behavior: PER_EXECUTOR
     commands:
       player:
         # <random-mob> is replaced with a random spawnable living entity type.
@@ -276,10 +277,56 @@ custom-modifiers:
       - INTERVAL
     interval-settings:
       interval: 30
+      deviation: 5
+      behavior: PER_EXECUTOR
     commands:
       player:
         # <random-item> is replaced with a random item type.
         - "give <p> <random-item> 1"
+  # Gives a random reward to each player about every 45-75 seconds.
+  gear-dice:
+    enabled: false
+    runs-on:
+      - INTERVAL
+    # Only applicable when "runs-on" contains INTERVAL.
+    interval-settings:
+      # Interval duration in seconds.
+      interval: 60
+      # Random spread in seconds. 60 and 15 means every 45 to 75 seconds.
+      # Cannot go above interval. Defaults to 0.
+      deviation: 15
+      # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
+      # console their own timer. Defaults to PER_INVOKE.
+      behavior: PER_EXECUTOR
+    # Success chance for running the commands.
+    # Must be between 0 and 1.0 where 1.0 means 100% chance.
+    # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls for each player.
+    # Ignored by cleanup commands.
+    success-chance:
+      chance: 0.5
+      behavior: PER_EXECUTOR
+    commands:
+      # IN_ORDER runs every line sequentially.
+      # PICK_RANDOM runs a random few instead.
+      # Defaults to IN_ORDER.
+      execution:
+        selection: PICK_RANDOM
+        pick-random:
+          # How many lines to pick. Minimum 1. Defaults to 1.
+          count: 1
+          # PER_INVOKE picks once for everyone; PER_EXECUTOR picks separately
+          # for the console and each player. Defaults to PER_INVOKE.
+          behavior: PER_EXECUTOR
+      player:
+        - "give <p> minecraft:golden_apple 1"
+        - "give <p> minecraft:golden_apple 2"
+        - "give <p> minecraft:cobblestone 24"
+        - "give <p> minecraft:cobblestone 32"
+        - "give <p> minecraft:oak_planks 24"
+        - "give <p> minecraft:oak_planks 32"
+        - "give <p> minecraft:iron_ingot 8"
+        - "give <p> minecraft:ender_pearl 1"
+        - "give <p> minecraft:diamond 2"
   regen-on-kill:
     enabled: false
     runs-on:
@@ -304,19 +351,19 @@ custom-modifiers:
   tpall-on-end:
     enabled: false
     runs-on:
-      - ON_FIRST_ENTER_END
+      - ON_FIRST_END_ENTER
     # Ticks to wait after triggering before this modifier's commands run.
     # Applies to start, interval, and event triggers, but not to cleanup.
     delay: 100 # delay in case speedrunner lags when loading into The End
     commands:
       speedrunner:
         - "tp @a <p>"
+  # Install the Challenges addon to use this modifier.
   start-with-luckyblocks-requires-challenges-addon:
     enabled: false
     commands:
       player:
         - "give <p> sponge 32"
-
 
 # Settings that modify the game.
 # These can be toggled in-game with the 'configuration' subcommand.
@@ -574,7 +621,9 @@ settings:
 world-engine:
   enabled: false
   world-name: world
-  # Lobby location for all participants after game end, before End reset.
+  # Lobby location for all participants after a game ends.
+  # Preferably set to something different from the world that the spiral
+  # engine works on.
   # This is also used as the spawn point for joining NONE players.
   lobby-location:
     world: world
@@ -591,7 +640,7 @@ world-engine:
   # Hard-capped at cell-size / 2.
   # Default: 5
   tp-spread-radius: 5
-  # When true, the spawnpoint algorithm is used to find a valid spawn point
+  # When true, the spawn point algorithm is used to find a valid spawn point
   # for each player. This fixes spawning inside oceans or lava, but can
   # sometimes cause server lag.
   # Default: true
