@@ -1,3 +1,12 @@
+## [4.1.0] - 2026-09-15
+
+### 🚀 Features
+
+- Add anonymous statistics toggle
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for v4.0.0 [skip ci]
 ## [4.0.0] - 2026-09-15
 
 ### 🚀 Features
