@@ -291,10 +291,10 @@ custom-modifiers:
     # Only applicable when "runs-on" contains INTERVAL.
     interval-settings:
       # Interval duration in seconds.
-      interval: 60
-      # Random spread in seconds. 60 and 15 means every 45 to 75 seconds.
+      interval: 15
+      # Random spread in seconds. 20 and 10 means every 10 to 30 seconds.
       # Cannot go above interval. Defaults to 0.
-      deviation: 15
+      deviation: 5
       # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
       # console their own timer. Defaults to PER_INVOKE.
       behavior: PER_EXECUTOR
@@ -324,6 +324,7 @@ custom-modifiers:
         - "give <p> minecraft:cobblestone 32"
         - "give <p> minecraft:oak_planks 24"
         - "give <p> minecraft:oak_planks 32"
+        - "give <p> minecraft:lava_bucket 1"
         - "give <p> minecraft:iron_ingot 8"
         - "give <p> minecraft:ender_pearl 1"
         - "give <p> minecraft:diamond 2"

@@ -137,6 +137,8 @@ negative values are treated as zero.
 To end a match right away without waiting out the delay, run
 `/mh end -i` (alias `-immediate`). It runs the same end sequence with no
 waiting: stats post instantly, then end commands, cleanup, and deactivation.
+It also works mid delay while a match is already ending, finishing it at once.
+Stats and end commands still run exactly once.
 
 # Start Reminders
 

@@ -20,6 +20,22 @@ world-engine:
   enabled: false
 ```
 
+## Quick Start (3 minutes)
+
+1. Enable World Engine in-game with `/manhunt configuration world-engine enabled true`.
+2. Stand where you want the lobby to be and run `/manhunt worldengine setlobby`.
+   Players return here after a match ends. Double-check the
+   location by running `/mh worldengine lobby`,
+3. Restart the server. Everything works without a restart, but the stronghold
+   generation changes only apply after one. 
+
+As your next step, it's recommended to set up **chunk pre-generation** for cells. This
+may sound complex, but it's really as simple as installing [Chunky](https://modrinth.com/plugin/chunky) or a similar plugin
+and [hooking it up](world-engine/pregenerating-cells.md). This takes around 5 minutes
+and improves performance on low-to-mid-end servers.
+
+# Next Steps
+
 This section is split into focused pages:
 
 - [Cells & Spawns](world-engine/cells-spawns.md): the game world, cell

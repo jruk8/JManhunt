@@ -21,6 +21,6 @@ the `jmanhunt_world_engine` datapack with
 
 **Q: Will this work in [specific Minecraft version]?**
 
-A: This feature is tested to work on 26.2. If the plugin is marked to support
+A: This feature is tested to work on 26.2-26.3. If the plugin is marked to support
 a newer version and you encounter issues, please open an issue on GitHub with
 the relevant exception in server logs.

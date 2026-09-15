@@ -40,6 +40,8 @@ public final class GameManager {
     private final WinConditionEngine winConditionEngine;
     private boolean active;
     private boolean ending;
+    private boolean endPhaseDone;
+    private boolean endStatsShown;
     private boolean gameBegun;
     private BukkitTask waitingReminderTask;
     private BukkitTask waitingExpiryTask;
@@ -115,7 +117,7 @@ public final class GameManager {
                 || players.stream().noneMatch(p -> role(p) == Role.SPEEDRUNNER)) return false;
         // Remove any lingering invulnerability from a previous game end
         Bukkit.getOnlinePlayers().forEach(p -> p.setInvulnerable(false));
-        active = true; ending = false; gameBegun = false; stats.clear(); playerStates.clearMatch();
+        active = true; ending = false; endPhaseDone = false; endStatsShown = false; gameBegun = false; stats.clear(); playerStates.clearMatch();
         matchId++;
         playerStates.setMatchParticipants(players);
         for (Player player : players) {
@@ -245,10 +247,18 @@ public final class GameManager {
     /**
      * Ends the match. When {@code immediate} is true the configured
      * {@code match.end-delay} is skipped: statistics post instantly and the
-     * final cleanup runs at once instead of after the delay.
+     * final cleanup runs at once instead of after the delay. An immediate end
+     * during an in-progress end delay finishes the match at once instead of
+     * being blocked.
      */
     public void finish(Role winner, boolean immediate) {
-        if (ending) return;
+        if (ending) {
+            if (immediate) {
+                showEndStatsOnce(winner);
+                finishEndPhase(winner);
+            }
+            return;
+        }
         ending = true;
         gameEndListeners.forEach(Runnable::run);
         Bukkit.getPluginManager().callEvent(new JMatchEndEvent(matchId, roleToPlayerRole(winner)));
@@ -284,19 +294,32 @@ public final class GameManager {
         long delay = immediate
                 ? 0L
                 : Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
-        Bukkit.getScheduler().runTaskLater(plugin, () -> stats.showStats(winner), delay / 2);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            stateCommands.runEnd();
-            List<Player> participants = onlinePlayers.stream().filter(p -> role(p).isParticipant())
-                    .map(p -> (Player) p).toList();
-            worldEngine.onMatchEnd(participants);
-            if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
-                playerStates.resetParticipatingRoles();
-            }
-            active = false; ending = false; gameBegun = false; playerStates.clearMatch();
-            worldEngine.prepareNextCell();
-            updateAutostartState();
-        }, delay);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(winner), delay / 2);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(winner), delay);
+    }
+
+    /** Broadcasts end-of-match statistics, exactly once per match. */
+    private void showEndStatsOnce(Role winner) {
+        if (endStatsShown) return;
+        endStatsShown = true;
+        stats.showStats(winner);
+    }
+
+    /** Runs end commands and deactivates the match, exactly once per match. */
+    private void finishEndPhase(Role winner) {
+        if (endPhaseDone) return;
+        endPhaseDone = true;
+        stateCommands.runEnd();
+        var onlinePlayers = Bukkit.getOnlinePlayers();
+        List<Player> participants = onlinePlayers.stream().filter(p -> role(p).isParticipant())
+                .map(p -> (Player) p).toList();
+        worldEngine.onMatchEnd(participants);
+        if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
+            playerStates.resetParticipatingRoles();
+        }
+        active = false; ending = false; gameBegun = false; playerStates.clearMatch();
+        worldEngine.prepareNextCell();
+        updateAutostartState();
     }
 
     public void end() { finish(Role.HUNTER); }

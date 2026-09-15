@@ -16,12 +16,21 @@ world-engine:
   on-fetch-new-cell: []
 ```
 
+## Quick Setup
+
+1. Install Chunky or a similar chunk pre-generation plugin on your server.
+2. Copy the example lines below into your `config.yml` under
+   `world-engine.on-fetch-new-cell`, replacing the latter `world` with your
+   game world name.
+3. That is it. The next allocated cell is pre-generated automatically between
+   matches.
+
 Try something like:
 
 ```yaml
 world-engine:
   on-fetch-new-cell:
-    - "chunky world world"              # replace "world" with your game world name
+    - "chunky world world"              # replace the latter "world" with your game world name
     - "chunky center <cellX> <cellZ>"   # set gen center to the fetched cell's coordinates
     - "chunky radius 150"               # set gen radius to 150 blocks (keep reasonable to avoid lag)
     - "chunky start"                    # start the generation process
