@@ -1,3 +1,27 @@
+## [4.0.0] - 2026-09-15
+
+### 🚀 Features
+
+- [**breaking**] Modifiers-subcommand overhaul, config refactoring (renamed and moved keys), announce roles on game start
+- Announce-config-changes and fixes
+- Instant end flag, modifier chance, pick-random, deviation and gear-dice
+
+### 🐛 Bug Fixes
+
+- Career wins statistics race condition, runs-on dimension bug
+- Messages style, structure boost decouple from world engine
+- Fixes
+
+### 📚 Documentation
+
+- Draft 1
+- Draft 2
+- [**breaking**] Settings and worldengine done
+- Documentation overhaul
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for v3.9.0 [skip ci]
 ## [3.9.0] - 2026-09-05
 
 ### 🚀 Features
