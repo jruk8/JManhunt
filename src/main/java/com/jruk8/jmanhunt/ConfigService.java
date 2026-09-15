@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt;
 
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,8 +26,17 @@ public final class ConfigService {
     }
 
     public Set<String> settingNames() {
+        return settingNames(plugin.getConfig());
+    }
+
+    /**
+     * Editable setting names for the given config. Package-visible so unit
+     * tests can exercise it without a running server: the plugin instance
+     * itself is not mockable on the unit-test classpath.
+     */
+    static Set<String> settingNames(FileConfiguration config) {
         Set<String> names = new TreeSet<>();
-        var defaults = plugin.getConfig().getConfigurationSection("gamestate-commands.default-commands");
+        var defaults = config.getConfigurationSection("gamestate-commands.default-commands");
         if (defaults != null) {
             if (defaults.contains("enabled")) {
                 names.add("default-commands.enabled");
@@ -37,10 +47,10 @@ public final class ConfigService {
                 }
             }
         }
-        for (String name : modifierNames()) {
+        for (String name : modifierNames(config)) {
             names.add("custom-modifiers." + name + ".enabled");
         }
-        names.addAll(extraModifierNames());
+        names.addAll(extraModifierNames(config));
         return names;
     }
 
@@ -92,7 +102,11 @@ public final class ConfigService {
     }
 
     public Set<String> modifierNames() {
-        var section = plugin.getConfig().getConfigurationSection("custom-modifiers");
+        return modifierNames(plugin.getConfig());
+    }
+
+    static Set<String> modifierNames(FileConfiguration config) {
+        var section = config.getConfigurationSection("custom-modifiers");
         return section == null ? Set.of() : section.getKeys(false);
     }
 
@@ -110,13 +124,15 @@ public final class ConfigService {
         }
     }
 
-    private Set<String> extraModifierNames() {
+    private static Set<String> extraModifierNames(FileConfiguration root) {
         Set<String> names = new TreeSet<>();
-        var root = plugin.getConfig();
         for (String key : root.getKeys(false)) {
-            // config-version is not editable and custom-modifiers internals
-            // stay .enabled-only (see settingNames above).
-            if (key.equals("config-version") || key.equals("custom-modifiers")) {
+            // config-version and send-anonymous-statistics are not editable
+            // and custom-modifiers internals stay .enabled-only (see
+            // settingNames above).
+            if (key.equals("config-version")
+                    || key.equals("send-anonymous-statistics")
+                    || key.equals("custom-modifiers")) {
                 continue;
             }
             ConfigurationSection child = root.getConfigurationSection(key);
@@ -129,7 +145,7 @@ public final class ConfigService {
         return names;
     }
 
-    private void collectExtraModifierNames(ConfigurationSection section, String prefix, String root, Set<String> names) {
+    private static void collectExtraModifierNames(ConfigurationSection section, String prefix, String root, Set<String> names) {
         if (section == null) {
             return;
         }

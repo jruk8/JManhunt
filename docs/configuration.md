@@ -33,3 +33,15 @@ settings:
 `minimessage` enables MiniMessage formatting; `legacy` keeps classic `&`
 color codes. Placeholder formatting in `config.yml` follows the same setting.
 Changes apply after `/manhunt reload`.
+
+## Anonymous Statistics
+
+JManhunt collects anonymous usage statistics through bStats, which helps guide
+development. This is enabled by default and can only be changed directly in
+`config.yml`.
+
+```yaml
+send-anonymous-statistics: true
+```
+
+Set it to `false` and restart the server to opt out.

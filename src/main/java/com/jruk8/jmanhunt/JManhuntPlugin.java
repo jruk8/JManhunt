@@ -72,9 +72,13 @@ public final class JManhuntPlugin extends JavaPlugin {
             listener.onStart();
         }
 
-        // Initialize bStats
-        var metricsBootstrap = new MetricsBootstrap(this);
-        metricsBootstrap.register();
+        // Initialize bStats unless anonymous statistics are disabled. This is
+        // intentionally read once at startup: the toggle lives outside the
+        // in-game configuration command and takes effect on server restart.
+        if (getConfig().getBoolean("send-anonymous-statistics", true)) {
+            var metricsBootstrap = new MetricsBootstrap(this);
+            metricsBootstrap.register();
+        }
     }
 
     private void setupDatabase() {

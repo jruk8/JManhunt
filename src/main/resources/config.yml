@@ -25,6 +25,11 @@
 # Used for config updates, don't change unless you know what you're doing.
 config-version: 3
 
+# Send anonymous statistics via bStats. We never collect personal data or IP addresses.
+# Requires a server restart to take effect.
+# Default: true
+send-anonymous-statistics: true
+
 # Persistent career statistics. SQLite is local and requires no setup. Use
 # PostgreSQL when several JManhunt servers should share the same statistics.
 database:
