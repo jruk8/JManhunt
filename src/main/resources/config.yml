@@ -284,7 +284,7 @@ custom-modifiers:
       player:
         # <random-mob> is replaced with a random spawnable living entity type.
         # Tildes (~) are resolved to the player's position automatically.
-        - "summon <random-mob> ~ ~ ~"
+        - "summon <random-mob> ~ ~1 ~"
   # Gives every participating player a random item every 30 seconds.
   random-item-giver:
     enabled: false
@@ -380,7 +380,7 @@ custom-modifiers:
     commands:
       player:
         - "give <p> sponge 24"
-        - "give <p golden_hoe 1>"
+        - "give <p> golden_hoe 1"
 
 
 # Settings that modify the game.
