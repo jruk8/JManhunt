@@ -125,8 +125,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 "\n<green>Still need help? Join our <#de7766><click:open_url:'https://discord.gg/hkWmCVmWDC'>"
                         + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
         sender.sendMessage(messages.miniMessage(
-                "\n<green>Donate: <#de7766><click:open_url:'https://ko-fi.com/jruk'>"
-                        + "<underlined>Ko-fi</underlined></click></#de7766></green>"));
+                "\n<green>Support our development on <#de7766><click:open_url:'https://ko-fi.com/jruk'>"
+                        + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
         neutralSound(sender);
         return true;
     }
