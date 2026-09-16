@@ -23,20 +23,24 @@
 #
 
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 3
+config-version: 4
+
 
 # Send anonymous statistics via bStats. We never collect personal data or IP addresses.
 # Requires a server restart to take effect.
 # Default: true
 send-anonymous-statistics: true
 
+
 # Persistent career statistics. SQLite is local and requires no setup. Use
 # PostgreSQL when several JManhunt servers should share the same statistics.
-database:
+# If you are upgrading from an older version, rename your existing jmanhunt.db
+# file to statistics.db to keep your stored statistics.
+statistics:
   enabled: true
   type: sqlite
   sqlite:
-    file: jmanhunt.db
+    file: statistics.db
   postgresql:
     host: localhost
     port: 5432
@@ -45,6 +49,7 @@ database:
     password: change-me
     ssl: false
   pool-size: 4
+
 
 # PlaceholderAPI placeholders. All placeholders must be used with the prefix
 # %jmanhunt_<placeholder>% (e.g. %jmanhunt_total_kills%).
@@ -137,6 +142,7 @@ gamestate-commands:
     end:
       - "clear <p>"
 
+
 # Match lifecycle settings: end-of-match delay, pre-start reminders,
 # disconnect rules, and end-screen statistics.
 match:
@@ -175,6 +181,7 @@ match:
   # on reliable vanilla advancements and is calculated only at match end.
   end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
 
+
 # Optional named command bundles. Toggle a bundle in-game with
 # /manhunt configuration custom-modifiers <name> enabled true|false.
 # All commands are run when the match starts (or on interval if configured),
@@ -204,16 +211,15 @@ custom-modifiers:
     enabled: false
     commands:
       player:
-        - "give <p> iron_sword 1"
+        - "give <p> stone_sword 1"
         - "give <p> iron_pickaxe 1"
-        - "give <p> iron_axe 1"
-        - "give <p> iron_shovel 1"
+        - "give <p> cooked_chicken 8"
+        - "give <p> lava_bucket 1"
         - "give <p> shield 1"
         - "give <p> iron_boots 1"
         - "give <p> iron_leggings 1"
         - "give <p> iron_chestplate 1"
         - "give <p> iron_helmet 1"
-        - "give <p> cooked_beef 8"
   # Speedrunners get a health advantage while hunters' health gets a debuff.
   speedrunner-health-advantage:
     enabled: false
@@ -369,7 +375,9 @@ custom-modifiers:
     enabled: false
     commands:
       player:
-        - "give <p> sponge 32"
+        - "give <p> sponge 24"
+        - "give <p golden_hoe 1>"
+
 
 # Settings that modify the game.
 # These can be toggled in-game with the 'configuration' subcommand.
@@ -424,13 +432,11 @@ settings:
     # Default: true
     reset-on-game-end:
       enabled: true
-
     # When true, players are reset to NONE when they leave the server.
     # (only when no game is running, otherwise they are reset to NONE on game end)
     # Default: true
     reset-on-leave:
       enabled: true
-
     # Controls how players with role NONE are handled when default auto-set
     # gamemode is enabled.
     # true: NONE players are put in spectator
@@ -518,9 +524,9 @@ settings:
     # When true, a compass survives a speedrunner's death as a normal dropped
     # item.
     # If a speedrunner gets ahold of the compass, they may track the hunters.
-    # Default: false
+    # Default: true
     drop-on-death:
-      enabled: false
+      enabled: true
     # Seconds between compass target/location refreshes. Set to -1 to disable
     # scheduled refreshes (in that case use right-click refresh or the compass
     # NEVER refreshes); right-click refreshes can still be used separately.
@@ -614,6 +620,7 @@ settings:
       stay-seconds: 3.0
       fade-out-seconds: 0.5
 
+
 # Grid-based single-world manhunt engine.
 # Uses persistent square-spiral cell indexing and teleports participants to
 # randomized points near each cell center.
@@ -702,6 +709,7 @@ world-engine:
       # immediately.
       # Default: 5
       fadeout-time: 5
+
 
 # Sound names are namespaced Minecraft keys.
 # eg. block.note_block.pling

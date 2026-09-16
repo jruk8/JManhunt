@@ -11,43 +11,43 @@ import java.sql.Statement;
 import java.util.UUID;
 
 /** Persistent career-statistics storage for local and shared deployments. */
-public final class StatsRepository implements AutoCloseable {
+public final class StatisticsRepository implements AutoCloseable {
     private final JManhuntPlugin plugin;
     private final boolean postgres;
     private final HikariDataSource dataSource;
 
-    private StatsRepository(JManhuntPlugin plugin, boolean postgres, HikariDataSource dataSource) {
+    private StatisticsRepository(JManhuntPlugin plugin, boolean postgres, HikariDataSource dataSource) {
         this.plugin = plugin;
         this.postgres = postgres;
         this.dataSource = dataSource;
     }
 
-    public static StatsRepository open(JManhuntPlugin plugin) throws SQLException {
-        String type = plugin.getConfig().getString("database.type", "sqlite").toLowerCase();
+    public static StatisticsRepository open(JManhuntPlugin plugin) throws SQLException {
+        String type = plugin.getConfig().getString("statistics.type", "sqlite").toLowerCase();
         if (type.equals("sqlite")) {
-            String file = plugin.getConfig().getString("database.sqlite.file", "jmanhunt.db");
+            String file = plugin.getConfig().getString("statistics.sqlite.file", "statistics.db");
             File database = new File(plugin.getDataFolder(), file);
             if (database.getParentFile() != null) database.getParentFile().mkdirs();
-            StatsRepository repository = new StatsRepository(plugin, false,
-                    dataSource("jdbc:sqlite:" + database, "", "", plugin.getConfig().getInt("database.pool-size", 4)));
+            StatisticsRepository repository = new StatisticsRepository(plugin, false,
+                    dataSource("jdbc:sqlite:" + database, "", "", plugin.getConfig().getInt("statistics.pool-size", 4)));
             repository.initialize();
             return repository;
         }
         if (type.equals("postgresql") || type.equals("postgres")) {
-            String host = plugin.getConfig().getString("database.postgresql.host", "localhost");
-            int port = plugin.getConfig().getInt("database.postgresql.port", 5432);
-            String database = plugin.getConfig().getString("database.postgresql.database", "jmanhunt");
-            String user = plugin.getConfig().getString("database.postgresql.username", "jmanhunt");
-            String pass = plugin.getConfig().getString("database.postgresql.password", "change-me");
-            boolean ssl = plugin.getConfig().getBoolean("database.postgresql.ssl", false);
+            String host = plugin.getConfig().getString("statistics.postgresql.host", "localhost");
+            int port = plugin.getConfig().getInt("statistics.postgresql.port", 5432);
+            String database = plugin.getConfig().getString("statistics.postgresql.database", "jmanhunt");
+            String user = plugin.getConfig().getString("statistics.postgresql.username", "jmanhunt");
+            String pass = plugin.getConfig().getString("statistics.postgresql.password", "change-me");
+            boolean ssl = plugin.getConfig().getBoolean("statistics.postgresql.ssl", false);
             String jdbc = "jdbc:postgresql://" + host + ":" + port + "/" + database + "?sslmode="
                     + (ssl ? "require" : "disable");
-            StatsRepository repository = new StatsRepository(plugin, true,
-                    dataSource(jdbc, user, pass, plugin.getConfig().getInt("database.pool-size", 4)));
+            StatisticsRepository repository = new StatisticsRepository(plugin, true,
+                    dataSource(jdbc, user, pass, plugin.getConfig().getInt("statistics.pool-size", 4)));
             repository.initialize();
             return repository;
         }
-        throw new SQLException("Unsupported database.type: " + type);
+        throw new SQLException("Unsupported statistics.type: " + type);
     }
 
     private static HikariDataSource dataSource(String url, String username, String password, int poolSize) {
@@ -74,52 +74,6 @@ public final class StatsRepository implements AutoCloseable {
                     + "speedrunner_wins INTEGER NOT NULL DEFAULT 0, sessions INTEGER NOT NULL DEFAULT 0, "
                     + "speedrunner_sessions INTEGER NOT NULL DEFAULT 0, hunter_sessions INTEGER NOT NULL DEFAULT 0, "
                     + "deaths INTEGER NOT NULL DEFAULT 0, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
-            statement.executeUpdate("CREATE TABLE IF NOT EXISTS jmanhunt_state ("
-                    + "state_key VARCHAR(64) PRIMARY KEY, state_value BIGINT NOT NULL)");
-        }
-    }
-
-    public synchronized long consumeWorldCellIndexes(int amount) throws SQLException {
-        int consumed = Math.max(0, amount);
-        try (Connection connection = connection()) {
-            connection.setAutoCommit(false);
-            try {
-                long current = 0L;
-                boolean hasValue;
-                try (PreparedStatement select = connection.prepareStatement(
-                        "SELECT state_value FROM jmanhunt_state WHERE state_key=?")) {
-                    select.setString(1, "world_cell_index");
-                    try (ResultSet result = select.executeQuery()) {
-                        hasValue = result.next();
-                        if (hasValue) current = result.getLong(1);
-                    }
-                }
-
-                if (!hasValue) {
-                    try (PreparedStatement insert = connection.prepareStatement(
-                            "INSERT INTO jmanhunt_state (state_key, state_value) VALUES (?, ?)")) {
-                        insert.setString(1, "world_cell_index");
-                        insert.setLong(2, 0L);
-                        insert.executeUpdate();
-                    }
-                }
-
-                long next = current + consumed;
-                try (PreparedStatement update = connection.prepareStatement(
-                        "UPDATE jmanhunt_state SET state_value=? WHERE state_key=?")) {
-                    update.setLong(1, next);
-                    update.setString(2, "world_cell_index");
-                    update.executeUpdate();
-                }
-
-                connection.commit();
-                return current;
-            } catch (SQLException exception) {
-                connection.rollback();
-                throw exception;
-            } finally {
-                connection.setAutoCommit(true);
-            }
         }
     }
 

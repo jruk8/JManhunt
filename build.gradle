@@ -17,6 +17,12 @@ dependencies {
     compileOnly 'com.zaxxer:HikariCP:7.1.0'
     compileOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
     compileOnly 'org.postgresql:postgresql:42.7.13'
+
+    // Tests exercise the real SQLite engine store, so the drivers must be
+    // present at test runtime. The shipped plugin still loads them through
+    // the plugin.yml libraries section instead of bundling them.
+    testRuntimeOnly 'com.zaxxer:HikariCP:7.1.0'
+    testRuntimeOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
 }
 
 // Publishes the JManhunt API so other plugins (e.g. JManhunt-Challenges) can

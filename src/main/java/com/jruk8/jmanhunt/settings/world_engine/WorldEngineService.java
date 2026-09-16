@@ -2,9 +2,10 @@ package com.jruk8.jmanhunt.settings.world_engine;
 
 import com.jruk8.jmanhunt.ConfigService;
 import com.jruk8.jmanhunt.LobbyTeleporter;
-import com.jruk8.jmanhunt.StatsRepository;
+import com.jruk8.jmanhunt.EngineStateRepository;
 import com.jruk8.jmanhunt.settings.SettingsListener;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -52,17 +53,17 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     // The cell allocated during the intermission, used by the next match start.
     private CellOrigin pendingCell;
 
-    public WorldEngineService(JavaPlugin plugin, ConfigService configService, StatsRepository statsRepository) {
+    public WorldEngineService(JavaPlugin plugin, ConfigService configService, EngineStateRepository engineState) {
         this.plugin = plugin;
         this.configService = configService;
-        this.cellAllocator = new WorldCellAllocator(statsRepository);
+        this.cellAllocator = new WorldCellAllocator(engineState);
         this.strongholdDatapackManager = new StrongholdDatapackManager(plugin);
         this.netherStructuresDatapackManager = new NetherStructuresDatapackManager(plugin);
         this.overworldStructuresDatapackManager = new OverworldStructuresDatapackManager(plugin);
         this.endResetManager = new EndResetManager(plugin);
     }
 
-    public void onMatchStart(List<Player> participants) {
+    public void onMatchStart(List<Player> participants, List<Player> spectators) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled() || participants.isEmpty()) return;
         World world = Bukkit.getWorld(config.worldName());
@@ -83,10 +84,30 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             }
         }
 
-        teleportToGame(participants, world, config, origin);
+        Location cellRoot = teleportToGame(participants, world, config, origin);
+        teleportSpectatorsToCell(spectators, cellRoot);
         setWorldBorder(world, config, origin);
         // Reset the intermission fetch flag for the next match.
         cellFetchedForIntermission = false;
+    }
+
+    /**
+     * Teleports NONE players to the match cell center so they can spectate
+     * the match instead of waiting in the lobby. Skipped entirely when
+     * spectator handling for NONE players is disabled.
+     */
+    private void teleportSpectatorsToCell(List<Player> spectators, Location cellRoot) {
+        if (spectators.isEmpty() || cellRoot == null) {
+            return;
+        }
+        if (!plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+            return;
+        }
+        for (Player spectator : spectators) {
+            spectator.teleport(cellRoot);
+            spectator.setRespawnLocation(cellRoot, true);
+            spectator.setGameMode(GameMode.SPECTATOR);
+        }
     }
 
     /**
@@ -134,7 +155,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         startBorderActive = false;
     }
 
-    public void onMatchEnd(List<Player> participants) {
+    public void onMatchEnd(List<Player> participants, List<Player> spectators) {
         resetTrackedBorders();
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return;
@@ -152,6 +173,15 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         for (Player player : participants) {
             player.teleport(lobby);
             player.setRespawnLocation(lobby, true);
+        }
+        // Spectators placed at the cell center at match start return to the
+        // lobby with everyone else. When NONE spectator handling is disabled
+        // they were never moved, so they are left alone.
+        if (plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+            for (Player spectator : spectators) {
+                spectator.teleport(lobby);
+                spectator.setRespawnLocation(lobby, true);
+            }
         }
         endResetManager.reset(config, lobby);
         clearWorldBorder(lobby.getWorld());
@@ -270,7 +300,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         return Optional.empty();
     }
 
-    private void teleportToGame(List<Player> participants, World world, WorldEngineConfig config, CellOrigin origin) {
+    private Location teleportToGame(List<Player> participants, World world, WorldEngineConfig config, CellOrigin origin) {
         // Use the cell root as the respawn location for all participants so
         // that deaths send them back to the cell center rather than the lobby.
         Location cellRoot = new Location(world, origin.x() + 0.5,
@@ -287,6 +317,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         endResetManager.reset(config, lobby);
 
         setWorldBorder(world, config, origin);
+        return cellRoot;
     }
 
     /**

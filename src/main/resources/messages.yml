@@ -2,7 +2,7 @@
 messages-version: 6
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
-prefix: "<dark_gray>[<gold>JManhunt<dark_gray>] "
+prefix: "<#a6a6a6>[<gradient:#e66550:#de7766><bold>J</bold>Manhunt</gradient>]</#a6a6a6> "
 
 command:
   player-only: "{prefix}<red>Only players can use this command."
@@ -10,7 +10,7 @@ command:
   invalid: "{prefix}<red>Unknown command. Use <yellow>/manhunt help<red>."
 
 manhunt:
-  help-header: "\n{prefix}<gold>JManhunt commands:"
+  help-header: "\n{prefix}\n<gold>JManhunt commands:"
   help-line: "<white>» {command}<gray>: {description}</gray></white>"
   status-header: "{prefix}<gold>Manhunt status: <white>{status}"
   speedrunners-header: "\n{prefix}<gold>Speedrunners:"

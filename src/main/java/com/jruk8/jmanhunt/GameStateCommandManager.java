@@ -466,7 +466,12 @@ public final class GameStateCommandManager {
                 }
                 player.setGameMode(GameMode.SURVIVAL);
             });
-            if (!nonePlayers.isEmpty()) {
+            // When the world engine is enabled, NONE spectators travel to the
+            // match cell with the players instead of waiting in the lobby.
+            boolean engineMovesSpectators = phase.equals("start")
+                    && setNoneSpectator
+                    && plugin.getConfig().getBoolean("world-engine.enabled", false);
+            if (!nonePlayers.isEmpty() && !engineMovesSpectators) {
                 lobbyTeleporter.teleportToLobby(nonePlayers);
                 lobbyTeleporter.setSpawnToLobby(nonePlayers);
             }

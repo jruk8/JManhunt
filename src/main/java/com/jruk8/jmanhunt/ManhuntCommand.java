@@ -32,16 +32,16 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             "world-engine.enabled",
             "settings.game-boosts.nether-structures.enabled",
             "settings.game-boosts.overworld-structures.enabled",
-            "database.enabled",
-            "database.type",
-            "database.sqlite.file",
-            "database.postgresql.host",
-            "database.postgresql.port",
-            "database.postgresql.database",
-            "database.postgresql.username",
-            "database.postgresql.password",
-            "database.postgresql.ssl",
-            "database.pool-size"
+            "statistics.enabled",
+            "statistics.type",
+            "statistics.sqlite.file",
+            "statistics.postgresql.host",
+            "statistics.postgresql.port",
+            "statistics.postgresql.database",
+            "statistics.postgresql.username",
+            "statistics.postgresql.password",
+            "statistics.postgresql.ssl",
+            "statistics.pool-size"
     );
 
     /**
@@ -91,8 +91,17 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
         // The config alias shares the configuration permission node; every
         // other subcommand keeps its own jmanhunt.command.<sub> node.
-        String node = sub.equals("config") ? "configuration" : sub;
-        if (!sender.hasPermission("jmanhunt.command." + node)) return message(sender, "command.no-permission");
+        // setplayer additionally accepts the self-only node, which setPlayer
+        // enforces down below.
+        if (sub.equals("setplayer")) {
+            if (!sender.hasPermission("jmanhunt.command.setplayer")
+                    && !sender.hasPermission("jmanhunt.command.setplayer.self")) {
+                return message(sender, "command.no-permission");
+            }
+        } else {
+            String node = sub.equals("config") ? "configuration" : sub;
+            if (!sender.hasPermission("jmanhunt.command." + node)) return message(sender, "command.no-permission");
+        }
         return switch (sub) {
             case "help" -> help(sender);
             case "status" -> status(sender);
@@ -220,6 +229,23 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return false;
     }
 
+    static String rolePermissionNode(Role role) {
+        return switch (role) {
+            case HUNTER -> "jmanhunt.hunter";
+            case SPEEDRUNNER -> "jmanhunt.speedrunner";
+            case AFK -> "jmanhunt.afk";
+            case NONE -> "jmanhunt.none";
+        };
+    }
+
+    static boolean isSelfOnlySelection(CommandSender sender, List<Entity> selected) {
+        if (!(sender instanceof Player self) || selected.size() != 1) {
+            return false;
+        }
+        return selected.get(0) instanceof Player target
+                && target.getUniqueId().equals(self.getUniqueId());
+    }
+
     private boolean setPlayer(CommandSender sender, String[] args) {
         if (args.length < 3) return message(sender, "command.invalid");
         Role role;
@@ -228,12 +254,20 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         List<Entity> selected;
         try { selected = Bukkit.selectEntities(sender, args[1]); }
         catch (IllegalArgumentException exception) { return message(sender, "command.invalid"); }
+        // The full setplayer permission overrides every other check: any
+        // selector and any role. Otherwise the sender needs the self node,
+        // the selector must resolve to exactly the sender, and the sender
+        // must hold the permission for the requested role.
+        if (!sender.hasPermission("jmanhunt.command.setplayer")
+                && (!isSelfOnlySelection(sender, selected)
+                || !sender.hasPermission(rolePermissionNode(role)))) {
+            return message(sender, "command.no-permission");
+        }
         int changed = 0, unchanged = 0, skipped = 0;
         Set<java.util.UUID> assigned = new HashSet<>();
         for (Entity entity : selected) if (entity instanceof Player player) {
             if (playerStates.role(player) == role) { unchanged++; continue; }
-            if (role == Role.HUNTER && !player.hasPermission("jmanhunt.hunter")
-                    || role == Role.SPEEDRUNNER && !player.hasPermission("jmanhunt.speedrunner")) { skipped++; continue; }
+            if (!player.hasPermission(rolePermissionNode(role))) { skipped++; continue; }
             playerStates.setRole(player, role); changed++;
             assigned.add(player.getUniqueId());
             message(player, "manhunt.role-assigned", Map.of("role", role.name()));

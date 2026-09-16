@@ -57,14 +57,13 @@ must-be-inventory:
 
 Under `settings.compass.drop-on-death`, you can configure whether the compass
 is dropped on death. This is useful for allowing speedrunners to pick up the
-hunter's compass after death, or for allowing hunters to pick up the speedrunner's
-compass after death.
+hunter's compass after death and track them.
 
 Only one compass may exist in the inventory at a time. Duplicate ones are removed.
 
 ```yaml
 drop-on-death:
-  enabled: false
+  enabled: true
 ```
 
 ## Refresh Time

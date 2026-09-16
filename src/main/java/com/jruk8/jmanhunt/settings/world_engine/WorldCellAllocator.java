@@ -1,15 +1,15 @@
 package com.jruk8.jmanhunt.settings.world_engine;
 
-import com.jruk8.jmanhunt.StatsRepository;
+import com.jruk8.jmanhunt.EngineStateRepository;
 
 import java.sql.SQLException;
 import java.util.OptionalLong;
 
 public final class WorldCellAllocator {
-    private final StatsRepository repository;
+    private final EngineStateRepository repository;
     private long fallbackIndex = 0L;
 
-    public WorldCellAllocator(StatsRepository repository) {
+    public WorldCellAllocator(EngineStateRepository repository) {
         this.repository = repository;
     }
 

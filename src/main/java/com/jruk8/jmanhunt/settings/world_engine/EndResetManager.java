@@ -28,11 +28,18 @@ public final class EndResetManager {
             return;
         }
 
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.getWorld().equals(endWorld)) {
-                player.teleport(lobbyLocation);
+        if (lobbyLocation != null) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (player.getWorld().equals(endWorld)) {
+                    player.teleport(lobbyLocation);
+                }
             }
         }
+        // The vanilla dragon health bar is tracked per player and is not
+        // always cleared when its world is unloaded and recreated, so remove
+        // every viewer explicitly. Otherwise the stale bar stays on screen
+        // for anyone who was in the End during the reset.
+        clearDragonBar(endWorld);
         for (org.bukkit.Chunk chunk : endWorld.getLoadedChunks()) {
             chunk.unload();
         }
@@ -49,6 +56,22 @@ public final class EndResetManager {
         WorldCreator creator = new WorldCreator(endWorldName);
         creator.environment(World.Environment.THE_END);
         creator.createWorld();
+    }
+
+    private void clearDragonBar(World endWorld) {
+        try {
+            var battle = endWorld.getEnderDragonBattle();
+            if (battle == null) {
+                return;
+            }
+            var bar = battle.getBossBar();
+            if (bar == null) {
+                return;
+            }
+            bar.removeAll();
+        } catch (UnsupportedOperationException exception) {
+            plugin.getLogger().fine("Could not clear dragon bar in " + endWorld.getName() + ": " + exception.getMessage());
+        }
     }
 
     private void deleteFolder(File folder) {

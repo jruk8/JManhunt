@@ -7,7 +7,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt`                                        | Shows the current teams and match status. | `jmanhunt.command.status` |
 | `/manhunt help`                                   | Shows the in-game command list. | `jmanhunt.command.help` |
 | `/manhunt challenges`                             | Shows a chat notice with a clickable link to the optional Challenges addon. | `jmanhunt.command.challenges` |
-| `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `afk`, or `none`. | `jmanhunt.command.setplayer` |
+| `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `afk`, or `none`. | `jmanhunt.command.setplayer` (`jmanhunt.command.setplayer.self` for your own role only) |
 | `/manhunt start`                                  | Starts a match. | `jmanhunt.command.start` |
 | `/manhunt end`                                    | Ends the active match; hunters win. | `jmanhunt.command.end` |
 | `/manhunt end -i` / `-immediate`                | Ends the match immediately, skipping the end delay (stats post instantly). | `jmanhunt.command.end` |
@@ -26,8 +26,13 @@ The `setplayer` command accepts the following roles:
 | --- | --- |
 | `hunter` | Participates as a hunter. Requires `jmanhunt.hunter` permission. |
 | `speedrunner` | Participates as a speedrunner. Requires `jmanhunt.speedrunner` permission. |
-| `afk` | Excluded from the match entirely. AFK players never become hunters or speedrunners, are excluded from Quick Start, and are ignored by automatic team assignment. They can still be assigned through `/setplayer`. |
-| `none` | Not participating. Sent to spectator mode if a match is active. |
+| `afk` | Excluded from the match entirely. AFK players never become hunters or speedrunners, are excluded from Quick Start, and are ignored by automatic team assignment. They can still be assigned through `/setplayer`. Requires `jmanhunt.afk` permission. |
+| `none` | Not participating. Sent to spectator mode if a match is active. Requires `jmanhunt.none` permission. |
+
+With `jmanhunt.command.setplayer`, a player can assign anyone to any role
+(the target still needs the permission for that role). With only
+`jmanhunt.command.setplayer.self`, a player can only target themselves and
+only pick roles they have the permission for.
 
 ## Quick Start
 

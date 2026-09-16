@@ -34,6 +34,12 @@ whenever the plugin's automatic gamemode assignment is active:
 - `true`: `NONE` players are put into spectator mode.
 - `false`: `NONE` players keep whatever gamemode they already had.
 
+When the world engine is enabled and this setting is `true`, `NONE`
+players are teleported to the match cell center together with the
+participants when a match starts, so they can spectate the match instead
+of waiting in the lobby. They return to the lobby when the match ends.
+When this setting is `false`, they are not teleported to the cell.
+
 # Friendly Fire
 
 Under `settings.friendly-fire`, you can control whether players of the same

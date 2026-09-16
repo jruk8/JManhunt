@@ -38,7 +38,8 @@
    `/manhunt end`.
 
 Players need permission `jmanhunt.hunter` or `jmanhunt.speedrunner` to receive the
-corresponding role. Both permissions are granted by default. The `/manhunt`
+corresponding role, and likewise `jmanhunt.afk` or `jmanhunt.none` for those
+roles. All four permissions are granted by default. The `/manhunt`
 command is also accessible through the `mh` alias.
 
 ## Next Steps

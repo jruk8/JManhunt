@@ -18,13 +18,14 @@ import java.util.Map;
 
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int CONFIG_VERSION = 3;
+    private static final int CONFIG_VERSION = 4;
     private static final int MESSAGES_VERSION = 5;
     /**
      * Relocated config paths, applied on reload. Every key must live under a
      * real category so the in-game config command can drill into it.
      */
     private static final Map<String, String> CONFIG_MOVES = Map.of(
+            "database", "statistics",
             "game-end-delay", "match.end-delay",
             "start-reminder-interval", "match.start-reminder-interval",
             "end-statistics", "match.end-statistics",
@@ -36,7 +37,8 @@ public final class JManhuntPlugin extends JavaPlugin {
     private StatsManager stats;
     private CompassManager compass;
     private GameManager game;
-    private StatsRepository statsRepository;
+    private StatisticsRepository statistics;
+    private EngineStateRepository engineState;
     private JManhuntExpansion expansion;
     private ConfigService configService;
     private WorldEngineService worldEngine;
@@ -48,15 +50,16 @@ public final class JManhuntPlugin extends JavaPlugin {
         reload();
 
         playerStates = new PlayerStateStore();
-        setupDatabase();
-        stats = new StatsManager(this, messages, statsRepository);
+        setupStatistics();
+        setupEngineState();
+        stats = new StatsManager(this, messages, statistics);
         setupPlaceholderApi();
 
         compass = new CompassManager(this, messages, playerStates,
                 new NamespacedKey(this, "hunters_compass"));
         configService = new ConfigService(this);
         sounds = new SoundService(this, configService);
-        worldEngine = new WorldEngineService(this, configService, statsRepository);
+        worldEngine = new WorldEngineService(this, configService, engineState);
         winConditionEngine = new WinConditionEngine(getConfig());
         game = new GameManager(
                 this, messages, sounds, playerStates, compass, stats,
@@ -81,16 +84,28 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
     }
 
-    private void setupDatabase() {
-        if (!getConfig().getBoolean("database.enabled", true)) {
+    private void setupStatistics() {
+        if (!getConfig().getBoolean("statistics.enabled", true)) {
             return;
         }
         try {
-            statsRepository = StatsRepository.open(this);
+            statistics = StatisticsRepository.open(this);
             getLogger().info("Career statistics database initialized.");
         } catch (Exception exception) {
             getLogger().severe(
                     "Career statistics are disabled because the database could not be initialized: "
+                            + exception.getMessage());
+        }
+    }
+
+    private void setupEngineState() {
+        try {
+            engineState = EngineStateRepository.open(getDataFolder());
+            getLogger().info("Engine state database initialized.");
+        } catch (Exception exception) {
+            getLogger().severe(
+                    "World-engine cell allocation will fall back to memory because "
+                            + "the engine database could not be initialized: "
                             + exception.getMessage());
         }
     }
@@ -141,8 +156,11 @@ public final class JManhuntPlugin extends JavaPlugin {
         if (stats != null) {
             stats.flush();
         }
-        if (statsRepository != null) {
-            statsRepository.close();
+        if (statistics != null) {
+            statistics.close();
+        }
+        if (engineState != null) {
+            engineState.close();
         }
     }
 

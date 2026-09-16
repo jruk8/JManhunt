@@ -17,14 +17,14 @@ import java.util.Set;
 public final class StatsManager {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
-    private final StatsRepository repository;
+    private final StatisticsRepository repository;
     private final Map<UUID, Stats> stats = new HashMap<>();
     private final Map<UUID, CareerStats> career = new ConcurrentHashMap<>();
     private final Set<UUID> careerLoading = ConcurrentHashMap.newKeySet();
     private final Set<UUID> careerLoaded = ConcurrentHashMap.newKeySet();
     private final Set<CompletableFuture<Void>> pendingSaves = ConcurrentHashMap.newKeySet();
 
-    public StatsManager(JManhuntPlugin plugin, MessageService messages, StatsRepository repository) {
+    public StatsManager(JManhuntPlugin plugin, MessageService messages, StatisticsRepository repository) {
         this.plugin = plugin;
         this.messages = messages;
         this.repository = repository;

@@ -31,6 +31,9 @@ permissions:
   jmanhunt.command.setplayer:
     description: Assign players to Manhunt roles.
     default: op
+  jmanhunt.command.setplayer.self:
+    description: Assign your own Manhunt role.
+    default: op
   jmanhunt.command.start:
     description: Start a Manhunt match.
     default: op
@@ -54,4 +57,10 @@ permissions:
     default: true
   jmanhunt.speedrunner:
     description: Allows a player to become a speedrunner.
+    default: true
+  jmanhunt.afk:
+    description: Allows a player to become afk.
+    default: true
+  jmanhunt.none:
+    description: Allows a player to become a spectator (none).
     default: true

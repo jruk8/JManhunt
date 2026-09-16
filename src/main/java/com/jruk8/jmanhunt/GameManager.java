@@ -142,7 +142,7 @@ public final class GameManager {
         // giving role equipment. In particular, default clear-inventory must
         // not remove the hunter compass.
         stateCommands.runStart();
-        worldEngine.onMatchStart(players);
+        worldEngine.onMatchStart(players, noneSpectators());
         for (Player player : players) {
             if (role(player).isParticipant()) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
@@ -313,7 +313,7 @@ public final class GameManager {
         var onlinePlayers = Bukkit.getOnlinePlayers();
         List<Player> participants = onlinePlayers.stream().filter(p -> role(p).isParticipant())
                 .map(p -> (Player) p).toList();
-        worldEngine.onMatchEnd(participants);
+        worldEngine.onMatchEnd(participants, noneSpectators());
         if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
             playerStates.resetParticipatingRoles();
         }
@@ -480,7 +480,7 @@ public final class GameManager {
                         stateCommands.runEnd();
                         List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
                                 .map(p -> (Player) p).toList();
-                        worldEngine.onMatchEnd(participants);
+                        worldEngine.onMatchEnd(participants, noneSpectators());
                         if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
                             playerStates.resetParticipatingRoles();
                         }
@@ -613,6 +613,12 @@ public final class GameManager {
     }
 
     private Role role(Player player) { return playerStates.role(player); }
+
+    /** Online players with role NONE: match spectators, never AFK players. */
+    private List<Player> noneSpectators() {
+        return Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.NONE)
+                .map(p -> (Player) p).toList();
+    }
 
     /** Maps an internal role to the API player role, defaulting to the winner role of NONE. */
     private static com.jruk8.jmanhunt.api.PlayerRole roleToPlayerRole(Role role) {
