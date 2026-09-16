@@ -1,3 +1,12 @@
+## [4.2.2] - 2026-09-16
+
+### 🐛 Bug Fixes
+
+- Docs changes and branding
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for v4.2.1 [skip ci]
 ## [4.2.1] - 2026-09-16
 
 ### 🐛 Bug Fixes
