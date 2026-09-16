@@ -122,10 +122,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         // Clickable links need MiniMessage parsing regardless of text-format,
         // so this footer stays hardcoded instead of living in messages.yml.
         sender.sendMessage(messages.miniMessage(
-                "\n<green>Still need help? Join our <#de7766><click:open_url:'https://discord.gg/hkWmCVmWDC'>"
+                "\n<green>Still need help? Check <#de7766><click:open_url:'https://jruk8.github.io/JManhunt/'>"
+                        + "<underlined>Docs</underlined></click></#de7766> or join our <#de7766><click:open_url:'https://discord.gg/hkWmCVmWDC'>"
                         + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
         sender.sendMessage(messages.miniMessage(
-                "\n<green>Support our development on <#de7766><click:open_url:'https://ko-fi.com/jruk'>"
+                "<green>Support our development on <#de7766><click:open_url:'https://ko-fi.com/jruk'>"
                         + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
         neutralSound(sender);
         return true;

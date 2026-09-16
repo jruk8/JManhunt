@@ -1,5 +1,5 @@
 site_name: JManhunt
-site_description: A deeply configurable Paper plugin for Manhunts.
+site_description: 🧭 Highly customizable Manhunt plugin for 26.2-26.3+ with compass tracking, custom modifiers, and an automated world reset engine.
 site_url: https://jruk8.github.io/JManhunt/
 repo_url: https://github.com/jruk8/JManhunt
 repo_name: jruk8/JManhunt
@@ -48,10 +48,10 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Installation: installation.md
   - Getting Started: getting-started.md
   - Gallery: gallery.md
   - Commands: commands.md
-  - Permissions: permissions.md
   - Configuration:
       - Overview: configuration.md
       - Settings:
@@ -71,6 +71,7 @@ nav:
       - Built-in Match Commands: configuration/match-commands.md
       - Statistics & PlaceholderAPI: configuration/statistics.md
       - Sounds: configuration/sounds.md
+  - Permissions: permissions.md
   - Placeholders: placeholders.md
   - API: api.md
 

@@ -6,10 +6,8 @@ optional command lists, all configured in `config.yml` under
 `default-commands`. Like custom modifiers, these can be browsed and toggled
 in-game with `/manhunt configuration`.
 
-All command examples are the default config settings. Some defaults may be outdated
-(typically not), in
-which case you should refer to the latest version of `config.yml` in the
-[GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
+All command examples are the default config settings. Refer to the latest
+version of `config.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
 
 Settings for match commands are categorized under `gamestate-commands`:
 

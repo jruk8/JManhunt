@@ -1,17 +1,15 @@
 # World Engine
 
 **World Engine** partitions a single world into configurable cells and runs
-each match on an unused one. This allows for practically infinite matches on
-just one world, which is:
+each match on an unused one. This allows for near-infinite matches on
+one world file, which is:
 
-- a clean solution compared to manually regenerating a world
-- more performant than the world resets other plugins offer
-- far less likely to break on updates
+- automatic and faster compared to manually deleting a world file
+- very performant (new cells preload in the background)
+- supports up to half a billion cells (games) on just one world file
 
-All command examples are the default config settings. Some defaults may be outdated
-(typically not), in
-which case you should refer to the latest version of `config.yml` in the
-[GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
+All command examples are the default config settings. Refer to the latest 
+version of `config.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
 
 Settings for the world engine are categorized under `world-engine`:
 
@@ -25,7 +23,7 @@ world-engine:
 1. Enable World Engine in-game with `/manhunt configuration world-engine enabled true`.
 2. Stand where you want the lobby to be and run `/manhunt worldengine setlobby`.
    Players return here after a match ends. Double-check the
-   location by running `/mh worldengine lobby`,
+   location by running `/mh worldengine lobby`.
 3. Restart the server. Everything works without a restart, but the stronghold
    generation changes only apply after one. 
 
@@ -34,7 +32,7 @@ may sound complex, but it's really as simple as installing [Chunky](https://modr
 and [hooking it up](world-engine/pregenerating-cells.md). This takes around 5 minutes
 and improves performance on low-to-mid-end servers.
 
-# Next Steps
+## Next Steps
 
 This section is split into focused pages:
 

@@ -5,20 +5,17 @@ that run whenever a new cell is allocated for a match. This
 is useful for pre-generating the cell area with chunk-generation plugins
 such as Chunky before a game starts.
 
-**Why?** Obviously, one could generate chunks as they're needed. However, this lags the server
-because generating chunks in further out regions is expensive. Thus, it's better for the server to 
-load chunks and lag before the game than during it.
+> **Why Pre-Generate:**
+> Generating terrain dynamically at high coordinates causes severe server lag during active matches.
+> Pre-generating during intermissions moves heavy chunk loading out of gameplay.
 
-The placeholders `<cellX>` and `<cellZ>` are replaced with the cell's block coordinates.
-The `<world>` placeholder is replaced with the world-engine world name, so you
-never have to hardcode it.
-
+Category in `config.yml`:
 ```yaml
 world-engine:
   on-fetch-new-cell: []
 ```
 
-## Quick Setup
+## Quick Setup (Chunky, 5 minutes)
 
 1. Install Chunky or a similar chunk pre-generation plugin on your server.
 2. Copy the example lines below into your `config.yml` under
@@ -39,14 +36,21 @@ world-engine:
     - "chunky confirm"                  # fixes anything that may have prevented the generation
 ```
 
-The commands run:
+## Dynamic Placeholders
 
-i. when a match ends (after the match goes inactive) and
+The following placeholders are automatically populated at runtime:
 
-ii. when the autostart countdown begins,
+- `<world>`: The configured game world name (from `world-engine.world-name`).
+- `<cellX>`: The X-block coordinate of the newly fetched cell center.
+- `<cellZ>`: The Z-block coordinate of the newly fetched cell center.
 
-giving chunk-generation plugins time to pre-generate the next cell before
-a game starts. They only run once per match intermission, so the cell is
-fetched exactly once between matches. The commands only run when the cell
-is actually new (i.e. the previous cell was not already regenerated),
-avoiding unnecessary regeneration.
+## Run Behavior
+
+The commands run on:
+
+- **Match End:** after the previous match becomes inactive
+- **Autostart:** when the match autostart countdown begins
+
+These commands are run in the background, and the cell is fetched only once.
+If the current cell is **not stale** (i.e., not used), then the pre-generation will
+be skipped.

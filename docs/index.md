@@ -5,29 +5,25 @@ JManhunt is a deeply configurable Paper plugin for 26.2+ Manhunts. It comes
 with a lean world reset engine, compass tracking, placeholders, statistics,
 and a variety of built-in actions and custom modifiers.
 
+## Get Started
+
+- [Quick Setup](getting-started.md)
+
 ## Key Features
 
 - **Deep configurability**: Toggle built-in mechanics on or off, or create
-  entirely new gameplay through easy-to-use custom modifiers.
-- **World reset engine**: Grid-based single-world manhunt engine with
+  new gameplay through easy-to-use custom modifiers.
+- **World Engine**: Grid-based single-world Manhunt engine with
   persistent spiral cell assignment and automatic End resets.
 - **Compass tracking**: Hunter compass with configurable refresh and
   right-click behavior.
 - **Placeholders & statistics**: Career statistics with PlaceholderAPI
   support.
-- **Public API**: Read match state and react to lifecycle events from other
-  plugins; the companion plugin JManhunt-Challenges implements the built-in
-  challenges on top of it.
-
-## Installation
-
-Download the latest release from
-[Modrinth](https://modrinth.com/plugin/jmanhunt) and place the jar in your
-server's `plugins/` folder. Restart the server to generate the default
-configuration files.
+- **Public API**: If you're a developer, this is for you!
 
 ## Documentation
 
+- [Installation](installation.md)
 - [Getting Started](getting-started.md)
 - [Gallery](gallery.md)
 - [Configuration](configuration.md): overview, settings, world engine,
@@ -36,32 +32,5 @@ configuration files.
 - [Permissions](permissions.md)
 - [Placeholders](placeholders.md)
 - [API](api.md)
-
-## Download / Build
-
-Pre-built releases are published to
-[Modrinth](https://modrinth.com/plugin/jmanhunt).
-
-To build from source, Java 25 is required:
-
-```shell
-./gradlew build
-```
-
-On Windows:
-
-```powershell
-.\gradlew.bat build
-```
-
-The plugin jar is written to `build/libs/`.
-
-## Contributing
-
-Contributions are welcome! See
-[CONTRIBUTING.md](https://github.com/jruk8/JManhunt/blob/main/CONTRIBUTING.md)
-for contributor setup and the
-[GitHub repository](https://github.com/jruk8/JManhunt) for issues and pull
-requests.
 
 © 2026 jruk8. Licensed under GNU GPLv3.
