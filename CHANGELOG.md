@@ -1,3 +1,14 @@
+## [4.2.0] - 2026-09-16
+
+### 🚀 Features
+
+- Feats
+- Feats 2
+- General experience improvements
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for v4.1.0 [skip ci]
 ## [4.1.0] - 2026-09-15
 
 ### 🚀 Features
