@@ -45,6 +45,28 @@ public final class EngineStateRepository implements AutoCloseable {
         }
     }
 
+    public synchronized long getWorldCellIndex() throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement select = connection.prepareStatement(
+                        "SELECT state_value FROM engine_state WHERE state_key=?")) {
+            select.setString(1, "world_cell_index");
+            try (ResultSet result = select.executeQuery()) {
+                return result.next() ? result.getLong(1) : 0L;
+            }
+        }
+    }
+
+    public synchronized void setWorldCellIndex(long value) throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement update = connection.prepareStatement(
+                        "INSERT INTO engine_state (state_key, state_value) VALUES (?, ?) "
+                                + "ON CONFLICT (state_key) DO UPDATE SET state_value=EXCLUDED.state_value")) {
+            update.setString(1, "world_cell_index");
+            update.setLong(2, Math.max(0L, value));
+            update.executeUpdate();
+        }
+    }
+
     public synchronized long consumeWorldCellIndexes(int amount) throws SQLException {
         int consumed = Math.max(0, amount);
         try (Connection connection = connection()) {

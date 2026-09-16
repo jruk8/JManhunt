@@ -13,6 +13,29 @@ public final class WorldCellAllocator {
         this.repository = repository;
     }
 
+    public OptionalLong currentStartIndex() {
+        if (repository == null) {
+            return OptionalLong.empty();
+        }
+        try {
+            return OptionalLong.of(repository.getWorldCellIndex());
+        } catch (SQLException ignored) {
+            return OptionalLong.empty();
+        }
+    }
+
+    public boolean setStartIndex(long value) {
+        if (repository == null) {
+            return false;
+        }
+        try {
+            repository.setWorldCellIndex(value);
+            return true;
+        } catch (SQLException ignored) {
+            return false;
+        }
+    }
+
     public OptionalLong reserveStartIndex(int amount) {
         int size = Math.max(0, amount);
         if (size == 0) {

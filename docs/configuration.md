@@ -21,13 +21,12 @@ See the individual configuration pages for detailed documentation:
 
 ## Core Settings
 
-Under `settings.text-format`, you can choose the message parser used for
+Under `text-format`, you can choose the message parser used for
 `messages.yml`:
 
 ```yaml
-settings:
-  # Message parser used for messages.yml: minimessage or legacy.
-  text-format: minimessage
+# Message parser used for messages.yml: minimessage or legacy.
+text-format: minimessage
 ```
 
 `minimessage` enables MiniMessage formatting; `legacy` keeps classic `&`

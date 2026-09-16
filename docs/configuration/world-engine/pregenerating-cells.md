@@ -10,6 +10,8 @@ because generating chunks in further out regions is expensive. Thus, it's better
 load chunks and lag before the game than during it.
 
 The placeholders `<cellX>` and `<cellZ>` are replaced with the cell's block coordinates.
+The `<world>` placeholder is replaced with the world-engine world name, so you
+never have to hardcode it.
 
 ```yaml
 world-engine:
@@ -20,8 +22,8 @@ world-engine:
 
 1. Install Chunky or a similar chunk pre-generation plugin on your server.
 2. Copy the example lines below into your `config.yml` under
-   `world-engine.on-fetch-new-cell`, replacing the latter `world` with your
-   game world name.
+   `world-engine.on-fetch-new-cell`. `<world>` fills in your game world
+   name on its own.
 3. That is it. The next allocated cell is pre-generated automatically between
    matches.
 
@@ -30,7 +32,7 @@ Try something like:
 ```yaml
 world-engine:
   on-fetch-new-cell:
-    - "chunky world world"              # replace the latter "world" with your game world name
+    - "chunky world <world>"            # your game world name, filled in automatically
     - "chunky center <cellX> <cellZ>"   # set gen center to the fetched cell's coordinates
     - "chunky radius 150"               # set gen radius to 150 blocks (keep reasonable to avoid lag)
     - "chunky start"                    # start the generation process

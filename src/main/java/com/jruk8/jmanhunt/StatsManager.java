@@ -144,7 +144,7 @@ public final class StatsManager {
         pendingSaves.forEach(CompletableFuture::join);
     }
 
-    public void showStats(Role winner) {
+    public void showStats() {
         for (String statistic : plugin.getConfig().getStringList("match.end-statistics")) {
             if (statistic.equalsIgnoreCase("PROGRESSION")) updateProgression();
             var ranked = stats.values().stream()

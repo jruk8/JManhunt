@@ -29,8 +29,7 @@ public final class JManhuntPlugin extends JavaPlugin {
             "game-end-delay", "match.end-delay",
             "start-reminder-interval", "match.start-reminder-interval",
             "end-statistics", "match.end-statistics",
-            "disconnect-handling", "match.disconnect-handling",
-            "text-format", "settings.text-format");
+            "disconnect-handling", "match.disconnect-handling");
     private MessageService messages;
     private SoundService sounds;
     private PlayerStateStore playerStates;
@@ -176,7 +175,7 @@ public final class JManhuntPlugin extends JavaPlugin {
             messages = new MessageService();
         }
         messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")),
-                getConfig().getString("settings.text-format", "minimessage"));
+                getConfig().getString("text-format", "minimessage"));
 
         if (winConditionEngine != null) {
             winConditionEngine.reload(getConfig());

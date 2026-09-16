@@ -11,12 +11,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CompassMeta;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public final class CompassManager {
@@ -214,13 +216,79 @@ public final class CompassManager {
                         role == Role.HUNTER);
     }
 
+    private static final Set<String> PLACEABLE_SUFFIXES =
+            Set.of("_BUCKET", "_SPAWN_EGG", "_BOAT", "_MINECART", "_RAFT");
+    private static final Set<String> PLACEABLE_ITEMS = Set.of(
+            "BUCKET", "MILK_BUCKET", "REDSTONE", "STRING",
+            "WHEAT_SEEDS", "BEETROOT_SEEDS", "MELON_SEEDS", "PUMPKIN_SEEDS",
+            "TORCHFLOWER_SEEDS", "PITCHER_POD", "NETHER_WART", "COCOA_BEANS",
+            "GLOW_BERRIES", "SWEET_BERRIES", "MINECART",
+            "ARMOR_STAND", "ITEM_FRAME", "GLOW_ITEM_FRAME", "PAINTING", "END_CRYSTAL",
+            "FLINT_AND_STEEL", "FIRE_CHARGE");
+
+    /**
+     * Resolves a configured compass item such as "clock" or
+     * "minecraft:recovery_compass" to its material. The minecraft namespace
+     * may be omitted. Returns null for unknown names and for items with
+     * placement functionality (blocks and anything that places blocks or
+     * entities), which cannot serve as compasses.
+     */
+    static Material resolveCompassMaterial(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String input = raw.trim();
+        if (input.isEmpty()) {
+            return null;
+        }
+        int colon = input.indexOf(':');
+        String namespace = colon < 0
+                ? NamespacedKey.MINECRAFT
+                : input.substring(0, colon).toLowerCase(Locale.ROOT);
+        String path = colon < 0 ? input : input.substring(colon + 1);
+        if (!NamespacedKey.MINECRAFT.equals(namespace)) {
+            return null;
+        }
+        Material material;
+        try {
+            material = Material.valueOf(
+                    path.toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_'));
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+        return isAllowedCompassItem(material) ? material : null;
+    }
+
+    static boolean isAllowedCompassItem(Material material) {
+        if (material == null || !material.isItem() || material.isBlock()) {
+            return false;
+        }
+        String name = material.name();
+        if (PLACEABLE_ITEMS.contains(name)) {
+            return false;
+        }
+        for (String suffix : PLACEABLE_SUFFIXES) {
+            if (name.endsWith(suffix)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public void giveCompass(Player player) {
         if (!shouldReceiveCompass(role(player))) {
             return;
         }
         removeCompasses(player);
-        ItemStack item = new ItemStack(Material.COMPASS);
-        CompassMeta meta = (CompassMeta) item.getItemMeta();
+        String configured = plugin.getConfig().getString("settings.compass.item", "compass");
+        Material material = resolveCompassMaterial(configured);
+        if (material == null) {
+            plugin.getLogger().warning("Unknown or placeable settings.compass.item '"
+                    + configured + "'. Using minecraft:compass.");
+            material = Material.COMPASS;
+        }
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
         meta.displayName(messages.nonItalic(component("compass.compass-name")));
         meta.lore(messages.strings("compass.compass-lore").stream()
                 .map(messages::parse).map(messages::nonItalic).toList());
@@ -301,7 +369,7 @@ public final class CompassManager {
     }
 
     public boolean isCompass(ItemStack item) {
-        return item != null && item.getType() == Material.COMPASS && item.hasItemMeta()
+        return item != null && item.hasItemMeta()
                 && item.getItemMeta().getPersistentDataContainer()
                         .has(compassKey, PersistentDataType.BYTE);
     }

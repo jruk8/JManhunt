@@ -40,6 +40,19 @@ uses Multiverse-Core)
 `cell-size` is the size of one spiral cell in blocks. It is hard-capped at
 50,000. Too low values may cause issues. In general, don't go below 5,000.
 
+Do not change `cell-size` after cells have already been generated. Every
+cell size lays its own grid over the world, so cells generated under one
+size can overlap and clip into cells generated under another.
+
+## Cell Index
+
+The engine hands out cells from a persistent counter. You can inspect it
+with `/manhunt worldengine cellindex get` and overwrite it with
+`/manhunt worldengine cellindex set <value>`. Set values are clamped
+between 0 and the addressable grid for the current cell size. If the
+counter ever grows past that grid, it restarts at zero on the next fetch
+with a console warning telling you to reset the world manually.
+
 ## Spawn Spread
 
 `tp-spread-radius` is the radius from each cell center used when selecting

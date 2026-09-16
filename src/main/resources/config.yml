@@ -31,6 +31,10 @@ config-version: 4
 # Default: true
 send-anonymous-statistics: true
 
+# Message parser used for messages.yml: minimessage or legacy.
+# Default: minimessage
+text-format: minimessage
+
 
 # Persistent career statistics. SQLite is local and requires no setup. Use
 # PostgreSQL when several JManhunt servers should share the same statistics.
@@ -382,9 +386,6 @@ custom-modifiers:
 # Settings that modify the game.
 # These can be toggled in-game with the 'configuration' subcommand.
 settings:
-  # Message parser used for messages.yml: minimessage or legacy.
-  text-format: minimessage
-
   # When true, every in-game config change is announced to all online
   # players except the one who made the change.
   # Default: false
@@ -512,6 +513,13 @@ settings:
     given-to:
       hunters: true
       speedrunners: false
+    # The item handed out as the tracking compass, in modern
+    # minecraft:material_name format (the minecraft: namespace may be
+    # omitted). Try "clock" or "recovery_compass" for a different look.
+    # Anything unknown, or anything with placement functionality such as
+    # dirt, signs, or redstone, falls back to "compass".
+    # Default: compass
+    item: compass
     # When true, the hunter compass must stay in the player's inventory and
     # cannot be dropped or placed in chests. When false, the compass behaves
     # like a normal item and can be dropped or stored.
@@ -749,6 +757,12 @@ sounds:
       volume: 1.0
     # Runs when hunters win
     fail-sound:
+      enabled: true
+      sound: entity.wither.spawn
+      pitch: 1.0
+      volume: 1.0
+    # Runs when a match is cancelled
+    cancelled-sound:
       enabled: true
       sound: entity.wither.spawn
       pitch: 1.0

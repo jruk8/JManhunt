@@ -41,6 +41,27 @@ Hunters always track speedrunners and speedrunners always track hunters.
 
 If you'd like to disable the compass entirely, set both to false.
 
+## Compass Item
+
+Under `settings.compass.item`, you can choose which item is handed out as
+the tracking compass, in modern `minecraft:material_name` format (the
+`minecraft:` namespace may be omitted):
+
+```yaml
+compass:
+  item: compass
+```
+
+The default is `compass`. Try `clock` or `recovery_compass` for a different
+look; anything else works too. Unknown names, and anything with placement
+functionality such as dirt, signs, or redstone, fall back to `compass` with
+a console warning. Already handed out compasses keep working after a
+change; new ones use the configured item.
+
+Note that only `compass` points its needle at the tracked player. A
+`recovery_compass` always points at its holder's last death location, so it
+works as a match token while direction readout stays on the actionbar.
+
 ## Inventory Lock
 
 Under `settings.compass.inventory-lock`, you can configure whether the compass

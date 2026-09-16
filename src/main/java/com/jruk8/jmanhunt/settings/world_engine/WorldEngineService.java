@@ -132,7 +132,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             return;
         }
 
-        runOnFetchNewCell(pendingCell);
+        runOnFetchNewCell(config, pendingCell);
         cellFetchedForIntermission = true;
     }
 
@@ -269,7 +269,52 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
 
     private record CellOrigin(int x, int z) {}
 
+    /**
+     * Highest usable cell index for the given cell size. The grid spans
+     * 59,900,000 blocks per axis, so the cap is that span in cells, squared.
+     */
+    static long maxCellIndex(int cellSize) {
+        long span = 59_900_000L / Math.max(1, cellSize);
+        return span * span;
+    }
+
+    public static long clampCellIndex(long value, long max) {
+        return Math.clamp(value, 0L, max);
+    }
+
+    /** Current cell index cap for the live configuration. */
+    public long cellIndexCap() {
+        return maxCellIndex(WorldEngineConfig.fromConfig(plugin.getConfig()).cellSize());
+    }
+
+    /** Current cell index, or empty when the engine store is unavailable. */
+    public OptionalLong cellIndex() {
+        return cellAllocator.currentStartIndex();
+    }
+
+    /** Overwrites the cell index. Returns false when the store is unavailable. */
+    public boolean cellIndex(long value) {
+        return cellAllocator.setStartIndex(value);
+    }
+
+    /**
+     * Restarts the cell counter at zero once it grows past the addressable
+     * grid so allocation never runs off the world. New cells may then
+     * overlap old ones, hence the warning.
+     */
+    private void enforceCellIndexCap(WorldEngineConfig config) {
+        OptionalLong current = cellAllocator.currentStartIndex();
+        if (current.isPresent() && current.getAsLong() > maxCellIndex(config.cellSize())) {
+            plugin.getLogger().warning("World-engine cell index " + current.getAsLong()
+                    + " exceeds the addressable grid for cell size " + config.cellSize()
+                    + ". Restarting the index at zero; the world should be manually reset "
+                    + "because new cells may overlap old ones.");
+            cellAllocator.setStartIndex(0L);
+        }
+    }
+
     private Optional<CellOrigin> findValidOrigin(World world, WorldEngineConfig config) {
+        enforceCellIndexCap(config);
         for (int iter = 0; iter < MAX_CELL_ALLOCATE_ATTEMPTS; iter++) {
             OptionalLong startIndex = cellAllocator.reserveStartIndex(1);
             if (startIndex.isEmpty()) return Optional.empty();
@@ -490,13 +535,14 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
      * Used to pre-generate the cell area with chunk-generation plugins such
      * as Chunky before players teleport in.
      */
-    private void runOnFetchNewCell(CellOrigin origin) {
+    private void runOnFetchNewCell(WorldEngineConfig config, CellOrigin origin) {
         List<String> commands = plugin.getConfig().getStringList("world-engine.on-fetch-new-cell");
         if (commands.isEmpty()) return;
         for (String command : commands) {
             if (command.isBlank()) continue;
             String parsed = command.replace("<cellX>", String.valueOf(origin.x()))
-                    .replace("<cellZ>", String.valueOf(origin.z()));
+                    .replace("<cellZ>", String.valueOf(origin.z()))
+                    .replace("<world>", config.worldName());
             if (parsed.startsWith("/")) parsed = parsed.substring(1);
             try {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);

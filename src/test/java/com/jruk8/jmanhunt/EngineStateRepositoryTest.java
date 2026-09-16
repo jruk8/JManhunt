@@ -30,6 +30,15 @@ class EngineStateRepositoryTest {
     }
 
     @Test
+    void cellIndexRoundTrip(@TempDir Path dataFolder) throws Exception {
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertEquals(0L, repository.getWorldCellIndex());
+            repository.setWorldCellIndex(41L);
+            assertEquals(41L, repository.getWorldCellIndex());
+        }
+    }
+
+    @Test
     void allocatorFallsBackWithoutRepository() {
         WorldCellAllocator allocator = new WorldCellAllocator(null);
 

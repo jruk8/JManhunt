@@ -79,6 +79,9 @@ are in the package `com.jruk8.jmanhunt.api.events`.
 | `JGameBeginEvent` | The game actually begins (after the pre-start window). | `getMatchId()` |
 | `JMatchEndEvent` | A winner is announced (end delay still running). | `getMatchId()`, `getWinner()` |
 
+Cancelling a match with `/manhunt end` does not fire `JMatchEndEvent`: there
+is no winner.
+
 ```java
 import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
 import org.bukkit.event.EventHandler;

@@ -121,8 +121,8 @@ plays at all.
 # Match End Delay
 
 Under `match.end-delay`, you can configure how long the plugin waits between
-the win announcement and the final cleanup (running end commands, returning
-players to the lobby, and deactivating the match):
+the win or cancel announcement and the final cleanup (running end commands,
+returning players to the lobby, and deactivating the match):
 
 ```yaml
 match:
@@ -134,11 +134,12 @@ are stopped as soon as the match ends, so they never fire during the delay.
 Set to `-1` to skip the delay entirely (cleanup runs immediately); other
 negative values are treated as zero.
 
-To end a match right away without waiting out the delay, run
-`/mh end -i` (alias `-immediate`). It runs the same end sequence with no
+To cancel a match right away without waiting out the delay, run
+`/mh end -i` (alias `-immediate`). It runs the same cancel sequence with no
 waiting: stats post instantly, then end commands, cleanup, and deactivation.
 It also works mid delay while a match is already ending, finishing it at once.
-Stats and end commands still run exactly once.
+Stats and end commands still run exactly once. Cancelling never saves career
+stats, with or without the flag.
 
 # Start Reminders
 

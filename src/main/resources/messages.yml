@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 6
+messages-version: 7
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<#a6a6a6>[<gradient:#e66550:#de7766><bold>J</bold>Manhunt</gradient>]</#a6a6a6> "
@@ -12,12 +12,12 @@ command:
 manhunt:
   help-header: "\n{prefix}\n<gold>JManhunt commands:"
   help-line: "<white>» {command}<gray>: {description}</gray></white>"
-  status-header: "{prefix}<gold>Manhunt status: <white>{status}"
-  speedrunners-header: "\n{prefix}<gold>Speedrunners:"
-  hunters-header: "\n{prefix}<gold>Hunters:"
-  afk-header: "\n{prefix}<gray>AFK:"
-  none-header: "\n{prefix}<gold>None:"
-  status-player: "{prefix}<gray>{player}"
+  status-header: "\n{prefix}\n<gold>Manhunt status: <white>{status}"
+  speedrunners-header: "\n<gold>Speedrunners:"
+  hunters-header: "\n<gold>Hunters:"
+  afk-header: "\n<gray>AFK:"
+  none-header: "\n<gold>None:"
+  status-player: "<white>» <gray>{player}"
   no-match: "{prefix}<yellow>No match is active."
   set-success: "{prefix}<green>Updated <white>{count}<green> player(s) to <white>{role}<green>."
   set-success-unchanged: "{prefix}<green>Updated <white>{count}<green> player(s) to <white>{role}<green> (<white>{unchanged}<green> unchanged)."
@@ -43,7 +43,6 @@ manhunt:
   queue-left: "{prefix}<yellow>{player} left the queue."
   already-active: "{prefix}<red>A match is already active."
   not-active: "{prefix}<yellow>No match is active."
-  end-success: "{prefix}<green>Manhunt ended. Hunters win!"
   reload-success: "{prefix}<green>Reloaded config.yml, messages.yml, and settings."
   setting-invalid: "{prefix}<red>Unknown setting."
   setting-invalid-value: "{prefix}<red>Setting values must be true or false."
@@ -55,7 +54,12 @@ manhunt:
   configuration-list: "\n{prefix}<white>Available configs in <gray>{key}:{entries}"
   configuration-entry: "\n<green>» <white>{key}</white><gray>{suffix}</gray>"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
-  worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|lobby>"
+  worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|lobby|cellindex>"
+  worldengine-cellindex-usage: "{prefix}<yellow>Usage: /manhunt worldengine cellindex <get|set <value>>"
+  worldengine-cellindex-get: "{prefix}<green>World-engine cell index: <white>{index}<green>."
+  worldengine-cellindex-set: "{prefix}<green>Set world-engine cell index to <white>{index}<green> (max <white>{max}<green>)."
+  worldengine-cellindex-invalid: "{prefix}<red>Invalid cell index. Use a number between 0 and <white>{max}<red>."
+  worldengine-cellindex-unavailable: "{prefix}<red>Cell index storage is unavailable."
   worldengine-disabled: '{prefix}<red>World engine is disabled. Enable it through <gray>"/manhunt configuration world-engine enabled true"</gray> to use this command.'
   worldengine-setlobby-success: "{prefix}<green>Set the world-engine lobby to <white>{location}<green>."
   worldengine-teleport-success: "{prefix}<green>Teleported <white>{target}<green> to the world-engine lobby."
@@ -89,9 +93,11 @@ game:
   hunters-win: "{prefix}<red>Hunters Win!"
   hunters-title: "<red>Hunters Win!"
   speedrunners-title: "<green>Speedrunners Win!"
-  stat-header: "\n{prefix}{stat-prefix}{stat}:"
+  cancelled: "{prefix}<yellow>Manhunt match cancelled."
+  cancelled-title: "<gray>Cancelled"
+  stat-header: "\n{stat-prefix}{stat}:"
   stat-header-prefix: "<bold><gradient:white:#dbdbdb:white>"
-  stat-entry: "{prefix}{rank-color}#{rank}: {player}: {value}"
+  stat-entry: "{rank-color}#{rank}: {player}: {value}"
   rank-colors:
     first: "<#f5af5b>"
     second: "<#cccccc>"

@@ -14,7 +14,10 @@
 | `jmanhunt.command.quickstart` | Quick-start a match with auto team assignment. | OP |
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |
 | `jmanhunt.command.configuration` | View or change configuration by category. | OP |
-| `jmanhunt.command.worldengine` | View world-engine settings. | OP |
+| `jmanhunt.command.worldengine` | View world-engine settings. Implies every worldengine action below. | OP |
+| `jmanhunt.command.worldengine.setlobby` | Set the world-engine lobby position. | OP |
+| `jmanhunt.command.worldengine.lobby` | Teleport players to the world-engine lobby. | OP |
+| `jmanhunt.command.worldengine.cellindex` | View or change the world-engine cell index. | OP |
 
 ## Role Permissions
 

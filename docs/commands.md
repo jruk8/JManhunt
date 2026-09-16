@@ -9,14 +9,19 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt challenges`                             | Shows a chat notice with a clickable link to the optional Challenges addon. | `jmanhunt.command.challenges` |
 | `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `afk`, or `none`. | `jmanhunt.command.setplayer` (`jmanhunt.command.setplayer.self` for your own role only) |
 | `/manhunt start`                                  | Starts a match. | `jmanhunt.command.start` |
-| `/manhunt end`                                    | Ends the active match; hunters win. | `jmanhunt.command.end` |
-| `/manhunt end -i` / `-immediate`                | Ends the match immediately, skipping the end delay (stats post instantly). | `jmanhunt.command.end` |
+| `/manhunt end`                                    | Cancels the active match with no winner and no saved stats. | `jmanhunt.command.end` |
+| `/manhunt end -i` / `-immediate`                | Cancels the match immediately, skipping the end delay intermission. | `jmanhunt.command.end` |
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
 | `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
 | `/manhunt configuration <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.configuration` |
-| `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` |
-| `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` |
+| `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobby`) |
+| `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobby`) |
+| `/manhunt worldengine cellindex get`              | Shows the current world-engine cell index. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
+| `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt reload`                                 | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
+
+Tab completion only suggests subcommands and worldengine actions the sender
+has permission to run.
 
 ## Roles
 

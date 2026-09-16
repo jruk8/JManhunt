@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -254,8 +255,8 @@ public final class GameManager {
     public void finish(Role winner, boolean immediate) {
         if (ending) {
             if (immediate) {
-                showEndStatsOnce(winner);
-                finishEndPhase(winner);
+                showEndStatsOnce();
+                finishEndPhase();
             }
             return;
         }
@@ -294,25 +295,33 @@ public final class GameManager {
         long delay = immediate
                 ? 0L
                 : Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
-        Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(winner), delay / 2);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(winner), delay);
+        Bukkit.getScheduler().runTaskLater(plugin, this::showEndStatsOnce, delay / 2);
+        Bukkit.getScheduler().runTaskLater(plugin, this::finishEndPhase, delay);
     }
 
     /** Broadcasts end-of-match statistics, exactly once per match. */
-    private void showEndStatsOnce(Role winner) {
+    private void showEndStatsOnce() {
         if (endStatsShown) return;
         endStatsShown = true;
-        stats.showStats(winner);
+        stats.showStats();
     }
 
     /** Runs end commands and deactivates the match, exactly once per match. */
-    private void finishEndPhase(Role winner) {
+    private void finishEndPhase() {
         if (endPhaseDone) return;
         endPhaseDone = true;
-        stateCommands.runEnd();
-        var onlinePlayers = Bukkit.getOnlinePlayers();
-        List<Player> participants = onlinePlayers.stream().filter(p -> role(p).isParticipant())
+        List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
                 .map(p -> (Player) p).toList();
+        teardownNow(participants);
+    }
+
+    /**
+     * Shared immediate teardown tail: end commands, lobby teleport, role
+     * reset, and deactivation. Callers run their own announcements, stat
+     * handling, and cleanup commands first.
+     */
+    private void teardownNow(List<Player> participants) {
+        stateCommands.runEnd();
         worldEngine.onMatchEnd(participants, noneSpectators());
         if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
             playerStates.resetParticipatingRoles();
@@ -322,9 +331,57 @@ public final class GameManager {
         updateAutostartState();
     }
 
-    public void end() { finish(Role.HUNTER); }
+    public void cancel() { cancel(false); }
 
-    public void end(boolean immediate) { finish(Role.HUNTER, immediate); }
+    /**
+     * Cancels the active match with no winner. Career statistics are not
+     * saved, but the in-memory match statistics still back the end screen.
+     * Runs the normal end delay intermission unless immediate skips
+     * straight to teardown. No JMatchEndEvent fires: there is no winner.
+     */
+    public void cancel(boolean immediate) {
+        if (!active) return;
+        if (ending) {
+            if (immediate) {
+                showEndStatsOnce();
+                finishEndPhase();
+            }
+            return;
+        }
+        ending = true;
+        gameEndListeners.forEach(Runnable::run);
+        if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
+        if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
+        if (startDelayTask != null) { startDelayTask.cancel(); startDelayTask = null; }
+        if (surviveTimeTask != null) { surviveTimeTask.cancel(); surviveTimeTask = null; }
+        startDelayActive = false;
+
+        messages.broadcast("game.cancelled");
+        var onlinePlayers = Bukkit.getOnlinePlayers();
+        for (Player player : onlinePlayers) {
+            player.showTitle(Title.title(messages.component("game.cancelled-title"), Component.empty(),
+                    Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
+        }
+        playerStates.resetOfflinePlayers(onlinePlayers);
+        sounds.playGlobalSound("game.cancelled-sound");
+
+        // Make all players invulnerable on cancel if configured
+        if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
+            onlinePlayers.forEach(p -> p.setInvulnerable(true));
+        }
+
+        // cancel interval modifiers early so they don't fire during the end delay
+        stateCommands.cancelIntervalModifiers();
+        // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
+        stateCommands.runConsoleCleanup();
+        stateCommands.runPlayerCleanup();
+
+        long delay = immediate
+                ? 0L
+                : Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
+        Bukkit.getScheduler().runTaskLater(plugin, this::showEndStatsOnce, delay / 2);
+        Bukkit.getScheduler().runTaskLater(plugin, this::finishEndPhase, delay);
+    }
 
     public void finishLater(Role winner) { Bukkit.getScheduler().runTask(plugin, () -> finish(winner)); }
 
@@ -477,19 +534,12 @@ public final class GameManager {
                         stateCommands.cancelIntervalModifiers();
                         stateCommands.runConsoleCleanup();
                         stateCommands.runPlayerCleanup();
-                        stateCommands.runEnd();
                         List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
                                 .map(p -> (Player) p).toList();
-                        worldEngine.onMatchEnd(participants, noneSpectators());
-                        if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
-                            playerStates.resetParticipatingRoles();
-                        }
+                        teardownNow(participants);
                         if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
                             Bukkit.getOnlinePlayers().forEach(p -> p.setInvulnerable(true));
                         }
-                        active = false; ending = false; gameBegun = false; playerStates.clearMatch();
-                        worldEngine.prepareNextCell();
-                        updateAutostartState();
                     } else {
                         // force start the game
                         beginGame();
@@ -619,6 +669,15 @@ public final class GameManager {
         return Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.NONE)
                 .map(p -> (Player) p).toList();
     }
+
+    /** Current world-engine cell index, or empty when the store is unavailable. */
+    public OptionalLong cellIndex() { return worldEngine.cellIndex(); }
+
+    /** Current world-engine cell index cap for the live cell size. */
+    public long cellIndexCap() { return worldEngine.cellIndexCap(); }
+
+    /** Overwrites the world-engine cell index. Returns false when unavailable. */
+    public boolean cellIndex(long value) { return worldEngine.cellIndex(value); }
 
     /** Maps an internal role to the API player role, defaulting to the winner role of NONE. */
     private static com.jruk8.jmanhunt.api.PlayerRole roleToPlayerRole(Role role) {

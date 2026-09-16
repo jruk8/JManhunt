@@ -18,12 +18,15 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
+import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.HashSet;
 
@@ -89,19 +92,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
-        // The config alias shares the configuration permission node; every
-        // other subcommand keeps its own jmanhunt.command.<sub> node.
-        // setplayer additionally accepts the self-only node, which setPlayer
-        // enforces down below.
-        if (sub.equals("setplayer")) {
-            if (!sender.hasPermission("jmanhunt.command.setplayer")
-                    && !sender.hasPermission("jmanhunt.command.setplayer.self")) {
-                return message(sender, "command.no-permission");
-            }
-        } else {
-            String node = sub.equals("config") ? "configuration" : sub;
-            if (!sender.hasPermission("jmanhunt.command." + node)) return message(sender, "command.no-permission");
-        }
+        if (!canUseSubcommand(sender, sub)) return message(sender, "command.no-permission");
         return switch (sub) {
             case "help" -> help(sender);
             case "status" -> status(sender);
@@ -121,7 +112,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         message(sender, "manhunt.help-header");
         String[][] lines = {{"/manhunt help", "show commands"}, {"/manhunt", "show match status"},
                 {"/manhunt setplayer <selector> <hunter|speedrunner|afk|none>", "assign roles"},
-                {"/manhunt start", "start a match"}, {"/manhunt end [-i|-immediate]", "end a match"},
+                {"/manhunt start", "start a match"}, {"/manhunt end [-i|-immediate]", "cancel the active match"},
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt configuration <category> <key...> <value>", "view or change a setting"},
                 {"/manhunt worldengine", "set lobby or teleport players"},
@@ -229,6 +220,38 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return false;
     }
 
+    /**
+     * Whether the sender may run the given first level subcommand. Aliases
+     * share their canonical permission node, and setplayer additionally
+     * accepts the self-only node (setPlayer enforces the self target).
+     */
+    static boolean canUseSubcommand(CommandSender sender, String sub) {
+        return switch (sub.toLowerCase(Locale.ROOT)) {
+            case "setplayer" -> sender.hasPermission("jmanhunt.command.setplayer")
+                    || sender.hasPermission("jmanhunt.command.setplayer.self");
+            case "config", "configuration" -> sender.hasPermission("jmanhunt.command.configuration");
+            case "qs", "quickstart" -> sender.hasPermission("jmanhunt.command.quickstart");
+            default -> sender.hasPermission("jmanhunt.command." + sub.toLowerCase(Locale.ROOT));
+        };
+    }
+
+    /**
+     * Whether the sender may run the given worldengine action. Holding the
+     * base worldengine node implies every action; otherwise each action
+     * needs its own node.
+     */
+    static boolean canUseWorldEngineAction(CommandSender sender, String action) {
+        if (sender.hasPermission("jmanhunt.command.worldengine")) {
+            return true;
+        }
+        return switch (action.toLowerCase(Locale.ROOT)) {
+            case "setlobby" -> sender.hasPermission("jmanhunt.command.worldengine.setlobby");
+            case "lobby" -> sender.hasPermission("jmanhunt.command.worldengine.lobby");
+            case "cellindex" -> sender.hasPermission("jmanhunt.command.worldengine.cellindex");
+            default -> false;
+        };
+    }
+
     static String rolePermissionNode(Role role) {
         return switch (role) {
             case HUNTER -> "jmanhunt.hunter";
@@ -311,7 +334,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             }
             immediate = true;
         }
-        game.end(immediate); return true;
+        game.cancel(immediate); return true;
     }
 
     /**
@@ -552,11 +575,60 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
 
         String sub = args[1].toLowerCase(Locale.ROOT);
+        if (!canUseWorldEngineAction(sender, sub)) {
+            return message(sender, "command.no-permission");
+        }
         if (sub.equals("setlobby")) {
             return worldEngineSetLobby(sender, args);
         }
         if (sub.equals("lobby")) {
             return worldEngineLobby(sender, args);
+        }
+        if (sub.equals("cellindex")) {
+            return worldEngineCellIndex(sender, args);
+        }
+        return message(sender, "command.invalid");
+    }
+
+    private boolean worldEngineCellIndex(CommandSender sender, String[] args) {
+        if (args.length < 3 || args[2].isBlank()) {
+            return message(sender, "manhunt.worldengine-cellindex-usage");
+        }
+        String action = args[2].toLowerCase(Locale.ROOT);
+        if (action.equals("get")) {
+            if (args.length > 3) {
+                return message(sender, "command.invalid");
+            }
+            OptionalLong index = game.cellIndex();
+            if (index.isEmpty()) {
+                return message(sender, "manhunt.worldengine-cellindex-unavailable");
+            }
+            message(sender, "manhunt.worldengine-cellindex-get",
+                    Map.of("index", String.valueOf(index.getAsLong())));
+            neutralSound(sender);
+            return true;
+        }
+        if (action.equals("set")) {
+            if (args.length != 4) {
+                return message(sender, "manhunt.worldengine-cellindex-usage");
+            }
+            long max = game.cellIndexCap();
+            long value;
+            try {
+                value = Long.parseLong(args[3].trim());
+            } catch (NumberFormatException exception) {
+                message(sender, "manhunt.worldengine-cellindex-invalid",
+                        Map.of("max", String.valueOf(max)));
+                return true;
+            }
+            long clamped = WorldEngineService.clampCellIndex(value, max);
+            if (!game.cellIndex(clamped)) {
+                return message(sender, "manhunt.worldengine-cellindex-unavailable");
+            }
+            message(sender, "manhunt.worldengine-cellindex-set",
+                    Map.of("index", String.valueOf(clamped), "max", String.valueOf(max)));
+            neutralSound(sender);
+            return true;
         }
         return message(sender, "command.invalid");
     }
@@ -651,16 +723,30 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) return partial(args[0], List.of("help", "status", "challenges", "setplayer",
-                "start", "end", "configuration", "config", "worldengine", "quickstart", "qs", "reload"));
+        if (args.length == 1) {
+            // Only suggest subcommands the sender may actually run.
+            List<String> options = new ArrayList<>(List.of("help", "status", "challenges", "setplayer",
+                    "start", "end", "configuration", "config", "worldengine", "quickstart", "qs", "reload"));
+            options.removeIf(option -> !canUseSubcommand(sender, option));
+            return partial(args[0], options);
+        }
         if (args.length == 2 && args[0].equalsIgnoreCase("end"))
             return partial(args[1], List.of("-i", "-immediate"));
         if (args.length >= 2
                 && (args[0].equalsIgnoreCase("configuration") || args[0].equalsIgnoreCase("config"))) {
             return completeDrill(args);
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("worldengine"))
-            return partial(args[1], List.of("setlobby", "lobby"));
+        if (args.length == 2 && args[0].equalsIgnoreCase("worldengine")) {
+            List<String> actions = new ArrayList<>(List.of("setlobby", "lobby", "cellindex"));
+            actions.removeIf(action -> !canUseWorldEngineAction(sender, action));
+            return partial(args[1], actions);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("cellindex")) {
+            if (!canUseWorldEngineAction(sender, "cellindex")) {
+                return List.of();
+            }
+            return partial(args[2], List.of("get", "set"));
+        }
         if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("lobby")) {
             List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p"));
             Bukkit.getOnlinePlayers().forEach(player -> selectors.add(player.getName()));

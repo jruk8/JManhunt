@@ -75,4 +75,51 @@ class SetPlayerPermissionsTest {
         when(player.getUniqueId()).thenReturn(id);
         return player;
     }
+
+    @Test
+    void subcommandGateFollowsCommandNodes() {
+        CommandSender sender = senderWith("jmanhunt.command.status");
+
+        assertTrue(ManhuntCommand.canUseSubcommand(sender, "status"));
+        assertFalse(ManhuntCommand.canUseSubcommand(sender, "start"));
+    }
+
+    @Test
+    void subcommandGateAcceptsAliasesAndSelfNode() {
+        CommandSender selfOnly = senderWith("jmanhunt.command.setplayer.self");
+        CommandSender config = senderWith("jmanhunt.command.configuration");
+        CommandSender quick = senderWith("jmanhunt.command.quickstart");
+
+        assertTrue(ManhuntCommand.canUseSubcommand(selfOnly, "setplayer"));
+        assertFalse(ManhuntCommand.canUseSubcommand(selfOnly, "start"));
+        assertTrue(ManhuntCommand.canUseSubcommand(config, "config"));
+        assertTrue(ManhuntCommand.canUseSubcommand(quick, "qs"));
+    }
+
+    @Test
+    void worldEngineBaseNodeImpliesEveryAction() {
+        CommandSender sender = senderWith("jmanhunt.command.worldengine");
+
+        assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "setlobby"));
+        assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "lobby"));
+        assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "cellindex"));
+    }
+
+    @Test
+    void worldEngineSubNodesGrantSingleActions() {
+        CommandSender sender = senderWith("jmanhunt.command.worldengine.lobby");
+
+        assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "lobby"));
+        assertFalse(ManhuntCommand.canUseWorldEngineAction(sender, "setlobby"));
+        assertFalse(ManhuntCommand.canUseWorldEngineAction(sender, "cellindex"));
+        assertFalse(ManhuntCommand.canUseWorldEngineAction(sender, "bogus"));
+    }
+
+    private static CommandSender senderWith(String... permissions) {
+        CommandSender sender = mock(CommandSender.class);
+        java.util.Set<String> granted = java.util.Set.of(permissions);
+        when(sender.hasPermission(org.mockito.ArgumentMatchers.anyString()))
+                .thenAnswer(call -> granted.contains(call.getArgument(0)));
+        return sender;
+    }
 }
