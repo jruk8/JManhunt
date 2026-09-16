@@ -81,7 +81,9 @@ then continue waiting out this delay on top of it.
 Each hunter's location is recorded when the delay begins. Spectating hunters
 can fly around freely during the delay, but once it expires they are
 teleported back to their recorded spawnpoint, including its dimension, and
-restored to survival mode.
+restored to survival mode. The last five seconds announce in chat with the
+`autostart-countdown` sound each second, and the spawn moment plays the
+neutral sound.
 
 ## Delay Length
 

@@ -57,7 +57,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     static final String CHALLENGES_MESSAGE = """
             
             <gray>[<gradient:#5e42f4:#b742f4>JMHChallenges</gradient>]</gray>
-            <gold>JManhunt</gold> is a free plugin for configurable manhunts. For lucky blocks and other fun challenges, you can find the optional addon {link}.
+            <#de7766>JManhunt</#de7766> is a free plugin for configurable manhunts. For lucky blocks and other fun challenges, you can find the optional addon {link}.
             
             <gray> » Challenges status: [{status}<gray>]</gray>
             
@@ -122,8 +122,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         // Clickable links need MiniMessage parsing regardless of text-format,
         // so this footer stays hardcoded instead of living in messages.yml.
         sender.sendMessage(messages.miniMessage(
-                "\n<green>Still need help? Join our <gold><click:open_url:'https://discord.gg/hkWmCVmWDC'>"
-                        + "<underlined>Discord server</underlined></click></gold>!</green>"));
+                "\n<green>Still need help? Join our <#de7766><click:open_url:'https://discord.gg/hkWmCVmWDC'>"
+                        + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
+        sender.sendMessage(messages.miniMessage(
+                "\n<green>Donate: <#de7766><click:open_url:'https://ko-fi.com/jruk'>"
+                        + "<underlined>Ko-fi</underlined></click></#de7766></green>"));
         neutralSound(sender);
         return true;
     }

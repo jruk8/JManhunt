@@ -731,7 +731,7 @@ sounds:
     volume: 1.0
 
   game:
-    # Runs on autostart countdown
+    # Runs on autostart countdown and hunter spawn countdown
     autostart-countdown:
       enabled: true
       sound: block.stone_button.click_on
@@ -761,11 +761,11 @@ sounds:
       sound: entity.wither.spawn
       pitch: 1.0
       volume: 1.0
-    # Runs when a match is cancelled
+    # Runs when a match is canceled
     cancelled-sound:
       enabled: true
-      sound: entity.wither.spawn
-      pitch: 1.0
+      sound: block.bubble_column.whirlpool_ambient
+      pitch: 0.9
       volume: 1.0
   # Per-role sounds for the start-of-match role announcement. Each participant
   # hears their own role's sound.

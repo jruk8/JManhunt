@@ -10,13 +10,13 @@ command:
   invalid: "{prefix}<red>Unknown command. Use <yellow>/manhunt help<red>."
 
 manhunt:
-  help-header: "\n{prefix}\n<gold>JManhunt commands:"
+  help-header: "\n{prefix}\n<#de7766>JManhunt commands:"
   help-line: "<white>» {command}<gray>: {description}</gray></white>"
-  status-header: "\n{prefix}\n<gold>Manhunt status: <white>{status}"
-  speedrunners-header: "\n<gold>Speedrunners:"
-  hunters-header: "\n<gold>Hunters:"
+  status-header: "\n{prefix}\n<#de7766>Manhunt status: <white>{status}"
+  speedrunners-header: "\n<#de7766>Speedrunners:"
+  hunters-header: "\n<#de7766>Hunters:"
   afk-header: "\n<gray>AFK:"
-  none-header: "\n<gold>None:"
+  none-header: "\n<#de7766>None:"
   status-player: "<white>» <gray>{player}"
   no-match: "{prefix}<yellow>No match is active."
   set-success: "{prefix}<green>Updated <white>{count}<green> player(s) to <white>{role}<green>."
@@ -118,12 +118,12 @@ game:
     entered_end: "<#5fe888>Entered the End"
 
 compass:
-  compass-name: "<gold>Hunter's Compass"
+  compass-name: "<#de7766>Hunter's Compass"
   compass-lore:
     - "<gray>Tracks the nearest speedrunner."
     - "<gray><white>Right-click</white> to refresh when enabled."
-  compass-actionbar: "<gold>Tracking <white>{player}<gold> • <white>{distance}m"
-  compass-last-seen-actionbar: "<gold>Tracking <white>{player}<gold>'s Last Seen • <white>{distance}m <gray>({reason})"
+  compass-actionbar: "<#de7766>Tracking <white>{player}<#de7766> • <white>{distance}m"
+  compass-last-seen-actionbar: "<#de7766>Tracking <white>{player}<#de7766>'s Last Seen • <white>{distance}m <gray>({reason})"
   no-target-actionbar: "<gray>No {role} location available."
   nearby-actionbar: "<green>{player} is nearby! The compass is disabled."
   too-far-actionbar: "<yellow>{player} is out of tracking range • <white>{distance}m"

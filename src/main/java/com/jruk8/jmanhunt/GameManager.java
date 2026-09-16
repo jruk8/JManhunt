@@ -444,6 +444,7 @@ public final class GameManager {
                 endStartDelay();
             } else if (startDelayRemaining <= 5) {
                 messages.broadcast("manhunt.start-delay-ending", Map.of("seconds", String.valueOf(startDelayRemaining)));
+                sounds.playGlobalSound("game.autostart-countdown");
             }
         }, 20L, 20L);
     }
@@ -466,6 +467,7 @@ public final class GameManager {
         }
         startDelayReturnPoints.clear();
         messages.broadcast("manhunt.start-delay-ended");
+        sounds.playNeutralSound();
     }
 
     private void cancelStartDelay() {
