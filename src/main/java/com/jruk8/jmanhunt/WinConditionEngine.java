@@ -45,6 +45,14 @@ public final class WinConditionEngine {
         return config.getString("settings.win-conditions.acquireItem.item", "minecraft:netherite_ingot");
     }
 
+    public boolean isAcquireItem(ItemStack stack) {
+        if (!isAcquireItemEnabled() || stack == null) {
+            return false;
+        }
+        Material material = acquireItemMaterial();
+        return material != null && stack.getType() == material;
+    }
+
     public boolean isReachAdvancementEnabled() {
         return config.getBoolean("settings.win-conditions.reachAdvancement.enabled", false);
     }
@@ -63,12 +71,7 @@ public final class WinConditionEngine {
         if (!isAcquireItemEnabled()) {
             return false;
         }
-        String item = acquireItem();
-        NamespacedKey key = NamespacedKey.fromString(item);
-        if (key == null) {
-            key = NamespacedKey.minecraft(item.replace("minecraft:", ""));
-        }
-        Material material = Registry.MATERIAL.get(key);
+        Material material = acquireItemMaterial();
         if (material == null) {
             return false;
         }
@@ -78,6 +81,15 @@ public final class WinConditionEngine {
             }
         }
         return false;
+    }
+
+    private Material acquireItemMaterial() {
+        String item = acquireItem();
+        NamespacedKey key = NamespacedKey.fromString(item);
+        if (key == null) {
+            key = NamespacedKey.minecraft(item.replace("minecraft:", ""));
+        }
+        return Registry.MATERIAL.get(key);
     }
 
     /**

@@ -15,7 +15,7 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerPickupItemEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.scheduler.BukkitTask;
@@ -386,10 +386,12 @@ public final class GameplayListener implements Listener {
         }
     }
 
-    @EventHandler public void onPickupItem(PlayerPickupItemEvent event) {
-        Player player = event.getPlayer();
+    @EventHandler public void onPickupItem(EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
         if (!game.isActive() || !game.isGameBegun() || !playerStates.role(player).isParticipant()) return;
-        if (winConditionEngine.hasAcquireItem(player)) {
+        if (winConditionEngine.isAcquireItem(event.getItem().getItemStack())) {
             game.finishLater(Role.SPEEDRUNNER);
         }
     }

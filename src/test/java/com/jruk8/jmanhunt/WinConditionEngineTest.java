@@ -1,6 +1,8 @@
 package com.jruk8.jmanhunt;
 
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -71,6 +73,22 @@ class WinConditionEngineTest {
         config.set("settings.win-conditions.acquireItem.enabled", true);
         WinConditionEngine engine = engine(config);
         assertEquals("minecraft:netherite_ingot", engine.acquireItem());
+    }
+
+    @Test
+    void acquireItemMatchUsesConfiguredMaterial() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("settings.win-conditions.acquireItem.enabled", true);
+        config.set("settings.win-conditions.acquireItem.item", "minecraft:diamond");
+        WinConditionEngine engine = engine(config);
+        assertTrue(engine.isAcquireItem(new ItemStack(Material.DIAMOND)));
+        assertFalse(engine.isAcquireItem(new ItemStack(Material.DIRT)));
+    }
+
+    @Test
+    void acquireItemMatchRequiresConditionEnabled() {
+        WinConditionEngine engine = engine(new YamlConfiguration());
+        assertFalse(engine.isAcquireItem(new ItemStack(Material.NETHERITE_INGOT)));
     }
 
     @Test
