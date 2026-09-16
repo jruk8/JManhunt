@@ -1,3 +1,12 @@
+## [4.2.3] - 2026-09-16
+
+### 🐛 Bug Fixes
+
+- Command syntax in config.yml
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for v4.2.2 [skip ci]
 ## [4.2.2] - 2026-09-16
 
 ### 🐛 Bug Fixes
