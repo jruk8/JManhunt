@@ -1,3 +1,12 @@
+## [4.2.1] - 2026-09-16
+
+### 🐛 Bug Fixes
+
+- Style hotfix
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for v4.2.0 [skip ci]
 ## [4.2.0] - 2026-09-16
 
 ### 🚀 Features
