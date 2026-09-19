@@ -47,6 +47,7 @@ Whenever user-facing behaviour changes:
 
 - Use Conventional Commits.
 - Never push unless explicitly requested.
+- Bump config-version or messages-version only once between tagged git versions. Example: user has three unpushed, untagged commits and has already bumped config-version. Do not bump it again if you modify config.  
 
 ## Common pitfalls
 
