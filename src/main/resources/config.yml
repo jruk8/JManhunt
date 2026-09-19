@@ -266,7 +266,6 @@ custom-modifiers:
     # ON_END_ENTER - When a participating player enters the End (once per player per match)
     # ON_FIRST_NETHER_ENTER - When the first participating player enters the Nether (once per match)
     # ON_FIRST_END_ENTER - When the first participating player enters the End (once per match)
-    # and ON_END_ENTER (once per player per match, not once per match).
     # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
     # ON_RESPAWN - When a player respawns (only the executing player)
     # ON_SPEEDRUNNER_RESPAWN - When a speedrunner respawns (only the executing player)
