@@ -44,3 +44,7 @@ This section is split into focused pages:
   shrinking start border.
 - [Troubleshooting](world-engine/troubleshooting.md): common questions
   and fixes.
+
+For running several matches at once, see
+[Concurrent Matches](../multi-instance.md): lobbies, per-match end
+dimensions, portal routing, and the ready-cell buffer.

@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.settings.world_engine;
 
-import org.bukkit.plugin.java.JavaPlugin;
 
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -10,9 +10,9 @@ import java.util.Map;
 
 /** Base class for datapacks that override vanilla structure sets. */
 public abstract class DatapackManager {
-    protected final JavaPlugin plugin;
+    protected final JManhuntPlugin plugin;
 
-    protected DatapackManager(JavaPlugin plugin) {
+    protected DatapackManager(JManhuntPlugin plugin) {
         this.plugin = plugin;
     }
 
@@ -44,14 +44,14 @@ public abstract class DatapackManager {
                 reloadDataPacks();
             }
         } catch (IOException exception) {
-            plugin.getLogger().warning(
+            plugin.logger().warning(
                     "Failed to apply " + datapackFolderName() + " datapack: " + exception.getMessage());
         }
     }
 
     public void remove(String worldName, boolean enabled) {
         if (enabled) {
-            plugin.getLogger().warning("Attempted remove datapack with feature enabled. " +
+            plugin.logger().warning("Attempted remove datapack with feature enabled. " +
                     "This message should not happen. Contact an admin.");
             return;
         }
@@ -62,7 +62,7 @@ public abstract class DatapackManager {
                 FileUtils.deleteRecursively(datapackRoot);
                 reloadDataPacks();
             } catch (IOException e) {
-                plugin.getLogger().warning("Failed to delete datapack folder: " + e.getMessage());
+                plugin.logger().warning("Failed to delete datapack folder: " + e.getMessage());
             }
         }
     }

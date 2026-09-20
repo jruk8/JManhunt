@@ -1,10 +1,10 @@
 package com.jruk8.jmanhunt.settings.world_engine;
 
-import org.bukkit.plugin.java.JavaPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 
 /** Applies the world-engine stronghold placement datapack. */
 public final class StrongholdDatapackManager extends DatapackManager {
-    public StrongholdDatapackManager(JavaPlugin plugin) {
+    public StrongholdDatapackManager(JManhuntPlugin plugin) {
         super(plugin);
     }
 

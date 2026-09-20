@@ -7,7 +7,9 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 
+import java.util.Collection;
 import java.util.Map;
 
 public final class MessageService {
@@ -24,7 +26,9 @@ public final class MessageService {
     }
 
     public Component component(String key, Map<String, String> values) {
-        String raw = messages.getString(key, key).replace("{prefix}", messages.getString("prefix", ""));
+        String raw = messages.getString(key, key)
+                .replace("{prefix}", messages.getString("prefix", ""))
+                .replace("{debug-prefix}", messages.getString("debug.prefix", ""));
         for (Map.Entry<String, String> entry : values.entrySet()) {
             raw = raw.replace("{" + entry.getKey() + "}", entry.getValue());
         }
@@ -73,6 +77,19 @@ public final class MessageService {
 
     public void broadcast(String key) { Bukkit.broadcast(component(key)); }
     public void broadcast(String key, Map<String, String> values) { Bukkit.broadcast(component(key, values)); }
+
+    /** Sends a message to exactly the given recipients (lobby or instance members). */
+    public void sendTo(Collection<? extends Player> recipients, String key) {
+        sendTo(recipients, key, Map.of());
+    }
+
+    /** Sends a message to exactly the given recipients (lobby or instance members). */
+    public void sendTo(Collection<? extends Player> recipients, String key, Map<String, String> values) {
+        Component rendered = component(key, values);
+        for (Player recipient : recipients) {
+            recipient.sendMessage(rendered);
+        }
+    }
 
     public void message(CommandSender sender, String key) { sender.sendMessage(component(key)); }
     public void message(CommandSender sender, String key, Map<String, String> values) {

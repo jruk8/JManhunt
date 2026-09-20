@@ -32,6 +32,7 @@ After playing a few matches, check out the built-in settings and custom
 modifiers to enhance your experience:
 
 - [Commands](commands.md)
+- [Concurrent Matches](multi-instance.md): lobbies and several matches at once.
 - [Configuration](configuration.md): overview, settings, world engine,
   statistics, and sounds.
 - [Placeholders](placeholders.md)

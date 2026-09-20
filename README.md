@@ -5,7 +5,7 @@
 # JManhunt
 
 JManhunt is a deeply configurable Paper plugin for 26.2+ Manhunts. It comes
-with an automated world reset engine, compass tracking, placeholders, statistics, 
+with an automated world reset engine, compass tracking, placeholders, statistics,
 and a bunch of actions and custom modifiers. The plug-and-play defaults work **instantly** for simple Manhunts with a fully tracking compass and fully automated world resets.
 
 ## Key Features
@@ -13,7 +13,9 @@ and a bunch of actions and custom modifiers. The plug-and-play defaults work **i
 - **Deep configurability** » Toggle actions and settings on or off, or create
   entirely new gameplay through easy-to-use custom modifiers.
 - **World reset engine** » Grid-based single-world Manhunt engine with
-  persistent spiral cell assignment and automatic End resets.
+  persistent spiral cell assignment and per-match End dimensions.
+- **Concurrent matches** » Lobby queues with caps and autostart, each
+  running its own isolated match at the same time.
 - **Compass tracking** » Hunter compass with configurable refresh and
   right-click behavior. Last-seen location locks onto portals.
 - **Placeholders & statistics** » Career statistics with PlaceholderAPI
@@ -34,7 +36,7 @@ Default custom modifiers include:
 
 and so much more (over 15).
 
-JManhunt can even alter Piglin loot tables and structure generation to make Manhunts more balanced for Speedrunners (or, you know, fake a manhunt). 
+JManhunt can even alter Piglin loot tables and structure generation to make Manhunts more balanced for Speedrunners (or, you know, fake a manhunt).
 
 > If the default (or custom) challenges do not provide enough fun, you can install the
 > [JManhunt-Challenges](https://builtbybit.com/resources/jmanhunt-challenges.121574)

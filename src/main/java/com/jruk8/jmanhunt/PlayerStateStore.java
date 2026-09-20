@@ -5,7 +5,6 @@ import org.bukkit.entity.Player;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -17,8 +16,6 @@ public final class PlayerStateStore {
     private final Map<UUID, String> playerNames = new HashMap<>();
     private final Map<UUID, Boolean> speedrunnerAlive = new HashMap<>();
     private final Map<UUID, Integer> lives = new HashMap<>();
-    private final Set<UUID> matchParticipants = new HashSet<>();
-    private final Set<UUID> matchSpectators = new HashSet<>();
 
     public Role role(Player player) {
         return roles.getOrDefault(player.getUniqueId(), Role.NONE);
@@ -36,21 +33,25 @@ public final class PlayerStateStore {
         roles.put(playerId, role);
     }
 
-    public int resetParticipatingRoles() {
+    /**
+     * Resets hunter and speedrunner roles to NONE for exactly the given
+     * players. Scoped per instance so ending one match never touches another.
+     */
+    public int resetRoles(Collection<UUID> playerIds) {
         int reset = 0;
-        for (Map.Entry<UUID, Role> entry : roles.entrySet()) {
-            Role role = entry.getValue();
-            if (role == Role.NONE || role == Role.AFK) {
+        for (UUID playerId : playerIds) {
+            Role role = roles.get(playerId);
+            if (role == null || role == Role.NONE || role == Role.AFK) {
                 continue;
             }
-            entry.setValue(Role.NONE);
+            roles.put(playerId, Role.NONE);
             reset++;
         }
         return reset;
     }
 
-    public void resetOfflinePlayers(Collection<? extends Player> onlinePlayers) {
-        for (UUID playerId : roles.keySet()) {
+    public void resetOfflinePlayers(Collection<? extends Player> onlinePlayers, Collection<UUID> scope) {
+        for (UUID playerId : scope) {
             boolean isOnline = onlinePlayers.stream().anyMatch(p -> p.getUniqueId().equals(playerId));
             if (!isOnline && roles.get(playerId) != Role.AFK) {
                 roles.put(playerId, Role.NONE);
@@ -58,41 +59,16 @@ public final class PlayerStateStore {
         }
     }
 
-    public void clearMatch() {
-        lastSeenByWorld.clear();
-        playerNames.clear();
-        speedrunnerAlive.clear();
-        lives.clear();
-        matchParticipants.clear();
-        matchSpectators.clear();
-    }
-
-    public void setMatchParticipants(Collection<? extends Player> players) {
-        matchParticipants.clear();
-        matchSpectators.clear();
-        for (Player player : players) {
-            matchParticipants.add(player.getUniqueId());
-        }
-    }
-
-    public boolean isMatchParticipant(UUID playerId) {
-        return matchParticipants.contains(playerId);
-    }
-
-    public void markMatchParticipant(UUID playerId) {
-        matchParticipants.add(playerId);
-        matchSpectators.remove(playerId);
-    }
-
-    public void removeMatchParticipant(UUID playerId) {
-        if (matchParticipants.remove(playerId)) {
-            matchSpectators.add(playerId);
-        }
-    }
-
-    public void markMatchSpectator(UUID playerId) {
-        if (!matchParticipants.contains(playerId)) {
-            matchSpectators.add(playerId);
+    /**
+     * Drops per-match state (sightings, names, alive flags, lives) for
+     * exactly the given players. Roles are untouched.
+     */
+    public void clearMatchFor(Collection<UUID> playerIds) {
+        for (UUID playerId : playerIds) {
+            lastSeenByWorld.remove(playerId);
+            playerNames.remove(playerId);
+            speedrunnerAlive.remove(playerId);
+            lives.remove(playerId);
         }
     }
 
@@ -102,16 +78,6 @@ public final class PlayerStateStore {
 
     public boolean isActiveSpeedrunner(UUID playerId) {
         return speedrunnerAlive.getOrDefault(playerId, false);
-    }
-
-    public int getActiveSpeedrunnerCount() {
-        int count = 0;
-        for (boolean alive : speedrunnerAlive.values()) {
-            if (alive) {
-                count++;
-            }
-        }
-        return count;
     }
 
     public void setLives(UUID playerId, int lives) {

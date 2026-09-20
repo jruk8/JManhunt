@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.ConfigService;
 import com.jruk8.jmanhunt.LobbyTeleporter;
 import com.jruk8.jmanhunt.EngineStateRepository;
 import com.jruk8.jmanhunt.settings.SettingsListener;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.HeightMap;
@@ -14,20 +15,23 @@ import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BooleanSupplier;
 
 public final class WorldEngineService implements SettingsListener, LobbyTeleporter {
     private static final int MAX_CELL_ALLOCATE_ATTEMPTS = 20;
 
-    private final JavaPlugin plugin;
+    private final JManhuntPlugin plugin;
     private final ConfigService configService;
     private final WorldCellAllocator cellAllocator;
     private final StrongholdDatapackManager strongholdDatapackManager;
@@ -47,13 +51,14 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     // is disabled afterwards.
     private final List<String> borderedWorldNames = new ArrayList<>();
 
-    // Tracks whether a new cell has been fetched for the current intermission,
-    // so on-fetch-new-cell commands only run once per intermission.
-    private boolean cellFetchedForIntermission;
-    // The cell allocated during the intermission, used by the next match start.
-    private CellOrigin pendingCell;
+    // Ready cells kept ahead of match starts so matches never wait on
+    // allocation or pregeneration.
+    private final Deque<CellOrigin> cellBuffer = new ArrayDeque<>();
+    private BukkitTask refillRetryTask;
+    private BooleanSupplier matchRunning = () -> false;
+    private final EndCellManager endCells;
 
-    public WorldEngineService(JavaPlugin plugin, ConfigService configService, EngineStateRepository engineState) {
+    public WorldEngineService(JManhuntPlugin plugin, ConfigService configService, EngineStateRepository engineState) {
         this.plugin = plugin;
         this.configService = configService;
         this.cellAllocator = new WorldCellAllocator(engineState);
@@ -61,34 +66,45 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         this.netherStructuresDatapackManager = new NetherStructuresDatapackManager(plugin);
         this.overworldStructuresDatapackManager = new OverworldStructuresDatapackManager(plugin);
         this.endResetManager = new EndResetManager(plugin);
+        this.endCells = new EndCellManager(plugin);
     }
 
-    public void onMatchStart(List<Player> participants, List<Player> spectators) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        if (!config.enabled() || participants.isEmpty()) return;
-        World world = Bukkit.getWorld(config.worldName());
-        if (world == null) return;
+    /** Wires the match-running check behind the NO_MATCH_RUNNING refill policy. */
+    public void setMatchRunningSupplier(BooleanSupplier matchRunning) {
+        this.matchRunning = matchRunning;
+    }
 
-        CellOrigin origin;
-        if (pendingCell != null) {
-            origin = pendingCell;
-            pendingCell = null;
-        } else {
+    /**
+     * Teleports participants to the next match cell. Returns the used cell
+     * index, or empty when the engine is off, the world is missing, or no
+     * valid cell could be allocated. The real border is only applied for a
+     * lone match; concurrent matches use pseudo-borders instead.
+     */
+    public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
+                                     boolean applyBorder, int lobbyId, long matchId) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled() || participants.isEmpty()) return OptionalLong.empty();
+        World world = Bukkit.getWorld(config.worldName());
+        if (world == null) return OptionalLong.empty();
+
+        CellOrigin origin = cellBuffer.poll();
+        if (origin == null) {
             try {
-                origin = findValidOrigin(world, config)
+                origin = fetchCell(world, config)
                         .orElseThrow(Exception::new);
             } catch (Exception e) {
-                plugin.getLogger().severe("Could not find a valid spawn cell for world-engine after "
+                plugin.logger().severe("Could not find a valid spawn cell for world-engine after "
                         + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Skipping teleport.");
-                return;
+                return OptionalLong.empty();
             }
         }
 
-        Location cellRoot = teleportToGame(participants, world, config, origin);
+        Location cellRoot = teleportToGame(participants, world, config, origin, lobbyId, applyBorder, matchId);
         teleportSpectatorsToCell(spectators, cellRoot);
-        setWorldBorder(world, config, origin);
-        // Reset the intermission fetch flag for the next match.
-        cellFetchedForIntermission = false;
+        if (applyBorder) {
+            setWorldBorder(world, config, origin);
+        }
+        return OptionalLong.of(origin.index());
     }
 
     /**
@@ -111,29 +127,107 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     }
 
     /**
-     * Allocates a new cell and runs the on-fetch-new-cell commands to
-     * pre-generate the area. Called when a match ends (after the match goes
-     * inactive) and when the autostart countdown begins. Only runs once per
-     * match intermission.
+     * Teleports mid-match joiners to random spawns inside a match cell and
+     * pins their respawn to the cell center. No-op when the engine is off or
+     * the world is missing.
      */
-    public void prepareNextCell() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        if (!config.enabled()) return;
-        if (cellFetchedForIntermission) return;
-        World world = Bukkit.getWorld(config.worldName());
-        if (world == null) return;
-
-        try {
-            pendingCell = findValidOrigin(world, config)
-                    .orElseThrow(Exception::new);
-        } catch (Exception e) {
-            plugin.getLogger().severe("Could not find a valid spawn cell for world-engine after "
-                    + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Skipping cell fetch.");
+    public void teleportJoinersToCell(List<Player> joiners, long cellIndex) {
+        if (joiners.isEmpty()) {
             return;
         }
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled()) {
+            return;
+        }
+        World world = Bukkit.getWorld(config.worldName());
+        if (world == null) {
+            return;
+        }
+        SpiralCoordinateMapper.CellCoordinate grid = SpiralCoordinateMapper.toCoordinate(cellIndex);
+        int originX = toBlockCoordinate(grid.x() * config.cellSize());
+        int originZ = toBlockCoordinate(grid.z() * config.cellSize());
+        Location cellRoot = new Location(world, originX + 0.5,
+                world.getHighestBlockYAt(originX, originZ, HeightMap.MOTION_BLOCKING) + 1,
+                originZ + 0.5);
+        for (Player player : joiners) {
+            Location spawn = randomSpawnInCell(world, originX, originZ, config.tpSpreadRadius(),
+                    player.getLocation().getYaw(), player.getLocation().getPitch());
+            player.teleport(spawn);
+            player.setRespawnLocation(cellRoot, true);
+        }
+    }
 
-        runOnFetchNewCell(config, pendingCell);
-        cellFetchedForIntermission = true;
+    /**
+     * Tops up the ready-cell buffer. Called when a match ends and when an
+     * autostart countdown begins; a periodic task covers matches started
+     * while others run.
+     */
+    public void prepareNextCell() {
+        refillBuffer();
+    }
+
+    /** Buffered cell indexes, oldest first. */
+    public List<Long> bufferedCellIndexes() {
+        return cellBuffer.stream().map(CellOrigin::index).toList();
+    }
+
+    /**
+     * Fetches cells until the buffer is full, running the preloading
+     * commands for each. Honors the NO_MATCH_RUNNING policy and retries
+     * failed fetches after a delay instead of spinning.
+     */
+    private void refillBuffer() {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled()) return;
+        if (BufferRefillPolicy.parse(plugin.getConfig()
+                .getString("world-engine.preloading.cell-buffer.increment-when", "ALWAYS"))
+                == BufferRefillPolicy.NO_MATCH_RUNNING && matchRunning.getAsBoolean()) {
+            return;
+        }
+        int target = bufferTarget();
+        while (cellBuffer.size() < target) {
+            World world = Bukkit.getWorld(config.worldName());
+            if (world == null) return;
+            Optional<CellOrigin> fetched = fetchCell(world, config);
+            if (fetched.isEmpty()) {
+                scheduleRefillRetry();
+                return;
+            }
+            cellBuffer.add(fetched.get());
+            runPreloadingCommands(config, fetched.get());
+            plugin.logger().debug("debug.cell-buffer-add", Map.of(
+                    "index", String.valueOf(fetched.get().index()),
+                    "count", String.valueOf(cellBuffer.size()),
+                    "target", String.valueOf(target)));
+        }
+    }
+
+    /** Ready cells to keep on hand. Minimum 1. */
+    private int bufferTarget() {
+        return Math.max(1, plugin.getConfig()
+                .getInt("world-engine.preloading.cell-buffer.stored-cells-buffer", 1));
+    }
+
+    /** Allocates one valid cell, logging it for debug recipients. */
+    private Optional<CellOrigin> fetchCell(World world, WorldEngineConfig config) {
+        Optional<CellOrigin> origin = findValidOrigin(world, config);
+        origin.ifPresent(cell -> plugin.logger().debug("debug.cell-fetched", Map.of(
+                "index", String.valueOf(cell.index()),
+                "x", String.valueOf(cell.x()),
+                "z", String.valueOf(cell.z()))));
+        return origin;
+    }
+
+    /** Retries a failed refill once after 30 seconds; concurrent retries never stack. */
+    private void scheduleRefillRetry() {
+        if (refillRetryTask != null) {
+            return;
+        }
+        plugin.logger().debug("debug.cell-fetch-failed", Map.of("seconds", "30"));
+        refillRetryTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            refillRetryTask = null;
+            refillBuffer();
+        }, 600L);
     }
 
     /**
@@ -155,20 +249,25 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         startBorderActive = false;
     }
 
-    public void onMatchEnd(List<Player> participants, List<Player> spectators) {
-        resetTrackedBorders();
+    public void onMatchEnd(List<Player> participants, List<Player> spectators, int lobbyId, long matchId) {
+        clearInstanceBorders();
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return;
 
-        // Cancel any pending start-border task.
-        if (startBorderTask != null) {
-            startBorderTask.cancel();
-            startBorderTask = null;
-        }
-        startBorderActive = false;
-
-        Location lobby = getValidLobby(config);
+        Location lobby = getValidLobby(config, lobbyId);
         if (lobby == null) return;
+
+        endCells.endWorldFor(matchId).ifPresentOrElse(endWorld -> {
+            // Everyone in the dedicated end rides to the lobby, including
+            // players outside the participant lists.
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                if (player.getWorld().equals(endWorld)) {
+                    player.teleport(lobby);
+                    player.setRespawnLocation(lobby, true);
+                }
+            }
+            endCells.release(matchId);
+        }, () -> endResetManager.reset(config, lobby));
 
         for (Player player : participants) {
             player.teleport(lobby);
@@ -183,34 +282,67 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
                 spectator.setRespawnLocation(lobby, true);
             }
         }
-        endResetManager.reset(config, lobby);
         clearWorldBorder(lobby.getWorld());
     }
 
-    public boolean teleportToLobby(List<Player> targets) {
+    /** Clears real borders and start-border state, e.g. when matches go concurrent. */
+    public void clearInstanceBorders() {
+        resetTrackedBorders();
+        if (startBorderTask != null) {
+            startBorderTask.cancel();
+            startBorderTask = null;
+        }
+        startBorderActive = false;
+    }
+
+    /**
+     * Applies the real world border for one cell, e.g. when concurrency
+     * drops back to a single match. Honors the start-border phase for
+     * matches that have not begun yet.
+     */
+    public void applyInstanceBorder(long cellIndex, boolean begun) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled() || !config.worldBorderEnabled()) {
+            return;
+        }
+        World world = Bukkit.getWorld(config.worldName());
+        if (world == null) {
+            return;
+        }
+        SpiralCoordinateMapper.CellCoordinate grid = SpiralCoordinateMapper.toCoordinate(cellIndex);
+        CellOrigin origin = new CellOrigin(
+                toBlockCoordinate(grid.x() * config.cellSize()),
+                toBlockCoordinate(grid.z() * config.cellSize()),
+                cellIndex);
+        if (begun) {
+            trackBorderedWorlds(world);
+            applyCellBorderSize(world, config, origin);
+        } else {
+            setWorldBorder(world, config, origin);
+        }
+    }
+
+    @Override
+    public boolean teleportToLobby(List<Player> targets, int lobbyId) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return false;
 
-        Location lobby = getValidLobby(config);
-        if (lobby != null) {
-            for (Entity entity : targets) {
-                entity.teleport(lobby);
-            }
-        }
-        else {
-            plugin.getLogger().warning("Skipping lobby teleport because lobby world was not found.");
+        Location lobby = getValidLobby(config, lobbyId);
+        if (lobby == null) {
             return false;
         }
-        // set spawnpoints
+        for (Entity entity : targets) {
+            entity.teleport(lobby);
+        }
         return true;
     }
 
     @Override
-    public boolean setSpawnToLobby(List<Player> targets) {
+    public boolean setSpawnToLobby(List<Player> targets, int lobbyId) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return false;
 
-        Location lobby = getValidLobby(config);
+        Location lobby = getValidLobby(config, lobbyId);
         if (lobby == null) return false;
 
         for (Player player : targets) {
@@ -219,18 +351,40 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         return true;
     }
 
-    private Location getValidLobby(WorldEngineConfig config) {
-        Location lobby = resolveLobby(config);
-        if (lobby == null || lobby.getWorld() == null) {
-            plugin.getLogger().warning("Skipping world-engine lobby teleport because lobby world was not found.");
-            return null;
-        }
-        return lobby;
+    private Location getValidLobby(WorldEngineConfig config, int lobbyId) {
+        return resolveLobby(config, lobbyId);
     }
 
     @Override
     public void onStart() {
         refreshDatapacks();
+        refillBuffer();
+        // Periodic top-up for matches consumed while others run. Plugin
+        // tasks are cancelled automatically on disable.
+        Bukkit.getScheduler().runTaskTimer(plugin, this::refillBuffer, 1200L, 1200L);
+    }
+
+    /** Dedicated end world of a live match, if it has one. */
+    public Optional<World> matchEndWorld(long matchId) {
+        return endCells.endWorldFor(matchId);
+    }
+
+    /** Surface center of a match cell, for end-exit routing. */
+    public Optional<Location> cellRoot(long cellIndex) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled()) {
+            return Optional.empty();
+        }
+        World world = Bukkit.getWorld(config.worldName());
+        if (world == null) {
+            return Optional.empty();
+        }
+        SpiralCoordinateMapper.CellCoordinate grid = SpiralCoordinateMapper.toCoordinate(cellIndex);
+        int originX = toBlockCoordinate(grid.x() * config.cellSize());
+        int originZ = toBlockCoordinate(grid.z() * config.cellSize());
+        return Optional.of(new Location(world, originX + 0.5,
+                world.getHighestBlockYAt(originX, originZ, HeightMap.MOTION_BLOCKING) + 1,
+                originZ + 0.5));
     }
 
     @Override
@@ -267,7 +421,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         return "settings/world-engine/strongholds.json";
     }
 
-    private record CellOrigin(int x, int z) {}
+    private record CellOrigin(int x, int z, long index) {}
 
     /**
      * Highest usable cell index for the given cell size. The grid spans
@@ -305,7 +459,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private void enforceCellIndexCap(WorldEngineConfig config) {
         OptionalLong current = cellAllocator.currentStartIndex();
         if (current.isPresent() && current.getAsLong() > maxCellIndex(config.cellSize())) {
-            plugin.getLogger().warning("World-engine cell index " + current.getAsLong()
+            plugin.logger().warning("World-engine cell index " + current.getAsLong()
                     + " exceeds the addressable grid for cell size " + config.cellSize()
                     + ". Restarting the index at zero; the world should be manually reset "
                     + "because new cells may overlap old ones.");
@@ -335,17 +489,18 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
                 }
 
                 if (isLastAttempt && (type == Material.WATER || type == Material.LAVA || !centerBlock.isSolid())) {
-                    plugin.getLogger().warning("Could not find a valid spawn cell after "
+                    plugin.logger().warning("Could not find a valid spawn cell after "
                             + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Using last attempted cell.");
                 }
             }
 
-            return Optional.of(new CellOrigin(originX, originZ));
+            return Optional.of(new CellOrigin(originX, originZ, baseIndex));
         }
         return Optional.empty();
     }
 
-    private Location teleportToGame(List<Player> participants, World world, WorldEngineConfig config, CellOrigin origin) {
+    private Location teleportToGame(List<Player> participants, World world, WorldEngineConfig config,
+                                    CellOrigin origin, int lobbyId, boolean applyBorder, long matchId) {
         // Use the cell root as the respawn location for all participants so
         // that deaths send them back to the cell center rather than the lobby.
         Location cellRoot = new Location(world, origin.x() + 0.5,
@@ -358,10 +513,15 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             player.setRespawnLocation(cellRoot, true);
         }
 
-        Location lobby = resolveLobby(config);
-        endResetManager.reset(config, lobby);
+        Location lobby = resolveLobby(config, lobbyId);
+        endCells.ensureEndCell(config, origin.index(), matchId);
+        if ("ALWAYS".equalsIgnoreCase(plugin.getConfig().getString("world-engine.end-cell-prune-when", "NEVER"))) {
+            endCells.pruneExtras(config.worldName(), bufferTarget(), lobby);
+        }
 
-        setWorldBorder(world, config, origin);
+        if (applyBorder) {
+            setWorldBorder(world, config, origin);
+        }
         return cellRoot;
     }
 
@@ -399,7 +559,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
                 netherBorder.setDamageBuffer(config.damageBuffer());
                 netherBorder.setDamageAmount(config.damageAmount());
             } else {
-                plugin.getLogger().warning("Could not find matching Nether world for '"
+                plugin.logger().warning("Could not find matching Nether world for '"
                         + overworld.getName() + "'. Skipping Nether world border sync.");
             }
 
@@ -426,7 +586,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
 
         World nether = getNetherWorld(overworld);
         if (nether == null) {
-            plugin.getLogger().warning("Could not find matching Nether world for '"
+            plugin.logger().warning("Could not find matching Nether world for '"
                     + overworld.getName() + "'. Skipping Nether world border sync.");
             return;
         }
@@ -452,7 +612,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
 
         World nether = getNetherWorld(overworld);
         if (nether == null) {
-            plugin.getLogger().warning("Could not find matching Nether world for '"
+            plugin.logger().warning("Could not find matching Nether world for '"
                     + overworld.getName() + "'. Skipping Nether world border sync.");
             return;
         }
@@ -504,12 +664,18 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         return Bukkit.getWorld(overworld.getName() + "_nether");
     }
 
-    private Location resolveLobby(WorldEngineConfig config) {
-        Location configured = config.lobbyLocation();
+    private Location resolveLobby(WorldEngineConfig config, int lobbyId) {
+        Location configured = config.lobbyLocations().get(lobbyId);
+        if (configured == null) {
+            return null;
+        }
         World lobbyWorld = configured.getWorld();
         if (lobbyWorld == null) lobbyWorld = Bukkit.getWorld(config.worldName());
         if (lobbyWorld == null && !Bukkit.getWorlds().isEmpty()) lobbyWorld = Bukkit.getWorlds().get(0);
-        if (lobbyWorld == null) return null;
+        if (lobbyWorld == null) {
+            plugin.logger().warning("Skipping world-engine lobby teleport because lobby world was not found.");
+            return null;
+        }
         return new Location(lobbyWorld, configured.getX(), configured.getY(), configured.getZ(),
                 configured.getYaw(), configured.getPitch());
     }
@@ -530,13 +696,13 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     }
 
     /**
-     * Runs the configured on-fetch-new-cell console commands, replacing
+     * Runs the configured preloading console commands, replacing
      * {@code <cellX>} and {@code <cellZ>} with the cell's block coordinates.
      * Used to pre-generate the cell area with chunk-generation plugins such
      * as Chunky before players teleport in.
      */
-    private void runOnFetchNewCell(WorldEngineConfig config, CellOrigin origin) {
-        List<String> commands = plugin.getConfig().getStringList("world-engine.on-fetch-new-cell");
+    private void runPreloadingCommands(WorldEngineConfig config, CellOrigin origin) {
+        List<String> commands = plugin.getConfig().getStringList("world-engine.preloading.commands");
         if (commands.isEmpty()) return;
         for (String command : commands) {
             if (command.isBlank()) continue;
@@ -547,7 +713,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             try {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception e) {
-                plugin.getLogger().severe("Failed to run on-fetch-new-cell command '%s'. Skipping..".formatted(command));
+                plugin.logger().severe("Failed to run preloading command '%s'. Skipping..".formatted(command));
                 e.printStackTrace();
             }
         }

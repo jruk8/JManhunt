@@ -15,7 +15,7 @@ class DimensionEnterTrackerTest {
         DimensionEnterTracker tracker = new DimensionEnterTracker();
 
         EnumSet<DimensionEnterTracker.Fire> fire =
-                tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, UUID.randomUUID());
+                tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, UUID.randomUUID(), 1L);
 
         assertEquals(EnumSet.of(
                 DimensionEnterTracker.Fire.PER_PLAYER,
@@ -27,19 +27,19 @@ class DimensionEnterTrackerTest {
         DimensionEnterTracker tracker = new DimensionEnterTracker();
         UUID player = UUID.randomUUID();
 
-        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player);
+        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player, 1L);
 
-        assertTrue(tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player).isEmpty());
+        assertTrue(tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player, 1L).isEmpty());
     }
 
     @Test
     void secondPlayerFiresPerPlayerOnly() {
         DimensionEnterTracker tracker = new DimensionEnterTracker();
 
-        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, UUID.randomUUID());
+        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, UUID.randomUUID(), 1L);
 
         assertEquals(EnumSet.of(DimensionEnterTracker.Fire.PER_PLAYER),
-                tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, UUID.randomUUID()));
+                tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, UUID.randomUUID(), 1L));
     }
 
     @Test
@@ -47,26 +47,40 @@ class DimensionEnterTrackerTest {
         DimensionEnterTracker tracker = new DimensionEnterTracker();
         UUID player = UUID.randomUUID();
 
-        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player);
+        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player, 1L);
 
         assertEquals(EnumSet.of(
                 DimensionEnterTracker.Fire.PER_PLAYER,
                 DimensionEnterTracker.Fire.GLOBAL_FIRST),
-                tracker.onEnter(DimensionEnterTracker.Dimension.END, player));
+                tracker.onEnter(DimensionEnterTracker.Dimension.END, player, 1L));
     }
 
     @Test
-    void resetRestoresFirstEntrySemantics() {
+    void dropMatchRestoresFirstEntrySemantics() {
         DimensionEnterTracker tracker = new DimensionEnterTracker();
         UUID player = UUID.randomUUID();
 
-        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player);
-        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, UUID.randomUUID());
-        tracker.reset();
+        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player, 1L);
+        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, UUID.randomUUID(), 1L);
+        tracker.dropMatch(1L);
 
         assertEquals(EnumSet.of(
                 DimensionEnterTracker.Fire.PER_PLAYER,
                 DimensionEnterTracker.Fire.GLOBAL_FIRST),
-                tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player));
+                tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player, 1L));
+    }
+
+    @Test
+    void concurrentMatchesTrackIndependently() {
+        DimensionEnterTracker tracker = new DimensionEnterTracker();
+        UUID player = UUID.randomUUID();
+
+        tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player, 1L);
+
+        assertEquals(EnumSet.of(
+                DimensionEnterTracker.Fire.PER_PLAYER,
+                DimensionEnterTracker.Fire.GLOBAL_FIRST),
+                tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player, 2L));
+        assertTrue(tracker.onEnter(DimensionEnterTracker.Dimension.NETHER, player, 1L).isEmpty());
     }
 }

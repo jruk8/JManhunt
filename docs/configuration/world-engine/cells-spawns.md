@@ -11,13 +11,14 @@ world-engine:
   cell-size: 10000
   tp-spread-radius: 5
   use-spawnpoint-algorithm: true
-  lobby-location:
-    world: world
-    x: 0.5
-    y: 100.0
-    z: 0.5
-    yaw: 0.0
-    pitch: 0.0
+  lobby-locations:
+    "0":
+      world: world
+      x: 0.5
+      y: 100.0
+      z: 0.5
+      yaw: 0.0
+      pitch: 0.0
 ```
 
 `enabled`, when true, teleports participants to a fresh cell when a match
@@ -66,8 +67,10 @@ in its size calculation.
 a valid spawn point for each player. This fixes spawning inside oceans or
 lava, but may cause server lag if many checks are required.
 
-## Lobby Location
+## Lobby Locations
 
-`lobby-location` is the lobby for all participants after game end. Make sure
-it is different from the game world. Use `/manhunt worldengine setlobby` to update
-it in-game.
+`lobby-locations` maps each lobby id to the lobby its players return to after
+a match ends. Make sure lobby worlds are different from the game world. Use
+`/manhunt worldengine setlobby` for lobby 0, or stand in place and run
+`/manhunt worldengine setlobbytp <lobby-id>` for any other lobby, to update
+locations in-game.

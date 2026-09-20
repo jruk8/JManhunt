@@ -49,7 +49,7 @@ class MessagesStyleTest {
                 "manhunt.worldengine-cellindex-unavailable")) {
             assertTrue(messages.getString(key, null) != null, key);
         }
-        assertEquals(7, messages.getInt("messages-version"));
+        assertEquals(8, messages.getInt("messages-version"));
     }
 
     private static int count(String text, String token) {

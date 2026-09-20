@@ -3,12 +3,15 @@ package com.jruk8.jmanhunt.settings.world_engine;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public record WorldEngineConfig(
         boolean enabled,
         String worldName,
         int cellSize,
         int tpSpreadRadius,
-        Location lobbyLocation,
+        Map<Integer, Location> lobbyLocations,
         boolean worldBorderEnabled,
         double damageBuffer,
         double damageAmount,
@@ -31,15 +34,31 @@ public record WorldEngineConfig(
         if (worldName.isBlank()) {
             worldName = "world";
         }
-        String lobbyWorld = config.getString(base + "lobby-location.world", worldName);
-        Location lobby = new Location(
-                org.bukkit.Bukkit.getWorld(lobbyWorld),
-                config.getDouble(base + "lobby-location.x", 0.5),
-                config.getDouble(base + "lobby-location.y", 100.0),
-                config.getDouble(base + "lobby-location.z", 0.5),
-                (float) config.getDouble(base + "lobby-location.yaw", 0.0),
-                (float) config.getDouble(base + "lobby-location.pitch", 0.0)
-        );
+        Map<Integer, Location> lobbyLocations = new HashMap<>();
+        var lobbiesSection = config.getConfigurationSection(base + "lobby-locations");
+        if (lobbiesSection != null) {
+            for (String key : lobbiesSection.getKeys(false)) {
+                int lobbyId;
+                try {
+                    lobbyId = Integer.parseInt(key.trim());
+                } catch (NumberFormatException exception) {
+                    continue;
+                }
+                if (lobbyId < 0) {
+                    continue;
+                }
+                String lobbyBase = base + "lobby-locations." + key + ".";
+                String lobbyWorld = config.getString(lobbyBase + "world", worldName);
+                lobbyLocations.put(lobbyId, new Location(
+                        org.bukkit.Bukkit.getWorld(lobbyWorld),
+                        config.getDouble(lobbyBase + "x", 0.5),
+                        config.getDouble(lobbyBase + "y", 100.0),
+                        config.getDouble(lobbyBase + "z", 0.5),
+                        (float) config.getDouble(lobbyBase + "yaw", 0.0),
+                        (float) config.getDouble(lobbyBase + "pitch", 0.0)
+                ));
+            }
+        }
         String borderBase = base + "world-border.";
         boolean worldBorderEnabled = config.getBoolean(borderBase + "enabled", false);
         double damageBuffer = Math.max(0, config.getDouble(borderBase + "damage.buffer", DEFAULT_DAMAGE_BUFFER));
@@ -53,7 +72,7 @@ public record WorldEngineConfig(
                 worldName,
                 cellSize,
                 spreadRadius,
-                lobby,
+                lobbyLocations,
                 worldBorderEnabled,
                 damageBuffer,
                 damageAmount,

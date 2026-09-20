@@ -13,20 +13,20 @@ class StatsManagerWinsTest {
         return new StatsManager(null, null, null);
     }
 
-    private UUID join(StatsManager manager, Role role) {
+    private UUID join(StatsManager manager, long matchId, Role role) {
         UUID id = UUID.randomUUID();
-        manager.getOrCreate(id).role = role;
+        manager.getOrCreate(matchId, id).role = role;
         return id;
     }
 
     @Test
     void speedrunnerWinCreditsOnlySpeedrunners() {
         StatsManager manager = manager();
-        UUID hunter = join(manager, Role.HUNTER);
-        UUID first = join(manager, Role.SPEEDRUNNER);
-        UUID second = join(manager, Role.SPEEDRUNNER);
+        UUID hunter = join(manager, 1L, Role.HUNTER);
+        UUID first = join(manager, 1L, Role.SPEEDRUNNER);
+        UUID second = join(manager, 1L, Role.SPEEDRUNNER);
 
-        manager.completeMatch(Role.SPEEDRUNNER);
+        manager.completeMatch(1L, Role.SPEEDRUNNER);
 
         StatsManager.CareerStats hunterStats = manager.career(hunter);
         assertEquals(0, hunterStats.wins);
@@ -47,10 +47,10 @@ class StatsManagerWinsTest {
     @Test
     void hunterWinCreditsOnlyHunters() {
         StatsManager manager = manager();
-        UUID hunter = join(manager, Role.HUNTER);
-        UUID speedrunner = join(manager, Role.SPEEDRUNNER);
+        UUID hunter = join(manager, 1L, Role.HUNTER);
+        UUID speedrunner = join(manager, 1L, Role.SPEEDRUNNER);
 
-        manager.completeMatch(Role.HUNTER);
+        manager.completeMatch(1L, Role.HUNTER);
 
         StatsManager.CareerStats hunterStats = manager.career(hunter);
         assertEquals(1, hunterStats.wins);
@@ -67,9 +67,9 @@ class StatsManagerWinsTest {
     @Test
     void nonParticipantGetsNoWinOrSession() {
         StatsManager manager = manager();
-        UUID spectator = join(manager, Role.NONE);
+        UUID spectator = join(manager, 1L, Role.NONE);
 
-        manager.completeMatch(Role.HUNTER);
+        manager.completeMatch(1L, Role.HUNTER);
 
         assertTrue(manager.career(spectator).isEmpty());
     }
@@ -77,18 +77,42 @@ class StatsManagerWinsTest {
     @Test
     void winsAccumulateAcrossMatchesAndMatchRoleSum() {
         StatsManager manager = manager();
-        UUID hunter = join(manager, Role.HUNTER);
-        UUID speedrunner = join(manager, Role.SPEEDRUNNER);
+        UUID hunter = UUID.randomUUID();
+        UUID speedrunner = UUID.randomUUID();
+        manager.getOrCreate(1L, hunter).role = Role.HUNTER;
+        manager.getOrCreate(1L, speedrunner).role = Role.SPEEDRUNNER;
+        manager.getOrCreate(2L, hunter).role = Role.HUNTER;
+        manager.getOrCreate(2L, speedrunner).role = Role.SPEEDRUNNER;
 
-        manager.completeMatch(Role.HUNTER);
-        manager.completeMatch(Role.SPEEDRUNNER);
+        manager.completeMatch(1L, Role.HUNTER);
+        manager.completeMatch(2L, Role.SPEEDRUNNER);
 
         StatsManager.CareerStats hunterStats = manager.career(hunter);
         assertEquals(1, hunterStats.wins);
+        assertEquals(2, hunterStats.sessions);
         assertEquals(hunterStats.hunterWins + hunterStats.speedrunnerWins, hunterStats.wins);
 
         StatsManager.CareerStats runnerStats = manager.career(speedrunner);
         assertEquals(1, runnerStats.wins);
+        assertEquals(2, runnerStats.sessions);
         assertEquals(runnerStats.hunterWins + runnerStats.speedrunnerWins, runnerStats.wins);
+    }
+
+    @Test
+    void concurrentMatchesStayIsolated() {
+        StatsManager manager = manager();
+        UUID hunter = join(manager, 1L, Role.HUNTER);
+        UUID speedrunner = join(manager, 2L, Role.SPEEDRUNNER);
+
+        manager.completeMatch(1L, Role.HUNTER);
+
+        assertEquals(1, manager.career(hunter).wins);
+        assertTrue(manager.career(speedrunner).isEmpty());
+
+        manager.completeMatch(2L, Role.SPEEDRUNNER);
+
+        assertEquals(1, manager.career(speedrunner).wins);
+        assertEquals(1, manager.career(speedrunner).sessions);
+        assertEquals(1, manager.career(hunter).sessions);
     }
 }

@@ -52,6 +52,7 @@ nav:
   - Getting Started: getting-started.md
   - Gallery: gallery.md
   - Commands: commands.md
+  - Concurrent Matches: multi-instance.md
   - Configuration:
       - Overview: configuration.md
       - Settings:

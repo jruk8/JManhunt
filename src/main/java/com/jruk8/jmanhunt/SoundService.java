@@ -35,7 +35,7 @@ public class SoundService {
             }
             player.playSound(player.getLocation(), settings.sound(), settings.volume(), settings.pitch());
         } catch (IllegalArgumentException exception) {
-            plugin.getLogger().warning(
+            plugin.logger().warning(
                     "Could not play configured sound '" + settings.configKey() + "': " + exception.getMessage());
         }
     }
@@ -56,12 +56,12 @@ public class SoundService {
                 soundKey = NamespacedKey.minecraft(sound.toLowerCase(Locale.ROOT));
             }
             if (Registry.SOUNDS.get(soundKey) == null) {
-                plugin.getLogger().warning("Sound '" + sound + "' is invalid. Using default sound.");
+                plugin.logger().warning("Sound '" + sound + "' is invalid. Using default sound.");
                 soundKey = NamespacedKey.fromString(FALLBACK_SOUND);
             }
             player.playSound(player.getLocation(), soundKey.asString(), volume, pitch);
         } catch (IllegalArgumentException exception) {
-            plugin.getLogger().warning("Could not play sound '" + sound + "': " + exception.getMessage());
+            plugin.logger().warning("Could not play sound '" + sound + "': " + exception.getMessage());
         }
     }
 
@@ -76,7 +76,7 @@ public class SoundService {
         }
         String sound = (Registry.SOUNDS.get(soundKey) == null) ? null : soundKey.asString();
         if (sound == null) {
-            plugin.getLogger().warning(
+            plugin.logger().warning(
                     "Sound '" + soundInput + "' for config key '" + configKey + "' is invalid."
                             + " Using default sound.");
             sound = FALLBACK_SOUND;

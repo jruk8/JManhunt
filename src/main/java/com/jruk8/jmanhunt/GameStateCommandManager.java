@@ -29,41 +29,56 @@ public final class GameStateCommandManager {
     private final PlayerStateStore playerStates;
     private final ConfigService configService;
     private final LobbyTeleporter lobbyTeleporter;
-    private final List<BukkitTask> intervalTasks = new ArrayList<>();
-    private final List<BukkitTask> pendingDelayed = new ArrayList<>();
-    /** Bumped every time interval chains are (re)started so stale firings stop. */
-    private long intervalGeneration;
-    /** Modifiers with per-executor timing: name to player ids owning a chain. */
-    private final Map<String, Set<UUID>> intervalExecutors = new HashMap<>();
-    /** Modifiers with per-executor timing that currently own a console chain. */
-    private final Set<String> intervalConsoleChained = new HashSet<>();
+    private final GameManager game;
+    /** One interval engine per live match, keyed by match id. */
+    private final Map<Long, IntervalEngine> intervalEngines = new HashMap<>();
+
+    /** Per-match interval engine state; each match runs its own chains. */
+    private static final class IntervalEngine {
+        final List<BukkitTask> tasks = new ArrayList<>();
+        final List<BukkitTask> delayed = new ArrayList<>();
+        /** Bumped every time interval chains are (re)started so stale firings stop. */
+        long generation;
+        /** Modifiers with per-executor timing: name to player ids owning a chain. */
+        final Map<String, Set<UUID>> executors = new HashMap<>();
+        /** Modifiers with per-executor timing that currently own a console chain. */
+        final Set<String> consoleChained = new HashSet<>();
+    }
+
+    private IntervalEngine engine(long matchId) {
+        return intervalEngines.computeIfAbsent(matchId, ignored -> new IntervalEngine());
+    }
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
-                                   ConfigService configService, LobbyTeleporter lobbyTeleporter) {
+                                   ConfigService configService, LobbyTeleporter lobbyTeleporter,
+                                   GameManager game) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.configService = configService;
         this.lobbyTeleporter = lobbyTeleporter;
+        this.game = game;
     }
 
-    public void runStart() {
-        cancelPendingDelayed();
-        runDefault("start");
-        runConfigured("start");
+    public void runStart(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId) {
+        cancelPendingDelayed(matchId);
+        runDefault("start", participants, lobbySpectators, lobbyId, false);
+        runConfigured("start", participants, matchId);
     }
 
-    public void runEnd() {
-        cancelPendingDelayed();
-        runConfigured("end");
-        runDefault("end");
+    public void runEnd(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
+                       boolean lastMatch) {
+        cancelPendingDelayed(matchId);
+        runConfigured("end", participants, matchId);
+        runDefault("end", participants, lobbySpectators, lobbyId, lastMatch);
     }
 
     /** Drops delayed modifier commands that never fired, e.g. at match end. */
-    private void cancelPendingDelayed() {
-        for (BukkitTask task : pendingDelayed) {
+    private void cancelPendingDelayed(long matchId) {
+        IntervalEngine engine = engine(matchId);
+        for (BukkitTask task : engine.delayed) {
             task.cancel();
         }
-        pendingDelayed.clear();
+        engine.delayed.clear();
     }
 
     public void runConsoleCleanup() {
@@ -73,10 +88,10 @@ public final class GameStateCommandManager {
         }
     }
 
-    public void runPlayerCleanup() {
+    public void runPlayerCleanup(List<Player> participants) {
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
-            for (Player player : participatingPlayers()) {
+            for (Player player : participants) {
                 runCommands("custom-modifiers." + name + ".commands.player-cleanup", player);
             }
         }
@@ -102,8 +117,8 @@ public final class GameStateCommandManager {
      * {@code PER_EXECUTOR} deviation fans out to one chain per player plus one
      * console chain instead of a single shared chain.
      */
-    public void startIntervalModifiers() {
-        cancelIntervalModifiers();
+    public void startIntervalModifiers(long matchId) {
+        cancelIntervalModifiers(matchId);
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
             if (!runsOnContains(name, "INTERVAL")) continue;
@@ -113,22 +128,31 @@ public final class GameStateCommandManager {
             double deviation = clampDeviation(plugin.getConfig().getDouble(base + "deviation", 0.0), intervalSeconds);
             TriggerScope scope = parseScope(plugin.getConfig().getString(base + "behavior", "PER_INVOKE"));
             if (deviation > 0.0 && scope == TriggerScope.PER_EXECUTOR) {
-                startPerExecutorInterval(name);
+                startPerExecutorInterval(name, matchId);
             } else {
-                scheduleSharedFiring(name);
+                scheduleSharedFiring(name, matchId);
             }
         }
     }
 
-    /** Cancels all running interval modifier tasks. */
-    public void cancelIntervalModifiers() {
-        intervalGeneration++;
-        for (BukkitTask task : intervalTasks) {
+    /** Cancels one match's running interval modifier tasks. */
+    public void cancelIntervalModifiers(long matchId) {
+        IntervalEngine engine = engine(matchId);
+        engine.generation++;
+        for (BukkitTask task : engine.tasks) {
             task.cancel();
         }
-        intervalTasks.clear();
-        intervalExecutors.clear();
-        intervalConsoleChained.clear();
+        engine.tasks.clear();
+        engine.executors.clear();
+        engine.consoleChained.clear();
+        intervalEngines.remove(matchId);
+    }
+
+    /** Cancels every match's interval tasks, e.g. on reload. */
+    public void cancelAllIntervalModifiers() {
+        for (long matchId : List.copyOf(intervalEngines.keySet())) {
+            cancelIntervalModifiers(matchId);
+        }
     }
 
     /**
@@ -137,8 +161,9 @@ public final class GameStateCommandManager {
      * every firing. Interval values are re-read each cycle so reloads apply
      * without a match restart.
      */
-    private void scheduleSharedFiring(String name) {
-        long generation = intervalGeneration;
+    private void scheduleSharedFiring(String name, long matchId) {
+        IntervalEngine engine = engine(matchId);
+        long generation = engine.generation;
         double intervalSeconds = plugin.getConfig()
                 .getDouble("custom-modifiers." + name + ".interval-settings.interval", 60.0);
         if (intervalSeconds < 0) return;
@@ -148,91 +173,94 @@ public final class GameStateCommandManager {
             long intervalTicks = secondsToTicks(intervalSeconds);
             AtomicReference<BukkitTask> ref = new AtomicReference<>();
             ref.set(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-                if (generation != intervalGeneration || !configService.modifierEnabled(name)) {
+                if (generation != engine.generation || !configService.modifierEnabled(name)) {
                     BukkitTask task = ref.get();
                     if (task != null) task.cancel();
-                    intervalTasks.remove(ref.get());
+                    engine.tasks.remove(ref.get());
                     return;
                 }
-                runModifierCommands(name);
+                runModifierCommands(name, matchId);
             }, intervalTicks, intervalTicks));
-            intervalTasks.add(ref.get());
+            engine.tasks.add(ref.get());
             return;
         }
         long delayTicks = jitteredIntervalTicks(intervalSeconds, deviation,
                 ThreadLocalRandom.current().nextDouble());
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            intervalTasks.remove(ref.get());
-            if (generation != intervalGeneration || !configService.modifierEnabled(name)) return;
-            runModifierCommands(name);
-            scheduleSharedFiring(name);
+            engine.tasks.remove(ref.get());
+            if (generation != engine.generation || !configService.modifierEnabled(name)) return;
+            runModifierCommands(name, matchId);
+            scheduleSharedFiring(name, matchId);
         }, delayTicks));
-        intervalTasks.add(ref.get());
+        engine.tasks.add(ref.get());
     }
 
     /** Starts one interval chain per participating player plus a console chain. */
-    private void startPerExecutorInterval(String name) {
-        intervalConsoleChained.add(name);
-        scheduleConsoleFiring(name);
-        for (Player player : participatingPlayers()) {
-            if (chainedPlayers(name).add(player.getUniqueId())) {
-                schedulePlayerFiring(name, player.getUniqueId());
+    private void startPerExecutorInterval(String name, long matchId) {
+        engine(matchId).consoleChained.add(name);
+        scheduleConsoleFiring(name, matchId);
+        for (Player player : game.onlineParticipants(matchId)) {
+            if (chainedPlayers(matchId, name).add(player.getUniqueId())) {
+                schedulePlayerFiring(name, player.getUniqueId(), matchId);
             }
         }
     }
 
     /** Schedules the next firing of a per-executor console chain. */
-    private void scheduleConsoleFiring(String name) {
-        long generation = intervalGeneration;
+    private void scheduleConsoleFiring(String name, long matchId) {
+        IntervalEngine engine = engine(matchId);
+        long generation = engine.generation;
         long delayTicks = currentJitteredDelay(name);
         if (delayTicks < 0) {
-            intervalConsoleChained.remove(name);
+            engine.consoleChained.remove(name);
             return;
         }
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            intervalTasks.remove(ref.get());
-            if (generation != intervalGeneration || !intervalConsoleChained.contains(name)
+            engine.tasks.remove(ref.get());
+            if (generation != engine.generation || !engine.consoleChained.contains(name)
                     || !configService.modifierEnabled(name)) {
-                intervalConsoleChained.remove(name);
+                engine.consoleChained.remove(name);
                 return;
             }
-            runModifierWithDelay(name, () -> dispatchModifier(name, List.of()));
-            reconcilePlayerChains(name);
-            scheduleConsoleFiring(name);
+            runModifierWithDelay(name, () -> dispatchModifier(name, List.of()), matchId);
+            reconcilePlayerChains(name, matchId);
+            scheduleConsoleFiring(name, matchId);
         }, delayTicks));
-        intervalTasks.add(ref.get());
+        engine.tasks.add(ref.get());
     }
 
     /** Schedules the next firing of one player's interval chain. */
-    private void schedulePlayerFiring(String name, UUID playerId) {
-        long generation = intervalGeneration;
+    private void schedulePlayerFiring(String name, UUID playerId, long matchId) {
+        IntervalEngine engine = engine(matchId);
+        long generation = engine.generation;
         long delayTicks = currentJitteredDelay(name);
         if (delayTicks < 0) {
-            chainedPlayers(name).remove(playerId);
+            chainedPlayers(matchId, name).remove(playerId);
             return;
         }
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            intervalTasks.remove(ref.get());
-            if (generation != intervalGeneration || !configService.modifierEnabled(name)) {
-                chainedPlayers(name).remove(playerId);
+            engine.tasks.remove(ref.get());
+            if (generation != engine.generation || !configService.modifierEnabled(name)) {
+                chainedPlayers(matchId, name).remove(playerId);
                 return;
             }
             Player target = Bukkit.getPlayer(playerId);
-            boolean present = target != null && playerStates.role(target).isParticipant();
+            boolean present = target != null && playerStates.role(target).isParticipant()
+                    && game.isActiveInInstance(matchId, playerId);
             if (present) {
-                runModifierWithDelay(name, () -> dispatchModifier(name, List.of(target)));
+                runModifierWithDelay(name, () -> dispatchModifier(name, List.of(target)), matchId);
             } else {
-                chainedPlayers(name).remove(playerId);
+                chainedPlayers(matchId, name).remove(playerId);
             }
-            reconcilePlayerChains(name);
-            if (present && chainedPlayers(name).contains(playerId)) {
-                schedulePlayerFiring(name, playerId);
+            reconcilePlayerChains(name, matchId);
+            if (present && chainedPlayers(matchId, name).contains(playerId)) {
+                schedulePlayerFiring(name, playerId, matchId);
             }
         }, delayTicks));
-        intervalTasks.add(ref.get());
+        engine.tasks.add(ref.get());
     }
 
     /** Reads the live interval config and rolls the next delay, or -1 when disabled. */
@@ -245,16 +273,16 @@ public final class GameStateCommandManager {
         return jitteredIntervalTicks(intervalSeconds, deviation, ThreadLocalRandom.current().nextDouble());
     }
 
-    private Set<UUID> chainedPlayers(String name) {
-        return intervalExecutors.computeIfAbsent(name, key -> new HashSet<>());
+    private Set<UUID> chainedPlayers(long matchId, String name) {
+        return engine(matchId).executors.computeIfAbsent(name, key -> new HashSet<>());
     }
 
     /** Starts chains for participants that joined after the modifier began. */
-    private void reconcilePlayerChains(String name) {
-        Set<UUID> active = chainedPlayers(name);
-        for (Player player : participatingPlayers()) {
+    private void reconcilePlayerChains(String name, long matchId) {
+        Set<UUID> active = chainedPlayers(matchId, name);
+        for (Player player : game.onlineParticipants(matchId)) {
             if (active.add(player.getUniqueId())) {
-                schedulePlayerFiring(name, player.getUniqueId());
+                schedulePlayerFiring(name, player.getUniqueId(), matchId);
             }
         }
     }
@@ -267,13 +295,14 @@ public final class GameStateCommandManager {
      *
      * @param event  the event name (e.g. ON_EVERY_KILL)
      * @param player the player involved in the event
+     * @param matchId the match the event belongs to
      */
-    public void runEventModifiers(String event, Player player) {
+    public void runEventModifiers(String event, Player player, long matchId) {
         if (player == null) return;
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
             if (!runsOnContains(name, event)) continue;
-            runModifierWithDelay(name, () -> dispatchModifier(name, List.of(player)));
+            runModifierWithDelay(name, () -> dispatchModifier(name, List.of(player)), matchId);
         }
     }
 
@@ -282,21 +311,22 @@ public final class GameStateCommandManager {
      * in ticks. Positions and roles resolve when delayed commands fire, not
      * when they trigger. Cleanup commands never go through here.
      */
-    private void runModifierWithDelay(String name, Runnable dispatch) {
+    private void runModifierWithDelay(String name, Runnable dispatch, long matchId) {
         long delay = Math.max(0L, plugin.getConfig().getLong("custom-modifiers." + name + ".delay", 0L));
         if (delay <= 0L) {
             dispatch.run();
             return;
         }
+        IntervalEngine engine = engine(matchId);
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
             try {
                 dispatch.run();
             } finally {
-                pendingDelayed.remove(ref.get());
+                engine.delayed.remove(ref.get());
             }
         }, delay));
-        pendingDelayed.add(ref.get());
+        engine.delayed.add(ref.get());
     }
 
     /**
@@ -322,8 +352,8 @@ public final class GameStateCommandManager {
         return runsOn.stream().map(GameStateCommandManager::normalizeTrigger).anyMatch(canonical::equalsIgnoreCase);
     }
 
-    private void runModifierCommands(String name) {
-        runModifierWithDelay(name, () -> dispatchModifier(name, participatingPlayers()));
+    private void runModifierCommands(String name, long matchId) {
+        runModifierWithDelay(name, () -> dispatchModifier(name, game.onlineParticipants(matchId)), matchId);
     }
 
     /**
@@ -447,33 +477,36 @@ public final class GameStateCommandManager {
         return List.copyOf(pool.subList(0, Math.min(count, pool.size())));
     }
 
-    private void runDefault(String phase) {
+    private void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
+                            boolean lastMatch) {
         if (!plugin.getConfig().getBoolean("gamestate-commands.default-commands.enabled", true)) return;
         String path = "gamestate-commands.default-commands.";
         if (plugin.getConfig().getBoolean(path + "reset-players-stats", false)) {
-            participatingPlayers().forEach(this::resetPlayerStats);
+            participants.forEach(this::resetPlayerStats);
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
             boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true);
             List<Player> nonePlayers = new ArrayList<>();
-            Bukkit.getOnlinePlayers().forEach(player -> {
-                Role role = playerStates.role(player);
-                if (role == Role.AFK) return; // AFK players are left alone
-                if (phase.equals("start") && !role.isParticipant()) {
+            for (Player player : participants) {
+                player.setGameMode(GameMode.SURVIVAL);
+            }
+            for (Player player : lobbySpectators) {
+                if (playerStates.role(player) == Role.AFK) continue; // AFK players are left alone
+                if (phase.equals("start")) {
                     if (setNoneSpectator) player.setGameMode(GameMode.SPECTATOR);
                     nonePlayers.add(player);
-                    return;
+                } else {
+                    player.setGameMode(GameMode.SURVIVAL);
                 }
-                player.setGameMode(GameMode.SURVIVAL);
-            });
+            }
             // When the world engine is enabled, NONE spectators travel to the
             // match cell with the players instead of waiting in the lobby.
             boolean engineMovesSpectators = phase.equals("start")
                     && setNoneSpectator
                     && plugin.getConfig().getBoolean("world-engine.enabled", false);
             if (!nonePlayers.isEmpty() && !engineMovesSpectators) {
-                lobbyTeleporter.teleportToLobby(nonePlayers);
-                lobbyTeleporter.setSpawnToLobby(nonePlayers);
+                lobbyTeleporter.teleportToLobby(nonePlayers, lobbyId);
+                lobbyTeleporter.setSpawnToLobby(nonePlayers, lobbyId);
             }
         }
         var worlds = Bukkit.getWorlds();
@@ -484,7 +517,7 @@ public final class GameStateCommandManager {
         boolean disablePhantoms = plugin.getConfig().getBoolean(path + "disable-phantoms", false);
         GameRule doInsomnia = Registry.GAME_RULE.get(NamespacedKey.minecraft("do_insomnia"));
         if (doInsomnia != null) {
-            boolean phantomsEnabled = phase.equals("end") || !disablePhantoms;
+            boolean phantomsEnabled = (phase.equals("end") && lastMatch) || !disablePhantoms;
             worlds.forEach(world -> world.setGameRule(doInsomnia, phantomsEnabled));
         }
         worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
@@ -506,24 +539,24 @@ public final class GameStateCommandManager {
             world.setStorm(false);
             world.setWeatherDuration(0);
         } catch (IllegalArgumentException exception) {
-            plugin.getLogger().fine("Skipping daytime reset in world without a world clock: " + world.getName());
+            plugin.logger().fine("Skipping daytime reset in world without a world clock: " + world.getName());
         }
     }
 
-    private void runConfigured(String phase) {
+    private void runConfigured(String phase, List<Player> participants, long matchId) {
         String base = "gamestate-commands.";
         if (plugin.getConfig().getBoolean(base + "console-commands.enabled", false)) {
             runCommands(base + "console-commands." + phase, null);
         }
         if (plugin.getConfig().getBoolean(base + "player-commands.enabled", false)) {
-            for (Player player : participatingPlayers()) {
+            for (Player player : participants) {
                 runCommands(base + "player-commands." + phase, player);
             }
         }
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
             if (phase.equals("start") && runsOnContains(name, "ON_START")) {
-                runModifierCommands(name);
+                runModifierCommands(name, matchId);
             }
         }
     }
@@ -544,15 +577,10 @@ public final class GameStateCommandManager {
                 if (parsed.startsWith("/")) parsed = parsed.substring(1);
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception e) {
-                plugin.getLogger().severe("Failed to run command '%s'. Skipping..".formatted(command));
+                plugin.logger().severe("Failed to run command '%s'. Skipping..".formatted(command));
                 e.printStackTrace();
             }
         }
-    }
-
-    private List<Player> participatingPlayers() {
-        return Bukkit.getOnlinePlayers().stream().filter(player -> playerStates.role(player).isParticipant())
-                .map(player -> (Player) player).toList();
     }
 
     private void resetPlayerStats(Player player) {

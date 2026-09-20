@@ -18,6 +18,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -28,6 +29,7 @@ public final class CompassManager {
     private final NamespacedKey compassKey;
     private final Map<UUID, Long> compassClicks = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
+    private GameManager game;
 
     public CompassManager(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
                           NamespacedKey compassKey) {
@@ -37,10 +39,16 @@ public final class CompassManager {
         this.compassKey = compassKey;
     }
 
+    /** Wires the game after construction so targets resolve within one match. */
+    public void setGameManager(GameManager game) {
+        this.game = game;
+    }
+
     public void refreshAllCompasses(boolean active) {
         if (active) {
             Bukkit.getOnlinePlayers().stream()
                     .filter(p -> role(p).isParticipant())
+                    .filter(p -> inLiveInstance(p))
                     .filter(this::hasCompass)
                     .forEach(this::refreshCompass);
         }
@@ -51,11 +59,17 @@ public final class CompassManager {
             return;
         }
         Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
+                .filter(p -> inLiveInstance(p))
                 .filter(p -> isCompass(p.getInventory().getItemInMainHand())
                         || isCompass(p.getInventory().getItemInOffHand()))
                 .forEach(p -> p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
                         component("compass.no-target-actionbar",
                                 Map.of("role", role(p) == Role.HUNTER ? "speedrunner" : "hunter")))));
+    }
+
+    /** True when the holder actively participates in a live match. */
+    private boolean inLiveInstance(Player player) {
+        return game != null && game.instanceOf(player.getUniqueId()).isPresent();
     }
 
     public void refreshCompass(Player holder) {
@@ -73,10 +87,18 @@ public final class CompassManager {
         if (!holderRole.isParticipant()) {
             return;
         }
+        if (game == null) {
+            return;
+        }
+        Optional<GameInstance> match = game.instanceOf(holder.getUniqueId());
+        if (match.isEmpty()) {
+            return;
+        }
+        GameInstance instance = match.get();
         Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
         String targetRoleString = targetRole == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
 
-        Player target = findTarget(holder, targetRole);
+        Player target = findTarget(holder, targetRole, instance);
         if (target != null) {
             if (handleNearbyOrTooFar(holder, target)) {
                 return;
@@ -91,7 +113,7 @@ public final class CompassManager {
         }
 
         // Last seen fallback - find nearest last seen location
-        LastSeenResult lastSeen = findNearestLastSeen(holder, targetRole);
+        LastSeenResult lastSeen = findNearestLastSeen(holder, targetRole, instance);
         if (lastSeen != null) {
             setLodestone(item, lastSeen.location());
             holder.getInventory().setItem(slot, item);
@@ -110,12 +132,13 @@ public final class CompassManager {
     }
 
     /**
-     * Finds the nearest online target for the given role in the same world.
+     * Finds the nearest online target for the given role in the same world
+     * and the same match.
      */
-    private Player findTarget(Player holder, Role targetRole) {
+    private Player findTarget(Player holder, Role targetRole, GameInstance instance) {
         return Bukkit.getOnlinePlayers().stream()
                 .filter(p -> role(p) == targetRole
-                        && isTrackableTarget(p.getUniqueId(), targetRole)
+                        && isTrackableTarget(p.getUniqueId(), targetRole, instance)
                         && p.getGameMode() != GameMode.SPECTATOR
                         && !p.getUniqueId().equals(holder.getUniqueId())
                         && p.getWorld().equals(holder.getWorld()))
@@ -178,21 +201,24 @@ public final class CompassManager {
         return false;
     }
 
-    private boolean isTrackableTarget(UUID playerId, Role targetRole) {
+    private boolean isTrackableTarget(UUID playerId, Role targetRole, GameInstance instance) {
         if (playerStates.role(playerId) != targetRole) {
+            return false;
+        }
+        if (!instance.isActive(playerId)) {
             return false;
         }
         if (targetRole == Role.SPEEDRUNNER) {
             return playerStates.isActiveSpeedrunner(playerId);
         }
-        return playerStates.isMatchParticipant(playerId);
+        return true;
     }
 
     private record LastSeenResult(String name, Location location, boolean online) {}
 
-    private LastSeenResult findNearestLastSeen(Player holder, Role targetRole) {
+    private LastSeenResult findNearestLastSeen(Player holder, Role targetRole, GameInstance instance) {
         return playerStates.sightings().entrySet().stream()
-                .filter(entry -> isTrackableTarget(entry.getKey(), targetRole))
+                .filter(entry -> isTrackableTarget(entry.getKey(), targetRole, instance))
                 .filter(entry -> !entry.getKey().equals(holder.getUniqueId()))
                 .map(entry -> {
                     Location loc = entry.getValue().get(holder.getWorld().getUID());
@@ -283,7 +309,7 @@ public final class CompassManager {
         String configured = plugin.getConfig().getString("settings.compass.item", "compass");
         Material material = resolveCompassMaterial(configured);
         if (material == null) {
-            plugin.getLogger().warning("Unknown or placeable settings.compass.item '"
+            plugin.logger().warning("Unknown or placeable settings.compass.item '"
                     + configured + "'. Using minecraft:compass.");
             material = Material.COMPASS;
         }

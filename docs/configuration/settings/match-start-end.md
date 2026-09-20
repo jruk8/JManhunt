@@ -12,6 +12,8 @@ settings:
 ```
 
 Autostart triggers once at least one hunter and one speedrunner are queued.
+Each lobby runs its own countdown and starts its own match; see
+[Concurrent Matches](../../multi-instance.md).
 
 ## Countdown
 
@@ -60,35 +62,40 @@ adventure mode during the pre-start window so nobody can break blocks while
 waiting for the starting hit. Everyone is restored to survival the instant
 the game actually begins.
 
-# Start Delay
+# Headstarts
 
-Under `settings.start-delay`, hunters can be given a head start disadvantage:
-they sit in spectator mode for a set delay while speedrunners get to move and
-gear up unimpeded.
+Under `settings.headstarts`, either side can be held in spectator mode while
+the other side plays. Each side is configured independently, so hunters can
+wait out a delay, speedrunners can wait out a delay, or both.
 
 ```yaml
 settings:
-  start-delay:
-    enabled: false
-    delay-seconds: 30
+  headstarts:
+    hunter:
+      enabled: false
+      delay-seconds: 30
+    speedrunner:
+      enabled: false
+      delay-seconds: 30
 ```
 
 If [Start on Speedrunner Damage](#start-on-speedrunner-damage) is also
-enabled, this delay's countdown doesn't begin until the speedrunner lands
-that first hit, so hunters stay in spectator through the pre-start window,
-then continue waiting out this delay on top of it.
+enabled, the countdowns don't begin until the speedrunner lands that first
+hit, so held players stay out through the pre-start window, then continue
+waiting out their headstart on top of it.
 
-Each hunter's location is recorded when the delay begins. Spectating hunters
-can fly around freely during the delay, but once it expires they are
+Each held player's location is recorded when their countdown begins. Held
+players can fly around freely during the delay, but once it expires they are
 teleported back to their recorded spawnpoint, including its dimension, and
 restored to survival mode. The last five seconds announce in chat with the
 `autostart-countdown` sound each second, and the spawn moment plays the
-neutral sound.
+neutral sound. Players who join mid-match while their side is held are held
+too.
 
 ## Delay Length
 
-`delay-seconds` sets the head start length in seconds. Values of `0` or below
-disable the delay entirely.
+`delay-seconds` sets the head start length in seconds per side. Values of `0`
+or below disable that side's delay entirely.
 
 # Role Announcement
 

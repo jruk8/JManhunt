@@ -52,6 +52,9 @@ permissions:
   jmanhunt.command.worldengine.setlobby:
     description: Set the world-engine lobby position.
     default: op
+  jmanhunt.command.worldengine.setlobbytp:
+    description: Set a lobby's world-engine location from your position.
+    default: op
   jmanhunt.command.worldengine.lobby:
     description: Teleport players to the world-engine lobby.
     default: op
@@ -60,6 +63,15 @@ permissions:
     default: op
   jmanhunt.command.quickstart:
     description: Quick-start a match.
+    default: op
+  jmanhunt.command.debug:
+    description: Toggle JManhunt debug output.
+    default: op
+  jmanhunt.command.lobby:
+    description: Manage lobby queues.
+    default: op
+  jmanhunt.command.joingame:
+    description: Add players to a running match.
     default: op
   jmanhunt.hunter:
     description: Allows a player to become a hunter.

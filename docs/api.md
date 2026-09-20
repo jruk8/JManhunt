@@ -43,15 +43,30 @@ and add `mavenLocal()` to your repositories.
 
 ## API surface
 
+Several matches can run concurrently, one per lobby. The parameterless state
+checks aggregate across all of them; the match id overloads scope to exactly
+one match. Unknown match ids read as empty: no match, no players, `false`
+states, and `-1` ids.
+
 ```java
 public interface JManhuntApi {
 
     boolean isMatchActive();        // a match exists (including the pre-start window)
-    boolean hasGameBegun();         // the match has begun (pre-start window over)
-    boolean isMatchEnding();        // the end delay is running
-    long    getMatchId();           // incrementing id of the current/last match
+    boolean hasGameBegun();         // any live match has begun (pre-start window over)
+    boolean isMatchEnding();        // any live match has its end delay running
+    long    getMatchId();           // incrementing id of the most recently started match
+    List<Long> getLiveMatchIds();   // ids of all live matches, oldest first
+    boolean isMatchLive(long matchId);
+    boolean hasMatchBegun(long matchId);
+    boolean isMatchEnding(long matchId);
+    long    getMatchId(UUID playerId);      // the player's live match, or -1
+    Set<UUID> getMatchPlayers(long matchId); // active participants of one match
+    int     getOriginLobbyId(long matchId); // lobby a match started from, or -1
     PlayerRole getRole(UUID playerId);
     boolean isParticipant(UUID playerId);
+    Set<Integer> getLobbyIds();
+    Set<UUID> getLobbyPlayers(int lobbyId);
+    int     getPlayerLobbyId(UUID playerId); // -1 when lobby-less
 }
 ```
 
@@ -75,12 +90,14 @@ are in the package `com.jruk8.jmanhunt.api.events`.
 
 | Event | When it fires | Data |
 | --- | --- | --- |
-| `JMatchStartEvent` | A match is created and announced (pre-start window begins). | `getMatchId()` |
+| `JMatchStartEvent` | A match is created and announced (pre-start window begins). | `getMatchId()`, `getOriginLobbyId()`, `getCellIndex()` |
 | `JGameBeginEvent` | The game actually begins (after the pre-start window). | `getMatchId()` |
 | `JMatchEndEvent` | A winner is announced (end delay still running). | `getMatchId()`, `getWinner()` |
+| `JMatchCancelEvent` | A match is cancelled with no winner. | `getMatchId()` |
+| `JPlayerJoinMatchEvent` | A player joins a running match. | `getMatchId()`, `getPlayerId()`, `getRole()` |
 
-Cancelling a match with `/manhunt end` does not fire `JMatchEndEvent`: there
-is no winner.
+Cancelling a match with `/manhunt end` fires `JMatchCancelEvent`, not
+`JMatchEndEvent`: there is no winner.
 
 ```java
 import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
@@ -118,8 +135,9 @@ public class OneHeartChallenge implements Listener {
 
     @EventHandler
     public void onGameBegin(JGameBeginEvent event) {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (api.isParticipant(player.getUniqueId())) {
+        for (java.util.UUID id : api.getMatchPlayers(event.getMatchId())) {
+            Player player = Bukkit.getPlayer(id);
+            if (player != null && api.isParticipant(id)) {
                 player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH)
                         .setBaseValue(2.0);
                 player.setHealth(2.0);

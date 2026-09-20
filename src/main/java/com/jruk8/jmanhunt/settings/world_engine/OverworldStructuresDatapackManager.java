@@ -1,7 +1,6 @@
 package com.jruk8.jmanhunt.settings.world_engine;
 
-import org.bukkit.plugin.java.JavaPlugin;
-
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -13,7 +12,7 @@ import java.util.Map;
  * generate in the overworld.
  */
 public final class OverworldStructuresDatapackManager extends DatapackManager {
-    public OverworldStructuresDatapackManager(JavaPlugin plugin) {
+    public OverworldStructuresDatapackManager(JManhuntPlugin plugin) {
         super(plugin);
     }
 

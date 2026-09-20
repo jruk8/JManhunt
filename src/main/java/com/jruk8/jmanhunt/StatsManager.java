@@ -1,9 +1,11 @@
 package com.jruk8.jmanhunt;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -18,7 +20,7 @@ public final class StatsManager {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final StatisticsRepository repository;
-    private final Map<UUID, Stats> stats = new HashMap<>();
+    private final Map<Long, Map<UUID, Stats>> matchStats = new HashMap<>();
     private final Map<UUID, CareerStats> career = new ConcurrentHashMap<>();
     private final Set<UUID> careerLoading = ConcurrentHashMap.newKeySet();
     private final Set<UUID> careerLoaded = ConcurrentHashMap.newKeySet();
@@ -30,7 +32,8 @@ public final class StatsManager {
         this.repository = repository;
     }
 
-    public void clear() { stats.clear(); }
+    /** Drops one match's slice so concurrent matches never share numbers. */
+    public void clearMatch(long matchId) { matchStats.remove(matchId); }
 
     public Stats create(String player) {
         Stats stat = new Stats();
@@ -38,9 +41,10 @@ public final class StatsManager {
         return stat;
     }
 
-    public Stats getOrCreate(UUID id) {
+    public Stats getOrCreate(long matchId, UUID id) {
         loadCareerAsync(id);
-        return stats.computeIfAbsent(id, ignored -> new Stats());
+        return matchStats.computeIfAbsent(matchId, ignored -> new HashMap<>())
+                .computeIfAbsent(id, ignored -> new Stats());
     }
 
     private void loadCareerAsync(UUID id) {
@@ -56,7 +60,7 @@ public final class StatsManager {
                 }
                 careerLoaded.add(id);
             } catch (Exception exception) {
-                plugin.getLogger().warning("Could not load career statistics for " + id + ": " + exception.getMessage());
+                plugin.logger().warning("Could not load career statistics for " + id + ": " + exception.getMessage());
             } finally {
                 careerLoading.remove(id);
             }
@@ -80,9 +84,10 @@ public final class StatsManager {
         }
     }
 
-    public void completeMatch(Role winner) {
+    public void completeMatch(long matchId, Role winner) {
         long now = System.currentTimeMillis();
-        for (Map.Entry<UUID, Stats> entry : stats.entrySet()) {
+        Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
+        for (Map.Entry<UUID, Stats> entry : slice.entrySet()) {
             Stats match = entry.getValue();
             CareerStats total = career(entry.getKey());
             synchronized (total) {
@@ -125,6 +130,8 @@ public final class StatsManager {
                 saveAsync(entry.getKey(), delta);
             }
         }
+        // The slice stays until teardown clears it so the end-of-match screen,
+        // shown during the end delay, still has numbers to display.
     }
 
     private void saveAsync(UUID id, CareerStats snapshot) {
@@ -133,7 +140,7 @@ public final class StatsManager {
             try {
                 repository.increment(id, snapshot);
             } catch (Exception exception) {
-                plugin.getLogger().warning("Could not save career statistics for " + id + ": " + exception.getMessage());
+                plugin.logger().warning("Could not save career statistics for " + id + ": " + exception.getMessage());
             }
         });
         pendingSaves.add(save);
@@ -144,22 +151,24 @@ public final class StatsManager {
         pendingSaves.forEach(CompletableFuture::join);
     }
 
-    public void showStats() {
+    /** End-screen lines go to the match plus the console, never other matches. */
+    public void showStats(long matchId, Collection<? extends Player> recipients) {
+        Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
         for (String statistic : plugin.getConfig().getStringList("match.end-statistics")) {
-            if (statistic.equalsIgnoreCase("PROGRESSION")) updateProgression();
-            var ranked = stats.values().stream()
+            if (statistic.equalsIgnoreCase("PROGRESSION")) updateProgression(matchId);
+            var ranked = slice.values().stream()
                     .sorted(Comparator.comparingDouble((Stats stat) -> stat.value(statistic)).reversed())
                     .filter(stat -> stat.appliesTo(statistic))
                     .filter(stat -> stat.value(statistic) > 0).limit(3).toList();
             if (ranked.isEmpty()) continue;
             String displayName = messages.string("game.stat-names." + statistic, statistic);
             String prefix = messages.string("game.stat-header-prefix", "<#de7766>");
-            broadcast("game.stat-header", Map.of("stat-prefix", prefix, "stat", displayName));
+            sendStat(recipients, "game.stat-header", Map.of("stat-prefix", prefix, "stat", displayName));
             for (int i = 0; i < ranked.size(); i++) {
                 Stats stat = ranked.get(i);
                 String placement = getPlacementName(i);
                 var rankColor = messages.string("game.rank-colors." + placement, "&f");
-                broadcast("game.stat-entry", Map.of("rank-color", rankColor, "rank", String.valueOf(i + 1),
+                sendStat(recipients, "game.stat-entry", Map.of("rank-color", rankColor, "rank", String.valueOf(i + 1),
                         "player", stat.player, "value", stat.displayValue(statistic, messages)));
             }
         }
@@ -169,15 +178,22 @@ public final class StatsManager {
         return switch (index) { case 0 -> "first"; case 1 -> "second"; case 2 -> "third"; default -> "other"; };
     }
 
-    private void broadcast(String key, Map<String, String> values) { Bukkit.broadcast(messages.component(key, values)); }
+    private void sendStat(Collection<? extends Player> recipients, String key, Map<String, String> values) {
+        Component rendered = messages.component(key, values);
+        for (Player recipient : recipients) {
+            recipient.sendMessage(rendered);
+        }
+        Bukkit.getConsoleSender().sendMessage(rendered);
+    }
 
-    private void updateProgression() {
+    private void updateProgression(long matchId) {
         Map<String, String> milestones = new LinkedHashMap<>();
         milestones.put("got_wood", "story/mine_wood"); milestones.put("got_iron", "story/smelt_iron");
         milestones.put("entered_nether", "story/enter_the_nether"); milestones.put("found_bastion", "nether/find_bastion");
         milestones.put("found_fortress", "nether/find_fortress"); milestones.put("entered_stronghold", "story/follow_ender_eye");
         milestones.put("entered_end", "story/enter_the_end");
-        for (Stats stat : stats.values()) {
+        Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
+        for (Stats stat : slice.values()) {
             Player player = Bukkit.getPlayer(stat.uuid);
             if (player == null) continue;
             stat.progression = 0; stat.progressionKey = null; int rank = 0;

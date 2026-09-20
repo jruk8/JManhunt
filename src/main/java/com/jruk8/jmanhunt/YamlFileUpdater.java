@@ -1,9 +1,9 @@
 package com.jruk8.jmanhunt;
 
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,12 +18,12 @@ public final class YamlFileUpdater {
     }
 
     public static FileConfiguration update(
-            JavaPlugin plugin, String resourceName, String versionKey, int currentVersion) {
+            JManhuntPlugin plugin, String resourceName, String versionKey, int currentVersion) {
         return update(plugin, resourceName, versionKey, currentVersion, Map.of());
     }
 
     public static FileConfiguration update(
-            JavaPlugin plugin, String resourceName, String versionKey, int currentVersion,
+            JManhuntPlugin plugin, String resourceName, String versionKey, int currentVersion,
             Map<String, String> moves) {
         File file = new File(plugin.getDataFolder(), resourceName);
         if (!file.exists()) {
@@ -44,7 +44,7 @@ public final class YamlFileUpdater {
             user.options().parseComments(true);
             user.save(file);
         } catch (IOException exception) {
-            plugin.getLogger().warning("Could not update " + resourceName + ": " + exception.getMessage());
+            plugin.logger().warning("Could not update " + resourceName + ": " + exception.getMessage());
         }
         return user;
     }

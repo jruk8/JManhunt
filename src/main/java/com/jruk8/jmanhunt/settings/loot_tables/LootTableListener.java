@@ -2,19 +2,19 @@ package com.jruk8.jmanhunt.settings.loot_tables;
 
 import com.jruk8.jmanhunt.GameManager;
 import com.jruk8.jmanhunt.settings.SettingsListener;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 
 public abstract class LootTableListener<T extends Event> implements Listener, SettingsListener {
-    protected final JavaPlugin plugin;
+    protected final JManhuntPlugin plugin;
     protected final LootTableEngine engine;
     private final GameManager game;
     private final File customFile;
 
-    public LootTableListener(JavaPlugin plugin, GameManager game) {
+    public LootTableListener(JManhuntPlugin plugin, GameManager game) {
         this.plugin = plugin;
         this.game = game;
         this.engine = new LootTableEngine();
@@ -39,17 +39,17 @@ public abstract class LootTableListener<T extends Event> implements Listener, Se
     private void reloadTable() {
         String name = getLootTableName();
         if (!customFile.exists()) {
-            plugin.getLogger().warning("Custom loot table '%s.json' does not exist.".formatted(name));
+            plugin.logger().warning("Custom loot table '%s.json' does not exist.".formatted(name));
             return;
         }
 
         boolean success = engine.loadFromFile(customFile);
 
         if (!success) {
-            plugin.getLogger().severe("Found loot table '%s.json' but failed to parse it!".formatted(name));
+            plugin.logger().severe("Found loot table '%s.json' but failed to parse it!".formatted(name));
             return;
         }
-        plugin.getLogger().info("Successfully loaded custom loot table '%s.json'!".formatted(name));
+        plugin.logger().info("Successfully loaded custom loot table '%s.json'!".formatted(name));
     }
 
     public void onStart() {

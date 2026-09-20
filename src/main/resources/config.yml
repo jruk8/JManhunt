@@ -23,7 +23,7 @@
 #
 
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 4
+config-version: 5
 
 
 # Send anonymous statistics via bStats. We never collect personal data or IP addresses.
@@ -34,6 +34,14 @@ send-anonymous-statistics: true
 # Message parser used for messages.yml: minimessage or legacy.
 # Default: minimessage
 text-format: minimessage
+
+
+# Debug output for pinpointing laggy configuration, such as cell fetches and
+# game starts. Toggled at runtime per player or for the console with
+# /manhunt debug. This value is only the default applied on restart.
+# Default: false
+debug:
+  enabled: false
 
 
 # Persistent career statistics. SQLite is local and requires no setup. Use
@@ -184,6 +192,31 @@ match:
   # HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based
   # on reliable vanilla advancements and is calculated only at match end.
   end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
+
+
+# Lobby queues. Each lobby runs its own queue, autostart countdown, and match.
+# Players join the default lobby on login and keep it until they join another
+# lobby or leave the server.
+lobbies:
+  # Lobby id assigned on join. Use -1 (or any negative value) to leave players
+  # without a lobby until they join one manually.
+  # Default: 0
+  default-lobby-id: 0
+  # When true, joining a lobby also teleports the player to that lobby's
+  # location. When no location exists for the lobby, the player is told to
+  # create one instead of being teleported.
+  # Default: false
+  join-teleports-to-lobby: false
+  # Per-role queue caps for each lobby. Only enforced on the queue before a
+  # match starts, and bypassed with -force. Lowering a cap below the current
+  # queue blocks new entries of that role but never kicks queued players.
+  caps:
+    # Max queued speedrunners per lobby. -1 means no limit. Minimum: 1.
+    # Default: -1
+    speedrunner: -1
+    # Max queued hunters per lobby. -1 means no limit. Minimum: 1.
+    # Default: -1
+    hunter: -1
 
 
 # Optional named command bundles. Toggle a bundle in-game with
@@ -465,16 +498,27 @@ settings:
     # Default: true
     start-with-adventure-mode: true
 
-  # Start delay for speedrunners. When enabled, all hunters are set to
-  # spectator mode for the configured delay, giving speedrunners a head start.
-  # If start-on-speedrunner-damage is also enabled, the delay countdown only
-  # starts when the speedrunner first damages a hunter.
-  # Default: false
-  start-delay:
-    enabled: false
-    # Delay in seconds. Values <= 0 mean no delay.
-    # Default: 30
-    delay-seconds: 30
+  # Head starts that hold one role in spectator mode while the other role
+  # plays. Each side is configured independently.
+  headstarts:
+    # Holds hunters in spectator mode at match start, giving speedrunners a
+    # head start. If start-on-speedrunner-damage is also enabled, the countdown
+    # only starts when a speedrunner first damages a hunter.
+    # Default: false
+    hunter:
+      enabled: false
+      # Delay in seconds. Values <= 0 mean no delay.
+      # Default: 30
+      delay-seconds: 30
+    # Holds speedrunners in spectator mode at match start, giving hunters a
+    # head start. If start-on-speedrunner-damage is also enabled, the countdown
+    # only starts when a speedrunner first damages a hunter.
+    # Default: false
+    speedrunner:
+      enabled: false
+      # Delay in seconds. Values <= 0 mean no delay.
+      # Default: 30
+      delay-seconds: 30
 
   # Alternate win conditions. Multiple conditions can be enabled at the same
   # time; speedrunners win as soon as any one is satisfied.
@@ -641,17 +685,17 @@ settings:
 world-engine:
   enabled: false
   world-name: world
-  # Lobby location for all participants after a game ends.
-  # Preferably set to something different from the world that the spiral
-  # engine works on.
-  # This is also used as the spawn point for joining NONE players.
-  lobby-location:
-    world: world
-    x: 0.5
-    y: 100.0
-    z: 0.5
-    yaw: 0.0
-    pitch: 0.0
+  # Lobby locations per lobby id. Players return to their match's lobby
+  # location when a game ends. Preferably set to something different from the
+  # world that the spiral engine works on.
+  lobby-locations:
+    "0":
+      world: world
+      x: 0.5
+      y: 100.0
+      z: 0.5
+      yaw: 0.0
+      pitch: 0.0
   # Size of one spiral cell in blocks. Hard-capped at 50,000.
   # Too low values may cause issues.
   # Default: 10,000
@@ -665,19 +709,34 @@ world-engine:
   # sometimes cause server lag.
   # Default: true
   use-spawnpoint-algorithm: true
-  # Optional console commands run whenever a new cell is fetched for a
-  # match. <cellX> and <cellZ> are replaced with the cell's block
-  # coordinates. This is useful for chunk-generation plugins such as Chunky
-  # to pre-generate the cell area before players teleport in.
-  # The commands only run when the cell is actually new (i.e. the previous
-  # cell was not already regenerated), avoiding unnecessary regeneration.
-  # Try something like:
-  #      - chunky world world
-  #      - chunky center <cellX> <cellZ>
-  #      - chunky radius 150
-  #      - chunky start
-  #      - chunky confirm
-  on-fetch-new-cell: []
+  # Cell preloading. Console commands run whenever new cells are fetched, and
+  # a buffer of ready cells is kept so matches start without lag.
+  preloading:
+    # Optional console commands run whenever a new cell is fetched for a
+    # match. <cellX> and <cellZ> are replaced with the cell's block
+    # coordinates. This is useful for chunk-generation plugins such as Chunky
+    # to pre-generate the cell area before players teleport in.
+    # Try something like:
+    #      - chunky world world
+    #      - chunky center <cellX> <cellZ>
+    #      - chunky radius 120
+    #      - chunky start
+    #      - chunky confirm
+    commands: []
+    # Ready-cell buffer kept ahead of match starts.
+    cell-buffer:
+      # How many pregenerated cells to keep ready. Minimum: 1.
+      # Default: 1
+      stored-cells-buffer: 1
+      # When the buffer refills: ALWAYS refills whenever a slot is free,
+      # NO_MATCH_RUNNING only refills while no match is running.
+      # Default: ALWAYS
+      increment-when: ALWAYS
+  # When extra end dimensions beyond the cell buffer are deleted. ALWAYS
+  # prunes one extra dimension per match start until the buffer is reached,
+  # NEVER keeps extra dimensions around.
+  # Default: NEVER
+  end-cell-prune-when: NEVER
   # World border configuration for cell confinement.
   world-border:
     # When true, the world border is used to limit the spiral cell area.

@@ -4,20 +4,26 @@ All commands are available under `/manhunt` and its alias `/mh`.
 
 | Command                                           | What it does | Permission |
 |---------------------------------------------------| --- | --- |
-| `/manhunt`                                        | Shows the current teams and match status. | `jmanhunt.command.status` |
+| `/manhunt [id\|all]`                             | Shows your match roster, one match roster by id, or every running match with `all`. | `jmanhunt.command.status` |
 | `/manhunt help`                                   | Shows the in-game command list. | `jmanhunt.command.help` |
 | `/manhunt challenges`                             | Shows a chat notice with a clickable link to the optional Challenges addon. | `jmanhunt.command.challenges` |
 | `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `afk`, or `none`. | `jmanhunt.command.setplayer` (`jmanhunt.command.setplayer.self` for your own role only) |
-| `/manhunt start`                                  | Starts a match. | `jmanhunt.command.start` |
-| `/manhunt end`                                    | Cancels the active match with no winner and no saved stats. | `jmanhunt.command.end` |
-| `/manhunt end -i` / `-immediate`                | Cancels the match immediately, skipping the end delay intermission. | `jmanhunt.command.end` |
+| `/manhunt lobby join <selector> <lobby-id> <role>` | Moves players to a lobby queue with a role. | `jmanhunt.command.lobby` |
+| `/manhunt lobby leave <player> <lobby-id>`        | Removes a player from a lobby queue. | `jmanhunt.command.lobby` |
+| `/manhunt start [lobby-id]`                       | Starts a match for a lobby queue. | `jmanhunt.command.start` |
+| `/manhunt end [id]`                               | Cancels a match with no winner and no saved stats. | `jmanhunt.command.end` |
+| `/manhunt end [id] -i` / `-immediate`           | Cancels the match immediately, skipping the end delay intermission. | `jmanhunt.command.end` |
+| `/manhunt joingame <selector> <id> <role>`        | Adds players to a running match as `hunter`, `speedrunner`, or `none`. | `jmanhunt.command.joingame` |
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
 | `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
 | `/manhunt configuration <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.configuration` |
-| `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the world-engine lobby position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobby`) |
-| `/manhunt worldengine lobby [selector]`           | Teleports the sender or selected players to the lobby. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobby`) |
+| `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the lobby 0 world-engine lobby position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobby`) |
+| `/manhunt worldengine setlobbytp <lobby-id>`       | Sets a lobby's location from your current position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobbytp`) |
+| `/manhunt worldengine lobby [selector] [lobby-id]` | Teleports the sender or selected players to a lobby. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobby`) |
 | `/manhunt worldengine cellindex get`              | Shows the current world-engine cell index. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
+| `/manhunt worldengine cellindex buffer`           | Lists the buffered ready cells. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
+| `/manhunt debug [on\|off]`                         | Toggles debug output for yourself or the console. | `jmanhunt.command.debug` |
 | `/manhunt reload`                                 | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
 
 Tab completion only suggests subcommands and worldengine actions the sender
@@ -43,7 +49,8 @@ only pick roles they have the permission for.
 
 `/manhunt quickstart [percentage]` (alias `/manhunt qs [percentage]`) is a
 convenience command for larger servers that want to start a match without
-manually assigning roles. It can only be used when no match is active.
+manually assigning roles. It runs in your lobby (or the default lobby
+from the console) and can only be used when that lobby has no running match.
 
 - **Without arguments:** keeps existing teams and converts only what is
   missing to start. If no Speedrunner is queued, a random player becomes one;
@@ -57,15 +64,33 @@ manually assigning roles. It can only be used when no match is active.
   are rounded to the nearest whole player, and there is always at least one
   Speedrunner.
 
-Every online player except AFK is convertible, including existing Hunters
-and Speedrunners; default mode preserves queued roles and only converts the
-minimum needed, preferring `none` players for conversion. AFK players are
-never touched. The match is validated after assignment: it requires at least
-one Hunter and one Speedrunner, so a server with two online players where
-one is AFK will fail to start.
+Every online lobby member except AFK is convertible, including existing
+Hunters and Speedrunners; default mode preserves queued roles and only
+converts the minimum needed, preferring `none` players for conversion. AFK
+players are never touched. The match is validated after assignment: it
+requires at least one Hunter and one Speedrunner, so a lobby with two online
+members where one is AFK will fail to start. Queue caps apply unless `-f`
+(`-force`) is passed.
 
 Quick Start bypasses the autostart system entirely: no countdowns or
 autostart messages are displayed.
+
+## Lobbies
+
+Each lobby runs its own queue, autostart countdown, and match, so several
+matches can run at the same time (see [Concurrent Matches](multi-instance.md)).
+Players join the default lobby on login. `/manhunt lobby join` moves players
+into a lobby with a role, honoring the per-role queue caps unless `-f`
+(`-force`) is passed; `/manhunt lobby leave` removes them again. Multiple
+lobbies need the world engine; with it off, everyone shares lobby 0.
+
+## Joining a Running Match
+
+`/manhunt joingame <selector> <id> <role>` adds players to a live match as
+`hunter`, `speedrunner`, or `none` (spectator). Joiners move to the match's
+lobby, are teleported into its cell, and receive lives, stats, and a compass.
+Players already in a live match are skipped. Promoting a queued player with
+`setplayer` while their lobby has a running match pulls them in the same way.
 
 ## Editing Settings In-Game
 
@@ -75,7 +100,7 @@ deeper, and tab completion only suggests the children of the current level.
 Boolean toggles accept `true` or `false`:
 
 ```text
-/manhunt configuration settings start-delay enabled true
+/manhunt configuration settings headstarts hunter enabled true
 ```
 
 Numerical settings (ints, floats, doubles) accept their numeric value:

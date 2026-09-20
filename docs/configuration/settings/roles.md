@@ -23,8 +23,8 @@ before the next one.
 ## Reset on Leave
 
 `reset-on-leave`, when enabled, resets a player back to `NONE` if they leave
-the server while no game is running. If a game is currently in progress, the
-reset is deferred until that game ends instead.
+the server while their lobby has no running match. If their lobby has a game
+in progress, the reset is deferred until that game ends instead.
 
 ## None Gamemode
 

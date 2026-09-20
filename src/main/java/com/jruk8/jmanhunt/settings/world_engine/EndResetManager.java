@@ -1,26 +1,27 @@
 package com.jruk8.jmanhunt.settings.world_engine;
 
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.List;
 
 public final class EndResetManager {
-    private final JavaPlugin plugin;
+    private final JManhuntPlugin plugin;
 
-    public EndResetManager(JavaPlugin plugin) {
+    public EndResetManager(JManhuntPlugin plugin) {
         this.plugin = plugin;
     }
 
+    /**
+     * Wipes and recreates the shared end dimension. Only used for matches
+     * without a dedicated end cell; cell matches get their own dimension
+     * from {@link EndCellManager} instead.
+     */
     public void reset(WorldEngineConfig config, Location lobbyLocation) {
         String endWorldName = config.worldName() + "_the_end";
         World endWorld = Bukkit.getWorld(endWorldName);
@@ -35,56 +36,30 @@ public final class EndResetManager {
                 }
             }
         }
-        // The vanilla dragon health bar is tracked per player and is not
-        // always cleared when its world is unloaded and recreated, so remove
-        // every viewer explicitly. Otherwise the stale bar stays on screen
-        // for anyone who was in the End during the reset.
-        clearDragonBar(endWorld);
+        EndWorlds.clearDragonBar(plugin, endWorld);
         for (org.bukkit.Chunk chunk : endWorld.getLoadedChunks()) {
             chunk.unload();
         }
 
         if (!Bukkit.unloadWorld(endWorld, true)) {
-            plugin.getLogger().warning("Could not unload end world " + endWorldName + " for reset.");
+            plugin.logger().warning("Could not unload end world " + endWorldName + " for reset.");
             return;
         }
 
-        deleteFolder(new File(plugin.getServer().getWorldContainer(), config.worldName() + "/DIM1"));
-        deleteFolder(new File(plugin.getServer().getWorldContainer(),
-                config.worldName() + "/dimensions/minecraft/the_end"));
-
+        deleteEndData(config.worldName());
         WorldCreator creator = new WorldCreator(endWorldName);
         creator.environment(World.Environment.THE_END);
         creator.createWorld();
     }
 
-    private void clearDragonBar(World endWorld) {
-        try {
-            var battle = endWorld.getEnderDragonBattle();
-            if (battle == null) {
-                return;
+    private void deleteEndData(String baseWorldName) {
+        File container = plugin.getServer().getWorldContainer();
+        for (String relative : new String[]{baseWorldName + "/DIM1", baseWorldName + "/dimensions/minecraft/the_end"}) {
+            try {
+                FileUtils.deleteRecursively(new File(container, relative));
+            } catch (IOException exception) {
+                plugin.logger().warning("Failed to clean end data at " + relative + ": " + exception.getMessage());
             }
-            var bar = battle.getBossBar();
-            if (bar == null) {
-                return;
-            }
-            bar.removeAll();
-        } catch (UnsupportedOperationException exception) {
-            plugin.getLogger().fine("Could not clear dragon bar in " + endWorld.getName() + ": " + exception.getMessage());
-        }
-    }
-
-    private void deleteFolder(File folder) {
-        if (!folder.exists()) {
-            return;
-        }
-        try {
-            List<Path> paths = Files.walk(folder.toPath()).sorted(Comparator.reverseOrder()).toList();
-            for (Path path : paths) {
-                Files.deleteIfExists(path);
-            }
-        } catch (IOException exception) {
-            plugin.getLogger().warning("Failed to clean end data at " + folder + ": " + exception.getMessage());
         }
     }
 }

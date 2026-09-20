@@ -1,9 +1,14 @@
 package com.jruk8.jmanhunt;
 
 import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
+import com.jruk8.jmanhunt.api.events.JMatchCancelEvent;
 import com.jruk8.jmanhunt.api.events.JMatchEndEvent;
 import com.jruk8.jmanhunt.api.events.JMatchStartEvent;
+import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
 import com.jruk8.jmanhunt.settings.autostart.AutostartCountdownMessages;
+import com.jruk8.jmanhunt.settings.world_engine.BorderMode;
+import com.jruk8.jmanhunt.settings.world_engine.CellBounds;
+import com.jruk8.jmanhunt.settings.world_engine.WorldEngineConfig;
 import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
@@ -12,6 +17,8 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
+import org.bukkit.World;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -19,14 +26,17 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 
 public final class GameManager {
     private final JManhuntPlugin plugin;
@@ -39,32 +49,26 @@ public final class GameManager {
     private final SoundService sounds;
     private final WorldEngineService worldEngine;
     private final WinConditionEngine winConditionEngine;
-    private boolean active;
-    private boolean ending;
-    private boolean endPhaseDone;
-    private boolean endStatsShown;
-    private boolean gameBegun;
-    private BukkitTask waitingReminderTask;
-    private BukkitTask waitingExpiryTask;
-    private int waitingDelayConfigured;
-    private long waitingStartTime;
-    private BukkitTask autostartCountdownTask;
-    private int autostartCountdownRemaining;
-    private int autostartCountdownConfigured;
+    private final LobbyService lobbies;
+    private final Map<Long, GameInstance> instances = new HashMap<>();
+    /** Per-lobby autostart countdowns, keyed by lobby id. */
+    private final Map<Integer, AutostartCountdown> autostartCountdowns = new HashMap<>();
+
+    /** Mutable per-lobby countdown state; the task ticks in GameManager. */
+    private static final class AutostartCountdown {
+        BukkitTask task;
+        int remaining;
+        int configured;
+    }
     private long matchId;
-    private final List<Runnable> gameStartListeners = new ArrayList<>();
-    private final List<Runnable> beginGameListeners = new ArrayList<>();
-    private final List<Runnable> gameEndListeners = new ArrayList<>();
-    private BukkitTask startDelayTask;
-    private int startDelayRemaining;
-    private boolean startDelayActive;
-    private final Map<UUID, Location> startDelayReturnPoints = new HashMap<>();
-    private BukkitTask surviveTimeTask;
+    private final List<Consumer<GameInstance>> gameStartListeners = new ArrayList<>();
+    private final List<Consumer<GameInstance>> beginGameListeners = new ArrayList<>();
+    private final List<Consumer<GameInstance>> gameEndListeners = new ArrayList<>();
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
                        PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
                        ConfigService configService, WorldEngineService worldEngine,
-                       WinConditionEngine winConditionEngine) {
+                       WinConditionEngine winConditionEngine, LobbyService lobbyService) {
         this.plugin = plugin;
         this.messages = messages;
         this.sounds = sounds;
@@ -74,7 +78,8 @@ public final class GameManager {
         this.configService = configService;
         this.worldEngine = worldEngine;
         this.winConditionEngine = winConditionEngine;
-        this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService, worldEngine);
+        this.lobbies = lobbyService;
+        this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService, worldEngine, this);
 
         // assign events
         configService.onChange("settings.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
@@ -86,13 +91,156 @@ public final class GameManager {
                 (oldValue, newValue) -> worldEngine.onReload());
         configService.onChange("settings.game-boosts.overworld-structures.enabled",
                 (oldValue, newValue) -> worldEngine.onReload());
+        // Pseudo-border guard for concurrent matches; idle unless at least two
+        // matches run with the engine border on.
+        Bukkit.getScheduler().runTaskTimer(plugin, this::enforcePseudoBorders, 20L, 20L);
     }
 
-    // TODO: push players to a match container, so that new players cannot join the match mid-game.
-    public boolean isActive() { return active; }
-    public boolean isGameBegun() { return gameBegun; }
-    public boolean isEnding() { return ending; }
+    /** True while any match runs, including end-delay phases. */
+    public boolean isActive() { return instances.values().stream().anyMatch(GameInstance::active); }
+    /** True once any live match has begun. */
+    public boolean isGameBegun() { return instances.values().stream().anyMatch(GameInstance::begun); }
+    /** True while any match is being finished. */
+    public boolean isEnding() { return instances.values().stream().anyMatch(GameInstance::ending); }
     public long matchId() { return matchId; }
+    /** Live instances keyed by match id; more than one only with the world engine on. */
+    public Map<Long, GameInstance> instances() { return Map.copyOf(instances); }
+    /** Looks up a live instance by match id. */
+    public Optional<GameInstance> instance(long matchId) { return Optional.ofNullable(instances.get(matchId)); }
+
+    /** Live instances oldest first. */
+    public List<GameInstance> liveInstances() {
+        return instances.values().stream().sorted(Comparator.comparingLong(GameInstance::matchId)).toList();
+    }
+
+    /** The live instance a player actively participates in, if any. */
+    public Optional<GameInstance> instanceOf(UUID playerId) {
+        return instances.values().stream().filter(instance -> instance.isActive(playerId)).findFirst();
+    }
+
+    /** Live instance by world-engine cell index. */
+    public Optional<GameInstance> instanceByCell(long cellIndex) {
+        return instances.values().stream()
+                .filter(instance -> instance.cellIndex().isPresent()
+                        && instance.cellIndex().getAsLong() == cellIndex)
+                .findFirst();
+    }
+
+    /** Live instance started from a lobby, if that lobby has one running. */
+    public Optional<GameInstance> instanceForLobby(int lobbyId) {
+        return instances.values().stream().filter(instance -> instance.originLobbyId() == lobbyId).findFirst();
+    }
+
+    /** True when the player actively participates in any live match. */
+    public boolean isInLiveInstance(UUID playerId) {
+        return instanceOf(playerId).isPresent();
+    }
+
+    /** Online active participants of a match. */
+    public List<Player> onlineParticipants(long matchId) {
+        GameInstance instance = instances.get(matchId);
+        if (instance == null) {
+            return List.of();
+        }
+        return onlineActivePlayers(instance);
+    }
+
+    /** Online active participants of a match. */
+    public List<Player> onlineActivePlayers(GameInstance instance) {
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(player -> instance.isActive(player.getUniqueId()))
+                .map(player -> (Player) player).toList();
+    }
+
+    /** Online players ever assigned to a match, including the eliminated. */
+    public List<Player> onlineAssignedPlayers(GameInstance instance) {
+        Set<UUID> assigned = instance.assignedPlayerIds();
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(player -> assigned.contains(player.getUniqueId()))
+                .map(player -> (Player) player).toList();
+    }
+
+    public boolean isActiveInInstance(long matchId, UUID playerId) {
+        GameInstance instance = instances.get(matchId);
+        return instance != null && instance.isActive(playerId);
+    }
+
+    /** Live speedrunners of a match (active, alive, and holding the role). */
+    public int activeRunnerCount(GameInstance instance) {
+        int count = 0;
+        for (UUID playerId : instance.activeIds()) {
+            if (playerStates.role(playerId) == Role.SPEEDRUNNER
+                    && playerStates.isActiveSpeedrunner(playerId)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** Live hunters of a match holding the role. */
+    public int activeHunterCount(GameInstance instance) {
+        int count = 0;
+        for (UUID playerId : instance.activeIds()) {
+            if (playerStates.role(playerId) == Role.HUNTER) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** Sends a message to a match plus the console, never other matches. */
+    public void sendToInstance(GameInstance instance, String key, Map<String, String> values) {
+        Component rendered = messages.component(key, values);
+        for (Player recipient : onlineAssignedPlayers(instance)) {
+            recipient.sendMessage(rendered);
+        }
+        Bukkit.getConsoleSender().sendMessage(rendered);
+    }
+
+    /** Plays a match sound for a match's online players. */
+    public void playInstanceSound(GameInstance instance, String key) {
+        for (Player recipient : onlineAssignedPlayers(instance)) {
+            sounds.playSound(recipient, key);
+        }
+    }
+
+    /** Plays the neutral click for a match's online players. */
+    public void playInstanceNeutral(GameInstance instance) {
+        for (Player recipient : onlineAssignedPlayers(instance)) {
+            sounds.playNeutralSound(recipient);
+        }
+    }
+
+    /** Sends a pre-rendered message to a match plus the console, never other matches. */
+    public void sendToInstanceComponent(GameInstance instance, Component rendered) {
+        for (Player recipient : onlineAssignedPlayers(instance)) {
+            recipient.sendMessage(rendered);
+        }
+        Bukkit.getConsoleSender().sendMessage(rendered);
+    }
+
+    /**
+     * Resolves an instance id typed in a command: a match id first, then a
+     * world-engine cell index as an alias. Empty when unparsable or unknown.
+     */
+    public Optional<GameInstance> resolveInstance(String raw) {
+        if (raw == null) {
+            return Optional.empty();
+        }
+        long id;
+        try {
+            id = Long.parseLong(raw.trim());
+        } catch (NumberFormatException exception) {
+            return Optional.empty();
+        }
+        Optional<GameInstance> byMatch = instance(id);
+        return byMatch.isPresent() ? byMatch : instanceByCell(id);
+    }
+
+    /** Lobby id used when a start has no other context; negative disables it. */
+    public int defaultStartLobbyId() {
+        return lobbies.multiLobbyAllowed() ? lobbies.defaultLobbyId() : 0;
+    }
     public GameStateCommandManager stateCommands() { return stateCommands; }
     public Set<String> settingNames() { return configService.settingNames(); }
     public boolean getSetting(String setting) { return configService.getBoolean(setting, false); }
@@ -101,49 +249,80 @@ public final class GameManager {
     public boolean setSetting(String setting, String rawValue) { return configService.setValue(setting, rawValue); }
 
     /** Registers a listener invoked whenever a match starts. */
-    public void addGameStartListener(Runnable listener) { gameStartListeners.add(listener); }
+    public void addGameStartListener(Consumer<GameInstance> listener) { gameStartListeners.add(listener); }
 
-    /** Registers a listener invoked when the game actually begins (after pre-start window). */
-    public void addBeginGameListener(Runnable listener) { beginGameListeners.add(listener); }
+    /** Registers a listener invoked when a game actually begins (after pre-start window). */
+    public void addBeginGameListener(Consumer<GameInstance> listener) { beginGameListeners.add(listener); }
 
     /** Registers a listener invoked when a match ends. */
-    public void addGameEndListener(Runnable listener) { gameEndListeners.add(listener); }
+    public void addGameEndListener(Consumer<GameInstance> listener) { gameEndListeners.add(listener); }
 
+    /**
+     * Starts a match from the default lobby. False when starting is disabled
+     * (negative default), the lobby is missing or already running, or its
+     * queue lacks a hunter or a speedrunner.
+     */
     public boolean start() {
-        if (active) return false;
-        cancelAutostartCountdown();
-        List<Player> players = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
+        int lobbyId = defaultStartLobbyId();
+        if (lobbyId < 0) {
+            return false;
+        }
+        return start(lobbyId);
+    }
+
+    /**
+     * Starts a match for one lobby's queued hunters and speedrunners. Other
+     * lobbies keep queueing and their matches and countdowns are untouched.
+     *
+     * @return false when the lobby is missing, already has a live match, or
+     *         its queue lacks a hunter or a speedrunner
+     */
+    public boolean start(int lobbyId) {
+        if (instanceForLobby(lobbyId).isPresent()) return false;
+        Optional<Lobby> lobby = lobbies.get(lobbyId);
+        if (lobby.isEmpty()) return false;
+        Lobby resolved = lobby.get();
+        List<Player> players = Bukkit.getOnlinePlayers().stream()
+                .filter(p -> resolved.contains(p.getUniqueId()) && role(p).isParticipant())
                 .map(p -> (Player) p).toList();
         if (players.stream().noneMatch(p -> role(p) == Role.HUNTER)
                 || players.stream().noneMatch(p -> role(p) == Role.SPEEDRUNNER)) return false;
-        // Remove any lingering invulnerability from a previous game end
-        Bukkit.getOnlinePlayers().forEach(p -> p.setInvulnerable(false));
-        active = true; ending = false; endPhaseDone = false; endStatsShown = false; gameBegun = false; stats.clear(); playerStates.clearMatch();
+        cancelAutostartCountdown(lobbyId, false);
+        // Remove any lingering invulnerability from a previous game end. Only
+        // this match's players are touched so a concurrent match sitting in
+        // its end delay keeps its protection.
+        players.forEach(p -> p.setInvulnerable(false));
         matchId++;
-        playerStates.setMatchParticipants(players);
+        long currentMatchId = matchId;
+        List<UUID> assignees = players.stream().map(Player::getUniqueId).toList();
+        playerStates.clearMatchFor(assignees);
         for (Player player : players) {
-            StatsManager.Stats playerStats = stats.getOrCreate(player.getUniqueId());
-            playerStats.player = player.getName();
-            playerStats.uuid = player.getUniqueId();
-            playerStats.role = role(player);
-            playerStats.matchStartedAt = System.currentTimeMillis();
+            initMatchStats(currentMatchId, player);
             if (role(player) == Role.SPEEDRUNNER) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
             }
-            if (role(player).isParticipant()) {
-                playerStates.recordLastSeen(player, player.getLocation());
-            }
-            // Initialize per-role lives from config. -1 means unlimited.
-            int lives = role(player) == Role.HUNTER
-                    ? plugin.getConfig().getInt("settings.hunter-respawn.lives.hunter", -1)
-                    : plugin.getConfig().getInt("settings.hunter-respawn.lives.speedrunner", 1);
-            playerStates.setLives(player.getUniqueId(), lives);
+            playerStates.recordLastSeen(player, player.getLocation());
+            playerStates.setLives(player.getUniqueId(), livesFor(role(player)));
         }
+        List<Player> spectators = lobbyNonePlayers(resolved);
+        // A second match drops the real border: concurrent matches are
+        // confined by per-instance pseudo-borders instead.
+        boolean firstMatch = instances.isEmpty();
+        if (!firstMatch) {
+            worldEngine.clearInstanceBorders();
+        }
+        OptionalLong matchCell = worldEngine.onMatchStart(players, spectators, firstMatch, lobbyId, currentMatchId);
+        GameInstance instance = new GameInstance(currentMatchId, lobbyId, matchCell,
+                System.currentTimeMillis());
+        for (UUID playerId : assignees) {
+            instance.activate(playerId);
+        }
+        instances.put(currentMatchId, instance);
         // Apply the configured default state and custom start commands before
         // giving role equipment. In particular, default clear-inventory must
-        // not remove the hunter compass.
-        stateCommands.runStart();
-        worldEngine.onMatchStart(players, noneSpectators());
+        // not remove the hunter compass. Runs after the teleport so ON_START
+        // modifiers resolve participants from the registered instance.
+        stateCommands.runStart(currentMatchId, players, spectators, lobbyId);
         for (Player player : players) {
             if (role(player).isParticipant()) { compass.giveCompass(player); compass.refreshCompass(player); }
         }
@@ -156,46 +335,108 @@ public final class GameManager {
                 player.setGameMode(GameMode.ADVENTURE);
             }
         }
-        // Start delay: hunters go to spectator for the initial delay of the
-        // match, giving speedrunners a head start. Hunters are only moved to
-        // spectator when the countdown actually begins; when
-        // start-on-speedrunner-damage is enabled, that happens only after the
-        // speedrunner first damages a hunter.
-        if (plugin.getConfig().getBoolean("settings.start-delay.enabled", false)) {
-            int delaySeconds = plugin.getConfig().getInt("settings.start-delay.delay-seconds", 30);
-            if (delaySeconds > 0) {
-                startDelayRemaining = delaySeconds;
-                startDelayActive = true;
-                // If start-on-speedrunner-damage is disabled, begin the
-                // countdown immediately. Otherwise it starts in beginGame().
-                if (!getSetting("settings.start-on-speedrunner-damage.enabled")) {
-                    beginStartDelay();
-                }
-            }
+        // Headstarts hold one side in spectator while the other plays. Sides
+        // are only moved to spectator when their countdown actually begins;
+        // when start-on-speedrunner-damage is enabled, that happens only after
+        // the speedrunner first damages a hunter.
+        armHeadstarts(instance);
+        if (!getSetting("settings.start-on-speedrunner-damage.enabled")) {
+            beginHeadstarts(instance);
         }
         // Survive time win condition: speedrunners win if they survive long enough.
         if (winConditionEngine.isSurviveTimeEnabled()) {
             long ticks = Math.round(winConditionEngine.surviveTimeSeconds() * 20.0);
-            long currentMatchId = matchId;
-            surviveTimeTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (active && matchId == currentMatchId) {
-                    finish(Role.SPEEDRUNNER);
+            instance.setSurviveTimeTask(Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (instances.get(currentMatchId) == instance && instance.active()) {
+                    finish(instance, Role.SPEEDRUNNER);
                 }
-            }, ticks);
+            }, ticks));
         }
-        messages.broadcast("manhunt.start-success");
-        gameStartListeners.forEach(Runnable::run);
-        Bukkit.getPluginManager().callEvent(new JMatchStartEvent(matchId));
-        sounds.playNeutralSound();
-        showStatusToAllPlayers();
+        sendToInstance(instance, "manhunt.start-success", Map.of());
+        gameStartListeners.forEach(listener -> listener.accept(instance));
+        Bukkit.getPluginManager().callEvent(new JMatchStartEvent(currentMatchId, lobbyId, matchCell));
+        playInstanceNeutral(instance);
+        showStatusToInstance(instance, players);
         announceRoles(players);
         // load waiting delay configuration (enforces a 5 second minimum;
         // -1 waits indefinitely)
-        waitingDelayConfigured = WaitingReminder.clampDelay(
-                plugin.getConfig().getInt("settings.start-on-speedrunner-damage.delay-seconds", 30));
-        if (getSetting("settings.start-on-speedrunner-damage.enabled")) scheduleWaitingReminder();
-        else beginGame();
+        instance.setWaitingDelayConfigured(WaitingReminder.clampDelay(
+                plugin.getConfig().getInt("settings.start-on-speedrunner-damage.delay-seconds", 30)));
+        if (getSetting("settings.start-on-speedrunner-damage.enabled")) scheduleWaitingReminder(instance);
+        else beginGame(instance);
+        plugin.logger().debug("debug.match-start",
+                Map.of("lobby", String.valueOf(lobbyId), "index", cellString(instance)));
+        logBorderMode();
         return true;
+    }
+
+    /**
+     * Adds players to a running match with the given role, moving them into
+     * the match's lobby. Players already in any live match are skipped, as is
+     * everyone when the match is ending. Returns the number added.
+     */
+    public int joinPlayers(GameInstance instance, List<Player> players, Role role) {
+        if (!instance.active() || instance.ending()) {
+            return 0;
+        }
+        int added = 0;
+        for (Player player : players) {
+            UUID playerId = player.getUniqueId();
+            if (instance.isActive(playerId) || isInLiveInstance(playerId)) {
+                continue;
+            }
+            lobbies.setLobby(playerId, instance.originLobbyId());
+            playerStates.setRole(player, role);
+            instance.activate(playerId);
+            initMatchStats(instance.matchId(), player);
+            if (role == Role.SPEEDRUNNER) {
+                playerStates.setSpeedrunnerAlive(playerId, true);
+            }
+            playerStates.setLives(playerId, livesFor(role));
+            if (instance.cellIndex().isPresent()) {
+                worldEngine.teleportJoinersToCell(List.of(player), instance.cellIndex().getAsLong());
+            }
+            playerStates.recordLastSeen(player, player.getLocation());
+            if (role.isParticipant()) {
+                compass.giveCompass(player);
+                compass.refreshCompass(player);
+            } else if (plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+                player.setGameMode(GameMode.SPECTATOR);
+            }
+            if (!instance.begun()
+                    && plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-with-adventure-mode", true)
+                    && role.isParticipant()
+                    && !instance.headstart(role).armed()) {
+                player.setGameMode(GameMode.ADVENTURE);
+            }
+            GameInstance.HeadstartState headstart = instance.headstart(role);
+            if (role.isParticipant() && headstart.task() != null) {
+                headstart.returnPoints().put(playerId, player.getLocation());
+                player.setGameMode(GameMode.SPECTATOR);
+            }
+            Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(
+                    instance.matchId(), playerId, roleToPlayerRole(role)));
+            sendToInstance(instance, "manhunt.joingame-announce",
+                    Map.of("player", player.getName(), "role", role.displayName()));
+            added++;
+        }
+        return added;
+    }
+
+    /** Fresh per-match stat row for one participant. */
+    private void initMatchStats(long matchId, Player player) {
+        StatsManager.Stats playerStats = stats.getOrCreate(matchId, player.getUniqueId());
+        playerStats.player = player.getName();
+        playerStats.uuid = player.getUniqueId();
+        playerStats.role = role(player);
+        playerStats.matchStartedAt = System.currentTimeMillis();
+    }
+
+    /** Configured starting lives for a role. -1 means unlimited. */
+    private int livesFor(Role role) {
+        return role == Role.HUNTER
+                ? plugin.getConfig().getInt("settings.hunter-respawn.lives.hunter", -1)
+                : plugin.getConfig().getInt("settings.hunter-respawn.lives.speedrunner", 1);
     }
 
     /**
@@ -222,7 +463,7 @@ public final class GameManager {
             if (!playerRole.isParticipant()) {
                 continue;
             }
-            Map<String, String> values = Map.of("role", playerRole.name());
+            Map<String, String> values = Map.of("role", playerRole.displayName());
             if (chat) {
                 player.sendMessage(messages.component("manhunt.role-announce-chat", values));
             }
@@ -241,78 +482,81 @@ public final class GameManager {
         return Math.max(0L, Math.round(seconds * 1000.0));
     }
 
+    /** Ends the match when exactly one is live; a no-op otherwise. */
     public void finish(Role winner) {
-        finish(winner, false);
+        singleLiveInstance().ifPresent(instance -> finish(instance, winner));
+    }
+
+    /** Ends one match. */
+    public void finish(GameInstance instance, Role winner) {
+        finish(instance, winner, false);
     }
 
     /**
-     * Ends the match. When {@code immediate} is true the configured
+     * Ends one match. When {@code immediate} is true the configured
      * {@code match.end-delay} is skipped: statistics post instantly and the
      * final cleanup runs at once instead of after the delay. An immediate end
      * during an in-progress end delay finishes the match at once instead of
      * being blocked.
      */
-    public void finish(Role winner, boolean immediate) {
-        if (ending) {
+    public void finish(GameInstance instance, Role winner, boolean immediate) {
+        if (instance.ending()) {
             if (immediate) {
-                showEndStatsOnce();
-                finishEndPhase();
+                showEndStatsOnce(instance);
+                finishEndPhase(instance);
             }
             return;
         }
-        ending = true;
-        gameEndListeners.forEach(Runnable::run);
-        Bukkit.getPluginManager().callEvent(new JMatchEndEvent(matchId, roleToPlayerRole(winner)));
-        if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
-        if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
-        if (startDelayTask != null) { startDelayTask.cancel(); startDelayTask = null; }
-        if (surviveTimeTask != null) { surviveTimeTask.cancel(); surviveTimeTask = null; }
-        startDelayActive = false;
+        instance.setEnding(true);
+        gameEndListeners.forEach(listener -> listener.accept(instance));
+        Bukkit.getPluginManager().callEvent(new JMatchEndEvent(instance.matchId(), roleToPlayerRole(winner)));
+        cancelWaitingTasks(instance);
+        cancelHeadstarts(instance);
+        if (instance.surviveTimeTask() != null) {
+            instance.surviveTimeTask().cancel();
+            instance.setSurviveTimeTask(null);
+        }
 
-        String winMessage = getWinMessage(winner);
         String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
-        messages.broadcast(winMessage);
-        var onlinePlayers = Bukkit.getOnlinePlayers();
-        for (Player player : onlinePlayers) {
+        sendToInstanceComponent(instance, messages.parse(getWinMessage(winner)));
+        for (Player player : onlineAssignedPlayers(instance)) {
             player.showTitle(Title.title(messages.component(title), Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
-        playerStates.resetOfflinePlayers(onlinePlayers);
-        sounds.playGlobalSound(winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
-        stats.completeMatch(winner);
+        playerStates.resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
+        playInstanceSound(instance, winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
+        stats.completeMatch(instance.matchId(), winner);
 
         // Make all players invulnerable on game end if configured
         if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
-            onlinePlayers.forEach(p -> p.setInvulnerable(true));
+            onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 
         // cancel interval modifiers early so they don't fire during the end delay
-        stateCommands.cancelIntervalModifiers();
+        stateCommands.cancelIntervalModifiers(instance.matchId());
         // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
         stateCommands.runConsoleCleanup();
-        stateCommands.runPlayerCleanup();
+        stateCommands.runPlayerCleanup(onlineActivePlayers(instance));
 
         long delay = immediate
                 ? 0L
                 : Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
-        Bukkit.getScheduler().runTaskLater(plugin, this::showEndStatsOnce, delay / 2);
-        Bukkit.getScheduler().runTaskLater(plugin, this::finishEndPhase, delay);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
     }
 
-    /** Broadcasts end-of-match statistics, exactly once per match. */
-    private void showEndStatsOnce() {
-        if (endStatsShown) return;
-        endStatsShown = true;
-        stats.showStats();
+    /** Sends end-of-match statistics, exactly once per match. */
+    private void showEndStatsOnce(GameInstance instance) {
+        if (instance.endStatsShown()) return;
+        instance.setEndStatsShown(true);
+        stats.showStats(instance.matchId(), onlineAssignedPlayers(instance));
     }
 
     /** Runs end commands and deactivates the match, exactly once per match. */
-    private void finishEndPhase() {
-        if (endPhaseDone) return;
-        endPhaseDone = true;
-        List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
-                .map(p -> (Player) p).toList();
-        teardownNow(participants);
+    private void finishEndPhase(GameInstance instance) {
+        if (instance.endPhaseDone()) return;
+        instance.setEndPhaseDone(true);
+        teardownNow(instance);
     }
 
     /**
@@ -320,160 +564,235 @@ public final class GameManager {
      * reset, and deactivation. Callers run their own announcements, stat
      * handling, and cleanup commands first.
      */
-    private void teardownNow(List<Player> participants) {
-        stateCommands.runEnd();
-        worldEngine.onMatchEnd(participants, noneSpectators());
+    private void teardownNow(GameInstance instance) {
+        long teardownId = instance.matchId();
+        List<Player> participants = onlineAssignedPlayers(instance).stream()
+                .filter(p -> role(p).isParticipant()).toList();
+        List<Player> spectators = instanceNonePlayers(instance);
+        boolean lastMatch = instances.size() <= 1;
+        stateCommands.runEnd(teardownId, participants, spectators, instance.originLobbyId(), lastMatch);
+        worldEngine.onMatchEnd(participants, spectators, instance.originLobbyId(), teardownId);
         if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
-            playerStates.resetParticipatingRoles();
+            playerStates.resetRoles(instance.assignedPlayerIds());
         }
-        active = false; ending = false; gameBegun = false; playerStates.clearMatch();
+        instance.setActive(false);
+        playerStates.clearMatchFor(instance.assignedPlayerIds());
+        stats.clearMatch(teardownId);
+        instances.remove(teardownId);
+        plugin.logger().debug("debug.match-end", Map.of("index", cellString(instance)));
         worldEngine.prepareNextCell();
+        restoreSingleBorder();
+        logBorderMode();
         updateAutostartState();
     }
 
-    public void cancel() { cancel(false); }
+    /** Cancels the match when exactly one is live; a no-op otherwise. */
+    public void cancel() { singleLiveInstance().ifPresent(instance -> cancel(instance)); }
+
+    /** Cancels one match with no winner. */
+    public void cancel(GameInstance instance) { cancel(instance, false); }
 
     /**
-     * Cancels the active match with no winner. Career statistics are not
+     * Cancels one match with no winner. Career statistics are not
      * saved, but the in-memory match statistics still back the end screen.
      * Runs the normal end delay intermission unless immediate skips
-     * straight to teardown. No JMatchEndEvent fires: there is no winner.
+     * straight to teardown. No JMatchEndEvent fires (there is no winner);
+     * a JMatchCancelEvent fires instead.
      */
-    public void cancel(boolean immediate) {
-        if (!active) return;
-        if (ending) {
+    public void cancel(GameInstance instance, boolean immediate) {
+        if (!instance.active()) return;
+        if (instance.ending()) {
             if (immediate) {
-                showEndStatsOnce();
-                finishEndPhase();
+                showEndStatsOnce(instance);
+                finishEndPhase(instance);
             }
             return;
         }
-        ending = true;
-        gameEndListeners.forEach(Runnable::run);
-        if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
-        if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
-        if (startDelayTask != null) { startDelayTask.cancel(); startDelayTask = null; }
-        if (surviveTimeTask != null) { surviveTimeTask.cancel(); surviveTimeTask = null; }
-        startDelayActive = false;
+        instance.setEnding(true);
+        gameEndListeners.forEach(listener -> listener.accept(instance));
+        Bukkit.getPluginManager().callEvent(new JMatchCancelEvent(instance.matchId()));
+        cancelWaitingTasks(instance);
+        cancelHeadstarts(instance);
+        if (instance.surviveTimeTask() != null) {
+            instance.surviveTimeTask().cancel();
+            instance.setSurviveTimeTask(null);
+        }
 
-        messages.broadcast("game.cancelled");
-        var onlinePlayers = Bukkit.getOnlinePlayers();
-        for (Player player : onlinePlayers) {
+        sendToInstance(instance, "game.cancelled", Map.of());
+        for (Player player : onlineAssignedPlayers(instance)) {
             player.showTitle(Title.title(messages.component("game.cancelled-title"), Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
-        playerStates.resetOfflinePlayers(onlinePlayers);
-        sounds.playGlobalSound("game.cancelled-sound");
+        playerStates.resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
+        playInstanceSound(instance, "game.cancelled-sound");
 
         // Make all players invulnerable on cancel if configured
         if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
-            onlinePlayers.forEach(p -> p.setInvulnerable(true));
+            onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 
         // cancel interval modifiers early so they don't fire during the end delay
-        stateCommands.cancelIntervalModifiers();
+        stateCommands.cancelIntervalModifiers(instance.matchId());
         // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
         stateCommands.runConsoleCleanup();
-        stateCommands.runPlayerCleanup();
+        stateCommands.runPlayerCleanup(onlineActivePlayers(instance));
 
         long delay = immediate
                 ? 0L
                 : Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
-        Bukkit.getScheduler().runTaskLater(plugin, this::showEndStatsOnce, delay / 2);
-        Bukkit.getScheduler().runTaskLater(plugin, this::finishEndPhase, delay);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
     }
 
-    public void finishLater(Role winner) { Bukkit.getScheduler().runTask(plugin, () -> finish(winner)); }
+    /** Ends the match next tick when exactly one is live; a no-op otherwise. */
+    public void finishLater(Role winner) {
+        singleLiveInstance().ifPresent(instance -> finishLater(instance, winner));
+    }
 
+    /** Ends one match on the next tick. */
+    public void finishLater(GameInstance instance, Role winner) {
+        Bukkit.getScheduler().runTask(plugin, () -> finish(instance, winner));
+    }
+
+    /** The live match when exactly one runs; empty with zero or concurrent matches. */
+    private Optional<GameInstance> singleLiveInstance() {
+        List<GameInstance> live = liveInstances();
+        return live.size() == 1 ? Optional.of(live.get(0)) : Optional.empty();
+    }
+
+    /** Begins the match when exactly one is live; a no-op otherwise. */
     public void beginGame() {
-        if (gameBegun) return;
-        gameBegun = true;
-        if (waitingReminderTask != null) waitingReminderTask.cancel();
-        if (waitingExpiryTask != null) { waitingExpiryTask.cancel(); waitingExpiryTask = null; }
+        singleLiveInstance().ifPresent(this::beginGame);
+    }
+
+    /** Begins one match: real gameplay starts for its participants. */
+    public void beginGame(GameInstance instance) {
+        if (instance.begun()) return;
+        instance.setBegun(true);
+        cancelWaitingTasks(instance);
         // Restore participants to survival when the game begins if they were
-        // set to adventure mode during the pre-start window. Hunters stay in
-        // spectator if a start delay is active.
+        // set to adventure mode during the pre-start window. Held headstart
+        // sides stay out: their countdown moves them to spectator below.
         if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-with-adventure-mode", true)) {
-            for (Player player : Bukkit.getOnlinePlayers()) {
-                if (role(player).isParticipant() && !(role(player) == Role.HUNTER && startDelayActive)) {
+            for (Player player : onlineActivePlayers(instance)) {
+                Role playerRole = role(player);
+                if (playerRole.isParticipant() && !instance.headstart(playerRole).armed()) {
                     player.setGameMode(GameMode.SURVIVAL);
                 }
             }
         }
-        messages.broadcast("manhunt.started-by-damage"); sounds.playNeutralSound(); applyStartDebuffs();
+        sendToInstance(instance, "manhunt.started-by-damage", Map.of());
+        playInstanceNeutral(instance);
+        applyStartDebuffs(instance);
         worldEngine.onBeginGame();
-        for (Runnable listener : beginGameListeners) {
-            listener.run();
-        }
-        Bukkit.getPluginManager().callEvent(new JGameBeginEvent(matchId));
-        stateCommands.startIntervalModifiers();
-        // If a start delay is active, begin the countdown now (the delay only
-        // starts counting when the speedrunner first damages a hunter).
-        if (startDelayActive) {
-            beginStartDelay();
-        }
+        beginGameListeners.forEach(listener -> listener.accept(instance));
+        Bukkit.getPluginManager().callEvent(new JGameBeginEvent(instance.matchId()));
+        stateCommands.startIntervalModifiers(instance.matchId());
+        // Armed headstarts begin counting now (the countdown only starts once
+        // the speedrunner first damages a hunter).
+        beginHeadstarts(instance);
+    }
+
+    /** Arms the configured headstart sides for a match. */
+    private void armHeadstarts(GameInstance instance) {
+        armHeadstartSide(instance, Role.HUNTER, HeadstartSettings.parse(plugin.getConfig(), "hunter"));
+        armHeadstartSide(instance, Role.SPEEDRUNNER, HeadstartSettings.parse(plugin.getConfig(), "speedrunner"));
+    }
+
+    private void armHeadstartSide(GameInstance instance, Role role, HeadstartSettings.Headstart side) {
+        GameInstance.HeadstartState state = instance.headstart(role);
+        boolean armed = side.enabled() && side.delaySeconds() > 0;
+        state.setArmed(armed);
+        state.setRemaining(armed ? side.delaySeconds() : 0);
+    }
+
+    /** Starts the countdown for every armed headstart side. */
+    private void beginHeadstarts(GameInstance instance) {
+        beginHeadstart(instance, Role.HUNTER);
+        beginHeadstart(instance, Role.SPEEDRUNNER);
     }
 
     /**
-     * Starts the start-delay countdown. Hunters remain in spectator mode
-     * until the delay expires, then are teleported back to their recorded
+     * Starts one side's headstart countdown. Held players stay in spectator
+     * mode until the delay expires, then are teleported back to their recorded
      * spawnpoints and restored to survival.
      */
-    private void beginStartDelay() {
-        if (startDelayTask != null) return;
-        // Hunters stay in spectator for the duration of the delay. Each
-        // hunter's current location is recorded so endStartDelay() can return
-        // them to their spawnpoint even if they flew elsewhere, including
-        // across dimensions since the location carries its world.
-        startDelayReturnPoints.clear();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (role(player) == Role.HUNTER) {
-                startDelayReturnPoints.put(player.getUniqueId(), player.getLocation());
+    private void beginHeadstart(GameInstance instance, Role role) {
+        GameInstance.HeadstartState state = instance.headstart(role);
+        if (!state.armed() || state.task() != null) return;
+        // Each held player's current location is recorded so endHeadstart()
+        // can return them to their spawnpoint even if they flew elsewhere,
+        // including across dimensions since the location carries its world.
+        state.returnPoints().clear();
+        for (Player player : onlineActivePlayers(instance)) {
+            if (role(player) == role) {
+                state.returnPoints().put(player.getUniqueId(), player.getLocation());
                 player.setGameMode(GameMode.SPECTATOR);
             }
         }
-        messages.broadcast("manhunt.start-delay-active", Map.of("seconds", String.valueOf(startDelayRemaining)));
-        long currentMatchId = matchId;
-        startDelayTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (!active || matchId != currentMatchId) {
-                cancelStartDelay();
+        sendToInstance(instance, "manhunt.headstart-active",
+                Map.of("seconds", String.valueOf(state.remaining()), "role", role.displayName()));
+        long headstartMatchId = instance.matchId();
+        state.setTask(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (instances.get(headstartMatchId) != instance || !instance.active()) {
+                cancelHeadstartTask(state);
                 return;
             }
-            startDelayRemaining--;
-            if (startDelayRemaining <= 0) {
-                endStartDelay();
-            } else if (startDelayRemaining <= 5) {
-                messages.broadcast("manhunt.start-delay-ending", Map.of("seconds", String.valueOf(startDelayRemaining)));
-                sounds.playGlobalSound("game.autostart-countdown");
+            state.setRemaining(state.remaining() - 1);
+            if (state.remaining() <= 0) {
+                endHeadstart(instance, role);
+            } else if (state.remaining() <= 5) {
+                sendToInstance(instance, "manhunt.headstart-ending",
+                        Map.of("seconds", String.valueOf(state.remaining()), "role", role.displayName()));
+                playInstanceSound(instance, "game.autostart-countdown");
             }
-        }, 20L, 20L);
+        }, 20L, 20L));
     }
 
     /**
-     * Ends the start delay, returning hunters to their recorded spawnpoints
-     * and restoring them to survival mode.
+     * Ends one side's headstart, returning held players to their recorded
+     * spawnpoints and restoring them to survival mode.
      */
-    private void endStartDelay() {
-        cancelStartDelay();
-        startDelayActive = false;
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (role(player) == Role.HUNTER) {
-                Location returnPoint = startDelayReturnPoints.remove(player.getUniqueId());
+    private void endHeadstart(GameInstance instance, Role role) {
+        GameInstance.HeadstartState state = instance.headstart(role);
+        cancelHeadstartTask(state);
+        state.setArmed(false);
+        for (Player player : onlineActivePlayers(instance)) {
+            if (role(player) == role) {
+                Location returnPoint = state.returnPoints().remove(player.getUniqueId());
                 if (returnPoint != null && returnPoint.getWorld() != null) {
                     player.teleport(returnPoint);
                 }
                 player.setGameMode(GameMode.SURVIVAL);
             }
         }
-        startDelayReturnPoints.clear();
-        messages.broadcast("manhunt.start-delay-ended");
-        sounds.playNeutralSound();
+        state.returnPoints().clear();
+        sendToInstance(instance, "manhunt.headstart-ended", Map.of("role", role.displayName()));
+        playInstanceNeutral(instance);
     }
 
-    private void cancelStartDelay() {
-        if (startDelayTask != null) {
-            startDelayTask.cancel();
-            startDelayTask = null;
+    /**
+     * Drops both headstart holds, restoring held players to survival so a
+     * match ending mid-headstart never strands them in spectator.
+     */
+    private void cancelHeadstarts(GameInstance instance) {
+        for (Role role : List.of(Role.HUNTER, Role.SPEEDRUNNER)) {
+            GameInstance.HeadstartState state = instance.headstart(role);
+            cancelHeadstartTask(state);
+            state.setArmed(false);
+            state.returnPoints().clear();
+            for (Player player : onlineActivePlayers(instance)) {
+                if (role(player) == role && player.getGameMode() == GameMode.SPECTATOR) {
+                    player.setGameMode(GameMode.SURVIVAL);
+                }
+            }
+        }
+    }
+
+    private void cancelHeadstartTask(GameInstance.HeadstartState state) {
+        if (state.task() != null) {
+            state.task().cancel();
+            state.setTask(null);
         }
     }
 
@@ -484,134 +803,211 @@ public final class GameManager {
         return messages.addSeparators(text);
     }
 
-    private void scheduleWaitingReminder() {
-        waitingStartTime = System.currentTimeMillis();
-        if (waitingDelayConfigured > 0) {
+    private void scheduleWaitingReminder(GameInstance instance) {
+        instance.setWaitingStartTime(System.currentTimeMillis());
+        int configured = instance.waitingDelayConfigured();
+        if (configured > 0) {
             // Finite delay: broadcast exactly three reminders at the delay and
             // two equally-sized slices (e.g. 30s -> 30, 20, 10).
-            int slice = WaitingReminder.sliceSeconds(waitingDelayConfigured);
-            List<Integer> checkpoints = List.of(waitingDelayConfigured,
-                    Math.max(1, waitingDelayConfigured - slice),
-                    Math.max(1, waitingDelayConfigured - 2 * slice));
-            messages.broadcast("manhunt.waiting-for-damage", Map.of("seconds", String.valueOf(waitingDelayConfigured)));
-            waitingReminderTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-                if (!active || gameBegun) return;
-                long elapsedMillis = System.currentTimeMillis() - waitingStartTime;
-                int remaining = (int) Math.round(waitingDelayConfigured - elapsedMillis / 1000.0);
+            int slice = WaitingReminder.sliceSeconds(configured);
+            List<Integer> checkpoints = List.of(configured,
+                    Math.max(1, configured - slice),
+                    Math.max(1, configured - 2 * slice));
+            sendToInstance(instance, "manhunt.waiting-for-damage", Map.of("seconds", String.valueOf(configured)));
+            instance.setWaitingReminderTask(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+                if (instances.get(instance.matchId()) != instance || instance.begun()) return;
+                long elapsedMillis = System.currentTimeMillis() - instance.waitingStartTime();
+                int remaining = (int) Math.round(configured - elapsedMillis / 1000.0);
                 if (remaining > 0 && checkpoints.contains(remaining)) {
-                    messages.broadcast("manhunt.waiting-for-damage", Map.of("seconds", String.valueOf(remaining)));
+                    sendToInstance(instance, "manhunt.waiting-for-damage", Map.of("seconds", String.valueOf(remaining)));
                 }
-            }, 20L, 20L);
+            }, 20L, 20L));
         } else {
             // Indefinite waiting (-1): use the configured reminder interval and
             // never schedule an expiry.
             double interval = configService.getFloat("match.start-reminder-interval", 10.0f);
             if (interval == -1.0) return;
             long delay = Math.max(1L, Math.round(interval * 20.0));
-            messages.broadcast("manhunt.waiting-for-damage-indefinite", Map.of());
-            waitingReminderTask = Bukkit.getScheduler().runTaskTimer(plugin,
-                    () -> { if (active && !gameBegun) {
-                        messages.broadcast("manhunt.waiting-for-damage-indefinite", Map.of());
-                    } }, delay, delay);
+            sendToInstance(instance, "manhunt.waiting-for-damage-indefinite", Map.of());
+            instance.setWaitingReminderTask(Bukkit.getScheduler().runTaskTimer(plugin,
+                    () -> {
+                        if (instances.get(instance.matchId()) == instance && !instance.begun()) {
+                            sendToInstance(instance, "manhunt.waiting-for-damage-indefinite", Map.of());
+                        }
+                    }, delay, delay));
         }
 
         // schedule expiry task which ends the waiting period if no damage occurs
-        if (waitingDelayConfigured > 0) {
-            long expiryTicks = Math.max(1L, Math.round(waitingDelayConfigured * 20.0));
-            long currentMatchId = matchId;
-            waitingExpiryTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        if (configured > 0) {
+            long expiryTicks = Math.max(1L, Math.round(configured * 20.0));
+            instance.setWaitingExpiryTask(Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 // only cancel if still active and game hasn't begun and match unchanged
-                if (active && !gameBegun && matchId == currentMatchId) {
-                    if (waitingReminderTask != null) { waitingReminderTask.cancel(); waitingReminderTask = null; }
+                if (instances.get(instance.matchId()) == instance && instance.active() && !instance.begun()) {
+                    if (instance.waitingReminderTask() != null) {
+                        instance.waitingReminderTask().cancel();
+                        instance.setWaitingReminderTask(null);
+                    }
                     boolean forceStart = plugin.getConfig().getString("settings.start-on-speedrunner-damage.on-expire", "CANCEL").equals("FORCE_START");
                     if (forceStart) {
-                        messages.broadcast(WaitingReminder.expiryMessageKey(true));
+                        sendToInstance(instance, WaitingReminder.expiryMessageKey(true), Map.of());
                     } else {
-                        messages.broadcast(WaitingReminder.expiryMessageKey(false), Map.of("seconds", String.valueOf(waitingDelayConfigured)));
+                        sendToInstance(instance, WaitingReminder.expiryMessageKey(false), Map.of("seconds", String.valueOf(configured)));
                     }
                     // end match as cancelled if configured
                     if (!forceStart) {
-                        // do not save stats
-                        stats.clear();
-                        stateCommands.cancelIntervalModifiers();
-                        stateCommands.runConsoleCleanup();
-                        stateCommands.runPlayerCleanup();
-                        List<Player> participants = Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
-                                .map(p -> (Player) p).toList();
-                        teardownNow(participants);
-                        if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
-                            Bukkit.getOnlinePlayers().forEach(p -> p.setInvulnerable(true));
-                        }
+                        expireWaitingMatch(instance);
                     } else {
                         // force start the game
-                        beginGame();
+                        beginGame(instance);
                     }
                 }
-            }, expiryTicks);
+            }, expiryTicks));
+        }
+    }
+
+    /** Aborts a match whose pre-start wait expired, without saving stats. */
+    private void expireWaitingMatch(GameInstance instance) {
+        // do not save stats
+        stats.clearMatch(instance.matchId());
+        stateCommands.cancelIntervalModifiers(instance.matchId());
+        stateCommands.runConsoleCleanup();
+        stateCommands.runPlayerCleanup(onlineActivePlayers(instance));
+        List<Player> assigned = onlineAssignedPlayers(instance);
+        teardownNow(instance);
+        if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
+            assigned.forEach(p -> p.setInvulnerable(true));
+        }
+    }
+
+    private void cancelWaitingTasks(GameInstance instance) {
+        if (instance.waitingReminderTask() != null) {
+            instance.waitingReminderTask().cancel();
+            instance.setWaitingReminderTask(null);
+        }
+        if (instance.waitingExpiryTask() != null) {
+            instance.waitingExpiryTask().cancel();
+            instance.setWaitingExpiryTask(null);
         }
     }
 
     public void updateAutostartState() {
         if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(plugin, this::updateAutostartState);
+            Bukkit.getScheduler().runTask(plugin, () -> updateAutostartState());
             return;
         }
-        if (active || ending || !plugin.getConfig().getBoolean("settings.autostart.enabled", false)) {
-            cancelAutostartCountdown();
+        if (!plugin.getConfig().getBoolean("settings.autostart.enabled", false)) {
+            cancelAllAutostartCountdowns(true);
             return;
         }
-        if (!isEligibleToStart()) {
-            cancelAutostartCountdown();
+        pruneAutostartCountdowns();
+        for (int lobbyId : lobbies.lobbyIds()) {
+            if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
+                continue;
+            }
+            updateAutostartState(lobbyId);
+        }
+    }
+
+    /** Drops countdowns for deleted lobbies (and non-zero lobbies with the engine off). */
+    private void pruneAutostartCountdowns() {
+        for (int lobbyId : List.copyOf(autostartCountdowns.keySet())) {
+            if (lobbies.get(lobbyId).isEmpty() || (!lobbies.multiLobbyAllowed() && lobbyId != 0)) {
+                cancelAutostartCountdown(lobbyId, false);
+            }
+        }
+    }
+
+    private void updateAutostartState(int lobbyId) {
+        Optional<Lobby> lobby = lobbies.get(lobbyId);
+        if (lobby.isEmpty() || instanceForLobby(lobbyId).isPresent() || !isEligibleToStart(lobby.get())) {
+            cancelAutostartCountdown(lobbyId, true);
             return;
         }
-        if (autostartCountdownTask != null) return;
-        autostartCountdownConfigured = Math.max(0, plugin.getConfig().getInt("settings.autostart.countdown-seconds", 60));
-        if (autostartCountdownConfigured == 0) {
-            start();
+        if (autostartCountdowns.containsKey(lobbyId)) return;
+        int configured = Math.max(0, plugin.getConfig().getInt("settings.autostart.countdown-seconds", 60));
+        if (configured == 0) {
+            start(lobbyId);
             return;
         }
         worldEngine.prepareNextCell();
-        autostartCountdownRemaining = autostartCountdownConfigured;
-        messages.broadcast("manhunt.autostart-eligible", Map.of("seconds", String.valueOf(autostartCountdownConfigured)));
-        sounds.playGlobalSound("game.autostart-countdown");
-        announceAutostartCheckpoint(autostartCountdownRemaining);
-        autostartCountdownTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (active || ending || !isEligibleToStart()) {
-                cancelAutostartCountdown();
+        AutostartCountdown countdown = new AutostartCountdown();
+        countdown.configured = configured;
+        countdown.remaining = configured;
+        autostartCountdowns.put(lobbyId, countdown);
+        sendToLobby(lobbyId, "manhunt.autostart-eligible", Map.of("seconds", String.valueOf(configured)));
+        playLobbySound(lobbyId, "game.autostart-countdown");
+        announceAutostartCheckpoint(lobbyId, countdown, countdown.remaining);
+        countdown.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            Optional<Lobby> tickLobby = lobbies.get(lobbyId);
+            if (instanceForLobby(lobbyId).isPresent() || tickLobby.isEmpty() || !isEligibleToStart(tickLobby.get())) {
+                cancelAutostartCountdown(lobbyId, true);
                 return;
             }
-            autostartCountdownRemaining--;
-            if (autostartCountdownRemaining <= 0) {
-                cancelAutostartCountdown(false);
-                start();
+            countdown.remaining--;
+            if (countdown.remaining <= 0) {
+                cancelAutostartCountdown(lobbyId, false);
+                start(lobbyId);
                 return;
             }
-            announceAutostartCheckpoint(autostartCountdownRemaining);
+            announceAutostartCheckpoint(lobbyId, countdown, countdown.remaining);
         }, 20L, 20L);
     }
 
-    private void announceAutostartCheckpoint(int remainingSeconds) {
-        if (!AutostartCountdownMessages.shouldAnnounce(remainingSeconds, autostartCountdownConfigured)) return;
-        messages.broadcast("manhunt.autostart-countdown", Map.of("seconds", String.valueOf(remainingSeconds)));
-        sounds.playGlobalSound("game.autostart-countdown");
+    private void announceAutostartCheckpoint(int lobbyId, AutostartCountdown countdown, int remainingSeconds) {
+        if (!AutostartCountdownMessages.shouldAnnounce(remainingSeconds, countdown.configured)) return;
+        sendToLobby(lobbyId, "manhunt.autostart-countdown", Map.of("seconds", String.valueOf(remainingSeconds)));
+        playLobbySound(lobbyId, "game.autostart-countdown");
     }
 
-    private void cancelAutostartCountdown() {
-        cancelAutostartCountdown(true);
-    }
-
-    private void cancelAutostartCountdown(boolean announce) {
-        if (autostartCountdownTask != null) {
-            autostartCountdownTask.cancel();
-            autostartCountdownTask = null;
-            if (announce) messages.broadcast("manhunt.autostart-cancelled");
+    private void cancelAutostartCountdown(int lobbyId, boolean announce) {
+        AutostartCountdown countdown = autostartCountdowns.remove(lobbyId);
+        if (countdown != null) {
+            if (countdown.task != null) {
+                countdown.task.cancel();
+            }
+            if (announce) {
+                sendToLobby(lobbyId, "manhunt.autostart-cancelled", Map.of());
+            }
         }
     }
 
-    private boolean isEligibleToStart() {
+    private void cancelAllAutostartCountdowns(boolean announce) {
+        for (int lobbyId : List.copyOf(autostartCountdowns.keySet())) {
+            cancelAutostartCountdown(lobbyId, announce);
+        }
+    }
+
+    /** Online lobby members for scoped autostart messages and sounds. */
+    private List<Player> lobbyRecipients(int lobbyId) {
+        Optional<Lobby> lobby = lobbies.get(lobbyId);
+        if (lobby.isEmpty()) {
+            return List.of();
+        }
+        Lobby resolved = lobby.get();
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(player -> resolved.contains(player.getUniqueId()))
+                .map(player -> (Player) player).toList();
+    }
+
+    private void sendToLobby(int lobbyId, String key, Map<String, String> values) {
+        messages.sendTo(lobbyRecipients(lobbyId), key, values);
+        // Console keeps seeing every lobby, as with the old broadcasts.
+        Bukkit.getConsoleSender().sendMessage(messages.component(key, values));
+    }
+
+    private void playLobbySound(int lobbyId, String key) {
+        for (Player recipient : lobbyRecipients(lobbyId)) {
+            sounds.playSound(recipient, key);
+        }
+    }
+
+    private boolean isEligibleToStart(Lobby lobby) {
         boolean hasHunter = false;
         boolean hasSpeedrunner = false;
         for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!lobby.contains(player.getUniqueId())) {
+                continue;
+            }
             Role playerRole = role(player);
             if (playerRole == Role.HUNTER) hasHunter = true;
             else if (playerRole == Role.SPEEDRUNNER) hasSpeedrunner = true;
@@ -620,19 +1016,20 @@ public final class GameManager {
         return false;
     }
 
-    private void showStatusToAllPlayers() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            messages.message(player, "manhunt.status-header", Map.of("status", active ? "ACTIVE" : "INACTIVE"));
-            sendRoleSection(player, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
-            sendRoleSection(player, Role.HUNTER, "manhunt.hunters-header");
-            sendRoleSection(player, Role.AFK, "manhunt.afk-header");
-            sendRoleSection(player, Role.NONE, "manhunt.none-header");
+    /** Shows the starting roster to one match's players. */
+    private void showStatusToInstance(GameInstance instance, List<Player> players) {
+        for (Player recipient : onlineAssignedPlayers(instance)) {
+            messages.message(recipient, "manhunt.status-header", Map.of("status", "ACTIVE"));
+            sendRoleSection(recipient, players, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
+            sendRoleSection(recipient, players, Role.HUNTER, "manhunt.hunters-header");
+            sendRoleSection(recipient, players, Role.AFK, "manhunt.afk-header");
+            sendRoleSection(recipient, players, Role.NONE, "manhunt.none-header");
         }
     }
 
-    private void sendRoleSection(Player receiver, Role role, String headerKey) {
+    private void sendRoleSection(Player receiver, List<Player> players, Role role, String headerKey) {
         List<String> names = new ArrayList<>();
-        for (Player player : Bukkit.getOnlinePlayers()) {
+        for (Player player : players) {
             if (role(player) == role) names.add(player.getName());
         }
         if (names.isEmpty()) return;
@@ -640,11 +1037,11 @@ public final class GameManager {
         names.stream().sorted().forEach(name -> messages.message(receiver, "manhunt.status-player", Map.of("player", name)));
     }
 
-    private void applyStartDebuffs() {
+    private void applyStartDebuffs(GameInstance instance) {
         if (!configService.getBoolean("settings.start-debuffs.enabled", false)) return;
         var effects = plugin.getConfig().getConfigurationSection("settings.start-debuffs.effects");
         if (effects == null) return;
-        for (Player hunter : Bukkit.getOnlinePlayers()) {
+        for (Player hunter : onlineActivePlayers(instance)) {
             if (role(hunter) != Role.HUNTER) continue;
             boolean applied = false;
             for (String effectName : effects.getKeys(false)) {
@@ -666,10 +1063,96 @@ public final class GameManager {
 
     private Role role(Player player) { return playerStates.role(player); }
 
-    /** Online players with role NONE: match spectators, never AFK players. */
-    private List<Player> noneSpectators() {
-        return Bukkit.getOnlinePlayers().stream().filter(p -> role(p) == Role.NONE)
+    /** Online lobby members with role NONE: match spectators, never AFK players. */
+    private List<Player> lobbyNonePlayers(Lobby lobby) {
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(p -> role(p) == Role.NONE && lobby.contains(p.getUniqueId()))
                 .map(p -> (Player) p).toList();
+    }
+
+    /** Online match assignees with role NONE, including eliminated hunters. */
+    private List<Player> instanceNonePlayers(GameInstance instance) {
+        Set<UUID> assigned = instance.assignedPlayerIds();
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(p -> role(p) == Role.NONE && assigned.contains(p.getUniqueId()))
+                .map(p -> (Player) p).toList();
+    }
+
+    /** Debug label for a match cell, "none" when the engine is off. */
+    private static String cellString(GameInstance instance) {
+        return instance.cellIndex().isPresent()
+                ? String.valueOf(instance.cellIndex().getAsLong())
+                : "none";
+    }
+
+    /** Logs the active border mode; silent when borders cannot apply. */
+    private void logBorderMode() {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled() || !config.worldBorderEnabled()) {
+            return;
+        }
+        plugin.logger().debug("debug.border-mode",
+                Map.of("mode", BorderMode.resolve(instances.size(), true, true).name()));
+    }
+
+    /**
+     * Hands the real border to the surviving match when concurrency drops
+     * back to one. Honors its start-border phase when it has not begun yet.
+     */
+    private void restoreSingleBorder() {
+        if (instances.size() != 1) {
+            return;
+        }
+        GameInstance survivor = liveInstances().get(0);
+        if (survivor.cellIndex().isPresent()) {
+            worldEngine.applyInstanceBorder(survivor.cellIndex().getAsLong(), survivor.begun());
+        }
+    }
+
+    /**
+     * Confines concurrent matches to their cells: players outside their
+     * cell are rubber-banded back in and take border damage past the damage
+     * buffer. Spectators bypass it like the vanilla border, and the End is
+     * left alone until end cells land.
+     */
+    private void enforcePseudoBorders() {
+        if (instances.size() < 2) {
+            return;
+        }
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled() || !config.worldBorderEnabled()) {
+            return;
+        }
+        for (GameInstance instance : liveInstances()) {
+            if (instance.cellIndex().isEmpty()) {
+                continue;
+            }
+            CellBounds bounds = CellBounds.forCell(instance.cellIndex().getAsLong(),
+                    config.cellSize(), config.startBorderDiameter(), !instance.begun());
+            for (Player player : onlineActivePlayers(instance)) {
+                if (player.getGameMode() == GameMode.SPECTATOR) {
+                    continue;
+                }
+                World.Environment environment = player.getWorld().getEnvironment();
+                if (environment != World.Environment.NETHER && environment != World.Environment.NORMAL) {
+                    continue;
+                }
+                boolean nether = environment == World.Environment.NETHER;
+                Location location = player.getLocation();
+                double outside = bounds.outsideBy(location.getX(), location.getZ(), nether);
+                if (outside <= 0.0) {
+                    continue;
+                }
+                double[] inside = bounds.clampInside(location.getX(), location.getZ(), nether, 2.0);
+                if (inside != null) {
+                    player.teleport(new Location(location.getWorld(), inside[0], location.getY(), inside[1],
+                            location.getYaw(), location.getPitch()));
+                }
+                if (outside > config.damageBuffer() && config.damageAmount() > 0.0) {
+                    player.damage(config.damageAmount());
+                }
+            }
+        }
     }
 
     /** Current world-engine cell index, or empty when the store is unavailable. */
@@ -677,6 +1160,9 @@ public final class GameManager {
 
     /** Current world-engine cell index cap for the live cell size. */
     public long cellIndexCap() { return worldEngine.cellIndexCap(); }
+
+    /** Buffered ready-cell indexes, oldest first. */
+    public List<Long> bufferedCellIndexes() { return worldEngine.bufferedCellIndexes(); }
 
     /** Overwrites the world-engine cell index. Returns false when unavailable. */
     public boolean cellIndex(long value) { return worldEngine.cellIndex(value); }
@@ -694,49 +1180,80 @@ public final class GameManager {
         };
     }
 
+    /** Outcome of a quick start: whether the match started plus cap-blocked roles. */
+    public record QuickStartOutcome(boolean started, Set<Role> cappedRoles) {
+    }
+
     /**
-     * Quick-starts a match by assigning eligible players to teams and
-     * immediately starting the game, bypassing the autostart system.
+     * Quick-starts a match by assigning eligible players of one lobby to
+     * teams and immediately starting the game, bypassing the autostart
+     * system. Queue caps apply unless forced; cap-skipped players keep
+     * their current role and may fail validation below.
      *
      * @param speedrunnerPercent the percentage of convertible players that
      *                           should become speedrunners (0-100), or -1 for
      *                           default (keep teams, converting only what is
      *                           missing to start)
-     * @return true if the match was started successfully
+     * @param force when true, queue caps are ignored
+     * @param lobbyId the lobby whose members form the convertible pool
+     * @return the start result plus any roles blocked by caps
      */
-    public boolean quickStart(int speedrunnerPercent) {
-        if (active) return false;
-        // Every online non-AFK player is convertible: NONE players are
+    public QuickStartOutcome quickStart(int speedrunnerPercent, boolean force, int lobbyId) {
+        if (instanceForLobby(lobbyId).isPresent()) return new QuickStartOutcome(false, Set.of());
+        Optional<Lobby> lobby = lobbies.get(lobbyId);
+        if (lobby.isEmpty()) return new QuickStartOutcome(false, Set.of());
+        Lobby resolved = lobby.get();
+        // Every online non-AFK lobby member is convertible: NONE players are
         // assigned fresh, while existing hunters and speedrunners keep their
         // roles unless conversion is needed. AFK players are never touched.
         List<Player> pool = Bukkit.getOnlinePlayers().stream()
                 .filter(p -> role(p) != Role.AFK)
+                .filter(p -> resolved.contains(p.getUniqueId()))
                 .map(p -> (Player) p)
                 .toList();
         // Cancel any autostart countdown silently
-        if (autostartCountdownTask != null) {
-            autostartCountdownTask.cancel();
-            autostartCountdownTask = null;
-        }
+        cancelAllAutostartCountdowns(false);
+        Set<Role> capped = new java.util.HashSet<>();
         // A match needs at least one hunter and one speedrunner, so with
         // fewer than two convertible players there is nothing to assign.
-        if (pool.size() < 2) return start();
+        if (pool.size() < 2) return new QuickStartOutcome(start(lobbyId), capped);
         if (speedrunnerPercent < 0) {
-            ensureMinimumTeams(pool);
+            ensureMinimumTeams(pool, force, resolved, capped);
         } else {
             // Percentage-based assignment over the whole convertible pool:
-            // random selection, the first N become speedrunners and the rest
-            // become hunters.
+            // random selection, players become speedrunners until the count
+            // is reached and hunters after that.
             int speedrunnerCount = quickStartSpeedrunnerCount(pool.size(), speedrunnerPercent);
             List<Player> shuffled = new ArrayList<>(pool);
             java.util.Collections.shuffle(shuffled);
-            for (int i = 0; i < shuffled.size(); i++) {
-                playerStates.setRole(shuffled.get(i), i < speedrunnerCount ? Role.SPEEDRUNNER : Role.HUNTER);
+            int runners = 0;
+            for (Player player : shuffled) {
+                Role want = runners < speedrunnerCount ? Role.SPEEDRUNNER : Role.HUNTER;
+                if (!force && !allowsInLobby(resolved, want)) {
+                    capped.add(want);
+                    continue;
+                }
+                playerStates.setRole(player, want);
+                if (want == Role.SPEEDRUNNER) {
+                    runners++;
+                }
             }
         }
         // Validate after assignment: start() requires at least one hunter and
         // one speedrunner, so e.g. two players online with one AFK will fail.
-        return start();
+        return new QuickStartOutcome(start(lobbyId), capped);
+    }
+
+    /** True when one more player may take a role in a lobby queue. */
+    private boolean allowsInLobby(Lobby lobby, Role role) {
+        int count = 0;
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (role(online) == role && lobby.contains(online.getUniqueId())) {
+                count++;
+            }
+        }
+        return CapLimits.allows(count, plugin.getConfig().getInt(
+                "lobbies.caps." + role.name().toLowerCase(Locale.ROOT), -1));
     }
 
     /**
@@ -756,22 +1273,38 @@ public final class GameManager {
      * Guarantees at least one hunter and one speedrunner by converting random
      * pool members only where a team is missing, so an all-hunter or an
      * all-speedrunner lobby still starts. NONE players become hunters and
-     * everyone else keeps their current role.
+     * everyone else keeps their current role. Conversions that would overflow
+     * a queue cap are skipped and recorded instead.
      */
-    private void ensureMinimumTeams(List<Player> pool) {
+    private void ensureMinimumTeams(List<Player> pool, boolean force, Lobby lobby, Set<Role> capped) {
         boolean hasHunter = pool.stream().anyMatch(p -> role(p) == Role.HUNTER);
         boolean hasSpeedrunner = pool.stream().anyMatch(p -> role(p) == Role.SPEEDRUNNER);
         Player converted = null;
         if (!hasSpeedrunner) {
-            converted = pickConvertible(pool, null);
-            if (converted != null) playerStates.setRole(converted, Role.SPEEDRUNNER);
+            if (!force && !allowsInLobby(lobby, Role.SPEEDRUNNER)) {
+                capped.add(Role.SPEEDRUNNER);
+            } else {
+                converted = pickConvertible(pool, null);
+                if (converted != null) playerStates.setRole(converted, Role.SPEEDRUNNER);
+            }
         }
         if (!hasHunter) {
-            Player hunter = pickConvertible(pool, converted);
-            if (hunter != null) playerStates.setRole(hunter, Role.HUNTER);
+            if (!force && !allowsInLobby(lobby, Role.HUNTER)) {
+                capped.add(Role.HUNTER);
+            } else {
+                Player hunter = pickConvertible(pool, converted);
+                if (hunter != null) playerStates.setRole(hunter, Role.HUNTER);
+            }
         }
         for (Player p : pool) {
-            if (role(p) == Role.NONE) playerStates.setRole(p, Role.HUNTER);
+            if (role(p) != Role.NONE) {
+                continue;
+            }
+            if (!force && !allowsInLobby(lobby, Role.HUNTER)) {
+                capped.add(Role.HUNTER);
+                continue;
+            }
+            playerStates.setRole(p, Role.HUNTER);
         }
     }
 

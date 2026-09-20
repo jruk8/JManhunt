@@ -24,6 +24,17 @@ world-engine:
 > This setting should only be used when the game world is different from the 
 > lobby world. Otherwise, lobby players may suffocate when the border resizes.
 
+## Concurrent Matches
+
+A lone match uses the real world border described above. Once a second match
+starts, the real border drops (one world can only hold one) and every match
+is confined by a per-instance pseudo-border instead: players outside their
+cell are pulled back in and take `damage.amount` past `damage.buffer`, with
+the start diameter applying until their match begins. Spectators bypass it
+like the vanilla border. When concurrency drops back to one match, the
+survivor gets the real border again. See
+[Concurrent Matches](../../multi-instance.md).
+
 ## Damage
 
 `damage.buffer` is the size of the world border buffer in blocks, after

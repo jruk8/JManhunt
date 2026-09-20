@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.api.JManhuntApi;
 import com.jruk8.jmanhunt.api.JManhuntApiImpl;
 import com.jruk8.jmanhunt.settings.SettingsListener;
 import com.jruk8.jmanhunt.settings.loot_tables.PiglinBarterListener;
+import com.jruk8.jmanhunt.settings.world_engine.PortalRouter;
 import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -18,8 +19,8 @@ import java.util.Map;
 
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int CONFIG_VERSION = 4;
-    private static final int MESSAGES_VERSION = 5;
+    private static final int CONFIG_VERSION = 5;
+    private static final int MESSAGES_VERSION = 8;
     /**
      * Relocated config paths, applied on reload. Every key must live under a
      * real category so the in-game config command can drill into it.
@@ -42,11 +43,19 @@ public final class JManhuntPlugin extends JavaPlugin {
     private ConfigService configService;
     private WorldEngineService worldEngine;
     private WinConditionEngine winConditionEngine;
+    private JManhuntLogger logger;
+    private DebugService debugService;
+    private LobbyService lobbyService;
     private final List<SettingsListener> settings = new ArrayList<>();
 
     @Override
     public void onEnable() {
+        messages = new MessageService();
+        debugService = new DebugService();
+        logger = new JManhuntLogger(getLogger(), debugService, messages, BukkitDebugSink.INSTANCE);
+        lobbyService = new LobbyService(this);
         reload();
+        debugService.resetToDefaults(getConfig().getBoolean("debug.enabled", false));
 
         playerStates = new PlayerStateStore();
         setupStatistics();
@@ -62,11 +71,13 @@ public final class JManhuntPlugin extends JavaPlugin {
         winConditionEngine = new WinConditionEngine(getConfig());
         game = new GameManager(
                 this, messages, sounds, playerStates, compass, stats,
-                configService, worldEngine, winConditionEngine);
+                configService, worldEngine, winConditionEngine, lobbyService);
+        compass.setGameManager(game);
+        worldEngine.setMatchRunningSupplier(game::isActive);
         setupListeners();
 
         Bukkit.getServicesManager().register(JManhuntApi.class,
-                new JManhuntApiImpl(game, playerStates), this, ServicePriority.High);
+                new JManhuntApiImpl(game, playerStates, lobbyService), this, ServicePriority.High);
 
         setupScheduling();
         reload(); // reload again to ensure that settings are loaded after the game manager is initialized
@@ -89,9 +100,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
         try {
             statistics = StatisticsRepository.open(this);
-            getLogger().info("Career statistics database initialized.");
+            logger().info("Career statistics database initialized.");
         } catch (Exception exception) {
-            getLogger().severe(
+            logger().severe(
                     "Career statistics are disabled because the database could not be initialized: "
                             + exception.getMessage());
         }
@@ -100,9 +111,9 @@ public final class JManhuntPlugin extends JavaPlugin {
     private void setupEngineState() {
         try {
             engineState = EngineStateRepository.open(getDataFolder());
-            getLogger().info("Engine state database initialized.");
+            logger().info("Engine state database initialized.");
         } catch (Exception exception) {
-            getLogger().severe(
+            logger().severe(
                     "World-engine cell allocation will fall back to memory because "
                             + "the engine database could not be initialized: "
                             + exception.getMessage());
@@ -113,9 +124,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             expansion = new JManhuntExpansion(this, stats, messages);
             expansion.register();
-            getLogger().info("Hooked into PlaceholderAPI as the %jmanhunt_<placeholder>% expansion.");
+            logger().info("Hooked into PlaceholderAPI as the %jmanhunt_<placeholder>% expansion.");
         } else {
-            getLogger().warning(
+            logger().warning(
                     "PlaceholderAPI is not installed; JManhunt placeholders will not be hooked into.");
         }
     }
@@ -126,13 +137,15 @@ public final class JManhuntPlugin extends JavaPlugin {
         settings.add(piglinBarter);
 
         ManhuntCommand command = new ManhuntCommand(
-                this, messages, configService, sounds, playerStates, game, compass, worldEngine);
+                this, messages, configService, sounds, playerStates, game, compass, worldEngine, debugService,
+                lobbyService);
         getCommand("manhunt").setExecutor(command);
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);
+        getServer().getPluginManager().registerEvents(new PortalRouter(this, game, worldEngine), this);
         getServer().getPluginManager().registerEvents(new GameplayListener(
                 this, playerStates, game, messages, configService, sounds,
-                compass, stats, worldEngine, winConditionEngine), this);
+                compass, stats, worldEngine, winConditionEngine, lobbyService), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
     }
 
@@ -163,6 +176,19 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
     }
 
+    /** Single funnel for plugin console output; never null once onEnable starts. */
+    public JManhuntLogger logger() {
+        return logger;
+    }
+
+    public DebugService debugService() {
+        return debugService;
+    }
+
+    public LobbyService lobbyService() {
+        return lobbyService;
+    }
+
     public void reload() {
         YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION, CONFIG_MOVES);
         reloadConfig();
@@ -184,7 +210,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         // Cancel any running interval modifier tasks before reloading settings
         // so stale tasks do not keep firing against a partially updated config.
         if (game != null) {
-            game.stateCommands().cancelIntervalModifiers();
+            game.stateCommands().cancelAllIntervalModifiers();
         }
         for (SettingsListener listener : settings) {
             if (!new java.io.File(getDataFolder(), listener.getDataPath()).exists()) {
@@ -192,7 +218,7 @@ public final class JManhuntPlugin extends JavaPlugin {
             }
             listener.onReload();
         }
-        getLogger().info("JManhunt has been reloaded.");
+        logger().info("JManhunt has been reloaded.");
     }
 
 }

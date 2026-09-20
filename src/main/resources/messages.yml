@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 7
+messages-version: 8
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<#a6a6a6>[<gradient:#e66550:#de7766><bold>J</bold>Manhunt</gradient>]</#a6a6a6> "
@@ -8,6 +8,7 @@ command:
   player-only: "{prefix}<red>Only players can use this command."
   no-permission: "{prefix}<red>You do not have permission to use this command."
   invalid: "{prefix}<red>Unknown command. Use <yellow>/manhunt help<red>."
+  no-targets: "{prefix}<yellow>No players matched that selector."
 
 manhunt:
   help-header: "\n{prefix}\n<#de7766>JManhunt commands:"
@@ -36,9 +37,9 @@ manhunt:
   waiting-for-damage-exhausted: "{prefix}<red>No speedrunner hit a hunter within <white>{seconds}s</white>. The game will not start."
   waiting-for-damage-force-started: "{prefix}<yellow>The game has automatically started because no speedrunner hit a hunter on time."
   started-by-damage: "{prefix}<green>The Manhunt game has begun!"
-  start-delay-active: "{prefix}<yellow>Hunters are in spectator mode for <white>{seconds}s</white>."
-  start-delay-ending: "{prefix}<yellow>Hunters return in <white>{seconds}s</white>."
-  start-delay-ended: "{prefix}<green>Hunters have spawned!"
+  headstart-active: "{prefix}<yellow>{role}s are in spectator mode for <white>{seconds}s</white>."
+  headstart-ending: "{prefix}<yellow>{role}s return in <white>{seconds}s</white>."
+  headstart-ended: "{prefix}<green>{role}s have spawned!"
   start-invalid: "{prefix}<red>A match needs at least one hunter and one speedrunner."
   queue-left: "{prefix}<yellow>{player} left the queue."
   already-active: "{prefix}<red>A match is already active."
@@ -54,8 +55,8 @@ manhunt:
   configuration-list: "\n{prefix}<white>Available configs in <gray>{key}:{entries}"
   configuration-entry: "\n<green>» <white>{key}</white><gray>{suffix}</gray>"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
-  worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|lobby|cellindex>"
-  worldengine-cellindex-usage: "{prefix}<yellow>Usage: /manhunt worldengine cellindex <get|set <value>>"
+  worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|setlobbytp|lobby|cellindex>"
+  worldengine-cellindex-usage: "{prefix}<yellow>Usage: /manhunt worldengine cellindex <get|set <value>|buffer>"
   worldengine-cellindex-get: "{prefix}<green>World-engine cell index: <white>{index}<green>."
   worldengine-cellindex-set: "{prefix}<green>Set world-engine cell index to <white>{index}<green> (max <white>{max}<green>)."
   worldengine-cellindex-invalid: "{prefix}<red>Invalid cell index. Use a number between 0 and <white>{max}<red>."
@@ -69,6 +70,26 @@ manhunt:
   worldengine-invalid-lobby: "{prefix}<red>The world-engine lobby world is not loaded."
   quickstart-invalid-percent: "{prefix}<red>Quick start percentage must be a number between 0 and 100."
   quickstart-failed: "{prefix}<red>Quick start requires at least one hunter and one speedrunner. AFK players are not assigned roles."
+  status-all-header: "\n{prefix}\n<#de7766>Running instances:"
+  status-all-entry: "<white>» <white>{id} <gray>({remaining}/{assigned}) <white>{duration}"
+  status-all-empty: "{prefix}<yellow>No matches are running."
+  invalid-instance-id: "{prefix}<red>Unknown instance id."
+  not-in-match: "{prefix}<yellow>You are not in a match."
+  console-requires-id: "{prefix}<red>Specify an instance id or <yellow>all<red>."
+  joingame-success: "{prefix}<green>Added <white>{count}<green> player(s) to instance <white>{id}<green> as <white>{role}<green>."
+  joingame-announce: "{prefix}<green>{player} has joined as a {role}."
+  joingame-invalid-role: "{prefix}<red>Role must be hunter, speedrunner, or none."
+  lobby-join-success: "{prefix}<green>Moved <white>{count}<green> player(s) to lobby <white>{lobby}<green> as <white>{role}<green>."
+  lobby-leave-success: "{prefix}<green>Removed <white>{player}<green> from lobby <white>{lobby}<green>."
+  lobby-invalid-id: "{prefix}<red>Invalid lobby id. Use a number between 0 and <white>2147483647<red>."
+  lobby-not-member: "{prefix}<yellow>{player} is not in lobby <white>{lobby}<yellow>."
+  lobby-full: "{prefix}<red>Lobby <white>{lobby}<red> is full for role <white>{role}<red>."
+  lobby-no-location: "{prefix}<yellow>No lobby location exists for lobby <white>{lobby}<yellow>. Create one with <white>/manhunt worldengine setlobbytp {lobby}<yellow>."
+  lobby-worldengine-required: "{prefix}<red>Enable the world engine to use multiple lobbies."
+  debug-enabled: "{prefix}<green>Debug mode enabled."
+  debug-disabled: "{prefix}<yellow>Debug mode disabled."
+  worldengine-cellindex-buffer-header: "\n{prefix}\n<#de7766>Buffered cells:"
+  worldengine-cellindex-buffer-entry: "<white>» <white>{index}"
 
 game:
   separator: "<strikethrough><gradient:#bababa:#dedede:#bababa>                                                    </gradient></strikethrough>"
@@ -127,3 +148,17 @@ compass:
   no-target-actionbar: "<gray>No {role} location available."
   nearby-actionbar: "<green>{player} is nearby! The compass is disabled."
   too-far-actionbar: "<yellow>{player} is out of tracking range • <white>{distance}m"
+
+debug:
+  prefix: "<gray>[<bold>J</bold>ManhuntDebug]</gray> "
+  cell-fetched: "{debug-prefix}<gray>Fetched cell <white>{index} <gray>at <white>{x}<gray>, <white>{z}<gray>."
+  cell-buffer-add: "{debug-prefix}<gray>Buffered cell <white>{index} <gray>({count}/{target})."
+  cell-fetch-failed: "{debug-prefix}<gray>Cell fetch failed, retrying in <white>{seconds}s<gray>."
+  match-start: "{debug-prefix}<gray>Match started in lobby <white>{lobby} <gray>on cell <white>{index}<gray>."
+  match-end: "{debug-prefix}<gray>Match on cell <white>{index} <gray>ended."
+  end-cell-reserved: "{debug-prefix}<gray>Reserved <white>{cell} <gray>for instance <white>{id}<gray>."
+  end-cell-created: "{debug-prefix}<gray>Created end dimension <white>{cell}<gray>."
+  end-cell-reset: "{debug-prefix}<gray>Reset end dimension <white>{cell}<gray>."
+  end-cell-pruned: "{debug-prefix}<gray>Pruned end dimension <white>{cell}<gray>."
+  border-mode: "{debug-prefix}<gray>Border mode: <white>{mode}<gray>."
+  portal-reroute: "{debug-prefix}<gray>Rerouted <white>{player} <gray>to <white>{cell}<gray>."
