@@ -4,7 +4,8 @@ public enum Role {
     NONE,
     HUNTER,
     SPEEDRUNNER,
-    AFK;
+    AFK,
+    SPECTATOR;
 
     /** Returns true for HUNTER or SPEEDRUNNER (active match participants). */
     public boolean isParticipant() {
@@ -18,6 +19,7 @@ public enum Role {
             case SPEEDRUNNER -> "Speedrunner";
             case AFK -> "Afk";
             case NONE -> "None";
+            case SPECTATOR -> "Spectator";
         };
     }
 

@@ -73,8 +73,8 @@ permissions:
   jmanhunt.command.lobby:
     description: Manage lobby queues.
     default: op
-  jmanhunt.command.joingame:
-    description: Add players to a running match.
+  jmanhunt.command.game:
+    description: Join players to or remove them from a running match.
     default: op
   jmanhunt.hunter:
     description: Allows a player to become a hunter.
@@ -86,5 +86,8 @@ permissions:
     description: Allows a player to become afk.
     default: true
   jmanhunt.none:
-    description: Allows a player to become a spectator (none).
+    description: Allows a player to become unassigned (none).
+    default: true
+  jmanhunt.spectator:
+    description: Allows a player to become a spectator.
     default: true

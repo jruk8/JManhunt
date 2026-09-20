@@ -1,8 +1,9 @@
 # Win Conditions
 
 Under `settings.win-conditions`, you can configure what constitutes a win in the
-game. Multiple conditions can be enabled at once. Make sure at least one is
-enabled.
+game. Each side wins as soon as any one of its conditions is satisfied, and
+both sides always win by eliminating the other side outright. Make sure at
+least one is enabled.
 
 ```yaml
 settings:
@@ -18,6 +19,18 @@ settings:
     reachAdvancement:
       enabled: false
       advancement: "minecraft:story/enter_the_nether"
+    killMob:
+      enabled: false
+      mob: "minecraft:ender_dragon"
+    hunterTimeLimit:
+      enabled: false
+      time: 3600.0
+    hunterAcquireItem:
+      enabled: false
+      item: "minecraft:netherite_ingot"
+    hunterKillMob:
+      enabled: false
+      mob: "minecraft:ender_dragon"
 ```
 
 ## Exit the End
@@ -40,6 +53,29 @@ in `item`, given as a namespaced key (e.g. `minecraft:netherite_ingot`).
 `reachAdvancement` grants the win when a speedrunner completes the
 advancement named in `advancement`, given as a namespaced key (e.g.
 `minecraft:story/enter_the_nether`).
+
+## Kill Mob
+
+`killMob` grants the win when a speedrunner kills the mob named in `mob`,
+given as a namespaced key (e.g. `minecraft:ender_dragon`).
+
+## Hunter Conditions
+
+`hunterTimeLimit`, `hunterAcquireItem`, and `hunterKillMob` mirror the
+speedrunner conditions for the other side: hunters win when the clock runs
+out, when a hunter holds the item, or when a hunter kills the mob. All
+default to off.
+
+## Time Announcements
+
+Whenever a time limit is running, the match hears it count down: 8h, 6h,
+4h, 2h, 1h, 30m, 15m, 10m, 5m, 2m, 1m, 30s, 15s, 10s, then 5-4-3-2-1. If
+both sides' clocks are set, the earlier expiry wins (ties favor the
+speedrunners) and the console logs which one was picked.
+
+Enable `settings.status.show-win-conditions` to print each side's rules in
+`/manhunt status`, e.g. `Speedrunners win on: eliminate all hunters,
+credits screen`.
 
 # End-Screen Statistics
 

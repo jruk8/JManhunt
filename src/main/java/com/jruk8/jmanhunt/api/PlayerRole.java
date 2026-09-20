@@ -9,7 +9,8 @@ public enum PlayerRole {
     NONE,
     HUNTER,
     SPEEDRUNNER,
-    AFK;
+    AFK,
+    SPECTATOR;
 
     /** Returns true for HUNTER or SPEEDRUNNER (active match participants). */
     public boolean isParticipant() {

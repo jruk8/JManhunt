@@ -207,6 +207,30 @@ player is at `(10.5, 64.0, -20.2)`. Offsets like `~5` and `~-3` are supported.
 All commands are dispatched as the console sender, so there are no permission
 issues. The tilde resolution is handled by the plugin before dispatch.
 
+# Targeting Sides with Selectors
+
+Manhunt roles mirror to vanilla scoreboard teams — `HUNTER`,
+`SPEEDRUNNER`, and `SPECTATOR` — so console commands can aim at a whole
+side with the `team` selector argument:
+
+```yaml
+custom-modifiers:
+  hunter-fear:
+    enabled: false
+    runs-on:
+      - INTERVAL
+    interval-settings:
+      interval: 30
+    commands:
+      console:
+        - "effect give @a[distance=..15,team=HUNTER] minecraft:darkness 5 0"
+```
+
+Membership follows roles exactly (repaired on every role change and
+login), carries no colors or friendly-fire rules, and `none`/`afk` players
+sit in no team. Pair with `player`/`hunter`/`speedrunner` lists when you
+need per-player placeholders like `<p>` or `~` coordinates instead.
+
 # Match-End Cleanup
 
 The `console-cleanup` and `player-cleanup` lists run when the match ends,

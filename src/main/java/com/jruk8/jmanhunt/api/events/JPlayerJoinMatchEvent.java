@@ -8,7 +8,7 @@ import java.util.UUID;
 
 /**
  * Fired synchronously for each player added to a running match, either
- * through {@code /manhunt joingame} or a mid-match role promotion. Fires
+ * through {@code /manhunt game join} or a mid-match role promotion. Fires
  * after the player is activated, so {@code JManhuntApi} already reports
  * their new state.
  */

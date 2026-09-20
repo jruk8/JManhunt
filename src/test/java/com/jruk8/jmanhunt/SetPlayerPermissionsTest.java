@@ -22,6 +22,7 @@ class SetPlayerPermissionsTest {
         assertEquals("jmanhunt.speedrunner", ManhuntCommand.rolePermissionNode(Role.SPEEDRUNNER));
         assertEquals("jmanhunt.afk", ManhuntCommand.rolePermissionNode(Role.AFK));
         assertEquals("jmanhunt.none", ManhuntCommand.rolePermissionNode(Role.NONE));
+        assertEquals("jmanhunt.spectator", ManhuntCommand.rolePermissionNode(Role.SPECTATOR));
     }
 
     @Test

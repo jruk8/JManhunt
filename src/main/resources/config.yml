@@ -204,9 +204,10 @@ lobbies:
   default-lobby-id: 0
   # When true, joining a lobby also teleports the player to that lobby's
   # location. When no location exists for the lobby, the player is told to
-  # create one instead of being teleported.
-  # Default: false
-  join-teleports-to-lobby: false
+  # create one instead of being teleported. The -notp join flag skips the
+  # teleport for one invocation.
+  # Default: true
+  join-teleports-to-lobby: true
   # Per-role queue caps for each lobby. Only enforced on the queue before a
   # match starts, and bypassed with -force. Lowering a cap below the current
   # queue blocks new entries of that role but never kicks queued players.
@@ -478,6 +479,13 @@ settings:
     none-gamemode-spectator:
       enabled: true
 
+  # Where players go when they leave a running match, voluntarily or
+  # automatically: SPECTATOR keeps them at the match as a watcher, LOBBY
+  # sends them back to their lobby as NONE.
+  # Default: SPECTATOR
+  game-leave:
+    destination: SPECTATOR
+
   # Start the game only after a speedrunner hits a hunter.
   # Default: true
   start-on-speedrunner-damage:
@@ -545,6 +553,30 @@ settings:
       # The advancement to reach (namespaced key, e.g. minecraft:story/enter_the_nether).
       # Default: minecraft:story/enter_the_nether
       advancement: "minecraft:story/enter_the_nether"
+    # Speedrunners win when a speedrunner kills the configured mob.
+    killMob:
+      enabled: false
+      # The mob to kill (namespaced key, e.g. minecraft:ender_dragon).
+      # Default: minecraft:ender_dragon
+      mob: "minecraft:ender_dragon"
+    # Hunters win when the time expires before the speedrunners win.
+    hunterTimeLimit:
+      enabled: false
+      # Time in seconds the speedrunners have.
+      # Default: 3600.0
+      time: 3600.0
+    # Hunters win when a hunter acquires the configured item.
+    hunterAcquireItem:
+      enabled: false
+      # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
+      # Default: minecraft:netherite_ingot
+      item: "minecraft:netherite_ingot"
+    # Hunters win when a hunter kills the configured mob.
+    hunterKillMob:
+      enabled: false
+      # The mob to kill (namespaced key, e.g. minecraft:ender_dragon).
+      # Default: minecraft:ender_dragon
+      mob: "minecraft:ender_dragon"
 
   # Compass tracking settings. The held actionbar stays visible between
   # interval refreshes and continues showing its cached value.
@@ -587,6 +619,19 @@ settings:
       refresh-on-right-click: true
       # Seconds between right-click refreshes. Set to -1 for no cooldown.
       right-click-cooldown: 3.0
+    analyze:
+      # Purposeful lag before a compass refresh resolves, showing
+      # "Analyzing..." while it runs. No second refresh starts mid-analysis,
+      # and click cooldowns restart when the analysis ends.
+      # Applies to right-click refreshes.
+      # Default: false
+      right-click: false
+      # Applies to automatic (interval) refreshes.
+      # Default: false
+      auto: false
+      # Seconds the analysis takes before the compass updates.
+      # Default: 1.0
+      delay-seconds: 1.0
     # When true, the compass stops tracking when the targeted player is within
     # the configured flat distance. Only X/Z coordinates are compared, so the
     # target may still be above or below the holder. Applies to both hunters
@@ -670,6 +715,34 @@ settings:
       fade-in-seconds: 0.5
       stay-seconds: 3.0
       fade-out-seconds: 0.5
+
+  # Optional /manhunt status extras. Each toggles independently.
+  status:
+    # Show "Speedrunners win on ..." and "Hunters win on ..." lines.
+    # Default: false
+    show-win-conditions: false
+    # Show how long the match has been running.
+    # Default: false
+    show-elapsed-time: false
+    # Show lobby and game ids as L{lobby}|G{game}.
+    # Default: true
+    show-ids: true
+
+  # Rolling anti-spawn-camp guard: too many kills by one attacker on the
+  # same victim inside the window punishes the camper, broadcast to all.
+  anti-spawn-camp:
+    # Default: true
+    enabled: true
+    # Kills on the same victim that trigger the punishment.
+    # Default: 3
+    kills: 3
+    # Rolling window in seconds.
+    # Default: 120.0
+    window-seconds: 120.0
+    # Punishment: KILL slays the camper, GEAR-WIPE clears their armor,
+    # offhand, and main hand.
+    # Default: KILL
+    punishment: KILL
 
 
 # Grid-based single-world manhunt engine.
@@ -851,3 +924,9 @@ sounds:
       sound: block.copper_chest.close
       pitch: 1.0
       volume: 1.0
+    # Heard by each spectator when roles are announced.
+    spectator:
+      enabled: true
+      sound: block.note_block.chime
+      pitch: 1.0
+      volume: 0.8

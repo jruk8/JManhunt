@@ -31,11 +31,17 @@ class RoleTest {
     }
 
     @Test
+    void spectatorIsNotParticipant() {
+        assertFalse(Role.SPECTATOR.isParticipant());
+    }
+
+    @Test
     void displayNamesArePretty() {
         assertEquals("Hunter", Role.HUNTER.displayName());
         assertEquals("Speedrunner", Role.SPEEDRUNNER.displayName());
         assertEquals("Afk", Role.AFK.displayName());
         assertEquals("None", Role.NONE.displayName());
+        assertEquals("Spectator", Role.SPECTATOR.displayName());
     }
 
     @Test
@@ -44,6 +50,7 @@ class RoleTest {
         assertEquals(Optional.of(Role.SPEEDRUNNER), Role.parse("SpeedRunner"));
         assertEquals(Optional.of(Role.AFK), Role.parse("AFK"));
         assertEquals(Optional.of(Role.NONE), Role.parse(" none "));
+        assertEquals(Optional.of(Role.SPECTATOR), Role.parse("Spectator"));
     }
 
     @Test

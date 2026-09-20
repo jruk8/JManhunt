@@ -13,7 +13,7 @@
 | `jmanhunt.command.end` | End an active Manhunt match. | OP |
 | `jmanhunt.command.quickstart` | Quick-start a match with auto team assignment. | OP |
 | `jmanhunt.command.lobby` | Manage lobby queues. | OP |
-| `jmanhunt.command.joingame` | Add players to a running match. | OP |
+| `jmanhunt.command.game` | Join players to or remove them from a running match. | OP |
 | `jmanhunt.command.debug` | Toggle JManhunt debug output. | OP |
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |
 | `jmanhunt.command.configuration` | View or change configuration by category. | OP |
@@ -31,4 +31,5 @@
 | `jmanhunt.hunter` | Allows a player to become a hunter. | Everyone |
 | `jmanhunt.speedrunner` | Allows a player to become a speedrunner. | Everyone |
 | `jmanhunt.afk` | Allows a player to become afk. | Everyone |
-| `jmanhunt.none` | Allows a player to become a spectator (none). | Everyone |
+| `jmanhunt.none` | Allows a player to become unassigned (none). | Everyone |
+| `jmanhunt.spectator` | Allows a player to become a spectator. | Everyone |

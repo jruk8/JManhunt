@@ -23,7 +23,8 @@ portals where the target left the current dimension.
 seen location is still recorded when they disconnect.
 
 In any case, targets who are **active in the same dimension** are prioritized over inactive
-ones.
+ones. Players who are still respawning (in spectator mode) are never
+targets, neither live nor through their last seen location.
 
 ## Given to Roles
 
@@ -106,6 +107,23 @@ right-click:
   refresh-on-right-click: true
   right-click-cooldown: 3.0      # in seconds
 ```
+
+## Analysis Delay
+
+Under `settings.compass.analyze`, a refresh can take a purposeful moment to
+resolve instead of answering instantly. While analyzing, the actionbar reads
+`Analyzing...`, no second refresh can start, and right-click cooldowns
+restart when the analysis ends rather than when it begins:
+
+```yaml
+analyze:
+  right-click: false
+  auto: false
+  delay-seconds: 1.0
+```
+
+`right-click` covers manual refreshes, `auto` covers interval refreshes;
+enable either or both. `delay-seconds` is how long each analysis takes.
 
 ## Tracking Distance
 

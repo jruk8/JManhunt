@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt;
 
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.junit.jupiter.api.Test;
 
@@ -43,5 +44,22 @@ class CompassItemTest {
         assertTrue(CompassManager.isAllowedCompassItem(Material.RECOVERY_COMPASS));
         assertFalse(CompassManager.isAllowedCompassItem(Material.DIRT));
         assertFalse(CompassManager.isAllowedCompassItem(null));
+    }
+
+    @Test
+    void skipsOnlyRespawningSpectators() {
+        assertTrue(CompassManager.skipLastSeen(true, GameMode.SPECTATOR));
+        assertFalse(CompassManager.skipLastSeen(true, GameMode.SURVIVAL));
+        assertFalse(CompassManager.skipLastSeen(true, GameMode.ADVENTURE));
+        assertFalse(CompassManager.skipLastSeen(false, GameMode.SPECTATOR));
+        assertFalse(CompassManager.skipLastSeen(false, null));
+    }
+
+    @Test
+    void analyzeDelayTicksConvertsSeconds() {
+        assertEquals(20L, CompassManager.analyzeDelayTicks(1.0));
+        assertEquals(10L, CompassManager.analyzeDelayTicks(0.5));
+        assertEquals(1L, CompassManager.analyzeDelayTicks(0.0));
+        assertEquals(1L, CompassManager.analyzeDelayTicks(-2.0));
     }
 }

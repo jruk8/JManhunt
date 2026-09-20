@@ -31,7 +31,7 @@ class MultiInstanceSchemaTest {
         YamlConfiguration config = bundledConfig();
 
         assertEquals(0, config.getInt("lobbies.default-lobby-id"));
-        assertFalse(config.getBoolean("lobbies.join-teleports-to-lobby"));
+        assertTrue(config.getBoolean("lobbies.join-teleports-to-lobby"));
         assertEquals(-1, config.getInt("lobbies.caps.speedrunner"));
         assertEquals(-1, config.getInt("lobbies.caps.hunter"));
     }
@@ -58,6 +58,115 @@ class MultiInstanceSchemaTest {
         assertFalse(config.contains("world-engine.on-fetch-new-cell"));
         assertEquals("jmh-lobby", config.getString("world-engine.lobby-world-name"));
         assertTrue(config.getBoolean("world-engine.lobby-world-void-rescue"));
+    }
+
+    @Test
+    void hunterWinConditionDefaults() {
+        YamlConfiguration config = bundledConfig();
+
+        assertFalse(config.getBoolean("settings.win-conditions.killMob.enabled"));
+        assertEquals("minecraft:ender_dragon", config.getString("settings.win-conditions.killMob.mob"));
+        assertFalse(config.getBoolean("settings.win-conditions.hunterTimeLimit.enabled"));
+        assertEquals(3600.0, config.getDouble("settings.win-conditions.hunterTimeLimit.time"));
+        assertFalse(config.getBoolean("settings.win-conditions.hunterAcquireItem.enabled"));
+        assertFalse(config.getBoolean("settings.win-conditions.hunterKillMob.enabled"));
+    }
+
+    @Test
+    void statusDisplayDefaults() {
+        YamlConfiguration config = bundledConfig();
+        YamlConfiguration messages = bundledMessages();
+
+        assertFalse(config.getBoolean("settings.status.show-win-conditions"));
+        assertFalse(config.getBoolean("settings.status.show-elapsed-time"));
+        assertTrue(config.getBoolean("settings.status.show-ids"));
+        assertTrue(messages.getString("manhunt.status-win-speedrunners", "").contains("{conditions}"));
+        assertTrue(messages.getString("manhunt.status-win-hunters", "").contains("{conditions}"));
+        assertTrue(messages.getString("manhunt.status-elapsed", "").contains("{duration}"));
+        assertTrue(messages.getString("manhunt.status-ids", "").contains("{value}"));
+        assertTrue(messages.getString("game.time-left", "").contains("{time}"));
+        assertTrue(messages.getString("game.time-left", "").contains("{winner}"));
+    }
+
+    @Test
+    void commandUsageAndEdgeKeysExist() {
+        YamlConfiguration messages = bundledMessages();
+
+        for (String key : List.of(
+                "manhunt.status-usage",
+                "manhunt.setplayer-usage",
+                "manhunt.set-in-match",
+                "manhunt.set-afk-confirm",
+                "manhunt.start-usage",
+                "manhunt.end-usage",
+                "manhunt.game-usage",
+                "manhunt.game-join-usage",
+                "manhunt.game-leave-usage",
+                "manhunt.lobby-usage",
+                "manhunt.lobby-join-usage",
+                "manhunt.lobby-leave-usage",
+                "manhunt.lobby-already-member",
+                "manhunt.lobby-join-in-match",
+                "manhunt.lobby-leave-not-member",
+                "manhunt.lobby-leave-in-match",
+                "manhunt.quickstart-usage",
+                "manhunt.configuration-usage",
+                "manhunt.debug-usage",
+                "manhunt.worldengine-setlobby-usage",
+                "manhunt.worldengine-setlobbytp-usage",
+                "manhunt.worldengine-lobby-usage",
+                "manhunt.worldengine-tpto-usage",
+                "manhunt.worldengine-tpto-lobby-world-clash",
+                "game.join-no-change")) {
+            assertTrue(messages.getString(key, null) != null, key);
+        }
+        assertTrue(messages.getString("manhunt.lobby-not-member", null) == null);
+        assertTrue(messages.getString("manhunt.set-afk-confirm", "").contains("{count}"));
+        assertTrue(messages.getString("manhunt.worldengine-cellindex-set", "").contains("{was}"));
+    }
+
+    @Test
+    void compassAnalyzeDefaults() {
+        YamlConfiguration config = bundledConfig();
+        YamlConfiguration messages = bundledMessages();
+
+        assertFalse(config.getBoolean("settings.compass.analyze.right-click"));
+        assertFalse(config.getBoolean("settings.compass.analyze.auto"));
+        assertEquals(1.0, config.getDouble("settings.compass.analyze.delay-seconds"));
+        assertTrue(messages.getString("compass.analyzing-actionbar", "").contains("Analyzing..."));
+    }
+
+    @Test
+    void antiSpawnCampDefaults() {
+        YamlConfiguration config = bundledConfig();
+        YamlConfiguration messages = bundledMessages();
+
+        assertTrue(config.getBoolean("settings.anti-spawn-camp.enabled"));
+        assertEquals(3, config.getInt("settings.anti-spawn-camp.kills"));
+        assertEquals(120.0, config.getDouble("settings.anti-spawn-camp.window-seconds"));
+        assertEquals("KILL", config.getString("settings.anti-spawn-camp.punishment"));
+        assertTrue(messages.getString("game.spawncamp-kill", "").contains("{victim}"));
+        assertTrue(messages.getString("game.spawncamp-gear-wipe", "").contains("{victim}"));
+    }
+
+    @Test
+    void gameLeaveDefaults() {
+        YamlConfiguration config = bundledConfig();
+
+        assertEquals("SPECTATOR", config.getString("settings.game-leave.destination"));
+    }
+
+    @Test
+    void spectatorAnnounceDefaults() {
+        YamlConfiguration messages = bundledMessages();
+        YamlConfiguration config = bundledConfig();
+
+        assertTrue(messages.getString("manhunt.spectators-line", "").contains("{value}"));
+        assertTrue(messages.getString("manhunt.spectators-line", "").contains("Spectators"));
+        assertEquals("<gray>Watch the Hunt",
+                messages.getString("manhunt.role-announce-subtitle-spectator"));
+        assertTrue(config.getBoolean("sounds.announce.spectator.enabled"));
+        assertEquals("block.note_block.chime", config.getString("sounds.announce.spectator.sound"));
     }
 
     @Test
@@ -89,13 +198,20 @@ class MultiInstanceSchemaTest {
                 "manhunt.invalid-instance-id",
                 "manhunt.not-in-match",
                 "manhunt.console-requires-id",
-                "manhunt.joingame-success",
-                "manhunt.joingame-announce",
-                "manhunt.joingame-invalid-role",
+                "game.join-success",
+                "game.join-announce",
+                "game.join-invalid-role",
+                "game.leave-confirm",
+                "game.leave-not-in-match",
+                "game.leave-success",
+                "game.leave-removed",
+                "game.hunter-left",
+                "game.speedrunner-left",
+                "game.auto-left-bounds",
+                "game.auto-left-lobby-world",
                 "manhunt.lobby-join-success",
                 "manhunt.lobby-leave-success",
                 "manhunt.lobby-invalid-id",
-                "manhunt.lobby-not-member",
                 "manhunt.lobby-full",
                 "manhunt.lobby-no-location",
                 "manhunt.lobby-worldengine-required",
@@ -106,8 +222,10 @@ class MultiInstanceSchemaTest {
             assertTrue(messages.getString(key, null) != null, key);
         }
         assertTrue(messages.getString("command.no-targets", null) != null);
-        assertTrue(messages.getString("manhunt.joingame-announce", "").contains("{player}"));
-        assertTrue(messages.getString("manhunt.joingame-announce", "").contains("{role}"));
+        assertTrue(messages.getString("game.join-announce", "").contains("{player}"));
+        assertTrue(messages.getString("game.join-announce", "").contains("{role}"));
+        assertTrue(messages.getString("game.hunter-left", "").contains("{remaining}"));
+        assertTrue(messages.getString("game.speedrunner-left", "").contains("{remaining}"));
         assertTrue(messages.getString("manhunt.status-all-entry", "").contains("{id}"));
         assertTrue(messages.getString("manhunt.status-all-entry", "").contains("{duration}"));
         assertTrue(messages.getString("manhunt.headstart-active", "").contains("{role}"));

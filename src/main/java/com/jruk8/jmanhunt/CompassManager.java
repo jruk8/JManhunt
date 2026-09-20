@@ -16,6 +16,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +30,7 @@ public final class CompassManager {
     private final NamespacedKey compassKey;
     private final Map<UUID, Long> compassClicks = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
+    private final Set<UUID> analyzing = new HashSet<>();
     private GameManager game;
 
     public CompassManager(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
@@ -46,11 +48,18 @@ public final class CompassManager {
 
     public void refreshAllCompasses(boolean active) {
         if (active) {
+            boolean analyze = analyzeEnabled(true);
             Bukkit.getOnlinePlayers().stream()
                     .filter(p -> role(p).isParticipant())
                     .filter(p -> inLiveInstance(p))
                     .filter(this::hasCompass)
-                    .forEach(this::refreshCompass);
+                    .forEach(holder -> {
+                        if (analyze) {
+                            startAnalysis(holder, false);
+                        } else {
+                            refreshCompass(holder);
+                        }
+                    });
         }
     }
 
@@ -216,6 +225,15 @@ public final class CompassManager {
 
     private record LastSeenResult(String name, Location location, boolean online) {}
 
+    /**
+     * Online spectators are mid-respawn (or otherwise out of play): never a
+     * last-seen target. Offline players still report their log-out spot.
+     * Pure for tests.
+     */
+    static boolean skipLastSeen(boolean online, GameMode mode) {
+        return online && mode == GameMode.SPECTATOR;
+    }
+
     private LastSeenResult findNearestLastSeen(Player holder, Role targetRole, GameInstance instance) {
         return playerStates.sightings().entrySet().stream()
                 .filter(entry -> isTrackableTarget(entry.getKey(), targetRole, instance))
@@ -226,6 +244,10 @@ public final class CompassManager {
                         return null;
                     }
                     Player player = Bukkit.getPlayer(entry.getKey());
+                    if (skipLastSeen(player != null,
+                            player == null ? null : player.getGameMode())) {
+                        return null;
+                    }
                     String name = player != null
                             ? player.getName() : playerStates.playerName(entry.getKey());
                     return new LastSeenResult(name, loc, player != null);
@@ -405,16 +427,58 @@ public final class CompassManager {
     }
 
     public void handleRightClick(Player player) {
-        if (plugin.getConfig()
+        if (!plugin.getConfig()
                 .getBoolean("settings.compass.right-click.refresh-on-right-click", false)) {
-            long now = System.currentTimeMillis();
-            long cooldownMs = (long) (plugin.getConfig()
-                    .getDouble("settings.compass.right-click.right-click-cooldown", 3.0) * 1000);
-            if (now - compassClicks.getOrDefault(player.getUniqueId(), 0L) >= cooldownMs) {
-                compassClicks.put(player.getUniqueId(), now);
-                refreshCompass(player);
-            }
+            return;
         }
+        long now = System.currentTimeMillis();
+        long cooldownMs = (long) (plugin.getConfig()
+                .getDouble("settings.compass.right-click.right-click-cooldown", 3.0) * 1000);
+        if (now - compassClicks.getOrDefault(player.getUniqueId(), 0L) < cooldownMs) {
+            return;
+        }
+        if (analyzeEnabled(false)) {
+            startAnalysis(player, true);
+            return;
+        }
+        compassClicks.put(player.getUniqueId(), now);
+        refreshCompass(player);
+    }
+
+    /**
+     * Purposeful analysis lag before a refresh resolves: shows
+     * "Analyzing...", waits out the configured delay, then refreshes.
+     * No second analysis starts while one runs, and click cooldowns
+     * start when the analysis ends rather than when it begins.
+     */
+    private void startAnalysis(Player holder, boolean fromClick) {
+        UUID id = holder.getUniqueId();
+        if (!analyzing.add(id)) {
+            return;
+        }
+        compassActionbars.put(id, component("compass.analyzing-actionbar"));
+        long delayTicks = analyzeDelayTicks(
+                plugin.getConfig().getDouble("settings.compass.analyze.delay-seconds", 1.0));
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            analyzing.remove(id);
+            refreshCompass(holder);
+            if (!inLiveInstance(holder) || !role(holder).isParticipant()) {
+                compassActionbars.remove(id);
+            }
+            if (fromClick) {
+                compassClicks.put(id, System.currentTimeMillis());
+            }
+        }, delayTicks);
+    }
+
+    /** Analysis delay in ticks, at least one. Pure for tests. */
+    static long analyzeDelayTicks(double delaySeconds) {
+        return Math.max(1L, Math.round(delaySeconds * 20.0));
+    }
+
+    private boolean analyzeEnabled(boolean auto) {
+        return plugin.getConfig().getBoolean(auto
+                ? "settings.compass.analyze.auto" : "settings.compass.analyze.right-click", false);
     }
 
     private Role role(Player player) {

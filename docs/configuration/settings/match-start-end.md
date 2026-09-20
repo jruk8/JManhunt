@@ -27,8 +27,9 @@ Under `settings.start-on-speedrunner-damage`, the match will include a **pre-sta
 window that lasts until a speedrunner hits a hunter. This gives speedrunners
 a moment to get their bearings before hunters are "let loose."
 
-Players in the pre-start window are invulnerable and may not deal any damage, except for 
-the speedrunners' first hit.
+Players in the pre-start window are invulnerable and may not deal any damage. The
+speedrunners' first hit on a hunter opens the match but deals no damage
+itself. The pre-start window also blocks `/kill`, unlike everywhere else.
 
 ```yaml
 settings:
@@ -118,14 +119,14 @@ The announcement runs inside match start after the match status is shown,
 but still before the pre-start window opens, so players always learn their
 roles before anything can happen, even when
 [Start on Speedrunner Damage](#start-on-speedrunner-damage) is enabled.
-Players without a participating role are skipped.
+Spectators are announced too; only `none` and `afk` players are skipped.
 
 The title shows `manhunt.role-announce-title` (`Role: {role}` by default) with a
 per-role subtitle from `messages.yml`, and follows the configured fade, stay,
 and fade-out times. Each role also hears its own sound
-(`sounds.announce.hunter` and `sounds.announce.speedrunner`), toggled per role
-like any other sound. When both chat and title are disabled, no announcement
-plays at all.
+(`sounds.announce.hunter`, `sounds.announce.speedrunner`, and
+`sounds.announce.spectator`), toggled per role like any other sound. When
+both chat and title are disabled, no announcement plays at all.
 
 # Match End Delay
 

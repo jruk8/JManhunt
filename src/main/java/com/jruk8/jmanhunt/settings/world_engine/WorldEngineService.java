@@ -354,6 +354,15 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         return true;
     }
 
+    /**
+     * True when newcomers have a lobby to wait in: the engine is on and
+     * the lobby has a valid location.
+     */
+    public boolean hasLobbyLocation(int lobbyId) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        return config.enabled() && getValidLobby(config, lobbyId) != null;
+    }
+
     private Location getValidLobby(WorldEngineConfig config, int lobbyId) {
         return resolveLobby(config, lobbyId);
     }
@@ -409,12 +418,46 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     }
 
     /**
-     * Rescue destination for a void fall: the member lobby's location, else
-     * lobby 0's, else empty.
+     * Rescue destination for a void fall in the lobby world: the member
+     * lobby's location when it sits in the lobby world, else lobby 0's
+     * when it does, else the lobby world's own spawn. Never a game-world
+     * location. Empty only when the lobby world is not loaded.
      */
     public Optional<Location> lobbyRescueLocation(OptionalInt memberLobby) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        return LobbyWorldManager.selectRescueLocation(config.lobbyLocations(), memberLobby);
+        String lobbyWorld = lobbyWorlds.lobbyWorldName();
+        Optional<Location> configured = LobbyWorldManager.inLobbyWorld(
+                LobbyWorldManager.selectRescueLocation(config.lobbyLocations(), memberLobby), lobbyWorld);
+        if (configured.isPresent()) {
+            return configured;
+        }
+        World world = Bukkit.getWorld(lobbyWorld);
+        if (world != null) {
+            return Optional.of(world.getSpawnLocation());
+        }
+        return Optional.empty();
+    }
+
+    /** True when lobby-world-name collides with the game world name. */
+    public boolean lobbyWorldNameClashes() {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        return LobbyWorldManager.namesClash(lobbyWorlds.lobbyWorldName(), config.worldName());
+    }
+
+    /**
+     * Warns when lobby-world-name matches the game world name, in which
+     * case lobby world loading stays refused until it is renamed. True
+     * when clean. Runs on enable and reload.
+     */
+    public boolean validateLobbyWorldName() {
+        if (!lobbyWorldNameClashes()) {
+            return true;
+        }
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        plugin.logger().warning("world-engine.lobby-world-name '" + lobbyWorlds.lobbyWorldName()
+                + "' matches the game world '" + config.worldName()
+                + "'. Lobby world loading stays disabled until it is renamed.");
+        return false;
     }
 
     /** Surface center of a match cell, for end-exit routing. */

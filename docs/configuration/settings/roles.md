@@ -1,5 +1,18 @@
 # Roles
 
+Every player holds one role: `hunter` and `speedrunner` play the match,
+`spectator` watches it (always in spectator mode, announced and titled
+like everyone else), `afk` waits it out in the lobby untouched, and `none`
+means unassigned — the recruit pool Quick Start draws from. If a role
+change ever empties the hunters or the speedrunners mid-match, the other
+side wins immediately.
+
+Roles also mirror to vanilla scoreboard teams (`HUNTER`, `SPEEDRUNNER`,
+`SPECTATOR`; `none` and `afk` sit in no team), repaired on every role
+change and login, so datapacks and
+[custom modifiers](../modifiers.md#targeting-sides-with-selectors) can
+target sides with selectors like `@a[distance=..15,team=HUNTER]`.
+
 Under `settings.roles`, you can control how player roles are assigned and
 reset around the lifecycle of a match.
 
@@ -39,6 +52,38 @@ players are teleported to the match cell center together with the
 participants when a match starts, so they can spectate the match instead
 of waiting in the lobby. They return to the lobby when the match ends.
 When this setting is `false`, they are not teleported to the cell.
+
+# Match Leave Destination
+
+Under `settings.game-leave`, you decide where players go when they leave a
+running match, voluntarily or automatically:
+
+```yaml
+settings:
+  game-leave:
+    destination: SPECTATOR
+```
+
+`SPECTATOR` keeps them at the match as a watcher; `LOBBY` sends them back
+to their lobby as `NONE`. See [Joining and Leaving](../../commands.md#joining-and-leaving-a-running-match).
+
+# Anti-Spawn-Camp
+
+Under `settings.anti-spawn-camp`, a rolling kill limit punishes campers:
+by default, three kills by one attacker on the same victim within 120
+seconds triggers it. Every punishment is broadcast to the whole server.
+
+```yaml
+settings:
+  anti-spawn-camp:
+    enabled: true
+    kills: 3
+    window-seconds: 120.0
+    punishment: KILL
+```
+
+`KILL` slays the camper through a normal death; `GEAR-WIPE` instead clears
+their armor, offhand, and main hand.
 
 # Friendly Fire
 
@@ -141,5 +186,7 @@ settings:
 `on-game-end` refers to the period after a game ends, but where feedback 
 (like chat statistics) has not yet finished broadcasting. 
 
-`none-players` refers to players with the `NONE` role. This makes players
-who are not in a game immune to damage.
+`none-players` refers to players outside the match (`NONE`, `AFK`, and
+spectators). This makes players who are not in a game immune to damage.
+Command kills (`/kill`) still go through; only the pre-start window blocks
+those, to avoid glitches.

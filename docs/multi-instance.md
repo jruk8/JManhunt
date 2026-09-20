@@ -16,7 +16,7 @@ restarts.
 ```yaml
 lobbies:
   default-lobby-id: 0
-  join-teleports-to-lobby: false
+  join-teleports-to-lobby: true
   caps:
     speedrunner: -1
     hunter: -1
@@ -27,13 +27,18 @@ value to leave joining players lobby-less until they join one manually.
 `join-teleports-to-lobby`, when true, teleports players to their lobby
 location when they join it (see
 [Cells & Spawns](configuration/world-engine/cells-spawns.md#lobby-locations)).
+Pass `-notp` to skip that teleport for one join.
 
 Move players between lobbies with:
 
 ```text
-/manhunt lobby join <selector> <lobby-id> <role>
-/manhunt lobby leave <player> <lobby-id>
+/manhunt lobby join <selector> <lobby-id> [role]
+/manhunt lobby leave [selector]
 ```
+
+The join role defaults to `none`. Players logging in while a match runs
+but with nowhere to wait (world engine off, or no lobby set) skip the
+lobby and join the newest running match as spectators instead.
 
 Lobby ids run from `0` to `2147483647`. Unknown ids are created on join and
 empty lobbies are deleted on leave. New to this? `/manhunt worldengine tpto
@@ -63,13 +68,28 @@ removes already-queued players, and joining a running match ignores caps.
 Match ids are the incrementing numbers shown by `status all`. A match's
 world-engine cell index works as an alias wherever an id is accepted.
 
-## Joining a Running Match
+## Joining and Leaving a Running Match
 
-`/manhunt joingame <selector> <id> <role>` adds players to a live match as
-`hunter`, `speedrunner`, or `none`. Joiners move to the match's lobby, are
+`/manhunt game join <id> [role] [selector]` adds players to a live match,
+defaulting to `spectator`. Joiners move to the match's lobby, are
 teleported into its cell, and receive lives, statistics, and a compass.
-Players already in a live match are skipped, and matches in their end delay
-cannot be joined.
+Players already in a live match are skipped, and matches in their end
+delay cannot be joined.
+
+`/manhunt game leave [id] [selector]` removes them again. Living hunters
+and speedrunners confirm with a second run within 10 seconds, drop their
+gear, and land wherever `settings.game-leave.destination` points
+(`SPECTATOR` by default, `LOBBY` to return to the queue as `none`). If a
+role change ever leaves a side empty — a last leaver included — the other
+side wins immediately.
+
+## Match Area Enforcement
+
+A participant who leaves their cell, or who wanders into the lobby world
+mid-match, is removed from the match automatically and reset
+match-end-style, for themselves only. This is the backstop for servers
+running without borders; where borders are on, the rubber-band still
+brings stray players back instead.
 
 ## Borders
 

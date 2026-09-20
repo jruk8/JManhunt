@@ -33,7 +33,9 @@ world-engine:
 Prefer your own world instead? Set `world-engine.lobby-world-name` to its
 name, reload, and `tpto lobbyworld` takes you there without generating
 anything. Hop back to the game world any time with
-`/manhunt worldengine tpto gameworld`.
+`/manhunt worldengine tpto gameworld`. The lobby world name can never
+equal the game world name: a clash is refused with a warning until it is
+renamed.
 
 As your next step, it's recommended to set up **chunk pre-generation** for cells. This
 may sound complex, but it's really as simple as installing [Chunky](https://modrinth.com/plugin/chunky) or a similar plugin

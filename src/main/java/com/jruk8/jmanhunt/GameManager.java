@@ -21,6 +21,7 @@ import org.bukkit.Registry;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
@@ -189,6 +190,166 @@ public final class GameManager {
         return count;
     }
 
+    /**
+     * Ends a begun match whose hunter or speedrunner bucket hit zero through
+     * a role change. Deaths end matches on their own paths; this covers
+     * setplayer, joins, leaves, and removals.
+     */
+    public void finishIfBucketEmpty(GameInstance instance) {
+        if (!instance.begun() || instance.ending()) {
+            return;
+        }
+        bucketWinner(activeHunterCount(instance), activeRunnerCount(instance))
+                .ifPresent(winner -> finishLater(instance, winner));
+    }
+
+    /** Winner when a bucket is empty; empty when both sides stand. Pure for tests. */
+    static Optional<Role> bucketWinner(int hunterCount, int runnerCount) {
+        if (hunterCount == 0 && runnerCount == 0) {
+            return Optional.empty();
+        }
+        if (hunterCount == 0) {
+            return Optional.of(Role.SPEEDRUNNER);
+        }
+        if (runnerCount == 0) {
+            return Optional.of(Role.HUNTER);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Countdown marks for a time-limit win, in whole seconds remaining:
+     * 8h, 6h, 4h, 2h, 1h, 30m, 15m, 10m, 5m, 2m, 1m, 30s, 15s, 10s, 5-1s.
+     */
+    static final List<Long> TIME_ANNOUNCE_SECONDS = List.of(
+            28_800L, 21_600L, 14_400L, 7_200L, 3_600L, 1_800L, 900L, 600L,
+            300L, 120L, 60L, 30L, 15L, 10L, 5L, 4L, 3L, 2L, 1L);
+
+    /**
+     * Starts the time-limit win countdown for a match. With both sides'
+     * limits set, the earlier expiry wins (ties favor the speedrunners)
+     * and a console warning explains the pick. A single per-second task
+     * announces each threshold once and ends the match at zero.
+     */
+    private void scheduleTimeLimit(GameInstance instance, long currentMatchId) {
+        boolean runnerClock = winConditionEngine.isSurviveTimeEnabled();
+        boolean hunterClock = winConditionEngine.isHunterTimeLimitEnabled();
+        if (!runnerClock && !hunterClock) {
+            return;
+        }
+        double runnerSecs = winConditionEngine.surviveTimeSeconds();
+        double hunterSecs = winConditionEngine.hunterTimeLimitSeconds();
+        double limitSecs;
+        Role winner;
+        if (runnerClock && hunterClock) {
+            if (runnerSecs == hunterSecs) {
+                plugin.logger().warning("Both time-limit win conditions are " + runnerSecs
+                        + "s; favoring the speedrunners.");
+            } else {
+                plugin.logger().warning("Both time-limit win conditions are set (speedrunners "
+                        + runnerSecs + "s, hunters " + hunterSecs + "s); the earlier expiry wins.");
+            }
+            winner = timeLimitWinner(runnerSecs, hunterSecs);
+            limitSecs = Math.min(runnerSecs, hunterSecs);
+        } else if (runnerClock) {
+            winner = Role.SPEEDRUNNER;
+            limitSecs = runnerSecs;
+        } else {
+            winner = Role.HUNTER;
+            limitSecs = hunterSecs;
+        }
+        if (limitSecs <= 0.0) {
+            return;
+        }
+        long limitSecsWhole = (long) limitSecs;
+        long limitMillis = Math.round(limitSecs * 1000.0);
+        String winnerName = winner.displayName() + "s";
+        Role finalWinner = winner;
+        instance.setTimeLimitTask(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            if (instances.get(currentMatchId) != instance || !instance.active() || instance.ending()) {
+                cancelTimeLimit(instance);
+                return;
+            }
+            long elapsedMillis = System.currentTimeMillis() - instance.startedAtMillis();
+            long remainingSecs = Math.max(0L, (limitMillis - elapsedMillis) / 1000L);
+            if (remainingSecs > 0L) {
+                for (long mark : dueThresholds(limitSecsWhole, remainingSecs, instance.timeAnnounced())) {
+                    instance.timeAnnounced().add(mark);
+                    sendToInstance(instance, "game.time-left",
+                            Map.of("winner", winnerName, "time", DurationFormat.format(mark)));
+                }
+            } else {
+                cancelTimeLimit(instance);
+                finish(instance, finalWinner);
+            }
+        }, 20L, 20L));
+    }
+
+    /** Stops a match's time-limit countdown, if any. */
+    private void cancelTimeLimit(GameInstance instance) {
+        if (instance.timeLimitTask() != null) {
+            instance.timeLimitTask().cancel();
+            instance.setTimeLimitTask(null);
+        }
+    }
+
+    /**
+     * Thresholds to announce now: marks within the limit that the
+     * remaining time has reached and that are still unannounced, highest
+     * first. Pure for tests.
+     */
+    static List<Long> dueThresholds(long limitSecs, long remainingSecs, Set<Long> announced) {
+        List<Long> due = new ArrayList<>();
+        for (long mark : TIME_ANNOUNCE_SECONDS) {
+            if (mark <= limitSecs && mark >= remainingSecs && !announced.contains(mark)) {
+                due.add(mark);
+            }
+        }
+        return due;
+    }
+
+    /** Winner when both time limits run: earlier expiry wins, ties favor runners. Pure for tests. */
+    static Role timeLimitWinner(double runnerSecs, double hunterSecs) {
+        return runnerSecs <= hunterSecs ? Role.SPEEDRUNNER : Role.HUNTER;
+    }
+
+    /** Status text for the speedrunner win conditions: base plus enabled alternates. */
+    public String speedrunnerWinConditions() {
+        List<String> conditions = new ArrayList<>(List.of("eliminate all hunters"));
+        if (winConditionEngine.isExitEndEnabled()) {
+            conditions.add("credits screen");
+        }
+        if (winConditionEngine.isSurviveTimeEnabled()) {
+            conditions.add("survive " + DurationFormat.format((long) winConditionEngine.surviveTimeSeconds()));
+        }
+        if (winConditionEngine.isAcquireItemEnabled()) {
+            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.acquireItem()) + " acquired");
+        }
+        if (winConditionEngine.isReachAdvancementEnabled()) {
+            conditions.add("advancement " + winConditionEngine.reachAdvancement());
+        }
+        if (winConditionEngine.isKillMobEnabled()) {
+            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.killMob()) + " killed");
+        }
+        return String.join(", ", conditions);
+    }
+
+    /** Status text for the hunter win conditions: base plus enabled alternates. */
+    public String hunterWinConditions() {
+        List<String> conditions = new ArrayList<>(List.of("eliminate all speedrunners"));
+        if (winConditionEngine.isHunterTimeLimitEnabled()) {
+            conditions.add("time limit "
+                    + DurationFormat.format((long) winConditionEngine.hunterTimeLimitSeconds()));
+        }
+        if (winConditionEngine.isHunterAcquireItemEnabled()) {
+            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.hunterAcquireItem()) + " acquired");
+        }
+        if (winConditionEngine.isHunterKillMobEnabled()) {
+            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.hunterKillMob()) + " killed");
+        }
+        return String.join(", ", conditions);
+    }
+
     /** Sends a message to a match plus the console, never other matches. */
     public void sendToInstance(GameInstance instance, String key, Map<String, String> values) {
         Component rendered = messages.component(key, values);
@@ -318,6 +479,17 @@ public final class GameManager {
         for (UUID playerId : assignees) {
             instance.activate(playerId);
         }
+        // Watchers join the assignment too, so win titles, sounds, and
+        // broadcasts reach them like everyone else. Only SPECTATOR-role
+        // watchers are forced into spectator mode; NONEs keep lobby rules.
+        for (Player spectator : spectators) {
+            instance.activate(spectator.getUniqueId());
+            initMatchStats(currentMatchId, spectator);
+            playerStates.setLives(spectator.getUniqueId(), livesFor(role(spectator)));
+            if (role(spectator) == Role.SPECTATOR) {
+                spectator.setGameMode(GameMode.SPECTATOR);
+            }
+        }
         instances.put(currentMatchId, instance);
         // Apply the configured default state and custom start commands before
         // giving role equipment. In particular, default clear-inventory must
@@ -344,21 +516,13 @@ public final class GameManager {
         if (!getSetting("settings.start-on-speedrunner-damage.enabled")) {
             beginHeadstarts(instance);
         }
-        // Survive time win condition: speedrunners win if they survive long enough.
-        if (winConditionEngine.isSurviveTimeEnabled()) {
-            long ticks = Math.round(winConditionEngine.surviveTimeSeconds() * 20.0);
-            instance.setSurviveTimeTask(Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (instances.get(currentMatchId) == instance && instance.active()) {
-                    finish(instance, Role.SPEEDRUNNER);
-                }
-            }, ticks));
-        }
+        scheduleTimeLimit(instance, currentMatchId);
         sendToInstance(instance, "manhunt.start-success", Map.of());
         gameStartListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchStartEvent(currentMatchId, lobbyId, matchCell));
         playInstanceNeutral(instance);
         showStatusToInstance(instance, players);
-        announceRoles(players);
+        announceRoles(players, spectators);
         // load waiting delay configuration (enforces a 5 second minimum;
         // -1 waits indefinitely)
         instance.setWaitingDelayConfigured(WaitingReminder.clampDelay(
@@ -388,6 +552,7 @@ public final class GameManager {
             }
             lobbies.setLobby(playerId, instance.originLobbyId());
             playerStates.setRole(player, role);
+            plugin.roleTeams().sync(player);
             instance.activate(playerId);
             initMatchStats(instance.matchId(), player);
             if (role == Role.SPEEDRUNNER) {
@@ -401,7 +566,8 @@ public final class GameManager {
             if (role.isParticipant()) {
                 compass.giveCompass(player);
                 compass.refreshCompass(player);
-            } else if (plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+            } else if (role == Role.SPECTATOR
+                    || plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
                 player.setGameMode(GameMode.SPECTATOR);
             }
             if (!instance.begun()
@@ -417,11 +583,179 @@ public final class GameManager {
             }
             Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(
                     instance.matchId(), playerId, roleToPlayerRole(role)));
-            sendToInstance(instance, "manhunt.joingame-announce",
+            sendToInstance(instance, "game.join-announce",
                     Map.of("player", player.getName(), "role", role.displayName()));
             added++;
         }
         return added;
+    }
+
+    /** Where a match leaver goes, from settings.game-leave.destination. */
+    public enum LeaveDestination {
+        SPECTATOR,
+        LOBBY;
+
+        /** Parses case-insensitively; unknown values fall back to SPECTATOR. */
+        public static LeaveDestination parse(String raw) {
+            if (raw != null && raw.trim().equalsIgnoreCase("LOBBY")) {
+                return LOBBY;
+            }
+            return SPECTATOR;
+        }
+    }
+
+    /** Configured leave destination, SPECTATOR by default. */
+    public LeaveDestination leaveDestination() {
+        return LeaveDestination.parse(plugin.getConfig().getString("settings.game-leave.destination", "SPECTATOR"));
+    }
+
+    /**
+     * Removes players from a match: deactivates them, clears their match
+     * state, and moves them to the configured destination. Begun-match
+     * participants drop their gear when {@code dropGear} is true (voluntary
+     * leave) or are wiped match-end style when false (auto-leave); pre-start
+     * leavers keep everything. Hunter and speedrunner departures are
+     * announced to the lobby with the remaining role count. Returns the
+     * number removed. A last leaver ends the match for the other side.
+     */
+    public int leaveMatch(GameInstance instance, List<Player> leavers, boolean dropGear) {
+        if (!instance.active()) {
+            return 0;
+        }
+        LeaveDestination destination = leaveDestination();
+        int removed = 0;
+        List<Role> leftRoles = new ArrayList<>();
+        List<String> leftNames = new ArrayList<>();
+        for (Player player : leavers) {
+            UUID playerId = player.getUniqueId();
+            if (!instance.isActive(playerId)) {
+                continue;
+            }
+            Role before = role(player);
+            if (instance.begun() && before.isParticipant()) {
+                if (dropGear) {
+                    dropAllGear(player);
+                    stateCommands.resetVitals(player);
+                } else {
+                    stateCommands.resetPlayer(player);
+                }
+            }
+            playerStates.setSpeedrunnerAlive(playerId, false);
+            instance.deactivate(playerId);
+            playerStates.clearMatchFor(List.of(playerId));
+            compass.removeCompasses(player);
+            if (destination == LeaveDestination.LOBBY) {
+                playerStates.setRole(player, Role.NONE);
+                worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
+                worldEngine.setSpawnToLobby(List.of(player), instance.originLobbyId());
+                if (player.getGameMode() == GameMode.SPECTATOR) {
+                    player.setGameMode(GameMode.SURVIVAL);
+                }
+            } else {
+                playerStates.setRole(player, Role.SPECTATOR);
+                player.setGameMode(GameMode.SPECTATOR);
+                if (!dropGear && instance.cellIndex().isPresent()) {
+                    // Auto-leave pulled them out of bounds: put the watcher
+                    // back in the cell instead of stranding them outside it.
+                    worldEngine.teleportJoinersToCell(List.of(player), instance.cellIndex().getAsLong());
+                }
+            }
+            plugin.roleTeams().sync(player);
+            player.sendMessage(messages.component("game.leave-success", Map.of()));
+            leftRoles.add(before);
+            leftNames.add(player.getName());
+            removed++;
+        }
+        for (int index = 0; index < leftRoles.size(); index++) {
+            Role before = leftRoles.get(index);
+            if (before == Role.HUNTER) {
+                sendToLobby(instance.originLobbyId(), "game.hunter-left",
+                        Map.of("player", leftNames.get(index),
+                                "remaining", String.valueOf(activeHunterCount(instance))));
+            } else if (before == Role.SPEEDRUNNER) {
+                sendToLobby(instance.originLobbyId(), "game.speedrunner-left",
+                        Map.of("player", leftNames.get(index),
+                                "remaining", String.valueOf(activeRunnerCount(instance))));
+            }
+        }
+        if (removed > 0) {
+            finishIfBucketEmpty(instance);
+        }
+        return removed;
+    }
+
+    /**
+     * Removes a begun-match participant standing outside their cell or in
+     * the lobby world, with a reason notice. The End is skipped like the
+     * border enforcement, and while borders are enabled they confine
+     * instead. Returns true when the player was removed.
+     */
+    public boolean autoLeaveIfOutside(Player player, Location at) {
+        Optional<GameInstance> match = instanceOf(player.getUniqueId());
+        if (match.isEmpty() || !match.get().begun() || match.get().ending()) {
+            return false;
+        }
+        if (!playerStates.role(player).isParticipant()) {
+            return false;
+        }
+        GameInstance instance = match.get();
+        if (at.getWorld() != null && at.getWorld().getName().equals(lobbyWorldName())) {
+            player.sendMessage(messages.component("game.auto-left-lobby-world", Map.of()));
+            leaveMatch(instance, List.of(player), false);
+            return true;
+        }
+        if (at.getWorld() == null) {
+            return false;
+        }
+        World.Environment environment = at.getWorld().getEnvironment();
+        if (environment != World.Environment.NORMAL && environment != World.Environment.NETHER) {
+            return false;
+        }
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        if (!config.enabled() || instance.cellIndex().isEmpty()) {
+            return false;
+        }
+        if (config.worldBorderEnabled()) {
+            // Borders confine instead: the rubber-band brings them back.
+            return false;
+        }
+        boolean nether = environment == World.Environment.NETHER;
+        CellBounds bounds = CellBounds.forCell(instance.cellIndex().getAsLong(),
+                config.cellSize(), config.startBorderDiameter(), !instance.begun());
+        if (bounds.contains(at.getX(), at.getZ(), nether)) {
+            return false;
+        }
+        player.sendMessage(messages.component("game.auto-left-bounds", Map.of()));
+        leaveMatch(instance, List.of(player), false);
+        return true;
+    }
+
+    /** Drops a player's full gear at their feet, death style. */
+    private static void dropAllGear(Player player) {
+        Location at = player.getLocation();
+        World world = at.getWorld();
+        if (world == null) {
+            return;
+        }
+        for (ItemStack item : player.getInventory().getContents()) {
+            dropStack(world, at, item);
+        }
+        for (ItemStack item : player.getInventory().getArmorContents()) {
+            dropStack(world, at, item);
+        }
+        dropStack(world, at, player.getInventory().getItemInOffHand());
+        player.getInventory().clear();
+        player.getInventory().setHelmet(null);
+        player.getInventory().setChestplate(null);
+        player.getInventory().setLeggings(null);
+        player.getInventory().setBoots(null);
+        player.getInventory().setItemInOffHand(null);
+    }
+
+    private static void dropStack(World world, Location at, ItemStack item) {
+        if (item != null && !item.getType().isAir()) {
+            world.dropItemNaturally(at, item);
+        }
     }
 
     /** Fresh per-match stat row for one participant. */
@@ -435,9 +769,13 @@ public final class GameManager {
 
     /** Configured starting lives for a role. -1 means unlimited. */
     private int livesFor(Role role) {
-        return role == Role.HUNTER
-                ? plugin.getConfig().getInt("settings.hunter-respawn.lives.hunter", -1)
-                : plugin.getConfig().getInt("settings.hunter-respawn.lives.speedrunner", 1);
+        if (role == Role.HUNTER) {
+            return plugin.getConfig().getInt("settings.hunter-respawn.lives.hunter", -1);
+        }
+        if (role == Role.SPEEDRUNNER) {
+            return plugin.getConfig().getInt("settings.hunter-respawn.lives.speedrunner", 1);
+        }
+        return -1;
     }
 
     /**
@@ -448,7 +786,7 @@ public final class GameManager {
      * announcement: when both chat and title are disabled, nothing plays at
      * all.
      */
-    private void announceRoles(List<Player> players) {
+    private void announceRoles(List<Player> players, List<Player> spectators) {
         boolean chat = configService.getBoolean("settings.announce-roles.chat.enabled", true);
         boolean title = configService.getBoolean("settings.announce-roles.title.enabled", true);
         if (!chat && !title) {
@@ -476,6 +814,21 @@ public final class GameManager {
                         messages.component(subtitleKey), times));
             }
             sounds.playSound(player, playerRole == Role.HUNTER ? "announce.hunter" : "announce.speedrunner");
+        }
+        for (Player spectator : spectators) {
+            if (role(spectator) != Role.SPECTATOR) {
+                continue;
+            }
+            Map<String, String> values = Map.of("role", Role.SPECTATOR.displayName());
+            if (chat) {
+                spectator.sendMessage(messages.component("manhunt.role-announce-chat", values));
+            }
+            if (title) {
+                spectator.showTitle(Title.title(
+                        messages.component("manhunt.role-announce-title", values),
+                        messages.component("manhunt.role-announce-subtitle-spectator"), times));
+            }
+            sounds.playSound(spectator, "announce.spectator");
         }
     }
 
@@ -513,10 +866,7 @@ public final class GameManager {
         Bukkit.getPluginManager().callEvent(new JMatchEndEvent(instance.matchId(), roleToPlayerRole(winner)));
         cancelWaitingTasks(instance);
         cancelHeadstarts(instance);
-        if (instance.surviveTimeTask() != null) {
-            instance.surviveTimeTask().cancel();
-            instance.setSurviveTimeTask(null);
-        }
+        cancelTimeLimit(instance);
 
         String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
         sendToInstanceComponent(instance, messages.renderLiteral(getWinMessage(winner), Map.of()));
@@ -576,6 +926,9 @@ public final class GameManager {
         if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
             playerStates.resetRoles(instance.assignedPlayerIds());
         }
+        // A finished match fields no sides, even when roles are kept.
+        plugin.roleTeams().removeAll(onlineAssignedPlayers(instance));
+        plugin.spawnCamp().clearMatch(teardownId);
         instance.setActive(false);
         playerStates.clearMatchFor(instance.assignedPlayerIds());
         stats.clearMatch(teardownId);
@@ -614,10 +967,7 @@ public final class GameManager {
         Bukkit.getPluginManager().callEvent(new JMatchCancelEvent(instance.matchId()));
         cancelWaitingTasks(instance);
         cancelHeadstarts(instance);
-        if (instance.surviveTimeTask() != null) {
-            instance.surviveTimeTask().cancel();
-            instance.setSurviveTimeTask(null);
-        }
+        cancelTimeLimit(instance);
 
         sendToInstance(instance, "game.cancelled", Map.of());
         for (Player player : onlineAssignedPlayers(instance)) {
@@ -1064,19 +1414,23 @@ public final class GameManager {
 
     private Role role(Player player) { return playerStates.role(player); }
 
-    /** Online lobby members with role NONE: match spectators, never AFK players. */
+    /** Online lobby members watching without playing: NONE and SPECTATOR, never AFK. */
     private List<Player> lobbyNonePlayers(Lobby lobby) {
         return Bukkit.getOnlinePlayers().stream()
-                .filter(p -> role(p) == Role.NONE && lobby.contains(p.getUniqueId()))
+                .filter(p -> isWatching(role(p)) && lobby.contains(p.getUniqueId()))
                 .map(p -> (Player) p).toList();
     }
 
-    /** Online match assignees with role NONE, including eliminated hunters. */
+    /** Online match assignees watching without playing, including eliminated hunters. */
     private List<Player> instanceNonePlayers(GameInstance instance) {
         Set<UUID> assigned = instance.assignedPlayerIds();
         return Bukkit.getOnlinePlayers().stream()
-                .filter(p -> role(p) == Role.NONE && assigned.contains(p.getUniqueId()))
+                .filter(p -> isWatching(role(p)) && assigned.contains(p.getUniqueId()))
                 .map(p -> (Player) p).toList();
+    }
+
+    private static boolean isWatching(Role role) {
+        return role == Role.NONE || role == Role.SPECTATOR;
     }
 
     /** Debug label for a match cell, "none" when the engine is off. */
@@ -1168,8 +1522,50 @@ public final class GameManager {
     /** Configured lobby world name. */
     public String lobbyWorldName() { return worldEngine.lobbyWorldName(); }
 
+    /** True when newcomers have a lobby to wait in. */
+    public boolean hasLobbyLocation(int lobbyId) { return worldEngine.hasLobbyLocation(lobbyId); }
+
+    /**
+     * Parks a lobby-less newcomer in the newest running match as a
+     * spectator. Cell matches place them via the join spread; cell-less
+     * matches fall back to the game world spawn. False when no match runs.
+     */
+    public boolean joinLeastTimeMatch(Player player) {
+        Optional<GameInstance> target = leastTimeMatch(liveInstances());
+        if (target.isEmpty()) {
+            return false;
+        }
+        GameInstance instance = target.get();
+        joinPlayers(instance, List.of(player), Role.SPECTATOR);
+        if (instance.cellIndex().isEmpty()) {
+            teleportToGameWorldSpawn(player);
+        }
+        return true;
+    }
+
+    /** Newest live match (running the least time); empty when none runs. Pure for tests. */
+    static Optional<GameInstance> leastTimeMatch(java.util.Collection<GameInstance> instances) {
+        return instances.stream()
+                .filter(instance -> instance.active() && !instance.ending())
+                .max(Comparator.comparingLong(GameInstance::startedAtMillis));
+    }
+
+    private void teleportToGameWorldSpawn(Player player) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        World world = Bukkit.getWorld(config.worldName());
+        Location spawn = world != null ? world.getSpawnLocation() : player.getWorld().getSpawnLocation();
+        player.teleport(spawn);
+        player.setRespawnLocation(spawn, true);
+    }
+
     /** True when the lobby world is loaded or has a folder waiting. */
     public boolean lobbyWorldExists() { return worldEngine.lobbyWorldExists(); }
+
+    /** True when lobby-world-name collides with the game world name. */
+    public boolean lobbyWorldNameClashes() { return worldEngine.lobbyWorldNameClashes(); }
+
+    /** Warns on a lobby/game world name clash. True when clean. */
+    public boolean validateLobbyWorldName() { return worldEngine.validateLobbyWorldName(); }
 
     /**
      * Arms or confirms lobby-world generation for one sender key. True only
@@ -1195,6 +1591,7 @@ public final class GameManager {
             case SPEEDRUNNER -> com.jruk8.jmanhunt.api.PlayerRole.SPEEDRUNNER;
             case AFK -> com.jruk8.jmanhunt.api.PlayerRole.AFK;
             case NONE -> com.jruk8.jmanhunt.api.PlayerRole.NONE;
+            case SPECTATOR -> com.jruk8.jmanhunt.api.PlayerRole.SPECTATOR;
         };
     }
 
@@ -1221,11 +1618,12 @@ public final class GameManager {
         Optional<Lobby> lobby = lobbies.get(lobbyId);
         if (lobby.isEmpty()) return new QuickStartOutcome(false, Set.of());
         Lobby resolved = lobby.get();
-        // Every online non-AFK lobby member is convertible: NONE players are
-        // assigned fresh, while existing hunters and speedrunners keep their
-        // roles unless conversion is needed. AFK players are never touched.
+        // Every online non-AFK, non-spectator lobby member is convertible:
+        // NONE players are assigned fresh, while existing hunters and
+        // speedrunners keep their roles unless conversion is needed. AFK
+        // players and spectators are never touched.
         List<Player> pool = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> role(p) != Role.AFK)
+                .filter(p -> role(p) != Role.AFK && role(p) != Role.SPECTATOR)
                 .filter(p -> resolved.contains(p.getUniqueId()))
                 .map(p -> (Player) p)
                 .toList();
@@ -1252,6 +1650,7 @@ public final class GameManager {
                     continue;
                 }
                 playerStates.setRole(player, want);
+                plugin.roleTeams().sync(player);
                 if (want == Role.SPEEDRUNNER) {
                     runners++;
                 }
@@ -1303,7 +1702,10 @@ public final class GameManager {
                 capped.add(Role.SPEEDRUNNER);
             } else {
                 converted = pickConvertible(pool, null);
-                if (converted != null) playerStates.setRole(converted, Role.SPEEDRUNNER);
+                if (converted != null) {
+                    playerStates.setRole(converted, Role.SPEEDRUNNER);
+                    plugin.roleTeams().sync(converted);
+                }
             }
         }
         if (!hasHunter) {
@@ -1311,7 +1713,10 @@ public final class GameManager {
                 capped.add(Role.HUNTER);
             } else {
                 Player hunter = pickConvertible(pool, converted);
-                if (hunter != null) playerStates.setRole(hunter, Role.HUNTER);
+                if (hunter != null) {
+                    playerStates.setRole(hunter, Role.HUNTER);
+                    plugin.roleTeams().sync(hunter);
+                }
             }
         }
         for (Player p : pool) {
@@ -1323,6 +1728,7 @@ public final class GameManager {
                 continue;
             }
             playerStates.setRole(p, Role.HUNTER);
+            plugin.roleTeams().sync(p);
         }
     }
 

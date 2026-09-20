@@ -46,11 +46,14 @@ public final class JManhuntPlugin extends JavaPlugin {
     private JManhuntLogger logger;
     private DebugService debugService;
     private LobbyService lobbyService;
+    private RoleTeamService roleTeams;
+    private SpawnCampService spawnCamp;
     private final List<SettingsListener> settings = new ArrayList<>();
 
     @Override
     public void onEnable() {
         messages = new MessageService();
+        spawnCamp = new SpawnCampService(this, messages);
         debugService = new DebugService();
         logger = new JManhuntLogger(getLogger(), debugService, messages, BukkitDebugSink.INSTANCE);
         lobbyService = new LobbyService(this);
@@ -58,6 +61,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         debugService.resetToDefaults(getConfig().getBoolean("debug.enabled", false));
 
         playerStates = new PlayerStateStore();
+        roleTeams = new RoleTeamService(playerStates);
         setupStatistics();
         setupEngineState();
         stats = new StatsManager(this, messages, statistics);
@@ -92,6 +96,20 @@ public final class JManhuntPlugin extends JavaPlugin {
             var metricsBootstrap = new MetricsBootstrap(this);
             metricsBootstrap.register();
         }
+        // Scoreboard teams do not survive restarts: recreate them and repair
+        // every online player's membership from their current role.
+        roleTeams.syncAll();
+        game.validateLobbyWorldName();
+    }
+
+    /** Scoreboard-team mirror of manhunt roles. */
+    public RoleTeamService roleTeams() {
+        return roleTeams;
+    }
+
+    /** Rolling anti-spawn-camp guard. */
+    public SpawnCampService spawnCamp() {
+        return spawnCamp;
     }
 
     private void setupStatistics() {
@@ -137,7 +155,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         settings.add(piglinBarter);
 
         ManhuntCommand command = new ManhuntCommand(
-                this, messages, configService, sounds, playerStates, game, compass, worldEngine, debugService,
+                this, messages, configService, sounds, playerStates, game, worldEngine, debugService,
                 lobbyService);
         getCommand("manhunt").setExecutor(command);
         getCommand("manhunt").setTabCompleter(command);

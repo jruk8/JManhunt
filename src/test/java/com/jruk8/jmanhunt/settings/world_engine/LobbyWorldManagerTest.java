@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.settings.world_engine;
 
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 
@@ -12,6 +13,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class LobbyWorldManagerTest {
 
@@ -63,6 +66,34 @@ class LobbyWorldManagerTest {
 
         config.set("world-engine.lobby-locations.0.world", "jmh-lobby");
         assertFalse(LobbyWorldManager.missingLobbyZero(config));
+    }
+
+    @Test
+    void namesClashIgnoresCase() {
+        assertTrue(LobbyWorldManager.namesClash("world", "world"));
+        assertTrue(LobbyWorldManager.namesClash("World", "world"));
+        assertFalse(LobbyWorldManager.namesClash("jmh-lobby", "world"));
+        assertFalse(LobbyWorldManager.namesClash(null, "world"));
+        assertFalse(LobbyWorldManager.namesClash("jmh-lobby", null));
+    }
+
+    @Test
+    void rescueStaysInLobbyWorld() {
+        World lobbyWorld = mock(World.class);
+        when(lobbyWorld.getName()).thenReturn("jmh-lobby");
+        World gameWorld = mock(World.class);
+        when(gameWorld.getName()).thenReturn("world");
+
+        Location lobbySpot = new Location(lobbyWorld, 0.5, 65.0, 0.5);
+        Location gameSpot = new Location(gameWorld, 1.0, 2.0, 3.0);
+        assertEquals(Optional.of(lobbySpot),
+                LobbyWorldManager.inLobbyWorld(Optional.of(lobbySpot), "jmh-lobby"));
+        assertEquals(Optional.empty(),
+                LobbyWorldManager.inLobbyWorld(Optional.of(gameSpot), "jmh-lobby"));
+        assertEquals(Optional.empty(),
+                LobbyWorldManager.inLobbyWorld(Optional.of(new Location(null, 0, 0, 0)), "jmh-lobby"));
+        assertEquals(Optional.empty(),
+                LobbyWorldManager.inLobbyWorld(Optional.empty(), "jmh-lobby"));
     }
 
     @Test

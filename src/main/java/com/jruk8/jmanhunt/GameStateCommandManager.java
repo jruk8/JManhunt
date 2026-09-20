@@ -135,7 +135,7 @@ public final class GameStateCommandManager {
         }
     }
 
-    /** Cancels one match's running interval modifier tasks. */
+    /** Cancels one match's running interval modifier tasks, including delayed firings. */
     public void cancelIntervalModifiers(long matchId) {
         IntervalEngine engine = engine(matchId);
         engine.generation++;
@@ -143,6 +143,10 @@ public final class GameStateCommandManager {
             task.cancel();
         }
         engine.tasks.clear();
+        for (BukkitTask task : engine.delayed) {
+            task.cancel();
+        }
+        engine.delayed.clear();
         engine.executors.clear();
         engine.consoleChained.clear();
         intervalEngines.remove(matchId);
@@ -318,15 +322,29 @@ public final class GameStateCommandManager {
             return;
         }
         IntervalEngine engine = engine(matchId);
+        long generation = engine.generation;
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
             try {
-                dispatch.run();
+                // A restart or teardown between scheduling and firing voids
+                // the dispatch: stale interval output never leaks into a
+                // new match.
+                if (!isStaleDispatch(generation, engine.generation, intervalEngines.get(matchId) == engine)) {
+                    dispatch.run();
+                }
             } finally {
                 engine.delayed.remove(ref.get());
             }
         }, delay));
         engine.delayed.add(ref.get());
+    }
+
+    /**
+     * True when a delayed dispatch must not fire: its engine restarted
+     * (new generation) or was torn down. Pure for tests.
+     */
+    static boolean isStaleDispatch(long capturedGeneration, long currentGeneration, boolean engineAlive) {
+        return capturedGeneration != currentGeneration || !engineAlive;
     }
 
     /**
@@ -482,7 +500,7 @@ public final class GameStateCommandManager {
         if (!plugin.getConfig().getBoolean("gamestate-commands.default-commands.enabled", true)) return;
         String path = "gamestate-commands.default-commands.";
         if (plugin.getConfig().getBoolean(path + "reset-players-stats", false)) {
-            participants.forEach(this::resetPlayerStats);
+            participants.forEach(this::resetPlayer);
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
             boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true);
@@ -583,15 +601,35 @@ public final class GameStateCommandManager {
         }
     }
 
-    private void resetPlayerStats(Player player) {
-        player.getInventory().clear();
+    /**
+     * Full match-end style wipe for one player: inventory, vitals, and
+     * advancements. Used by auto-leave so a removed player restarts clean.
+     */
+    public void resetPlayer(Player player) {
+        resetPlayerStats(player, true, true);
+    }
+
+    /**
+     * Vitals-only reset for one player: no inventory clear, no advancement
+     * wipe. Used by voluntary leave after the leaver's gear has dropped.
+     */
+    public void resetVitals(Player player) {
+        resetPlayerStats(player, false, false);
+    }
+
+    private void resetPlayerStats(Player player, boolean clearInventory, boolean wipeAdvancements) {
+        if (clearInventory) {
+            player.getInventory().clear();
+        }
         player.setLevel(0);
         player.setExp(0.0f);
         player.clearActivePotionEffects();
         player.getAttribute(Attribute.MAX_HEALTH).setBaseValue(20.0);
         player.setHealth(20.0);
         player.setFoodLevel(20);
-        clearAdvancements(player);
+        if (wipeAdvancements) {
+            clearAdvancements(player);
+        }
     }
 
     private void clearAdvancements(Player player) {

@@ -125,6 +125,7 @@ public final class JManhuntApiImpl implements JManhuntApi {
             case SPEEDRUNNER -> PlayerRole.SPEEDRUNNER;
             case AFK -> PlayerRole.AFK;
             case NONE -> PlayerRole.NONE;
+            case SPECTATOR -> PlayerRole.SPECTATOR;
         };
     }
 }

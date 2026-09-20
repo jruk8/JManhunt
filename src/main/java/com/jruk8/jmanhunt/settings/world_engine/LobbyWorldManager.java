@@ -60,6 +60,12 @@ public final class LobbyWorldManager {
         return plugin.getConfig().getString("world-engine.lobby-world-name", "jmh-lobby");
     }
 
+    /** True when the lobby world name collides with the game world name. Pure for tests. */
+    public static boolean namesClash(String lobbyWorldName, String gameWorldName) {
+        return lobbyWorldName != null && gameWorldName != null
+                && lobbyWorldName.equalsIgnoreCase(gameWorldName);
+    }
+
     /** True when a world with the lobby name is loaded or has a folder waiting. */
     public boolean lobbyWorldExists() {
         String name = lobbyWorldName();
@@ -95,6 +101,11 @@ public final class LobbyWorldManager {
      */
     public Optional<LobbyWorld> ensureLobbyWorld() {
         String name = lobbyWorldName();
+        if (namesClash(name, plugin.getConfig().getString("world-engine.world-name", "world"))) {
+            plugin.logger().warning("Refusing to load lobby world '" + name
+                    + "': it matches the game world. Rename world-engine.lobby-world-name.");
+            return Optional.empty();
+        }
         World loaded = Bukkit.getWorld(name);
         if (loaded != null) {
             return Optional.of(new LobbyWorld(loaded, false, false));
@@ -141,6 +152,15 @@ public final class LobbyWorldManager {
     /** True when no lobby 0 location is configured. Pure for tests. */
     static boolean missingLobbyZero(FileConfiguration config) {
         return !config.contains("world-engine.lobby-locations.0");
+    }
+
+    /**
+     * Keeps a rescue target only when it sits in the lobby world, so void
+     * rescue never strands a player in the game world. Pure for tests.
+     */
+    static Optional<Location> inLobbyWorld(Optional<Location> target, String lobbyWorldName) {
+        return target.filter(location -> location.getWorld() != null
+                && location.getWorld().getName().equals(lobbyWorldName));
     }
 
     private void pruneExpired() {

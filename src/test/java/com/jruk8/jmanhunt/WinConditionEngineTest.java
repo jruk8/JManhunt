@@ -111,4 +111,63 @@ class WinConditionEngineTest {
         assertTrue(engine.isSurviveTimeEnabled());
         assertEquals(500.0, engine.surviveTimeSeconds());
     }
+
+    @Test
+    void killMobDisabledByDefault() {
+        WinConditionEngine engine = engine(new YamlConfiguration());
+        assertFalse(engine.isKillMobEnabled());
+        assertEquals("minecraft:ender_dragon", engine.killMob());
+    }
+
+    @Test
+    void killMobConfigurable() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("settings.win-conditions.killMob.enabled", true);
+        config.set("settings.win-conditions.killMob.mob", "minecraft:wither");
+        WinConditionEngine engine = engine(config);
+        assertTrue(engine.isKillMobEnabled());
+        assertEquals("minecraft:wither", engine.killMob());
+    }
+
+    @Test
+    void hunterConditionsDisabledByDefault() {
+        WinConditionEngine engine = engine(new YamlConfiguration());
+        assertFalse(engine.isHunterTimeLimitEnabled());
+        assertEquals(3600.0, engine.hunterTimeLimitSeconds());
+        assertFalse(engine.isHunterAcquireItemEnabled());
+        assertEquals("minecraft:netherite_ingot", engine.hunterAcquireItem());
+        assertFalse(engine.isHunterKillMobEnabled());
+        assertEquals("minecraft:ender_dragon", engine.hunterKillMob());
+    }
+
+    @Test
+    void hunterConditionsConfigurable() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("settings.win-conditions.hunterTimeLimit.enabled", true);
+        config.set("settings.win-conditions.hunterTimeLimit.time", 600.0);
+        config.set("settings.win-conditions.hunterAcquireItem.enabled", true);
+        config.set("settings.win-conditions.hunterKillMob.enabled", true);
+        config.set("settings.win-conditions.hunterKillMob.mob", "minecraft:warden");
+        WinConditionEngine engine = engine(config);
+        assertTrue(engine.isHunterTimeLimitEnabled());
+        assertEquals(600.0, engine.hunterTimeLimitSeconds());
+        assertTrue(engine.isHunterAcquireItemEnabled());
+        assertTrue(engine.isHunterKillMobEnabled());
+        assertEquals("minecraft:warden", engine.hunterKillMob());
+    }
+
+    @Test
+    void prettyKeyStripsNamespaceAndFormats() {
+        assertEquals("ender dragon", WinConditionEngine.prettyKey("minecraft:ender_dragon"));
+        assertEquals("netherite ingot", WinConditionEngine.prettyKey("minecraft:netherite_ingot"));
+        assertEquals("story enter the nether",
+                WinConditionEngine.prettyKey("minecraft:story/enter_the_nether"));
+        assertEquals("netherite ingot", WinConditionEngine.prettyKey("netherite_ingot"));
+    }
+
+    @Test
+    void prettyKeyFallsBackOnBlank() {
+        assertEquals("?", WinConditionEngine.prettyKey(null));
+        assertEquals("?", WinConditionEngine.prettyKey("   "));
+    }
 }

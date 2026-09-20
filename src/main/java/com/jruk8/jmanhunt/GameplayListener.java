@@ -79,6 +79,8 @@ public final class GameplayListener implements Listener {
     @EventHandler public void onJoin(PlayerJoinEvent event) {
         var player = event.getPlayer();
         playerStates.resetRolesIfAbsent(player);
+        // Repair scoreboard teams in case roles and teams drifted apart.
+        plugin.roleTeams().sync(player);
         lobbies.assignDefault(player.getUniqueId());
 
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
@@ -96,11 +98,21 @@ public final class GameplayListener implements Listener {
             // Their lobby has a running match they are not part of (a
             // newcomer or an eliminated player): wait in the lobby as a
             // spectator. Preserve the AFK role; only reset the rest to NONE.
-            if (playerStates.role(player) != Role.AFK) {
-                playerStates.setRole(player.getUniqueId(), Role.NONE);
-            }
-            if (config.getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
-                player.setGameMode(GameMode.SPECTATOR);
+            // With nowhere to wait (engine off or no lobby set), they join
+            // the newest running match as a spectator instead.
+            if (playerStates.role(player) != Role.AFK && !game.hasLobbyLocation(lobbyId)) {
+                if (!game.joinLeastTimeMatch(player)) {
+                    playerStates.setRole(player.getUniqueId(), Role.NONE);
+                    plugin.roleTeams().sync(player);
+                }
+            } else {
+                if (playerStates.role(player) != Role.AFK) {
+                    playerStates.setRole(player.getUniqueId(), Role.NONE);
+                    plugin.roleTeams().sync(player);
+                }
+                if (config.getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+                    player.setGameMode(GameMode.SPECTATOR);
+                }
             }
         }
         // Everyone else keeps their queued role and is sent to their lobby.
@@ -111,6 +123,7 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        plugin.roleTeams().remove(player);
         int lobbyId = lobbyIdFor(player.getUniqueId());
         lobbies.remove(player.getUniqueId());
         if (config.getBoolean("settings.roles.reset-on-leave.enabled", true)
@@ -213,6 +226,7 @@ public final class GameplayListener implements Listener {
                 // Out of lives: eliminate permanently.
                 game.sendToInstance(instance, "game.hunter-out-of-lives", Map.of());
                 playerStates.setRole(player.getUniqueId(), Role.NONE);
+                plugin.roleTeams().sync(player);
                 instance.deactivate(player.getUniqueId());
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     player.setGameMode(GameMode.SPECTATOR);
@@ -298,26 +312,34 @@ public final class GameplayListener implements Listener {
         if (match.isPresent() && playerStates.role(player).isParticipant() && player.getGameMode() != GameMode.SPECTATOR) {
             playerStates.recordLastSeen(player, event.getTo());
         }
-        if (winConditionEngine.isExitEndEnabled()
+        boolean exitWin = winConditionEngine.isExitEndEnabled()
                 && match.isPresent() && match.get().begun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
                 && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL
                 && event.getFrom().getWorld() != null
                 && event.getFrom().getWorld().getEnvironment() == World.Environment.THE_END
                 && event.getTo() != null && event.getTo().getWorld() != null
-                && event.getTo().getWorld().getEnvironment() == World.Environment.NORMAL) {
+                && event.getTo().getWorld().getEnvironment() == World.Environment.NORMAL;
+        if (exitWin) {
+            // The winner lands outside the cell: skip auto-leave for this hop.
             game.finishLater(match.get(), Role.SPEEDRUNNER);
+        } else if (event.getTo() != null) {
+            game.autoLeaveIfOutside(player, event.getTo());
         }
     }
     @EventHandler public void onWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
-        if (winConditionEngine.isExitEndEnabled()
+        boolean exitWin = winConditionEngine.isExitEndEnabled()
                 && match.isPresent() && match.get().begun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
                 && event.getFrom().getEnvironment() == World.Environment.THE_END
-                && player.getWorld().getEnvironment() == World.Environment.NORMAL) {
+                && player.getWorld().getEnvironment() == World.Environment.NORMAL;
+        if (exitWin) {
+            // The winner lands outside the cell: skip auto-leave for this hop.
             game.finishLater(match.get(), Role.SPEEDRUNNER);
+        } else {
+            game.autoLeaveIfOutside(player, player.getLocation());
         }
         if (match.isEmpty() || !match.get().begun() || match.get().ending()
                 || !playerStates.role(player).isParticipant()) return;
@@ -349,6 +371,15 @@ public final class GameplayListener implements Listener {
                 && event.getPlayer().getGameMode() != GameMode.SPECTATOR) {
             playerStates.recordLastSeen(event.getPlayer(), event.getTo());
         }
+        if (event.getTo() != null && event.getFrom().getBlockX() == event.getTo().getBlockX()
+                && event.getFrom().getBlockY() == event.getTo().getBlockY()
+                && event.getFrom().getBlockZ() == event.getTo().getBlockZ()
+                && event.getFrom().getWorld().equals(event.getTo().getWorld())) {
+            return;
+        }
+        if (event.getTo() != null) {
+            game.autoLeaveIfOutside(event.getPlayer(), event.getTo());
+        }
     }
     @EventHandler public void onDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player victim)) return;
@@ -371,8 +402,11 @@ public final class GameplayListener implements Listener {
             return;
         }
 
-        // NONE and AFK players are always invulnerable if configured
+        // NONE, AFK, and spectator players are always invulnerable if
+        // configured. Command kills (/kill) still go through: only the
+        // pre-start window below blocks those, to avoid glitches.
         if (!playerStates.role(victim).isParticipant()
+                && event.getCause() != EntityDamageEvent.DamageCause.SUICIDE
                 && config.getBoolean("settings.invulnerability.none-players.enabled", true)) {
             event.setCancelled(true);
             return;
@@ -381,9 +415,9 @@ public final class GameplayListener implements Listener {
         if (event.getFinalDamage() <= 0) return;
         Optional<GameInstance> victimMatch = game.instanceOf(victim.getUniqueId());
         if (victimMatch.isPresent() && !victimMatch.get().begun()) {
-            // A speedrunner hitting a hunter starts the game. That specific hit
-            // is allowed through so the first hit actually deals damage
-            // (fixes the first-hit-deals-no-damage bug).
+            // A speedrunner hitting a hunter starts the game. The starting
+            // hit is felt but never wounds: it begins the match and deals
+            // no damage.
             boolean startsGame = event instanceof EntityDamageByEntityEvent byEntity
                     && byEntity.getDamager() instanceof Player attacker
                     && sameMatch(victimMatch.get(), attacker)
@@ -391,7 +425,7 @@ public final class GameplayListener implements Listener {
                     && playerStates.role(victim) == Role.HUNTER;
             // During the pre-start window, all participants are protected from
             // damage (including fall damage from wacky world-engine spawns).
-            if (playerStates.role(victim).isParticipant() && !startsGame) {
+            if (playerStates.role(victim).isParticipant()) {
                 event.setCancelled(true);
             }
             if (startsGame) {
@@ -423,6 +457,18 @@ public final class GameplayListener implements Listener {
                 || !playerStates.role(killer).isParticipant()) return;
         Optional<GameInstance> match = game.instanceOf(killer.getUniqueId());
         if (match.isEmpty() || !match.get().begun()) return;
+        if (!(event.getEntity() instanceof Player)) {
+            // Mob kills only matter for the killMob win conditions.
+            Role killerRole = playerStates.role(killer);
+            if (killerRole == Role.SPEEDRUNNER
+                    && winConditionEngine.isKillMob(event.getEntity().getType())) {
+                game.finishLater(match.get(), Role.SPEEDRUNNER);
+            } else if (killerRole == Role.HUNTER
+                    && winConditionEngine.isHunterKillMob(event.getEntity().getType())) {
+                game.finishLater(match.get(), Role.HUNTER);
+            }
+            return;
+        }
         boolean victimIsPlayer = event.getEntity() instanceof Player;
         if (!victimIsPlayer || !playerStates.role(event.getEntity().getUniqueId()).isParticipant()) {
             return;
@@ -433,6 +479,7 @@ public final class GameplayListener implements Listener {
         long matchId = match.get().matchId();
         stats.getOrCreate(matchId, killer.getUniqueId()).kills++;
         game.stateCommands().runEventModifiers("ON_EVERY_KILL", killer, matchId);
+        plugin.spawnCamp().handleKill(matchId, killer, (Player) event.getEntity());
         if (victimIsPlayer) {
             game.stateCommands().runEventModifiers("ON_PLAYER_KILL", killer, matchId);
             Role victimRole = playerStates.role(event.getEntity().getUniqueId());
@@ -448,8 +495,11 @@ public final class GameplayListener implements Listener {
         Player player = event.getPlayer();
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
         if (match.isEmpty() || !match.get().begun() || !playerStates.role(player).isParticipant()) return;
-        if (winConditionEngine.hasAcquireItem(player)) {
+        Role role = playerStates.role(player);
+        if (role == Role.SPEEDRUNNER && winConditionEngine.hasAcquireItem(player)) {
             game.finishLater(match.get(), Role.SPEEDRUNNER);
+        } else if (role == Role.HUNTER && winConditionEngine.hasHunterAcquireItem(player)) {
+            game.finishLater(match.get(), Role.HUNTER);
         }
     }
 
@@ -463,7 +513,7 @@ public final class GameplayListener implements Listener {
         if (event.getAdvancement().getKey().getKey().startsWith("recipes/")) return;
         long matchId = match.get().matchId();
         game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId);
-        if (winConditionEngine.hasReachAdvancement(player)) {
+        if (playerStates.role(player) == Role.SPEEDRUNNER && winConditionEngine.hasReachAdvancement(player)) {
             game.finishLater(match.get(), Role.SPEEDRUNNER);
         }
     }
@@ -508,6 +558,9 @@ public final class GameplayListener implements Listener {
         Player onlinePlayer = Bukkit.getPlayer(playerId);
         if (onlinePlayer != null && config.getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
             onlinePlayer.setGameMode(GameMode.SPECTATOR);
+        }
+        if (onlinePlayer != null) {
+            plugin.roleTeams().sync(onlinePlayer);
         }
 
         String roleKey = role == Role.SPEEDRUNNER ? "speedrunner" : "hunter";

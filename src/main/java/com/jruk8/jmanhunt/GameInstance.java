@@ -35,7 +35,8 @@ public final class GameInstance {
     private BukkitTask waitingExpiryTask;
     private int waitingDelayConfigured;
     private long waitingStartTime;
-    private BukkitTask surviveTimeTask;
+    private BukkitTask timeLimitTask;
+    private final java.util.Set<Long> timeAnnounced = new java.util.HashSet<>();
 
     /** Mutable per-side headstart state; the countdown ticks in GameManager. */
     public static final class HeadstartState {
@@ -221,12 +222,17 @@ public final class GameInstance {
         this.waitingStartTime = waitingStartTime;
     }
 
-    public BukkitTask surviveTimeTask() {
-        return surviveTimeTask;
+    public BukkitTask timeLimitTask() {
+        return timeLimitTask;
     }
 
-    public void setSurviveTimeTask(BukkitTask surviveTimeTask) {
-        this.surviveTimeTask = surviveTimeTask;
+    public void setTimeLimitTask(BukkitTask timeLimitTask) {
+        this.timeLimitTask = timeLimitTask;
+    }
+
+    /** Announced countdown thresholds, in whole seconds remaining. */
+    public java.util.Set<Long> timeAnnounced() {
+        return timeAnnounced;
     }
 
     /** Whole seconds between match start and the given moment. */

@@ -114,4 +114,12 @@ class GameStateCommandManagerTest {
         assertEquals(1L, GameStateCommandManager.secondsToTicks(0.0));
         assertEquals(1L, GameStateCommandManager.secondsToTicks(-3.0));
     }
+
+    @Test
+    void staleDispatchVoidsRestartedOrTornDownEngines() {
+        assertFalse(GameStateCommandManager.isStaleDispatch(3L, 3L, true));
+        assertTrue(GameStateCommandManager.isStaleDispatch(3L, 4L, true));
+        assertTrue(GameStateCommandManager.isStaleDispatch(3L, 3L, false));
+        assertTrue(GameStateCommandManager.isStaleDispatch(3L, 4L, false));
+    }
 }
