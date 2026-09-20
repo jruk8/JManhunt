@@ -18,6 +18,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
+import com.jruk8.jmanhunt.settings.world_engine.LobbyWorldManager;
 import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
 
 import java.util.ArrayList;
@@ -63,7 +64,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             
             <gray> » Challenges status: [{status}<gray>]</gray>
             
-            <gray>Looking for settings instead? Try <white>/mh configuration <category> <key> <value></white>.</gray>
+            <gray>Looking for modifiers instead? Try <white>/mh configuration custom-modifiers <key> <value></white>.</gray>
             """;
     static final String CHALLENGES_URL = "https://builtbybit.com/resources/jmanhunt-challenges.121574/";
     private static final String CHALLENGES_LINK_TOKEN = "{link}";
@@ -332,6 +333,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return switch (action.toLowerCase(Locale.ROOT)) {
             case "setlobby" -> sender.hasPermission("jmanhunt.command.worldengine.setlobby");
             case "setlobbytp" -> sender.hasPermission("jmanhunt.command.worldengine.setlobbytp");
+            case "tpto" -> sender.hasPermission("jmanhunt.command.worldengine.tpto");
             case "lobby" -> sender.hasPermission("jmanhunt.command.worldengine.lobby");
             case "cellindex" -> sender.hasPermission("jmanhunt.command.worldengine.cellindex");
             default -> false;
@@ -969,6 +971,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (sub.equals("setlobbytp")) {
             return worldEngineSetLobbyTp(sender, args);
         }
+        if (sub.equals("tpto")) {
+            return worldEngineTpto(sender, args);
+        }
         if (sub.equals("lobby")) {
             return worldEngineLobby(sender, args);
         }
@@ -1254,7 +1259,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return completeDrill(args);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("worldengine")) {
-            List<String> actions = new ArrayList<>(List.of("setlobby", "setlobbytp", "lobby", "cellindex"));
+            List<String> actions = new ArrayList<>(List.of("setlobby", "setlobbytp", "lobby", "cellindex", "tpto"));
             actions.removeIf(action -> !canUseWorldEngineAction(sender, action));
             return partial(args[1], actions);
         }
@@ -1273,6 +1278,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[3], lobbyIdOptions());
         if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("setlobbytp"))
             return partial(args[2], lobbyIdOptions());
+        if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("tpto"))
+            return partial(args[2], List.of("lobbyworld", "gameworld"));
+        if (args.length == 4 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("tpto")) {
+            List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p"));
+            Bukkit.getOnlinePlayers().forEach(player -> selectors.add(player.getName()));
+            return partial(args[3], selectors);
+        }
         if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("setlobby")) {
             if (sender instanceof Player player) {
                 return partial(args[2], List.of(formatLocation(player.getLocation())));
@@ -1386,6 +1398,111 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         } catch (NumberFormatException exception) {
             return null;
         }
+    }
+
+    /**
+     * Teleports to the lobby world or the game world: tpto
+     * &lt;lobbyworld|gameworld&gt; [selector]. The lobby world is generated
+     * on a confirmed second run when it does not exist yet.
+     */
+    private boolean worldEngineTpto(CommandSender sender, String[] args) {
+        if (args.length < 3 || args.length > 4) {
+            return message(sender, "command.invalid");
+        }
+        Optional<TptoTarget> target = parseTptoTarget(args[2]);
+        if (target.isEmpty()) {
+            return message(sender, "command.invalid");
+        }
+        List<Player> targets = new ArrayList<>();
+        if (args.length == 3) {
+            if (!(sender instanceof Player player)) {
+                return message(sender, "command.player-only");
+            }
+            targets.add(player);
+        } else {
+            try {
+                for (Entity entity : Bukkit.selectEntities(sender, args[3])) {
+                    if (entity instanceof Player player) {
+                        targets.add(player);
+                    }
+                }
+            } catch (IllegalArgumentException exception) {
+                return message(sender, "manhunt.worldengine-invalid-selector");
+            }
+            if (targets.isEmpty()) {
+                return message(sender, "manhunt.worldengine-no-targets");
+            }
+        }
+        if (target.get() == TptoTarget.GAME) {
+            return worldEngineTptoGame(sender, targets);
+        }
+        return worldEngineTptoLobby(sender, targets);
+    }
+
+    /** Teleports targets to the game world spawn. Never generates anything. */
+    private boolean worldEngineTptoGame(CommandSender sender, List<Player> targets) {
+        String worldName = plugin.getConfig().getString("world-engine.world-name", "world");
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            message(sender, "manhunt.worldengine-tpto-no-world", Map.of("world", worldName));
+            return true;
+        }
+        Location spawn = world.getSpawnLocation();
+        for (Player target : targets) {
+            target.teleport(spawn);
+        }
+        message(sender, "manhunt.worldengine-tpto-success",
+                Map.of("count", String.valueOf(targets.size()), "world", worldName));
+        neutralSound(sender);
+        return true;
+    }
+
+    /** Teleports targets to the lobby world, generating it once confirmed. */
+    private boolean worldEngineTptoLobby(CommandSender sender, List<Player> targets) {
+        String worldName = game.lobbyWorldName();
+        String senderKey = sender instanceof Player player ? player.getUniqueId().toString() : "console";
+        if (!game.lobbyWorldExists()) {
+            if (!game.confirmLobbyGeneration(senderKey)) {
+                message(sender, "manhunt.worldengine-tpto-confirm",
+                        Map.of("world", worldName, "seconds", "10"));
+                return true;
+            }
+            message(sender, "manhunt.worldengine-tpto-creating", Map.of("world", worldName));
+        }
+        Optional<LobbyWorldManager.LobbyWorld> ensured = game.ensureLobbyWorld();
+        if (ensured.isEmpty()) {
+            message(sender, "manhunt.worldengine-tpto-failed", Map.of("world", worldName));
+            return true;
+        }
+        World world = ensured.get().world();
+        if (ensured.get().lobbyZeroSet()) {
+            message(sender, "manhunt.worldengine-setlobby-success",
+                    Map.of("location", formatLocation(world.getSpawnLocation())));
+        }
+        Location spawn = world.getSpawnLocation();
+        for (Player target : targets) {
+            target.teleport(spawn);
+        }
+        message(sender, "manhunt.worldengine-tpto-success",
+                Map.of("count", String.valueOf(targets.size()), "world", worldName));
+        neutralSound(sender);
+        return true;
+    }
+
+    /** tpto destination words. */
+    enum TptoTarget {
+        LOBBY,
+        GAME
+    }
+
+    static Optional<TptoTarget> parseTptoTarget(String raw) {
+        if (raw.equalsIgnoreCase("lobbyworld")) {
+            return Optional.of(TptoTarget.LOBBY);
+        }
+        if (raw.equalsIgnoreCase("gameworld")) {
+            return Optional.of(TptoTarget.GAME);
+        }
+        return Optional.empty();
     }
 
     /** Lobby a bare lobby teleport targets: the player's lobby, else the default. */

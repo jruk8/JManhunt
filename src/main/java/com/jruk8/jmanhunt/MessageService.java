@@ -26,13 +26,22 @@ public final class MessageService {
     }
 
     public Component component(String key, Map<String, String> values) {
-        String raw = messages.getString(key, key)
-                .replace("{prefix}", messages.getString("prefix", ""))
+        return renderLiteral(messages.getString(key, key), values);
+    }
+
+    /**
+     * Renders pre-composed text that still carries placeholders: substitutes
+     * the prefixes and custom values, then parses per the text format. For
+     * messages assembled from multiple keys (like the win announcement) that
+     * can never pass through {@link #component(String, Map)}.
+     */
+    public Component renderLiteral(String raw, Map<String, String> values) {
+        String rendered = raw.replace("{prefix}", messages.getString("prefix", ""))
                 .replace("{debug-prefix}", messages.getString("debug.prefix", ""));
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            raw = raw.replace("{" + entry.getKey() + "}", entry.getValue());
+            rendered = rendered.replace("{" + entry.getKey() + "}", entry.getValue());
         }
-        return parse(raw);
+        return parse(rendered);
     }
 
     public Component parse(String raw) {

@@ -103,7 +103,7 @@ click.
 
 ```yaml
 right-click:
-  refresh-on-right-click: false
+  refresh-on-right-click: true
   right-click-cooldown: 3.0      # in seconds
 ```
 

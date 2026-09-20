@@ -3,7 +3,7 @@
 With the world engine enabled, JManhunt runs several matches at the same
 time, one per lobby. Each match gets its own world cell, compass tracking,
 statistics, border confinement, and end dimension, so matches never see or
-interfere with each other. With the world engine off, everyone shares lobby
+interfere with each other. With the world engine **off**, everyone shares lobby
 0 and only one match runs at a time.
 
 ## Lobbies
@@ -36,7 +36,9 @@ Move players between lobbies with:
 ```
 
 Lobby ids run from `0` to `2147483647`. Unknown ids are created on join and
-empty lobbies are deleted on leave.
+empty lobbies are deleted on leave. New to this? `/manhunt worldengine tpto
+lobbyworld`, run twice, generates a lobby world and points lobby 0 at it;
+see [World Engine](configuration/world-engine.md).
 
 ## Queue Caps
 

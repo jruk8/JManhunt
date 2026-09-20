@@ -1,5 +1,7 @@
 package com.jruk8.jmanhunt;
 
+import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
+
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -25,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 public final class GameplayListener implements Listener {
@@ -39,6 +42,8 @@ public final class GameplayListener implements Listener {
     private final LobbyTeleporter lobbyTeleporter;
     private final WinConditionEngine winConditionEngine;
     private final LobbyService lobbies;
+    private final WorldEngineService worldEngine;
+    private long lastVoidRescueWarning;
     private final SpeedrunnerDisconnectTracker disconnects = new SpeedrunnerDisconnectTracker();
     private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
     private final Map<UUID, BukkitTask> respawnTasks = new HashMap<>();
@@ -47,7 +52,8 @@ public final class GameplayListener implements Listener {
     public GameplayListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
                             MessageService messages, ConfigService config, SoundService sounds, CompassManager compass,
                             StatsManager stats, LobbyTeleporter lobbyTeleporter,
-                            WinConditionEngine winConditionEngine, LobbyService lobbyService) {
+                            WinConditionEngine winConditionEngine, LobbyService lobbyService,
+                            WorldEngineService worldEngine) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.game = game;
@@ -59,6 +65,7 @@ public final class GameplayListener implements Listener {
         this.lobbyTeleporter = lobbyTeleporter;
         this.winConditionEngine = winConditionEngine;
         this.lobbies = lobbyService;
+        this.worldEngine = worldEngine;
         // Cancel any pending respawn tasks when a match ends so players
         // are not revived during the end sequence or after the match.
         // Dimension-enter tracking is keyed by match, so each finished
@@ -346,6 +353,24 @@ public final class GameplayListener implements Listener {
     @EventHandler public void onDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player victim)) return;
 
+        // Void rescue in the lobby world: falling off the platform returns
+        // the player to their lobby instead of killing them. Never applies
+        // in the game world.
+        if (event.getCause() == EntityDamageEvent.DamageCause.VOID
+                && plugin.getConfig().getBoolean("world-engine.lobby-world-void-rescue", true)
+                && worldEngine.rescuesVoidIn(victim.getWorld())) {
+            OptionalInt memberLobby = lobbies.lobbyOf(victim.getUniqueId())
+                    .map(lobby -> OptionalInt.of(lobby.id())).orElseGet(OptionalInt::empty);
+            Optional<Location> rescue = worldEngine.lobbyRescueLocation(memberLobby);
+            if (rescue.isPresent()) {
+                event.setCancelled(true);
+                victim.teleport(rescue.get());
+            } else {
+                warnVoidRescueUnset(victim.getName());
+            }
+            return;
+        }
+
         // NONE and AFK players are always invulnerable if configured
         if (!playerStates.role(victim).isParticipant()
                 && config.getBoolean("settings.invulnerability.none-players.enabled", true)) {
@@ -543,6 +568,17 @@ public final class GameplayListener implements Listener {
     private void cancelDisconnectTask(UUID playerId) {
         BukkitTask task = disconnectTasks.remove(playerId);
         if (task != null) task.cancel();
+    }
+
+    /** Warns about a missing rescue destination, at most once every 30 seconds. */
+    private void warnVoidRescueUnset(String playerName) {
+        long now = System.currentTimeMillis();
+        if (now - lastVoidRescueWarning < 30_000L) {
+            return;
+        }
+        lastVoidRescueWarning = now;
+        plugin.logger().warning(playerName + " fell into the void in the lobby world, but no lobby location "
+                + "is set to rescue them to. Set one with /manhunt worldengine setlobbytp 0.");
     }
 
     private void cancelAllRespawnTasks() {

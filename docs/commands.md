@@ -20,6 +20,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the lobby 0 world-engine lobby position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobby`) |
 | `/manhunt worldengine setlobbytp <lobby-id>`       | Sets a lobby's location from your current position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobbytp`) |
 | `/manhunt worldengine lobby [selector] [lobby-id]` | Teleports the sender or selected players to a lobby. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobby`) |
+| `/manhunt worldengine tpto lobbyworld\|gameworld [selector]` | Teleports to the lobby world (generating it on a confirmed second run) or the game world spawn. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.tpto`) |
 | `/manhunt worldengine cellindex get`              | Shows the current world-engine cell index. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex buffer`           | Lists the buffered ready cells. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
@@ -91,6 +92,16 @@ lobbies need the world engine; with it off, everyone shares lobby 0.
 lobby, are teleported into its cell, and receive lives, stats, and a compass.
 Players already in a live match are skipped. Promoting a queued player with
 `setplayer` while their lobby has a running match pulls them in the same way.
+
+## Lobby and Game Worlds
+
+`/manhunt worldengine tpto lobbyworld [selector]` teleports to the lobby
+world. If it does not exist yet, the first run names the missing world and
+asks you to run it again within 10 seconds; the second run generates a void
+world with a stone platform, points lobby 0 at it, and teleports you there.
+`/manhunt worldengine tpto gameworld [selector]` hops to the game world
+spawn and never generates anything. Without a selector, both target you
+(consoles must pass one).
 
 ## Editing Settings In-Game
 

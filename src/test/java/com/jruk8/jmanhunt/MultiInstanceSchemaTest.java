@@ -56,6 +56,8 @@ class MultiInstanceSchemaTest {
         assertEquals("NEVER", config.getString("world-engine.end-cell-prune-when"));
         assertFalse(config.getBoolean("debug.enabled"));
         assertFalse(config.contains("world-engine.on-fetch-new-cell"));
+        assertEquals("jmh-lobby", config.getString("world-engine.lobby-world-name"));
+        assertTrue(config.getBoolean("world-engine.lobby-world-void-rescue"));
     }
 
     @Test
@@ -76,6 +78,11 @@ class MultiInstanceSchemaTest {
                 "manhunt.headstart-active",
                 "manhunt.headstart-ending",
                 "manhunt.headstart-ended",
+                "manhunt.worldengine-tpto-confirm",
+                "manhunt.worldengine-tpto-creating",
+                "manhunt.worldengine-tpto-success",
+                "manhunt.worldengine-tpto-no-world",
+                "manhunt.worldengine-tpto-failed",
                 "manhunt.status-all-header",
                 "manhunt.status-all-entry",
                 "manhunt.status-all-empty",

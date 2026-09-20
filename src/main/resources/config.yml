@@ -584,7 +584,7 @@ settings:
     refresh-interval: 10.0
     right-click:
       # Optional refresh-on-right-click runs alongside interval refreshes.
-      refresh-on-right-click: false
+      refresh-on-right-click: true
       # Seconds between right-click refreshes. Set to -1 for no cooldown.
       right-click-cooldown: 3.0
     # When true, the compass stops tracking when the targeted player is within
@@ -607,10 +607,10 @@ settings:
   # Friendly fire rules for participants. When disabled for a role, players of
   # that role cannot damage players of the same role once the game has begun.
   # Friendly fire is never active during the pre-start window.
-  # Default: false for both
+  # Default: true for both
   friendly-fire:
-    speedrunner: false
-    hunter: false
+    speedrunner: true
+    hunter: true
 
   # Delayed hunter respawn and per-role lives.
   hunter-respawn:
@@ -685,6 +685,17 @@ settings:
 world-engine:
   enabled: false
   world-name: world
+  # Name of the lobby world used by /manhunt worldengine tpto lobbyworld.
+  # When no world with this name exists, the plugin generates a void world
+  # with a small stone platform on confirmed request. Point this at your own
+  # world to use it instead.
+  # Default: jmh-lobby
+  lobby-world-name: "jmh-lobby"
+  # Teleport players who fall into the void in the lobby world back to their
+  # lobby location (or lobby 0 when theirs is unset). Never applies in the
+  # game world.
+  # Default: true
+  lobby-world-void-rescue: true
   # Lobby locations per lobby id. Players return to their match's lobby
   # location when a game ends. Preferably set to something different from the
   # world that the spiral engine works on.

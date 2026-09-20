@@ -30,6 +30,30 @@ class MessageServiceTest {
         assertEquals("[T] value 7.", plain(rendered));
     }
 
+    @Test
+    void renderLiteralResolvesPrefixInComposedText() {
+        MessageService messages = messages();
+
+        // Composed literals (like the separator-wrapped win announcement)
+        // carry a raw {prefix} that parse() alone would leave behind.
+        Component rendered = messages.renderLiteral(
+                "---\n{prefix}<gray>value <white>{value}<gray>.\n---", Map.of("value", "7"));
+
+        assertEquals("---\n[T] value 7.\n---", plain(rendered));
+    }
+
+    @Test
+    void renderLiteralResolvesLegacyPrefix() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("prefix", "&8[T]&7 ");
+        MessageService messages = new MessageService();
+        messages.reload(config, "legacy");
+
+        Component rendered = messages.renderLiteral("{prefix}plain win.", Map.of());
+
+        assertEquals("[T] plain win.", plain(rendered));
+    }
+
     private static MessageService messages() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("prefix", "<gray>[T]</gray> ");

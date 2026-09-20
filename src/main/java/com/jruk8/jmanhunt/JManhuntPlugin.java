@@ -145,7 +145,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PortalRouter(this, game, worldEngine), this);
         getServer().getPluginManager().registerEvents(new GameplayListener(
                 this, playerStates, game, messages, configService, sounds,
-                compass, stats, worldEngine, winConditionEngine, lobbyService), this);
+                compass, stats, worldEngine, winConditionEngine, lobbyService, worldEngine), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
     }
 

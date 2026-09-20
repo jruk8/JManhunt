@@ -69,4 +69,20 @@ class ManhuntCommandTest {
 
         assertFalse(parsed.valid());
     }
+
+    @Test
+    void parseTptoTargetAcceptsBothWords() {
+        assertEquals(Optional.of(ManhuntCommand.TptoTarget.LOBBY),
+                ManhuntCommand.parseTptoTarget("lobbyworld"));
+        assertEquals(Optional.of(ManhuntCommand.TptoTarget.LOBBY),
+                ManhuntCommand.parseTptoTarget("LobbyWorld"));
+        assertEquals(Optional.of(ManhuntCommand.TptoTarget.GAME),
+                ManhuntCommand.parseTptoTarget("gameworld"));
+    }
+
+    @Test
+    void parseTptoTargetRejectsAnythingElse() {
+        assertEquals(Optional.empty(), ManhuntCommand.parseTptoTarget("lobby"));
+        assertEquals(Optional.empty(), ManhuntCommand.parseTptoTarget(""));
+    }
 }

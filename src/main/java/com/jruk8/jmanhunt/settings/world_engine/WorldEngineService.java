@@ -24,6 +24,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BooleanSupplier;
@@ -57,6 +58,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private BukkitTask refillRetryTask;
     private BooleanSupplier matchRunning = () -> false;
     private final EndCellManager endCells;
+    private final LobbyWorldManager lobbyWorlds;
 
     public WorldEngineService(JManhuntPlugin plugin, ConfigService configService, EngineStateRepository engineState) {
         this.plugin = plugin;
@@ -67,6 +69,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         this.overworldStructuresDatapackManager = new OverworldStructuresDatapackManager(plugin);
         this.endResetManager = new EndResetManager(plugin);
         this.endCells = new EndCellManager(plugin);
+        this.lobbyWorlds = new LobbyWorldManager(plugin);
     }
 
     /** Wires the match-running check behind the NO_MATCH_RUNNING refill policy. */
@@ -367,6 +370,51 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     /** Dedicated end world of a live match, if it has one. */
     public Optional<World> matchEndWorld(long matchId) {
         return endCells.endWorldFor(matchId);
+    }
+
+    /** Configured lobby world name. */
+    public String lobbyWorldName() {
+        return lobbyWorlds.lobbyWorldName();
+    }
+
+    /** True when the lobby world is loaded or has a folder waiting. */
+    public boolean lobbyWorldExists() {
+        return lobbyWorlds.lobbyWorldExists();
+    }
+
+    /**
+     * Arms or confirms lobby-world generation for one sender key. True only
+     * on a matching second call within the timeout.
+     */
+    public boolean confirmLobbyGeneration(String senderKey) {
+        return lobbyWorlds.confirmGeneration(senderKey, lobbyWorlds.lobbyWorldName());
+    }
+
+    /** Loads or generates the lobby world. Empty when creation fails. */
+    public Optional<LobbyWorldManager.LobbyWorld> ensureLobbyWorld() {
+        return lobbyWorlds.ensureLobbyWorld();
+    }
+
+    /**
+     * True when void rescue applies in a world: the lobby world, never the
+     * game world, even if an admin points both names at the same world.
+     */
+    public boolean rescuesVoidIn(World world) {
+        if (world == null) {
+            return false;
+        }
+        String name = world.getName();
+        return name.equals(lobbyWorldName())
+                && !name.equals(plugin.getConfig().getString("world-engine.world-name", "world"));
+    }
+
+    /**
+     * Rescue destination for a void fall: the member lobby's location, else
+     * lobby 0's, else empty.
+     */
+    public Optional<Location> lobbyRescueLocation(OptionalInt memberLobby) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        return LobbyWorldManager.selectRescueLocation(config.lobbyLocations(), memberLobby);
     }
 
     /** Surface center of a match cell, for end-exit routing. */

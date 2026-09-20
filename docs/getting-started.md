@@ -23,8 +23,9 @@
    or manually through `/manhunt end`.
 
 After dabbling with this, set up [world resets](configuration/world-engine.md).
-It only takes 3 minutes (just two commands and a restart) to set up and 
-greatly improves the user experience.
+It only takes 3 minutes (enable the engine, run
+`/manhunt worldengine tpto lobbyworld` twice to generate a lobby world, and
+restart) and greatly improves the user experience.
 
 ## Next Steps
 

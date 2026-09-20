@@ -48,8 +48,8 @@ role can damage each other once a match is underway.
 ```yaml
 settings:
   friendly-fire:
-    speedrunner: false
-    hunter: false
+    speedrunner: true
+    hunter: true
 ```
 
 Friendly fire is always disabled during the pre-start window, regardless of

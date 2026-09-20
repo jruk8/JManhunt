@@ -74,3 +74,13 @@ a match ends. Make sure lobby worlds are different from the game world. Use
 `/manhunt worldengine setlobby` for lobby 0, or stand in place and run
 `/manhunt worldengine setlobbytp <lobby-id>` for any other lobby, to update
 locations in-game.
+
+The fastest way to get a lobby is `/manhunt worldengine tpto lobbyworld`,
+run twice: it generates the `jmh-lobby` void world (a blank canvas with a
+small stone platform to build from) and points lobby 0 at it automatically.
+Set `world-engine.lobby-world-name` to use your own world instead.
+
+Players who fall into the void in the lobby world pop back at their lobby
+location (or lobby 0 when theirs is unset) instead of dying. This never
+applies in the game world, and can be turned off with
+`world-engine.lobby-world-void-rescue`.

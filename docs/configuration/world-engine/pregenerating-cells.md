@@ -37,7 +37,7 @@ world-engine:
     commands:
       - "chunky world <world>"            # your game world name, filled in automatically
       - "chunky center <cellX> <cellZ>"   # set gen center to the fetched cell's coordinates
-      - "chunky radius 150"               # set gen radius to 150 blocks (keep reasonable to avoid lag)
+      - "chunky radius 120"               # set gen radius to 120 blocks (keep reasonable to avoid lag)
       - "chunky start"                    # start the generation process
       - "chunky confirm"                  # fixes anything that may have prevented the generation
 ```

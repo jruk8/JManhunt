@@ -8,6 +8,7 @@ import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
 import com.jruk8.jmanhunt.settings.autostart.AutostartCountdownMessages;
 import com.jruk8.jmanhunt.settings.world_engine.BorderMode;
 import com.jruk8.jmanhunt.settings.world_engine.CellBounds;
+import com.jruk8.jmanhunt.settings.world_engine.LobbyWorldManager;
 import com.jruk8.jmanhunt.settings.world_engine.WorldEngineConfig;
 import com.jruk8.jmanhunt.settings.world_engine.WorldEngineService;
 import net.kyori.adventure.text.Component;
@@ -518,7 +519,7 @@ public final class GameManager {
         }
 
         String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
-        sendToInstanceComponent(instance, messages.parse(getWinMessage(winner)));
+        sendToInstanceComponent(instance, messages.renderLiteral(getWinMessage(winner), Map.of()));
         for (Player player : onlineAssignedPlayers(instance)) {
             player.showTitle(Title.title(messages.component(title), Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
@@ -1163,6 +1164,23 @@ public final class GameManager {
 
     /** Buffered ready-cell indexes, oldest first. */
     public List<Long> bufferedCellIndexes() { return worldEngine.bufferedCellIndexes(); }
+
+    /** Configured lobby world name. */
+    public String lobbyWorldName() { return worldEngine.lobbyWorldName(); }
+
+    /** True when the lobby world is loaded or has a folder waiting. */
+    public boolean lobbyWorldExists() { return worldEngine.lobbyWorldExists(); }
+
+    /**
+     * Arms or confirms lobby-world generation for one sender key. True only
+     * on a matching second call within the timeout.
+     */
+    public boolean confirmLobbyGeneration(String senderKey) { return worldEngine.confirmLobbyGeneration(senderKey); }
+
+    /** Loads or generates the lobby world. Empty when creation fails. */
+    public Optional<LobbyWorldManager.LobbyWorld> ensureLobbyWorld() {
+        return worldEngine.ensureLobbyWorld();
+    }
 
     /** Overwrites the world-engine cell index. Returns false when unavailable. */
     public boolean cellIndex(long value) { return worldEngine.cellIndex(value); }
