@@ -1,23 +1,21 @@
 package com.jruk8.jmanhunt.api;
 
-import com.jruk8.jmanhunt.GameInstance;
-import com.jruk8.jmanhunt.GameManager;
-import com.jruk8.jmanhunt.Lobby;
-import com.jruk8.jmanhunt.LobbyService;
-import com.jruk8.jmanhunt.PlayerStateStore;
-import com.jruk8.jmanhunt.Role;
+import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.lobby.Lobby;
+import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.player.PlayerStateStore;
+import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

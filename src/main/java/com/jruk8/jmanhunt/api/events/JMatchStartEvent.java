@@ -2,7 +2,6 @@ package com.jruk8.jmanhunt.api.events;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-
 import java.util.OptionalLong;
 
 /**

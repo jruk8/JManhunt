@@ -2,10 +2,8 @@ package com.jruk8.jmanhunt.api.events;
 
 import com.jruk8.jmanhunt.api.PlayerRole;
 import org.junit.jupiter.api.Test;
-
 import java.util.OptionalLong;
 import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class JMatchEventsTest {

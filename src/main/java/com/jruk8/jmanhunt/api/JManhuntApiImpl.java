@@ -1,11 +1,10 @@
 package com.jruk8.jmanhunt.api;
 
-import com.jruk8.jmanhunt.GameInstance;
-import com.jruk8.jmanhunt.GameManager;
-import com.jruk8.jmanhunt.LobbyService;
-import com.jruk8.jmanhunt.PlayerStateStore;
-import com.jruk8.jmanhunt.Role;
-
+import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.player.PlayerStateStore;
+import com.jruk8.jmanhunt.player.Role;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
