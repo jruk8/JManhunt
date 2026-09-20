@@ -464,7 +464,7 @@ settings:
     enabled: true
     # Seconds to wait before automatically running /manhunt start.
     # Set to 0 to start immediately as soon as the queue is eligible.
-    countdown-seconds: 60
+    countdown-seconds: 45
 
   # How player roles are assigned and reset around the lifecycle of a match.
   roles:
@@ -500,7 +500,7 @@ settings:
     # Seconds to wait for a speedrunner to hit a hunter before timing out.
     # Values below 5 are clamped to 5 seconds. Set to -1 to wait indefinitely.
     # Default: 30 seconds
-    delay-seconds: 30
+    delay-seconds: 60
     # What happens if delay-seconds expires before a hit occurs:
     # CANCEL - Abort the match without recording stats.
     # FORCE_START - Force the match to start anyway.
@@ -521,7 +521,7 @@ settings:
     # only starts when a speedrunner first damages a hunter.
     # Default: false
     hunter:
-      enabled: false
+      enabled: true
       # Delay in seconds. Values <= 0 mean no delay.
       # Default: 30
       delay-seconds: 30
