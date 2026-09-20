@@ -101,15 +101,15 @@ class SetPlayerPermissionsTest {
         CommandSender sender = senderWith("jmanhunt.command.worldengine");
 
         assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "setlobby"));
-        assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "lobby"));
+        assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "tpto"));
         assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "cellindex"));
     }
 
     @Test
     void worldEngineSubNodesGrantSingleActions() {
-        CommandSender sender = senderWith("jmanhunt.command.worldengine.lobby");
+        CommandSender sender = senderWith("jmanhunt.command.worldengine.tpto");
 
-        assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "lobby"));
+        assertTrue(ManhuntCommand.canUseWorldEngineAction(sender, "tpto"));
         assertFalse(ManhuntCommand.canUseWorldEngineAction(sender, "setlobby"));
         assertFalse(ManhuntCommand.canUseWorldEngineAction(sender, "cellindex"));
         assertFalse(ManhuntCommand.canUseWorldEngineAction(sender, "bogus"));

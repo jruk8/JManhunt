@@ -7,6 +7,7 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.YamlFileUpdater;
 import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.lobby.RolePadService;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameplayListener;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
@@ -180,6 +181,9 @@ public final class JManhuntPlugin extends JavaPlugin {
                 this, playerStates, game, messages, configService, sounds,
                 compass, stats, worldEngine, winConditionEngine, lobbyService, worldEngine), this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
+        getServer().getPluginManager().registerEvents(new RolePadService(
+                this, lobbyService, playerStates, game, messages, sounds,
+                worldEngine::lobbyWorldName), this);
     }
 
     private void setupScheduling() {

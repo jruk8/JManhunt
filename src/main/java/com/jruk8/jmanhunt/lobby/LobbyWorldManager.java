@@ -3,7 +3,6 @@ package com.jruk8.jmanhunt.lobby;
 import com.jruk8.jmanhunt.core.JManhuntPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -15,15 +14,13 @@ import java.util.OptionalInt;
 import java.util.function.LongSupplier;
 
 /**
- * Owns the native lobby world: a void dimension with a small stone platform
- * that admins build their lobby on, generated on confirmed request without
- * any world-management plugin. Also guards generation behind a run-twice
- * confirmation and resolves void-rescue destinations.
+ * Owns the native lobby world: a void dimension filled by the configured
+ * lobby preset, generated on confirmed request without any world-management
+ * plugin. Also guards generation behind a run-twice confirmation and
+ * resolves void-rescue destinations.
  */
 public final class LobbyWorldManager {
-    /** Platform extends this far from the origin each way: 9x9 blocks. */
-    static final int PLATFORM_RADIUS = 4;
-    /** Platform top surface height; spawn sits one block above. */
+    /** Lowest spawn height; with no pasted blocks this is the spawn. */
     static final int PLATFORM_Y = 64;
     /** Window in which a second tpto run confirms generation. */
     static final long CONFIRM_TIMEOUT_MILLIS = 10_000L;
@@ -91,9 +88,9 @@ public final class LobbyWorldManager {
 
     /**
      * Loads or generates the lobby world for any configured name. Fresh
-     * worlds get the void generator, a stone platform, a spawn on top of
-     * it, and a lobby 0 location when none is configured. Empty when
-     * creation fails.
+     * worlds get the void generator, the configured preset paste plus its
+     * commands, a safe spawn, and a lobby 0 location when none is
+     * configured. Empty when creation fails.
      */
     public Optional<LobbyWorld> ensureLobbyWorld() {
         String name = lobbyWorldName();
@@ -121,14 +118,25 @@ public final class LobbyWorldManager {
             return Optional.empty();
         }
         if (!fresh) {
-            // Our leftover from before a restart: platform and spawn persist.
+            // Our leftover from before a restart: paste and spawn persist.
             return Optional.of(new LobbyWorld(world, false, false));
         }
-        buildPlatform(world);
-        Location spawn = new Location(world, 0.5, PLATFORM_Y + 1, 0.5, 0.0f, 0.0f);
+        LobbyPreset preset = LobbyPreset.parse(
+                plugin.getConfig().getString("world-engine.lobby-preset", "DEFAULT"));
+        new LobbySchematicService(plugin).applyPreset(world, preset);
+        Location spawn = safeSpawn(world);
         world.setSpawnLocation(spawn);
         boolean lobbyZeroSet = autoSetLobbyZero(spawn);
         return Optional.of(new LobbyWorld(world, true, lobbyZeroSet));
+    }
+
+    /**
+     * Highest solid block at the origin plus one, never below y=65, so a
+     * missing schematic still yields a sane spawn instead of the void.
+     */
+    private Location safeSpawn(World world) {
+        int top = world.getHighestBlockYAt(0, 0);
+        return new Location(world, 0.5, Math.max(top + 1, PLATFORM_Y + 1), 0.5, 0.0f, 0.0f);
     }
 
     /**
@@ -162,14 +170,6 @@ public final class LobbyWorldManager {
     private void pruneExpired() {
         long now = clock.getAsLong();
         pending.values().removeIf(candidate -> candidate.expiresAt() <= now);
-    }
-
-    private void buildPlatform(World world) {
-        for (int x = -PLATFORM_RADIUS; x <= PLATFORM_RADIUS; x++) {
-            for (int z = -PLATFORM_RADIUS; z <= PLATFORM_RADIUS; z++) {
-                world.getBlockAt(x, PLATFORM_Y, z).setType(Material.STONE, false);
-            }
-        }
     }
 
     /**

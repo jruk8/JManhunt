@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,146 +14,105 @@ class WinConditionEngineTest {
     }
 
     @Test
-    void exitEndEnabledByDefault() {
+    void exitEndEnabledByDefaultForSpeedrunnersOnly() {
         WinConditionEngine engine = engine(new YamlConfiguration());
-        assertTrue(engine.isExitEndEnabled());
+        assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END));
+        assertFalse(engine.enabled(Role.HUNTER, WinCondition.EXIT_END));
     }
 
     @Test
     void exitEndCanBeDisabled() {
         YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.exitEnd.enabled", false);
+        config.set("settings.win-conditions.speedrunner.exit-end.enabled", false);
         WinConditionEngine engine = engine(config);
-        assertFalse(engine.isExitEndEnabled());
+        assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END));
     }
 
     @Test
     void surviveTimeDisabledByDefault() {
         WinConditionEngine engine = engine(new YamlConfiguration());
-        assertFalse(engine.isSurviveTimeEnabled());
+        assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME));
+        assertFalse(engine.enabled(Role.HUNTER, WinCondition.SURVIVE_TIME));
     }
 
     @Test
-    void surviveTimeSecondsDefault() {
-        WinConditionEngine engine = engine(new YamlConfiguration());
-        assertEquals(3600.0, engine.surviveTimeSeconds());
-    }
-
-    @Test
-    void surviveTimeSecondsConfigurable() {
+    void timeIsSharedAcrossSides() {
         YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.surviveTime.enabled", true);
-        config.set("settings.win-conditions.surviveTime.time", 1200.0);
+        config.set("settings.win-conditions.speedrunner.survive-time.enabled", true);
+        config.set("settings.win-conditions.speedrunner.survive-time.time", 1200.0);
+        config.set("settings.win-conditions.hunter.time-limit.enabled", true);
+        config.set("settings.win-conditions.hunter.time-limit.time", 600.0);
         WinConditionEngine engine = engine(config);
-        assertTrue(engine.isSurviveTimeEnabled());
-        assertEquals(1200.0, engine.surviveTimeSeconds());
+        assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME));
+        assertEquals(1200.0, engine.time(Role.SPEEDRUNNER));
+        assertTrue(engine.enabled(Role.HUNTER, WinCondition.TIME_LIMIT));
+        assertEquals(600.0, engine.time(Role.HUNTER));
+        assertEquals(3600.0, engine(new YamlConfiguration()).time(Role.SPECTATOR));
     }
 
     @Test
-    void acquireItemDisabledByDefault() {
-        WinConditionEngine engine = engine(new YamlConfiguration());
-        assertFalse(engine.isAcquireItemEnabled());
-    }
-
-    @Test
-    void acquireItemConfigurable() {
+    void acquireItemIsPerSide() {
         YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.acquireItem.enabled", true);
-        config.set("settings.win-conditions.acquireItem.item", "minecraft:diamond");
+        config.set("settings.win-conditions.speedrunner.acquire-item.enabled", true);
+        config.set("settings.win-conditions.speedrunner.acquire-item.item", "minecraft:diamond");
         WinConditionEngine engine = engine(config);
-        assertTrue(engine.isAcquireItemEnabled());
-        assertEquals("minecraft:diamond", engine.acquireItem());
+        assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.ACQUIRE_ITEM));
+        assertEquals("minecraft:diamond", engine.item(Role.SPEEDRUNNER));
+        assertFalse(engine.enabled(Role.HUNTER, WinCondition.ACQUIRE_ITEM));
+        assertEquals("minecraft:netherite_ingot", engine.item(Role.HUNTER));
     }
 
     @Test
-    void acquireItemDefaultItem() {
+    void reachAdvancementIsSpeedrunnerOnly() {
         YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.acquireItem.enabled", true);
+        config.set("settings.win-conditions.speedrunner.reach-advancement.enabled", true);
+        config.set("settings.win-conditions.speedrunner.reach-advancement.advancement",
+                "minecraft:story/enter_the_nether");
         WinConditionEngine engine = engine(config);
-        assertEquals("minecraft:netherite_ingot", engine.acquireItem());
+        assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT));
+        assertFalse(engine.enabled(Role.HUNTER, WinCondition.REACH_ADVANCEMENT));
+        assertEquals("minecraft:story/enter_the_nether", engine.advancement());
+        assertEquals("minecraft:story/enter_the_nether", engine(new YamlConfiguration()).advancement());
     }
 
     @Test
-    void reachAdvancementDisabledByDefault() {
-        WinConditionEngine engine = engine(new YamlConfiguration());
-        assertFalse(engine.isReachAdvancementEnabled());
-    }
-
-    @Test
-    void reachAdvancementConfigurable() {
+    void killMobIsPerSide() {
         YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.reachAdvancement.enabled", true);
-        config.set("settings.win-conditions.reachAdvancement.advancement", "minecraft:story/enter_the_nether");
+        config.set("settings.win-conditions.hunter.kill-mob.enabled", true);
+        config.set("settings.win-conditions.hunter.kill-mob.mob", "minecraft:warden");
         WinConditionEngine engine = engine(config);
-        assertTrue(engine.isReachAdvancementEnabled());
-        assertEquals("minecraft:story/enter_the_nether", engine.reachAdvancement());
+        assertTrue(engine.enabled(Role.HUNTER, WinCondition.KILL_MOB));
+        assertEquals("minecraft:warden", engine.mob(Role.HUNTER));
+        assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.KILL_MOB));
+        assertEquals("minecraft:ender_dragon", engine.mob(Role.SPEEDRUNNER));
     }
 
     @Test
-    void reachAdvancementDefaultAdvancement() {
+    void nonParticipantsNeverEnabled() {
         YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.reachAdvancement.enabled", true);
+        config.set("settings.win-conditions.speedrunner.acquire-item.enabled", true);
+        config.set("settings.win-conditions.hunter.acquire-item.enabled", true);
         WinConditionEngine engine = engine(config);
-        assertEquals("minecraft:story/enter_the_nether", engine.reachAdvancement());
+        for (Role role : new Role[] {Role.SPECTATOR, Role.AFK, Role.NONE}) {
+            for (WinCondition condition : WinCondition.values()) {
+                assertFalse(engine.enabled(role, condition), role + " " + condition);
+            }
+        }
     }
 
     @Test
     void reloadUpdatesConfig() {
         YamlConfiguration config = new YamlConfiguration();
         WinConditionEngine engine = engine(config);
-        assertFalse(engine.isSurviveTimeEnabled());
+        assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME));
 
         YamlConfiguration newConfig = new YamlConfiguration();
-        newConfig.set("settings.win-conditions.surviveTime.enabled", true);
-        newConfig.set("settings.win-conditions.surviveTime.time", 500.0);
+        newConfig.set("settings.win-conditions.speedrunner.survive-time.enabled", true);
+        newConfig.set("settings.win-conditions.speedrunner.survive-time.time", 500.0);
         engine.reload(newConfig);
 
-        assertTrue(engine.isSurviveTimeEnabled());
-        assertEquals(500.0, engine.surviveTimeSeconds());
-    }
-
-    @Test
-    void killMobDisabledByDefault() {
-        WinConditionEngine engine = engine(new YamlConfiguration());
-        assertFalse(engine.isKillMobEnabled());
-        assertEquals("minecraft:ender_dragon", engine.killMob());
-    }
-
-    @Test
-    void killMobConfigurable() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.killMob.enabled", true);
-        config.set("settings.win-conditions.killMob.mob", "minecraft:wither");
-        WinConditionEngine engine = engine(config);
-        assertTrue(engine.isKillMobEnabled());
-        assertEquals("minecraft:wither", engine.killMob());
-    }
-
-    @Test
-    void hunterConditionsDisabledByDefault() {
-        WinConditionEngine engine = engine(new YamlConfiguration());
-        assertFalse(engine.isHunterTimeLimitEnabled());
-        assertEquals(3600.0, engine.hunterTimeLimitSeconds());
-        assertFalse(engine.isHunterAcquireItemEnabled());
-        assertEquals("minecraft:netherite_ingot", engine.hunterAcquireItem());
-        assertFalse(engine.isHunterKillMobEnabled());
-        assertEquals("minecraft:ender_dragon", engine.hunterKillMob());
-    }
-
-    @Test
-    void hunterConditionsConfigurable() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.hunterTimeLimit.enabled", true);
-        config.set("settings.win-conditions.hunterTimeLimit.time", 600.0);
-        config.set("settings.win-conditions.hunterAcquireItem.enabled", true);
-        config.set("settings.win-conditions.hunterKillMob.enabled", true);
-        config.set("settings.win-conditions.hunterKillMob.mob", "minecraft:warden");
-        WinConditionEngine engine = engine(config);
-        assertTrue(engine.isHunterTimeLimitEnabled());
-        assertEquals(600.0, engine.hunterTimeLimitSeconds());
-        assertTrue(engine.isHunterAcquireItemEnabled());
-        assertTrue(engine.isHunterKillMobEnabled());
-        assertEquals("minecraft:warden", engine.hunterKillMob());
+        assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME));
+        assertEquals(500.0, engine.time(Role.SPEEDRUNNER));
     }
 
     @Test

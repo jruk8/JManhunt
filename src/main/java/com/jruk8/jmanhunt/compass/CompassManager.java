@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.compass;
 
+import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.core.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -19,11 +20,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CompassMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -112,90 +116,116 @@ public final class CompassManager {
         Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
         String targetRoleString = targetRole == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
 
-        Player target = findTarget(holder, targetRole, instance);
-        if (target != null) {
-            if (handleNearbyOrTooFar(holder, target)) {
-                return;
+        List<CompassCandidate> opponents = collectOpponents(holder, targetRole, instance);
+        List<CompassSighting> sightings = collectSightings(holder, targetRole, instance);
+        boolean nearbyEnabled = plugin.getConfig()
+                .getBoolean("settings.compass.disable-when-nearby.enabled", false);
+        double nearbyThreshold = plugin.getConfig()
+                .getDouble("settings.compass.disable-when-nearby.distance", 25.0);
+        double trackingDistance = plugin.getConfig()
+                .getDouble("settings.compass.tracking-distance", -1.0);
+        CompassPick pick = CompassPick.resolve(opponents, sightings, nearbyEnabled, nearbyThreshold,
+                trackingDistance);
+        switch (pick.kind()) {
+            case TRACK_PLAYER -> trackPlayer(holder, item, slot, pick, targetRoleString);
+            case NEARBY -> {
+                spinNeedle(item, holder);
+                holder.getInventory().setItem(slot, item);
+                compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
+                        Map.of("player", pick.name())));
             }
-            setLodestone(item, target.getLocation());
-            holder.getInventory().setItem(slot, item);
-            compassActionbars.put(holder.getUniqueId(), component("compass.compass-actionbar",
-                    Map.of("player", target.getName(),
-                            "distance",
-                            String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
-            return;
+            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString);
+            case TOO_FAR -> {
+                spinNeedle(item, holder);
+                holder.getInventory().setItem(slot, item);
+                compassActionbars.put(holder.getUniqueId(), component("compass.too-far-actionbar",
+                        Map.of("player", pick.name())));
+            }
+            case NONE -> showNoTarget(holder, item, slot, targetRoleString);
         }
-
-        // Last seen fallback - find nearest last seen location
-        LastSeenResult lastSeen = findNearestLastSeen(holder, targetRole, instance);
-        if (lastSeen != null) {
-            setLodestone(item, lastSeen.location());
-            holder.getInventory().setItem(slot, item);
-            String reason = lastSeen.online() ? "Another Dimension" : "Log-Out";
-            compassActionbars.put(holder.getUniqueId(), component("compass.compass-last-seen-actionbar",
-                    Map.of("player", lastSeen.name(),
-                            "distance",
-                            String.valueOf(Math.round(holder.getLocation().distance(lastSeen.location()))),
-                            "reason", reason)));
-            return;
-        }
-
-        // Truly no location available
-        compassActionbars.put(holder.getUniqueId(), component("compass.no-target-actionbar",
-                Map.of("role", targetRoleString)));
     }
 
     /**
-     * Finds the nearest online target for the given role in the same world
-     * and the same match.
+     * Live opponents of the given role in the same world and match,
+     * nearest first.
      */
-    private Player findTarget(Player holder, Role targetRole, GameInstance instance) {
+    private List<CompassCandidate> collectOpponents(Player holder, Role targetRole, GameInstance instance) {
+        Location origin = holder.getLocation();
         return Bukkit.getOnlinePlayers().stream()
                 .filter(p -> role(p) == targetRole
                         && isTrackableTarget(p.getUniqueId(), targetRole, instance)
                         && p.getGameMode() != GameMode.SPECTATOR
                         && !p.getUniqueId().equals(holder.getUniqueId())
                         && p.getWorld().equals(holder.getWorld()))
-                .min(Comparator.comparingDouble(
-                        p -> p.getLocation().distanceSquared(holder.getLocation())))
-                .orElse(null);
+                .map(player -> new CompassCandidate(player.getUniqueId(), player.getName(),
+                        origin.distance(player.getLocation()),
+                        flatDistance(origin, player.getLocation())))
+                .sorted(Comparator.comparingDouble(CompassCandidate::distance))
+                .toList();
     }
 
-    /**
-     * Handles the disable-when-nearby and tracking-distance config checks.
-     * Returns true when the compass should not be updated (target too close
-     * or too far).
-     */
-    private boolean handleNearbyOrTooFar(Player holder, Player target) {
-        // Check if the compass should be disabled when the target is
-        // nearby. Comparison is X/Z only (ignoring Y), as configured.
-        double threshold = plugin.getConfig()
-                .getDouble("settings.compass.disable-when-nearby.distance", 25.0);
-        boolean disableNearby = plugin.getConfig()
-                .getBoolean("settings.compass.disable-when-nearby.enabled", false);
-        if (disableNearby && threshold > 0) {
-            double dx = holder.getLocation().getX() - target.getLocation().getX();
-            double dz = holder.getLocation().getZ() - target.getLocation().getZ();
-            double flatDistance = Math.sqrt(dx * dx + dz * dz);
-            if (flatDistance <= threshold) {
-                compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
-                        Map.of("player", target.getName())));
-                return true;
-            }
+    /** Flat X/Z distance between two spots, ignoring Y. Pure for tests. */
+    static double flatDistance(Location from, Location to) {
+        double dx = from.getX() - to.getX();
+        double dz = from.getZ() - to.getZ();
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+
+    private void trackPlayer(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString) {
+        Player target = Bukkit.getPlayer(pick.id());
+        if (target == null) {
+            showNoTarget(holder, item, slot, targetRoleString);
+            return;
         }
-        // Check if the target is beyond the configured tracking distance.
-        double trackingDistance = plugin.getConfig()
-                .getDouble("settings.compass.tracking-distance", -1.0);
-        if (trackingDistance >= 0) {
-            double distance = holder.getLocation().distance(target.getLocation());
-            if (distance > trackingDistance) {
-                compassActionbars.put(holder.getUniqueId(), component("compass.too-far-actionbar",
-                        Map.of("player", target.getName(),
-                                "distance", String.valueOf(Math.round(distance)))));
-                return true;
-            }
+        setLodestone(item, target.getLocation());
+        holder.getInventory().setItem(slot, item);
+        compassActionbars.put(holder.getUniqueId(), component("compass.compass-actionbar",
+                Map.of("player", target.getName(),
+                        "distance",
+                        String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
+    }
+
+    private void trackSighting(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString) {
+        Location location = playerStates.sightings().getOrDefault(pick.id(), Map.of())
+                .get(holder.getWorld().getUID());
+        Player seen = Bukkit.getPlayer(pick.id());
+        if (location == null || location.getWorld() == null
+                || skipLastSeen(seen != null, seen == null ? null : seen.getGameMode())) {
+            showNoTarget(holder, item, slot, targetRoleString);
+            return;
         }
-        return false;
+        setLodestone(item, location);
+        holder.getInventory().setItem(slot, item);
+        String reason = seen != null ? "Another Dimension" : "Log-Out";
+        compassActionbars.put(holder.getUniqueId(), component("compass.compass-last-seen-actionbar",
+                Map.of("player", pick.name(),
+                        "distance",
+                        String.valueOf(Math.round(holder.getLocation().distance(location))),
+                        "reason", reason)));
+    }
+
+    private void showNoTarget(Player holder, ItemStack item, int slot, String targetRoleString) {
+        spinNeedle(item, holder);
+        holder.getInventory().setItem(slot, item);
+        compassActionbars.put(holder.getUniqueId(), component("compass.no-target-actionbar",
+                Map.of("role", targetRoleString)));
+    }
+
+    /** Lodestone offset radius for a spinning needle, in blocks. */
+    private static final double SPIN_RADIUS = 8.0;
+
+    /** Points the needle at a rotating offset so it visibly spins. */
+    private void spinNeedle(ItemStack item, Player holder) {
+        double angle = Math.toRadians(spinAngle(System.currentTimeMillis()));
+        Location origin = holder.getLocation();
+        setLodestone(item, new Location(origin.getWorld(),
+                origin.getX() + Math.cos(angle) * SPIN_RADIUS, origin.getY(),
+                origin.getZ() + Math.sin(angle) * SPIN_RADIUS));
+    }
+
+    /** Needle angle in degrees; advances one degree every 200ms. Pure for tests. */
+    static double spinAngle(long nowMillis) {
+        return (nowMillis / 200.0) % 360.0;
     }
 
     private void setLodestone(ItemStack item, Location location) {
@@ -228,8 +258,6 @@ public final class CompassManager {
         return true;
     }
 
-    private record LastSeenResult(String name, Location location, boolean online) {}
-
     /**
      * Online spectators are mid-respawn (or otherwise out of play): never a
      * last-seen target. Offline players still report their log-out spot.
@@ -239,7 +267,12 @@ public final class CompassManager {
         return online && mode == GameMode.SPECTATOR;
     }
 
-    private LastSeenResult findNearestLastSeen(Player holder, Role targetRole, GameInstance instance) {
+    /**
+     * Last-seen locations of trackable opponents in the holder's world,
+     * nearest first.
+     */
+    private List<CompassSighting> collectSightings(Player holder, Role targetRole, GameInstance instance) {
+        Location origin = holder.getLocation();
         return playerStates.sightings().entrySet().stream()
                 .filter(entry -> isTrackableTarget(entry.getKey(), targetRole, instance))
                 .filter(entry -> !entry.getKey().equals(holder.getUniqueId()))
@@ -255,12 +288,11 @@ public final class CompassManager {
                     }
                     String name = player != null
                             ? player.getName() : playerStates.playerName(entry.getKey());
-                    return new LastSeenResult(name, loc, player != null);
+                    return new CompassSighting(entry.getKey(), name, origin.distance(loc));
                 })
-                .filter(result -> result != null)
-                .min(Comparator.comparingDouble(
-                        result -> result.location().distanceSquared(holder.getLocation())))
-                .orElse(null);
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparingDouble(CompassSighting::distance))
+                .toList();
     }
 
     public boolean shouldReceiveCompass(Role role) {
@@ -461,6 +493,7 @@ public final class CompassManager {
         if (!analyzing.add(id)) {
             return;
         }
+        runAnalysisDebuffs(holder);
         compassActionbars.put(id, component("compass.analyzing-actionbar"));
         long delayTicks = analyzeDelayTicks(
                 plugin.getConfig().getDouble("settings.compass.analyze.delay-seconds", 1.0));
@@ -479,6 +512,46 @@ public final class CompassManager {
     /** Analysis delay in ticks, at least one. Pure for tests. */
     static long analyzeDelayTicks(double delaySeconds) {
         return Math.max(1L, Math.round(delaySeconds * 20.0));
+    }
+
+    /**
+     * Runs the configured analysis debuff commands for a participant
+     * holder: the shared player list plus their own role list, resolved
+     * modifier-style and dispatched as console.
+     */
+    private void runAnalysisDebuffs(Player holder) {
+        if (!plugin.getConfig().getBoolean("settings.compass.analyze.debuffs.enabled", false)) {
+            return;
+        }
+        Role holderRole = role(holder);
+        if (!holderRole.isParticipant()) {
+            return;
+        }
+        double delaySeconds = plugin.getConfig()
+                .getDouble("settings.compass.analyze.delay-seconds", 1.0);
+        List<String> commands = new ArrayList<>(plugin.getConfig()
+                .getStringList("settings.compass.analyze.debuffs.commands.player"));
+        commands.addAll(plugin.getConfig().getStringList(
+                "settings.compass.analyze.debuffs.commands." + holderRole.name().toLowerCase(Locale.ROOT)));
+        Location location = holder.getLocation();
+        for (String command : commands) {
+            if (command.isBlank()) {
+                continue;
+            }
+            try {
+                String parsed = CommandPlaceholders.replace(
+                        CommandPlaceholders.withDuration(command, delaySeconds),
+                        holder.getName(), location.getX(), location.getY(), location.getZ());
+                if (parsed.startsWith("/")) {
+                    parsed = parsed.substring(1);
+                }
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+            } catch (Exception exception) {
+                plugin.logger().severe(
+                        "Failed to run analysis debuff command '" + command + "'. Skipping..");
+                exception.printStackTrace();
+            }
+        }
     }
 
     private boolean analyzeEnabled(boolean auto) {

@@ -1,11 +1,13 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.lobby.SubLobby;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GameInstanceTest {
@@ -75,5 +77,16 @@ class GameInstanceTest {
         assertEquals(0L, instance.elapsedSeconds(1_000L));
         assertEquals(61L, instance.elapsedSeconds(62_500L));
         assertEquals(0L, instance.elapsedSeconds(500L));
+    }
+
+    @Test
+    void lobbyTagShowsSublobbyWhenMinted() {
+        GameInstance direct = new GameInstance(1L, 2, OptionalLong.empty(), 1_000L);
+        GameInstance sublobbed = new GameInstance(2L, 2, OptionalLong.empty(), 1_000L);
+        sublobbed.setSubLobby(new SubLobby(2, 0));
+
+        assertNull(direct.subLobby());
+        assertEquals("L2", direct.lobbyTag());
+        assertEquals("L2-0", sublobbed.lobbyTag());
     }
 }

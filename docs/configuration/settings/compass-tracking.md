@@ -26,6 +26,11 @@ In any case, targets who are **active in the same dimension** are prioritized ov
 ones. Players who are still respawning (in spectator mode) are never
 targets, neither live nor through their last seen location.
 
+When several options exist, the compass ranks them: the nearest
+in-range live player first, then a too-close player, then another
+player's last seen location. Anything else — no targets at all, or
+only out-of-range ones — makes the needle spin instead of freezing.
+
 ## Given to Roles
 
 Under `settings.compass.given-to`, you can configure which roles receive a
@@ -125,6 +130,26 @@ analyze:
 `right-click` covers manual refreshes, `auto` covers interval refreshes;
 enable either or both. `delay-seconds` is how long each analysis takes.
 
+### Analysis Debuffs
+
+Under `settings.compass.analyze.debuffs`, you can run console commands
+every time an analysis starts, in custom-modifier style: `<p>` is the
+compass holder, `~` resolves against their location, and `<duration>` is
+the analysis delay in whole seconds (floored). The `player` list runs for
+every analyzing holder plus their own role list, and only participants
+are affected:
+
+```yaml
+debuffs:
+  enabled: false
+  commands:
+    player:
+      - "effect give <p> minecraft:slowness <duration> 1 true"
+    speedrunner: []
+    hunter:
+      - "summon lightning_bolt ~ ~ ~"
+```
+
 ## Tracking Distance
 
 ### Minimum Distance
@@ -145,7 +170,8 @@ disable-when-nearby:
 
 Under `settings.compass.tracking-distance`, you can limit how far the
 compass can track a player. When the target is beyond this distance, the
-compass points at a random distance and shows an out-of-range actionbar.
+compass shows a meterless out-of-range actionbar and either points at a
+closer last seen location of another player or spins its needle.
 
 ```yaml
 settings:

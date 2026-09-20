@@ -20,17 +20,22 @@ public final class LobbyService {
     private final JManhuntPlugin plugin;
     private final Map<Integer, Lobby> lobbies = new HashMap<>();
     private final Map<UUID, Integer> membership = new HashMap<>();
+    private final Map<Integer, Integer> nextSubIds = new HashMap<>();
 
     public LobbyService(JManhuntPlugin plugin) {
         this.plugin = plugin;
     }
 
-    /** Lobby ids run from 0 to 2,147,483,647. */
+    /**
+     * Lobby ids run from 0 to 2,147,483,647.
+     */
     public static boolean isValidId(long id) {
         return id >= 0 && id <= MAX_LOBBY_ID;
     }
 
-    /** Parses a lobby id command argument, or empty when out of range. */
+    /**
+     * Parses a lobby id command argument, or empty when out of range.
+     */
     public static OptionalInt parseId(String raw) {
         if (raw == null) {
             return OptionalInt.empty();
@@ -47,7 +52,9 @@ public final class LobbyService {
         return plugin.getConfig().getInt("lobbies.default-lobby-id", 0);
     }
 
-    /** Multiple lobbies exist only with the world engine on. */
+    /**
+     * Multiple lobbies exist only with the world engine on.
+     */
     public boolean multiLobbyAllowed() {
         return plugin.getConfig().getBoolean("world-engine.enabled", false);
     }
@@ -72,7 +79,9 @@ public final class LobbyService {
         setLobby(playerId, defaultId);
     }
 
-    /** Moves a player to a lobby, creating it when needed. */
+    /**
+     * Moves a player to a lobby, creating it when needed.
+     */
     public Lobby setLobby(UUID playerId, int lobbyId) {
         remove(playerId);
         Lobby lobby = lobbies.computeIfAbsent(lobbyId, Lobby::new);
@@ -81,7 +90,9 @@ public final class LobbyService {
         return lobby;
     }
 
-    /** Removes a player from their lobby, deleting it when it becomes empty. */
+    /**
+     * Removes a player from their lobby, deleting it when it becomes empty.
+     */
     public Optional<Lobby> remove(UUID playerId) {
         Integer lobbyId = membership.remove(playerId);
         if (lobbyId == null) {
@@ -109,5 +120,15 @@ public final class LobbyService {
 
     public Set<Integer> lobbyIds() {
         return Collections.unmodifiableSet(new HashSet<>(lobbies.keySet()));
+    }
+
+    /**
+     * Next sublobby counter for a lobby, starting at 0. Monotonic per
+     * server run; ids are never reused.
+     */
+    public int nextSubId(int lobbyId) {
+        int sub = nextSubIds.getOrDefault(lobbyId, 0);
+        nextSubIds.put(lobbyId, sub + 1);
+        return sub;
     }
 }

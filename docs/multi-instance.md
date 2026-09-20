@@ -68,6 +68,38 @@ removes already-queued players, and joining a running match ignores caps.
 Match ids are the incrementing numbers shown by `status all`. A match's
 world-engine cell index works as an alias wherever an id is accepted.
 
+## Mid-match Setplayer
+
+`lobbies.mid-match-setplayer` decides what `setplayer` does when the
+target's lobby has a live match. It only applies with the world engine
+on; otherwise the in-match block stays.
+
+- `HOLD` assigns the role for the next game, tells the player a match is
+  in progress, and does nothing further.
+- `JOIN_ANY` joins any role straight into the running match.
+- `JOIN_SPECTATORS` joins spectators mid-match and holds every other
+  role.
+- `SUBLOBBY` (default) queues the role for the next sublobby; see
+  [Sublobbies](#sublobbies).
+
+Held players count against queue caps; joined players ignore them, like
+`game join`.
+
+## Sublobbies
+
+With the default `SUBLOBBY` policy, a lobby never hosts a match
+directly: it only orchestrates sublobbies, and every match — the first
+included — runs as one. Sublobbies are numbered per lobby from zero and
+shown as `L{lobby-id}-{sublobby-id}` (so the first match in lobby 2 is
+`L2-0`); ids are never reused within a run.
+
+Sublobbies run one live match per parent lobby, exactly like direct
+hosting — the queue keeps gathering in the parent while its sublobby
+plays. `setplayer` into a live sublobby queues the role for the next
+one, and status output shows the tag (`L2-0|G5` in `status`,
+`L2-0|G5`-style entries in `status all`). Switch the policy to `HOLD`
+for plain direct hosting.
+
 ## Joining and Leaving a Running Match
 
 `/manhunt game join <id> [role] [selector]` adds players to a live match,

@@ -324,7 +324,7 @@ public final class GameplayListener implements Listener {
         if (match.isPresent() && playerStates.role(player).isParticipant() && player.getGameMode() != GameMode.SPECTATOR) {
             playerStates.recordLastSeen(player, event.getTo());
         }
-        boolean exitWin = winConditionEngine.isExitEndEnabled()
+        boolean exitWin = winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END)
                 && match.isPresent() && match.get().begun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
                 && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL
@@ -342,7 +342,7 @@ public final class GameplayListener implements Listener {
     @EventHandler public void onWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
-        boolean exitWin = winConditionEngine.isExitEndEnabled()
+        boolean exitWin = winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END)
                 && match.isPresent() && match.get().begun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
                 && event.getFrom().getEnvironment() == World.Environment.THE_END
@@ -470,13 +470,13 @@ public final class GameplayListener implements Listener {
         Optional<GameInstance> match = game.instanceOf(killer.getUniqueId());
         if (match.isEmpty() || !match.get().begun()) return;
         if (!(event.getEntity() instanceof Player)) {
-            // Mob kills only matter for the killMob win conditions.
+            // Mob kills only matter for the kill-mob win conditions.
             Role killerRole = playerStates.role(killer);
             if (killerRole == Role.SPEEDRUNNER
-                    && winConditionEngine.isKillMob(event.getEntity().getType())) {
+                    && winConditionEngine.mobMatches(event.getEntity().getType(), Role.SPEEDRUNNER)) {
                 game.finishLater(match.get(), Role.SPEEDRUNNER);
             } else if (killerRole == Role.HUNTER
-                    && winConditionEngine.isHunterKillMob(event.getEntity().getType())) {
+                    && winConditionEngine.mobMatches(event.getEntity().getType(), Role.HUNTER)) {
                 game.finishLater(match.get(), Role.HUNTER);
             }
             return;
@@ -508,9 +508,9 @@ public final class GameplayListener implements Listener {
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
         if (match.isEmpty() || !match.get().begun() || !playerStates.role(player).isParticipant()) return;
         Role role = playerStates.role(player);
-        if (role == Role.SPEEDRUNNER && winConditionEngine.hasAcquireItem(player)) {
+        if (role == Role.SPEEDRUNNER && winConditionEngine.hasItem(player, Role.SPEEDRUNNER)) {
             game.finishLater(match.get(), Role.SPEEDRUNNER);
-        } else if (role == Role.HUNTER && winConditionEngine.hasHunterAcquireItem(player)) {
+        } else if (role == Role.HUNTER && winConditionEngine.hasItem(player, Role.HUNTER)) {
             game.finishLater(match.get(), Role.HUNTER);
         }
     }

@@ -53,6 +53,7 @@ nav:
   - Gallery: gallery.md
   - Commands: commands.md
   - Concurrent Matches: multi-instance.md
+  - Lobby Quick Start: lobby-quick-start.md
   - Configuration:
       - Overview: configuration.md
       - Settings:

@@ -36,6 +36,18 @@ public final class CommandPlaceholders {
      * @param z          the player's z coordinate for tilde resolution, or 0 if no player
      * @return the parsed command ready for console dispatch
      */
+    /**
+     * Replaces the &lt;duration&gt; placeholder with the given delay in whole
+     * seconds, floored so commands like `effect give` receive an int.
+     * Pure for tests.
+     */
+    public static String withDuration(String command, double delaySeconds) {
+        if (!command.contains("<duration>")) {
+            return command;
+        }
+        return command.replace("<duration>", String.valueOf((long) Math.floor(delaySeconds)));
+    }
+
     public static String replace(String command, String playerName, double x, double y, double z) {
         String parsed = command;
         if (playerName != null) {

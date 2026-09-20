@@ -20,7 +20,6 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt configuration <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.configuration` |
 | `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the lobby 0 world-engine lobby position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobby`) |
 | `/manhunt worldengine setlobbytp <lobby-id>`       | Sets a lobby's location from your current position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobbytp`) |
-| `/manhunt worldengine lobby [selector] [lobby-id]` | Teleports the sender or selected players to a lobby. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobby`) |
 | `/manhunt worldengine tpto lobbyworld\|gameworld [selector]` | Teleports to the lobby world (generating it on a confirmed second run) or the game world spawn. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.tpto`) |
 | `/manhunt worldengine cellindex get`              | Shows the current world-engine cell index. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
@@ -48,11 +47,15 @@ With `jmanhunt.command.setplayer`, a player can assign anyone to any role
 `jmanhunt.command.setplayer.self`, a player can only target themselves and
 only pick roles they have the permission for.
 
-`setplayer` only works while the target's lobby has no running match: use
-`/manhunt game join` and `/manhunt game leave` to change roles mid-match
-instead (`-force` never bypasses this). Assigning someone else away from
-`afk` needs the command run twice within 10 seconds; changing your own
-role never needs confirmation.
+`setplayer` assigns directly while the target's lobby has no running
+match. With a live match and the world engine on,
+`lobbies.mid-match-setplayer` decides what happens instead (see
+[Mid-match Setplayer](multi-instance.md#mid-match-setplayer)); with the
+engine off the in-match block stays and `/manhunt game join` plus
+`/manhunt game leave` are the mid-match tools (`-force` never bypasses
+this). Assigning someone else away from `afk` needs the command run
+twice within 10 seconds; changing your own role never needs
+confirmation.
 
 ## Quick Start
 
@@ -95,7 +98,8 @@ is passed, honoring the per-role queue caps unless `-f` (`-force`) is
 passed; `/manhunt lobby leave [selector]` removes players from whatever
 lobby they are in. Re-joining the same lobby with the same role is refused
 with a notice. Multiple lobbies need the world engine; with it off,
-everyone shares lobby 0.
+everyone shares lobby 0. New to lobbies? Start with the [Lobby Quick
+Start](lobby-quick-start.md).
 
 ## Joining and Leaving a Running Match
 
@@ -125,7 +129,8 @@ the running time (`show-elapsed-time`), and a gray `L{lobby}|G{game}` tag
 `/manhunt worldengine tpto lobbyworld [selector]` teleports to the lobby
 world. If it does not exist yet, the first run names the missing world and
 asks you to run it again within 10 seconds; the second run generates a void
-world with a stone platform, points lobby 0 at it, and teleports you there.
+world, pastes the configured lobby preset, points lobby 0 at the spawn,
+and teleports you there.
 `/manhunt worldengine tpto gameworld [selector]` hops to the game world
 spawn and never generates anything. Without a selector, both target you
 (consoles must pass one).
@@ -145,7 +150,7 @@ Numerical settings (ints, floats, doubles) accept their numeric value:
 
 ```text
 /manhunt configuration settings compass refresh-interval 5.0
-/manhunt configuration settings win-conditions surviveTime time 1800.0
+/manhunt configuration settings win-conditions speedrunner survive-time time 1800.0
 /manhunt configuration world-engine cell-size 20000
 ```
 
@@ -153,7 +158,7 @@ Strings and enum-like values are stored verbatim:
 
 ```text
 /manhunt configuration settings start-on-speedrunner-damage on-expire FORCE_START
-/manhunt configuration settings win-conditions acquireItem item minecraft:diamond
+/manhunt configuration settings win-conditions speedrunner acquire-item item minecraft:diamond
 ```
 
 With no category, the command lists categories; with a section path, it lists

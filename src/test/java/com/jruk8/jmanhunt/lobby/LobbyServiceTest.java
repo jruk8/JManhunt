@@ -113,6 +113,16 @@ class LobbyServiceTest {
         assertEquals(6, lobbies.lobbyOf(player).orElseThrow().id());
     }
 
+    @Test
+    void subIdsStartAtZeroAndNeverRepeat() {
+        LobbyService lobbies = service();
+
+        assertEquals(0, lobbies.nextSubId(2));
+        assertEquals(1, lobbies.nextSubId(2));
+        assertEquals(0, lobbies.nextSubId(3));
+        assertEquals(2, lobbies.nextSubId(2));
+    }
+
     private static LobbyService service() {
         return new LobbyService(null);
     }

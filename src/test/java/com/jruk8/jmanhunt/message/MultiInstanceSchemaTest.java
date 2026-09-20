@@ -62,12 +62,12 @@ class MultiInstanceSchemaTest {
     void hunterWinConditionDefaults() {
         YamlConfiguration config = bundledConfig();
 
-        assertFalse(config.getBoolean("settings.win-conditions.killMob.enabled"));
-        assertEquals("minecraft:ender_dragon", config.getString("settings.win-conditions.killMob.mob"));
-        assertFalse(config.getBoolean("settings.win-conditions.hunterTimeLimit.enabled"));
-        assertEquals(3600.0, config.getDouble("settings.win-conditions.hunterTimeLimit.time"));
-        assertFalse(config.getBoolean("settings.win-conditions.hunterAcquireItem.enabled"));
-        assertFalse(config.getBoolean("settings.win-conditions.hunterKillMob.enabled"));
+        assertFalse(config.getBoolean("settings.win-conditions.speedrunner.kill-mob.enabled"));
+        assertEquals("minecraft:ender_dragon", config.getString("settings.win-conditions.speedrunner.kill-mob.mob"));
+        assertFalse(config.getBoolean("settings.win-conditions.hunter.time-limit.enabled"));
+        assertEquals(3600.0, config.getDouble("settings.win-conditions.hunter.time-limit.time"));
+        assertFalse(config.getBoolean("settings.win-conditions.hunter.acquire-item.enabled"));
+        assertFalse(config.getBoolean("settings.win-conditions.hunter.kill-mob.enabled"));
     }
 
     @Test
@@ -112,7 +112,6 @@ class MultiInstanceSchemaTest {
                 "manhunt.debug-usage",
                 "manhunt.worldengine-setlobby-usage",
                 "manhunt.worldengine-setlobbytp-usage",
-                "manhunt.worldengine-lobby-usage",
                 "manhunt.worldengine-tpto-usage",
                 "manhunt.worldengine-tpto-lobby-world-clash",
                 "game.join-no-change")) {
@@ -226,6 +225,7 @@ class MultiInstanceSchemaTest {
         assertTrue(messages.getString("game.speedrunner-left", "").contains("{remaining}"));
         assertTrue(messages.getString("manhunt.status-all-entry", "").contains("{id}"));
         assertTrue(messages.getString("manhunt.status-all-entry", "").contains("{duration}"));
+        assertTrue(messages.getString("manhunt.status-all-entry", "").contains("{lobby}"));
         assertTrue(messages.getString("manhunt.headstart-active", "").contains("{role}"));
         assertTrue(messages.getString("manhunt.headstart-active", "").contains("{seconds}"));
     }

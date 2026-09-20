@@ -58,9 +58,6 @@ permissions:
   jmanhunt.command.worldengine.tpto:
     description: Teleport to the lobby world or game world.
     default: op
-  jmanhunt.command.worldengine.lobby:
-    description: Teleport players to the world-engine lobby.
-    default: op
   jmanhunt.command.worldengine.cellindex:
     description: View or change the world-engine cell index.
     default: op

@@ -8,6 +8,8 @@ import com.jruk8.jmanhunt.core.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.LobbyWorld;
+import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
+import com.jruk8.jmanhunt.lobby.SubLobby;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.CapLimits;
@@ -141,7 +143,13 @@ public final class GameManager {
 
     /** Live instance started from a lobby, if that lobby has one running. */
     public Optional<GameInstance> instanceForLobby(int lobbyId) {
-        return instances.values().stream().filter(instance -> instance.originLobbyId() == lobbyId).findFirst();
+        return instancesForLobby(lobbyId).stream().findFirst();
+    }
+
+    /** Live instances started from one lobby, sublobbies included. */
+    public List<GameInstance> instancesForLobby(int lobbyId) {
+        return instances.values().stream()
+                .filter(instance -> instance.originLobbyId() == lobbyId).toList();
     }
 
     /** True when the player actively participates in any live match. */
@@ -243,13 +251,13 @@ public final class GameManager {
      * announces each threshold once and ends the match at zero.
      */
     private void scheduleTimeLimit(GameInstance instance, long currentMatchId) {
-        boolean runnerClock = winConditionEngine.isSurviveTimeEnabled();
-        boolean hunterClock = winConditionEngine.isHunterTimeLimitEnabled();
+        boolean runnerClock = winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME);
+        boolean hunterClock = winConditionEngine.enabled(Role.HUNTER, WinCondition.TIME_LIMIT);
         if (!runnerClock && !hunterClock) {
             return;
         }
-        double runnerSecs = winConditionEngine.surviveTimeSeconds();
-        double hunterSecs = winConditionEngine.hunterTimeLimitSeconds();
+        double runnerSecs = winConditionEngine.time(Role.SPEEDRUNNER);
+        double hunterSecs = winConditionEngine.time(Role.HUNTER);
         double limitSecs;
         Role winner;
         if (runnerClock && hunterClock) {
@@ -327,20 +335,23 @@ public final class GameManager {
     /** Status text for the speedrunner win conditions: base plus enabled alternates. */
     public String speedrunnerWinConditions() {
         List<String> conditions = new ArrayList<>(List.of("eliminate all hunters"));
-        if (winConditionEngine.isExitEndEnabled()) {
+        if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END)) {
             conditions.add("credits screen");
         }
-        if (winConditionEngine.isSurviveTimeEnabled()) {
-            conditions.add("survive " + DurationFormat.format((long) winConditionEngine.surviveTimeSeconds()));
+        if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME)) {
+            conditions.add("survive "
+                    + DurationFormat.format((long) winConditionEngine.time(Role.SPEEDRUNNER)));
         }
-        if (winConditionEngine.isAcquireItemEnabled()) {
-            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.acquireItem()) + " acquired");
+        if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.ACQUIRE_ITEM)) {
+            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.item(Role.SPEEDRUNNER))
+                    + " acquired");
         }
-        if (winConditionEngine.isReachAdvancementEnabled()) {
-            conditions.add("advancement " + winConditionEngine.reachAdvancement());
+        if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT)) {
+            conditions.add("advancement " + winConditionEngine.advancement());
         }
-        if (winConditionEngine.isKillMobEnabled()) {
-            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.killMob()) + " killed");
+        if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.KILL_MOB)) {
+            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.mob(Role.SPEEDRUNNER))
+                    + " killed");
         }
         return String.join(", ", conditions);
     }
@@ -348,15 +359,15 @@ public final class GameManager {
     /** Status text for the hunter win conditions: base plus enabled alternates. */
     public String hunterWinConditions() {
         List<String> conditions = new ArrayList<>(List.of("eliminate all speedrunners"));
-        if (winConditionEngine.isHunterTimeLimitEnabled()) {
+        if (winConditionEngine.enabled(Role.HUNTER, WinCondition.TIME_LIMIT)) {
             conditions.add("time limit "
-                    + DurationFormat.format((long) winConditionEngine.hunterTimeLimitSeconds()));
+                    + DurationFormat.format((long) winConditionEngine.time(Role.HUNTER)));
         }
-        if (winConditionEngine.isHunterAcquireItemEnabled()) {
-            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.hunterAcquireItem()) + " acquired");
+        if (winConditionEngine.enabled(Role.HUNTER, WinCondition.ACQUIRE_ITEM)) {
+            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.item(Role.HUNTER)) + " acquired");
         }
-        if (winConditionEngine.isHunterKillMobEnabled()) {
-            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.hunterKillMob()) + " killed");
+        if (winConditionEngine.enabled(Role.HUNTER, WinCondition.KILL_MOB)) {
+            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.mob(Role.HUNTER)) + " killed");
         }
         return String.join(", ", conditions);
     }
@@ -487,6 +498,11 @@ public final class GameManager {
         OptionalLong matchCell = worldEngine.onMatchStart(players, spectators, firstMatch, lobbyId, currentMatchId);
         GameInstance instance = new GameInstance(currentMatchId, lobbyId, matchCell,
                 System.currentTimeMillis());
+        if (lobbies.multiLobbyAllowed()
+                && MidMatchPolicy.parse(plugin.getConfig()
+                        .getString("lobbies.mid-match-setplayer", "SUBLOBBY")) == MidMatchPolicy.SUBLOBBY) {
+            instance.setSubLobby(new SubLobby(lobbyId, lobbies.nextSubId(lobbyId)));
+        }
         for (UUID playerId : assignees) {
             instance.activate(playerId);
         }

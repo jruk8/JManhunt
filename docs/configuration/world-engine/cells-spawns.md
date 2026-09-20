@@ -21,7 +21,7 @@ world-engine:
       pitch: 0.0
 ```
 
-`enabled`, when true, teleports participants to a fresh cell when a match
+When `enabled`, teleports participants to a fresh cell when a match
 starts and returns them to the lobby when it ends. Players with role `none`
 travel to the cell center as spectators when
 `settings.roles.none-gamemode-spectator` is enabled, and return to the lobby
@@ -31,10 +31,8 @@ strongholds around like normal structures. You can tweak the rates in
 `settings/world-engine/strongholds.json` (defaults imitate average distance
 in a normal world from world origin 0,0).
 
-`world-name` is the name of the world that is partitioned into cells. Make
-sure it is different from the lobby world. It is recommended to use something
-like **Multiverse-Core** to manage both worlds. (test server `play.alttari.games`
-uses Multiverse-Core)
+`world-name` is the name of the world that is partitioned into cells. Don't modify
+unless you have a particular reason to not use the default overworld.
 
 ## Cell Size
 
@@ -76,8 +74,8 @@ a match ends. Make sure lobby worlds are different from the game world. Use
 locations in-game.
 
 The fastest way to get a lobby is `/manhunt worldengine tpto lobbyworld`,
-run twice: it generates the `jmh-lobby` void world (a blank canvas with a
-small stone platform to build from) and points lobby 0 at it automatically.
+run twice: it generates the `jmh-lobby` void world (filled by your lobby
+preset) and points lobby 0 at the spawn automatically.
 Set `world-engine.lobby-world-name` to use your own world instead.
 
 Players who fall into the void in the lobby world pop back at their lobby

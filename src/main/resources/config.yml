@@ -208,6 +208,13 @@ lobbies:
   # teleport for one invocation.
   # Default: true
   join-teleports-to-lobby: true
+  # What /manhunt setplayer does when the target's lobby has a live match.
+  # Only applies with the world engine on; otherwise the in-match block
+  # stays. HOLD queues roles for the next game, JOIN_ANY joins any role
+  # mid-match, JOIN_SPECTATORS joins spectators and holds everyone else,
+  # SUBLOBBY queues roles for the next sublobby.
+  # Default: SUBLOBBY
+  mid-match-setplayer: SUBLOBBY
   # Per-role queue caps for each lobby. Only enforced on the queue before a
   # match starts, and bypassed with -force. Lowering a cap below the current
   # queue blocks new entries of that role but never kicks queued players.
@@ -530,53 +537,57 @@ settings:
 
   # Alternate win conditions. Multiple conditions can be enabled at the same
   # time; speedrunners win as soon as any one is satisfied.
-  # Default: exitEnd enabled, all others disabled
+  # Default: exit-end enabled, all others disabled
   win-conditions:
-    # Speedrunners win by entering the End and returning to the Overworld.
-    exitEnd:
-      enabled: true
-    # Speedrunners win by surviving for the configured time.
-    surviveTime:
-      enabled: false
-      # Time in seconds the speedrunner(s) must survive.
-      # Default: 3600.0
-      time: 3600.0
-    # Speedrunners win by acquiring the configured item.
-    acquireItem:
-      enabled: false
-      # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
-      # Default: minecraft:netherite_ingot
-      item: "minecraft:netherite_ingot"
-    # Speedrunners win by completing the configured advancement.
-    reachAdvancement:
-      enabled: false
-      # The advancement to reach (namespaced key, e.g. minecraft:story/enter_the_nether).
-      # Default: minecraft:story/enter_the_nether
-      advancement: "minecraft:story/enter_the_nether"
-    # Speedrunners win when a speedrunner kills the configured mob.
-    killMob:
-      enabled: false
-      # The mob to kill (namespaced key, e.g. minecraft:ender_dragon).
-      # Default: minecraft:ender_dragon
-      mob: "minecraft:ender_dragon"
-    # Hunters win when the time expires before the speedrunners win.
-    hunterTimeLimit:
-      enabled: false
-      # Time in seconds the speedrunners have.
-      # Default: 3600.0
-      time: 3600.0
-    # Hunters win when a hunter acquires the configured item.
-    hunterAcquireItem:
-      enabled: false
-      # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
-      # Default: minecraft:netherite_ingot
-      item: "minecraft:netherite_ingot"
-    # Hunters win when a hunter kills the configured mob.
-    hunterKillMob:
-      enabled: false
-      # The mob to kill (namespaced key, e.g. minecraft:ender_dragon).
-      # Default: minecraft:ender_dragon
-      mob: "minecraft:ender_dragon"
+    # Conditions the speedrunners can win with.
+    speedrunner:
+      # Speedrunners win by entering the End and returning to the Overworld.
+      exit-end:
+        enabled: true
+      # Speedrunners win by surviving for the configured time.
+      survive-time:
+        enabled: false
+        # Time in seconds the speedrunner(s) must survive.
+        # Default: 3600.0
+        time: 3600.0
+      # Speedrunners win by acquiring the configured item.
+      acquire-item:
+        enabled: false
+        # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
+        # Default: minecraft:netherite_ingot
+        item: "minecraft:netherite_ingot"
+      # Speedrunners win by completing the configured advancement.
+      reach-advancement:
+        enabled: false
+        # The advancement to reach (namespaced key, e.g. minecraft:story/enter_the_nether).
+        # Default: minecraft:story/enter_the_nether
+        advancement: "minecraft:story/enter_the_nether"
+      # Speedrunners win when a speedrunner kills the configured mob.
+      kill-mob:
+        enabled: false
+        # The mob to kill (namespaced key, e.g. minecraft:ender_dragon).
+        # Default: minecraft:ender_dragon
+        mob: "minecraft:ender_dragon"
+    # Conditions the hunters can win with.
+    hunter:
+      # Hunters win when the time expires before the speedrunners win.
+      time-limit:
+        enabled: false
+        # Time in seconds the speedrunners have.
+        # Default: 3600.0
+        time: 3600.0
+      # Hunters win when a hunter acquires the configured item.
+      acquire-item:
+        enabled: false
+        # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
+        # Default: minecraft:netherite_ingot
+        item: "minecraft:netherite_ingot"
+      # Hunters win when a hunter kills the configured mob.
+      kill-mob:
+        enabled: false
+        # The mob to kill (namespaced key, e.g. minecraft:ender_dragon).
+        # Default: minecraft:ender_dragon
+        mob: "minecraft:ender_dragon"
 
   # Compass tracking settings. The held actionbar stays visible between
   # interval refreshes and continues showing its cached value.
@@ -632,6 +643,19 @@ settings:
       # Seconds the analysis takes before the compass updates.
       # Default: 1.0
       delay-seconds: 1.0
+      # Commands run as console when an analysis starts, in custom-modifier
+      # style: <p> is the holder, ~ resolves against their location, and
+      # <duration> is the analysis delay in whole seconds (floored). The
+      # player list runs for every analyzing holder plus their own role
+      # list. Only participants are affected.
+      # Default: false
+      debuffs:
+        enabled: false
+        commands:
+          player:
+            - "effect give <p> minecraft:slowness <duration> 1 true"
+          speedrunner: []
+          hunter: []
     # When true, the compass stops tracking when the targeted player is within
     # the configured flat distance. Only X/Z coordinates are compared, so the
     # target may still be above or below the holder. Applies to both hunters
@@ -760,8 +784,8 @@ world-engine:
   world-name: world
   # Name of the lobby world used by /manhunt worldengine tpto lobbyworld.
   # When no world with this name exists, the plugin generates a void world
-  # with a small stone platform on confirmed request. Point this at your own
-  # world to use it instead.
+  # filled by the configured lobby preset on confirmed request. Point this
+  # at your own world to use it instead.
   # Default: jmh-lobby
   lobby-world-name: "jmh-lobby"
   # Teleport players who fall into the void in the lobby world back to their
@@ -769,6 +793,36 @@ world-engine:
   # game world.
   # Default: true
   lobby-world-void-rescue: true
+  # Preset applied when the lobby world is generated. Delete the world
+  # folder and run tpto twice to regenerate with another preset.
+  # Default: DEFAULT
+  lobby-preset: DEFAULT
+  # Per-preset generation. schematic is a vanilla structure-block .nbt in
+  # JManhunt/settings/world-engine/lobby-schematics/, pasted with its
+  # midpoint at 0,64,0. commands run as console after the paste and before
+  # the first teleport lands ({world} and {preset} are substituted).
+  # Do not touch unless you know what you are doing.
+  lobby-presets:
+    EMPTY:
+      schematic: "empty-lobby"
+      commands: []
+    DEFAULT:
+      schematic: "default-lobby"
+      commands: []
+    ADVANCED:
+      schematic: "advanced-lobby"
+      commands: []
+  # Stand-on role pads. A player in the lobby world inside a listed block's
+  # XZ cell and at most 4 blocks above it is assigned the mapped role,
+  # like setplayer. Material names are Bukkit Material names.
+  # Default: true
+  role-pads:
+    enabled: true
+    speedrunner: LIME_CONCRETE
+    hunter: RED_CONCRETE
+    afk: YELLOW_CONCRETE
+    spectator: LIGHT_GRAY_CONCRETE
+    none: GRAY_CONCRETE
   # Lobby locations per lobby id. Players return to their match's lobby
   # location when a game ends. Preferably set to something different from the
   # world that the spiral engine works on.

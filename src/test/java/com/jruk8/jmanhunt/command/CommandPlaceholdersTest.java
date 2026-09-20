@@ -66,4 +66,22 @@ class CommandPlaceholdersTest {
         String result = CommandPlaceholders.replace("summon zombie ~ ~ ~", "Steve", 10.5, 64.0, -20.2);
         assertEquals("summon zombie 10.5 64 -20.2", result);
     }
+
+    @Test
+    void withDurationFloorsDecimals() {
+        assertEquals("effect give Steve minecraft:slowness 2 1 true",
+                CommandPlaceholders.withDuration("effect give Steve minecraft:slowness <duration> 1 true", 2.9));
+    }
+
+    @Test
+    void withDurationKeepsWholeSeconds() {
+        assertEquals("effect give Steve minecraft:slowness 1 1 true",
+                CommandPlaceholders.withDuration("effect give Steve minecraft:slowness <duration> 1 true", 1.0));
+    }
+
+    @Test
+    void withDurationLeavesOtherCommandsAlone() {
+        assertEquals("summon lightning_bolt ~ ~ ~",
+                CommandPlaceholders.withDuration("summon lightning_bolt ~ ~ ~", 3.7));
+    }
 }

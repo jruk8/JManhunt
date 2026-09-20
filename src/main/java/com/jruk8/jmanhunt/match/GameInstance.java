@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.lobby.SubLobby;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.scheduler.BukkitTask;
 import java.util.Collections;
@@ -19,6 +20,7 @@ public final class GameInstance {
     private final int originLobbyId;
     private final OptionalLong cellIndex;
     private final long startedAtMillis;
+    private SubLobby subLobby;
     private final Set<UUID> assigned = new HashSet<>();
     private final Set<UUID> activeParticipants = new HashSet<>();
     private boolean active = true;
@@ -60,6 +62,23 @@ public final class GameInstance {
 
     public long startedAtMillis() {
         return startedAtMillis;
+    }
+
+    /**
+     * Sublobby this match runs as, or null when the parent lobby hosts
+     * directly (engine off, or a non-SUBLOBBY policy).
+     */
+    public SubLobby subLobby() {
+        return subLobby;
+    }
+
+    public void setSubLobby(SubLobby subLobby) {
+        this.subLobby = subLobby;
+    }
+
+    /** Lobby tag for status output: L{id}, or L{id}-{sub} when sublobbed. */
+    public String lobbyTag() {
+        return subLobby == null ? "L" + originLobbyId : subLobby.format();
     }
 
     /** Records players assigned to this instance (grows, never shrinks). */

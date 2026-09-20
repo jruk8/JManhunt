@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -11,8 +12,9 @@ import org.bukkit.inventory.ItemStack;
 
 /**
  * Evaluates alternate win conditions from the {@code settings.win-conditions}
- * section of config.yml. Multiple conditions can be enabled simultaneously;
- * each side wins as soon as any one of its conditions is satisfied.
+ * section of config.yml, grouped by winning side. Multiple conditions can
+ * be enabled simultaneously; each side wins as soon as any one of its
+ * conditions is satisfied. One role-parameterized core serves both sides.
  */
 public final class WinConditionEngine {
     private FileConfiguration config;
@@ -26,89 +28,82 @@ public final class WinConditionEngine {
         this.config = config;
     }
 
-    public boolean isExitEndEnabled() {
-        return config.getBoolean("settings.win-conditions.exitEnd.enabled", true);
+    /**
+     * True when the condition is enabled for the side. Conditions owned by
+     * the other side, and any condition for a non-participant role, are
+     * always disabled.
+     */
+    public boolean enabled(Role role, WinCondition condition) {
+        if (!role.isParticipant()) {
+            return false;
+        }
+        switch (condition) {
+            case EXIT_END, SURVIVE_TIME, REACH_ADVANCEMENT -> {
+                if (role != Role.SPEEDRUNNER) {
+                    return false;
+                }
+            }
+            case TIME_LIMIT -> {
+                if (role != Role.HUNTER) {
+                    return false;
+                }
+            }
+            case ACQUIRE_ITEM, KILL_MOB -> {
+            }
+        }
+        return config.getBoolean(base(role, condition) + "enabled", condition == WinCondition.EXIT_END);
     }
 
-    public boolean isSurviveTimeEnabled() {
-        return config.getBoolean("settings.win-conditions.surviveTime.enabled", false);
+    /**
+     * Configured clock in seconds: the survival time for speedrunners, the
+     * expiry limit for hunters.
+     */
+    public double time(Role role) {
+        if (role == Role.SPEEDRUNNER) {
+            return config.getDouble(base(role, WinCondition.SURVIVE_TIME) + "time", 3600.0);
+        }
+        if (role == Role.HUNTER) {
+            return config.getDouble(base(role, WinCondition.TIME_LIMIT) + "time", 3600.0);
+        }
+        return 3600.0;
     }
 
-    public double surviveTimeSeconds() {
-        return config.getDouble("settings.win-conditions.surviveTime.time", 3600.0);
+    /** Configured item for the side's acquire-item condition. */
+    public String item(Role role) {
+        return config.getString(base(role, WinCondition.ACQUIRE_ITEM) + "item", "minecraft:netherite_ingot");
     }
 
-    public boolean isAcquireItemEnabled() {
-        return config.getBoolean("settings.win-conditions.acquireItem.enabled", false);
+    /** Configured mob for the side's kill-mob condition. */
+    public String mob(Role role) {
+        return config.getString(base(role, WinCondition.KILL_MOB) + "mob", "minecraft:ender_dragon");
     }
 
-    public String acquireItem() {
-        return config.getString("settings.win-conditions.acquireItem.item", "minecraft:netherite_ingot");
-    }
-
-    public boolean isReachAdvancementEnabled() {
-        return config.getBoolean("settings.win-conditions.reachAdvancement.enabled", false);
-    }
-
-    public String reachAdvancement() {
-        return config.getString(
-                "settings.win-conditions.reachAdvancement.advancement",
+    /** Configured advancement for the speedrunner reach-advancement condition. */
+    public String advancement() {
+        return config.getString("settings.win-conditions.speedrunner.reach-advancement.advancement",
                 "minecraft:story/enter_the_nether");
-    }
-
-    public boolean isKillMobEnabled() {
-        return config.getBoolean("settings.win-conditions.killMob.enabled", false);
-    }
-
-    public String killMob() {
-        return config.getString("settings.win-conditions.killMob.mob", "minecraft:ender_dragon");
-    }
-
-    public boolean isHunterTimeLimitEnabled() {
-        return config.getBoolean("settings.win-conditions.hunterTimeLimit.enabled", false);
-    }
-
-    public double hunterTimeLimitSeconds() {
-        return config.getDouble("settings.win-conditions.hunterTimeLimit.time", 3600.0);
-    }
-
-    public boolean isHunterAcquireItemEnabled() {
-        return config.getBoolean("settings.win-conditions.hunterAcquireItem.enabled", false);
-    }
-
-    public String hunterAcquireItem() {
-        return config.getString(
-                "settings.win-conditions.hunterAcquireItem.item", "minecraft:netherite_ingot");
-    }
-
-    public boolean isHunterKillMobEnabled() {
-        return config.getBoolean("settings.win-conditions.hunterKillMob.enabled", false);
-    }
-
-    public String hunterKillMob() {
-        return config.getString("settings.win-conditions.hunterKillMob.mob", "minecraft:ender_dragon");
     }
 
     /**
      * Returns true if the player's inventory contains the configured item
-     * for the acquireItem win condition.
+     * for their side's acquire-item win condition.
      */
-    public boolean hasAcquireItem(Player player) {
-        if (!isAcquireItemEnabled()) {
+    public boolean hasItem(Player player, Role role) {
+        if (!enabled(role, WinCondition.ACQUIRE_ITEM)) {
             return false;
         }
-        return hasMaterial(player, acquireItem());
+        return hasMaterial(player, item(role));
     }
 
     /**
      * Returns true if the player has completed the configured advancement
-     * for the reachAdvancement win condition.
+     * for the reach-advancement win condition.
      */
     public boolean hasReachAdvancement(Player player) {
-        if (!isReachAdvancementEnabled()) {
+        if (!enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT)) {
             return false;
         }
-        NamespacedKey key = NamespacedKey.fromString(reachAdvancement());
+        NamespacedKey key = NamespacedKey.fromString(advancement());
         if (key == null) {
             return false;
         }
@@ -116,25 +111,28 @@ public final class WinConditionEngine {
         return advancement != null && player.getAdvancementProgress(advancement).isDone();
     }
 
-    /**
-     * Returns true if the player's inventory contains the configured item
-     * for the hunterAcquireItem win condition.
-     */
-    public boolean hasHunterAcquireItem(Player player) {
-        if (!isHunterAcquireItemEnabled()) {
-            return false;
-        }
-        return hasMaterial(player, hunterAcquireItem());
+    /** True when the killed mob satisfies the side's kill-mob condition. */
+    public boolean mobMatches(EntityType type, Role role) {
+        return enabled(role, WinCondition.KILL_MOB) && matchesMob(mob(role), type);
     }
 
-    /** True when the killed mob satisfies the speedrunner killMob condition. */
-    public boolean isKillMob(EntityType type) {
-        return isKillMobEnabled() && matchesMob(killMob(), type);
+    private String base(Role role, WinCondition condition) {
+        return "settings.win-conditions." + side(role) + "." + leaf(condition) + ".";
     }
 
-    /** True when the killed mob satisfies the hunter hunterKillMob condition. */
-    public boolean isHunterKillMob(EntityType type) {
-        return isHunterKillMobEnabled() && matchesMob(hunterKillMob(), type);
+    private static String side(Role role) {
+        return role == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
+    }
+
+    private static String leaf(WinCondition condition) {
+        return switch (condition) {
+            case EXIT_END -> "exit-end";
+            case SURVIVE_TIME -> "survive-time";
+            case ACQUIRE_ITEM -> "acquire-item";
+            case REACH_ADVANCEMENT -> "reach-advancement";
+            case KILL_MOB -> "kill-mob";
+            case TIME_LIMIT -> "time-limit";
+        };
     }
 
     private boolean hasMaterial(Player player, String item) {

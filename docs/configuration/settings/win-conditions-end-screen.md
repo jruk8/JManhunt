@@ -8,63 +8,58 @@ least one is enabled.
 ```yaml
 settings:
   win-conditions:
-    exitEnd:
-      enabled: true
-    surviveTime:
-      enabled: false
-      time: 3600.0
-    acquireItem:
-      enabled: false
-      item: "minecraft:netherite_ingot"
-    reachAdvancement:
-      enabled: false
-      advancement: "minecraft:story/enter_the_nether"
-    killMob:
-      enabled: false
-      mob: "minecraft:ender_dragon"
-    hunterTimeLimit:
-      enabled: false
-      time: 3600.0
-    hunterAcquireItem:
-      enabled: false
-      item: "minecraft:netherite_ingot"
-    hunterKillMob:
-      enabled: false
-      mob: "minecraft:ender_dragon"
+    speedrunner:
+      exit-end:
+        enabled: true
+      survive-time:
+        enabled: false
+        time: 3600.0
+      acquire-item:
+        enabled: false
+        item: "minecraft:netherite_ingot"
+      reach-advancement:
+        enabled: false
+        advancement: "minecraft:story/enter_the_nether"
+      kill-mob:
+        enabled: false
+        mob: "minecraft:ender_dragon"
+    hunter:
+      time-limit:
+        enabled: false
+        time: 3600.0
+      acquire-item:
+        enabled: false
+        item: "minecraft:netherite_ingot"
+      kill-mob:
+        enabled: false
+        mob: "minecraft:ender_dragon"
 ```
 
-## Exit the End
+## Speedrunner Conditions
 
-`exitEnd` is the classic manhunt win condition: speedrunners win by entering
-the End and then returning to the Overworld. Enabled by default.
+`exit-end` is the classic manhunt win condition: speedrunners win by
+entering the End and then returning to the Overworld. Enabled by default.
 
-## Survive Time
-
-`surviveTime` lets speedrunners win simply by staying alive for a set
+`survive-time` lets speedrunners win simply by staying alive for a set
 duration, given by `time` in seconds.
 
-## Acquire Item
+`acquire-item` grants the win the moment a speedrunner obtains the item
+named in `item`, given as a namespaced key (e.g.
+`minecraft:netherite_ingot`).
 
-`acquireItem` grants the win the moment a speedrunner obtains the item named
-in `item`, given as a namespaced key (e.g. `minecraft:netherite_ingot`).
-
-## Reach Advancement
-
-`reachAdvancement` grants the win when a speedrunner completes the
+`reach-advancement` grants the win when a speedrunner completes the
 advancement named in `advancement`, given as a namespaced key (e.g.
 `minecraft:story/enter_the_nether`).
 
-## Kill Mob
-
-`killMob` grants the win when a speedrunner kills the mob named in `mob`,
-given as a namespaced key (e.g. `minecraft:ender_dragon`).
+`kill-mob` grants the win when a speedrunner kills the mob named in
+`mob`, given as a namespaced key (e.g. `minecraft:ender_dragon`).
 
 ## Hunter Conditions
 
-`hunterTimeLimit`, `hunterAcquireItem`, and `hunterKillMob` mirror the
-speedrunner conditions for the other side: hunters win when the clock runs
-out, when a hunter holds the item, or when a hunter kills the mob. All
-default to off.
+`time-limit`, `acquire-item`, and `kill-mob` mirror the speedrunner
+conditions for the other side: hunters win when the clock runs out, when
+a hunter holds the item, or when a hunter kills the mob. All default to
+off.
 
 ## Time Announcements
 
