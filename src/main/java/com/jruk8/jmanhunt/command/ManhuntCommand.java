@@ -153,7 +153,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt status [id|all]", "show match status"},
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt configuration <category> <key...> <value>", "view or change a setting"},
-                {"/manhunt worldengine", "set lobby or teleport players"},
+                {"/manhunt worldengine", "manage lobbies or teleport players"},
                 {"/manhunt debug [on|off]", "toggle debug output"},
                 {"/manhunt challenges", "show Challenges addon info"},
                 {"/manhunt dev schem <pos1|pos2|save|load|list>", "dev schematic tools"},
@@ -423,9 +423,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         return switch (action.toLowerCase(Locale.ROOT)) {
-            case "setlobby" -> sender.hasPermission("jmanhunt.command.worldengine.setlobby");
-            case "setlobbytp" -> sender.hasPermission("jmanhunt.command.worldengine.setlobbytp");
-            case "lobbybounds" -> sender.hasPermission("jmanhunt.command.worldengine.lobbybounds");
+            case "lobbyconfig" -> sender.hasPermission("jmanhunt.command.worldengine.lobbyconfig");
             case "tpto" -> sender.hasPermission("jmanhunt.command.worldengine.tpto");
             case "cellindex" -> sender.hasPermission("jmanhunt.command.worldengine.cellindex");
             default -> false;
@@ -1319,14 +1317,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (!canUseWorldEngineAction(sender, sub)) {
             return message(sender, "command.no-permission");
         }
-        if (sub.equals("setlobby")) {
-            return worldEngineSetLobby(sender, args);
-        }
-        if (sub.equals("setlobbytp")) {
-            return worldEngineSetLobbyTp(sender, args);
-        }
-        if (sub.equals("lobbybounds")) {
-            return worldEngineLobbyBounds(sender, args);
+        if (sub.equals("lobbyconfig")) {
+            return worldEngineLobbyConfig(sender, args);
         }
         if (sub.equals("tpto")) {
             return worldEngineTpto(sender, args);
@@ -1394,76 +1386,47 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return message(sender, "manhunt.worldengine-cellindex-usage");
     }
 
-    private boolean worldEngineSetLobby(CommandSender sender, String[] args) {
-        if (args.length > 3) {
-            return message(sender, "manhunt.worldengine-setlobby-usage");
-        }
-
-        Location location;
-        if (args.length == 2 || args[2].isBlank()) {
-            if (!(sender instanceof Player player)) {
-                return message(sender, "command.player-only");
-            }
-            location = player.getLocation();
-        } else {
-            location = parseLobbyLocation(sender, args[2]);
-            if (location == null) {
-                return message(sender, "manhunt.worldengine-invalid-location");
-            }
-        }
-
-        saveLobbyTp(0, location);
-
-        // Set the world spawn to the lobby location so that new spawns and
-        // deaths without a personal respawn point go to the lobby.
-        if (location.getWorld() != null) {
-            location.getWorld().setSpawnLocation(location);
-        }
-
-        // Update respawn points for players who are not in an active match.
-        // When no match is running, all online players are updated; when a
-        // match is running, only non-participants are moved so that active
-        // hunters/speedrunners keep their in-match respawn points.
-        List<Player> targets = new ArrayList<>();
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (game.instanceOf(online.getUniqueId()).isEmpty()) {
-                targets.add(online);
-            }
-        }
-        lobbyTeleporter.setSpawnToLobby(targets, 0);
-
-        message(sender, "manhunt.worldengine-setlobby-success",
-                Map.of("location", formatLocation(location)));
-        neutralSound(sender);
-        return true;
-    }
-
     /**
-     * Saves the sender's position as a lobby's teleport: setlobbytp
-     * &lt;lobby-id&gt;. Player-only, since the position is read from the
-     * sender, and lobby-world-only, since teleports always land there.
+     * Stores a lobby teleport: setlobbytp &lt;lobby-id&gt;
+     * [x y z yaw pitch]. Coords are all-or-none; omitted coords use the
+     * sender's position, so the console must pass all five. The
+     * position path requires standing in the lobby world; explicit
+     * coords skip that check.
      */
-    private boolean worldEngineSetLobbyTp(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            return message(sender, "command.player-only");
+    private boolean lobbyConfigSetTp(CommandSender sender, String[] args) {
+        if (args.length != 4 && args.length != 9) {
+            return message(sender, "manhunt.worldengine-lobbyconfig-setlobbytp-usage");
         }
-        if (args.length != 3) {
-            return message(sender, "manhunt.worldengine-setlobbytp-usage");
-        }
-        OptionalInt lobbyId = LobbyService.parseId(args[2]);
+        OptionalInt lobbyId = LobbyService.parseId(args[3]);
         if (lobbyId.isEmpty()) {
             return message(sender, "manhunt.lobby-invalid-id");
         }
         if (!lobbies.multiLobbyAllowed() && lobbyId.getAsInt() != 0) {
             return message(sender, "manhunt.lobby-worldengine-required");
         }
-        String lobbyWorld = game.lobbyWorldName();
-        if (player.getWorld() == null || !player.getWorld().getName().equals(lobbyWorld)) {
-            message(sender, "manhunt.worldengine-setlobbytp-wrong-world",
-                    Map.of("world", lobbyWorld));
-            return true;
+        Location location;
+        String shown;
+        if (args.length == 9) {
+            double[] coords = parseLobbyTpCoords(args[4], args[5], args[6], args[7], args[8]);
+            if (coords == null) {
+                return message(sender, "manhunt.worldengine-invalid-location");
+            }
+            location = new Location(null, coords[0], coords[1], coords[2],
+                    (float) coords[3], (float) coords[4]);
+            shown = formatCoords(coords[0], coords[1], coords[2], coords[3], coords[4]);
+        } else {
+            if (!(sender instanceof Player player)) {
+                return message(sender, "command.player-only");
+            }
+            String lobbyWorld = game.lobbyWorldName();
+            if (player.getWorld() == null || !player.getWorld().getName().equals(lobbyWorld)) {
+                message(sender, "manhunt.worldengine-lobbyconfig-setlobbytp-wrong-world",
+                        Map.of("world", lobbyWorld));
+                return true;
+            }
+            location = player.getLocation();
+            shown = formatLocation(location);
         }
-        Location location = player.getLocation();
         saveLobbyTp(lobbyId.getAsInt(), location);
         List<Player> targets = new ArrayList<>();
         for (Player online : Bukkit.getOnlinePlayers()) {
@@ -1472,42 +1435,90 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             }
         }
         lobbyTeleporter.setSpawnToLobby(targets, lobbyId.getAsInt());
-        message(sender, "manhunt.worldengine-setlobby-success",
-                Map.of("location", formatLocation(location)));
+        message(sender, "manhunt.worldengine-lobbyconfig-setlobbytp-success", Map.of(
+                "lobby", String.valueOf(lobbyId.getAsInt()), "location", shown));
         neutralSound(sender);
         return true;
     }
 
     /**
-     * Manages lobby boundary boxes: lobbybounds pos1|pos2 records the
-     * executing player's feet block as a corner, and lobbybounds set
-     * &lt;lobby-id&gt; stores both corners as that lobby's bounds.
-     * Player-only throughout, since the corners come from the sender.
-     * Overwriting existing bounds needs a second run within 10 seconds.
+     * Parses setlobbytp coords: x, y, z, yaw, pitch. Null when any part
+     * is not a number. Pure for tests.
      */
-    private boolean worldEngineLobbyBounds(CommandSender sender, String[] args) {
+    static double[] parseLobbyTpCoords(String xText, String yText, String zText,
+            String yawText, String pitchText) {
+        try {
+            return new double[]{
+                    Double.parseDouble(xText.trim()),
+                    Double.parseDouble(yText.trim()),
+                    Double.parseDouble(zText.trim()),
+                    Double.parseDouble(yawText.trim()),
+                    Double.parseDouble(pitchText.trim())};
+        } catch (NumberFormatException expected) {
+            return null;
+        }
+    }
+
+    private static String formatCoords(double x, double y, double z, double yaw, double pitch) {
+        return String.format("%.2f, %.2f, %.2f, %.2f, %.2f", x, y, z, yaw, pitch);
+    }
+
+    /**
+     * Manages lobby teleports and boundary boxes in the lobby store:
+     * pos1|pos2 records the executing player's feet block as a bounds
+     * corner, setbounds stores both corners, setlobbytp stores a
+     * teleport, and deletelobby removes the whole entry.
+     */
+    private boolean worldEngineLobbyConfig(CommandSender sender, String[] args) {
+        if (args.length < 3 || args[2].isBlank()) {
+            return message(sender, "manhunt.worldengine-lobbyconfig-usage");
+        }
+        String action = args[2].toLowerCase(Locale.ROOT);
+        switch (action) {
+            case "pos1", "pos2" -> {
+                return lobbyConfigPos(sender, action.equals("pos1"), args);
+            }
+            case "setbounds" -> {
+                return lobbyConfigSetBounds(sender, args);
+            }
+            case "setlobbytp" -> {
+                return lobbyConfigSetTp(sender, args);
+            }
+            case "deletelobby" -> {
+                return lobbyConfigDelete(sender, args);
+            }
+            default -> {
+                return message(sender, "manhunt.worldengine-lobbyconfig-usage");
+            }
+        }
+    }
+
+    private boolean lobbyConfigPos(CommandSender sender, boolean first, String[] args) {
         if (!(sender instanceof Player player)) {
             return message(sender, "command.player-only");
         }
-        if (args.length < 3 || args[2].isBlank()) {
-            return message(sender, "manhunt.worldengine-lobbybounds-usage");
+        if (args.length != 3) {
+            return message(sender, "manhunt.worldengine-lobbyconfig-usage");
         }
-        String action = args[2].toLowerCase(Locale.ROOT);
-        if (action.equals("pos1") || action.equals("pos2")) {
-            if (args.length != 3) {
-                return message(sender, "manhunt.worldengine-lobbybounds-usage");
-            }
-            (action.equals("pos1") ? boundPos1 : boundPos2)
-                    .put(player.getUniqueId(), player.getLocation().clone());
-            message(sender, action.equals("pos1")
-                            ? "manhunt.worldengine-lobbybounds-pos1"
-                            : "manhunt.worldengine-lobbybounds-pos2",
-                    Map.of("pos", blockCoords(player.getLocation())));
-            neutralSound(sender);
-            return true;
+        (first ? boundPos1 : boundPos2).put(player.getUniqueId(), player.getLocation().clone());
+        message(sender, first ? "manhunt.worldengine-lobbyconfig-pos1"
+                        : "manhunt.worldengine-lobbyconfig-pos2",
+                Map.of("pos", blockCoords(player.getLocation())));
+        neutralSound(sender);
+        return true;
+    }
+
+    /**
+     * Stores both recorded corners as a lobby's bounds. Player-only,
+     * since the corners come from the sender. Overwriting existing
+     * bounds needs a second run within 10 seconds.
+     */
+    private boolean lobbyConfigSetBounds(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            return message(sender, "command.player-only");
         }
-        if (!action.equals("set") || args.length != 4) {
-            return message(sender, "manhunt.worldengine-lobbybounds-usage");
+        if (args.length != 4) {
+            return message(sender, "manhunt.worldengine-lobbyconfig-setbounds-usage");
         }
         OptionalInt lobbyId = LobbyService.parseId(args[3]);
         if (lobbyId.isEmpty()) {
@@ -1519,10 +1530,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         Location first = boundPos1.get(player.getUniqueId());
         Location second = boundPos2.get(player.getUniqueId());
         if (first == null || second == null) {
-            return message(sender, "manhunt.worldengine-lobbybounds-need-selection");
+            return message(sender, "manhunt.worldengine-lobbyconfig-need-selection");
         }
         if (first.getWorld() == null || !first.getWorld().equals(second.getWorld())) {
-            return message(sender, "manhunt.worldengine-lobbybounds-world-mismatch");
+            return message(sender, "manhunt.worldengine-lobbyconfig-world-mismatch");
         }
         LobbyConfig lobbyConfig = plugin.lobbyConfig();
         LobbyConfig.LobbyEntry entry =
@@ -1530,8 +1541,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         boolean hasBounds = entry != null && entry.getBounds() != null
                 && entry.getBounds().getPos1() != null && entry.getBounds().getPos2() != null;
         if (hasBounds && !confirms.confirm(
-                "lobbybounds:" + senderKey(sender) + ":" + lobbyId.getAsInt())) {
-            message(sender, "manhunt.worldengine-lobbybounds-confirm",
+                "lobbyconfig-setbounds:" + senderKey(sender) + ":" + lobbyId.getAsInt())) {
+            message(sender, "manhunt.worldengine-lobbyconfig-setbounds-confirm",
                     Map.of("lobby", String.valueOf(lobbyId.getAsInt())));
             return true;
         }
@@ -1544,11 +1555,57 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         bounds.setPos2(LobbyConfig.Position.of(second.getBlockX(), second.getBlockY(), second.getBlockZ()));
         entry.setBounds(bounds);
         lobbyConfig.save();
-        message(sender, "manhunt.worldengine-lobbybounds-success", Map.of(
+        message(sender, "manhunt.worldengine-lobbyconfig-setbounds-success", Map.of(
                 "lobby", String.valueOf(lobbyId.getAsInt()),
                 "from", blockCoords(first), "to", blockCoords(second)));
         neutralSound(sender);
         return true;
+    }
+
+    /**
+     * Deletes a lobby entry (teleport plus bounds) from the lobby
+     * store. Live lobbies, members, and matches are untouched.
+     * Console-capable. Needs a second run within 10 seconds.
+     */
+    private boolean lobbyConfigDelete(CommandSender sender, String[] args) {
+        if (args.length != 4) {
+            return message(sender, "manhunt.worldengine-lobbyconfig-deletelobby-usage");
+        }
+        OptionalInt lobbyId = LobbyService.parseId(args[3]);
+        if (lobbyId.isEmpty()) {
+            return message(sender, "manhunt.lobby-invalid-id");
+        }
+        if (!lobbies.multiLobbyAllowed() && lobbyId.getAsInt() != 0) {
+            return message(sender, "manhunt.lobby-worldengine-required");
+        }
+        LobbyConfig lobbyConfig = plugin.lobbyConfig();
+        if (!lobbyConfigHasLobby(lobbyConfig, lobbyId.getAsInt())) {
+            message(sender, "manhunt.worldengine-lobbyconfig-deletelobby-missing",
+                    Map.of("lobby", String.valueOf(lobbyId.getAsInt())));
+            return true;
+        }
+        if (!confirms.confirm(
+                "lobbyconfig-delete:" + senderKey(sender) + ":" + lobbyId.getAsInt())) {
+            message(sender, "manhunt.worldengine-lobbyconfig-deletelobby-confirm",
+                    Map.of("lobby", String.valueOf(lobbyId.getAsInt())));
+            return true;
+        }
+        lobbyConfig.getLobbies().remove(String.valueOf(lobbyId.getAsInt()));
+        lobbyConfig.save();
+        message(sender, "manhunt.worldengine-lobbyconfig-deletelobby-success",
+                Map.of("lobby", String.valueOf(lobbyId.getAsInt())));
+        neutralSound(sender);
+        return true;
+    }
+
+    /**
+     * True when the lobby store defines the index. A lobby counts as
+     * existing with an index alone, even without a teleport or bounds.
+     * Pure for tests.
+     */
+    static boolean lobbyConfigHasLobby(LobbyConfig lobbyConfig, int lobbyId) {
+        return lobbyConfig != null && lobbyConfig.getLobbies() != null
+                && lobbyConfig.getLobbies().containsKey(String.valueOf(lobbyId));
     }
 
     /** Smallest lobby id without bounds yet. Pure for tests. */
@@ -1660,24 +1717,37 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return completeDrill(args);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("worldengine")) {
-            List<String> actions = new ArrayList<>(
-                    List.of("setlobby", "setlobbytp", "lobbybounds", "cellindex", "tpto"));
+            List<String> actions = new ArrayList<>(List.of("lobbyconfig", "cellindex", "tpto"));
             actions.removeIf(action -> !canUseWorldEngineAction(sender, action));
             return partial(args[1], actions);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("worldengine")
-                && args[1].equalsIgnoreCase("lobbybounds")) {
-            if (!canUseWorldEngineAction(sender, "lobbybounds")) {
+                && args[1].equalsIgnoreCase("lobbyconfig")) {
+            if (!canUseWorldEngineAction(sender, "lobbyconfig")) {
                 return List.of();
             }
-            return partial(args[2], List.of("pos1", "pos2", "set"));
+            return partial(args[2], List.of("pos1", "pos2", "setbounds", "setlobbytp", "deletelobby"));
         }
         if (args.length == 4 && args[0].equalsIgnoreCase("worldengine")
-                && args[1].equalsIgnoreCase("lobbybounds") && args[2].equalsIgnoreCase("set")) {
-            if (!canUseWorldEngineAction(sender, "lobbybounds")) {
+                && args[1].equalsIgnoreCase("lobbyconfig") && args[2].equalsIgnoreCase("setbounds")) {
+            if (!canUseWorldEngineAction(sender, "lobbyconfig")) {
                 return List.of();
             }
             return partial(args[3], lobbyBoundsSetOptions());
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("worldengine")
+                && args[1].equalsIgnoreCase("lobbyconfig") && args[2].equalsIgnoreCase("setlobbytp")) {
+            if (!canUseWorldEngineAction(sender, "lobbyconfig")) {
+                return List.of();
+            }
+            return partial(args[3], lobbyIdOptions());
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("worldengine")
+                && args[1].equalsIgnoreCase("lobbyconfig") && args[2].equalsIgnoreCase("deletelobby")) {
+            if (!canUseWorldEngineAction(sender, "lobbyconfig")) {
+                return List.of();
+            }
+            return partial(args[3], lobbyConfigIdOptions());
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("cellindex")) {
             if (!canUseWorldEngineAction(sender, "cellindex")) {
@@ -1685,18 +1755,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             }
             return partial(args[2], List.of("get", "set", "buffer"));
         }
-        if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("setlobbytp"))
-            return partial(args[2], lobbyIdOptions());
         if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("tpto"))
             return partial(args[2], List.of("lobbyworld", "gameworld"));
         if (args.length == 4 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("tpto"))
             return partial(args[3], selectorOptions());
-        if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("setlobby")) {
-            if (sender instanceof Player player) {
-                return partial(args[2], List.of(formatLocation(player.getLocation())));
-            }
-            return List.of();
-        }
         if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) {
             if (args[1].startsWith("@a[")) return partial(args[1], List.of("@a[distance=", "@a[limit=", "@a[name=", "@a[gamemode="));
             return partial(args[1], selectorOptions());
@@ -1765,8 +1827,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Lobby id completion for lobbybounds set: the next id without
-     * bounds first, then live lobby ids. Any valid id stays accepted.
+     * Lobby id completion for lobbyconfig setbounds: the next id
+     * without bounds first, then live lobby ids. Any valid id stays
+     * accepted.
      */
     private List<String> lobbyBoundsSetOptions() {
         Set<Integer> bounded = new HashSet<>();
@@ -1794,6 +1857,28 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             }
         }
         return options;
+    }
+
+    /**
+     * Lobby id completion for lobbyconfig deletelobby: indexes defined
+     * in the lobby store, sorted. Empty when none are defined.
+     */
+    private List<String> lobbyConfigIdOptions() {
+        List<Integer> ids = new ArrayList<>();
+        LobbyConfig lobbyConfig = plugin.lobbyConfig();
+        if (lobbyConfig != null && lobbyConfig.getLobbies() != null) {
+            for (String key : lobbyConfig.getLobbies().keySet()) {
+                try {
+                    int id = Integer.parseInt(key.trim());
+                    if (id >= 0) {
+                        ids.add(id);
+                    }
+                } catch (NumberFormatException expected) {
+                    // Skip non-numeric indexes.
+                }
+            }
+        }
+        return ids.stream().sorted().map(String::valueOf).toList();
     }
 
     /**
@@ -1826,35 +1911,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private List<String> partial(String value, List<String> options) {
         String normalized = value.toLowerCase(Locale.ROOT);
         return options.stream().filter(option -> option.toLowerCase(Locale.ROOT).startsWith(normalized)).toList();
-    }
-
-    private Location parseLobbyLocation(CommandSender sender, String value) {
-        String[] parts = value.split(",");
-        if (parts.length < 3 || parts.length > 5) {
-            return null;
-        }
-
-        try {
-            double x = Double.parseDouble(parts[0].trim());
-            double y = Double.parseDouble(parts[1].trim());
-            double z = Double.parseDouble(parts[2].trim());
-            float yaw = 0.0f;
-            float pitch = 0.0f;
-            if (parts.length >= 4) {
-                yaw = Float.parseFloat(parts[3].trim());
-            } else if (sender instanceof Player player) {
-                yaw = player.getLocation().getYaw();
-                pitch = player.getLocation().getPitch();
-            }
-            if (parts.length == 5) {
-                pitch = Float.parseFloat(parts[4].trim());
-            }
-            World world = sender instanceof Player player ? player.getWorld()
-                    : Bukkit.getWorld(plugin.getConfig().getString("world-engine.world-name", "world"));
-            return new Location(world, x, y, z, yaw, pitch);
-        } catch (NumberFormatException exception) {
-            return null;
-        }
     }
 
     /**
@@ -1936,8 +1992,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         World world = ensured.get().world();
         if (ensured.get().lobbyZeroSet()) {
-            message(sender, "manhunt.worldengine-setlobby-success",
-                    Map.of("location", formatLocation(world.getSpawnLocation())));
+            message(sender, "manhunt.worldengine-lobbyconfig-setlobbytp-success", Map.of(
+                    "lobby", "0", "location", formatLocation(world.getSpawnLocation())));
         }
         Location spawn = world.getSpawnLocation();
         for (Player target : targets) {

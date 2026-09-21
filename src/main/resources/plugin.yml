@@ -49,14 +49,8 @@ permissions:
   jmanhunt.command.worldengine:
     description: View world-engine settings.
     default: op
-  jmanhunt.command.worldengine.setlobby:
-    description: Set the world-engine lobby position.
-    default: op
-  jmanhunt.command.worldengine.setlobbytp:
-    description: Set a lobby's world-engine location from your position.
-    default: op
-  jmanhunt.command.worldengine.lobbybounds:
-    description: Manage lobby boundary boxes.
+  jmanhunt.command.worldengine.lobbyconfig:
+    description: Manage lobby teleports, bounds, and entries.
     default: op
   jmanhunt.command.worldengine.tpto:
     description: Teleport to the lobby world or game world.

@@ -78,14 +78,14 @@ lobbies:
       pos2: null
 ```
 
-Lobby teleports are managed with `/manhunt worldengine setlobby` for
-lobby 0, or by standing in the lobby world and running
-`/manhunt worldengine setlobbytp <lobby-id>` for any lobby. The world is
-never stored: teleports always land in the configured lobby world, so
-`setlobbytp` refuses to run anywhere else. When a lobby has no teleport
-of its own, players fall back to the lowest lobby id that has one (noted
-in debug output); when no teleport exists anywhere — or the lobby world
-itself is missing — players are told no lobby exists and to contact an
+Set a teleport by standing in the lobby world and running
+`/manhunt worldengine lobbyconfig setlobbytp <lobby-id>`, or pass coords
+directly (`setlobbytp <lobby-id> <x y z yaw pitch>`, which also works
+from the console). The world is never stored: teleports always land in
+the configured lobby world. When a lobby has no teleport of its own,
+players fall back to the lowest lobby id that has one (noted in debug
+output). When no teleport exists anywhere, or the lobby world itself is
+missing, players are told no lobby exists and to contact an
 administrator. This file is not editable through
 `/manhunt configuration`.
 
@@ -95,10 +95,13 @@ while in the lobby world joins that lobby with role `none`, the same as
 already there). Players already in that lobby, and players in a running
 match, are left alone. Where boxes overlap, the box whose midpoint is
 nearest wins. Record two opposite feet-block corners with
-`/manhunt worldengine lobbybounds pos1|pos2`, then store them with
-`/manhunt worldengine lobbybounds set <lobby-id>` (tab completion
+`/manhunt worldengine lobbyconfig pos1|pos2`, then store them with
+`/manhunt worldengine lobbyconfig setbounds <lobby-id>` (tab completion
 suggests the next id without bounds; overwriting existing bounds needs
-the command run twice within 10 seconds).
+the command run twice within 10 seconds). Remove a whole entry with
+`/manhunt worldengine lobbyconfig deletelobby <lobby-id>`, also run
+twice to confirm. This only deletes the stored entry, never the live
+lobby or its players.
 
 The fastest way to get a lobby is `/manhunt worldengine tpto lobbyworld`,
 run twice: it generates the `jmh-lobby` void world (filled by your lobby

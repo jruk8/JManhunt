@@ -142,8 +142,10 @@ class MultiInstanceSchemaTest {
                 "manhunt.quickstart-usage",
                 "manhunt.configuration-usage",
                 "manhunt.debug-usage",
-                "manhunt.worldengine-setlobby-usage",
-                "manhunt.worldengine-setlobbytp-usage",
+                "manhunt.worldengine-lobbyconfig-usage",
+                "manhunt.worldengine-lobbyconfig-setbounds-usage",
+                "manhunt.worldengine-lobbyconfig-setlobbytp-usage",
+                "manhunt.worldengine-lobbyconfig-deletelobby-usage",
                 "manhunt.worldengine-tpto-usage",
                 "manhunt.worldengine-tpto-lobby-world-clash",
                 "game.join-no-change")) {
@@ -250,11 +252,21 @@ class MultiInstanceSchemaTest {
         YamlConfiguration messages = bundledMessages();
 
         assertFalse(config.contains("world-engine.lobby-locations"));
-        assertTrue(messages.getString("manhunt.worldengine-usage", "").contains("lobbybounds"));
-        assertTrue(messages.getString("manhunt.worldengine-setlobbytp-wrong-world", "").contains("{world}"));
-        assertTrue(messages.getString("manhunt.worldengine-lobbybounds-usage", "").contains("pos1"));
-        assertTrue(messages.getString("manhunt.worldengine-lobbybounds-confirm", "").contains("{lobby}"));
-        assertTrue(messages.getString("manhunt.worldengine-lobbybounds-success", "").contains("{from}"));
+        assertTrue(messages.getString("manhunt.worldengine-usage", "").contains("lobbyconfig"));
+        assertFalse(messages.contains("manhunt.worldengine-setlobby-usage"));
+        assertFalse(messages.contains("manhunt.worldengine-setlobbytp-usage"));
+        assertFalse(messages.contains("manhunt.worldengine-lobbybounds-usage"));
+        assertTrue(messages.getString("manhunt.worldengine-lobbyconfig-setlobbytp-wrong-world", "")
+                .contains("{world}"));
+        assertTrue(messages.getString("manhunt.worldengine-lobbyconfig-usage", "").contains("pos1"));
+        assertTrue(messages.getString("manhunt.worldengine-lobbyconfig-setbounds-confirm", "")
+                .contains("{lobby}"));
+        assertTrue(messages.getString("manhunt.worldengine-lobbyconfig-setbounds-success", "")
+                .contains("{from}"));
+        assertTrue(messages.getString("manhunt.worldengine-lobbyconfig-deletelobby-missing", "")
+                .contains("{lobby}"));
+        assertTrue(messages.getString("manhunt.worldengine-lobbyconfig-deletelobby-success", "")
+                .contains("{lobby}"));
         assertTrue(messages.getString("manhunt.lobby-no-location-anywhere", "").contains("administrator"));
         assertTrue(messages.getString("debug.lobby-fallback", "").contains("{fallback}"));
         assertTrue(messages.getString("debug.lobby-missing", "").contains("{lobby}"));

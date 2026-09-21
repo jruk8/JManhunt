@@ -1,12 +1,15 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.lobby.LobbyConfig;
 import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Unit-testable ManhuntCommand argument helpers. */
@@ -70,6 +73,33 @@ class ManhuntCommandTest {
         assertEquals(1, ManhuntCommand.nextFreeBoundsId(Set.of(0)));
         assertEquals(0, ManhuntCommand.nextFreeBoundsId(Set.of(1, 2)));
         assertEquals(2, ManhuntCommand.nextFreeBoundsId(Set.of(0, 1, 3)));
+    }
+
+    @Test
+    void parseLobbyTpCoordsAcceptsFiveNumbers() {
+        assertArrayEquals(new double[]{1.5, 65.0, -3.0, 90.0, 0.0},
+                ManhuntCommand.parseLobbyTpCoords("1.5", "65", "-3", "90", "0"));
+        assertArrayEquals(new double[]{0.0, 0.0, 0.0, 0.0, 0.0},
+                ManhuntCommand.parseLobbyTpCoords(" 0 ", "0", "0", "0", "0"));
+    }
+
+    @Test
+    void parseLobbyTpCoordsRejectsNonNumbers() {
+        assertNull(ManhuntCommand.parseLobbyTpCoords("1", "65", "three", "0", "0"));
+        assertNull(ManhuntCommand.parseLobbyTpCoords("1", "65", "3", "0", ""));
+    }
+
+    @Test
+    void lobbyConfigHasLobbyCountsBareIndexesAsExisting() {
+        LobbyConfig lobbyConfig = new LobbyConfig();
+        lobbyConfig.getLobbies().clear();
+
+        assertFalse(ManhuntCommand.lobbyConfigHasLobby(lobbyConfig, 0));
+        assertFalse(ManhuntCommand.lobbyConfigHasLobby(null, 0));
+
+        lobbyConfig.getLobbies().put("1", new LobbyConfig.LobbyEntry());
+        assertTrue(ManhuntCommand.lobbyConfigHasLobby(lobbyConfig, 1));
+        assertFalse(ManhuntCommand.lobbyConfigHasLobby(lobbyConfig, 2));
     }
 
     @Test

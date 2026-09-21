@@ -727,7 +727,7 @@ public final class GameplayListener implements Listener {
         }
         lastVoidRescueWarning = now;
         plugin.logger().warning(playerName + " fell into the void in the lobby world, but no lobby location "
-                + "is set to rescue them to. Set one with /manhunt worldengine setlobbytp 0.");
+                + "is set to rescue them to. Set one with /manhunt worldengine lobbyconfig setlobbytp 0.");
     }
 
     private void cancelAllRespawnTasks() {

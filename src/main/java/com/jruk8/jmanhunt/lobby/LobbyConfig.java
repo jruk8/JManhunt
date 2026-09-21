@@ -11,7 +11,7 @@ import java.util.Map;
  * is never stored here: every lobbytp resolves in the configured lobby
  * world at teleport time. Generated with defaults on first load and
  * reloaded with /manhunt reload; not editable through
- * /manhunt configuration (use the worldengine commands instead).
+ * /manhunt configuration (use the lobbyconfig commands instead).
  */
 @SuppressWarnings("FieldMayBeFinal")
 @Header({
@@ -19,8 +19,8 @@ import java.util.Map;
         "",
         "Each lobby id maps to a lobbytp (where its players land) and an",
         "optional bounds box (which auto-joins walkers to that lobby).",
-        "Manage both in-game: /manhunt worldengine setlobbytp <id> and",
-        "/manhunt worldengine lobbybounds pos1|pos2|set <id>.",
+        "Manage both in-game: /manhunt worldengine lobbyconfig",
+        "setlobbytp|setbounds|deletelobby <id>.",
         ""
 })
 public class LobbyConfig extends OkaeriConfig {
@@ -55,16 +55,15 @@ public class LobbyConfig extends OkaeriConfig {
         @Comment({
                 "Where this lobby's players land. Coordinates only: the",
                 "world is always the configured lobby world. Unset until",
-                "/manhunt worldengine setlobbytp <id> runs (lobby 0 ships",
+                "lobbyconfig setlobbytp <id> runs (lobby 0 ships",
                 "with a default)."
         })
         private LobbyTp lobbytp;
 
         @Comment({
                 "Boundary box that auto-joins walkers to this lobby with",
-                "role none. Empty until /manhunt worldengine lobbybounds",
-                "set <id> runs; both corners are required for the box to",
-                "apply."
+                "role none. Empty until lobbyconfig setbounds <id> runs;",
+                "both corners are required for the box to apply."
         })
         private BoundsData bounds = new BoundsData();
 

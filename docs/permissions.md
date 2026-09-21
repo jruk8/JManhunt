@@ -19,9 +19,7 @@
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |
 | `jmanhunt.command.configuration` | View or change configuration by category. | OP |
 | `jmanhunt.command.worldengine` | View world-engine settings. Implies every worldengine action below. | OP |
-| `jmanhunt.command.worldengine.setlobby` | Set the world-engine lobby position. | OP |
-| `jmanhunt.command.worldengine.setlobbytp` | Set a lobby's world-engine location from your position. | OP |
-| `jmanhunt.command.worldengine.lobbybounds` | Manage lobby boundary boxes. | OP |
+| `jmanhunt.command.worldengine.lobbyconfig` | Manage lobby teleports, bounds, and entries. | OP |
 | `jmanhunt.command.worldengine.tpto` | Teleport to the lobby world or game world. | OP |
 | `jmanhunt.command.worldengine.cellindex` | View or change the world-engine cell index. | OP |
 

@@ -903,8 +903,7 @@ world-engine:
     none: GRAY_CONCRETE
   # Lobby teleport points and boundary boxes live in
   # settings/world-engine/lobby-config.yml, managed in-game with
-  # '/mh worldengine setlobbytp <id>' and
-  # '/mh worldengine lobbybounds pos1|pos2|set <id>'.
+  # '/mh worldengine lobbyconfig'.
   # They are not editable through /manhunt configuration.
   # Size of one spiral cell in blocks. Hard-capped at 50,000.
   # Too low values may cause issues.

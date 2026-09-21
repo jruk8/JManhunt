@@ -18,10 +18,10 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
 | `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
 | `/manhunt configuration <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.configuration` |
-| `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the lobby 0 world-engine lobby position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobby`) |
-| `/manhunt worldengine setlobbytp <lobby-id>`       | Sets a lobby's teleport from your current position (lobby world only). | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobbytp`) |
-| `/manhunt worldengine lobbybounds pos1\|pos2`      | Records a lobby-bounds corner at your feet block. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbybounds`) |
-| `/manhunt worldengine lobbybounds set <lobby-id>` | Stores the recorded corners as a lobby's bounds. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbybounds`) |
+| `/manhunt worldengine lobbyconfig pos1\|pos2`                    | Records a lobby-bounds corner at your feet block. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
+| `/manhunt worldengine lobbyconfig setbounds <lobby-id>`       | Stores the recorded corners as a lobby's bounds. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
+| `/manhunt worldengine lobbyconfig setlobbytp <lobby-id> [coords]` | Sets a lobby's teleport (your position, or `x y z yaw pitch`). | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
+| `/manhunt worldengine lobbyconfig deletelobby <lobby-id>`     | Deletes a lobby's stored entry. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
 | `/manhunt worldengine tpto lobbyworld\|gameworld [selector]` | Teleports to the lobby world (generating it on a confirmed second run) or the game world spawn. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.tpto`) |
 | `/manhunt worldengine cellindex get`              | Shows the current world-engine cell index. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
@@ -107,7 +107,7 @@ Start](lobby-quick-start.md).
 ## Joining and Leaving a Running Match
 
 `/manhunt game join <id> [role] [selector]` adds players to a live match,
-defaulting to `spectator` — the clean way to let someone watch. Joiners
+defaulting to `spectator`: the clean way to let someone watch. Joiners
 move to the match's lobby, are teleported into its cell, and receive lives,
 statistics, and a compass. Players already in a live match are skipped, and
 matches in their end delay cannot be joined.
