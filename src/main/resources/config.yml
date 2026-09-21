@@ -677,6 +677,18 @@ settings:
       refresh-on-right-click: true
       # Seconds between right-click refreshes. Set to -1 for no cooldown.
       right-click-cooldown: 3.0
+    left-click:
+      # When true, left-clicking the compass cycles a manual target lock
+      # through the nearest candidates (live opponents first, then
+      # last-seen locations). While locked, the actionbar shows LOCKED and
+      # automatic refreshes keep pointing at the locked target. Cycling
+      # past the last candidate returns to automatic tracking.
+      # Default: false
+      enabled: false
+      # How many nearest candidates the lock cycles through at most.
+      # Minimum: 1.
+      # Default: 5
+      max-targets: 5
     # Purposeful lag before a compass refresh resolves, showing
     # "Analyzing..." while it runs. No second refresh starts mid-analysis,
     # and click cooldowns restart when the analysis ends.

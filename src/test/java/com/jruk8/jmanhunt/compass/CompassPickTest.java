@@ -123,4 +123,56 @@ class CompassPickTest {
         assertEquals(CompassPick.Kind.TRACK_PLAYER, pick.kind());
         assertEquals(ALICE, pick.id());
     }
+
+    @Test
+    void lockCycleRunsOpponentsThenSightingsAndWrapsToAutomatic() {
+        List<CompassCandidate> opponents = List.of(
+                candidate(BOB, "Bob", 200.0, 200.0),
+                candidate(ALICE, "Alice", 100.0, 100.0));
+        List<CompassSighting> sightings = List.of(sighting(CAROL, "Carol", 50.0));
+
+        assertEquals(ALICE, CompassPick.cycleLock(opponents, sightings, null, 5));
+        assertEquals(BOB, CompassPick.cycleLock(opponents, sightings, ALICE, 5));
+        assertEquals(CAROL, CompassPick.cycleLock(opponents, sightings, BOB, 5));
+        assertNull(CompassPick.cycleLock(opponents, sightings, CAROL, 5));
+    }
+
+    @Test
+    void lockCycleStaysAutomaticWithoutCandidates() {
+        assertNull(CompassPick.cycleLock(List.of(), List.of(), null, 5));
+    }
+
+    @Test
+    void lockCycleCapsCandidatesAndDropsStaleLocksToAutomatic() {
+        List<CompassCandidate> opponents = List.of(
+                candidate(ALICE, "Alice", 100.0, 100.0),
+                candidate(BOB, "Bob", 200.0, 200.0),
+                candidate(CAROL, "Carol", 300.0, 300.0));
+
+        // Capped at two: Bob is last, Carol never cycles in.
+        assertEquals(BOB, CompassPick.cycleLock(opponents, List.of(), ALICE, 2));
+        assertNull(CompassPick.cycleLock(opponents, List.of(), BOB, 2));
+        // A lock that left the candidate set returns to automatic.
+        assertNull(CompassPick.cycleLock(opponents, List.of(), CAROL, 2));
+        assertNull(CompassPick.cycleLock(opponents, List.of(), UUID.randomUUID(), 5));
+    }
+
+    @Test
+    void lockCycleDedupesLivePlayersBeforeTheirSightings() {
+        List<CompassCandidate> opponents = List.of(candidate(ALICE, "Alice", 100.0, 100.0));
+        List<CompassSighting> sightings = List.of(sighting(ALICE, "Alice", 50.0));
+
+        assertEquals(ALICE, CompassPick.cycleLock(opponents, sightings, null, 5));
+        assertNull(CompassPick.cycleLock(opponents, sightings, ALICE, 5));
+    }
+
+    @Test
+    void lockCycleClampsNonPositiveCapToOne() {
+        List<CompassCandidate> opponents = List.of(
+                candidate(ALICE, "Alice", 100.0, 100.0),
+                candidate(BOB, "Bob", 200.0, 200.0));
+
+        assertEquals(ALICE, CompassPick.cycleLock(opponents, List.of(), null, 0));
+        assertNull(CompassPick.cycleLock(opponents, List.of(), ALICE, -3));
+    }
 }

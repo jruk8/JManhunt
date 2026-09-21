@@ -108,6 +108,10 @@ public final class CompassProtectionListener implements Listener {
         if (event.getHand() != EquipmentSlot.HAND || !compass.isCompass(event.getItem()) || !game.isActive()) {
             return;
         }
-        compass.handleRightClick(event.getPlayer());
+        switch (event.getAction()) {
+            case LEFT_CLICK_AIR, LEFT_CLICK_BLOCK -> compass.handleLeftClick(event.getPlayer());
+            case RIGHT_CLICK_AIR, RIGHT_CLICK_BLOCK -> compass.handleRightClick(event.getPlayer());
+            default -> { }
+        }
     }
 }

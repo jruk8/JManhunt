@@ -192,8 +192,11 @@ compass:
   compass-lore:
     - "<gray>Tracks the nearest speedrunner."
     - "<gray><white>Right-click</white> to refresh when enabled."
+    - "<gray><white>Left-click</white> to cycle targets when enabled."
   compass-actionbar: "<#de7766>Tracking <white>{player}<#de7766> • <white>{distance}m"
   compass-last-seen-actionbar: "<#de7766>Tracking <white>{player}<#de7766>'s Last Seen • <white>{distance}m <gray>({reason})"
+  compass-locked-actionbar: "<#de7766>Tracking <white>{player}<#de7766> • <white>{distance}m <gray>[LOCKED]"
+  compass-last-seen-locked-actionbar: "<#de7766>Tracking <white>{player}<#de7766>'s Last Seen • <white>{distance}m <gray>({reason}) [LOCKED]"
   no-target-actionbar: "<gray>No {role}<gray> location available."
   nearby-actionbar: "<green>{player} is nearby! The compass is disabled."
   too-far-actionbar: "<yellow>{player} is out of tracking range."

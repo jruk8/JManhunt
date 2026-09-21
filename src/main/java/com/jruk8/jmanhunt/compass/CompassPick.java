@@ -49,6 +49,43 @@ public record CompassPick(Kind kind, UUID id, String name) {
         return new CompassPick(Kind.NONE, null, null);
     }
 
+    /**
+     * Next manual compass lock when left-click cycling, or null for
+     * automatic tracking. Candidates run live opponents nearest-first,
+     * then last-seen locations nearest-first, capped at maxTargets total
+     * (at least one). From automatic the first candidate locks; from the
+     * last candidate, or from a lock that left the candidate set, cycling
+     * returns to automatic. Pure for tests.
+     */
+    public static UUID cycleLock(List<CompassCandidate> opponents, List<CompassSighting> sightings,
+            UUID currentLock, int maxTargets) {
+        int cap = Math.max(1, maxTargets);
+        List<UUID> ordered = new ArrayList<>();
+        opponents.stream()
+                .sorted(Comparator.comparingDouble(CompassCandidate::distance))
+                .map(CompassCandidate::id)
+                .filter(id -> id != null && !ordered.contains(id))
+                .limit(cap)
+                .forEachOrdered(ordered::add);
+        sightings.stream()
+                .sorted(Comparator.comparingDouble(CompassSighting::distance))
+                .map(CompassSighting::ownerId)
+                .filter(id -> id != null && !ordered.contains(id))
+                .limit(cap - ordered.size())
+                .forEachOrdered(ordered::add);
+        if (ordered.isEmpty()) {
+            return null;
+        }
+        if (currentLock == null) {
+            return ordered.get(0);
+        }
+        int index = ordered.indexOf(currentLock);
+        if (index < 0 || index == ordered.size() - 1) {
+            return null;
+        }
+        return ordered.get(index + 1);
+    }
+
     private static boolean tooClose(CompassCandidate candidate, boolean nearbyEnabled, double nearbyThreshold) {
         return nearbyEnabled && nearbyThreshold > 0 && candidate.flatDistance() <= nearbyThreshold;
     }

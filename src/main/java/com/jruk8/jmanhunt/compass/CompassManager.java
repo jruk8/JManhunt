@@ -38,6 +38,8 @@ public final class CompassManager {
     private final PlayerStateStore playerStates;
     private final NamespacedKey compassKey;
     private final Map<UUID, Long> lastRefresh = new HashMap<>();
+    /** Manual left-click target locks: holder id -> locked target id. */
+    private final Map<UUID, UUID> locks = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
     private final Set<UUID> analyzing = new HashSet<>();
     private GameManager game;
@@ -120,6 +122,7 @@ public final class CompassManager {
 
         Role holderRole = role(holder);
         if (!holderRole.isParticipant()) {
+            locks.remove(holder.getUniqueId());
             return;
         }
         if (game == null) {
@@ -127,6 +130,7 @@ public final class CompassManager {
         }
         Optional<GameInstance> match = game.instanceOf(holder.getUniqueId());
         if (match.isEmpty()) {
+            locks.remove(holder.getUniqueId());
             return;
         }
         GameInstance instance = match.get();
@@ -135,6 +139,13 @@ public final class CompassManager {
 
         List<CompassCandidate> opponents = collectOpponents(holder, targetRole, instance);
         List<CompassSighting> sightings = collectSightings(holder, targetRole, instance);
+        UUID locked = locks.get(holder.getUniqueId());
+        if (locked != null) {
+            if (trackLockedTarget(holder, item, slot, locked, opponents, sightings, targetRoleString)) {
+                return;
+            }
+            locks.remove(holder.getUniqueId());
+        }
         boolean nearbyEnabled = plugin.getConfig()
                 .getBoolean("settings.compass.disable-when-nearby.enabled", false);
         double nearbyThreshold = plugin.getConfig()
@@ -144,14 +155,14 @@ public final class CompassManager {
         CompassPick pick = CompassPick.resolve(opponents, sightings, nearbyEnabled, nearbyThreshold,
                 trackingDistance);
         switch (pick.kind()) {
-            case TRACK_PLAYER -> trackPlayer(holder, item, slot, pick, targetRoleString);
+            case TRACK_PLAYER -> trackPlayer(holder, item, slot, pick, targetRoleString, false);
             case NEARBY -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
                 compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
                         Map.of("player", pick.name())));
             }
-            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString);
+            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, false);
             case TOO_FAR -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
@@ -188,7 +199,36 @@ public final class CompassManager {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    private void trackPlayer(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString) {
+    /**
+     * Points a locked compass at its target: live location for a live
+     * opponent, else their last-seen location. A manual lock bypasses the
+     * nearby and tracking-distance overrides. Returns false when the
+     * target is no longer trackable, so the caller falls back to
+     * automatic.
+     */
+    private boolean trackLockedTarget(Player holder, ItemStack item, int slot, UUID locked,
+            List<CompassCandidate> opponents, List<CompassSighting> sightings, String targetRoleString) {
+        for (CompassCandidate candidate : opponents) {
+            if (candidate.id().equals(locked)) {
+                trackPlayer(holder, item, slot,
+                        new CompassPick(CompassPick.Kind.TRACK_PLAYER, locked, candidate.name()),
+                        targetRoleString, true);
+                return true;
+            }
+        }
+        for (CompassSighting sighting : sightings) {
+            if (sighting.ownerId().equals(locked)) {
+                trackSighting(holder, item, slot,
+                        new CompassPick(CompassPick.Kind.TRACK_SIGHTING, locked, sighting.name()),
+                        targetRoleString, true);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void trackPlayer(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
+            boolean locked) {
         Player target = Bukkit.getPlayer(pick.id());
         if (target == null) {
             showNoTarget(holder, item, slot, targetRoleString);
@@ -196,13 +236,15 @@ public final class CompassManager {
         }
         setLodestone(item, target.getLocation());
         holder.getInventory().setItem(slot, item);
-        compassActionbars.put(holder.getUniqueId(), component("compass.compass-actionbar",
+        compassActionbars.put(holder.getUniqueId(), component(
+                locked ? "compass.compass-locked-actionbar" : "compass.compass-actionbar",
                 Map.of("player", target.getName(),
                         "distance",
                         String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
     }
 
-    private void trackSighting(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString) {
+    private void trackSighting(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
+            boolean locked) {
         Location location = playerStates.sightings().getOrDefault(pick.id(), Map.of())
                 .get(holder.getWorld().getUID());
         Player seen = Bukkit.getPlayer(pick.id());
@@ -214,7 +256,8 @@ public final class CompassManager {
         setLodestone(item, location);
         holder.getInventory().setItem(slot, item);
         String reason = seen != null ? "Another Dimension" : "Log-Out";
-        compassActionbars.put(holder.getUniqueId(), component("compass.compass-last-seen-actionbar",
+        compassActionbars.put(holder.getUniqueId(), component(
+                locked ? "compass.compass-last-seen-locked-actionbar" : "compass.compass-last-seen-actionbar",
                 Map.of("player", pick.name(),
                         "distance",
                         String.valueOf(Math.round(holder.getLocation().distance(location))),
@@ -504,6 +547,42 @@ public final class CompassManager {
         if (analyzeEnabled(false)) {
             startAnalysis(player);
             return;
+        }
+        refreshCompass(player);
+    }
+
+    /**
+     * Cycles the holder's manual target lock one step: automatic locks
+     * the nearest candidate, further clicks advance through the rest,
+     * and cycling past the last candidate returns to automatic. No-op
+     * unless left-click cycling is enabled and the holder participates
+     * in a live match. Locks survive automatic refreshes; the refresh
+     * after each click applies the new lock immediately.
+     */
+    public void handleLeftClick(Player player) {
+        if (!plugin.getConfig()
+                .getBoolean("settings.compass.left-click.enabled", false)) {
+            return;
+        }
+        if (game == null || !role(player).isParticipant()) {
+            return;
+        }
+        Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
+        if (match.isEmpty()) {
+            locks.remove(player.getUniqueId());
+            return;
+        }
+        GameInstance instance = match.get();
+        Role targetRole = role(player) == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
+        List<CompassCandidate> opponents = collectOpponents(player, targetRole, instance);
+        List<CompassSighting> sightings = collectSightings(player, targetRole, instance);
+        int maxTargets = plugin.getConfig()
+                .getInt("settings.compass.left-click.max-targets", 5);
+        UUID next = CompassPick.cycleLock(opponents, sightings, locks.get(player.getUniqueId()), maxTargets);
+        if (next == null) {
+            locks.remove(player.getUniqueId());
+        } else {
+            locks.put(player.getUniqueId(), next);
         }
         refreshCompass(player);
     }

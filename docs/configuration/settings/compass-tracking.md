@@ -114,6 +114,22 @@ right-click:
   right-click-cooldown: 3.0      # in seconds
 ```
 
+Under `settings.compass.left-click`, you can let holders left-click the
+compass to cycle a manual target lock through the nearest candidates: live
+opponents nearest-first, then last-seen locations nearest-first, up to
+`max-targets` total. While locked, the actionbar shows `LOCKED` and
+automatic refreshes keep pointing at the locked target (a manual lock also
+bypasses the nearby-disable and tracking-distance overrides). Cycling past
+the last candidate returns to automatic tracking, as does clicking again
+after the locked target left the candidate set. Only left-clicks on air or
+blocks cycle the lock; attacking an entity with the compass does not.
+
+```yaml
+left-click:
+  enabled: false
+  max-targets: 5
+```
+
 ## Spin Speed
 
 When the compass has no live target, its needle spins. Under

@@ -166,6 +166,17 @@ class MultiInstanceSchemaTest {
     }
 
     @Test
+    void compassLeftClickDefaults() {
+        YamlConfiguration config = bundledConfig();
+        YamlConfiguration messages = bundledMessages();
+
+        assertFalse(config.getBoolean("settings.compass.left-click.enabled"));
+        assertEquals(5, config.getInt("settings.compass.left-click.max-targets"));
+        assertTrue(messages.getString("compass.compass-locked-actionbar", "").contains("[LOCKED]"));
+        assertTrue(messages.getString("compass.compass-last-seen-locked-actionbar", "").contains("[LOCKED]"));
+    }
+
+    @Test
     void antiSpawnCampDefaults() {
         YamlConfiguration config = bundledConfig();
         YamlConfiguration messages = bundledMessages();
