@@ -726,11 +726,6 @@ settings:
             - "effect give <p> minecraft:slowness <duration> 1 true"
           speedrunner: []
           hunter: []
-    # Needle spin speed when the compass has no live target to track.
-    spin:
-      # Seconds for one full needle revolution while spinning.
-      # Default: 2.0
-      seconds-per-revolution: 2.0
     # Per-role tracking distances. The holder's role picks which block
     # applies. Manually locked targets bypass both distances.
     hunter:
@@ -771,6 +766,78 @@ settings:
         # Maximum distance in blocks at which the compass can track.
         # Default: -1
         distance: -1.0
+    # Signal interference: when enabled, tracking can fail with a Bad
+    # signal readout when the interference options say the signal is bad.
+    # The signal is always good unless an option below says otherwise.
+    # Default: false
+    signal-interference:
+      enabled: false
+      # How many enabled options must interfere before tracking fails.
+      # Clamped to the enabled option count, minimum 1.
+      # Default: 1
+      required-to-fail: 1
+      # When true, the target's location must also have a good signal.
+      # Default: false
+      two-way: false
+      # Chance from 0.0 to 1.0 that a bad signal still tracks anyway.
+      # Default: 0.0
+      chance-to-bypass: 0.0
+      # Light at the holder's feet. Only considered in the overworld;
+      # skipped in the nether and the end.
+      # Default: false
+      light-level:
+        enabled: false
+        # Minimum sky light, 0 to 15.
+        # Default: 10
+        min-sky-light: 10
+        # Minimum block light, 0 to 15.
+        # Default: 5
+        min-block-light: 5
+        # ONE_UNMET interferes when either reading is below its minimum;
+        # BOTH_UNMET only when both are.
+        # Default: ONE_UNMET
+        interfere-when: ONE_UNMET
+      # Cover above the holder's head. Counts solid blocks strictly above
+      # the feet block; interferes when the count passes the maximum.
+      # Default: false
+      underground:
+        enabled: false
+        # Maximum solid blocks above before interference, 1 to 380.
+        # Default: 3
+        max-blocks-above: 3
+      # Height band with good signal. Interferes outside min-y to max-y.
+      # Default: false
+      altitude:
+        enabled: false
+        # Both from -64 to 319. Order does not matter.
+        # Default: -20
+        min-y: -20
+        # Default: 120
+        max-y: 120
+      # Weather that interferes: STORM, RAIN, CLEAR.
+      # Default: false
+      weather:
+        enabled: false
+        # Default: STORM, RAIN
+        interfere-during:
+          - STORM
+          - RAIN
+      # Biomes with bad signal, as full keys like minecraft:desert.
+      # Default: false
+      biome:
+        enabled: false
+        interfere-in:
+          - minecraft:desert
+          - minecraft:badlands
+          - minecraft:mushroom_fields
+          - minecraft:deep_ocean
+          - minecraft:deep_cold_ocean
+          - minecraft:deep_lukewarm_ocean
+          - minecraft:deep_frozen_ocean
+          - minecraft:deep_dark
+          - minecraft:soul_sand_valley
+          - minecraft:basalt_deltas
+          - minecraft:the_end
 
   # Friendly fire rules for participants. When disabled for a role, players of
   # that role cannot damage players of the same role once the game has begun.

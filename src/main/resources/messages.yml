@@ -215,6 +215,7 @@ compass:
   nearby-actionbar: "<green>{player} is nearby! The compass is disabled."
   too-far-actionbar: "<yellow>{player} is out of tracking range."
   analyzing-actionbar: "<gray>Analyzing..."
+  bad-signal-actionbar: "<gray>☹ Bad signal"
 
 # One color tag per role. Used directly in templates as {role-color-<role>}
 # and by code that builds colored role names. Legacy-format servers can set

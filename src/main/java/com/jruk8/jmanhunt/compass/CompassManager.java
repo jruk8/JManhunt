@@ -14,6 +14,8 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
@@ -32,6 +34,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class CompassManager {
     private final JManhuntPlugin plugin;
@@ -39,7 +42,10 @@ public final class CompassManager {
     private final SoundService sounds;
     private final PlayerStateStore playerStates;
     private final NamespacedKey compassKey;
-    private final Map<UUID, Long> lastRefresh = new HashMap<>();
+    /** Last automatic refresh per holder; right-clicks also stamp this. */
+    private final Map<UUID, Long> lastAutoRefresh = new HashMap<>();
+    /** Last right-click refresh per holder; the click's own cooldown. */
+    private final Map<UUID, Long> lastClickRefresh = new HashMap<>();
     /** Manual left-click target locks: holder id -> locked target id. */
     private final Map<UUID, UUID> locks = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
@@ -62,9 +68,9 @@ public final class CompassManager {
 
     public void refreshAllCompasses(boolean active) {
         if (active) {
-            // One universal refresh clock shared with right-click refreshes,
-            // stamped at initiation: holders refreshed less than an interval
-            // ago keep their fresh target.
+            // The automatic clock only: holders refreshed less than an
+            // interval ago keep their fresh target. Right-clicks stamp
+            // this clock too, so each click restarts the interval.
             long intervalMs = (long) (plugin.getConfig()
                     .getDouble("settings.compass.refresh-interval", 10.0) * 1000);
             long now = System.currentTimeMillis();
@@ -75,10 +81,10 @@ public final class CompassManager {
                     .filter(this::hasCompass)
                     .forEach(holder -> {
                         UUID id = holder.getUniqueId();
-                        if (!shouldRefresh(now, lastRefresh.getOrDefault(id, 0L), intervalMs)) {
+                        if (!shouldRefresh(now, lastAutoRefresh.getOrDefault(id, 0L), intervalMs)) {
                             return;
                         }
-                        lastRefresh.put(id, now);
+                        lastAutoRefresh.put(id, now);
                         if (analyze) {
                             startAnalysis(holder);
                         } else {
@@ -208,7 +214,8 @@ public final class CompassManager {
     /**
      * Points a locked compass at its target: live location for a live
      * opponent, else their last-seen location. A manual lock bypasses the
-     * min/max distance overrides. Returns false when the
+     * min/max distance overrides, but signal interference still applies.
+     * Returns false when the
      * target is no longer trackable, so the caller falls back to
      * automatic.
      */
@@ -240,6 +247,10 @@ public final class CompassManager {
             showNoTarget(holder, item, slot, targetRoleString);
             return;
         }
+        if (badSignal(holder, target.getLocation())) {
+            showBadSignal(holder, item, slot);
+            return;
+        }
         setLodestone(item, target.getLocation());
         holder.getInventory().setItem(slot, item);
         compassActionbars.put(holder.getUniqueId(), component(
@@ -257,6 +268,10 @@ public final class CompassManager {
         if (location == null || location.getWorld() == null
                 || skipLastSeen(seen != null, seen == null ? null : seen.getGameMode())) {
             showNoTarget(holder, item, slot, targetRoleString);
+            return;
+        }
+        if (badSignal(holder, location)) {
+            showBadSignal(holder, item, slot);
             return;
         }
         setLodestone(item, location);
@@ -277,34 +292,147 @@ public final class CompassManager {
                 Map.of("role", targetRoleString)));
     }
 
-    /** Lodestone offset radius for a spinning needle, in blocks. */
-    private static final double SPIN_RADIUS = 8.0;
-
-    /** Points the needle at a rotating offset so it visibly spins. */
-    private void spinNeedle(ItemStack item, Player holder) {
-        double seconds = plugin.getConfig()
-                .getDouble("settings.compass.spin.seconds-per-revolution", 2.0);
-        double angle = Math.toRadians(spinAngle(System.currentTimeMillis(), seconds));
-        Location origin = holder.getLocation();
-        setLodestone(item, new Location(origin.getWorld(),
-                origin.getX() + Math.cos(angle) * SPIN_RADIUS, origin.getY(),
-                origin.getZ() + Math.sin(angle) * SPIN_RADIUS));
+    private void showBadSignal(Player holder, ItemStack item, int slot) {
+        spinNeedle(item, holder);
+        holder.getInventory().setItem(slot, item);
+        compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-actionbar"));
     }
 
     /**
-     * Needle angle in degrees for one revolution per the given seconds; a
-     * non-positive period falls back to the 2-second default. Pure for
-     * tests.
+     * True when signal interference fails this tracking attempt: the
+     * holder's spot (and, with two-way, the target's spot) resolves to a
+     * bad signal that the bypass roll does not save.
      */
-    static double spinAngle(long nowMillis, double revSeconds) {
-        double period = revSeconds > 0 ? revSeconds : 2.0;
-        return ((nowMillis / 1000.0) / period * 360.0) % 360.0;
+    private boolean badSignal(Player holder, Location target) {
+        if (!plugin.getConfig().getBoolean("settings.compass.signal-interference.enabled", false)) {
+            return false;
+        }
+        SignalInterference.Config interference = interferenceConfig();
+        SignalInterference.Snapshot targetSnapshot =
+                interference.twoWay() ? targetSnapshot(target) : null;
+        return SignalInterference.badSignal(signalSnapshot(holder.getLocation()), targetSnapshot,
+                interference, ThreadLocalRandom.current().nextDouble());
+    }
+
+    private SignalInterference.Config interferenceConfig() {
+        String base = "settings.compass.signal-interference.";
+        Set<SignalInterference.Weather> during = new HashSet<>();
+        for (String raw : plugin.getConfig().getStringList(base + "weather.interfere-during")) {
+            try {
+                during.add(SignalInterference.Weather.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException e) {
+                // Unknown buckets are ignored, so one typo cannot break refreshes.
+            }
+        }
+        SignalInterference.InterfereWhen when;
+        try {
+            String raw = plugin.getConfig().getString(base + "light-level.interfere-when", "ONE_UNMET");
+            when = SignalInterference.InterfereWhen.valueOf(
+                    (raw == null ? "ONE_UNMET" : raw).trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            when = SignalInterference.InterfereWhen.ONE_UNMET;
+        }
+        return new SignalInterference.Config(
+                plugin.getConfig().getBoolean(base + "light-level.enabled", false),
+                plugin.getConfig().getInt(base + "light-level.min-sky-light", 10),
+                plugin.getConfig().getInt(base + "light-level.min-block-light", 5),
+                when,
+                plugin.getConfig().getBoolean(base + "underground.enabled", false),
+                plugin.getConfig().getInt(base + "underground.max-blocks-above", 3),
+                plugin.getConfig().getBoolean(base + "altitude.enabled", false),
+                plugin.getConfig().getInt(base + "altitude.min-y", -20),
+                plugin.getConfig().getInt(base + "altitude.max-y", 120),
+                plugin.getConfig().getBoolean(base + "weather.enabled", false),
+                during,
+                plugin.getConfig().getBoolean(base + "biome.enabled", false),
+                new HashSet<>(plugin.getConfig().getStringList(base + "biome.interfere-in")),
+                plugin.getConfig().getInt(base + "required-to-fail", 1),
+                plugin.getConfig().getBoolean(base + "two-way", false),
+                plugin.getConfig().getDouble(base + "chance-to-bypass", 0.0));
+    }
+
+    /** Signal snapshot for a spot, read from its feet block. */
+    private SignalInterference.Snapshot signalSnapshot(Location location) {
+        Block block = location.getBlock();
+        World world = block.getWorld();
+        SignalInterference.Weather weather;
+        if (world.isThundering()) {
+            weather = SignalInterference.Weather.STORM;
+        } else if (world.hasStorm()) {
+            weather = SignalInterference.Weather.RAIN;
+        } else {
+            weather = SignalInterference.Weather.CLEAR;
+        }
+        return new SignalInterference.Snapshot(
+                block.getLightFromSky(),
+                block.getLightFromBlocks(),
+                world.getEnvironment() == World.Environment.NORMAL,
+                solidBlocksAbove(block),
+                block.getY(),
+                weather,
+                block.getBiome().getKey().toString());
+    }
+
+    /**
+     * Target-side snapshot for two-way checks, or null when the spot's
+     * chunk is not loaded. An unloaded sighting never fails the target
+     * side, so refreshes never force chunk loads.
+     */
+    private SignalInterference.Snapshot targetSnapshot(Location target) {
+        if (target == null || target.getWorld() == null
+                || !target.getWorld().isChunkLoaded(target.getBlockX() >> 4, target.getBlockZ() >> 4)) {
+            return null;
+        }
+        return signalSnapshot(target);
+    }
+
+    /** Solid blocks strictly above the feet block, capped for cheap reads. */
+    private static final int MAX_SOLID_COUNT = 380;
+
+    private int solidBlocksAbove(Block feet) {
+        World world = feet.getWorld();
+        int count = 0;
+        for (int y = feet.getY() + 1; y < world.getMaxHeight(); y++) {
+            if (world.getBlockAt(feet.getX(), y, feet.getZ()).isSolid()) {
+                count++;
+                if (count > MAX_SOLID_COUNT) {
+                    break;
+                }
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Spins the needle by pointing at spawn of a dimension the holder is
+     * not in, which the client cannot resolve to a direction. With no
+     * other dimension loaded, the lodestone is cleared instead, so the
+     * compass falls back to vanilla behavior.
+     */
+    private void spinNeedle(ItemStack item, Player holder) {
+        World.Environment here = holder.getWorld().getEnvironment();
+        World other = Bukkit.getWorlds().stream()
+                .filter(world -> world.getEnvironment() != here)
+                .findFirst()
+                .orElse(null);
+        if (other == null) {
+            clearLodestone(item);
+            return;
+        }
+        setLodestone(item, new Location(other, 0.0, 64.0, 0.0));
     }
 
     private void setLodestone(ItemStack item, Location location) {
         if (item != null && item.getItemMeta() instanceof CompassMeta meta) {
             meta.setLodestone(location);
             meta.setLodestoneTracked(false);
+            item.setItemMeta(meta);
+        }
+    }
+
+    private void clearLodestone(ItemStack item) {
+        if (item != null && item.getItemMeta() instanceof CompassMeta meta) {
+            meta.clearLodestone();
             item.setItemMeta(meta);
         }
     }
@@ -544,12 +672,14 @@ public final class CompassManager {
         long now = System.currentTimeMillis();
         long cooldownMs = (long) (plugin.getConfig()
                 .getDouble("settings.compass.right-click.right-click-cooldown", 3.0) * 1000);
-        if (!shouldRefresh(now, lastRefresh.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
+        if (!shouldRefresh(now, lastClickRefresh.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
             return;
         }
-        // The universal clock stamps at initiation (this click), which also
-        // restarts the automatic interval; analysis cooldowns run from here.
-        lastRefresh.put(player.getUniqueId(), now);
+        // Clicks run on their own cooldown, so a fresh automatic refresh
+        // never blocks them; each click also stamps the automatic clock
+        // at initiation, restarting the interval from here.
+        lastClickRefresh.put(player.getUniqueId(), now);
+        lastAutoRefresh.put(player.getUniqueId(), now);
         if (analyzeEnabled(false)) {
             startAnalysis(player);
             return;

@@ -105,8 +105,9 @@ refresh-interval: 10.0        # in seconds
 Under `settings.compass.right-click`, you can configure right-clicking the
 compass to refresh it. You may enable it, in which case right-clicking will
 refresh the compass if `right-click-cooldown` time has elapsed since the
-last refresh. Both paths share one refresh clock: a click also restarts
-the automatic interval, and a fresh automatic refresh holds off clicks.
+last click. Clicks run on their own cooldown, so a fresh automatic
+refresh never blocks them; each click still restarts the automatic
+interval.
 
 ```yaml
 right-click:
@@ -134,23 +135,17 @@ Each successful scroll plays a short click. You can change it under
 `sounds.compass.left-click`, or turn it off there. No sound plays when
 there is nothing to scroll to.
 
-## Spin Speed
+## Spinning
 
-When the compass has no live target, its needle spins. Under
-`settings.compass.spin`, `seconds-per-revolution` sets how long one full
-turn takes:
-
-```yaml
-spin:
-  seconds-per-revolution: 2.0
-```
+When the compass has nothing to point at, its needle spins by aiming at
+a dimension you are not in. There is nothing to configure.
 
 ## Analysis Delay
 
 Under `settings.compass.analyze`, a refresh can take a purposeful moment to
 resolve instead of answering instantly. While analyzing, the actionbar reads
-`Analyzing...`, no second refresh can start, and the shared refresh clock
-stamps when the analysis starts, so cooldowns run from the click rather
+`Analyzing...`, no second refresh can start, and the refresh clocks
+stamp when the analysis starts, so cooldowns run from initiation rather
 than from resolution:
 
 ```yaml
@@ -214,3 +209,27 @@ another player or spins its needle. Set the distance to `-1` for
 unlimited range.
 
 A manually locked target ignores both limits.
+
+## Signal Interference
+
+Under `settings.compass.signal-interference`, you can make tracking fail
+with a gray Bad signal readout when conditions are bad. The master
+`enabled` switch defaults to off, and every sub-option defaults to off
+too, so the signal is always good until you opt in.
+
+Each sub-option watches one thing at the compass holder's feet:
+
+- `light-level`: fails in the dark, with separate sky and block light
+  minimums. Only applies in the overworld.
+- `underground`: fails under too many solid blocks overhead.
+- `altitude`: fails outside a min/max height band.
+- `weather`: fails during the listed weather (storm, rain, clear).
+- `biome`: fails in the listed biomes, written as full keys like
+  `minecraft:desert`.
+
+Three extra knobs shape the failure: `required-to-fail` sets how many
+options must agree before the compass fails (default 1), `two-way`
+checks the target's spot as well as the holder's, and
+`chance-to-bypass` gives a bad signal a random chance to track anyway.
+Locked targets can fail too; the nearby, out-of-range, and no-target
+readouts never consult interference.

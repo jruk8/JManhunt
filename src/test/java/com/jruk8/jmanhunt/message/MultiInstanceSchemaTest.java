@@ -196,6 +196,38 @@ class MultiInstanceSchemaTest {
     }
 
     @Test
+    void compassSpinConfigRemoved() {
+        assertFalse(bundledConfig().contains("settings.compass.spin"));
+    }
+
+    @Test
+    void compassSignalInterferenceDefaults() {
+        YamlConfiguration config = bundledConfig();
+        YamlConfiguration messages = bundledMessages();
+        String base = "settings.compass.signal-interference.";
+
+        assertFalse(config.getBoolean(base + "enabled"));
+        assertEquals(1, config.getInt(base + "required-to-fail"));
+        assertFalse(config.getBoolean(base + "two-way"));
+        assertEquals(0.0, config.getDouble(base + "chance-to-bypass"));
+        assertFalse(config.getBoolean(base + "light-level.enabled"));
+        assertEquals(10, config.getInt(base + "light-level.min-sky-light"));
+        assertEquals(5, config.getInt(base + "light-level.min-block-light"));
+        assertEquals("ONE_UNMET", config.getString(base + "light-level.interfere-when"));
+        assertFalse(config.getBoolean(base + "underground.enabled"));
+        assertEquals(3, config.getInt(base + "underground.max-blocks-above"));
+        assertFalse(config.getBoolean(base + "altitude.enabled"));
+        assertEquals(-20, config.getInt(base + "altitude.min-y"));
+        assertEquals(120, config.getInt(base + "altitude.max-y"));
+        assertFalse(config.getBoolean(base + "weather.enabled"));
+        assertEquals(List.of("STORM", "RAIN"), config.getStringList(base + "weather.interfere-during"));
+        assertFalse(config.getBoolean(base + "biome.enabled"));
+        assertEquals(11, config.getStringList(base + "biome.interfere-in").size());
+        assertTrue(config.getStringList(base + "biome.interfere-in").contains("minecraft:the_end"));
+        assertTrue(messages.getString("compass.bad-signal-actionbar", "").contains("Bad signal"));
+    }
+
+    @Test
     void autostartMinimumDefaults() {
         YamlConfiguration config = bundledConfig();
         YamlConfiguration messages = bundledMessages();
