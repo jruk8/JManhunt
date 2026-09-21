@@ -19,7 +19,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -508,6 +510,13 @@ public final class GameplayListener implements Listener {
                     && sameMatch(victimMatch.get(), attacker)
                     && playerStates.role(attacker) == Role.SPEEDRUNNER
                     && playerStates.role(victim) == Role.HUNTER;
+            // Hunter hits on speedrunners never land before the game
+            // begins, while speedrunner hits on hunters still start it.
+            if (event instanceof EntityDamageByEntityEvent byEntity
+                    && hunterHitsRunner(victimMatch.get(), byEntity.getDamager(), victim)) {
+                event.setCancelled(true);
+                return;
+            }
             // During the pre-start window, all participants are protected from
             // damage (including fall damage from wacky world-engine spawns).
             // Survivable hits still land so knockback registers, then heal
@@ -711,6 +720,36 @@ public final class GameplayListener implements Listener {
     /** True when the player actively participates in the given match. */
     private boolean sameMatch(GameInstance instance, Player player) {
         return sameMatch(instance, player.getUniqueId());
+    }
+
+    /**
+     * True when a hunter of the given match hits a speedrunner: direct
+     * hits and projectile shooters both count.
+     */
+    private boolean hunterHitsRunner(GameInstance instance, Entity damager, Player victim) {
+        Player attacker = resolveAttacker(damager);
+        return attacker != null && blockPreStartHit(sameMatch(instance, attacker),
+                playerStates.role(attacker), playerStates.role(victim));
+    }
+
+    /** Attacking player behind a damager: direct hits and shooters. */
+    private Player resolveAttacker(Entity damager) {
+        if (damager instanceof Player player) {
+            return player;
+        }
+        if (damager instanceof Projectile projectile
+                && projectile.getShooter() instanceof Player shooter) {
+            return shooter;
+        }
+        return null;
+    }
+
+    /**
+     * True when a pre-start hit never lands: a hunter of the same match
+     * hitting a speedrunner. Pure for tests.
+     */
+    static boolean blockPreStartHit(boolean sameMatch, Role attacker, Role victim) {
+        return sameMatch && attacker == Role.HUNTER && victim == Role.SPEEDRUNNER;
     }
 
     /** True when the player id actively participates in the given match. */

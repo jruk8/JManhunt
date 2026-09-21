@@ -847,7 +847,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (game.instanceForLobby(lobbyId).isPresent()) {
             return message(sender, "manhunt.already-active");
         }
-        if (!game.start(lobbyId)) return message(sender, "manhunt.start-invalid");
+        Location surroundOrigin = sender instanceof Player executor ? executor.getLocation() : null;
+        if (!game.start(lobbyId, surroundOrigin)) return message(sender, "manhunt.start-invalid");
         return true;
     }
 
@@ -2141,7 +2142,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         if (lobbyId < 0) return message(sender, "manhunt.quickstart-failed");
         if (game.instanceForLobby(lobbyId).isPresent()) return message(sender, "manhunt.already-active");
-        QuickStartOutcome outcome = game.quickStart(percent, lobbyId);
+        Location surroundOrigin = sender instanceof Player executor ? executor.getLocation() : null;
+        QuickStartOutcome outcome = game.quickStart(percent, lobbyId, surroundOrigin);
         if (!outcome.started()) return message(sender, "manhunt.quickstart-failed");
         return true;
     }

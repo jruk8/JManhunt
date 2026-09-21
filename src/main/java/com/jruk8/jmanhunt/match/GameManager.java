@@ -513,6 +513,15 @@ public final class GameManager {
      *         its queue lacks a hunter or a speedrunner
      */
     public boolean start(int lobbyId) {
+        return start(lobbyId, null);
+    }
+
+    /**
+     * Same, but the surround origin gathers participants when the world
+     * engine is off: a player executor's location, or null for a random
+     * wilderness point (console and autostart).
+     */
+    public boolean start(int lobbyId, Location surroundOrigin) {
         if (instanceForLobby(lobbyId).isPresent()) return false;
         Optional<Lobby> lobby = lobbies.get(lobbyId);
         if (lobby.isEmpty()) return false;
@@ -547,6 +556,9 @@ public final class GameManager {
             worldEngine.clearInstanceBorders();
         }
         OptionalLong matchCell = worldEngine.onMatchStart(players, spectators, firstMatch, lobbyId, currentMatchId);
+        if (matchCell.isEmpty() && !plugin.getConfig().getBoolean("world-engine.enabled", false)) {
+            surroundParticipants(players, surroundOrigin);
+        }
         GameInstance instance = new GameInstance(currentMatchId, lobbyId, matchCell,
                 System.currentTimeMillis());
         if (lobbies.multiLobbyAllowed()
@@ -611,6 +623,45 @@ public final class GameManager {
                 Map.of("lobby", String.valueOf(lobbyId), "index", cellString(instance)));
         logBorderMode();
         return true;
+    }
+
+    /** Engine-off surround scatter around the origin, in blocks. */
+    static final int SURROUND_RADIUS = 5;
+    /** Fallback origin spread: random point within this of 0,0. */
+    static final int SURROUND_FALLBACK_RADIUS = 5000;
+
+    /**
+     * Gathers participants around the surround origin when the world
+     * engine is off, using the same safe-spawn scatter as cell spawns.
+     * A null origin (console, autostart) falls back to a random
+     * wilderness point in the game world.
+     */
+    private void surroundParticipants(List<Player> participants, Location surroundOrigin) {
+        if (participants.isEmpty()) {
+            return;
+        }
+        Location center = surroundOrigin != null ? surroundOrigin : fallbackOrigin();
+        if (center == null || center.getWorld() == null) {
+            return;
+        }
+        World world = center.getWorld();
+        int centerX = center.getBlockX();
+        int centerZ = center.getBlockZ();
+        for (Player player : participants) {
+            player.teleport(WorldEngineService.spreadSpawn(world, centerX, centerZ, SURROUND_RADIUS,
+                    player.getLocation().getYaw(), player.getLocation().getPitch()));
+        }
+    }
+
+    /** Random origin in the game world for executor-less starts. */
+    private Location fallbackOrigin() {
+        World world = Bukkit.getWorld(plugin.getConfig().getString("world-engine.world-name", "world"));
+        if (world == null) {
+            return null;
+        }
+        int x = ThreadLocalRandom.current().nextInt(-SURROUND_FALLBACK_RADIUS, SURROUND_FALLBACK_RADIUS + 1);
+        int z = ThreadLocalRandom.current().nextInt(-SURROUND_FALLBACK_RADIUS, SURROUND_FALLBACK_RADIUS + 1);
+        return new Location(world, x + 0.5, 64.0, z + 0.5);
     }
 
     /**
@@ -1544,8 +1595,11 @@ public final class GameManager {
         if (!plugin.getConfig().getBoolean("settings.autostart.enabled", false)) {
             return;
         }
+        if (!plugin.getConfig().getBoolean("settings.autostart.broadcast-requirements.enabled", false)) {
+            return;
+        }
         int intervalSeconds = Math.max(1, plugin.getConfig()
-                .getInt("settings.autostart.needs-broadcast-interval-seconds", 60));
+                .getInt("settings.autostart.broadcast-requirements.interval-seconds", 60));
         long now = System.currentTimeMillis();
         for (int lobbyId : lobbies.lobbyIds()) {
             if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
@@ -1574,7 +1628,7 @@ public final class GameManager {
                 continue;
             }
             Long last = lastShortfallBroadcast.get(lobbyId);
-            if (last != null && now - last < intervalSeconds * 1000L) {
+            if (!nagDue(now, last, intervalSeconds)) {
                 continue;
             }
             lastShortfallBroadcast.put(lobbyId, now);
@@ -1606,6 +1660,14 @@ public final class GameManager {
      */
     static boolean teamGrew(Set<UUID> previous, Set<UUID> current) {
         return previous != null && current.stream().anyMatch(id -> !previous.contains(id));
+    }
+
+    /**
+     * True when the shortfall nag may fire: never broadcast, or a full
+     * interval elapsed since the last one. Pure for tests.
+     */
+    static boolean nagDue(long now, Long lastBroadcast, int intervalSeconds) {
+        return lastBroadcast == null || now - lastBroadcast >= intervalSeconds * 1000L;
     }
 
     /** "two more Hunters and one more Speedrunner" for a shortfall, role-colored. */
@@ -1866,6 +1928,15 @@ public final class GameManager {
      * @return whether the match started
      */
     public QuickStartOutcome quickStart(int speedrunnerPercent, int lobbyId) {
+        return quickStart(speedrunnerPercent, lobbyId, null);
+    }
+
+    /**
+     * Same, but the surround origin gathers participants when the world
+     * engine is off: a player executor's location, or null for a random
+     * wilderness point (console).
+     */
+    public QuickStartOutcome quickStart(int speedrunnerPercent, int lobbyId, Location surroundOrigin) {
         if (instanceForLobby(lobbyId).isPresent()) return new QuickStartOutcome(false);
         Optional<Lobby> lobby = lobbies.get(lobbyId);
         if (lobby.isEmpty()) return new QuickStartOutcome(false);
@@ -1882,7 +1953,7 @@ public final class GameManager {
         cancelAllAutostartCountdowns(false);
         // A match needs at least one hunter and one speedrunner, so with
         // fewer than two convertible players there is nothing to assign.
-        if (pool.size() < 2) return new QuickStartOutcome(start(lobbyId));
+        if (pool.size() < 2) return new QuickStartOutcome(start(lobbyId, surroundOrigin));
         if (speedrunnerPercent < 0) {
             ensureMinimumTeams(pool);
         } else {
@@ -1904,7 +1975,7 @@ public final class GameManager {
         }
         // Validate after assignment: start() requires at least one hunter and
         // one speedrunner, so e.g. two players online with one AFK will fail.
-        return new QuickStartOutcome(start(lobbyId));
+        return new QuickStartOutcome(start(lobbyId, surroundOrigin));
     }
 
     /**

@@ -65,4 +65,12 @@ class AutostartShortfallTest {
         assertEquals(Map.of(Role.SPEEDRUNNER, 1),
                 GameManager.autostartShortfall(3, 0, 0, 1));
     }
+
+    @Test
+    void nagDueFiresOncePerInterval() {
+        assertTrue(GameManager.nagDue(100_000L, null, 60));
+        assertTrue(GameManager.nagDue(160_000L, 100_000L, 60));
+        assertFalse(GameManager.nagDue(159_999L, 100_000L, 60));
+        assertFalse(GameManager.nagDue(100_000L, 100_000L, 60));
+    }
 }

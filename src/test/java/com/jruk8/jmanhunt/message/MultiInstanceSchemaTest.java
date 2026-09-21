@@ -234,7 +234,8 @@ class MultiInstanceSchemaTest {
 
         assertEquals(1, config.getInt("settings.autostart.minimums.hunter"));
         assertEquals(1, config.getInt("settings.autostart.minimums.speedrunner"));
-        assertEquals(60, config.getInt("settings.autostart.needs-broadcast-interval-seconds"));
+        assertFalse(config.getBoolean("settings.autostart.broadcast-requirements.enabled"));
+        assertEquals(60, config.getInt("settings.autostart.broadcast-requirements.interval-seconds"));
         assertTrue(messages.getString("manhunt.autostart-needs-more", "").contains("{details}"));
         assertFalse(messages.getString("manhunt.quickstart-usage", "").contains("-force"));
         assertTrue(messages.getString("manhunt.setplayer-usage", "").contains("-silent"));

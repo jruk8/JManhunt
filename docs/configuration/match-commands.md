@@ -33,6 +33,7 @@ gamestate-commands:
     set-respawn-immediate: true
     set-daytime: true
     disable-phantoms: true
+    disable-command-feedback: false
 ```
 
 - `auto-set-gamemode` puts participants in survival mode. Players with role
@@ -47,6 +48,9 @@ gamestate-commands:
 - `set-daytime` sets every world to daytime.
 - `disable-phantoms` stops phantoms from spawning while a match runs, and
   re-enables them afterwards.
+- `disable-command-feedback` sets `send_command_feedback` to false while a
+  match runs, and restores it afterwards. Unlike the rest, it stays off
+  unless you enable it.
 
 Pillager patrols (`spawn_patrols`) are always paused while a match runs and
 restored when the last match ends. This one has no toggle.

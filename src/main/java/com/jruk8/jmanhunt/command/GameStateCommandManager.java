@@ -569,6 +569,12 @@ public final class GameStateCommandManager {
         var worlds = Bukkit.getWorlds();
         boolean disableLocatorBar = plugin.getConfig().getBoolean(path + "disable-locator-bar", false);
         worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, !disableLocatorBar));
+        // Quiet command feedback while a match runs and restore it when
+        // the last match ends. Unlike its siblings this toggle defaults
+        // to off.
+        boolean disableFeedback = plugin.getConfig().getBoolean(path + "disable-command-feedback", false);
+        boolean feedbackEnabled = (phase.equals("end") && lastMatch) || !disableFeedback;
+        worlds.forEach(world -> world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK, feedbackEnabled));
         // Disable phantom spawning while a match runs and restore it when the
         // match ends. The gamerule is re-enabled on the end phase.
         boolean disablePhantoms = plugin.getConfig().getBoolean(path + "disable-phantoms", false);

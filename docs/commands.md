@@ -91,6 +91,10 @@ where one is AFK will fail to start. Queue caps never apply to Quick Start.
 Quick Start bypasses the autostart system entirely: no countdowns or
 autostart messages are displayed.
 
+With the world engine off, `/manhunt start` and `/manhunt quickstart`
+gather every participant around you on safe ground. From the console,
+the group lands at a random wilderness point instead.
+
 ## Lobbies
 
 Each lobby runs its own queue, autostart countdown, and match, so several

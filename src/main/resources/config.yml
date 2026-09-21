@@ -140,6 +140,9 @@ gamestate-commands:
     set-respawn-immediate: true
     set-daytime: true
     disable-phantoms: true
+    # Sets send_command_feedback to false while a match runs. Unlike the
+    # options above, this one stays off unless you enable it.
+    disable-command-feedback: false
   # Console commands run once per configured entry.
   console-commands:
     enabled: false
@@ -505,10 +508,14 @@ settings:
     minimums:
       hunter: 1
       speedrunner: 1
-    # Seconds between shortfall broadcasts telling queued players how
-    # many more of each role autostart needs.
-    # Default: 60
-    needs-broadcast-interval-seconds: 60
+    # Shortfall broadcasts telling queued players how many more of
+    # each role autostart needs.
+    # Default: false
+    broadcast-requirements:
+      enabled: false
+      # Seconds between broadcasts.
+      # Default: 60
+      interval-seconds: 60
 
   # How player roles are assigned and reset around the lifecycle of a match.
   roles:

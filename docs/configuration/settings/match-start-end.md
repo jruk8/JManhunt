@@ -12,7 +12,9 @@ settings:
     minimums:
       hunter: 1
       speedrunner: 1
-    needs-broadcast-interval-seconds: 60
+    broadcast-requirements:
+      enabled: false
+      interval-seconds: 60
 ```
 
 Autostart triggers once each role reaches its `minimums` queued players
@@ -22,12 +24,13 @@ see [Concurrent Matches](../../multi-instance.md). Minimums only gate
 autostart: manual `/manhunt start` keeps its own
 one-hunter-one-speedrunner check.
 
-While a lobby sits below its minimums, its queued hunters and
-speedrunners are told what is still missing every
-`needs-broadcast-interval-seconds` (`none`, `afk`, and spectator members
-are not nagged), for example "The game needs *two* more Hunters and
-*one* more Speedrunner to begin." Whenever someone new joins the teams,
-the timer restarts, so the message never fires instantly on assignment.
+While a lobby sits below its minimums, enabling
+`broadcast-requirements` tells its queued hunters and speedrunners what
+is still missing every `interval-seconds` (`none`, `afk`, and spectator
+members are not nagged), for example "The game needs *two* more Hunters
+and *one* more Speedrunner to begin." Whenever someone new joins the
+teams, the timer restarts, so the message never fires instantly on
+assignment.
 
 ## Countdown
 
@@ -44,7 +47,8 @@ a moment to get their bearings before hunters are "let loose."
 Players in the pre-start window are invulnerable and may not deal any damage. The
 speedrunners' first hit on a hunter opens the match: it deals no damage
 itself, but its knockback registers and the damage is healed back a tick
-later. The pre-start window also blocks `/kill`, unlike everywhere else.
+later. Hunter hits on speedrunners are cancelled outright instead.
+The pre-start window also blocks `/kill`, unlike everywhere else.
 Match clocks (the status elapsed time and any time-limit countdowns)
 ignore the pre-start window and start when the game begins.
 

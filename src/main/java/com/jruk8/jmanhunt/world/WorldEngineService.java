@@ -167,7 +167,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
                 world.getHighestBlockYAt(originX, originZ, HeightMap.MOTION_BLOCKING) + 1,
                 originZ + 0.5);
         for (Player player : joiners) {
-            Location spawn = randomSpawnInCell(world, originX, originZ, config.tpSpreadRadius(),
+            Location spawn = spreadSpawn(world, originX, originZ, config.tpSpreadRadius(),
                     player.getLocation().getYaw(), player.getLocation().getPitch());
             player.teleport(spawn);
             player.setRespawnLocation(cellRoot, true);
@@ -703,7 +703,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
                 world.getHighestBlockYAt(origin.x(), origin.z(), HeightMap.MOTION_BLOCKING) + 1,
                 origin.z() + 0.5);
         for (Player player : participants) {
-            Location spawn = randomSpawnInCell(world, origin.x(), origin.z(), config.tpSpreadRadius(),
+            Location spawn = spreadSpawn(world, origin.x(), origin.z(), config.tpSpreadRadius(),
                     player.getLocation().getYaw(), player.getLocation().getPitch());
             player.teleport(spawn);
             player.setRespawnLocation(cellRoot, true);
@@ -874,7 +874,13 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
 
 
 
-    private Location randomSpawnInCell(World world, int centerX, int centerZ, int radius, float yaw, float pitch) {
+    /**
+     * Random safe spawn near a center: a square scatter within radius,
+     * landed on the highest motion-blocking block. Shared by cell
+     * spawns and the engine-off surround.
+     */
+    public static Location spreadSpawn(World world, int centerX, int centerZ, int radius, float yaw,
+            float pitch) {
         int offsetX = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
         int offsetZ = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
         int x = centerX + offsetX;
