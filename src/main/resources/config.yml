@@ -802,7 +802,7 @@ settings:
         interfere-when: ONE_UNMET
       # Cover above the holder's head. Counts solid blocks strictly above
       # the feet block; interferes when the count passes the maximum.
-      # Default: false
+      # Default: true
       underground:
         enabled: true
         # Maximum solid blocks above before interference, 1 to 380.

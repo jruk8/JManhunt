@@ -89,6 +89,19 @@ missing, players are told no lobby exists and to contact an
 administrator. This file is not editable through
 `/manhunt configuration`.
 
+The same file holds lobby upkeep under `care`: arrivals are healed
+and fed at once, and everyone inside is topped up every `interval`
+seconds. Both toggles default to on:
+
+```yaml
+care:
+  heal:
+    enabled: true
+  saturate:
+    enabled: true
+  interval: 15
+```
+
 Boundary boxes auto-join walkers: a player who steps into a lobby's box
 while in the lobby world joins that lobby with role `none`, the same as
 `/manhunt lobby join` with role `none` (no teleport, since they are

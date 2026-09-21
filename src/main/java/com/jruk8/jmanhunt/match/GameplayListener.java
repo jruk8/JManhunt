@@ -92,6 +92,7 @@ public final class GameplayListener implements Listener {
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
         var player = event.getPlayer();
+        worldEngine.careFor(player);
         playerStates.resetRolesIfAbsent(player);
         // Repair scoreboard teams in case roles and teams drifted apart.
         plugin.roleTeams().sync(player);
@@ -395,6 +396,9 @@ public final class GameplayListener implements Listener {
     }
     @EventHandler public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
+        if (event.getTo() != null && worldEngine.isLobbyWorld(event.getTo().getWorld())) {
+            worldEngine.careFor(player);
+        }
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
         if (match.isPresent() && playerStates.role(player).isParticipant() && player.getGameMode() != GameMode.SPECTATOR) {
             playerStates.recordLastSeen(player, event.getTo());

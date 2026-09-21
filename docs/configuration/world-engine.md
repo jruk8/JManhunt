@@ -38,6 +38,11 @@ anything. Hop back to the game world any time with
 equal the game world name: a clash is refused with a warning until it is
 renamed.
 
+Fresh lobby worlds generate with safe defaults: peaceful difficulty,
+frozen time and weather, no mob, trader, phantom, or patrol spawns,
+and no mob griefing. These apply on generation only; changing them
+later is up to you.
+
 As your next step, it's recommended to set up **chunk pre-generation** for cells. This
 may sound complex, but it's really as simple as installing [Chunky](https://modrinth.com/plugin/chunky) or a similar plugin
 and [hooking it up](world-engine/pregenerating-cells.md). This takes around 5 minutes

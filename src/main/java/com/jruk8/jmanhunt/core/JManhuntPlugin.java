@@ -224,6 +224,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 () -> compass.showHeldActionbars(game.isActive()), 1L, 20L);
         Bukkit.getScheduler().runTaskTimer(this, game::broadcastAutostartShortfalls, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(this, tutorialService::checkTimeouts, 100L, 100L);
+        Bukkit.getScheduler().runTaskTimer(this, worldEngine::careTick, 20L, 20L);
     }
 
     @Override public void onDisable() {

@@ -32,12 +32,26 @@ public class LobbyConfig extends OkaeriConfig {
     })
     private Map<String, LobbyEntry> lobbies = defaultLobbies();
 
+    @Comment({
+            "Lobby-world upkeep: arrivals are healed and fed at once, and",
+            "everyone inside is topped up every interval seconds."
+    })
+    private CareData care = new CareData();
+
     public Map<String, LobbyEntry> getLobbies() {
         return lobbies;
     }
 
     public void setLobbies(Map<String, LobbyEntry> lobbies) {
         this.lobbies = lobbies;
+    }
+
+    public CareData getCare() {
+        return care;
+    }
+
+    public void setCare(CareData care) {
+        this.care = care;
     }
 
     private static Map<String, LobbyEntry> defaultLobbies() {
@@ -166,6 +180,59 @@ public class LobbyConfig extends OkaeriConfig {
 
         public void setPos2(Position pos2) {
             this.pos2 = pos2;
+        }
+    }
+
+    /** Lobby-world upkeep: instant heal and feed toggles plus the repeat. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class CareData extends OkaeriConfig {
+
+        @Comment("Restore full health on arrival and on every repeat.")
+        private CareToggle heal = new CareToggle();
+
+        @Comment("Restore full hunger on arrival and on every repeat.")
+        private CareToggle saturate = new CareToggle();
+
+        @Comment("Seconds between top-ups for everyone in the lobby world.")
+        private int interval = 15;
+
+        public CareToggle getHeal() {
+            return heal;
+        }
+
+        public void setHeal(CareToggle heal) {
+            this.heal = heal;
+        }
+
+        public CareToggle getSaturate() {
+            return saturate;
+        }
+
+        public void setSaturate(CareToggle saturate) {
+            this.saturate = saturate;
+        }
+
+        public int getInterval() {
+            return interval;
+        }
+
+        public void setInterval(int interval) {
+            this.interval = interval;
+        }
+    }
+
+    /** One upkeep switch. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class CareToggle extends OkaeriConfig {
+
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 

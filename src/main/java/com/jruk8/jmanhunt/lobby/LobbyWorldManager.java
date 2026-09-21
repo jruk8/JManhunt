@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt.lobby;
 
 import com.jruk8.jmanhunt.core.JManhuntPlugin;
 import org.bukkit.Bukkit;
+import org.bukkit.Difficulty;
+import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
@@ -131,10 +133,27 @@ public final class LobbyWorldManager {
         LobbyPreset preset = presetOverride.orElseGet(() -> LobbyPreset.parse(
                 plugin.getConfig().getString("world-engine.lobby-preset", "DEFAULT")));
         new LobbySchematicService(plugin).applyPreset(world, preset);
+        applyLobbyDefaults(world);
         Location spawn = safeSpawn(world);
         world.setSpawnLocation(spawn);
         boolean lobbyZeroSet = autoSetLobbyZero(spawn);
         return Optional.of(new LobbyWorld(world, true, lobbyZeroSet));
+    }
+
+    /**
+     * Safe defaults for a fresh lobby world: peaceful difficulty, frozen
+     * time and weather, and no mob, trader, phantom, patrol, or griefing
+     * activity. Generation-only: later loads never touch these again.
+     */
+    private void applyLobbyDefaults(World world) {
+        world.setDifficulty(Difficulty.PEACEFUL);
+        world.setGameRule(GameRules.ADVANCE_TIME, false);
+        world.setGameRule(GameRules.ADVANCE_WEATHER, false);
+        world.setGameRule(GameRules.SPAWN_MOBS, false);
+        world.setGameRule(GameRules.SPAWN_WANDERING_TRADERS, false);
+        world.setGameRule(GameRules.SPAWN_PHANTOMS, false);
+        world.setGameRule(GameRules.SPAWN_PATROLS, false);
+        world.setGameRule(GameRules.MOB_GRIEFING, false);
     }
 
     /**

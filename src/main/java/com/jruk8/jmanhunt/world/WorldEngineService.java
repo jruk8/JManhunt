@@ -61,6 +61,8 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     // restored to vanilla defaults even when the engine or the border itself
     // is disabled afterwards.
     private final List<String> borderedWorldNames = new ArrayList<>();
+    /** Last lobby-care sweep, for the configured repeat interval. */
+    private long lastCareMillis;
 
     // Ready cells kept ahead of match starts so matches never wait on
     // allocation or pregeneration.
@@ -497,12 +499,75 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
      * game world, even if an admin points both names at the same world.
      */
     public boolean rescuesVoidIn(World world) {
+        return isLobbyWorld(world);
+    }
+
+    /**
+     * True when a world is the lobby world: name match, never the game
+     * world, even if an admin points both names at the same world.
+     */
+    public boolean isLobbyWorld(World world) {
         if (world == null) {
             return false;
         }
         String name = world.getName();
         return name.equals(lobbyWorldName())
                 && !name.equals(plugin.getConfig().getString("world-engine.world-name", "world"));
+    }
+
+    /**
+     * Heals and feeds one lobby-world occupant per the lobby care toggles.
+     * No-op anywhere else.
+     */
+    public void careFor(Player player) {
+        if (player == null || !isLobbyWorld(player.getWorld())) {
+            return;
+        }
+        LobbyConfig.CareData care = careConfig();
+        if (care == null) {
+            return;
+        }
+        if (care.getHeal() != null && care.getHeal().isEnabled()) {
+            player.setHealth(player.getMaxHealth());
+        }
+        if (care.getSaturate() != null && care.getSaturate().isEnabled()) {
+            player.setFoodLevel(20);
+            player.setSaturation(20.0f);
+        }
+    }
+
+    /**
+     * Repeating upkeep sweep over every lobby-world occupant. Runs every
+     * second from the plugin scheduler; the configured interval gates
+     * the actual sweep so reloads apply without rescheduling.
+     */
+    public void careTick() {
+        LobbyConfig.CareData care = careConfig();
+        if (care == null) {
+            return;
+        }
+        int intervalSeconds = Math.max(1, care.getInterval());
+        long now = System.currentTimeMillis();
+        if (!careDue(now, lastCareMillis, intervalSeconds)) {
+            return;
+        }
+        lastCareMillis = now;
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            careFor(player);
+        }
+    }
+
+    /**
+     * True when the upkeep sweep may run: never ran, or a full interval
+     * elapsed since the last one. Pure for tests.
+     */
+    static boolean careDue(long now, long lastMillis, int intervalSeconds) {
+        return lastMillis <= 0 || now - lastMillis >= intervalSeconds * 1000L;
+    }
+
+    private LobbyConfig.CareData careConfig() {
+        LobbyConfig config = plugin.lobbyConfig();
+        return config == null ? null : config.getCare();
     }
 
     /**
