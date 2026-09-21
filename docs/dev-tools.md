@@ -1,6 +1,6 @@
 # Developer Tools
 
-> These commands exist for developers — primarily for authoring the
+> These commands exist for developers: primarily for authoring the
 > default lobby presets. They offer no safety rails and are not intended
 > for production servers.
 

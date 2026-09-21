@@ -227,8 +227,8 @@ issues. The tilde resolution is handled by the plugin before dispatch.
 
 # Targeting Sides with Selectors
 
-Manhunt roles mirror to vanilla scoreboard teams — `HUNTER`,
-`SPEEDRUNNER`, and `SPECTATOR` — so console commands can aim at a whole
+Manhunt roles mirror to vanilla scoreboard teams (`HUNTER`,
+`SPEEDRUNNER`, and `SPECTATOR`), so console commands can aim at a whole
 side with the `team` selector argument:
 
 ```yaml

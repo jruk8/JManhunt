@@ -3,14 +3,15 @@
 Every player holds one role: `hunter` and `speedrunner` play the match,
 `spectator` watches it (always in spectator mode, announced and titled
 like everyone else), `afk` waits it out in the lobby untouched, and `none`
-means unassigned — left alone like `afk` unless Quick Start is forced.
+means unassigned: left alone like `afk`, except Quick Start always
+includes them.
 If a role change ever empties the hunters or the speedrunners mid-match,
 the other side wins immediately.
 
 Under `settings.announce-role-changes` (default `false`), changes between
 a passive role (`none`, `afk`, `spectator`) and an active one (`hunter`,
 `speedrunner`) are announced to the player's lobby mates who are not in
-a live match — e.g. `Aria is now a Hunter.` Only the active side is ever
+a live match (e.g. `Aria is now a Hunter`). Only the active side is ever
 named; changes within the same class stay silent.
 
 Roles also mirror to vanilla scoreboard teams (`HUNTER`, `SPEEDRUNNER`,
