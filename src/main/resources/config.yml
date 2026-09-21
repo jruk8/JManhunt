@@ -894,13 +894,20 @@ world-engine:
   # XZ cell and at most 4 blocks above it is assigned the mapped role,
   # like setplayer. Material names are Bukkit Material names.
   # Default: true
+  # Lobby-world blocks that assign roles when stood on.
   role-pads:
     enabled: true
-    speedrunner: LIME_CONCRETE
-    hunter: RED_CONCRETE
-    afk: YELLOW_CONCRETE
-    spectator: LIGHT_GRAY_CONCRETE
-    none: GRAY_CONCRETE
+    # When true, pads assign roles quietly: no role message, no sound,
+    # and no role-change announcement. Teleports still happen.
+    # Default: false
+    silent-role-assignment: false
+    # Concrete block per role.
+    blocks:
+      speedrunner: LIME_CONCRETE
+      hunter: RED_CONCRETE
+      afk: YELLOW_CONCRETE
+      spectator: LIGHT_GRAY_CONCRETE
+      none: GRAY_CONCRETE
   # Lobby teleport points and boundary boxes live in
   # settings/world-engine/lobby-config.yml, managed in-game with
   # '/mh worldengine lobbyconfig'.

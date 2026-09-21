@@ -195,6 +195,20 @@ class MultiInstanceSchemaTest {
     }
 
     @Test
+    void rolePadsDefaults() {
+        YamlConfiguration config = bundledConfig();
+
+        assertTrue(config.getBoolean("world-engine.role-pads.enabled"));
+        assertFalse(config.getBoolean("world-engine.role-pads.silent-role-assignment"));
+        assertEquals("LIME_CONCRETE", config.getString("world-engine.role-pads.blocks.speedrunner"));
+        assertEquals("RED_CONCRETE", config.getString("world-engine.role-pads.blocks.hunter"));
+        assertEquals("YELLOW_CONCRETE", config.getString("world-engine.role-pads.blocks.afk"));
+        assertEquals("LIGHT_GRAY_CONCRETE", config.getString("world-engine.role-pads.blocks.spectator"));
+        assertEquals("GRAY_CONCRETE", config.getString("world-engine.role-pads.blocks.none"));
+        assertFalse(config.contains("world-engine.role-pads.hunter"));
+    }
+
+    @Test
     void antiSpawnCampDefaults() {
         YamlConfiguration config = bundledConfig();
         YamlConfiguration messages = bundledMessages();

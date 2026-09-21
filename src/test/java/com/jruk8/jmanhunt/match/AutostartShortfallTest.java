@@ -3,6 +3,8 @@ package com.jruk8.jmanhunt.match;
 import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,6 +41,19 @@ class AutostartShortfallTest {
         assertFalse(GameManager.receivesShortfall(Role.NONE));
         assertFalse(GameManager.receivesShortfall(Role.AFK));
         assertFalse(GameManager.receivesShortfall(Role.SPECTATOR));
+    }
+
+    @Test
+    void teamGrewDetectsNewAssigneesOnly() {
+        UUID alice = UUID.randomUUID();
+        UUID bob = UUID.randomUUID();
+
+        assertFalse(GameManager.teamGrew(null, Set.of(alice)));
+        assertTrue(GameManager.teamGrew(Set.of(), Set.of(alice)));
+        assertTrue(GameManager.teamGrew(Set.of(alice), Set.of(alice, bob)));
+        assertFalse(GameManager.teamGrew(Set.of(alice), Set.of(alice)));
+        assertFalse(GameManager.teamGrew(Set.of(alice, bob), Set.of(alice)));
+        assertFalse(GameManager.teamGrew(Set.of(), Set.of()));
     }
 
     @Test

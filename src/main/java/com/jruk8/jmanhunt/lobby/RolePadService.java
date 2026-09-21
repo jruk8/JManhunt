@@ -129,7 +129,7 @@ public final class RolePadService implements Listener {
     }
 
     private void matchPad(Map<Material, Role> pads, String key, Role role) {
-        String raw = plugin.getConfig().getString("world-engine.role-pads." + key, "");
+        String raw = plugin.getConfig().getString("world-engine.role-pads.blocks." + key, "");
         Material material = parsePadMaterial(raw);
         if (material == null) {
             if (raw != null && !raw.isBlank() && warnedMaterials.add(key)) {
@@ -185,7 +185,7 @@ public final class RolePadService implements Listener {
                 return;
             }
             setPadRole(player, role);
-            if (!member) {
+            if (!member && !padSilent()) {
                 messages.message(player, "manhunt.setplayer-held",
                         Map.of("role", messages.roleName(role)));
             }
@@ -201,13 +201,22 @@ public final class RolePadService implements Listener {
         Role from = playerStates.role(player);
         playerStates.setRole(player, role);
         plugin.roleTeams().sync(player);
-        messages.message(player, "manhunt.role-assigned",
-                Map.of("role", messages.roleName(role)));
-        sounds.playNeutralSound(player);
+        if (!padSilent()) {
+            messages.message(player, "manhunt.role-assigned",
+                    Map.of("role", messages.roleName(role)));
+            sounds.playNeutralSound(player);
+        }
         if (from != role) {
             game.updateAutostartState();
-            game.announceRoleChange(player, from, role);
+            if (!padSilent()) {
+                game.announceRoleChange(player, from, role);
+            }
         }
+    }
+
+    /** True when pads assign roles quietly. */
+    private boolean padSilent() {
+        return plugin.getConfig().getBoolean("world-engine.role-pads.silent-role-assignment", false);
     }
 
     private boolean capAllows(Optional<Lobby> lobby, Role role) {

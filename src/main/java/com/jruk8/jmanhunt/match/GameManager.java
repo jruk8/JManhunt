@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -68,6 +69,8 @@ public final class GameManager {
     private final Map<Integer, AutostartCountdown> autostartCountdowns = new HashMap<>();
     /** Last shortfall broadcast per lobby, for the needs-more interval. */
     private final Map<Integer, Long> lastShortfallBroadcast = new HashMap<>();
+    /** Last-seen hunter/speedrunner sets per lobby, for nag seeding. */
+    private final Map<Integer, Set<UUID>> lastNagTeams = new HashMap<>();
 
     /** Mutable per-lobby countdown state; the task ticks in GameManager. */
     private static final class AutostartCountdown {
@@ -1533,6 +1536,14 @@ public final class GameManager {
                 lastShortfallBroadcast.remove(lobbyId);
                 continue;
             }
+            Set<UUID> teams = teamComposition(lobby.get());
+            Set<UUID> previous = lastNagTeams.put(lobbyId, teams);
+            if (teamGrew(previous, teams)) {
+                // A player joined the teams: the nag waits a full
+                // interval from the assignment instead of firing now.
+                lastShortfallBroadcast.put(lobbyId, now);
+                continue;
+            }
             Map<Role, Integer> missing = shortfallFor(lobby.get());
             List<Player> recipients = lobbyRecipients(lobbyId).stream()
                     .filter(player -> receivesShortfall(role(player)))
@@ -1550,6 +1561,30 @@ public final class GameManager {
                     Map.of("details", shortfallDetails(missing)));
         }
         lastShortfallBroadcast.keySet().removeIf(id -> lobbies.get(id).isEmpty());
+        lastNagTeams.keySet().removeIf(id -> lobbies.get(id).isEmpty());
+    }
+
+    /** Online hunters and speedrunners of a lobby, for nag seeding. */
+    private Set<UUID> teamComposition(Lobby lobby) {
+        Set<UUID> teams = new HashSet<>();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (!lobby.contains(player.getUniqueId())) {
+                continue;
+            }
+            if (receivesShortfall(role(player))) {
+                teams.add(player.getUniqueId());
+            }
+        }
+        return teams;
+    }
+
+    /**
+     * True when the team set gained members since the last sighting. A
+     * null previous set (first sighting, e.g. after a restart) counts
+     * as no growth, so the nag still fires immediately. Pure for tests.
+     */
+    static boolean teamGrew(Set<UUID> previous, Set<UUID> current) {
+        return previous != null && current.stream().anyMatch(id -> !previous.contains(id));
     }
 
     /** "two more Hunters and one more Speedrunner" for a shortfall, role-colored. */

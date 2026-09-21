@@ -26,7 +26,8 @@ While a lobby sits below its minimums, its queued hunters and
 speedrunners are told what is still missing every
 `needs-broadcast-interval-seconds` (`none`, `afk`, and spectator members
 are not nagged), for example "The game needs *two* more Hunters and
-*one* more Speedrunner to begin."
+*one* more Speedrunner to begin." Whenever someone new joins the teams,
+the timer restarts, so the message never fires instantly on assignment.
 
 ## Countdown
 
@@ -44,7 +45,7 @@ Players in the pre-start window are invulnerable and may not deal any damage. Th
 speedrunners' first hit on a hunter opens the match: it deals no damage
 itself, but its knockback registers and the damage is healed back a tick
 later. The pre-start window also blocks `/kill`, unlike everywhere else.
-Match clocks — the status elapsed time and any time-limit countdowns —
+Match clocks (the status elapsed time and any time-limit countdowns)
 ignore the pre-start window and start when the game begins.
 
 ```yaml

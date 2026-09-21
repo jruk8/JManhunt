@@ -49,7 +49,7 @@ from zero to a queued lobby in five minutes.
 ## Lobby Presets
 
 Fresh lobby worlds are filled by `world-engine.lobby-preset`: `EMPTY`,
-`DEFAULT`, or `ADVANCED` (default). Nothing is built in code — each
+`DEFAULT`, or `ADVANCED` (default). Nothing is built in code: each
 preset pastes its vanilla structure-block `.nbt` from
 `JManhunt/settings/world-engine/lobby-schematics/` with the structure's
 midpoint at 0,64,0, then runs its console commands (meant for lobby
@@ -60,7 +60,7 @@ void, with a bare spawn at y=65 as the fallback.
 To regenerate with another preset (or an updated `.nbt`): stop the
 server, delete the lobby world folder, set `lobby-preset`, start up,
 and run `tpto lobbyworld` twice. Presets only apply on fresh
-generation — existing worlds are never touched.
+generation: existing worlds are never touched.
 
 Authors editing the presets themselves can build in-game and capture the
 result with the [developer schematic tools](../../dev-tools.md).
@@ -82,6 +82,9 @@ and do nothing when your role already matches. Defaults under
 | `YELLOW_CONCRETE` | afk |
 | `LIGHT_GRAY_CONCRETE` | spectator |
 | `GRAY_CONCRETE` | none |
+
+Set `silent-role-assignment: true` to make pads assign quietly (no
+message, no sound). The block list lives under `blocks:`.
 
 ## Next Steps
 
