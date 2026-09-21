@@ -9,7 +9,9 @@ New here? Run `/mh setup` in-game. It walks you through first-time setup,
 modifiers, the compass, and the config command as a short chat dialogue:
 type the number of your answer, `b` to go back, or `q` to quit. Anything
 the guide runs (such as enabling the world engine) uses your own
-permissions. It times out after 5 idle minutes.
+permissions. It times out after 5 idle minutes. The modifier path lets
+you switch on a few fun defaults one by one, and every path can point
+you to Discord for community modifiers and help.
 
 ## Your First Match
 

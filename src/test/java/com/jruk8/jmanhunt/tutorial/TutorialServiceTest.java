@@ -35,6 +35,7 @@ class TutorialServiceTest {
     private final List<String> warnings = new ArrayList<>();
     private int neutralPlays;
     private int angryPlays;
+    private int congratulationsPlays;
     private TutorialConfig config;
     private TutorialService tutorial;
 
@@ -60,6 +61,11 @@ class TutorialServiceTest {
             public void playAngry(Player target) {
                 angryPlays++;
             }
+
+            @Override
+            public void playCongratulations(Player target) {
+                congratulationsPlays++;
+            }
         };
         TutorialCommandRunner commands = (target, command) -> ran.add(command);
         TutorialLogger logger = new TutorialLogger() {
@@ -82,13 +88,16 @@ class TutorialServiceTest {
 
         assertTrue(tutorial.isInTutorial(playerId));
         assertEquals(1, sent.size());
+        assertEquals(1, neutralPlays);
         List<String> lines = sent.get(0);
         assertEquals("", lines.get(0));
         assertTrue(lines.get(1).contains("Welcome to the interactive setup"));
-        assertTrue(lines.stream().anyMatch(line -> line.startsWith("1. First?")));
+        assertTrue(lines.contains(stepLine(1, "First?")));
         assertTrue(lines.stream().anyMatch(line -> line.startsWith("1 <green>")));
         assertTrue(lines.stream().anyMatch(line -> line.startsWith("2 <green>")));
-        assertEquals(config.getFormat().getFooter(), lines.get(lines.size() - 1));
+        assertTrue(lines.contains(config.getFormat().getSeparator()));
+        assertEquals(config.getFormat().getFooter(), lines.get(lines.size() - 2));
+        assertEquals("", lines.get(lines.size() - 1));
     }
 
     @Test
@@ -98,10 +107,10 @@ class TutorialServiceTest {
         assertEquals(TutorialService.InputResult.CONSUMED, tutorial.handleInput(player, "1"));
 
         assertEquals(List.of("say hi"), ran);
-        assertEquals(1, neutralPlays);
+        assertEquals(2, neutralPlays);
         assertTrue(tutorial.isInTutorial(playerId));
         assertEquals(2, sent.size());
-        assertTrue(sent.get(1).stream().anyMatch(line -> line.startsWith("2. Second?")));
+        assertTrue(sent.get(1).contains(stepLine(2, "Second?")));
         assertTrue(sent.get(1).stream().anyMatch(line -> line.contains("(recommended)")));
     }
 
@@ -133,7 +142,29 @@ class TutorialServiceTest {
         assertEquals(TutorialService.InputResult.CONSUMED, tutorial.handleInput(player, "b"));
 
         assertTrue(tutorial.isInTutorial(playerId));
-        assertTrue(sent.get(sent.size() - 1).stream().anyMatch(line -> line.startsWith("3. First?")));
+        assertTrue(sent.get(sent.size() - 1).contains(stepLine(1, "First?")));
+    }
+
+    @Test
+    void celebrateNodePlaysCongratulations() {
+        config.getNodes().get("second").setCelebrate(true);
+        tutorial.start(player);
+
+        assertEquals(TutorialService.InputResult.CONSUMED, tutorial.handleInput(player, "1"));
+
+        assertEquals(1, congratulationsPlays);
+        assertEquals(1, neutralPlays);
+        assertTrue(tutorial.isInTutorial(playerId));
+    }
+
+    @Test
+    void notrecommendedTagRendersOnAnswer() {
+        config.getNodes().put("start", node(List.of("First?"),
+                List.of(answer("Risky.", "EXIT", List.of(), false))));
+        config.getNodes().get("start").getAnswers().get(0).setNotrecommended(true);
+        tutorial.start(player);
+
+        assertTrue(sent.get(0).stream().anyMatch(line -> line.contains("(not recommended)")));
     }
 
     @Test
@@ -251,6 +282,12 @@ class TutorialServiceTest {
         node.setQuestion(new ArrayList<>(question));
         node.setAnswers(new ArrayList<>(answers));
         return node;
+    }
+
+    private String stepLine(int step, String question) {
+        return config.getFormat().getQuestion()
+                .replace("{step}", String.valueOf(step))
+                .replace("{question}", question);
     }
 
     private static TutorialConfig.TutorialAnswer answer(String text, String next, List<String> commands, boolean recommended) {

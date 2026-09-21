@@ -10,10 +10,12 @@ format:
   header:
     - "<white>Welcome to the interactive setup for {logo}."
     - "This system aims to help you quickly start using the plugin."
-  question: "{step}. {question}"
-  answer: "{number} <green>»</green> {recommendation}{answer}"
+  question: "<#de7766>{step}.</#de7766> {question}"
+  answer: "{number} <green>»</green> {recommendation}{notrecommended}{answer}"
+  separator: "<gray>--**--**--**--**--**--**--**--**--</gray>"
   footer: "<gray>(type answer number to continue, b to go back, or q to quit)"
   recommendation: "<yellow>(recommended)</yellow> "
+  notrecommended: "<red>(not recommended)</red> "
 sounds:
   neutral:
     enabled: true
@@ -25,6 +27,11 @@ sounds:
     id: "block.bamboo_wood.place"
     volume: 1.0
     pitch: 1.0
+  congratulations:
+    enabled: true
+    id: "entity.player.levelup"
+    volume: 1.0
+    pitch: 0.8
 messages:
   invalid: "{prefix}<gray>Type a number or type 'q' to quit the setup."
   timeout: "{prefix}<yellow>Setup timed out after 5 minutes of no answers."
@@ -35,24 +42,27 @@ nodes:
     question:
       - "What would you like to do?"
     answers:
-      - text: "Set up JManhunt as a first-timer. (~3 minutes)"
+      - text: "Set up JManhunt as a first-timer. <gray>(~3 minutes)</gray>"
         next: "setup_root"
-      - text: "Use Modifiers for juicing up the game. (~3 minutes)"
+      - text: "Use Modifiers to juice up the game. <gray>(~3 minutes)</gray>"
         next: "mod_intro"
-      - text: "Customize the Compass. (~8 minutes)"
+      - text: "Customize the Compass. <gray>(~8 minutes)</gray>"
         next: "compass_intro"
-      - text: "Learn about the plugin. (instant)"
+      - text: "Talk to us on Discord."
+        next: "discord"
+      - text: "Learn about the plugin. <gray>(instant)</gray>"
         next: "HELP_EXIT"
   setup_root:
     question:
       - "Let's get started. What is your goal?"
     answers:
-      - text: "Classic Manhunts with World Engine and a fully automated lobby. (3 minutes)"
+      - text: "Classic Manhunts with World Engine and a fully automated lobby. <gray>(3 minutes)</gray>"
         recommended: true
         commands:
           - "jmanhunt:mh config world-engine enabled true"
         next: "we_lobby"
-      - text: "Classic Manhunts but with <red>no world resets</red>. (instant)"
+      - text: "Classic Manhunts with no world resets. <gray>(instant)</gray>"
+        notrecommended: true
         next: "nr_start"
   we_lobby:
     question:
@@ -89,8 +99,9 @@ nodes:
       - text: "No, I will do it later."
         next: "we_done"
   we_done:
+    celebrate: true
     question:
-      - "That is basically it. Walk onto the colored concrete blocks to pick Hunter or Speedrunner, then start with <white>/mh start</white>."
+      - "That is basically it. Walk onto the colored concrete blocks to pick <#de666e>Hunter</#de666e> or <#74de66>Speedrunner</#74de66>, then start with <white>/mh start</white>."
       - "Remember to restart the server so World Engine fully applies."
       - "Want to go further?"
     answers:
@@ -106,14 +117,14 @@ nodes:
     question:
       - "No resets, no problem. How do you want to start matches?"
     answers:
-      - text: "Start with one random speedrunner. (instant)"
+      - text: "Start with one random <#74de66>speedrunner</#74de66>. <gray>(instant)</gray>"
         recommended: true
         next: "nr_qs"
-      - text: "Pick who plays what myself. (1 minute)"
+      - text: "Pick who plays what myself. <gray>(1 minute)</gray>"
         next: "nr_manual"
   nr_qs:
     question:
-      - "Use <white>/mh qs</white>: it shuffles everyone into hunters plus one random speedrunner and starts instantly."
+      - "Use <white>/mh qs</white>: it shuffles everyone into <#de666e>hunters</#de666e> plus one random <#74de66>speedrunner</#74de66> and starts instantly."
       - "Where to next?"
     answers:
       - text: "Learn to pick roles manually."
@@ -129,8 +140,8 @@ nodes:
         next: "EXIT"
   nr_qs_more:
     question:
-      - "<white>/mh qs [percentage]</white> sets how many players become speedrunners. <white>/mh qs 50</white> splits the lobby in half."
-      - "Without a percentage you get exactly one speedrunner."
+      - "<white>/mh qs [percentage]</white> sets how many players become <#74de66>speedrunners</#74de66>. <white>/mh qs 50</white> splits the lobby in half."
+      - "Without a percentage you get exactly one <#74de66>speedrunner</#74de66>."
     answers:
       - text: "Learn to pick roles manually."
         next: "nr_manual"
@@ -143,7 +154,7 @@ nodes:
         next: "EXIT"
   nr_manual:
     question:
-      - "Use <white>/mh setplayer @a hunter</white>: any selector plus a role (hunter, speedrunner, spectator, afk, none). Then <white>/mh start</white>."
+      - "Use <white>/mh setplayer @a hunter</white>: any selector plus a role (<#de666e>hunter</#de666e>, <#74de66>speedrunner</#74de66>, spectator, afk, none). Then <white>/mh start</white>."
     answers:
       - text: "Learn about quickstart instead."
         next: "nr_qs"
@@ -156,35 +167,81 @@ nodes:
         next: "EXIT"
   mod_intro:
     question:
-      - "Modifiers are named command bundles that fire on match start, on events, on an interval, or on match end."
-      - "Example: <white>everyone-gets-beef</white> hands every participant 8 steaks at the start."
+      - "Modifiers are ready-made game twists you can switch on or off."
+      - "For example, <white>everyone-gets-beef</white> hands every player 8 steaks when the match starts."
     answers:
-      - text: "Enable the example modifier now."
+      - text: "Show me the fun ones to turn on."
         recommended: true
-        commands:
-          - "jmanhunt:mh config custom-modifiers everyone-gets-beef enabled true"
-        next: "mod_detail"
-      - text: "How do the trigger lists work?"
-        next: "mod_detail"
+        next: "mod_fun"
+      - text: "How do I turn them on and off?"
+        next: "mod_toggle"
+      - text: "How do I make my own?"
+        next: "mod_create"
+      - text: "Get community modifiers on Discord."
+        next: "discord"
       - text: "Exit the setup."
         next: "EXIT"
-  mod_detail:
+  mod_fun:
     question:
-      - "Under <white>custom-modifiers.[name].commands</white> you get player, hunter, speedrunner, console, plus player-cleanup and console-cleanup for match end."
-      - "Copy one of the examples in config.yml to make your own, then run <white>/mh reload</white>."
+      - "Pick one to turn it on. You land back here after each pick, so take as many as you like."
     answers:
-      - text: "Learn about the Compass."
-        next: "compass_intro"
-      - text: "Learn the /mh config command."
-        next: "cfg_intro"
-      - text: "Back to the main menu."
-        next: "start"
+      - text: "Speedrunners get a speed potion."
+        commands:
+          - "jmanhunt:mh config custom-modifiers speedrunners-speed-potion enabled true"
+        next: "mod_fun"
+      - text: "Everyone starts with an iron kit."
+        commands:
+          - "jmanhunt:mh config custom-modifiers full-iron-kit enabled true"
+        next: "mod_fun"
+      - text: "Killers regenerate health."
+        commands:
+          - "jmanhunt:mh config custom-modifiers regen-on-kill enabled true"
+        next: "mod_fun"
+      - text: "A diamond for every advancement."
+        commands:
+          - "jmanhunt:mh config custom-modifiers diamond-on-advancement enabled true"
+        next: "mod_fun"
+      - text: "A random mob visits the runners."
+        commands:
+          - "jmanhunt:mh config custom-modifiers random-mob-spawner enabled true"
+        next: "mod_fun"
+      - text: "A random item for everyone."
+        commands:
+          - "jmanhunt:mh config custom-modifiers random-item-giver enabled true"
+        next: "mod_fun"
+      - text: "Back to modifiers."
+        next: "mod_intro"
+  mod_toggle:
+    question:
+      - "Run <white>/mh config custom-modifiers</white> to list every modifier."
+      - "Then switch one with <white>/mh config custom-modifiers NAME enabled true</white>, or <white>false</white> to switch it off."
+      - "Example: <white>/mh config custom-modifiers everyone-gets-beef enabled true</white>"
+    answers:
+      - text: "Show me the fun ones."
+        recommended: true
+        next: "mod_fun"
+      - text: "How do I make my own?"
+        next: "mod_create"
+      - text: "Back to modifiers."
+        next: "mod_intro"
+      - text: "Exit the setup."
+        next: "EXIT"
+  mod_create:
+    question:
+      - "Open <gray>config.yml</gray>, find <gray>custom-modifiers</gray>, copy the <white>everyone-gets-beef</white> block, rename it, and change its commands. Save, then run <white>/mh reload</white>."
+      - "Stuck? Grab ready-made ones from the community."
+    answers:
+      - text: "Get community modifiers on Discord."
+        recommended: true
+        next: "discord"
+      - text: "Back to modifiers."
+        next: "mod_intro"
       - text: "Exit the setup."
         next: "EXIT"
   compass_intro:
     question:
-      - "Hunters track speedrunners with the compass. Under <white>settings.compass.given-to</white> you can make both roles get one."
-      - "The compass has a lot of configuration options. You can view them in the config file."
+      - "<#de666e>Hunters</#de666e> track <#74de66>speedrunners</#74de66> with the compass. Under <gray>settings.compass.given-to</gray> you can hand both roles one."
+      - "The compass has plenty of options. You can read about them in the config file."
     answers:
       - text: "What can the compass do other than the basic stuff?"
         next: "compass_detail"
@@ -194,7 +251,7 @@ nodes:
         next: "EXIT"
   compass_detail:
     question:
-      - "Right-click refreshes the target, left-click cycles it. Tune min and max distance, lock behavior, and signal interference under <white>settings.compass</white>."
+      - "Right-click refreshes the target, left-click cycles it. Tune min and max distance, lock behavior, and signal interference under <gray>settings.compass</gray>."
     answers:
       - text: "Learn about Modifiers."
         next: "mod_intro"
@@ -208,12 +265,23 @@ nodes:
     question:
       - "<white>/mh config</white> browses every setting in-game: each word drills one level deeper. A section lists its keys; a leaf shows its value, plus a value to set it."
       - "Example: <white>/mh config world-engine enabled true</white> (needs a restart)."
+      - "Modifiers work the same way: <white>/mh config custom-modifiers everyone-gets-beef enabled true</white>"
     answers:
       - text: "Learn about Modifiers."
         next: "mod_intro"
       - text: "Learn about the Compass."
         next: "compass_intro"
+      - text: "Get help on Discord."
+        next: "discord"
       - text: "Back to the main menu."
+        next: "start"
+      - text: "Exit the setup."
+        next: "EXIT"
+  discord:
+    question:
+      - "<click:open_url:'https://discord.gg/hkWmCVmWDC'><underlined>Click to join Discord</underlined></click> for community modifiers and setup help."
+    answers:
+      - text: "Back to menu."
         next: "start"
       - text: "Exit the setup."
         next: "EXIT"

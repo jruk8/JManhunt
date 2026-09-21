@@ -80,17 +80,23 @@ public class TutorialConfig extends OkaeriConfig {
                 "<white>Welcome to the interactive setup for {logo}.",
                 "This system aims to help you quickly start using the plugin."));
 
-        @Comment("First question line. {step} counts shown dialogues.")
-        private String question = "{step}. {question}";
+        @Comment("First question line. {step} is the dialogue position.")
+        private String question = "<#de7766>{step}.</#de7766> {question}";
 
         @Comment("One answer line per option.")
-        private String answer = "{number} <green>»</green> {recommendation}{answer}";
+        private String answer = "{number} <green>»</green> {recommendation}{notrecommended}{answer}";
+
+        @Comment("Line drawn between the question and the answers.")
+        private String separator = "<gray>--**--**--**--**--**--**--**--**--</gray>";
 
         @Comment("Footer shown under every dialogue.")
         private String footer = "<gray>(type answer number to continue, b to go back, or q to quit)";
 
         @Comment("Inserted as {recommendation} for recommended answers.")
         private String recommendation = "<yellow>(recommended)</yellow> ";
+
+        @Comment("Inserted as {notrecommended} for discouraged answers.")
+        private String notrecommended = "<red>(not recommended)</red> ";
 
         public List<String> getHeader() {
             return header;
@@ -116,6 +122,14 @@ public class TutorialConfig extends OkaeriConfig {
             this.answer = answer;
         }
 
+        public String getSeparator() {
+            return separator;
+        }
+
+        public void setSeparator(String separator) {
+            this.separator = separator;
+        }
+
         public String getFooter() {
             return footer;
         }
@@ -131,6 +145,14 @@ public class TutorialConfig extends OkaeriConfig {
         public void setRecommendation(String recommendation) {
             this.recommendation = recommendation;
         }
+
+        public String getNotrecommended() {
+            return notrecommended;
+        }
+
+        public void setNotrecommended(String notrecommended) {
+            this.notrecommended = notrecommended;
+        }
     }
 
     /** One feedback sound. */
@@ -143,8 +165,14 @@ public class TutorialConfig extends OkaeriConfig {
         private float pitch = 1.0f;
 
         public static TutorialSound of(String id) {
+            return of(id, 1.0f, 1.0f);
+        }
+
+        public static TutorialSound of(String id, float volume, float pitch) {
             TutorialSound sound = new TutorialSound();
             sound.setId(id);
+            sound.setVolume(volume);
+            sound.setPitch(pitch);
             return sound;
         }
 
@@ -181,15 +209,19 @@ public class TutorialConfig extends OkaeriConfig {
         }
     }
 
-    /** Neutral and angry feedback sounds. */
+    /** Neutral, angry, and congratulations feedback sounds. */
     @SuppressWarnings("FieldMayBeFinal")
     public static class TutorialSounds extends OkaeriConfig {
 
-        @Comment("Heard on valid answers, back, and quit.")
+        @Comment("Heard on start, valid answers, back, and quit.")
         private TutorialSound neutral = TutorialSound.of("block.note_block.pling");
 
         @Comment("Heard on invalid input and on timeout.")
         private TutorialSound angry = TutorialSound.of("block.bamboo_wood.place");
+
+        @Comment("Heard when a path completes.")
+        private TutorialSound congratulations =
+                TutorialSound.of("entity.player.levelup", 1.0f, 0.8f);
 
         public TutorialSound getNeutral() {
             return neutral;
@@ -205,6 +237,14 @@ public class TutorialConfig extends OkaeriConfig {
 
         public void setAngry(TutorialSound angry) {
             this.angry = angry;
+        }
+
+        public TutorialSound getCongratulations() {
+            return congratulations;
+        }
+
+        public void setCongratulations(TutorialSound congratulations) {
+            this.congratulations = congratulations;
         }
     }
 
@@ -263,6 +303,7 @@ public class TutorialConfig extends OkaeriConfig {
 
         private List<String> question = new ArrayList<>();
         private List<TutorialAnswer> answers = new ArrayList<>();
+        private boolean celebrate = false;
 
         public List<String> getQuestion() {
             return question;
@@ -279,6 +320,14 @@ public class TutorialConfig extends OkaeriConfig {
         public void setAnswers(List<TutorialAnswer> answers) {
             this.answers = answers;
         }
+
+        public boolean isCelebrate() {
+            return celebrate;
+        }
+
+        public void setCelebrate(boolean celebrate) {
+            this.celebrate = celebrate;
+        }
     }
 
     /** One answer: label, optional commands, and where it leads. */
@@ -287,6 +336,7 @@ public class TutorialConfig extends OkaeriConfig {
 
         private String text = "";
         private boolean recommended = false;
+        private boolean notrecommended = false;
         private List<String> commands = new ArrayList<>();
         private String next = "EXIT";
 
@@ -304,6 +354,14 @@ public class TutorialConfig extends OkaeriConfig {
 
         public void setRecommended(boolean recommended) {
             this.recommended = recommended;
+        }
+
+        public boolean isNotrecommended() {
+            return notrecommended;
+        }
+
+        public void setNotrecommended(boolean notrecommended) {
+            this.notrecommended = notrecommended;
         }
 
         public List<String> getCommands() {

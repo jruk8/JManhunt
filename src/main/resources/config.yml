@@ -215,9 +215,13 @@ lobbies:
   join-teleports-to-lobby: true
   # What /manhunt setplayer does when the target's lobby has a live match.
   # Only applies with the world engine on; otherwise the in-match block
-  # stays. HOLD queues roles for the next game, JOIN_ANY joins any role
-  # mid-match, JOIN_SPECTATORS joins spectators and holds everyone else,
-  # SUBLOBBY queues roles for the next sublobby.
+  # stays since only one match can run without the engine.
+  # - HOLD queues roles for the next game
+  # - JOIN_ANY joins any role mid-match
+  # - JOIN_SPECTATORS joins spectators and holds everyone else,
+  # - SUBLOBBY queues roles for the next sublobby (theoretically infinite matches
+  # on one lobby).
+  #
   # Default: SUBLOBBY
   mid-match-setplayer: SUBLOBBY
   # Per-role queue caps for each lobby. Only enforced on the queue before a
@@ -339,7 +343,7 @@ custom-modifiers:
       console-cleanup:
         # Ran by the console when the match ends.
         - "gamerule advance_time true"
-  # Spawns a random mob on every speedrunner every 60 seconds.
+  # Spawns a random mob on every speedrunner every 90 seconds.
   random-mob-spawner:
     enabled: false
     runs-on:
@@ -347,7 +351,7 @@ custom-modifiers:
     # Only applicable when "runs-on" contains INTERVAL.
     interval-settings:
       # Interval duration in seconds.
-      interval: 60
+      interval: 90
       deviation: 5
       behavior: PER_EXECUTOR
     commands:
@@ -463,6 +467,7 @@ settings:
   # When true, role changes between passive (none, afk, spectator) and
   # active (hunter, speedrunner) roles are announced to the player's
   # lobby mates who are not in a live match.
+  # Good for small setups.
   # Default: false
   announce-role-changes: false
 
@@ -490,8 +495,8 @@ settings:
     # Toggles between custom piglin barter odds.
     # By default, the custom odds have boosted up ender pearl and obsidian rates.
     # This may help in balancing the game.
-    # Default: false
-    custom-piglin-barter: false
+    # Default: true
+    custom-piglin-barter: true
 
   # Automatically start a match once each role reaches its configured
   # minimum queued players.
@@ -567,28 +572,26 @@ settings:
 
   # Head starts that hold one role in spectator mode while the other role
   # plays. Each side is configured independently.
+  # If start-on-speedrunner-damage is also enabled, the
+  # headstarts only begin when a speedrunner first damages a hunter.
   headstarts:
     # Gives speedrunners a head start at match start by holding hunters in
-    # spectator mode. If start-on-speedrunner-damage is also enabled, the
-    # countdown only starts when a speedrunner first damages a hunter.
+    # spectator mode.
     # Default: false
     speedrunner:
-      enabled: true
-      # Delay in seconds. Values <= 0 mean no delay.
-      # Default: 30
-      delay-seconds: 30
-    # Gives hunters a head start at match start by holding speedrunners in
-    # spectator mode. If start-on-speedrunner-damage is also enabled, the
-    # countdown only starts when a speedrunner first damages a hunter.
-    # Default: false
-    hunter:
       enabled: false
       # Delay in seconds. Values <= 0 mean no delay.
       # Default: 30
       delay-seconds: 30
+    # Same, but for hunters.
+    # Default: false
+    hunter:
+      enabled: false
+      # Default: 30
+      delay-seconds: 30
 
   # Alternate win conditions. Multiple conditions can be enabled at the same
-  # time; speedrunners win as soon as any one is satisfied.
+  # time; any satisfied condition leads to a win.
   # Default: exit-end enabled, all others disabled
   win-conditions:
     # Conditions the speedrunners can win with.
@@ -617,34 +620,26 @@ settings:
       # Speedrunners win when a speedrunner kills the configured mob.
       kill-mob:
         enabled: false
-        # The mob to kill (namespaced key, e.g. minecraft:ender_dragon).
-        # Default: minecraft:ender_dragon
-        mob: "minecraft:ender_dragon"
+        # The mob to kill (namespaced key, e.g. minecraft:wither).
+        # Default: minecraft:wither
+        mob: "minecraft:wither"
     # Conditions the hunters can win with.
     hunter:
       # Hunters win when the time expires before the speedrunners win.
       survive-time:
         enabled: false
-        # Time in seconds the speedrunners have.
-        # Default: 3600.0
         time: 3600.0
       # Hunters win when a hunter acquires the configured item.
       acquire-item:
         enabled: false
-        # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
-        # Default: minecraft:netherite_ingot
         item: "minecraft:netherite_ingot"
       # Hunters win by completing the configured advancement.
       reach-advancement:
         enabled: false
-        # The advancement to reach (namespaced key, e.g. minecraft:story/enter_the_nether).
-        # Default: minecraft:story/enter_the_nether
         advancement: "minecraft:story/enter_the_nether"
       # Hunters win when a hunter kills the configured mob.
       kill-mob:
         enabled: false
-        # The mob to kill (namespaced key, e.g. minecraft:ender_dragon).
-        # Default: minecraft:ender_dragon
         mob: "minecraft:ender_dragon"
 
   # Compass tracking settings.
@@ -948,8 +943,9 @@ settings:
     # Default: false
     show-modifiers: false
     # Show lobby and game ids as L{lobby}|G{game}.
-    # Default: true
-    show-ids: true
+    # Useful for debugging.
+    # Default: false
+    show-ids: false
 
   # Rolling anti-spawn-camp guard: too many kills by one attacker on the
   # same victim inside the window punishes the camper, broadcast to all.
@@ -960,8 +956,8 @@ settings:
     # Default: 3
     kills: 3
     # Rolling window in seconds.
-    # Default: 120.0
-    window-seconds: 120.0
+    # Default: 90.0
+    window-seconds: 90.0
     # Punishment: KILL slays the camper, GEAR-WIPE clears their armor,
     # offhand, and main hand.
     # Default: KILL
@@ -976,7 +972,7 @@ settings:
 # Setting this to true will additionally modify stronghold generation,
 # such that to bypass the 128-per-world limit and spread them around
 # like normal structures. You can tweak the rates in
-# settings/world-engine/strongholds.json.
+# settings/world-engine/strongholds.json and run /mh reload afterward.
 # Default: false
 world-engine:
   enabled: false

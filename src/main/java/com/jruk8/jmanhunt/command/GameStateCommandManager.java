@@ -8,10 +8,7 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
-import org.bukkit.GameRule;
 import org.bukkit.GameRules;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
@@ -499,6 +496,14 @@ public final class GameStateCommandManager {
         return roll < clampedChance;
     }
 
+    /**
+     * True when a match-paused gamerule is back on: the end phase of the
+     * last match, or any phase when its toggle is off. Pure for tests.
+     */
+    static boolean gameruleRestored(String phase, boolean lastMatch, boolean toggleEnabled) {
+        return (phase.equals("end") && lastMatch) || !toggleEnabled;
+    }
+
     /** Clamps {@code interval-settings.deviation} to {@code [0, interval]}. */
     static double clampDeviation(double deviation, double intervalSeconds) {
         if (Double.isNaN(deviation) || deviation <= 0.0) return 0.0;
@@ -573,16 +578,13 @@ public final class GameStateCommandManager {
         // the last match ends. Unlike its siblings this toggle defaults
         // to off.
         boolean disableFeedback = plugin.getConfig().getBoolean(path + "disable-command-feedback", false);
-        boolean feedbackEnabled = (phase.equals("end") && lastMatch) || !disableFeedback;
-        worlds.forEach(world -> world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK, feedbackEnabled));
+        worlds.forEach(world -> world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK,
+                gameruleRestored(phase, lastMatch, disableFeedback)));
         // Disable phantom spawning while a match runs and restore it when the
         // match ends. The gamerule is re-enabled on the end phase.
         boolean disablePhantoms = plugin.getConfig().getBoolean(path + "disable-phantoms", false);
-        GameRule doInsomnia = Registry.GAME_RULE.get(NamespacedKey.minecraft("do_insomnia"));
-        if (doInsomnia != null) {
-            boolean phantomsEnabled = (phase.equals("end") && lastMatch) || !disablePhantoms;
-            worlds.forEach(world -> world.setGameRule(doInsomnia, phantomsEnabled));
-        }
+        worlds.forEach(world -> world.setGameRule(GameRules.SPAWN_PHANTOMS,
+                gameruleRestored(phase, lastMatch, disablePhantoms)));
         worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
                 plugin.getConfig().getBoolean(path + "set-respawn-immediate", false)));
         // Prevent spectators from generating chunks while the match is active.
@@ -591,11 +593,8 @@ public final class GameStateCommandManager {
         worlds.forEach(world -> world.setGameRule(GameRules.SPECTATORS_GENERATE_CHUNKS, false));
         // Pillager patrols never spawn while a match runs; restored when the
         // last match ends. Unconditional like the spectator chunk rule above.
-        GameRule spawnPatrols = Registry.GAME_RULE.get(NamespacedKey.minecraft("spawn_patrols"));
-        if (spawnPatrols != null) {
-            boolean patrolsEnabled = phase.equals("end") && lastMatch;
-            worlds.forEach(world -> world.setGameRule(spawnPatrols, patrolsEnabled));
-        }
+        worlds.forEach(world -> world.setGameRule(GameRules.SPAWN_PATROLS,
+                gameruleRestored(phase, lastMatch, true)));
         if (plugin.getConfig().getBoolean(path + "set-daytime", false)) {
             Bukkit.getWorlds().forEach(this::setDaytime);
         }

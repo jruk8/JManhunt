@@ -53,6 +53,16 @@ class GameStateCommandManagerTest {
     }
 
     @Test
+    void gameruleRestoresOnLastMatchEnd() {
+        assertFalse(GameStateCommandManager.gameruleRestored("start", true, true));
+        assertFalse(GameStateCommandManager.gameruleRestored("start", false, true));
+        assertFalse(GameStateCommandManager.gameruleRestored("end", false, true));
+        assertTrue(GameStateCommandManager.gameruleRestored("end", true, true));
+        assertTrue(GameStateCommandManager.gameruleRestored("start", true, false));
+        assertTrue(GameStateCommandManager.gameruleRestored("end", false, false));
+    }
+
+    @Test
     void chanceRollUsesStrictLessThan() {
         assertTrue(GameStateCommandManager.rollChance(1.0, 0.999));
         assertFalse(GameStateCommandManager.rollChance(0.0, 0.0));

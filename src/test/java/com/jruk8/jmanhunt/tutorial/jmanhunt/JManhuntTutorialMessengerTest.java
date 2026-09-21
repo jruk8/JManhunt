@@ -7,7 +7,7 @@ class JManhuntTutorialMessengerTest {
 
     @Test
     void logoStripsFirstBracketPair() {
-        assertEquals("<#a6a6a6><gradient:#e66550:#de7766><bold>J</bold>Manhunt</gradient></#a6a6a6> ",
+        assertEquals("<#a6a6a6><gradient:#e66550:#de7766><bold>J</bold>Manhunt</gradient></#a6a6a6>",
                 JManhuntTutorialMessenger.logo(
                         "<#a6a6a6>[<gradient:#e66550:#de7766><bold>J</bold>Manhunt</gradient>]</#a6a6a6> "));
     }

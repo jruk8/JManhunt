@@ -49,6 +49,11 @@ public final class TutorialSession {
         shownCount++;
     }
 
+    /** Steps back one shown dialogue, never below the first. */
+    public void backed() {
+        shownCount = Math.max(1, shownCount - 1);
+    }
+
     public long lastAnswerMillis() {
         return lastAnswerMillis;
     }

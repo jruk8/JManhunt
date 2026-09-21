@@ -26,6 +26,11 @@ public final class JManhuntTutorialSounds implements TutorialSoundPlayer {
         play(player, config.getSounds().getAngry());
     }
 
+    @Override
+    public void playCongratulations(Player player) {
+        play(player, config.getSounds().getCongratulations());
+    }
+
     private void play(Player player, TutorialConfig.TutorialSound sound) {
         if (sound == null || !sound.isEnabled()) {
             return;

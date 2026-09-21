@@ -73,9 +73,12 @@ public final class TutorialService {
     public void start(Player player) {
         TutorialSession session = new TutorialSession(player.getUniqueId(), START_NODE, clock.getAsLong());
         sessions.put(player.getUniqueId(), session);
+        session.shown();
         if (!render(player, session)) {
             sessions.remove(player.getUniqueId());
+            return;
         }
+        sounds.playNeutral(player);
     }
 
     /** Drops a session without output, for disconnects. */
@@ -137,6 +140,7 @@ public final class TutorialService {
             } else {
                 session.pop();
                 session.answered(clock.getAsLong());
+                session.backed();
                 render(player, session);
                 sounds.playNeutral(player);
             }
@@ -176,18 +180,24 @@ public final class TutorialService {
             commands.runAsPlayer(player, command);
         }
         session.answered(clock.getAsLong());
-        sounds.playNeutral(player);
         String next = answer.getNext();
+        TutorialConfig.TutorialNode target = node(next);
+        if (target != null && target.isCelebrate()) {
+            sounds.playCongratulations(player);
+        } else {
+            sounds.playNeutral(player);
+        }
         if (next == null || next.isBlank() || EXIT.equalsIgnoreCase(next)) {
             quitWithMessage(player, session);
         } else if (HELP_EXIT.equalsIgnoreCase(next)) {
             commands.runAsPlayer(player, HELP_COMMAND);
             sessions.remove(session.playerId());
-        } else if (!config.getNodes().containsKey(next)) {
+        } else if (target == null) {
             logger.warning("Unknown tutorial target '" + next + "'; closing the setup.");
             quitWithMessage(player, session);
         } else {
             session.push(next);
+            session.shown();
             render(player, session);
         }
     }
@@ -207,8 +217,9 @@ public final class TutorialService {
 
     /**
      * Renders the session's current dialogue: a blank line, the header on
-     * the first dialogue, the step-prefixed question, numbered answers,
-     * and the footer. False when the node is missing (broken message sent).
+     * the first dialogue, the step-prefixed question, a separator,
+     * numbered answers, the footer, and a trailing blank line. False when
+     * the node is missing (broken message sent).
      */
     private boolean render(Player player, TutorialSession session) {
         TutorialConfig.TutorialNode node = node(session.current());
@@ -217,7 +228,6 @@ public final class TutorialService {
             messenger.send(player, List.of(config.getMessages().getBroken()));
             return false;
         }
-        session.shown();
         TutorialConfig.TutorialFormat format = config.getFormat();
         List<String> lines = new ArrayList<>();
         lines.add("");
@@ -235,16 +245,20 @@ public final class TutorialService {
                 lines.add(question.get(index));
             }
         }
+        lines.add(format.getSeparator());
         List<TutorialConfig.TutorialAnswer> answers = node.getAnswers();
         for (int index = 0; index < answers.size(); index++) {
             TutorialConfig.TutorialAnswer answer = answers.get(index);
             String recommendation = answer.isRecommended() ? format.getRecommendation() : "";
+            String notrecommended = answer.isNotrecommended() ? format.getNotrecommended() : "";
             lines.add(format.getAnswer()
                     .replace("{number}", String.valueOf(index + 1))
                     .replace("{recommendation}", recommendation)
+                    .replace("{notrecommended}", notrecommended)
                     .replace("{answer}", answer.getText()));
         }
         lines.add(format.getFooter());
+        lines.add("");
         messenger.send(player, lines);
         return true;
     }

@@ -52,7 +52,7 @@ gamestate-commands:
   match runs, and restores it afterwards. Unlike the rest, it stays off
   unless you enable it.
 
-Pillager patrols (`spawn_patrols`) are always paused while a match runs and
+Pillager patrols (`spawnPatrols`) are always paused while a match runs and
 restored when the last match ends. This one has no toggle.
 
 # Console Commands

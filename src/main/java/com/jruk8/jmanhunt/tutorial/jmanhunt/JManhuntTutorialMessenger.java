@@ -29,11 +29,11 @@ public final class JManhuntTutorialMessenger implements TutorialMessenger {
         }
     }
 
-    /** Prefix minus its first square bracket pair. Pure for tests. */
+    /** Prefix minus its first square bracket pair and edge space. Pure for tests. */
     static String logo(String prefix) {
         if (prefix == null) {
             return "";
         }
-        return prefix.replaceFirst("\\[", "").replaceFirst("\\]", "");
+        return prefix.replaceFirst("\\[", "").replaceFirst("\\]", "").trim();
     }
 }
