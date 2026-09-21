@@ -1,11 +1,14 @@
 package com.jruk8.jmanhunt.message;
 
+import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** MessageService rendering that runs without a Bukkit server. */
 class MessageServiceTest {
@@ -50,6 +53,45 @@ class MessageServiceTest {
         Component rendered = messages.renderLiteral("{prefix}plain win.", Map.of());
 
         assertEquals("[T] plain win.", plain(rendered));
+    }
+
+    @Test
+    void emptyStringDisablesButWhitespaceDoesNot() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("a.gone", "");
+        config.set("a.space", " ");
+        config.set("a.kept", "hi");
+        MessageService messages = new MessageService();
+        messages.reload(config, "minimessage");
+
+        assertTrue(messages.isDisabled("a.gone"));
+        assertFalse(messages.isDisabled("a.space"));
+        assertFalse(messages.isDisabled("a.kept"));
+        assertFalse(messages.isDisabled("a.missing"));
+    }
+
+    @Test
+    void roleNameUsesConfiguredColorOrDefault() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("role-colors.hunter", "&c");
+        MessageService messages = new MessageService();
+        messages.reload(config, "minimessage");
+
+        assertEquals("&cHunter", messages.roleName(Role.HUNTER));
+        assertEquals("<#74de66>Speedrunner", messages.roleName(Role.SPEEDRUNNER));
+    }
+
+    @Test
+    void roleColorPlaceholdersResolveInTemplates() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("role-colors.hunter", "<red>");
+        MessageService messages = new MessageService();
+        messages.reload(config, "minimessage");
+
+        Component rendered = messages.renderLiteral(
+                "No {role-color-hunter}Hunter<gray> here.", Map.of());
+
+        assertEquals("No Hunter here.", plain(rendered));
     }
 
     private static MessageService messages() {

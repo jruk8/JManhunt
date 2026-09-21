@@ -141,4 +141,44 @@ class ConfigDrillTest {
         assertEquals("", ManhuntCommand.renderEntries(
                 Map.of(), "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>"));
     }
+
+    @Test
+    void nextSegmentsSplitSectionsFromLeaves() {
+        var listing = ManhuntCommand.nextSegments(editable(), "settings");
+
+        assertEquals(List.of("autostart", "compass"), listing.sections());
+        assertEquals(List.of(), listing.leaves());
+    }
+
+    @Test
+    void nextSegmentsHideNonEditableSubtrees() {
+        // tracking-distance exists in config but is not editable, so the
+        // compass level only lists given-to as a section.
+        var listing = ManhuntCommand.nextSegments(editable(), "settings.compass");
+
+        assertEquals(List.of("given-to"), listing.sections());
+        assertEquals(List.of(), listing.leaves());
+    }
+
+    @Test
+    void nextSegmentsListEditableLeaves() {
+        var autostart = ManhuntCommand.nextSegments(editable(), "settings.autostart");
+        assertEquals(List.of(), autostart.sections());
+        assertEquals(List.of("enabled"), autostart.leaves());
+
+        var givenTo = ManhuntCommand.nextSegments(editable(), "settings.compass.given-to");
+        assertEquals(List.of(), givenTo.sections());
+        assertEquals(List.of("hunters", "speedrunners"), givenTo.leaves());
+    }
+
+    @Test
+    void nextSegmentsOfUnknownOrScalarPathAreEmpty() {
+        var missing = ManhuntCommand.nextSegments(editable(), "bogus");
+        assertEquals(List.of(), missing.sections());
+        assertEquals(List.of(), missing.leaves());
+
+        var scalar = ManhuntCommand.nextSegments(editable(), "match.end-delay");
+        assertEquals(List.of(), scalar.sections());
+        assertEquals(List.of(), scalar.leaves());
+    }
 }

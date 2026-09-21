@@ -2,12 +2,14 @@ package com.jruk8.jmanhunt.player;
 
 import com.jruk8.jmanhunt.core.JManhuntPlugin;
 import com.jruk8.jmanhunt.message.MessageService;
-import org.bukkit.Bukkit;
+
 import org.bukkit.entity.Player;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.LongSupplier;
 
@@ -38,6 +40,7 @@ public final class SpawnCampService {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final Map<KillKey, Deque<Long>> kills = new HashMap<>();
+    private final Set<UUID> quietPunishment = new HashSet<>();
     private final LongSupplier clock;
 
     public SpawnCampService(JManhuntPlugin plugin, MessageService messages) {
@@ -63,6 +66,10 @@ public final class SpawnCampService {
                 .getDouble("settings.anti-spawn-camp.window-seconds", 120.0) * 1000.0);
         int count = recordKill(matchId, attacker.getUniqueId(), victim.getUniqueId(), windowMillis);
         if (count < Math.max(1, limit)) {
+            if (shouldWarn(count, limit)) {
+                messages.message(attacker, "game.spawncamp-warning",
+                        Map.of("victim", victim.getName()));
+            }
             return;
         }
         Punishment punishment = Punishment.parse(
@@ -71,9 +78,22 @@ public final class SpawnCampService {
             wipeGear(attacker);
             broadcast("game.spawncamp-gear-wipe", attacker, victim, count);
         } else {
-            attacker.setHealth(0.0);
+            // The death below re-enters onDeath synchronously: tag it so the
+            // listener runs the quiet path (state changes intact, no chatter).
+            // try/finally keeps the tag exact even if a totem saves them.
+            quietPunishment.add(attacker.getUniqueId());
+            try {
+                attacker.setHealth(0.0);
+            } finally {
+                quietPunishment.remove(attacker.getUniqueId());
+            }
             broadcast("game.spawncamp-kill", attacker, victim, count);
         }
+    }
+
+    /** True while the player is dying from spawncamp punishment. */
+    public boolean isQuietPunishment(UUID playerId) {
+        return quietPunishment.contains(playerId);
     }
 
     /**
@@ -91,6 +111,14 @@ public final class SpawnCampService {
         return stamps.size();
     }
 
+    /**
+     * True when the killer has exactly one kill left in the quota: the
+     * rolling count sits at limit - 1. Pure for tests.
+     */
+    static boolean shouldWarn(int count, int limit) {
+        return count >= 1 && count == limit - 1;
+    }
+
     /** Drops all tracking for a finished match. */
     public void clearMatch(long matchId) {
         kills.keySet().removeIf(key -> key.matchId() == matchId);
@@ -106,7 +134,7 @@ public final class SpawnCampService {
     }
 
     private void broadcast(String key, Player attacker, Player victim, int count) {
-        Bukkit.broadcast(messages.component(key, Map.of("player", attacker.getName(),
-                "victim", victim.getName(), "count", String.valueOf(count))));
+        messages.broadcast(key, Map.of("player", attacker.getName(),
+                "victim", victim.getName(), "count", String.valueOf(count)));
     }
 }

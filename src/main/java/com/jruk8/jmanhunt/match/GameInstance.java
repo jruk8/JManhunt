@@ -19,7 +19,7 @@ public final class GameInstance {
     private final long matchId;
     private final int originLobbyId;
     private final OptionalLong cellIndex;
-    private final long startedAtMillis;
+    private long startedAtMillis;
     private SubLobby subLobby;
     private final Set<UUID> assigned = new HashSet<>();
     private final Set<UUID> activeParticipants = new HashSet<>();
@@ -36,6 +36,8 @@ public final class GameInstance {
     private long waitingStartTime;
     private BukkitTask timeLimitTask;
     private final java.util.Set<Long> timeAnnounced = new java.util.HashSet<>();
+    private boolean runnerUnlimitedAnnounced;
+    private boolean hunterUnlimitedAnnounced;
 
 
     public GameInstance(long matchId, int originLobbyId, OptionalLong cellIndex, long startedAtMillis) {
@@ -62,6 +64,11 @@ public final class GameInstance {
 
     public long startedAtMillis() {
         return startedAtMillis;
+    }
+
+    /** Re-anchors the match clock, used once when the game begins. */
+    public void setStartedAtMillis(long startedAtMillis) {
+        this.startedAtMillis = startedAtMillis;
     }
 
     /**
@@ -212,6 +219,24 @@ public final class GameInstance {
     /** Announced countdown thresholds, in whole seconds remaining. */
     public java.util.Set<Long> timeAnnounced() {
         return timeAnnounced;
+    }
+
+    /** Whether the side's unlimited-lives line has fired this match. */
+    public boolean runnerUnlimitedAnnounced() {
+        return runnerUnlimitedAnnounced;
+    }
+
+    public void setRunnerUnlimitedAnnounced(boolean announced) {
+        this.runnerUnlimitedAnnounced = announced;
+    }
+
+    /** Whether the side's unlimited-lives line has fired this match. */
+    public boolean hunterUnlimitedAnnounced() {
+        return hunterUnlimitedAnnounced;
+    }
+
+    public void setHunterUnlimitedAnnounced(boolean announced) {
+        this.hunterUnlimitedAnnounced = announced;
     }
 
     /** Whole seconds between match start and the given moment. */

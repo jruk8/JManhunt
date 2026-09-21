@@ -15,6 +15,7 @@
 | `jmanhunt.command.lobby` | Manage lobby queues. | OP |
 | `jmanhunt.command.game` | Join players to or remove them from a running match. | OP |
 | `jmanhunt.command.debug` | Toggle JManhunt debug output. | OP |
+| `jmanhunt.command.dev.schem` | Use the developer schematic tools. | OP |
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |
 | `jmanhunt.command.configuration` | View or change configuration by category. | OP |
 | `jmanhunt.command.worldengine` | View world-engine settings. Implies every worldengine action below. | OP |

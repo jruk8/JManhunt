@@ -11,6 +11,7 @@ import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.QuickStartOutcome;
+import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.CapLimits;
@@ -35,7 +36,6 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -44,7 +44,9 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.Set;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.TreeSet;
 import java.util.UUID;
 
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
@@ -100,6 +102,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final DebugService debugService;
     private final LobbyService lobbies;
     private final PendingConfirmations confirms = new PendingConfirmations();
+    private final DevSchemCommand devSchem;
 
     public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, ConfigService config,
                           SoundService sounds, PlayerStateStore playerStates, GameManager game,
@@ -109,6 +112,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.playerStates = playerStates; this.game = game;
         this.lobbyTeleporter = lobbyTeleporter; this.debugService = debugService;
         this.lobbies = lobbyService;
+        this.devSchem = new DevSchemCommand(plugin, messages);
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -128,6 +132,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "reload" -> reload(sender);
             case "debug" -> debug(sender, args);
             case "lobby" -> lobby(sender, args);
+            case "dev" -> dev(sender, args);
             default -> message(sender, "command.invalid");
         };
     }
@@ -147,6 +152,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt worldengine", "set lobby or teleport players"},
                 {"/manhunt debug [on|off]", "toggle debug output"},
                 {"/manhunt challenges", "show Challenges addon info"},
+                {"/manhunt dev schem <pos1|pos2|save|load|list>", "dev schematic tools"},
                 {"/manhunt reload", "reload files"}};
         for (String[] line : lines) message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
         // Clickable links need MiniMessage parsing regardless of text-format,
@@ -205,6 +211,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         sendRoleSection(sender, players, Role.NONE, "manhunt.none-header");
         sendSpectatorLine(sender, players);
         sendWinConditionLines(sender);
+        sendModifiersLine(sender);
         sendElapsedLine(sender, instance);
         sendIdLine(sender, instance.lobbyTag() + "|G" + instance.matchId());
         neutralSound(sender);
@@ -247,6 +254,24 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         message(sender, "manhunt.status-win-hunters", Map.of("conditions", game.hunterWinConditions()));
     }
 
+    /** Optional enabled-modifier roll call: hidden when off or when none are enabled. */
+    private void sendModifiersLine(CommandSender sender) {
+        if (!plugin.getConfig().getBoolean("settings.status.show-modifiers", false)) {
+            return;
+        }
+        List<String> enabled = new ArrayList<>();
+        for (String name : config.modifierNames()) {
+            if (config.modifierEnabled(name)) {
+                enabled.add(name);
+            }
+        }
+        if (enabled.isEmpty()) {
+            return;
+        }
+        enabled.sort(String.CASE_INSENSITIVE_ORDER);
+        message(sender, "manhunt.status-modifiers", Map.of("modifiers", ListFormatter.joinOxford(enabled)));
+    }
+
     /** Optional match runtime, off by default. */
     private void sendElapsedLine(CommandSender sender, GameInstance instance) {
         if (!plugin.getConfig().getBoolean("settings.status.show-elapsed-time", false)) {
@@ -285,11 +310,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendRoleSection(CommandSender sender, List<Player> players, Role role, String header) {
-        List<Player> section = players.stream().filter(p -> playerStates.role(p) == role)
-                .sorted(Comparator.comparing(Player::getName)).toList();
-        if (section.isEmpty()) return;
-        message(sender, header); section.forEach(player -> message(sender, "manhunt.status-player",
-                Map.of("player", player.getName())));
+        List<String> names = players.stream().filter(p -> playerStates.role(p) == role)
+                .map(Player::getName).sorted().toList();
+        if (names.isEmpty()) return;
+        message(sender, header);
+        for (String line : ListFormatter.chunk(names, 10)) {
+            message(sender, "manhunt.status-player", Map.of("player", line));
+        }
     }
 
     private boolean challenges(CommandSender sender) {
@@ -373,6 +400,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      */
     static boolean canUseSubcommand(CommandSender sender, String sub) {
         return switch (sub.toLowerCase(Locale.ROOT)) {
+            case "dev" -> sender.hasPermission("jmanhunt.command.dev.schem");
             case "setplayer" -> sender.hasPermission("jmanhunt.command.setplayer")
                     || sender.hasPermission("jmanhunt.command.setplayer.self");
             case "config", "configuration" -> sender.hasPermission("jmanhunt.command.configuration");
@@ -481,43 +509,43 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 if (!member && !capAllows(targetLobby, role, force, cappedIn)) {
                     continue;
                 }
+                Role from = playerStates.role(player);
                 playerStates.setRole(player, role); changed++;
                 plugin.roleTeams().sync(player);
+                game.announceRoleChange(player, from, role);
                 assigned.add(player.getUniqueId());
-                message(player, "manhunt.role-assigned", Map.of("role", role.displayName()));
+                message(player, "manhunt.role-assigned", Map.of("role", messages.roleName(role)));
                 sounds.playNeutralSound(player);
                 if (!member) {
                     held++;
-                    message(player, "manhunt.setplayer-held", Map.of("role", role.displayName()));
-                }
-                if (!role.isParticipant()) {
-                    sendToPlayerLobby(player, "manhunt.queue-left", Map.of("player", player.getName()));
+                    if (role != Role.AFK) {
+                        message(player, "manhunt.setplayer-held", Map.of("role", messages.roleName(role)));
+                    }
                 }
                 continue;
             }
             if (!capAllows(lobbies.lobbyOf(player.getUniqueId()), role, force, cappedIn)) {
                 continue;
             }
+            Role from = playerStates.role(player);
             playerStates.setRole(player, role); changed++;
             plugin.roleTeams().sync(player);
+            game.announceRoleChange(player, from, role);
             assigned.add(player.getUniqueId());
-            message(player, "manhunt.role-assigned", Map.of("role", role.displayName()));
+            message(player, "manhunt.role-assigned", Map.of("role", messages.roleName(role)));
             sounds.playNeutralSound(player);
-            if (!role.isParticipant()) {
-                sendToPlayerLobby(player, "manhunt.queue-left", Map.of("player", player.getName()));
-            }
         }
         message(sender, unchanged == 0 ? "manhunt.set-success" : "manhunt.set-success-unchanged",
-                Map.of("count", String.valueOf(changed), "role", role.displayName(), "unchanged", String.valueOf(unchanged)));
+                Map.of("count", String.valueOf(changed), "role", messages.roleName(role), "unchanged", String.valueOf(unchanged)));
         if (skipped > 0) message(sender, "manhunt.set-skipped", Map.of("count", String.valueOf(skipped)));
         if (joined > 0) message(sender, "manhunt.setplayer-joined",
-                Map.of("count", String.valueOf(joined), "role", role.displayName()));
+                Map.of("count", String.valueOf(joined), "role", messages.roleName(role)));
         if (held > 0) message(sender, "manhunt.setplayer-held-summary",
                 Map.of("count", String.valueOf(held)));
         for (Map.Entry<Integer, Set<Role>> entry : cappedIn.entrySet()) {
             for (Role cappedRole : entry.getValue()) {
                 message(sender, "manhunt.lobby-full", Map.of("lobby", String.valueOf(entry.getKey()),
-                        "role", cappedRole.displayName()));
+                        "role", messages.roleName(cappedRole)));
             }
         }
         if (sender instanceof Player player && !assigned.contains(player.getUniqueId())) sounds.playNeutralSound(player);
@@ -643,7 +671,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             if (current.isPresent() && current.get().id() == lobbyId.getAsInt()
                     && playerStates.role(target) == role) {
                 message(sender, "manhunt.lobby-already-member", Map.of("player", target.getName(),
-                        "lobby", String.valueOf(lobbyId.getAsInt()), "role", role.displayName()));
+                        "lobby", String.valueOf(lobbyId.getAsInt()), "role", messages.roleName(role)));
                 continue;
             }
             Lobby lobby = lobbies.get(lobbyId.getAsInt()).orElse(null);
@@ -658,16 +686,16 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             plugin.roleTeams().sync(target);
             moved.add(target);
             if (previous != role) {
-                message(target, "manhunt.role-assigned", Map.of("role", role.displayName()));
+                message(target, "manhunt.role-assigned", Map.of("role", messages.roleName(role)));
                 sounds.playNeutralSound(target);
             }
         }
         for (Role cappedRole : capped) {
             message(sender, "manhunt.lobby-full", Map.of("lobby", String.valueOf(lobbyId.getAsInt()),
-                    "role", cappedRole.displayName()));
+                    "role", messages.roleName(cappedRole)));
         }
         message(sender, "manhunt.lobby-join-success", Map.of("count", String.valueOf(moved.size()),
-                "lobby", String.valueOf(lobbyId.getAsInt()), "role", role.displayName()));
+                "lobby", String.valueOf(lobbyId.getAsInt()), "role", messages.roleName(role)));
         if (sender instanceof Player player) {
             sounds.playNeutralSound(player);
         }
@@ -752,28 +780,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     /** Configured queue cap for a participant role, -1 when uncapped. */
     private int capFor(Role role) {
         return plugin.getConfig().getInt(
-                "lobbies.caps." + role.name().toLowerCase(Locale.ROOT), -1);
-    }
-
-    /**
-     * Sends a queue message to the player's lobby members plus the console.
-     * Lobby-less players fall back to a global broadcast.
-     */
-    private void sendToPlayerLobby(Player player, String key, Map<String, String> values) {
-        Optional<Lobby> lobby = lobbies.lobbyOf(player.getUniqueId());
-        if (lobby.isEmpty()) {
-            Bukkit.broadcast(messages.component(key, values));
-            return;
-        }
-        Lobby resolved = lobby.get();
-        List<Player> recipients = new ArrayList<>();
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (resolved.contains(online.getUniqueId())) {
-                recipients.add(online);
-            }
-        }
-        messages.sendTo(recipients, key, values);
-        Bukkit.getConsoleSender().sendMessage(messages.component(key, values));
+                "lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1);
     }
 
     private boolean start(CommandSender sender, String[] args) {
@@ -899,13 +906,25 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (targets.isEmpty()) {
             return message(sender, "command.no-targets");
         }
+        Map<UUID, Role> before = new HashMap<>();
+        for (Player target : targets) {
+            before.put(target.getUniqueId(), playerStates.role(target));
+        }
         int added = game.joinPlayers(instance.get(), targets, role);
         if (added == 0) {
             return message(sender, "game.join-no-change");
         }
+        for (Player target : targets) {
+            Role from = before.get(target.getUniqueId());
+            Role after = playerStates.role(target);
+            if (after != from) {
+                game.announceRoleChange(target, from, after);
+            }
+        }
         message(sender, "game.join-success", Map.of("count", String.valueOf(added),
-                "id", String.valueOf(instance.get().matchId()), "role", role.displayName()));
+                "id", String.valueOf(instance.get().matchId()), "role", messages.roleName(role)));
         neutralSound(sender);
+        game.updateAutostartState();
         return true;
     }
 
@@ -950,9 +969,24 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (needsConfirm && !confirms.confirm("gameleave:" + senderKey(sender))) {
             return message(sender, "game.leave-confirm");
         }
+        Map<UUID, Role> before = new HashMap<>();
+        for (List<Player> leavers : byMatch.values()) {
+            for (Player leaver : leavers) {
+                before.put(leaver.getUniqueId(), playerStates.role(leaver));
+            }
+        }
         int removed = 0;
         for (Map.Entry<GameInstance, List<Player>> entry : byMatch.entrySet()) {
             removed += game.leaveMatch(entry.getKey(), entry.getValue(), entry.getKey().begun());
+        }
+        for (List<Player> leavers : byMatch.values()) {
+            for (Player leaver : leavers) {
+                Role from = before.get(leaver.getUniqueId());
+                Role after = playerStates.role(leaver);
+                if (after != from) {
+                    game.announceRoleChange(leaver, from, after);
+                }
+            }
         }
         Set<UUID> leaverIds = byMatch.values().stream().flatMap(List::stream)
                 .map(Player::getUniqueId).collect(java.util.stream.Collectors.toSet());
@@ -960,6 +994,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             message(sender, "game.leave-removed", Map.of("count", String.valueOf(removed)));
         }
         neutralSound(sender);
+        game.updateAutostartState();
         return true;
     }
 
@@ -1020,11 +1055,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (!resolved.section() || !resolved.remainder().isEmpty()) {
             return message(sender, "manhunt.configuration-usage");
         }
+        DrillListing listing = nextSegments(game.settingNames(), resolved.path());
         Map<String, String> entries = new LinkedHashMap<>();
-        for (String setting : game.settingNames()) {
-            if (isUnder(setting, resolved.path())) {
-                entries.put(setting, ": " + game.getSettingValue(setting));
-            }
+        for (String section : listing.sections()) {
+            entries.put(section, "");
+        }
+        for (String leaf : listing.leaves()) {
+            entries.put(leaf, ": " + game.getSettingValue(resolved.path() + "." + leaf));
         }
         listEntries(sender, resolved.path(), entries);
         neutralSound(sender);
@@ -1093,8 +1130,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             if (sender instanceof Player changer && online.getUniqueId().equals(changer.getUniqueId())) {
                 continue;
             }
-            online.sendMessage(messages.component("manhunt.setting-change-announced",
-                    Map.of("player", sender.getName(), "key", setting, "value", String.valueOf(newValue))));
+            messages.message(online, "manhunt.setting-change-announced",
+                    Map.of("player", sender.getName(), "key", setting, "value", String.valueOf(newValue)));
         }
     }
 
@@ -1199,6 +1236,33 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         options.sort(String.CASE_INSENSITIVE_ORDER);
         return options;
+    }
+
+    /**
+     * Next drill level under a resolved section path: intermediate segments
+     * of editable settings become bare sub-sections, terminal segments
+     * become leaves. Derived purely from editable paths via {@link #isUnder},
+     * so non-editable subtrees never surface. Pure for tests.
+     */
+    public static DrillListing nextSegments(Set<String> settings, String path) {
+        if (path.isEmpty()) {
+            return new DrillListing(List.of(), List.of());
+        }
+        Set<String> sections = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        Set<String> leaves = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (String setting : settings) {
+            if (!isUnder(setting, path)) {
+                continue;
+            }
+            String rest = setting.substring(path.length() + 1);
+            int dot = rest.indexOf('.');
+            if (dot == -1) {
+                leaves.add(rest);
+            } else {
+                sections.add(rest.substring(0, dot));
+            }
+        }
+        return new DrillListing(List.copyOf(sections), List.copyOf(leaves));
     }
 
     private static boolean leadsToEditable(Set<String> editable, String path) {
@@ -1396,6 +1460,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /** Developer tools. Only schem exists for now; usage covers the rest. */
+    private boolean dev(CommandSender sender, String[] args) {
+        if (args.length < 2 || !args[1].equalsIgnoreCase("schem")) {
+            return message(sender, "dev.usage");
+        }
+        return devSchem.execute(sender, java.util.Arrays.copyOfRange(args, 2, args.length));
+    }
+
     private boolean toggleDebug(CommandSender sender) {
         if (sender instanceof Player player) {
             return debugService.togglePlayer(player.getUniqueId());
@@ -1446,6 +1518,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[3], selectorOptions());
         if (args.length == 5 && args[0].equalsIgnoreCase("game") && args[1].equalsIgnoreCase("join"))
             return partial(args[4], selectorOptions());
+        if (args.length == 2 && args[0].equalsIgnoreCase("dev"))
+            return partial(args[1], List.of("schem"));
+        if (args.length == 3 && args[0].equalsIgnoreCase("dev") && args[1].equalsIgnoreCase("schem"))
+            return partial(args[2], List.of("pos1", "pos2", "save", "load", "list"));
+        if (args.length == 4 && args[0].equalsIgnoreCase("dev") && args[1].equalsIgnoreCase("schem")
+                && args[2].equalsIgnoreCase("load"))
+            return partial(args[3], devSchem.schematicNames());
         if (args.length == 2 && args[0].equalsIgnoreCase("debug"))
             return partial(args[1], List.of("on", "off"));
         if (args.length >= 2
@@ -1549,7 +1628,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     static List<String> subcommandOptions() {
         return new ArrayList<>(List.of("challenges", "help", "reload", "worldengine", "config",
                 "configuration", "debug", "lobby", "qs", "quickstart", "game", "end", "start",
-                "setplayer", "status"));
+                "setplayer", "status", "dev"));
     }
 
     /** Instance id completion: live match ids, oldest first. */
@@ -1767,7 +1846,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         QuickStartOutcome outcome = game.quickStart(percent, force, lobbyId);
         for (Role cappedRole : outcome.cappedRoles()) {
             message(sender, "manhunt.lobby-full", Map.of("lobby", String.valueOf(lobbyId),
-                    "role", cappedRole.displayName()));
+                    "role", messages.roleName(cappedRole)));
         }
         if (!outcome.started()) return message(sender, "manhunt.quickstart-failed");
         return true;
@@ -1796,8 +1875,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return new QuickStartArgs(percent, force, true);
     }
 
-    private boolean message(CommandSender sender, String key) { sender.sendMessage(messages.component(key)); return true; }
-    private void message(CommandSender sender, String key, Map<String, String> values) { sender.sendMessage(messages.component(key, values)); }
+    private boolean message(CommandSender sender, String key) { messages.message(sender, key); return true; }
+    private void message(CommandSender sender, String key, Map<String, String> values) { messages.message(sender, key, values); }
     private void neutralSound(CommandSender sender) {
         if (sender instanceof Player player) sounds.playNeutralSound(player);
     }

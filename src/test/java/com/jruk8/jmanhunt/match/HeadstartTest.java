@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -32,5 +33,12 @@ class HeadstartTest {
                 Headstart.parse(config, "hunter"));
         assertEquals(new Headstart(true, 10),
                 Headstart.parse(config, "speedrunner"));
+    }
+
+    @Test
+    void oppositeSwapsParticipantSides() {
+        assertEquals(Role.SPEEDRUNNER, GameManager.opposite(Role.HUNTER));
+        assertEquals(Role.HUNTER, GameManager.opposite(Role.SPEEDRUNNER));
+        assertEquals(Role.NONE, GameManager.opposite(Role.NONE));
     }
 }

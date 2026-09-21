@@ -92,6 +92,24 @@ Except for `ON_START`, every event trigger runs the `player`, `hunter`, and
 `speedrunner` commands only for the specific player involved in the event.
 `ON_START` and `INTERVAL` run for all participating players instead.
 
+## Start Timing
+
+Under `custom-modifiers.<name>.on-start`, an `ON_START` modifier can wait
+out the pre-start window before running:
+
+```yaml
+custom-modifiers:
+  hunter-post-start-speed:
+    on-start:
+      # BEFORE runs at /manhunt start; AFTER waits until the speedrunner
+      # first hits a hunter (or the match force-starts). Defaults to BEFORE.
+      pre-start-order: AFTER
+```
+
+This only applies when `runs-on` contains `ON_START` or is omitted (which
+defaults to `ON_START`). When `start-on-speedrunner-damage` is disabled
+there is no pre-start window, so both settings run at match start.
+
 ## Success Chance
 
 Under `custom-modifiers.<name>.success-chance`, you can make the modifier run
@@ -276,5 +294,7 @@ custom-modifiers:
 
 The default `config.yml` ships more examples to copy from: `full-iron-kit`,
 `speedrunner-health-advantage`, `random-mob-spawner`, `random-item-giver`,
-`gear-dice`, `regen-on-kill`, `diamond-on-advancement`, and
-`fireres-on-nether-enter`.
+`gear-dice`, `regen-on-kill`, `diamond-on-advancement`,
+`fireres-on-nether-enter`, `hunter-start-debuffs` (slowness II plus
+weakness I on every hunter at match start), and `hunter-post-start-speed`
+(speed for hunters once the game actually begins).

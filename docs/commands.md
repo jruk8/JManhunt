@@ -66,9 +66,8 @@ from the console) and can only be used when that lobby has no running match.
 
 - **Without arguments:** keeps existing teams and converts only what is
   missing to start. If no Speedrunner is queued, a random player becomes one;
-  if no Hunter is queued, a random player becomes one. Players with role
-  `none` become Hunters. An all-Hunter or all-Speedrunner lobby therefore
-  still starts.
+  if no Hunter is queued, a random player becomes one. An all-Hunter or
+  all-Speedrunner lobby therefore still starts.
 - **With a percentage:** interprets the value as the percentage of all
   convertible players that should become Speedrunners, assigned by random
   selection with the rest becoming Hunters. For example, `50` with 16
@@ -76,14 +75,14 @@ from the console) and can only be used when that lobby has no running match.
   are rounded to the nearest whole player, and there is always at least one
   Speedrunner.
 
-Every online lobby member except AFK players and spectators is
-convertible, including existing Hunters and Speedrunners; default mode
-preserves queued roles and only converts the minimum needed, preferring
-`none` players for conversion. AFK players and spectators are never
-touched. The match is validated after assignment: it
-requires at least one Hunter and one Speedrunner, so a lobby with two online
-members where one is AFK will fail to start. Queue caps apply unless `-f`
-(`-force`) is passed.
+Every online lobby member except AFK players, spectators, and (without
+`-f`) `none` players is convertible, including existing Hunters and
+Speedrunners; default mode preserves queued roles and only converts the
+minimum needed, preferring `none` players for conversion when `-f`
+(`-force`) includes them. AFK players and spectators are never touched.
+The match is validated after assignment: it requires at least one Hunter
+and one Speedrunner, so a lobby with two online members where one is AFK
+will fail to start. Queue caps apply unless `-f` (`-force`) is passed.
 
 Quick Start bypasses the autostart system entirely: no countdowns or
 autostart messages are displayed.
@@ -119,10 +118,11 @@ speedrunner leaves, the other side wins on the spot.
 ## Match Status
 
 `/manhunt [id|all]` groups everyone by role and ends with a spectator roll
-call whenever someone is watching. Three extras can be toggled under
+call whenever someone is watching. Four extras can be toggled under
 `settings.status`: the per-side win conditions (`show-win-conditions`),
-the running time (`show-elapsed-time`), and a gray `L{lobby}|G{game}` tag
-(`show-ids`, on by default).
+the running time (`show-elapsed-time`), the enabled custom modifiers
+(`show-modifiers`, hidden when none are enabled), and a gray
+`L{lobby}|G{game}` tag (`show-ids`, on by default).
 
 ## Lobby and Game Worlds
 
@@ -162,7 +162,8 @@ Strings and enum-like values are stored verbatim:
 ```
 
 With no category, the command lists categories; with a section path, it lists
-that section's settings:
+that section's next level: sub-sections as bare names, editable settings
+as `child: value`. Non-editable branches never surface:
 
 ```text
 /manhunt configuration
@@ -216,3 +217,10 @@ Play built-in challenges through our
 companion plugin [**JManhunt-Challenges**](https://github.com/jruk8/JManhunt-Challenges),
 which natively hooks into the [JManhunt API](api.md). Install 
 alongside JManhunt and toggle with `/jmhchallenges toggle <challenge>`.
+
+## Developer Tools
+
+`/manhunt dev schem <pos1|pos2|save|load|list>` (permission
+`jmanhunt.command.dev.schem`) saves and loads vanilla `.nbt` structure
+files for authoring lobby presets. See [Developer Tools](dev-tools.md);
+only `list` works from the console.

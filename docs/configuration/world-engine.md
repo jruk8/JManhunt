@@ -62,6 +62,9 @@ server, delete the lobby world folder, set `lobby-preset`, start up,
 and run `tpto lobbyworld` twice. Presets only apply on fresh
 generation — existing worlds are never touched.
 
+Authors editing the presets themselves can build in-game and capture the
+result with the [developer schematic tools](../../dev-tools.md).
+
 ## Role Pads
 
 Role pads are lobby-world blocks that assign roles when stood on: step

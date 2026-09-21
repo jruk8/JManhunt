@@ -40,8 +40,8 @@ class WinConditionEngineTest {
         YamlConfiguration config = new YamlConfiguration();
         config.set("settings.win-conditions.speedrunner.survive-time.enabled", true);
         config.set("settings.win-conditions.speedrunner.survive-time.time", 1200.0);
-        config.set("settings.win-conditions.hunter.time-limit.enabled", true);
-        config.set("settings.win-conditions.hunter.time-limit.time", 600.0);
+        config.set("settings.win-conditions.hunter.survive-time.enabled", true);
+        config.set("settings.win-conditions.hunter.survive-time.time", 600.0);
         WinConditionEngine engine = engine(config);
         assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME));
         assertEquals(1200.0, engine.time(Role.SPEEDRUNNER));
@@ -63,7 +63,7 @@ class WinConditionEngineTest {
     }
 
     @Test
-    void reachAdvancementIsSpeedrunnerOnly() {
+    void reachAdvancementIsPerSide() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("settings.win-conditions.speedrunner.reach-advancement.enabled", true);
         config.set("settings.win-conditions.speedrunner.reach-advancement.advancement",
@@ -71,8 +71,9 @@ class WinConditionEngineTest {
         WinConditionEngine engine = engine(config);
         assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT));
         assertFalse(engine.enabled(Role.HUNTER, WinCondition.REACH_ADVANCEMENT));
-        assertEquals("minecraft:story/enter_the_nether", engine.advancement());
-        assertEquals("minecraft:story/enter_the_nether", engine(new YamlConfiguration()).advancement());
+        assertEquals("minecraft:story/enter_the_nether", engine.advancement(Role.SPEEDRUNNER));
+        assertEquals("minecraft:story/enter_the_nether",
+                engine(new YamlConfiguration()).advancement(Role.HUNTER));
     }
 
     @Test
@@ -128,5 +129,36 @@ class WinConditionEngineTest {
     void prettyKeyFallsBackOnBlank() {
         assertEquals("?", WinConditionEngine.prettyKey(null));
         assertEquals("?", WinConditionEngine.prettyKey("   "));
+    }
+
+    @Test
+    void reachAdvancementEnabledPerSide() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("settings.win-conditions.hunter.reach-advancement.enabled", true);
+        config.set("settings.win-conditions.hunter.reach-advancement.advancement",
+                "minecraft:nether/get_wither_skull");
+        WinConditionEngine engine = engine(config);
+
+        assertTrue(engine.enabled(Role.HUNTER, WinCondition.REACH_ADVANCEMENT));
+        assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT));
+        assertEquals("minecraft:nether/get_wither_skull", engine.advancement(Role.HUNTER));
+        assertEquals("minecraft:story/enter_the_nether", engine.advancement(Role.SPEEDRUNNER));
+    }
+
+    @Test
+    void materialWinsStaysFalseWhenDisabled() {
+        WinConditionEngine engine = engine(new YamlConfiguration());
+
+        assertFalse(engine.materialWins(org.bukkit.Material.DIAMOND, Role.SPEEDRUNNER));
+        assertFalse(engine.materialWins(org.bukkit.Material.DIAMOND, Role.HUNTER));
+    }
+
+    @Test
+    void materialWinsRejectsNullWithoutTouchingRegistry() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("settings.win-conditions.speedrunner.acquire-item.enabled", true);
+        WinConditionEngine engine = engine(config);
+
+        assertFalse(engine.materialWins(null, Role.SPEEDRUNNER));
     }
 }

@@ -28,8 +28,11 @@ window that lasts until a speedrunner hits a hunter. This gives speedrunners
 a moment to get their bearings before hunters are "let loose."
 
 Players in the pre-start window are invulnerable and may not deal any damage. The
-speedrunners' first hit on a hunter opens the match but deals no damage
-itself. The pre-start window also blocks `/kill`, unlike everywhere else.
+speedrunners' first hit on a hunter opens the match: it deals no damage
+itself, but its knockback registers and the damage is healed back a tick
+later. The pre-start window also blocks `/kill`, unlike everywhere else.
+Match clocks — the status elapsed time and any time-limit countdowns —
+ignore the pre-start window and start when the game begins.
 
 ```yaml
 settings:
@@ -37,7 +40,7 @@ settings:
     enabled: true
     delay-seconds: 30
     on-expire: FORCE_START
-    start-with-adventure-mode: true
+    start-in-adventure-mode: true
 ```
 
 ## Pre-Start Timeout
@@ -58,27 +61,32 @@ clamped up to `5` seconds. Set to `-1` to wait indefinitely for a hit.
 
 ## Adventure Mode Lock
 
-`start-with-adventure-mode`, when enabled, puts every participant in
+`start-in-adventure-mode`, when enabled, puts every participant in
 adventure mode during the pre-start window so nobody can break blocks while
 waiting for the starting hit. Everyone is restored to survival the instant
 the game actually begins.
 
 # Headstarts
 
-Under `settings.headstarts`, either side can be held in spectator mode while
-the other side plays. Each side is configured independently, so hunters can
-wait out a delay, speedrunners can wait out a delay, or both.
+Under `settings.headstarts`, either side can be given a head start: a
+headstart configured for one side holds the *other* side in spectator
+mode while the configured side plays. Each side is configured
+independently, so hunters can start ahead, speedrunners can start ahead,
+or both (in which case everybody waits).
 
 ```yaml
 settings:
   headstarts:
-    hunter:
-      enabled: false
-      delay-seconds: 30
     speedrunner:
       enabled: false
       delay-seconds: 30
+    hunter:
+      enabled: false
+      delay-seconds: 30
 ```
+
+Out of the box, speedrunners start with a 30-second head start while
+hunters wait; the hunter headstart is disabled.
 
 If [Start on Speedrunner Damage](#start-on-speedrunner-damage) is also
 enabled, the countdowns don't begin until the speedrunner lands that first

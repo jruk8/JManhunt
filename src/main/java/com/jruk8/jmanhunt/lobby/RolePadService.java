@@ -19,7 +19,6 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
-import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -187,8 +186,8 @@ public final class RolePadService implements Listener {
             }
             setPadRole(player, role);
             if (!member) {
-                player.sendMessage(messages.component("manhunt.setplayer-held",
-                        Map.of("role", role.displayName())));
+                messages.message(player, "manhunt.setplayer-held",
+                        Map.of("role", messages.roleName(role)));
             }
             return;
         }
@@ -199,13 +198,15 @@ public final class RolePadService implements Listener {
     }
 
     private void setPadRole(Player player, Role role) {
+        Role from = playerStates.role(player);
         playerStates.setRole(player, role);
         plugin.roleTeams().sync(player);
-        player.sendMessage(messages.component("manhunt.role-assigned",
-                Map.of("role", role.displayName())));
+        messages.message(player, "manhunt.role-assigned",
+                Map.of("role", messages.roleName(role)));
         sounds.playNeutralSound(player);
-        if (!role.isParticipant()) {
-            announceQueueLeft(player);
+        if (from != role) {
+            game.updateAutostartState();
+            game.announceRoleChange(player, from, role);
         }
     }
 
@@ -220,23 +221,7 @@ public final class RolePadService implements Listener {
             }
         }
         return CapLimits.allows(count, plugin.getConfig()
-                .getInt("lobbies.caps." + role.name().toLowerCase(Locale.ROOT), -1));
+                .getInt("lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1));
     }
 
-    /** Queue-left notice to the player's lobby plus the console. */
-    private void announceQueueLeft(Player player) {
-        Map<String, String> values = Map.of("player", player.getName());
-        Optional<Lobby> lobby = lobbies.lobbyOf(player.getUniqueId());
-        if (lobby.isEmpty()) {
-            Bukkit.broadcast(messages.component("manhunt.queue-left", values));
-            return;
-        }
-        List<Player> recipients = new ArrayList<>();
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (lobby.get().contains(online.getUniqueId())) {
-                recipients.add(online);
-            }
-        }
-        messages.sendTo(recipients, "manhunt.queue-left", values);
-    }
 }

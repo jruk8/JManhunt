@@ -42,13 +42,36 @@ public final class LobbySchematicService {
         if (name == null || name.isBlank()) {
             return;
         }
+        pasteNbt(world, name);
+    }
+
+    /** Directory holding the vanilla .nbt preset schematics, created on demand. */
+    public File schematicDir() {
         File dir = new File(plugin.getDataFolder(), "settings/world-engine/lobby-schematics");
         dir.mkdirs();
-        File file = new File(dir, name + ".nbt");
+        return dir;
+    }
+
+    /**
+     * Pastes a named .nbt from the schematics dir with its midpoint at
+     * 0,64,0. Warns and returns false when the file is missing or the
+     * paste fails.
+     */
+    public boolean pasteNbt(World world, String name) {
+        return pasteNbt(world, name, new Location(world, 0, PASTE_MID_Y, 0));
+    }
+
+    /**
+     * Pastes a named .nbt from the schematics dir centered on the given
+     * midpoint's block, in the given world. Warns and returns false when
+     * the file is missing or the paste fails.
+     */
+    public boolean pasteNbt(World world, String name, Location midpoint) {
+        File file = new File(schematicDir(), name + ".nbt");
         if (!file.isFile()) {
-            plugin.logger().warning("Lobby preset " + preset.name() + " schematic '" + name
+            plugin.logger().warning("Lobby schematic '" + name
                     + ".nbt' is missing from settings/world-engine/lobby-schematics/; leaving void.");
-            return;
+            return false;
         }
         Structure structure;
         try {
@@ -56,18 +79,19 @@ public final class LobbySchematicService {
         } catch (IOException unreadable) {
             plugin.logger().warning(
                     "Could not load lobby schematic '" + file.getName() + "': " + unreadable.getMessage());
-            return;
+            return false;
         }
         BlockVector size = structure.getSize();
-        Location corner = new Location(world, cornerAxis(0, size.getBlockX()),
-                cornerAxis(PASTE_MID_Y, size.getBlockY()), cornerAxis(0, size.getBlockZ()));
+        Location corner = cornerFor(world, midpoint, size);
         try {
             structure.place(corner, true, StructureRotation.NONE, Mirror.NONE, 0, 1.0f,
                     ThreadLocalRandom.current());
         } catch (RuntimeException failed) {
             plugin.logger().warning(
                     "Could not paste lobby schematic '" + file.getName() + "': " + failed.getMessage());
+            return false;
         }
+        return true;
     }
 
     private void runCommands(World world, LobbyPreset preset) {
@@ -89,6 +113,17 @@ public final class LobbySchematicService {
                 exception.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Paste corner centering the structure on the midpoint's block. Pure
+     * for tests.
+     */
+    static Location cornerFor(World world, Location midpoint, BlockVector size) {
+        return new Location(world,
+                cornerAxis(midpoint.getBlockX(), size.getBlockX()),
+                cornerAxis(midpoint.getBlockY(), size.getBlockY()),
+                cornerAxis(midpoint.getBlockZ(), size.getBlockZ()));
     }
 
     /**

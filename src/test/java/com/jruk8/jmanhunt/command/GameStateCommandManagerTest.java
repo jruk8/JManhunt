@@ -114,6 +114,15 @@ class GameStateCommandManagerTest {
     }
 
     @Test
+    void preStartOrderDefaultsToBefore() {
+        assertFalse(GameStateCommandManager.runsAfterPrestart(null));
+        assertFalse(GameStateCommandManager.runsAfterPrestart("BEFORE"));
+        assertFalse(GameStateCommandManager.runsAfterPrestart("banana"));
+        assertTrue(GameStateCommandManager.runsAfterPrestart("AFTER"));
+        assertTrue(GameStateCommandManager.runsAfterPrestart("  after  "));
+    }
+
+    @Test
     void staleDispatchVoidsRestartedOrTornDownEngines() {
         assertFalse(GameStateCommandManager.isStaleDispatch(3L, 3L, true));
         assertTrue(GameStateCommandManager.isStaleDispatch(3L, 4L, true));

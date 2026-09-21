@@ -14,11 +14,13 @@
 #
 # Issues? Report them on GitHub:
 # - https://github.com/jruk8/JManhunt/issues
-# For quick assistance, join our Discord server:
+# For quick assistance and community modifiers, join our Discord server:
 # - https://discord.gg/hkWmCVmWDC
+# Support our development on Ko-fi:
+# - https://ko-fi.com/jruk
 #
 # Built by Starburst Studios
-# © 2026 jruk8. Licensed under GNU AGPLv3.
+# © 2026 jruk. Licensed under GNU AGPLv3.
 # **--**--**--**--**--**--**--**--**--**--**--**--**--**--**
 #
 
@@ -218,7 +220,7 @@ lobbies:
   # Per-role queue caps for each lobby. Only enforced on the queue before a
   # match starts, and bypassed with -force. Lowering a cap below the current
   # queue blocks new entries of that role but never kicks queued players.
-  caps:
+  queue-caps:
     # Max queued speedrunners per lobby. -1 means no limit. Minimum: 1.
     # Default: -1
     speedrunner: -1
@@ -235,6 +237,24 @@ custom-modifiers:
   # Gives every participating player eight steaks when the match starts.
   everyone-gets-beef:
     enabled: false
+    # When should commands other than cleanup be run? A list of any of:
+    # ON_START - Once when the match starts (runs for all participants)
+    # INTERVAL - On a fixed interval that starts counting when the game begins
+    # ON_EVERY_KILL - When any participating player kills any entity (mobs included)
+    # ON_PLAYER_KILL - When a participating player kills another player
+    # ON_HUNTER_KILL - When a hunter kills a player
+    # ON_SPEEDRUNNER_KILL - When a speedrunner kills a player
+    # ON_NETHER_ENTER - When a participating player enters the Nether (once per player per match)
+    # ON_END_ENTER - When a participating player enters the End (once per player per match)
+    # ON_FIRST_NETHER_ENTER - When the first participating player enters the Nether (once per match)
+    # ON_FIRST_END_ENTER - When the first participating player enters the End (once per match)
+    # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
+    # ON_RESPAWN - When a player respawns (only the executing player)
+    # ON_SPEEDRUNNER_RESPAWN - When a speedrunner respawns (only the executing player)
+    # ON_HUNTER_RESPAWN - When a hunter respawns (only the executing player)
+    # If omitted, defaults to ON_START.
+    runs-on:
+      - ON_START
     commands:
       player:
         # Runs for every participating player (only hunters and speedrunners, not including NONE)
@@ -252,6 +272,29 @@ custom-modifiers:
       hunter:
         # Runs only once for each Hunter, with <p> replaced by their name.
         - "give <p> wooden_sword"
+  # Softens the hunters right out of the gate: slowness II and weakness I
+  # for 10 seconds each.
+  hunter-start-debuffs:
+    enabled: false
+    on-start:
+      # When to run the commands? BEFORE or AFTER the match pre-start window?
+      pre-start-order: AFTER
+    commands:
+      hunter:
+        # Runs only once for each Hunter, with <p> replaced by their name.
+        # Durations are in seconds, amplifiers zero-based.
+        - "effect give <p> minecraft:slowness 10 1 true"
+        - "effect give <p> minecraft:weakness 10 0 true"
+  # Speedrunners get buffed right out of the gate: speed II and strength I
+  speedrunner-start-buffs:
+    enabled: false
+    on-start:
+      pre-start-order: AFTER
+    commands:
+      speedrunner:
+        - "effect give <p> minecraft:speed 30 1 true"
+        - "effect give <p> minecraft:strength 15 0 true"
+  # A semi-op kit for players to start with.
   full-iron-kit:
     enabled: false
     commands:
@@ -296,22 +339,6 @@ custom-modifiers:
   # Spawns a random mob on every speedrunner every 60 seconds.
   random-mob-spawner:
     enabled: false
-    # When should commands other than cleanup be run? A list of any of:
-    # ON_START - Once when the match starts (runs for all participants)
-    # INTERVAL - On a fixed interval that starts counting when the game begins
-    # ON_EVERY_KILL - When any participating player kills any entity (mobs included)
-    # ON_PLAYER_KILL - When a participating player kills another player
-    # ON_HUNTER_KILL - When a hunter kills a player
-    # ON_SPEEDRUNNER_KILL - When a speedrunner kills a player
-    # ON_NETHER_ENTER - When a participating player enters the Nether (once per player per match)
-    # ON_END_ENTER - When a participating player enters the End (once per player per match)
-    # ON_FIRST_NETHER_ENTER - When the first participating player enters the Nether (once per match)
-    # ON_FIRST_END_ENTER - When the first participating player enters the End (once per match)
-    # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
-    # ON_RESPAWN - When a player respawns (only the executing player)
-    # ON_SPEEDRUNNER_RESPAWN - When a speedrunner respawns (only the executing player)
-    # ON_HUNTER_RESPAWN - When a hunter respawns (only the executing player)
-    # If omitted, defaults to ON_START.
     runs-on:
       - INTERVAL
     # Only applicable when "runs-on" contains INTERVAL.
@@ -430,17 +457,22 @@ settings:
   # players except the one who made the change.
   # Default: false
   announce-config-changes: false
+  # When true, role changes between passive (none, afk, spectator) and
+  # active (hunter, speedrunner) roles are announced to the player's
+  # lobby mates who are not in a live match.
+  # Default: false
+  announce-role-changes: false
 
   # Game boosts that skew world generation and loot odds in the speedrunners'
   # favor, without touching any actual gameplay rules.
   game-boosts:
-    # When true, a datapack that boosts nether structure (fortress and
+    # When true, a datapack that significantly boosts nether structure (fortress and
     # bastion remnant) spawn frequency is applied to the world.
     # Requires a server restart to take effect.
     # Default: false
     nether-structures:
       enabled: false
-    # When true, a datapack that boosts overworld structure (village,
+    # When true, a datapack that moderately boosts overworld structure (village,
     # shipwreck, buried treasure, dungeon, ruined portal) spawn frequency is
     # applied to the world.
     # Requires a server restart to take effect.
@@ -451,8 +483,9 @@ settings:
     # Tables may be found in settings/loot-tables.
     # Loot tables are JSON files with the same format as vanilla Minecraft loot tables
     # but parsed with some limitations.
+    #
     # Toggles between custom piglin barter odds.
-    # By default the custom odds have boosted up ender pearl and obsidian rates.
+    # By default, the custom odds have boosted up ender pearl and obsidian rates.
     # This may help in balancing the game.
     # Default: false
     custom-piglin-barter: false
@@ -478,13 +511,14 @@ settings:
     # Default: true
     reset-on-leave:
       enabled: true
-    # Controls how players with role NONE are handled when default auto-set
-    # gamemode is enabled.
-    # true: NONE players are put in spectator
-    # false: NONE players keep their current gamemode
-    # Default: true
-    none-gamemode-spectator:
-      enabled: true
+    # Turn NONE-role players into spectators (gamemode plus match
+    # spectating) wherever the plugin would otherwise leave them alone.
+    # AFK players are always left alone.
+    # true: NONEs are put in spectator
+    # false: NONEs keep their gamemode and stay put, like AFK
+    # Default: false
+    turn-nones-spectator:
+      enabled: false
 
   # Where players go when they leave a running match, voluntarily or
   # automatically: SPECTATOR keeps them at the match as a watcher, LOBBY
@@ -499,8 +533,8 @@ settings:
     enabled: true
     # Seconds to wait for a speedrunner to hit a hunter before timing out.
     # Values below 5 are clamped to 5 seconds. Set to -1 to wait indefinitely.
-    # Default: 30 seconds
-    delay-seconds: 60
+    # Default: 45 seconds
+    delay-seconds: 45
     # What happens if delay-seconds expires before a hit occurs:
     # CANCEL - Abort the match without recording stats.
     # FORCE_START - Force the match to start anyway.
@@ -511,25 +545,25 @@ settings:
     # breaking blocks while waiting. Players are restored to survival when the
     # game begins.
     # Default: true
-    start-with-adventure-mode: true
+    start-in-adventure-mode: true
 
   # Head starts that hold one role in spectator mode while the other role
   # plays. Each side is configured independently.
   headstarts:
-    # Holds hunters in spectator mode at match start, giving speedrunners a
-    # head start. If start-on-speedrunner-damage is also enabled, the countdown
-    # only starts when a speedrunner first damages a hunter.
+    # Gives speedrunners a head start at match start by holding hunters in
+    # spectator mode. If start-on-speedrunner-damage is also enabled, the
+    # countdown only starts when a speedrunner first damages a hunter.
     # Default: false
-    hunter:
+    speedrunner:
       enabled: true
       # Delay in seconds. Values <= 0 mean no delay.
       # Default: 30
       delay-seconds: 30
-    # Holds speedrunners in spectator mode at match start, giving hunters a
-    # head start. If start-on-speedrunner-damage is also enabled, the countdown
-    # only starts when a speedrunner first damages a hunter.
+    # Gives hunters a head start at match start by holding speedrunners in
+    # spectator mode. If start-on-speedrunner-damage is also enabled, the
+    # countdown only starts when a speedrunner first damages a hunter.
     # Default: false
-    speedrunner:
+    hunter:
       enabled: false
       # Delay in seconds. Values <= 0 mean no delay.
       # Default: 30
@@ -571,7 +605,7 @@ settings:
     # Conditions the hunters can win with.
     hunter:
       # Hunters win when the time expires before the speedrunners win.
-      time-limit:
+      survive-time:
         enabled: false
         # Time in seconds the speedrunners have.
         # Default: 3600.0
@@ -582,6 +616,12 @@ settings:
         # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
         # Default: minecraft:netherite_ingot
         item: "minecraft:netherite_ingot"
+      # Hunters win by completing the configured advancement.
+      reach-advancement:
+        enabled: false
+        # The advancement to reach (namespaced key, e.g. minecraft:story/enter_the_nether).
+        # Default: minecraft:story/enter_the_nether
+        advancement: "minecraft:story/enter_the_nether"
       # Hunters win when a hunter kills the configured mob.
       kill-mob:
         enabled: false
@@ -589,8 +629,15 @@ settings:
         # Default: minecraft:ender_dragon
         mob: "minecraft:ender_dragon"
 
-  # Compass tracking settings. The held actionbar stays visible between
-  # interval refreshes and continues showing its cached value.
+  # Compass tracking settings.
+  # The compass selects its target in this order:
+  #
+  # i. The nearest live player of the opposite role
+  # ii. The nearest last seen location of the opposite role
+  #
+  # Last seen is cached on portal exits to support cross-dimensional
+  # tracking. However, active players are always prioritized over last seen.
+  # The compass shows an actionbar with meters to target where applicable.
   compass:
     # Which roles receive a compass when a match starts (and on respawn).
     # Hunters track speedrunners; speedrunners track hunters.
@@ -630,10 +677,10 @@ settings:
       refresh-on-right-click: true
       # Seconds between right-click refreshes. Set to -1 for no cooldown.
       right-click-cooldown: 3.0
+    # Purposeful lag before a compass refresh resolves, showing
+    # "Analyzing..." while it runs. No second refresh starts mid-analysis,
+    # and click cooldowns restart when the analysis ends.
     analyze:
-      # Purposeful lag before a compass refresh resolves, showing
-      # "Analyzing..." while it runs. No second refresh starts mid-analysis,
-      # and click cooldowns restart when the analysis ends.
       # Applies to right-click refreshes.
       # Default: false
       right-click: false
@@ -656,6 +703,11 @@ settings:
             - "effect give <p> minecraft:slowness <duration> 1 true"
           speedrunner: []
           hunter: []
+    # Needle spin speed when the compass has no live target to track.
+    spin:
+      # Seconds for one full needle revolution while spinning.
+      # Default: 2.0
+      seconds-per-revolution: 2.0
     # When true, the compass stops tracking when the targeted player is within
     # the configured flat distance. Only X/Z coordinates are compared, so the
     # target may still be above or below the holder. Applies to both hunters
@@ -698,22 +750,6 @@ settings:
       speedrunner: 1
       hunter: -1
 
-  # Optional effects applied to every hunter when the game begins. Effect keys
-  # are Bukkit PotionEffectType names. Duration is in seconds and amplifier is
-  # zero-based: amplifier 0 is level I, amplifier 1 is level II.
-  # You may find a list of effect names here:
-  # https://hub.spigotmc.org/javadocs/spigot/org/bukkit/potion/PotionEffectType.html
-  # Default: false
-  start-debuffs:
-    enabled: false
-    effects:
-      SLOWNESS:
-        seconds: 10.0
-        amplifier: 1
-      WEAKNESS:
-        seconds: 10.0
-        amplifier: 0
-
   # Invulnerability settings.
   invulnerability:
     # Makes all online players invulnerable when the game ends.
@@ -748,6 +784,10 @@ settings:
     # Show how long the match has been running.
     # Default: false
     show-elapsed-time: false
+    # Show enabled custom modifiers as "Modifiers: a, b, and c".
+    # Hidden when no custom modifier is enabled.
+    # Default: false
+    show-modifiers: false
     # Show lobby and game ids as L{lobby}|G{game}.
     # Default: true
     show-ids: true
@@ -824,8 +864,10 @@ world-engine:
     spectator: LIGHT_GRAY_CONCRETE
     none: GRAY_CONCRETE
   # Lobby locations per lobby id. Players return to their match's lobby
-  # location when a game ends. Preferably set to something different from the
-  # world that the spiral engine works on.
+  # location when a game ends. Use '/mh worldengine tpto lobbyworld' to
+  # get to the lobbyworld. Use '/mh worldengine setlobbytp' to set a lobby
+  # tp to your current position (only works in the lobbyworld)
+  # TODO: remove world and implicitly use lobby-world-name.
   lobby-locations:
     "0":
       world: world

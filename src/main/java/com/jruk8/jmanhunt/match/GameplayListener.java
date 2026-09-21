@@ -122,7 +122,10 @@ public final class GameplayListener implements Listener {
                     playerStates.setRole(player.getUniqueId(), Role.NONE);
                     plugin.roleTeams().sync(player);
                 }
-                if (config.getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+                // Joining NONEs take spectator gamemode only with the toggle;
+                // AFK players keep their role and their gamemode.
+                if (playerStates.role(player) == Role.NONE
+                        && config.getBoolean("settings.roles.turn-nones-spectator.enabled", false)) {
                     player.setGameMode(GameMode.SPECTATOR);
                 }
             }
@@ -176,17 +179,23 @@ public final class GameplayListener implements Listener {
 
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
         if (match.isEmpty() || !match.get().begun()) return;
+        // Begun matches speak through plugin lines only: vanilla death
+        // messages would double every announcement.
+        event.setDeathMessage(null);
         GameInstance instance = match.get();
         stats.recordDeath(player.getUniqueId());
         Role role = playerStates.role(player);
+        // Spawncamp punishment kills re-enter here synchronously: their state
+        // changes run intact, but the punishment broadcast already said it.
+        boolean quiet = plugin.spawnCamp().isQuietPunishment(player.getUniqueId());
         if (role == Role.SPEEDRUNNER) {
-            handleSpeedrunnerDeath(player, instance);
+            handleSpeedrunnerDeath(player, instance, quiet);
         } else if (role == Role.HUNTER) {
-            handleHunterDeath(player, instance);
+            handleHunterDeath(player, instance, quiet);
         }
     }
 
-    private void handleSpeedrunnerDeath(Player player, GameInstance instance) {
+    private void handleSpeedrunnerDeath(Player player, GameInstance instance, boolean quiet) {
         cancelDisconnectTask(player.getUniqueId());
         disconnects.clear(player.getUniqueId());
         playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
@@ -201,31 +210,45 @@ public final class GameplayListener implements Listener {
                     stats.getOrCreate(matchId, player.getKiller().getUniqueId()).finalKills++;
                 }
                 Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
-                game.sendToInstance(instance, "game.speedrunner-out-of-lives", Map.of());
-                if (game.activeRunnerCount(instance) == 0) game.finishLater(instance, Role.HUNTER);
+                if (!quiet) {
+                    game.sendToInstance(instance, "game.speedrunner-out-of-lives", Map.of());
+                }
+                // When nobody remains the win line follows, so no last-died
+                // line is sent: the win is the announcement.
                 int playerCount = game.activeRunnerCount(instance);
                 if (playerCount > 0) {
-                    game.sendToInstance(instance, "game.speedrunner-death", Map.of("value", Integer.toString(playerCount)));
+                    if (!quiet) {
+                        game.sendToInstance(instance, "game.speedrunner-death", Map.of("value", Integer.toString(playerCount)));
+                    }
                 } else {
-                    game.sendToInstance(instance, "game.last-speedrunner-death", Map.of());
+                    game.finishLater(instance, Role.HUNTER);
                 }
                 game.playInstanceSound(instance, "game.speedrunner-death");
                 return;
             }
             // Lives remain: keep the speedrunner in the game.
-            game.sendToInstance(instance, "game.speedrunner-death", Map.of("value", Integer.toString(game.activeRunnerCount(instance))));
+            if (!quiet) {
+                game.sendToInstance(instance, "game.speedrunner-death", Map.of("value", Integer.toString(game.activeRunnerCount(instance))));
+            }
             game.playInstanceSound(instance, "game.speedrunner-death");
             respawnParticipant(player, 0, matchId);
             return;
         }
-        // Unlimited lives (-1): never eliminated permanently by lives.
-        game.sendToInstance(instance, "game.speedrunners-unlimited-lives", Map.of());
-        game.sendToInstance(instance, "game.speedrunner-death", Map.of("value", Integer.toString(game.activeRunnerCount(instance))));
+        // Unlimited lives (-1): never eliminated permanently by lives. The
+        // unlimited line fires once per side per match; quiet deaths neither
+        // send nor consume it.
+        if (!quiet && !instance.runnerUnlimitedAnnounced()) {
+            instance.setRunnerUnlimitedAnnounced(true);
+            game.sendToInstance(instance, "game.speedrunners-unlimited-lives", Map.of());
+        }
+        if (!quiet) {
+            game.sendToInstance(instance, "game.speedrunner-death", Map.of("value", Integer.toString(game.activeRunnerCount(instance))));
+        }
         game.playInstanceSound(instance, "game.speedrunner-death");
         respawnParticipant(player, 0, matchId);
     }
 
-    private void handleHunterDeath(Player player, GameInstance instance) {
+    private void handleHunterDeath(Player player, GameInstance instance, boolean quiet) {
         cancelDisconnectTask(player.getUniqueId());
         disconnects.clear(player.getUniqueId());
         long matchId = instance.matchId();
@@ -236,7 +259,9 @@ public final class GameplayListener implements Listener {
             playerStates.decrementLives(player.getUniqueId());
             if (playerStates.getLives(player.getUniqueId()) <= 0) {
                 // Out of lives: eliminate permanently.
-                game.sendToInstance(instance, "game.hunter-out-of-lives", Map.of());
+                if (!quiet) {
+                    game.sendToInstance(instance, "game.hunter-out-of-lives", Map.of());
+                }
                 playerStates.setRole(player.getUniqueId(), Role.NONE);
                 plugin.roleTeams().sync(player);
                 instance.deactivate(player.getUniqueId());
@@ -249,14 +274,19 @@ public final class GameplayListener implements Listener {
                 return;
             }
         }
-        game.sendToInstance(instance, "game.hunter-death", Map.of());
+        if (!quiet) {
+            game.sendToInstance(instance, "game.hunter-death", Map.of());
+        }
         game.playInstanceSound(instance, "game.hunter-death");
-        if (lives == -1) {
+        if (lives == -1 && !quiet && !instance.hunterUnlimitedAnnounced()) {
+            instance.setHunterUnlimitedAnnounced(true);
             game.sendToInstance(instance, "game.hunters-unlimited-lives", Map.of());
         }
         if (delayed && delaySeconds > 0) {
-            game.sendToInstance(instance, "game.hunter-respawn-scheduled",
-                    Map.of("player", player.getName(), "seconds", Integer.toString(delaySeconds)));
+            if (!quiet) {
+                game.sendToInstance(instance, "game.hunter-respawn-scheduled",
+                        Map.of("player", player.getName(), "seconds", Integer.toString(delaySeconds)));
+            }
             respawnParticipant(player, delaySeconds, matchId);
         }
     }
@@ -313,8 +343,8 @@ public final class GameplayListener implements Listener {
     }
 
     private void checkHuntersRemaining(GameInstance instance) {
+        // No last-removed line: the win that follows is the announcement.
         if (game.activeHunterCount(instance) == 0) {
-            game.sendToInstance(instance, "game.last-hunter-removed", Map.of());
             game.finishLater(instance, Role.SPEEDRUNNER);
         }
     }
@@ -437,8 +467,21 @@ public final class GameplayListener implements Listener {
                     && playerStates.role(victim) == Role.HUNTER;
             // During the pre-start window, all participants are protected from
             // damage (including fall damage from wacky world-engine spawns).
+            // Survivable hits still land so knockback registers, then heal
+            // back one tick later; lethal hits cancel to prevent pre-start
+            // deaths.
             if (playerStates.role(victim).isParticipant()) {
-                event.setCancelled(true);
+                double finalDamage = event.getFinalDamage();
+                if (finalDamage < victim.getHealth()) {
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (victim.isOnline() && victim.getHealth() > 0) {
+                            victim.setHealth(Math.min(victim.getMaxHealth(),
+                                    victim.getHealth() + finalDamage));
+                        }
+                    }, 1L);
+                } else {
+                    event.setCancelled(true);
+                }
             }
             if (startsGame) {
                 game.beginGame(victimMatch.get());
@@ -508,10 +551,13 @@ public final class GameplayListener implements Listener {
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
         if (match.isEmpty() || !match.get().begun() || !playerStates.role(player).isParticipant()) return;
         Role role = playerStates.role(player);
-        if (role == Role.SPEEDRUNNER && winConditionEngine.hasItem(player, Role.SPEEDRUNNER)) {
-            game.finishLater(match.get(), Role.SPEEDRUNNER);
-        } else if (role == Role.HUNTER && winConditionEngine.hasItem(player, Role.HUNTER)) {
-            game.finishLater(match.get(), Role.HUNTER);
+        // This deprecated event fires before the stack lands in the
+        // inventory, so check the picked stack itself for an instant win
+        // and keep the inventory scan as a fallback for stacks already
+        // held or picked up by other means.
+        if (winConditionEngine.materialWins(event.getItem().getItemStack().getType(), role)
+                || winConditionEngine.hasItem(player, role)) {
+            game.finishLater(match.get(), role);
         }
     }
 
@@ -525,8 +571,12 @@ public final class GameplayListener implements Listener {
         if (event.getAdvancement().getKey().getKey().startsWith("recipes/")) return;
         long matchId = match.get().matchId();
         game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId);
-        if (playerStates.role(player) == Role.SPEEDRUNNER && winConditionEngine.hasReachAdvancement(player)) {
+        if (playerStates.role(player) == Role.SPEEDRUNNER
+                && winConditionEngine.hasReachAdvancement(player, Role.SPEEDRUNNER)) {
             game.finishLater(match.get(), Role.SPEEDRUNNER);
+        } else if (playerStates.role(player) == Role.HUNTER
+                && winConditionEngine.hasReachAdvancement(player, Role.HUNTER)) {
+            game.finishLater(match.get(), Role.HUNTER);
         }
     }
 
@@ -567,8 +617,10 @@ public final class GameplayListener implements Listener {
         playerStates.setRole(playerId, Role.NONE);
         instance.deactivate(playerId);
 
+        // Disconnect removal always lands on NONE; the toggle decides the
+        // gamemode. AFK players are never tracked, so they keep theirs.
         Player onlinePlayer = Bukkit.getPlayer(playerId);
-        if (onlinePlayer != null && config.getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+        if (onlinePlayer != null && config.getBoolean("settings.roles.turn-nones-spectator.enabled", false)) {
             onlinePlayer.setGameMode(GameMode.SPECTATOR);
         }
         if (onlinePlayer != null) {
@@ -578,13 +630,12 @@ public final class GameplayListener implements Listener {
         String roleKey = role == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
         game.sendToInstance(instance, "game." + roleKey + "-disconnect-removed", Map.of());
 
+        // No last-died lines: the win that follows is the announcement.
         if (role == Role.SPEEDRUNNER) {
             if (game.activeRunnerCount(instance) == 0) {
-                game.sendToInstance(instance, "game.last-speedrunner-death", Map.of());
                 game.finishLater(instance, Role.HUNTER);
             }
         } else if (game.activeHunterCount(instance) == 0) {
-            game.sendToInstance(instance, "game.last-hunter-removed", Map.of());
             game.finishLater(instance, Role.SPEEDRUNNER);
         }
 

@@ -10,6 +10,7 @@ import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.LobbyWorld;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.lobby.SubLobby;
+import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.CapLimits;
@@ -31,13 +32,9 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -280,7 +277,7 @@ public final class GameManager {
         if (limitSecs <= 0.0) {
             return;
         }
-        long limitSecsWhole = (long) limitSecs;
+        long limitSecsWhole = Math.round(limitSecs);
         long limitMillis = Math.round(limitSecs * 1000.0);
         String winnerName = winner.displayName() + "s";
         Role finalWinner = winner;
@@ -313,14 +310,15 @@ public final class GameManager {
     }
 
     /**
-     * Thresholds to announce now: marks within the limit that the
+     * Thresholds to announce now: marks strictly below the limit that the
      * remaining time has reached and that are still unannounced, highest
-     * first. Pure for tests.
+     * first. The limit mark itself is hit exactly on spawn and never
+     * announces. Pure for tests.
      */
     static List<Long> dueThresholds(long limitSecs, long remainingSecs, Set<Long> announced) {
         List<Long> due = new ArrayList<>();
         for (long mark : TIME_ANNOUNCE_SECONDS) {
-            if (mark <= limitSecs && mark >= remainingSecs && !announced.contains(mark)) {
+            if (mark < limitSecs && mark >= remainingSecs && !announced.contains(mark)) {
                 due.add(mark);
             }
         }
@@ -334,46 +332,73 @@ public final class GameManager {
 
     /** Status text for the speedrunner win conditions: base plus enabled alternates. */
     public String speedrunnerWinConditions() {
-        List<String> conditions = new ArrayList<>(List.of("eliminate all hunters"));
+        // Hunters with infinite lives can never be eliminated, so the
+        // elimination line hides instead of promising an un-winnable goal.
+        List<String> conditions = new ArrayList<>();
+        int hunterLives = plugin.getConfig().getInt("settings.hunter-respawn.lives.hunter", -1);
+        if (hunterLives != -1) {
+            conditions.add(winconFragment("eliminate-hunters", Map.of()));
+        }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END)) {
-            conditions.add("credits screen");
+            conditions.add(winconFragment("credits", Map.of()));
         }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME)) {
-            conditions.add("survive "
-                    + DurationFormat.format((long) winConditionEngine.time(Role.SPEEDRUNNER)));
+            conditions.add(winconFragment("survive", Map.of("time",
+                    DurationFormat.format((long) winConditionEngine.time(Role.SPEEDRUNNER)))));
         }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.ACQUIRE_ITEM)) {
-            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.item(Role.SPEEDRUNNER))
-                    + " acquired");
+            conditions.add(winconFragment("acquired", Map.of("item",
+                    WinConditionEngine.prettyKey(winConditionEngine.item(Role.SPEEDRUNNER)))));
         }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT)) {
-            conditions.add("advancement " + winConditionEngine.advancement());
+            conditions.add(winconFragment("advancement",
+                    Map.of("advancement", winConditionEngine.advancement(Role.SPEEDRUNNER))));
         }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.KILL_MOB)) {
-            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.mob(Role.SPEEDRUNNER))
-                    + " killed");
+            conditions.add(winconFragment("killed", Map.of("mob",
+                    WinConditionEngine.prettyKey(winConditionEngine.mob(Role.SPEEDRUNNER)))));
         }
-        return String.join(", ", conditions);
+        return ListFormatter.joinOxford(conditions);
     }
 
     /** Status text for the hunter win conditions: base plus enabled alternates. */
     public String hunterWinConditions() {
-        List<String> conditions = new ArrayList<>(List.of("eliminate all speedrunners"));
+        List<String> conditions = new ArrayList<>(List.of(winconFragment("eliminate-speedrunners", Map.of())));
         if (winConditionEngine.enabled(Role.HUNTER, WinCondition.TIME_LIMIT)) {
-            conditions.add("time limit "
-                    + DurationFormat.format((long) winConditionEngine.time(Role.HUNTER)));
+            conditions.add(winconFragment("time-limit", Map.of("time",
+                    DurationFormat.format((long) winConditionEngine.time(Role.HUNTER)))));
         }
         if (winConditionEngine.enabled(Role.HUNTER, WinCondition.ACQUIRE_ITEM)) {
-            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.item(Role.HUNTER)) + " acquired");
+            conditions.add(winconFragment("acquired", Map.of("item",
+                    WinConditionEngine.prettyKey(winConditionEngine.item(Role.HUNTER)))));
+        }
+        if (winConditionEngine.enabled(Role.HUNTER, WinCondition.REACH_ADVANCEMENT)) {
+            conditions.add(winconFragment("advancement",
+                    Map.of("advancement", winConditionEngine.advancement(Role.HUNTER))));
         }
         if (winConditionEngine.enabled(Role.HUNTER, WinCondition.KILL_MOB)) {
-            conditions.add(WinConditionEngine.prettyKey(winConditionEngine.mob(Role.HUNTER)) + " killed");
+            conditions.add(winconFragment("killed", Map.of("mob",
+                    WinConditionEngine.prettyKey(winConditionEngine.mob(Role.HUNTER)))));
         }
-        return String.join(", ", conditions);
+        return ListFormatter.joinOxford(conditions);
+    }
+
+    /**
+     * Renders one wincon fragment template with its named values. Fragments
+     * stay unparsed here; they are substituted into the status-win lines and
+     * parsed once with them.
+     */
+    private String winconFragment(String key, Map<String, String> values) {
+        String raw = messages.string("wincon." + key, key);
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            raw = raw.replace("{" + entry.getKey() + "}", entry.getValue());
+        }
+        return raw;
     }
 
     /** Sends a message to a match plus the console, never other matches. */
     public void sendToInstance(GameInstance instance, String key, Map<String, String> values) {
+        if (messages.isDisabled(key)) return;
         Component rendered = messages.component(key, values);
         for (Player recipient : onlineAssignedPlayers(instance)) {
             recipient.sendMessage(rendered);
@@ -530,20 +555,20 @@ public final class GameManager {
         // configured, preventing block breaking while waiting for the first
         // speedrunner hit.
         if (getSetting("settings.start-on-speedrunner-damage.enabled")
-                && plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-with-adventure-mode", true)) {
+                && plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
             for (Player player : players) {
                 player.setGameMode(GameMode.ADVENTURE);
             }
         }
-        // Headstarts hold one side in spectator while the other plays. Sides
-        // are only moved to spectator when their countdown actually begins;
-        // when start-on-speedrunner-damage is enabled, that happens only after
+        // A headstart configured for one side holds the other side in
+        // spectator while the configured side plays. Held sides only move to
+        // spectator when the opposite countdown actually begins; when
+        // start-on-speedrunner-damage is enabled, that happens only after
         // the speedrunner first damages a hunter.
         armHeadstarts(instance);
         if (!getSetting("settings.start-on-speedrunner-damage.enabled")) {
             beginHeadstarts(instance);
         }
-        scheduleTimeLimit(instance, currentMatchId);
         sendToInstance(instance, "manhunt.start-success", Map.of());
         gameStartListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchStartEvent(currentMatchId, lobbyId, matchCell));
@@ -594,16 +619,20 @@ public final class GameManager {
                 compass.giveCompass(player);
                 compass.refreshCompass(player);
             } else if (role == Role.SPECTATOR
-                    || plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+                    // NONE joiners take spectator gamemode only with the toggle;
+                    // AFK cannot join at all (rejected in gameJoin).
+                    || plugin.getConfig().getBoolean("settings.roles.turn-nones-spectator.enabled", false)) {
                 player.setGameMode(GameMode.SPECTATOR);
             }
             if (!instance.begun()
-                    && plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-with-adventure-mode", true)
+                    && plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-in-adventure-mode", true)
                     && role.isParticipant()
-                    && !instance.headstart(role).armed()) {
+                    && !instance.headstart(opposite(role)).armed()) {
                 player.setGameMode(GameMode.ADVENTURE);
             }
-            HeadstartState headstart = instance.headstart(role);
+            // A joiner is held while the opposite side's headstart runs: a
+            // hunter headstart holds speedrunners, and vice versa.
+            HeadstartState headstart = instance.headstart(opposite(role));
             if (role.isParticipant() && headstart.task() != null) {
                 headstart.returnPoints().put(playerId, player.getLocation());
                 player.setGameMode(GameMode.SPECTATOR);
@@ -611,7 +640,7 @@ public final class GameManager {
             Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(
                     instance.matchId(), playerId, roleToPlayerRole(role)));
             sendToInstance(instance, "game.join-announce",
-                    Map.of("player", player.getName(), "role", role.displayName()));
+                    Map.of("player", player.getName(), "role", messages.roleName(role)));
             added++;
         }
         return added;
@@ -688,7 +717,7 @@ public final class GameManager {
                 }
             }
             plugin.roleTeams().sync(player);
-            player.sendMessage(messages.component("game.leave-success", Map.of()));
+            messages.message(player, "game.leave-success", Map.of());
             leftRoles.add(before);
             leftNames.add(player.getName());
             removed++;
@@ -727,7 +756,7 @@ public final class GameManager {
         }
         GameInstance instance = match.get();
         if (at.getWorld() != null && at.getWorld().getName().equals(lobbyWorldName())) {
-            player.sendMessage(messages.component("game.auto-left-lobby-world", Map.of()));
+            messages.message(player, "game.auto-left-lobby-world", Map.of());
             leaveMatch(instance, List.of(player), false);
             return true;
         }
@@ -752,7 +781,7 @@ public final class GameManager {
         if (bounds.contains(at.getX(), at.getZ(), nether)) {
             return false;
         }
-        player.sendMessage(messages.component("game.auto-left-bounds", Map.of()));
+        messages.message(player, "game.auto-left-bounds", Map.of());
         leaveMatch(instance, List.of(player), false);
         return true;
     }
@@ -829,9 +858,9 @@ public final class GameManager {
             if (!playerRole.isParticipant()) {
                 continue;
             }
-            Map<String, String> values = Map.of("role", playerRole.displayName());
+            Map<String, String> values = Map.of("role", messages.roleName(playerRole));
             if (chat) {
-                player.sendMessage(messages.component("manhunt.role-announce-chat", values));
+                messages.message(player, "manhunt.role-announce-chat", values);
             }
             if (title) {
                 String subtitleKey = playerRole == Role.HUNTER
@@ -846,9 +875,9 @@ public final class GameManager {
             if (role(spectator) != Role.SPECTATOR) {
                 continue;
             }
-            Map<String, String> values = Map.of("role", Role.SPECTATOR.displayName());
+            Map<String, String> values = Map.of("role", messages.roleName(Role.SPECTATOR));
             if (chat) {
-                spectator.sendMessage(messages.component("manhunt.role-announce-chat", values));
+                messages.message(spectator, "manhunt.role-announce-chat", values);
             }
             if (title) {
                 spectator.showTitle(Title.title(
@@ -1047,24 +1076,30 @@ public final class GameManager {
     public void beginGame(GameInstance instance) {
         if (instance.begun()) return;
         instance.setBegun(true);
+        // The match clock (elapsed status, time-limit countdown) ignores
+        // the pre-start wait: it anchors here, when play actually starts.
+        instance.setStartedAtMillis(System.currentTimeMillis());
+        scheduleTimeLimit(instance, instance.matchId());
         cancelWaitingTasks(instance);
         // Restore participants to survival when the game begins if they were
         // set to adventure mode during the pre-start window. Held headstart
         // sides stay out: their countdown moves them to spectator below.
-        if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-with-adventure-mode", true)) {
+        if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
             for (Player player : onlineActivePlayers(instance)) {
                 Role playerRole = role(player);
-                if (playerRole.isParticipant() && !instance.headstart(playerRole).armed()) {
+                if (playerRole.isParticipant() && !instance.headstart(opposite(playerRole)).armed()) {
                     player.setGameMode(GameMode.SURVIVAL);
                 }
             }
         }
         sendToInstance(instance, "manhunt.started-by-damage", Map.of());
         playInstanceNeutral(instance);
-        applyStartDebuffs(instance);
         worldEngine.onBeginGame();
         beginGameListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JGameBeginEvent(instance.matchId()));
+        // AFTER pre-start-order modifiers waited out the pre-start window;
+        // their ON_START sequence runs now instead of at match start.
+        stateCommands.runPostStartModifiers(instance.matchId());
         stateCommands.startIntervalModifiers(instance.matchId());
         // Armed headstarts begin counting now (the countdown only starts once
         // the speedrunner first damages a hunter).
@@ -1091,25 +1126,28 @@ public final class GameManager {
     }
 
     /**
-     * Starts one side's headstart countdown. Held players stay in spectator
-     * mode until the delay expires, then are teleported back to their recorded
+     * Starts one side's headstart countdown. A headstart configured for a
+     * side holds the OPPOSITE side: a hunter headstart freezes speedrunners
+     * so the hunters get a head start. Held players stay in spectator mode
+     * until the delay expires, then are teleported back to their recorded
      * spawnpoints and restored to survival.
      */
     private void beginHeadstart(GameInstance instance, Role role) {
         HeadstartState state = instance.headstart(role);
         if (!state.armed() || state.task() != null) return;
+        Role held = opposite(role);
         // Each held player's current location is recorded so endHeadstart()
         // can return them to their spawnpoint even if they flew elsewhere,
         // including across dimensions since the location carries its world.
         state.returnPoints().clear();
         for (Player player : onlineActivePlayers(instance)) {
-            if (role(player) == role) {
+            if (role(player) == held) {
                 state.returnPoints().put(player.getUniqueId(), player.getLocation());
                 player.setGameMode(GameMode.SPECTATOR);
             }
         }
         sendToInstance(instance, "manhunt.headstart-active",
-                Map.of("seconds", String.valueOf(state.remaining()), "role", role.displayName()));
+                Map.of("seconds", String.valueOf(state.remaining()), "role", messages.roleName(held)));
         long headstartMatchId = instance.matchId();
         state.setTask(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (instances.get(headstartMatchId) != instance || !instance.active()) {
@@ -1121,7 +1159,8 @@ public final class GameManager {
                 endHeadstart(instance, role);
             } else if (state.remaining() <= 5) {
                 sendToInstance(instance, "manhunt.headstart-ending",
-                        Map.of("seconds", String.valueOf(state.remaining()), "role", role.displayName()));
+                        Map.of("seconds", String.valueOf(state.remaining()),
+                                "role", messages.roleName(opposite(role))));
                 playInstanceSound(instance, "game.autostart-countdown");
             }
         }, 20L, 20L));
@@ -1135,8 +1174,9 @@ public final class GameManager {
         HeadstartState state = instance.headstart(role);
         cancelHeadstartTask(state);
         state.setArmed(false);
+        Role held = opposite(role);
         for (Player player : onlineActivePlayers(instance)) {
-            if (role(player) == role) {
+            if (role(player) == held) {
                 Location returnPoint = state.returnPoints().remove(player.getUniqueId());
                 if (returnPoint != null && returnPoint.getWorld() != null) {
                     player.teleport(returnPoint);
@@ -1145,8 +1185,17 @@ public final class GameManager {
             }
         }
         state.returnPoints().clear();
-        sendToInstance(instance, "manhunt.headstart-ended", Map.of("role", role.displayName()));
+        sendToInstance(instance, "manhunt.headstart-ended", Map.of("role", messages.roleName(held)));
         playInstanceNeutral(instance);
+    }
+
+    /** The other participant side; non-participants map to themselves. Pure for tests. */
+    static Role opposite(Role role) {
+        return switch (role) {
+            case HUNTER -> Role.SPEEDRUNNER;
+            case SPEEDRUNNER -> Role.HUNTER;
+            default -> role;
+        };
     }
 
     /**
@@ -1159,8 +1208,9 @@ public final class GameManager {
             cancelHeadstartTask(state);
             state.setArmed(false);
             state.returnPoints().clear();
+            Role held = opposite(role);
             for (Player player : onlineActivePlayers(instance)) {
-                if (role(player) == role && player.getGameMode() == GameMode.SPECTATOR) {
+                if (role(player) == held && player.getGameMode() == GameMode.SPECTATOR) {
                     player.setGameMode(GameMode.SURVIVAL);
                 }
             }
@@ -1370,7 +1420,40 @@ public final class GameManager {
     private void sendToLobby(int lobbyId, String key, Map<String, String> values) {
         messages.sendTo(lobbyRecipients(lobbyId), key, values);
         // Console keeps seeing every lobby, as with the old broadcasts.
-        Bukkit.getConsoleSender().sendMessage(messages.component(key, values));
+        if (!messages.isDisabled(key)) {
+            Bukkit.getConsoleSender().sendMessage(messages.component(key, values));
+        }
+    }
+
+    /**
+     * Announces a passive&lt;-&gt;active role change to the player's lobby
+     * mates, excluding the player and anyone in a live match. Same-class
+     * changes stay silent. Only the active side of the change is named.
+     */
+    public void announceRoleChange(Player player, Role from, Role to) {
+        if (!configService.getBoolean("settings.announce-role-changes", false)) {
+            return;
+        }
+        if (from.isParticipant() == to.isParticipant()) {
+            return;
+        }
+        Role active = to.isParticipant() ? to : from;
+        String key = to.isParticipant() ? "manhunt.role-is-now" : "manhunt.role-no-longer";
+        Map<String, String> values = Map.of("player", player.getName(),
+                "active-role", messages.roleName(active));
+        Optional<Lobby> lobby = lobbies.lobbyOf(player.getUniqueId());
+        if (lobby.isEmpty()) {
+            return;
+        }
+        for (Player recipient : lobbyRecipients(lobby.get().id())) {
+            if (recipient.getUniqueId().equals(player.getUniqueId())) {
+                continue;
+            }
+            if (instanceOf(recipient.getUniqueId()).isPresent()) {
+                continue;
+            }
+            messages.message(recipient, key, values);
+        }
     }
 
     private void playLobbySound(int lobbyId, String key) {
@@ -1412,30 +1495,9 @@ public final class GameManager {
         }
         if (names.isEmpty()) return;
         messages.message(receiver, headerKey, Map.of());
-        names.stream().sorted().forEach(name -> messages.message(receiver, "manhunt.status-player", Map.of("player", name)));
-    }
-
-    private void applyStartDebuffs(GameInstance instance) {
-        if (!configService.getBoolean("settings.start-debuffs.enabled", false)) return;
-        var effects = plugin.getConfig().getConfigurationSection("settings.start-debuffs.effects");
-        if (effects == null) return;
-        for (Player hunter : onlineActivePlayers(instance)) {
-            if (role(hunter) != Role.HUNTER) continue;
-            boolean applied = false;
-            for (String effectName : effects.getKeys(false)) {
-                var effect = effects.getConfigurationSection(effectName);
-                if (effect == null) continue;
-                PotionEffectType type = Registry.POTION_EFFECT_TYPE.get(
-                        NamespacedKey.minecraft(effectName.toLowerCase(Locale.ROOT)));
-                if (type == null) continue;
-                double seconds = effect.getDouble("seconds", 10.0);
-                if (seconds == -1.0) continue;
-                int amplifier = Math.max(0, effect.getInt("amplifier", 0));
-                hunter.addPotionEffect(new PotionEffect(type, Math.max(1, (int) Math.round(seconds * 20.0)),
-                        amplifier, false, false, true));
-                applied = true;
-            }
-            if (applied) hunter.sendMessage(messages.component("game.debuff-applied"));
+        names.sort(String::compareTo);
+        for (String line : ListFormatter.chunk(names, 10)) {
+            messages.message(receiver, "manhunt.status-player", Map.of("player", line));
         }
     }
 
@@ -1633,7 +1695,8 @@ public final class GameManager {
      *                           should become speedrunners (0-100), or -1 for
      *                           default (keep teams, converting only what is
      *                           missing to start)
-     * @param force when true, queue caps are ignored
+     * @param force when true, queue caps are ignored and NONE players join
+     *              the convertible pool
      * @param lobbyId the lobby whose members form the convertible pool
      * @return the start result plus any roles blocked by caps
      */
@@ -1642,12 +1705,14 @@ public final class GameManager {
         Optional<Lobby> lobby = lobbies.get(lobbyId);
         if (lobby.isEmpty()) return new QuickStartOutcome(false, Set.of());
         Lobby resolved = lobby.get();
-        // Every online non-AFK, non-spectator lobby member is convertible:
-        // NONE players are assigned fresh, while existing hunters and
-        // speedrunners keep their roles unless conversion is needed. AFK
-        // players and spectators are never touched.
+        // Every online participant lobby member is convertible: existing
+        // hunters and speedrunners keep their roles unless conversion is
+        // needed. AFK players and spectators are never touched, and NONEs
+        // sit out like AFK unless forced — the one case where NONE can
+        // still be picked.
         List<Player> pool = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> role(p) != Role.AFK && role(p) != Role.SPECTATOR)
+                .filter(p -> role(p) != Role.AFK && role(p) != Role.SPECTATOR
+                        && (force || role(p) != Role.NONE))
                 .filter(p -> resolved.contains(p.getUniqueId()))
                 .map(p -> (Player) p)
                 .toList();
@@ -1694,7 +1759,7 @@ public final class GameManager {
             }
         }
         return CapLimits.allows(count, plugin.getConfig().getInt(
-                "lobbies.caps." + role.name().toLowerCase(Locale.ROOT), -1));
+                "lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1));
     }
 
     /**

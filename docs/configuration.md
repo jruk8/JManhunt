@@ -33,6 +33,12 @@ text-format: minimessage
 color codes. Placeholder formatting in `config.yml` follows the same setting.
 Changes apply after `/manhunt reload`.
 
+Set any message in `messages.yml` to an empty string (`""`) to disable it:
+it will never be sent. (A single space still counts as a message.) Each
+role's color lives under `role-colors:` as one key per role, used by role
+headers and every message that names a role; legacy servers can put `&`
+codes there instead of the default hex tags.
+
 ## Anonymous Statistics
 
 JManhunt collects anonymous usage statistics through bStats, which helps guide

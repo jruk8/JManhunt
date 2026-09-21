@@ -37,7 +37,7 @@ gamestate-commands:
 
 - `auto-set-gamemode` puts participants in survival mode. Players with role
   `NONE` are put in spectator mode and teleported to the lobby instead, unless
-  `settings.roles.none-gamemode-spectator` is disabled, in which case they keep
+  `settings.roles.turn-nones-spectator` is disabled, in which case they keep
   their current gamemode.
 - `reset-players-stats` clears participants' match statistics.
 - `disable-locator-bar` turns off the vanilla locator bar in every world for

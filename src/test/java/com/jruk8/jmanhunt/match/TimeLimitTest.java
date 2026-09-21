@@ -21,8 +21,8 @@ class TimeLimitTest {
     }
 
     @Test
-    void limitMarkAnnouncesAtStart() {
-        assertEquals(List.of(3_600L), GameManager.dueThresholds(3_600L, 3_600L, Set.of()));
+    void limitMarkHitExactlyOnSpawnNeverAnnounces() {
+        assertEquals(List.of(), GameManager.dueThresholds(3_600L, 3_600L, Set.of()));
     }
 
     @Test
@@ -51,7 +51,7 @@ class TimeLimitTest {
 
     @Test
     void missedMarksCatchUpHighestFirst() {
-        assertEquals(List.of(3_600L, 1_800L, 900L, 600L, 300L, 120L),
+        assertEquals(List.of(1_800L, 900L, 600L, 300L, 120L),
                 GameManager.dueThresholds(3_600L, 100L, Set.of()));
     }
 }

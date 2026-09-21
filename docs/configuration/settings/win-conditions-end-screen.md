@@ -24,12 +24,15 @@ settings:
         enabled: false
         mob: "minecraft:ender_dragon"
     hunter:
-      time-limit:
+      survive-time:
         enabled: false
         time: 3600.0
       acquire-item:
         enabled: false
         item: "minecraft:netherite_ingot"
+      reach-advancement:
+        enabled: false
+        advancement: "minecraft:story/enter_the_nether"
       kill-mob:
         enabled: false
         mob: "minecraft:ender_dragon"
@@ -56,21 +59,24 @@ advancement named in `advancement`, given as a namespaced key (e.g.
 
 ## Hunter Conditions
 
-`time-limit`, `acquire-item`, and `kill-mob` mirror the speedrunner
-conditions for the other side: hunters win when the clock runs out, when
-a hunter holds the item, or when a hunter kills the mob. All default to
-off.
+`survive-time`, `acquire-item`, `reach-advancement`, and `kill-mob`
+mirror the speedrunner conditions for the other side: hunters win when
+the clock runs out, when a hunter holds the item, when a hunter completes
+the advancement, or when a hunter kills the mob. All default to off.
 
 ## Time Announcements
 
 Whenever a time limit is running, the match hears it count down: 8h, 6h,
-4h, 2h, 1h, 30m, 15m, 10m, 5m, 2m, 1m, 30s, 15s, 10s, then 5-4-3-2-1. If
-both sides' clocks are set, the earlier expiry wins (ties favor the
-speedrunners) and the console logs which one was picked.
+4h, 2h, 1h, 30m, 15m, 10m, 5m, 2m, 1m, 30s, 15s, 10s, then 5-4-3-2-1. A
+mark matching the limit itself stays silent (it would fire the instant
+the match starts). If both sides' clocks are set, the earlier expiry wins
+(ties favor the speedrunners) and the console logs which one was picked.
 
 Enable `settings.status.show-win-conditions` to print each side's rules in
-`/manhunt status`, e.g. `Speedrunners win on: eliminate all hunters,
-credits screen`.
+`/manhunt status`, e.g. `Speedrunners win on: eliminate all hunters and
+credits screen`. The elimination line hides while hunters have unlimited
+lives, since it could never be achieved. The sentence fragments live in
+`messages.yml` under `wincon:`, so every word of the rules is editable.
 
 # End-Screen Statistics
 

@@ -104,8 +104,9 @@ refresh-interval: 10.0        # in seconds
 
 Under `settings.compass.right-click`, you can configure right-clicking the
 compass to refresh it. You may enable it, in which case right-clicking will
-refresh the compass if `right-click-cooldown` time has elapsed since last
-click.
+refresh the compass if `right-click-cooldown` time has elapsed since the
+last refresh. Both paths share one refresh clock: a click also restarts
+the automatic interval, and a fresh automatic refresh holds off clicks.
 
 ```yaml
 right-click:
@@ -113,12 +114,24 @@ right-click:
   right-click-cooldown: 3.0      # in seconds
 ```
 
+## Spin Speed
+
+When the compass has no live target, its needle spins. Under
+`settings.compass.spin`, `seconds-per-revolution` sets how long one full
+turn takes:
+
+```yaml
+spin:
+  seconds-per-revolution: 2.0
+```
+
 ## Analysis Delay
 
 Under `settings.compass.analyze`, a refresh can take a purposeful moment to
 resolve instead of answering instantly. While analyzing, the actionbar reads
-`Analyzing...`, no second refresh can start, and right-click cooldowns
-restart when the analysis ends rather than when it begins:
+`Analyzing...`, no second refresh can start, and the shared refresh clock
+stamps when the analysis starts, so cooldowns run from the click rather
+than from resolution:
 
 ```yaml
 analyze:

@@ -37,7 +37,7 @@ public final class CompassManager {
     private final MessageService messages;
     private final PlayerStateStore playerStates;
     private final NamespacedKey compassKey;
-    private final Map<UUID, Long> compassClicks = new HashMap<>();
+    private final Map<UUID, Long> lastRefresh = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
     private final Set<UUID> analyzing = new HashSet<>();
     private GameManager game;
@@ -57,19 +57,35 @@ public final class CompassManager {
 
     public void refreshAllCompasses(boolean active) {
         if (active) {
+            // One universal refresh clock shared with right-click refreshes,
+            // stamped at initiation: holders refreshed less than an interval
+            // ago keep their fresh target.
+            long intervalMs = (long) (plugin.getConfig()
+                    .getDouble("settings.compass.refresh-interval", 10.0) * 1000);
+            long now = System.currentTimeMillis();
             boolean analyze = analyzeEnabled(true);
             Bukkit.getOnlinePlayers().stream()
                     .filter(p -> role(p).isParticipant())
                     .filter(p -> inLiveInstance(p))
                     .filter(this::hasCompass)
                     .forEach(holder -> {
+                        UUID id = holder.getUniqueId();
+                        if (!shouldRefresh(now, lastRefresh.getOrDefault(id, 0L), intervalMs)) {
+                            return;
+                        }
+                        lastRefresh.put(id, now);
                         if (analyze) {
-                            startAnalysis(holder, false);
+                            startAnalysis(holder);
                         } else {
                             refreshCompass(holder);
                         }
                     });
         }
+    }
+
+    /** True when the cooldown has elapsed since the last refresh. Pure for tests. */
+    static boolean shouldRefresh(long nowMillis, long lastMillis, long cooldownMs) {
+        return nowMillis - lastMillis >= cooldownMs;
     }
 
     public void showHeldActionbars(boolean active) {
@@ -82,7 +98,8 @@ public final class CompassManager {
                         || isCompass(p.getInventory().getItemInOffHand()))
                 .forEach(p -> p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
                         component("compass.no-target-actionbar",
-                                Map.of("role", role(p) == Role.HUNTER ? "speedrunner" : "hunter")))));
+                                Map.of("role", messages.roleName(role(p) == Role.HUNTER
+                                        ? Role.SPEEDRUNNER : Role.HUNTER))))));
     }
 
     /** True when the holder actively participates in a live match. */
@@ -114,7 +131,7 @@ public final class CompassManager {
         }
         GameInstance instance = match.get();
         Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
-        String targetRoleString = targetRole == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
+        String targetRoleString = messages.roleName(targetRole);
 
         List<CompassCandidate> opponents = collectOpponents(holder, targetRole, instance);
         List<CompassSighting> sightings = collectSightings(holder, targetRole, instance);
@@ -216,16 +233,23 @@ public final class CompassManager {
 
     /** Points the needle at a rotating offset so it visibly spins. */
     private void spinNeedle(ItemStack item, Player holder) {
-        double angle = Math.toRadians(spinAngle(System.currentTimeMillis()));
+        double seconds = plugin.getConfig()
+                .getDouble("settings.compass.spin.seconds-per-revolution", 2.0);
+        double angle = Math.toRadians(spinAngle(System.currentTimeMillis(), seconds));
         Location origin = holder.getLocation();
         setLodestone(item, new Location(origin.getWorld(),
                 origin.getX() + Math.cos(angle) * SPIN_RADIUS, origin.getY(),
                 origin.getZ() + Math.sin(angle) * SPIN_RADIUS));
     }
 
-    /** Needle angle in degrees; advances one degree every 200ms. Pure for tests. */
-    static double spinAngle(long nowMillis) {
-        return (nowMillis / 200.0) % 360.0;
+    /**
+     * Needle angle in degrees for one revolution per the given seconds; a
+     * non-positive period falls back to the 2-second default. Pure for
+     * tests.
+     */
+    static double spinAngle(long nowMillis, double revSeconds) {
+        double period = revSeconds > 0 ? revSeconds : 2.0;
+        return ((nowMillis / 1000.0) / period * 360.0) % 360.0;
     }
 
     private void setLodestone(ItemStack item, Location location) {
@@ -471,24 +495,27 @@ public final class CompassManager {
         long now = System.currentTimeMillis();
         long cooldownMs = (long) (plugin.getConfig()
                 .getDouble("settings.compass.right-click.right-click-cooldown", 3.0) * 1000);
-        if (now - compassClicks.getOrDefault(player.getUniqueId(), 0L) < cooldownMs) {
+        if (!shouldRefresh(now, lastRefresh.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
             return;
         }
+        // The universal clock stamps at initiation (this click), which also
+        // restarts the automatic interval; analysis cooldowns run from here.
+        lastRefresh.put(player.getUniqueId(), now);
         if (analyzeEnabled(false)) {
-            startAnalysis(player, true);
+            startAnalysis(player);
             return;
         }
-        compassClicks.put(player.getUniqueId(), now);
         refreshCompass(player);
     }
 
     /**
      * Purposeful analysis lag before a refresh resolves: shows
      * "Analyzing...", waits out the configured delay, then refreshes.
-     * No second analysis starts while one runs, and click cooldowns
-     * start when the analysis ends rather than when it begins.
+     * No second analysis starts while one runs. The caller stamps the
+     * universal refresh clock at analysis start, so cooldowns run from
+     * the click (or auto fire), not from resolution.
      */
-    private void startAnalysis(Player holder, boolean fromClick) {
+    private void startAnalysis(Player holder) {
         UUID id = holder.getUniqueId();
         if (!analyzing.add(id)) {
             return;
@@ -502,9 +529,6 @@ public final class CompassManager {
             refreshCompass(holder);
             if (!inLiveInstance(holder) || !role(holder).isParticipant()) {
                 compassActionbars.remove(id);
-            }
-            if (fromClick) {
-                compassClicks.put(id, System.currentTimeMillis());
             }
         }, delayTicks);
     }

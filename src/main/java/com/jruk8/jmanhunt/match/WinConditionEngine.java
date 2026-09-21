@@ -38,7 +38,7 @@ public final class WinConditionEngine {
             return false;
         }
         switch (condition) {
-            case EXIT_END, SURVIVE_TIME, REACH_ADVANCEMENT -> {
+            case EXIT_END, SURVIVE_TIME -> {
                 if (role != Role.SPEEDRUNNER) {
                     return false;
                 }
@@ -48,7 +48,7 @@ public final class WinConditionEngine {
                     return false;
                 }
             }
-            case ACQUIRE_ITEM, KILL_MOB -> {
+            case ACQUIRE_ITEM, KILL_MOB, REACH_ADVANCEMENT -> {
             }
         }
         return config.getBoolean(base(role, condition) + "enabled", condition == WinCondition.EXIT_END);
@@ -78,9 +78,9 @@ public final class WinConditionEngine {
         return config.getString(base(role, WinCondition.KILL_MOB) + "mob", "minecraft:ender_dragon");
     }
 
-    /** Configured advancement for the speedrunner reach-advancement condition. */
-    public String advancement() {
-        return config.getString("settings.win-conditions.speedrunner.reach-advancement.advancement",
+    /** Configured advancement for the side's reach-advancement condition. */
+    public String advancement(Role role) {
+        return config.getString(base(role, WinCondition.REACH_ADVANCEMENT) + "advancement",
                 "minecraft:story/enter_the_nether");
     }
 
@@ -96,14 +96,27 @@ public final class WinConditionEngine {
     }
 
     /**
-     * Returns true if the player has completed the configured advancement
-     * for the reach-advancement win condition.
+     * True when picking up the given material wins at once for the side:
+     * the acquire-item condition is enabled and the material equals the
+     * configured one. The disabled and null gates are pure for tests; the
+     * material comparison needs the server registry.
      */
-    public boolean hasReachAdvancement(Player player) {
-        if (!enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT)) {
+    public boolean materialWins(Material material, Role role) {
+        if (!enabled(role, WinCondition.ACQUIRE_ITEM)) {
             return false;
         }
-        NamespacedKey key = NamespacedKey.fromString(advancement());
+        return material != null && material == materialFor(item(role));
+    }
+
+    /**
+     * Returns true if the player has completed the configured advancement
+     * for their side's reach-advancement win condition.
+     */
+    public boolean hasReachAdvancement(Player player, Role role) {
+        if (!enabled(role, WinCondition.REACH_ADVANCEMENT)) {
+            return false;
+        }
+        NamespacedKey key = NamespacedKey.fromString(advancement(role));
         if (key == null) {
             return false;
         }
@@ -125,22 +138,19 @@ public final class WinConditionEngine {
     }
 
     private static String leaf(WinCondition condition) {
+        // Both clock variants share the survive-time leaf: hunters read
+        // settings.win-conditions.hunter.survive-time.* like speedrunners.
         return switch (condition) {
             case EXIT_END -> "exit-end";
-            case SURVIVE_TIME -> "survive-time";
+            case SURVIVE_TIME, TIME_LIMIT -> "survive-time";
             case ACQUIRE_ITEM -> "acquire-item";
             case REACH_ADVANCEMENT -> "reach-advancement";
             case KILL_MOB -> "kill-mob";
-            case TIME_LIMIT -> "time-limit";
         };
     }
 
     private boolean hasMaterial(Player player, String item) {
-        NamespacedKey key = NamespacedKey.fromString(item);
-        if (key == null) {
-            key = NamespacedKey.minecraft(item.replace("minecraft:", ""));
-        }
-        Material material = Registry.MATERIAL.get(key);
+        Material material = materialFor(item);
         if (material == null) {
             return false;
         }
@@ -150,6 +160,14 @@ public final class WinConditionEngine {
             }
         }
         return false;
+    }
+
+    private static Material materialFor(String item) {
+        NamespacedKey key = NamespacedKey.fromString(item);
+        if (key == null) {
+            key = NamespacedKey.minecraft(item.replace("minecraft:", ""));
+        }
+        return Registry.MATERIAL.get(key);
     }
 
     private static boolean matchesMob(String configured, EntityType type) {

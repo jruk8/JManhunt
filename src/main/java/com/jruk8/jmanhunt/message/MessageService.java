@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.message;
 
+import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -9,6 +10,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import java.util.Collection;
+import java.util.Locale;
 import java.util.Map;
 
 public final class MessageService {
@@ -40,7 +42,38 @@ public final class MessageService {
         for (Map.Entry<String, String> entry : values.entrySet()) {
             rendered = rendered.replace("{" + entry.getKey() + "}", entry.getValue());
         }
+        // Role colors resolve after values so composed text (win-condition
+        // fragments passed as {conditions}) picks them up too.
+        for (Role role : Role.values()) {
+            rendered = rendered.replace("{role-color-" + role.name().toLowerCase(Locale.ROOT) + "}",
+                    string("role-colors." + role.name().toLowerCase(Locale.ROOT), defaultRoleColor(role)));
+        }
         return parse(rendered);
+    }
+
+    /** Role display name prefixed with its configured color tag, without a reset. */
+    public String roleName(Role role) {
+        return string("role-colors." + role.name().toLowerCase(Locale.ROOT), defaultRoleColor(role))
+                + role.displayName();
+    }
+
+    private static String defaultRoleColor(Role role) {
+        return switch (role) {
+            case SPEEDRUNNER -> "<#74de66>";
+            case HUNTER -> "<#de666e>";
+            case SPECTATOR -> "<#6e728a>";
+            case AFK -> "<#a18e68>";
+            case NONE -> "<#7d7d7d>";
+        };
+    }
+
+    /**
+     * True when a message key is explicitly set to the empty string, which
+     * disables that message everywhere it would be sent.
+     */
+    public boolean isDisabled(String key) {
+        String raw = messages.getString(key, null);
+        return raw != null && raw.isEmpty();
     }
 
     public Component parse(String raw) {
@@ -83,8 +116,12 @@ public final class MessageService {
         return messages.getStringList(path);
     }
 
-    public void broadcast(String key) { Bukkit.broadcast(component(key)); }
-    public void broadcast(String key, Map<String, String> values) { Bukkit.broadcast(component(key, values)); }
+    public void broadcast(String key) {
+        if (!isDisabled(key)) Bukkit.broadcast(component(key));
+    }
+    public void broadcast(String key, Map<String, String> values) {
+        if (!isDisabled(key)) Bukkit.broadcast(component(key, values));
+    }
 
     /** Sends a message to exactly the given recipients (lobby or instance members). */
     public void sendTo(Collection<? extends Player> recipients, String key) {
@@ -93,14 +130,17 @@ public final class MessageService {
 
     /** Sends a message to exactly the given recipients (lobby or instance members). */
     public void sendTo(Collection<? extends Player> recipients, String key, Map<String, String> values) {
+        if (isDisabled(key)) return;
         Component rendered = component(key, values);
         for (Player recipient : recipients) {
             recipient.sendMessage(rendered);
         }
     }
 
-    public void message(CommandSender sender, String key) { sender.sendMessage(component(key)); }
+    public void message(CommandSender sender, String key) {
+        if (!isDisabled(key)) sender.sendMessage(component(key));
+    }
     public void message(CommandSender sender, String key, Map<String, String> values) {
-        sender.sendMessage(component(key, values));
+        if (!isDisabled(key)) sender.sendMessage(component(key, values));
     }
 }

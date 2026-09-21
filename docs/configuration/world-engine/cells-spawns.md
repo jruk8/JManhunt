@@ -24,7 +24,7 @@ world-engine:
 When `enabled`, teleports participants to a fresh cell when a match
 starts and returns them to the lobby when it ends. Players with role `none`
 travel to the cell center as spectators when
-`settings.roles.none-gamemode-spectator` is enabled, and return to the lobby
+`settings.roles.turn-nones-spectator` is enabled, and return to the lobby
 with everyone else. Enabling it additionally
 modifies stronghold generation to bypass the 128-per-world limit and spread
 strongholds around like normal structures. You can tweak the rates in

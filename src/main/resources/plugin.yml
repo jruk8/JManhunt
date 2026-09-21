@@ -67,6 +67,9 @@ permissions:
   jmanhunt.command.debug:
     description: Toggle JManhunt debug output.
     default: op
+  jmanhunt.command.dev.schem:
+    description: Use the developer schematic tools (/manhunt dev schem).
+    default: op
   jmanhunt.command.lobby:
     description: Manage lobby queues.
     default: op

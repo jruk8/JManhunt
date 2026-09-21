@@ -70,6 +70,29 @@ public final class GameStateCommandManager {
         runConfigured("start", participants, matchId);
     }
 
+    /**
+     * Runs ON_START modifiers deferred past the pre-start sequence via
+     * {@code on-start.pre-start-order: AFTER}. Called from
+     * {@link GameManager#beginGame()} once the speedrunner first hits a
+     * hunter (or the match force-starts). With
+     * start-on-speedrunner-damage disabled, begin runs inside start, so
+     * deferred modifiers still fire immediately.
+     */
+    public void runPostStartModifiers(long matchId) {
+        for (String name : configService.modifierNames()) {
+            if (!configService.modifierEnabled(name)) continue;
+            if (!runsOnContains(name, "ON_START")) continue;
+            if (!afterPrestart(name)) continue;
+            runModifierCommands(name, matchId);
+        }
+    }
+
+    /** True when the modifier defers its ON_START sequence past the pre-start hit. */
+    private boolean afterPrestart(String name) {
+        return runsAfterPrestart(plugin.getConfig()
+                .getString("custom-modifiers." + name + ".on-start.pre-start-order", "BEFORE"));
+    }
+
     public void runEnd(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
                        boolean lastMatch) {
         cancelPendingDelayed(matchId);
@@ -454,6 +477,15 @@ public final class GameStateCommandManager {
     }
 
     /**
+     * Parses an {@code on-start.pre-start-order} key. Only AFTER defers
+     * the ON_START sequence past the pre-start hit; anything else runs at
+     * match start.
+     */
+    static boolean runsAfterPrestart(String raw) {
+        return raw != null && raw.trim().equalsIgnoreCase("AFTER");
+    }
+
+    /**
      * Clamps a {@code success-chance.chance} value to the 0.0-1.0 decimal
      * fraction range. Unset or unreadable values fall back to 1.0 upstream.
      */
@@ -508,7 +540,9 @@ public final class GameStateCommandManager {
             participants.forEach(this::resetPlayer);
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
-            boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true);
+            // AFK players are skipped above and always left alone; NONEs follow
+            // the toggle, keeping their gamemode like AFK when it is off.
+            boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.roles.turn-nones-spectator.enabled", false);
             List<Player> nonePlayers = new ArrayList<>();
             for (Player player : participants) {
                 player.setGameMode(GameMode.SURVIVAL);
@@ -578,7 +612,7 @@ public final class GameStateCommandManager {
         }
         for (String name : configService.modifierNames()) {
             if (!configService.modifierEnabled(name)) continue;
-            if (phase.equals("start") && runsOnContains(name, "ON_START")) {
+            if (phase.equals("start") && runsOnContains(name, "ON_START") && !afterPrestart(name)) {
                 runModifierCommands(name, matchId);
             }
         }

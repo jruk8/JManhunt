@@ -3,9 +3,15 @@
 Every player holds one role: `hunter` and `speedrunner` play the match,
 `spectator` watches it (always in spectator mode, announced and titled
 like everyone else), `afk` waits it out in the lobby untouched, and `none`
-means unassigned — the recruit pool Quick Start draws from. If a role
-change ever empties the hunters or the speedrunners mid-match, the other
-side wins immediately.
+means unassigned — left alone like `afk` unless Quick Start is forced.
+If a role change ever empties the hunters or the speedrunners mid-match,
+the other side wins immediately.
+
+Under `settings.announce-role-changes` (default `false`), changes between
+a passive role (`none`, `afk`, `spectator`) and an active one (`hunter`,
+`speedrunner`) are announced to the player's lobby mates who are not in
+a live match — e.g. `Aria is now a Hunter.` Only the active side is ever
+named; changes within the same class stay silent.
 
 Roles also mirror to vanilla scoreboard teams (`HUNTER`, `SPEEDRUNNER`,
 `SPECTATOR`; `none` and `afk` sit in no team), repaired on every role
@@ -23,8 +29,8 @@ settings:
       enabled: false
     reset-on-leave:
       enabled: true
-    none-gamemode-spectator:
-      enabled: true
+    turn-nones-spectator:
+      enabled: false
 ```
 
 ## Reset on Game End
@@ -39,19 +45,20 @@ before the next one.
 the server while their lobby has no running match. If their lobby has a game
 in progress, the reset is deferred until that game ends instead.
 
-## None Gamemode
+## Turn Nones Spectator
 
-`none-gamemode-spectator` controls what happens to `NONE`-role players
+`turn-nones-spectator` controls what happens to `NONE`-role players
 whenever the plugin's automatic gamemode assignment is active:
 
 - `true`: `NONE` players are put into spectator mode.
-- `false`: `NONE` players keep whatever gamemode they already had.
+- `false`: `NONE` players keep their gamemode and stay put, like `afk`.
 
 When the world engine is enabled and this setting is `true`, `NONE`
 players are teleported to the match cell center together with the
 participants when a match starts, so they can spectate the match instead
 of waiting in the lobby. They return to the lobby when the match ends.
-When this setting is `false`, they are not teleported to the cell.
+When this setting is `false`, they are not teleported to the cell. `AFK`
+players are always left alone either way.
 
 # Match Leave Destination
 
@@ -83,7 +90,8 @@ settings:
 ```
 
 `KILL` slays the camper through a normal death; `GEAR-WIPE` instead clears
-their armor, offhand, and main hand.
+their armor, offhand, and main hand. One kill before the limit, the
+killer gets a private warning naming their victim.
 
 # Friendly Fire
 
@@ -138,36 +146,6 @@ for an immediate respawn.
 `lives` sets how many lives each role gets before that player is eliminated
 for the rest of the match. Set either value to `-1` for unlimited lives. By
 default, speedrunners get a single life while hunters have unlimited lives.
-
-# Start Debuffs
-
-Under `settings.start-debuffs`, every hunter can be given a set of potion
-effects the moment the game begins, useful for softening a hunter's
-advantage right out of the gate.
-
-```yaml
-settings:
-  start-debuffs:
-    enabled: false
-    effects:
-      SLOWNESS:
-        seconds: 10.0
-        amplifier: 1
-      WEAKNESS:
-        seconds: 10.0
-        amplifier: 0
-```
-
-## Effects
-
-Each entry under `effects` is a [Bukkit `PotionEffectType`](https://hub.spigotmc.org/javadocs/spigot/org/bukkit/potion/PotionEffectType.html)
-name, with:
-
-- `seconds`: how long the effect lasts.
-- `amplifier`: the effect's level, zero-indexed (`0` = level I, `1` = level
-  II, and so on).
-
-Add or remove entries freely. Only the effects listed are applied.
 
 # Invulnerability
 

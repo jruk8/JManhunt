@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SpawnCampServiceTest {
 
@@ -75,5 +77,13 @@ class SpawnCampServiceTest {
                 SpawnCampService.Punishment.parse("ban"));
         assertEquals(SpawnCampService.Punishment.KILL,
                 SpawnCampService.Punishment.parse(null));
+    }
+
+    @Test
+    void shouldWarnFiresOnlyAtOneBelowLimit() {
+        assertTrue(SpawnCampService.shouldWarn(2, 3));
+        assertFalse(SpawnCampService.shouldWarn(1, 3));
+        assertFalse(SpawnCampService.shouldWarn(3, 3));
+        assertFalse(SpawnCampService.shouldWarn(0, 1));
     }
 }

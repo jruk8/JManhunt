@@ -30,8 +30,8 @@ class MultiInstanceSchemaTest {
 
         assertEquals(0, config.getInt("lobbies.default-lobby-id"));
         assertTrue(config.getBoolean("lobbies.join-teleports-to-lobby"));
-        assertEquals(-1, config.getInt("lobbies.caps.speedrunner"));
-        assertEquals(-1, config.getInt("lobbies.caps.hunter"));
+        assertEquals(-1, config.getInt("lobbies.queue-caps.speedrunner"));
+        assertEquals(-1, config.getInt("lobbies.queue-caps.hunter"));
     }
 
     @Test
@@ -40,7 +40,7 @@ class MultiInstanceSchemaTest {
 
         assertFalse(config.getBoolean("settings.headstarts.hunter.enabled"));
         assertEquals(30, config.getInt("settings.headstarts.hunter.delay-seconds"));
-        assertFalse(config.getBoolean("settings.headstarts.speedrunner.enabled"));
+        assertTrue(config.getBoolean("settings.headstarts.speedrunner.enabled"));
         assertEquals(30, config.getInt("settings.headstarts.speedrunner.delay-seconds"));
     }
 
@@ -64,10 +64,13 @@ class MultiInstanceSchemaTest {
 
         assertFalse(config.getBoolean("settings.win-conditions.speedrunner.kill-mob.enabled"));
         assertEquals("minecraft:ender_dragon", config.getString("settings.win-conditions.speedrunner.kill-mob.mob"));
-        assertFalse(config.getBoolean("settings.win-conditions.hunter.time-limit.enabled"));
-        assertEquals(3600.0, config.getDouble("settings.win-conditions.hunter.time-limit.time"));
+        assertFalse(config.getBoolean("settings.win-conditions.hunter.survive-time.enabled"));
+        assertEquals(3600.0, config.getDouble("settings.win-conditions.hunter.survive-time.time"));
         assertFalse(config.getBoolean("settings.win-conditions.hunter.acquire-item.enabled"));
         assertFalse(config.getBoolean("settings.win-conditions.hunter.kill-mob.enabled"));
+        assertFalse(config.getBoolean("settings.win-conditions.hunter.reach-advancement.enabled"));
+        assertEquals("minecraft:story/enter_the_nether",
+                config.getString("settings.win-conditions.hunter.reach-advancement.advancement"));
     }
 
     @Test
@@ -77,6 +80,7 @@ class MultiInstanceSchemaTest {
 
         assertFalse(config.getBoolean("settings.status.show-win-conditions"));
         assertFalse(config.getBoolean("settings.status.show-elapsed-time"));
+        assertFalse(config.getBoolean("settings.status.show-modifiers"));
         assertTrue(config.getBoolean("settings.status.show-ids"));
         assertTrue(messages.getString("manhunt.status-win-speedrunners", "").contains("{conditions}"));
         assertTrue(messages.getString("manhunt.status-win-hunters", "").contains("{conditions}"));
@@ -84,6 +88,17 @@ class MultiInstanceSchemaTest {
         assertTrue(messages.getString("manhunt.status-ids", "").contains("{value}"));
         assertTrue(messages.getString("game.time-left", "").contains("{time}"));
         assertTrue(messages.getString("game.time-left", "").contains("{winner}"));
+    }
+
+    @Test
+    void roleColorKeysExistWithDefaults() {
+        YamlConfiguration messages = bundledMessages();
+
+        assertEquals("<#74de66>", messages.getString("role-colors.speedrunner"));
+        assertEquals("<#de666e>", messages.getString("role-colors.hunter"));
+        assertEquals("<#6e728a>", messages.getString("role-colors.spectator"));
+        assertEquals("<#a18e68>", messages.getString("role-colors.afk"));
+        assertEquals("<#7d7d7d>", messages.getString("role-colors.none"));
     }
 
     @Test
@@ -144,6 +159,25 @@ class MultiInstanceSchemaTest {
         assertEquals("KILL", config.getString("settings.anti-spawn-camp.punishment"));
         assertTrue(messages.getString("game.spawncamp-kill", "").contains("{victim}"));
         assertTrue(messages.getString("game.spawncamp-gear-wipe", "").contains("{victim}"));
+        assertTrue(messages.getString("game.spawncamp-warning", "").contains("{victim}"));
+    }
+
+    @Test
+    void roleChangeBroadcastDefaults() {
+        YamlConfiguration config = bundledConfig();
+        YamlConfiguration messages = bundledMessages();
+
+        assertFalse(config.getBoolean("settings.announce-role-changes"));
+        assertTrue(messages.getString("manhunt.role-is-now", "").contains("{active-role}"));
+        assertTrue(messages.getString("manhunt.role-no-longer", "").contains("{active-role}"));
+    }
+
+    @Test
+    void noneHandlingDefaults() {
+        YamlConfiguration config = bundledConfig();
+
+        assertFalse(config.getBoolean("settings.roles.turn-nones-spectator.enabled"));
+        assertTrue(config.getBoolean("settings.start-on-speedrunner-damage.start-in-adventure-mode"));
     }
 
     @Test

@@ -15,7 +15,9 @@
    Selectors such as `PlayerName`, `@a`, `@p`, and `@a[distance=..10]` are supported.
 
    You may also run `/manhunt quickstart` (or `/mh qs`) to quickly start a match
-   with one random speedrunner and the rest being hunters.
+   with one random speedrunner and the rest being hunters. Unassigned
+   (`none`) players sit out unless you pass `-f` (`-force`), so a fresh
+   lobby needs `/manhunt quickstart -force`.
 
 2. Start the match with `/manhunt start`.
 3. Check the teams at any time with `/manhunt status` (or simply `/manhunt`.)

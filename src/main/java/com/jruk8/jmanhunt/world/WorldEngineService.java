@@ -124,7 +124,9 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         if (spectators.isEmpty() || cellRoot == null) {
             return;
         }
-        if (!plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+        // AFK players never reach this list; the toggle moves NONE and
+        // spectator-role watchers together, and leaves them put when off.
+        if (!plugin.getConfig().getBoolean("settings.roles.turn-nones-spectator.enabled", false)) {
             return;
         }
         for (Player spectator : spectators) {
@@ -284,7 +286,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         // Spectators placed at the cell center at match start return to the
         // lobby with everyone else. When NONE spectator handling is disabled
         // they were never moved, so they are left alone.
-        if (plugin.getConfig().getBoolean("settings.roles.none-gamemode-spectator.enabled", true)) {
+        if (plugin.getConfig().getBoolean("settings.roles.turn-nones-spectator.enabled", false)) {
             for (Player spectator : spectators) {
                 spectator.teleport(lobby);
                 spectator.setRespawnLocation(lobby, true);
@@ -644,6 +646,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             WorldBorder border = overworld.getWorldBorder();
             border.setCenter(origin.x(), origin.z());
             border.setSize(startDiameter);
+            border.setWarningDistance(warningDistance(startDiameter));
             border.setDamageBuffer(config.damageBuffer());
             border.setDamageAmount(config.damageAmount());
 
@@ -652,6 +655,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
                 WorldBorder netherBorder = nether.getWorldBorder();
                 netherBorder.setCenter(origin.x() / 8.0, origin.z() / 8.0);
                 netherBorder.setSize(startDiameter / 8.0);
+                netherBorder.setWarningDistance(warningDistance(startDiameter / 8.0));
                 netherBorder.setDamageBuffer(config.damageBuffer());
                 netherBorder.setDamageAmount(config.damageAmount());
             } else {
@@ -677,6 +681,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         WorldBorder border = overworld.getWorldBorder();
         border.setCenter(origin.x(), origin.z());
         border.setSize(config.cellSize());
+        border.setWarningDistance(warningDistance(config.cellSize()));
         border.setDamageBuffer(config.damageBuffer());
         border.setDamageAmount(config.damageAmount());
 
@@ -690,8 +695,19 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         WorldBorder netherBorder = nether.getWorldBorder();
         netherBorder.setCenter(origin.x() / 8.0, origin.z() / 8.0);
         netherBorder.setSize(config.cellSize() / 8.0);
+        netherBorder.setWarningDistance(warningDistance(config.cellSize() / 8.0));
         netherBorder.setDamageBuffer(config.damageBuffer());
         netherBorder.setDamageAmount(config.damageAmount());
+    }
+
+    /**
+     * Border warning distance for an applied border size: a hundredth of
+     * the size, at least one block. Each world scales by its own applied
+     * size, so the Nether (1/8 scale) warns the same effective distance.
+     * Pure for tests.
+     */
+    static int warningDistance(double borderSize) {
+        return Math.max(1, (int) (borderSize / 100.0));
     }
 
     /**
@@ -703,6 +719,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         WorldBorder border = overworld.getWorldBorder();
         border.setCenter(origin.x(), origin.z());
         border.setSize(config.cellSize(), seconds);
+        border.setWarningDistance(warningDistance(config.cellSize()));
         border.setDamageBuffer(config.damageBuffer());
         border.setDamageAmount(config.damageAmount());
 
@@ -716,6 +733,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         WorldBorder netherBorder = nether.getWorldBorder();
         netherBorder.setCenter(origin.x() / 8.0, origin.z() / 8.0);
         netherBorder.setSize(config.cellSize() / 8.0, seconds);
+        netherBorder.setWarningDistance(warningDistance(config.cellSize() / 8.0));
         netherBorder.setDamageBuffer(config.damageBuffer());
         netherBorder.setDamageAmount(config.damageAmount());
     }
