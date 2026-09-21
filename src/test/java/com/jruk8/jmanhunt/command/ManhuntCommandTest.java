@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,6 +62,14 @@ class ManhuntCommandTest {
     @Test
     void subcommandOptionsHideDevOnPurpose() {
         assertFalse(ManhuntCommand.subcommandOptions().contains("dev"));
+    }
+
+    @Test
+    void nextFreeBoundsIdFindsFirstGap() {
+        assertEquals(0, ManhuntCommand.nextFreeBoundsId(Set.of()));
+        assertEquals(1, ManhuntCommand.nextFreeBoundsId(Set.of(0)));
+        assertEquals(0, ManhuntCommand.nextFreeBoundsId(Set.of(1, 2)));
+        assertEquals(2, ManhuntCommand.nextFreeBoundsId(Set.of(0, 1, 3)));
     }
 
     @Test

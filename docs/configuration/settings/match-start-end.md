@@ -12,7 +12,7 @@ settings:
     minimums:
       hunter: 1
       speedrunner: 1
-    needs-broadcast-interval-seconds: 30
+    needs-broadcast-interval-seconds: 60
 ```
 
 Autostart triggers once each role reaches its `minimums` queued players
@@ -22,9 +22,11 @@ see [Concurrent Matches](../../multi-instance.md). Minimums only gate
 autostart: manual `/manhunt start` keeps its own
 one-hunter-one-speedrunner check.
 
-While a lobby sits below its minimums, its queued players are told what
-is still missing every `needs-broadcast-interval-seconds`, for example
-"The game needs *two* more Hunters and *one* more Speedrunner to begin."
+While a lobby sits below its minimums, its queued hunters and
+speedrunners are told what is still missing every
+`needs-broadcast-interval-seconds` (`none`, `afk`, and spectator members
+are not nagged), for example "The game needs *two* more Hunters and
+*one* more Speedrunner to begin."
 
 ## Countdown
 

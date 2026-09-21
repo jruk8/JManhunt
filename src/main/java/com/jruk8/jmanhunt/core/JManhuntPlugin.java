@@ -6,6 +6,9 @@ import com.jruk8.jmanhunt.compass.CompassProtectionListener;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.YamlFileUpdater;
+import com.jruk8.jmanhunt.lobby.LobbyBoundsService;
+import com.jruk8.jmanhunt.lobby.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.LobbyConfigRegistrar;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.RolePadService;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -62,6 +65,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private JManhuntLogger logger;
     private DebugService debugService;
     private LobbyService lobbyService;
+    private LobbyConfigRegistrar lobbyConfigs;
     private RoleTeamService roleTeams;
     private SpawnCampService spawnCamp;
     private final List<SettingsListener> settings = new ArrayList<>();
@@ -73,6 +77,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         debugService = new DebugService();
         logger = new JManhuntLogger(getLogger(), debugService, messages, BukkitDebugSink.INSTANCE);
         lobbyService = new LobbyService(this);
+        lobbyConfigs = new LobbyConfigRegistrar(this);
+        lobbyConfigs.register();
         reload();
         debugService.resetToDefaults(getConfig().getBoolean("debug.enabled", false));
 
@@ -87,7 +93,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 new NamespacedKey(this, "hunters_compass"));
         configService = new ConfigService(this);
         sounds = new SoundService(this, configService);
-        worldEngine = new WorldEngineService(this, configService, engineState);
+        worldEngine = new WorldEngineService(this, messages, configService, engineState);
         winConditionEngine = new WinConditionEngine(getConfig());
         game = new GameManager(
                 this, messages, sounds, playerStates, compass, stats,
@@ -184,6 +190,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new RolePadService(
                 this, lobbyService, playerStates, game, messages, sounds,
                 worldEngine::lobbyWorldName), this);
+        getServer().getPluginManager().registerEvents(new LobbyBoundsService(
+                this, lobbyService, playerStates, game, messages, sounds,
+                worldEngine::lobbyWorldName), this);
     }
 
     private void setupScheduling() {
@@ -227,6 +236,11 @@ public final class JManhuntPlugin extends JavaPlugin {
         return lobbyService;
     }
 
+    /** Okaeri lobby teleport/bounds store, generated on first load. */
+    public LobbyConfig lobbyConfig() {
+        return lobbyConfigs == null ? null : lobbyConfigs.getLobbyConfig();
+    }
+
     public void reload() {
         YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION, CONFIG_MOVES);
         reloadConfig();
@@ -240,6 +254,10 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
         messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")),
                 getConfig().getString("text-format", "minimessage"));
+
+        if (lobbyConfigs != null) {
+            lobbyConfigs.reload();
+        }
 
         if (winConditionEngine != null) {
             winConditionEngine.reload(getConfig());

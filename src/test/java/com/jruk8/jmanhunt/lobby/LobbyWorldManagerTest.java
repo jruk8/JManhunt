@@ -2,7 +2,6 @@ package com.jruk8.jmanhunt.lobby;
 
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.Optional;
@@ -57,13 +56,19 @@ class LobbyWorldManagerTest {
     }
 
     @Test
-    void missingLobbyZeroDetectsUnsetLocation() {
-        YamlConfiguration config = new YamlConfiguration();
+    void missingLobbyZeroDetectsUnsetLobbytp() {
+        LobbyConfig lobbyConfig = new LobbyConfig();
+        lobbyConfig.getLobbies().clear();
 
-        assertTrue(LobbyWorldManager.missingLobbyZero(config));
+        assertTrue(LobbyWorldManager.missingLobbyZero(lobbyConfig));
+        assertTrue(LobbyWorldManager.missingLobbyZero(null));
 
-        config.set("world-engine.lobby-locations.0.world", "jmh-lobby");
-        assertFalse(LobbyWorldManager.missingLobbyZero(config));
+        LobbyConfig.LobbyEntry entry = new LobbyConfig.LobbyEntry();
+        lobbyConfig.getLobbies().put("0", entry);
+        assertTrue(LobbyWorldManager.missingLobbyZero(lobbyConfig));
+
+        entry.setLobbytp(LobbyConfig.LobbyTp.of(0.0, 65.0, 0.0, 0.0f, 0.0f));
+        assertFalse(LobbyWorldManager.missingLobbyZero(lobbyConfig));
     }
 
     @Test

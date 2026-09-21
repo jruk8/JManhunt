@@ -19,13 +19,15 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
 | `/manhunt configuration <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.configuration` |
 | `/manhunt worldengine setlobby [x,y,z,yaw,pitch]` | Sets the lobby 0 world-engine lobby position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobby`) |
-| `/manhunt worldengine setlobbytp <lobby-id>`       | Sets a lobby's location from your current position. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobbytp`) |
+| `/manhunt worldengine setlobbytp <lobby-id>`       | Sets a lobby's teleport from your current position (lobby world only). | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.setlobbytp`) |
+| `/manhunt worldengine lobbybounds pos1\|pos2`      | Records a lobby-bounds corner at your feet block. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbybounds`) |
+| `/manhunt worldengine lobbybounds set <lobby-id>` | Stores the recorded corners as a lobby's bounds. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbybounds`) |
 | `/manhunt worldengine tpto lobbyworld\|gameworld [selector]` | Teleports to the lobby world (generating it on a confirmed second run) or the game world spawn. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.tpto`) |
 | `/manhunt worldengine cellindex get`              | Shows the current world-engine cell index. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex buffer`           | Lists the buffered ready-cell ids. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt debug [on\|off]`                         | Toggles debug output for yourself or the console. | `jmanhunt.command.debug` |
-| `/manhunt reload`                                 | Reloads `config.yml` and `messages.yml`. | `jmanhunt.command.reload` |
+| `/manhunt reload`                                 | Reloads `config.yml`, `messages.yml`, and `lobby-config.yml`. | `jmanhunt.command.reload` |
 
 Tab completion only suggests subcommands and worldengine actions the sender
 has permission to run.

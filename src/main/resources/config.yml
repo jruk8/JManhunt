@@ -507,8 +507,8 @@ settings:
       speedrunner: 1
     # Seconds between shortfall broadcasts telling queued players how
     # many more of each role autostart needs.
-    # Default: 30
-    needs-broadcast-interval-seconds: 30
+    # Default: 60
+    needs-broadcast-interval-seconds: 60
 
   # How player roles are assigned and reset around the lifecycle of a match.
   roles:
@@ -901,19 +901,11 @@ world-engine:
     afk: YELLOW_CONCRETE
     spectator: LIGHT_GRAY_CONCRETE
     none: GRAY_CONCRETE
-  # Lobby locations per lobby id. Players return to their match's lobby
-  # location when a game ends. Use '/mh worldengine tpto lobbyworld' to
-  # get to the lobbyworld. Use '/mh worldengine setlobbytp' to set a lobby
-  # tp to your current position (only works in the lobbyworld)
-  # TODO: remove world and implicitly use lobby-world-name.
-  lobby-locations:
-    "0":
-      world: world
-      x: 0.5
-      y: 100.0
-      z: 0.5
-      yaw: 0.0
-      pitch: 0.0
+  # Lobby teleport points and boundary boxes live in
+  # settings/world-engine/lobby-config.yml, managed in-game with
+  # '/mh worldengine setlobbytp <id>' and
+  # '/mh worldengine lobbybounds pos1|pos2|set <id>'.
+  # They are not editable through /manhunt configuration.
   # Size of one spiral cell in blocks. Hard-capped at 50,000.
   # Too low values may cause issues.
   # Default: 10,000

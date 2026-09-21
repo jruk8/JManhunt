@@ -1508,19 +1508,20 @@ public final class GameManager {
     }
 
     /**
-     * Tells queued players of ineligible lobbies how many more of each
-     * role autostart needs, at most once per configured interval. Runs
-     * every second from the plugin scheduler; eligible, counting-down,
-     * and in-match lobbies are skipped and reset so the next shortfall
-     * announces immediately. Players only: the console is spared the
-     * nag.
+     * Tells queued hunters and speedrunners of ineligible lobbies how
+     * many more of each role autostart needs, at most once per
+     * configured interval. Runs every second from the plugin scheduler;
+     * eligible, counting-down, and in-match lobbies are skipped and
+     * reset so the next shortfall announces immediately. Players only:
+     * the console is spared the nag, as are none, afk, and spectator
+     * members.
      */
     public void broadcastAutostartShortfalls() {
         if (!plugin.getConfig().getBoolean("settings.autostart.enabled", false)) {
             return;
         }
         int intervalSeconds = Math.max(1, plugin.getConfig()
-                .getInt("settings.autostart.needs-broadcast-interval-seconds", 30));
+                .getInt("settings.autostart.needs-broadcast-interval-seconds", 60));
         long now = System.currentTimeMillis();
         for (int lobbyId : lobbies.lobbyIds()) {
             if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
@@ -1533,7 +1534,9 @@ public final class GameManager {
                 continue;
             }
             Map<Role, Integer> missing = shortfallFor(lobby.get());
-            List<Player> recipients = lobbyRecipients(lobbyId);
+            List<Player> recipients = lobbyRecipients(lobbyId).stream()
+                    .filter(player -> receivesShortfall(role(player)))
+                    .toList();
             if (missing.isEmpty() || recipients.isEmpty()) {
                 lastShortfallBroadcast.remove(lobbyId);
                 continue;
@@ -1557,10 +1560,27 @@ public final class GameManager {
             if (need == null) {
                 continue;
             }
-            String name = messages.roleName(role) + (need == 1 ? "" : "s");
-            parts.add("<white>" + NumberWords.word(need) + "</white> more " + name);
+            parts.add(shortfallPart(NumberWords.word(need), messages.roleName(role), need));
         }
         return String.join(" and ", parts);
+    }
+
+    /**
+     * True for the roles the autostart shortfall nag goes to: assigned
+     * hunters and speedrunners only. Pure for tests.
+     */
+    static boolean receivesShortfall(Role role) {
+        return role == Role.HUNTER || role == Role.SPEEDRUNNER;
+    }
+
+    /**
+     * One "two more Hunters" shortfall fragment. The role color is
+     * closed back to the message's yellow so it cannot bleed into the
+     * separator or the sentence tail. Pure for tests.
+     */
+    static String shortfallPart(String countWord, String coloredRoleName, int need) {
+        return "<white>" + countWord + "</white> more " + coloredRoleName + (need == 1 ? "" : "s")
+                + "<yellow>";
     }
 
     /** Shows the starting roster to one match's players. */

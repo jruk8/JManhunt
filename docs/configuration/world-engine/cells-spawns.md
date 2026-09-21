@@ -11,14 +11,6 @@ world-engine:
   cell-size: 10000
   tp-spread-radius: 5
   use-spawnpoint-algorithm: true
-  lobby-locations:
-    "0":
-      world: world
-      x: 0.5
-      y: 100.0
-      z: 0.5
-      yaw: 0.0
-      pitch: 0.0
 ```
 
 When `enabled`, teleports participants to a fresh cell when a match
@@ -65,13 +57,48 @@ in its size calculation.
 a valid spawn point for each player. This fixes spawning inside oceans or
 lava, but may cause server lag if many checks are required.
 
-## Lobby Locations
+## Lobby Teleports & Bounds
 
-`lobby-locations` maps each lobby id to the lobby its players return to after
-a match ends. Make sure lobby worlds are different from the game world. Use
-`/manhunt worldengine setlobby` for lobby 0, or stand in place and run
-`/manhunt worldengine setlobbytp <lobby-id>` for any other lobby, to update
-locations in-game.
+Lobby teleport points and boundary boxes live in
+`settings/world-engine/lobby-config.yml`, generated with defaults on first
+load and reloaded with `/manhunt reload`. They are keyed by lobby id, one
+entry per lobby:
+
+```yaml
+lobbies:
+  '0':
+    lobbytp:
+      x: 0.0
+      y: 65.0
+      z: 0.0
+      yaw: 0.0
+      pitch: 0.0
+    bounds:
+      pos1: null
+      pos2: null
+```
+
+Lobby teleports are managed with `/manhunt worldengine setlobby` for
+lobby 0, or by standing in the lobby world and running
+`/manhunt worldengine setlobbytp <lobby-id>` for any lobby. The world is
+never stored: teleports always land in the configured lobby world, so
+`setlobbytp` refuses to run anywhere else. When a lobby has no teleport
+of its own, players fall back to the lowest lobby id that has one (noted
+in debug output); when no teleport exists anywhere — or the lobby world
+itself is missing — players are told no lobby exists and to contact an
+administrator. This file is not editable through
+`/manhunt configuration`.
+
+Boundary boxes auto-join walkers: a player who steps into a lobby's box
+while in the lobby world joins that lobby with role `none`, the same as
+`/manhunt lobby join` with role `none` (no teleport, since they are
+already there). Players already in that lobby, and players in a running
+match, are left alone. Where boxes overlap, the box whose midpoint is
+nearest wins. Record two opposite feet-block corners with
+`/manhunt worldengine lobbybounds pos1|pos2`, then store them with
+`/manhunt worldengine lobbybounds set <lobby-id>` (tab completion
+suggests the next id without bounds; overwriting existing bounds needs
+the command run twice within 10 seconds).
 
 The fastest way to get a lobby is `/manhunt worldengine tpto lobbyworld`,
 run twice: it generates the `jmh-lobby` void world (filled by your lobby
@@ -79,6 +106,6 @@ preset) and points lobby 0 at the spawn automatically.
 Set `world-engine.lobby-world-name` to use your own world instead.
 
 Players who fall into the void in the lobby world pop back at their lobby
-location (or lobby 0 when theirs is unset) instead of dying. This never
+teleport (or lobby 0 when theirs is unset) instead of dying. This never
 applies in the game world, and can be turned off with
 `world-engine.lobby-world-void-rescue`.

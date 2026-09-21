@@ -5,7 +5,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
-import org.bukkit.configuration.file.FileConfiguration;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
@@ -153,9 +152,11 @@ public final class LobbyWorldManager {
         return Optional.ofNullable(locations.get(0));
     }
 
-    /** True when no lobby 0 location is configured. Pure for tests. */
-    static boolean missingLobbyZero(FileConfiguration config) {
-        return !config.contains("world-engine.lobby-locations.0");
+    /** True when no lobby 0 lobbytp is configured. Pure for tests. */
+    static boolean missingLobbyZero(LobbyConfig lobbyConfig) {
+        return lobbyConfig == null || lobbyConfig.getLobbies() == null
+                || lobbyConfig.getLobbies().get("0") == null
+                || lobbyConfig.getLobbies().get("0").getLobbytp() == null;
     }
 
     /**
@@ -177,18 +178,15 @@ public final class LobbyWorldManager {
      * it. Returns true when it wrote.
      */
     private boolean autoSetLobbyZero(Location spawn) {
-        FileConfiguration config = plugin.getConfig();
-        if (!missingLobbyZero(config)) {
+        LobbyConfig lobbyConfig = plugin.lobbyConfig();
+        if (!missingLobbyZero(lobbyConfig)) {
             return false;
         }
-        String base = "world-engine.lobby-locations.0.";
-        config.set(base + "world", spawn.getWorld().getName());
-        config.set(base + "x", spawn.getX());
-        config.set(base + "y", spawn.getY());
-        config.set(base + "z", spawn.getZ());
-        config.set(base + "yaw", spawn.getYaw());
-        config.set(base + "pitch", spawn.getPitch());
-        plugin.saveConfig();
+        LobbyConfig.LobbyEntry entry = new LobbyConfig.LobbyEntry();
+        entry.setLobbytp(LobbyConfig.LobbyTp.of(
+                spawn.getX(), spawn.getY(), spawn.getZ(), spawn.getYaw(), spawn.getPitch()));
+        lobbyConfig.getLobbies().put("0", entry);
+        lobbyConfig.save();
         return true;
     }
 }

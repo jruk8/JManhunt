@@ -26,7 +26,7 @@ lobbies:
 value to leave joining players lobby-less until they join one manually.
 `join-teleports-to-lobby`, when true, teleports players to their lobby
 location when they join it (see
-[Cells & Spawns](configuration/world-engine/cells-spawns.md#lobby-locations)).
+[Cells & Spawns](configuration/world-engine/cells-spawns.md#lobby-teleports-bounds)).
 Pass `-notp` to skip that teleport for one join.
 
 Move players between lobbies with:

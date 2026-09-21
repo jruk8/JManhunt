@@ -64,7 +64,7 @@ manhunt:
   configuration-list: "\n{prefix}<white>Available configs in <gray>{key}:{entries}"
   configuration-entry: "\n<green>» <white>{key}</white><gray>{suffix}</gray>"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
-  worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|setlobbytp|cellindex|tpto>"
+  worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <setlobby|setlobbytp|lobbybounds|cellindex|tpto>"
   worldengine-cellindex-usage: "{prefix}<yellow>Usage: /manhunt worldengine cellindex <get|set <value>|buffer>"
   worldengine-cellindex-get: "{prefix}<green>World-engine cell index: <white>{index}<green>."
   worldengine-cellindex-set: "{prefix}<green>Set world-engine cell index to <white>{index}<green> (was <white>{was}<green>, max <white>{max}<green>)."
@@ -122,7 +122,16 @@ manhunt:
   configuration-usage: "{prefix}<yellow>Usage: /manhunt configuration <category> <key...> [value]"
   debug-usage: "{prefix}<yellow>Usage: /manhunt debug [on|off]"
   worldengine-setlobby-usage: "{prefix}<yellow>Usage: /manhunt worldengine setlobby [x,y,z,yaw,pitch]"
-  worldengine-setlobbytp-usage: "{prefix}<yellow>Usage: /manhunt worldengine setlobbytp <lobby-id]"
+  worldengine-setlobbytp-usage: "{prefix}<yellow>Usage: /manhunt worldengine setlobbytp <lobby-id>>"
+  worldengine-setlobbytp-wrong-world: "{prefix}<yellow>You must stand in the lobby world (<white>{world}</white>) to set a lobby teleport."
+  worldengine-lobbybounds-usage: "{prefix}<yellow>Usage: /manhunt worldengine lobbybounds <pos1|pos2|set <lobby-id>>"
+  worldengine-lobbybounds-pos1: "{prefix}<green>Bounds position 1 set to <white>{pos}<green>."
+  worldengine-lobbybounds-pos2: "{prefix}<green>Bounds position 2 set to <white>{pos}<green>."
+  worldengine-lobbybounds-need-selection: "{prefix}<red>Set both corners first with <white>lobbybounds pos1<red> and <white>lobbybounds pos2<red>."
+  worldengine-lobbybounds-world-mismatch: "{prefix}<red>Both corners must be in the same world."
+  worldengine-lobbybounds-confirm: "{prefix}<yellow>Lobby <white>{lobby}<yellow> already has bounds. Run again within <white>10 seconds<yellow> to overwrite them."
+  worldengine-lobbybounds-success: "{prefix}<green>Set bounds for lobby <white>{lobby}<green> to <white>{from}<green> – <white>{to}<green>."
+  lobby-no-location-anywhere: "{prefix}<red>No lobby teleport exists for lobby <white>{lobby}<red> or any fallback lobby. Please contact an administrator."
   worldengine-tpto-usage: "{prefix}<yellow>Usage: /manhunt worldengine tpto <lobbyworld|gameworld> [selector]"
   worldengine-tpto-lobby-world-clash: "{prefix}<red>Lobby world name matches the game world. Rename <white>world-engine.lobby-world-name<red> first."
 
@@ -238,6 +247,8 @@ debug:
   end-cell-pruned: "{debug-prefix}<gray>Pruned end dimension <white>{cell}<gray>."
   border-mode: "{debug-prefix}<gray>Border mode: <white>{mode}<gray>."
   portal-reroute: "{debug-prefix}<gray>Rerouted <white>{player} <gray>to <white>{cell}<gray>."
+  lobby-fallback: "{debug-prefix}<gray>Failed to fetch lobbytp for lobby <white>{lobby}<gray>, using fallback <white>{fallback}<gray>."
+  lobby-missing: "{debug-prefix}<gray>No lobbytp for lobby <white>{lobby}<gray> anywhere (or the lobby world is missing); targets were told to contact an administrator."
 
 # Developer schematic tools (/manhunt dev schem). Not for production use.
 dev:

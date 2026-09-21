@@ -183,7 +183,7 @@ class MultiInstanceSchemaTest {
 
         assertEquals(1, config.getInt("settings.autostart.minimums.hunter"));
         assertEquals(1, config.getInt("settings.autostart.minimums.speedrunner"));
-        assertEquals(30, config.getInt("settings.autostart.needs-broadcast-interval-seconds"));
+        assertEquals(60, config.getInt("settings.autostart.needs-broadcast-interval-seconds"));
         assertTrue(messages.getString("manhunt.autostart-needs-more", "").contains("{details}"));
         assertFalse(messages.getString("manhunt.quickstart-usage", "").contains("-force"));
         assertTrue(messages.getString("manhunt.setplayer-usage", "").contains("-silent"));
@@ -243,13 +243,19 @@ class MultiInstanceSchemaTest {
     }
 
     @Test
-    void lobbyLocationDefaults() {
+    void lobbyLocationsMovedToLobbyConfig() {
         YamlConfiguration config = bundledConfig();
+        YamlConfiguration messages = bundledMessages();
 
-        assertEquals("world", config.getString("world-engine.lobby-locations.0.world"));
-        assertEquals(0.5, config.getDouble("world-engine.lobby-locations.0.x"), 0.0001);
-        assertEquals(100.0, config.getDouble("world-engine.lobby-locations.0.y"), 0.0001);
-        assertEquals(0.5, config.getDouble("world-engine.lobby-locations.0.z"), 0.0001);
+        assertFalse(config.contains("world-engine.lobby-locations"));
+        assertTrue(messages.getString("manhunt.worldengine-usage", "").contains("lobbybounds"));
+        assertTrue(messages.getString("manhunt.worldengine-setlobbytp-wrong-world", "").contains("{world}"));
+        assertTrue(messages.getString("manhunt.worldengine-lobbybounds-usage", "").contains("pos1"));
+        assertTrue(messages.getString("manhunt.worldengine-lobbybounds-confirm", "").contains("{lobby}"));
+        assertTrue(messages.getString("manhunt.worldengine-lobbybounds-success", "").contains("{from}"));
+        assertTrue(messages.getString("manhunt.lobby-no-location-anywhere", "").contains("administrator"));
+        assertTrue(messages.getString("debug.lobby-fallback", "").contains("{fallback}"));
+        assertTrue(messages.getString("debug.lobby-missing", "").contains("{lobby}"));
     }
 
     @Test

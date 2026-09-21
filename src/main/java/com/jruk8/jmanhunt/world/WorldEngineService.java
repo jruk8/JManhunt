@@ -1,7 +1,9 @@
 package com.jruk8.jmanhunt.world;
 
+import com.jruk8.jmanhunt.lobby.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.LobbyWorld;
 import com.jruk8.jmanhunt.lobby.LobbyWorldManager;
+import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.world.end.EndCellManager;
 import com.jruk8.jmanhunt.world.end.EndResetManager;
 import com.jruk8.jmanhunt.world.structure.NetherStructuresDatapackManager;
@@ -26,6 +28,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +41,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private static final int MAX_CELL_ALLOCATE_ATTEMPTS = 20;
 
     private final JManhuntPlugin plugin;
+    private final MessageService messages;
     private final ConfigService configService;
     private final WorldCellAllocator cellAllocator;
     private final StrongholdDatapackManager strongholdDatapackManager;
@@ -65,8 +69,10 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     private final EndCellManager endCells;
     private final LobbyWorldManager lobbyWorlds;
 
-    public WorldEngineService(JManhuntPlugin plugin, ConfigService configService, EngineStateRepository engineState) {
+    public WorldEngineService(JManhuntPlugin plugin, MessageService messages, ConfigService configService,
+            EngineStateRepository engineState) {
         this.plugin = plugin;
+        this.messages = messages;
         this.configService = configService;
         this.cellAllocator = new WorldCellAllocator(engineState);
         this.strongholdDatapackManager = new StrongholdDatapackManager(plugin);
@@ -264,7 +270,9 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return;
 
-        Location lobby = getValidLobby(config, lobbyId);
+        List<Player> returning = new ArrayList<>(participants);
+        returning.addAll(spectators);
+        Location lobby = resolveLobbyTeleport(lobbyId, returning);
         if (lobby == null) return;
 
         endCells.endWorldFor(matchId).ifPresentOrElse(endWorld -> {
@@ -337,7 +345,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return false;
 
-        Location lobby = getValidLobby(config, lobbyId);
+        Location lobby = resolveLobbyTeleport(lobbyId, targets);
         if (lobby == null) {
             return false;
         }
@@ -352,7 +360,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) return false;
 
-        Location lobby = getValidLobby(config, lobbyId);
+        Location lobby = resolveLobbyTeleport(lobbyId, targets);
         if (lobby == null) return false;
 
         for (Player player : targets) {
@@ -363,15 +371,82 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
 
     /**
      * True when newcomers have a lobby to wait in: the engine is on and
-     * the lobby has a valid location.
+     * the lobby (or a fallback lobby) has a valid teleport.
      */
     public boolean hasLobbyLocation(int lobbyId) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        return config.enabled() && getValidLobby(config, lobbyId) != null;
+        return config.enabled() && resolveLobby(lobbyId, false) != null;
     }
 
-    private Location getValidLobby(WorldEngineConfig config, int lobbyId) {
-        return resolveLobby(config, lobbyId);
+    /**
+     * Resolves a lobby teleport: the lobby's own lobbytp in the lobby
+     * world, else the lowest lobby id with a valid lobbytp as a
+     * fallback (debug-logged). A missing or unloaded lobby world
+     * resolves like a missing lobby entirely.
+     */
+    private Location resolveLobby(int lobbyId, boolean logFallback) {
+        World lobbyWorld = Bukkit.getWorld(lobbyWorlds.lobbyWorldName());
+        Map<Integer, LobbyConfig.LobbyTp> tps = lobbyTps();
+        LobbyConfig.LobbyTp own = tps.get(lobbyId);
+        if (lobbyWorld != null && own != null) {
+            return toLobbyLocation(lobbyWorld, own);
+        }
+        if (lobbyWorld == null || tps.isEmpty()) {
+            return null;
+        }
+        int fallback = tps.keySet().stream().min(Integer::compare).orElseThrow();
+        if (logFallback) {
+            plugin.logger().debug("debug.lobby-fallback", Map.of(
+                    "lobby", String.valueOf(lobbyId), "fallback", String.valueOf(fallback)));
+        }
+        return toLobbyLocation(lobbyWorld, tps.get(fallback));
+    }
+
+    /**
+     * resolveLobby plus the nothing-anywhere announcement: when no
+     * lobbytp exists anywhere (or the lobby world is missing), every
+     * target is told that no lobby exists and to contact an
+     * administrator, and the miss is debug-logged.
+     */
+    private Location resolveLobbyTeleport(int lobbyId, List<Player> targets) {
+        Location lobby = resolveLobby(lobbyId, true);
+        if (lobby != null) {
+            return lobby;
+        }
+        plugin.logger().debug("debug.lobby-missing", Map.of("lobby", String.valueOf(lobbyId)));
+        for (Player target : targets) {
+            messages.message(target, "manhunt.lobby-no-location-anywhere",
+                    Map.of("lobby", String.valueOf(lobbyId)));
+        }
+        return null;
+    }
+
+    /** Valid lobbytps keyed by lobby id: integer keys with a stored lobbytp. */
+    private Map<Integer, LobbyConfig.LobbyTp> lobbyTps() {
+        Map<Integer, LobbyConfig.LobbyTp> tps = new HashMap<>();
+        LobbyConfig lobbyConfig = plugin.lobbyConfig();
+        if (lobbyConfig == null || lobbyConfig.getLobbies() == null) {
+            return tps;
+        }
+        for (Map.Entry<String, LobbyConfig.LobbyEntry> entry : lobbyConfig.getLobbies().entrySet()) {
+            int id;
+            try {
+                id = Integer.parseInt(entry.getKey().trim());
+            } catch (NumberFormatException expected) {
+                continue;
+            }
+            if (id < 0 || entry.getValue() == null || entry.getValue().getLobbytp() == null) {
+                continue;
+            }
+            tps.put(id, entry.getValue().getLobbytp());
+        }
+        return tps;
+    }
+
+    /** Lobbytp coordinates as a location in the given lobby world. */
+    private static Location toLobbyLocation(World lobbyWorld, LobbyConfig.LobbyTp point) {
+        return new Location(lobbyWorld, point.getX(), point.getY(), point.getZ(),
+                point.getYaw(), point.getPitch());
     }
 
     @Override
@@ -431,14 +506,19 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
      * location. Empty only when the lobby world is not loaded.
      */
     public Optional<Location> lobbyRescueLocation(OptionalInt memberLobby) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         String lobbyWorld = lobbyWorlds.lobbyWorldName();
+        World world = Bukkit.getWorld(lobbyWorld);
+        Map<Integer, Location> locations = new HashMap<>();
+        if (world != null) {
+            for (Map.Entry<Integer, LobbyConfig.LobbyTp> entry : lobbyTps().entrySet()) {
+                locations.put(entry.getKey(), toLobbyLocation(world, entry.getValue()));
+            }
+        }
         Optional<Location> configured = LobbyWorldManager.inLobbyWorld(
-                LobbyWorldManager.selectRescueLocation(config.lobbyLocations(), memberLobby), lobbyWorld);
+                LobbyWorldManager.selectRescueLocation(locations, memberLobby), lobbyWorld);
         if (configured.isPresent()) {
             return configured;
         }
-        World world = Bukkit.getWorld(lobbyWorld);
         if (world != null) {
             return Optional.of(world.getSpawnLocation());
         }
@@ -611,7 +691,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             player.setRespawnLocation(cellRoot, true);
         }
 
-        Location lobby = resolveLobby(config, lobbyId);
+        Location lobby = resolveLobby(lobbyId, false);
         endCells.ensureEndCell(config, origin.index(), matchId);
         if ("ALWAYS".equalsIgnoreCase(plugin.getConfig().getString("world-engine.end-cell-prune-when", "NEVER"))) {
             endCells.pruneExtras(config.worldName(), bufferTarget(), lobby);
@@ -778,21 +858,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         return Bukkit.getWorld(overworld.getName() + "_nether");
     }
 
-    private Location resolveLobby(WorldEngineConfig config, int lobbyId) {
-        Location configured = config.lobbyLocations().get(lobbyId);
-        if (configured == null) {
-            return null;
-        }
-        World lobbyWorld = configured.getWorld();
-        if (lobbyWorld == null) lobbyWorld = Bukkit.getWorld(config.worldName());
-        if (lobbyWorld == null && !Bukkit.getWorlds().isEmpty()) lobbyWorld = Bukkit.getWorlds().get(0);
-        if (lobbyWorld == null) {
-            plugin.logger().warning("Skipping world-engine lobby teleport because lobby world was not found.");
-            return null;
-        }
-        return new Location(lobbyWorld, configured.getX(), configured.getY(), configured.getZ(),
-                configured.getYaw(), configured.getPitch());
-    }
+
 
     private Location randomSpawnInCell(World world, int centerX, int centerZ, int radius, float yaw, float pitch) {
         int offsetX = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
