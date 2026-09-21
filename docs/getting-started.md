@@ -3,6 +3,14 @@
 
 > **Prerequisite:** Make sure you have installed the plugin first. See: [Installation](installation.md)
 
+## Interactive Setup
+
+New here? Run `/mh setup` in-game. It walks you through first-time setup,
+modifiers, the compass, and the config command as a short chat dialogue:
+type the number of your answer, `b` to go back, or `q` to quit. Anything
+the guide runs (such as enabling the world engine) uses your own
+permissions. It times out after 5 idle minutes.
+
 ## Your First Match
 
 1. Assign at least one hunter and one speedrunner:

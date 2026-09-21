@@ -214,7 +214,7 @@ class MultiInstanceSchemaTest {
         assertEquals(10, config.getInt(base + "light-level.min-sky-light"));
         assertEquals(5, config.getInt(base + "light-level.min-block-light"));
         assertEquals("ONE_UNMET", config.getString(base + "light-level.interfere-when"));
-        assertFalse(config.getBoolean(base + "underground.enabled"));
+        assertTrue(config.getBoolean(base + "underground.enabled"));
         assertEquals(3, config.getInt(base + "underground.max-blocks-above"));
         assertFalse(config.getBoolean(base + "altitude.enabled"));
         assertEquals(-20, config.getInt(base + "altitude.min-y"));
@@ -346,6 +346,7 @@ class MultiInstanceSchemaTest {
                 "manhunt.worldengine-tpto-success",
                 "manhunt.worldengine-tpto-no-world",
                 "manhunt.worldengine-tpto-failed",
+                "manhunt.worldengine-tpto-invalid-preset",
                 "manhunt.status-all-header",
                 "manhunt.status-all-entry",
                 "manhunt.status-all-empty",
@@ -385,6 +386,7 @@ class MultiInstanceSchemaTest {
         assertTrue(messages.getString("manhunt.status-all-entry", "").contains("{lobby}"));
         assertTrue(messages.getString("manhunt.headstart-active", "").contains("{role}"));
         assertTrue(messages.getString("manhunt.headstart-active", "").contains("{seconds}"));
+        assertTrue(messages.getString("manhunt.worldengine-tpto-invalid-preset", "").contains("{presets}"));
     }
 
     @Test

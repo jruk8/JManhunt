@@ -1,0 +1,219 @@
+# JManhunt interactive setup tutorial (/mh setup).
+#
+# Nodes form a graph: every answer names the next node id, EXIT to close
+# the tutorial, or HELP_EXIT to run mh help and then close. Going back is
+# automatic from the visit stack; 'b' on the first dialogue quits like 'q'.
+#
+# Answer commands run as the player through /mh, so normal permission
+# checks apply. Nothing here runs as the console.
+format:
+  header:
+    - "<white>Welcome to the interactive setup for {logo}."
+    - "This system aims to help you quickly start using the plugin."
+  question: "{step}. {question}"
+  answer: "{number} <green>»</green> {recommendation}{answer}"
+  footer: "<gray>(type answer number to continue, b to go back, or q to quit)"
+  recommendation: "<yellow>(recommended)</yellow> "
+sounds:
+  neutral:
+    enabled: true
+    id: "block.note_block.pling"
+    volume: 1.0
+    pitch: 1.0
+  angry:
+    enabled: true
+    id: "block.bamboo_wood.place"
+    volume: 1.0
+    pitch: 1.0
+messages:
+  invalid: "{prefix}<gray>Type a number or type 'q' to quit the setup."
+  timeout: "{prefix}<yellow>Setup timed out after 5 minutes of no answers."
+  quit: "{prefix}<gray>Setup closed. Run <white>/mh setup<gray> any time to restart."
+  broken: "{prefix}<red>Setup is broken: tell an admin to check Core/tutorial.yml."
+nodes:
+  start:
+    question:
+      - "What would you like to do?"
+    answers:
+      - text: "Set up JManhunt as a first-timer. (~3 minutes)"
+        next: "setup_root"
+      - text: "Use Modifiers for juicing up the game. (~3 minutes)"
+        next: "mod_intro"
+      - text: "Customize the Compass. (~8 minutes)"
+        next: "compass_intro"
+      - text: "Learn about the plugin. (instant)"
+        next: "HELP_EXIT"
+  setup_root:
+    question:
+      - "Let's get started. What is your goal?"
+    answers:
+      - text: "Classic Manhunts with World Engine and a fully automated lobby. (3 minutes)"
+        recommended: true
+        commands:
+          - "jmanhunt:mh config world-engine enabled true"
+        next: "we_lobby"
+      - text: "Classic Manhunts but with <red>no world resets</red>. (instant)"
+        next: "nr_start"
+  we_lobby:
+    question:
+      - "World Engine is now enabled. Restart the server after this tutorial so it takes full effect."
+      - "Next: generate the lobby world. Pick a preset to build from."
+    answers:
+      - text: "Create the DEFAULT lobby: one lobby with baskets."
+        recommended: true
+        commands:
+          - "jmanhunt:mh worldengine tpto lobbyworld @s DEFAULT"
+          - "jmanhunt:mh worldengine tpto lobbyworld @s DEFAULT"
+        next: "we_teleport"
+      - text: "Create the ADVANCED lobby: three lobbies, each with baskets."
+        commands:
+          - "jmanhunt:mh worldengine tpto lobbyworld @s ADVANCED"
+          - "jmanhunt:mh worldengine tpto lobbyworld @s ADVANCED"
+        next: "we_teleport"
+      - text: "Create an EMPTY plot: nothing prebuilt."
+        commands:
+          - "jmanhunt:mh worldengine tpto lobbyworld @s EMPTY"
+          - "jmanhunt:mh worldengine tpto lobbyworld @s EMPTY"
+        next: "we_teleport"
+  we_teleport:
+    question:
+      - "Done. Everyone joins the hunt from the lobby world."
+      - "This command teleports all players there: <white>/mh worldengine tpto lobbyworld @a</white>"
+      - "Run it now so everyone teleports there right away?"
+    answers:
+      - text: "Yes, teleport everyone now."
+        recommended: true
+        commands:
+          - "jmanhunt:mh worldengine tpto lobbyworld @a"
+        next: "we_done"
+      - text: "No, I will do it later."
+        next: "we_done"
+  we_done:
+    question:
+      - "That is basically it. Walk onto the colored concrete blocks to pick Hunter or Speedrunner, then start with <white>/mh start</white>."
+      - "Remember to restart the server so World Engine fully applies."
+      - "Want to go further?"
+    answers:
+      - text: "Learn about Modifiers."
+        next: "mod_intro"
+      - text: "Learn about the Compass."
+        next: "compass_intro"
+      - text: "Learn the /mh config command."
+        next: "cfg_intro"
+      - text: "Exit the setup."
+        next: "EXIT"
+  nr_start:
+    question:
+      - "No resets, no problem. How do you want to start matches?"
+    answers:
+      - text: "Start with one random speedrunner. (instant)"
+        recommended: true
+        next: "nr_qs"
+      - text: "Pick who plays what myself. (1 minute)"
+        next: "nr_manual"
+  nr_qs:
+    question:
+      - "Use <white>/mh qs</white>: it shuffles everyone into hunters plus one random speedrunner and starts instantly."
+      - "Where to next?"
+    answers:
+      - text: "Learn to pick roles manually."
+        next: "nr_manual"
+      - text: "Learn more about quickstart."
+        next: "nr_qs_more"
+      - text: "Set up World Engine lobbies instead."
+        recommended: true
+        commands:
+          - "jmanhunt:mh config world-engine enabled true"
+        next: "we_lobby"
+      - text: "Exit the setup."
+        next: "EXIT"
+  nr_qs_more:
+    question:
+      - "<white>/mh qs [percentage]</white> sets how many players become speedrunners. <white>/mh qs 50</white> splits the lobby in half."
+      - "Without a percentage you get exactly one speedrunner."
+    answers:
+      - text: "Learn to pick roles manually."
+        next: "nr_manual"
+      - text: "Set up World Engine lobbies instead."
+        recommended: true
+        commands:
+          - "jmanhunt:mh config world-engine enabled true"
+        next: "we_lobby"
+      - text: "Exit the setup."
+        next: "EXIT"
+  nr_manual:
+    question:
+      - "Use <white>/mh setplayer @a hunter</white>: any selector plus a role (hunter, speedrunner, spectator, afk, none). Then <white>/mh start</white>."
+    answers:
+      - text: "Learn about quickstart instead."
+        next: "nr_qs"
+      - text: "Set up World Engine lobbies instead."
+        recommended: true
+        commands:
+          - "jmanhunt:mh config world-engine enabled true"
+        next: "we_lobby"
+      - text: "Exit the setup."
+        next: "EXIT"
+  mod_intro:
+    question:
+      - "Modifiers are named command bundles that fire on match start, on events, on an interval, or on match end."
+      - "Example: <white>everyone-gets-beef</white> hands every participant 8 steaks at the start."
+    answers:
+      - text: "Enable the example modifier now."
+        recommended: true
+        commands:
+          - "jmanhunt:mh config custom-modifiers everyone-gets-beef enabled true"
+        next: "mod_detail"
+      - text: "How do the trigger lists work?"
+        next: "mod_detail"
+      - text: "Exit the setup."
+        next: "EXIT"
+  mod_detail:
+    question:
+      - "Under <white>custom-modifiers.[name].commands</white> you get player, hunter, speedrunner, console, plus player-cleanup and console-cleanup for match end."
+      - "Copy one of the examples in config.yml to make your own, then run <white>/mh reload</white>."
+    answers:
+      - text: "Learn about the Compass."
+        next: "compass_intro"
+      - text: "Learn the /mh config command."
+        next: "cfg_intro"
+      - text: "Back to the main menu."
+        next: "start"
+      - text: "Exit the setup."
+        next: "EXIT"
+  compass_intro:
+    question:
+      - "Hunters track speedrunners with the compass. Under <white>settings.compass.given-to</white> you can make both roles get one."
+      - "The compass has a lot of configuration options. You can view them in the config file."
+    answers:
+      - text: "What can the compass do other than the basic stuff?"
+        next: "compass_detail"
+      - text: "Learn the /mh config command."
+        next: "cfg_intro"
+      - text: "Exit the setup."
+        next: "EXIT"
+  compass_detail:
+    question:
+      - "Right-click refreshes the target, left-click cycles it. Tune min and max distance, lock behavior, and signal interference under <white>settings.compass</white>."
+    answers:
+      - text: "Learn about Modifiers."
+        next: "mod_intro"
+      - text: "Learn the /mh config command."
+        next: "cfg_intro"
+      - text: "Back to the main menu."
+        next: "start"
+      - text: "Exit the setup."
+        next: "EXIT"
+  cfg_intro:
+    question:
+      - "<white>/mh config</white> browses every setting in-game: each word drills one level deeper. A section lists its keys; a leaf shows its value, plus a value to set it."
+      - "Example: <white>/mh config world-engine enabled true</white> (needs a restart)."
+    answers:
+      - text: "Learn about Modifiers."
+        next: "mod_intro"
+      - text: "Learn about the Compass."
+        next: "compass_intro"
+      - text: "Back to the main menu."
+        next: "start"
+      - text: "Exit the setup."
+        next: "EXIT"

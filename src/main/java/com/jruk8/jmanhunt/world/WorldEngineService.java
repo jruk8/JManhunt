@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.world;
 
 import com.jruk8.jmanhunt.lobby.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyWorld;
 import com.jruk8.jmanhunt.lobby.LobbyWorldManager;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -483,7 +484,12 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
 
     /** Loads or generates the lobby world. Empty when creation fails. */
     public Optional<LobbyWorld> ensureLobbyWorld() {
-        return lobbyWorlds.ensureLobbyWorld();
+        return ensureLobbyWorld(Optional.empty());
+    }
+
+    /** Same, with a one-shot preset override for fresh generation. */
+    public Optional<LobbyWorld> ensureLobbyWorld(Optional<LobbyPreset> presetOverride) {
+        return lobbyWorlds.ensureLobbyWorld(presetOverride);
     }
 
     /**

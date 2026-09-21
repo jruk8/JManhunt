@@ -720,7 +720,7 @@ settings:
       # list. Only participants are affected.
       # Default: false
       debuffs:
-        enabled: false
+        enabled: true
         commands:
           player:
             - "effect give <p> minecraft:slowness <duration> 1 true"
@@ -748,23 +748,12 @@ settings:
         # Default: -1
         distance: -1.0
     speedrunner:
-      # When true, the compass stops tracking when the target is within
-      # the configured flat distance. Only X/Z coordinates are compared,
-      # so the target may still be above or below the holder.
-      # Default: true
+      # Same as hunter, but for the opposite role.
       min-distance:
         enabled: true
-        # The flat distance in blocks at which the compass stops tracking.
-        # Default: 25
         distance: 25.0
-      # When true, the compass stops tracking when the target is beyond
-      # the configured distance and shows an out-of-range actionbar.
-      # Set distance to -1 for unlimited distance.
-      # Default: true
       max-distance:
         enabled: true
-        # Maximum distance in blocks at which the compass can track.
-        # Default: -1
         distance: -1.0
     # Signal interference: when enabled, tracking can fail with a Bad
     # signal readout when the interference options say the signal is bad.
@@ -801,7 +790,7 @@ settings:
       # the feet block; interferes when the count passes the maximum.
       # Default: false
       underground:
-        enabled: false
+        enabled: true
         # Maximum solid blocks above before interference, 1 to 380.
         # Default: 3
         max-blocks-above: 3

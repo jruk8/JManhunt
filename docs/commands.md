@@ -6,6 +6,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 |---------------------------------------------------| --- | --- |
 | `/manhunt [id\|all]`                             | Shows your match roster, one match roster by id, or every running match with `all`. | `jmanhunt.command.status` |
 | `/manhunt help`                                   | Shows the in-game command list. | `jmanhunt.command.help` |
+| `/manhunt setup`                                  | Starts the interactive setup tutorial (players only). | `jmanhunt.command.setup` |
 | `/manhunt challenges`                             | Shows a chat notice with a clickable link to the optional Challenges addon. | `jmanhunt.command.challenges` |
 | `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `spectator`, `afk`, or `none` in queues without a running match. | `jmanhunt.command.setplayer` (`jmanhunt.command.setplayer.self` for your own role only) |
 | `/manhunt lobby join <selector> <lobby-id> [role] [-notp]` | Moves players to a lobby queue, teleporting them there unless `-notp` is given. | `jmanhunt.command.lobby` |
@@ -22,7 +23,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt worldengine lobbyconfig setbounds <lobby-id>`       | Stores the recorded corners as a lobby's bounds. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
 | `/manhunt worldengine lobbyconfig setlobbytp <lobby-id> [coords]` | Sets a lobby's teleport (your position, or `x y z yaw pitch`). | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
 | `/manhunt worldengine lobbyconfig deletelobby <lobby-id>`     | Deletes a lobby's stored entry. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
-| `/manhunt worldengine tpto lobbyworld\|gameworld [selector]` | Teleports to the lobby world (generating it on a confirmed second run) or the game world spawn. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.tpto`) |
+| `/manhunt worldengine tpto lobbyworld\|gameworld [selector] [preset]` | Teleports to the lobby world (generating it on a confirmed second run) or the game world spawn. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.tpto`) |
 | `/manhunt worldengine cellindex get`              | Shows the current world-engine cell index. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex buffer`           | Lists the buffered ready-cell ids. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
@@ -134,7 +135,9 @@ the running time (`show-elapsed-time`), the enabled custom modifiers
 world. If it does not exist yet, the first run names the missing world and
 asks you to run it again within 10 seconds; the second run generates a void
 world, pastes the configured lobby preset, points lobby 0 at the spawn,
-and teleports you there.
+and teleports you there. Pass a preset (`EMPTY`, `DEFAULT`, `ADVANCED`) to
+generate with that preset instead of the configured one; the preset is
+ignored once the world exists, and it cannot be combined with `gameworld`.
 `/manhunt worldengine tpto gameworld [selector]` hops to the game world
 spawn and never generates anything. Without a selector, both target you
 (consoles must pass one).

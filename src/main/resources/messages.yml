@@ -47,9 +47,9 @@ manhunt:
   waiting-for-damage-exhausted: "{prefix}<red>No speedrunner hit a hunter within <white>{seconds}s</white>. The game will not start."
   waiting-for-damage-force-started: "{prefix}<yellow>The game has automatically started because no speedrunner hit a hunter on time."
   started-by-damage: "{prefix}<green>The Manhunt game has begun!"
-  headstart-active: "{prefix}<yellow>{role}<yellow>s are in spectator mode for <white>{seconds}s</white>."
-  headstart-ending: "{prefix}<yellow>{role}<yellow>s return in <white>{seconds}s</white>."
-  headstart-ended: "{prefix}<green>{role}<green>s have spawned!"
+  headstart-active: "{prefix}<yellow>{role}s <yellow>are in spectator mode for <white>{seconds}s</white>."
+  headstart-ending: "{prefix}<yellow>{role}s <yellow>return in <white>{seconds}s</white>."
+  headstart-ended: "{prefix}<green>{role}s <green>have spawned!"
   start-invalid: "{prefix}<red>A match needs at least one hunter and one speedrunner."
   already-active: "{prefix}<red>A match is already active."
   not-active: "{prefix}<yellow>No match is active."
@@ -136,7 +136,8 @@ manhunt:
   worldengine-lobbyconfig-deletelobby-confirm: "{prefix}<yellow>This deletes lobby <white>{lobby}<yellow> (teleport and bounds). Run again within <white>10 seconds<yellow> to confirm."
   worldengine-lobbyconfig-deletelobby-success: "{prefix}<green>Deleted lobby <white>{lobby}<green> from the lobby config."
   lobby-no-location-anywhere: "{prefix}<red>No lobby teleport exists for lobby <white>{lobby}<red> or any fallback lobby. Please contact an administrator."
-  worldengine-tpto-usage: "{prefix}<yellow>Usage: /manhunt worldengine tpto <lobbyworld|gameworld> [selector]"
+  worldengine-tpto-usage: "{prefix}<yellow>Usage: /manhunt worldengine tpto <lobbyworld|gameworld> [selector] [preset]"
+  worldengine-tpto-invalid-preset: "{prefix}<red>Invalid lobby preset. Use one of: <white>{presets}<red>."
   worldengine-tpto-lobby-world-clash: "{prefix}<red>Lobby world name matches the game world. Rename <white>world-engine.lobby-world-name<red> first."
 
 game:

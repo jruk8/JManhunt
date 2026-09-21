@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.core.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
+import com.jruk8.jmanhunt.lobby.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.LobbyWorld;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
@@ -223,6 +224,25 @@ public final class GameManager {
         }
         bucketWinner(activeHunterCount(instance), activeRunnerCount(instance))
                 .ifPresent(winner -> finishLater(instance, winner));
+    }
+
+    /**
+     * Cancels an unbegun match that lost a whole side through a leave.
+     * Pre-start matches need at least one hunter and one speedrunner to
+     * progress; the autostart minimums do not apply here.
+     */
+    public void cancelIfPreStartUnviable(GameInstance instance) {
+        if (instance.begun() || instance.ending()) {
+            return;
+        }
+        if (!canProgress(activeHunterCount(instance), activeRunnerCount(instance))) {
+            cancel(instance);
+        }
+    }
+
+    /** True when a pre-start match can still progress: both sides fielded. Pure for tests. */
+    static boolean canProgress(int hunterCount, int runnerCount) {
+        return hunterCount > 0 && runnerCount > 0;
     }
 
     /** Winner when a bucket is empty; empty when both sides stand. Pure for tests. */
@@ -742,6 +762,7 @@ public final class GameManager {
         }
         if (removed > 0) {
             finishIfBucketEmpty(instance);
+            cancelIfPreStartUnviable(instance);
         }
         return removed;
     }
@@ -1805,7 +1826,12 @@ public final class GameManager {
 
     /** Loads or generates the lobby world. Empty when creation fails. */
     public Optional<LobbyWorld> ensureLobbyWorld() {
-        return worldEngine.ensureLobbyWorld();
+        return ensureLobbyWorld(Optional.empty());
+    }
+
+    /** Same, with a one-shot preset override for fresh generation. */
+    public Optional<LobbyWorld> ensureLobbyWorld(Optional<LobbyPreset> presetOverride) {
+        return worldEngine.ensureLobbyWorld(presetOverride);
     }
 
     /** Overwrites the world-engine cell index. Returns false when unavailable. */

@@ -48,6 +48,11 @@ later. The pre-start window also blocks `/kill`, unlike everywhere else.
 Match clocks (the status elapsed time and any time-limit countdowns)
 ignore the pre-start window and start when the game begins.
 
+A pre-start match needs at least one hunter and one speedrunner to go
+ahead. If a leave or disconnect empties a side before the game begins,
+the match cancels. Disconnecting during pre-start removes you from the
+match at once, with no grace period or strikes.
+
 ```yaml
 settings:
   start-on-speedrunner-damage:

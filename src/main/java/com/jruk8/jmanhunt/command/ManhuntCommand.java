@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.core.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.LobbyWorld;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
@@ -136,6 +137,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "reload" -> reload(sender);
             case "debug" -> debug(sender, args);
             case "lobby" -> lobby(sender, args);
+            case "setup" -> setup(sender);
             case "dev" -> dev(sender, args);
             default -> message(sender, "command.invalid");
         };
@@ -143,7 +145,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     private boolean help(CommandSender sender) {
         message(sender, "manhunt.help-header");
-        String[][] lines = {{"/manhunt help", "show commands"}, {"/manhunt", "show match status"},
+        String[][] lines = {{"/manhunt help", "show commands"}, {"/manhunt setup", "interactive setup guide"},
+                {"/manhunt", "show match status"},
                 {"/manhunt setplayer <selector> <hunter|speedrunner|spectator|afk|none>", "assign roles"},
                 {"/manhunt lobby join <selector> <lobby-id> [role] [-notp]", "move players to a lobby"},
                 {"/manhunt lobby leave [selector]", "remove players from their lobby"},
@@ -169,6 +172,15 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 "<green>Support our development on <#de7766><click:open_url:'https://ko-fi.com/jruk'>"
                         + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
         neutralSound(sender);
+        return true;
+    }
+
+    /** Starts the interactive setup tutorial. Players only: it runs over chat. */
+    private boolean setup(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            return message(sender, "command.player-only");
+        }
+        plugin.tutorial().start(player);
         return true;
     }
 
@@ -1759,6 +1771,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[2], List.of("lobbyworld", "gameworld"));
         if (args.length == 4 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("tpto"))
             return partial(args[3], selectorOptions());
+        if (args.length == 5 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("tpto")
+                && args[2].equalsIgnoreCase("lobbyworld"))
+            return partial(args[4], lobbyPresetOptions());
         if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) {
             if (args[1].startsWith("@a[")) return partial(args[1], List.of("@a[distance=", "@a[limit=", "@a[name=", "@a[gamemode="));
             return partial(args[1], selectorOptions());
@@ -1893,7 +1908,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     static List<String> subcommandOptions() {
         return new ArrayList<>(List.of("challenges", "help", "reload", "worldengine", "config",
                 "configuration", "debug", "lobby", "qs", "quickstart", "game", "end", "start",
-                "setplayer", "status"));
+                "setplayer", "setup", "status"));
     }
 
     /** Instance id completion: live match ids, oldest first. */
@@ -1915,16 +1930,29 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /**
      * Teleports to the lobby world or the game world: tpto
-     * &lt;lobbyworld|gameworld&gt; [selector]. The lobby world is generated
-     * on a confirmed second run when it does not exist yet.
+     * &lt;lobbyworld|gameworld&gt; [selector] [preset]. The lobby world is
+     * generated on a confirmed second run when it does not exist yet. The
+     * preset only applies to lobbyworld fresh generation and is ignored
+     * once the world exists.
      */
     private boolean worldEngineTpto(CommandSender sender, String[] args) {
-        if (args.length < 3 || args.length > 4) {
+        if (args.length < 3 || args.length > 5) {
             return message(sender, "manhunt.worldengine-tpto-usage");
         }
         Optional<TptoTarget> target = parseTptoTarget(args[2]);
         if (target.isEmpty()) {
             return message(sender, "manhunt.worldengine-tpto-usage");
+        }
+        if (args.length == 5 && target.get() != TptoTarget.LOBBY) {
+            return message(sender, "manhunt.worldengine-tpto-usage");
+        }
+        Optional<LobbyPreset> preset = Optional.empty();
+        if (args.length == 5) {
+            Optional<LobbyPreset> parsed = LobbyPreset.tryParse(args[4]);
+            if (parsed.isEmpty()) {
+                return worldEngineTptoInvalidPreset(sender);
+            }
+            preset = parsed;
         }
         List<Player> targets = new ArrayList<>();
         if (args.length == 3) {
@@ -1949,7 +1977,43 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (target.get() == TptoTarget.GAME) {
             return worldEngineTptoGame(sender, targets);
         }
-        return worldEngineTptoLobby(sender, targets);
+        return worldEngineTptoLobby(sender, targets, preset);
+    }
+
+    /**
+     * Invalid preset notice, naming the valid presets. Falls back to the
+     * usage line when the key is missing (pre-existing messages.yml files
+     * predate it and get no migration).
+     */
+    private boolean worldEngineTptoInvalidPreset(CommandSender sender) {
+        if (messages.string("manhunt.worldengine-tpto-invalid-preset", null) == null) {
+            return message(sender, "manhunt.worldengine-tpto-usage");
+        }
+        message(sender, "manhunt.worldengine-tpto-invalid-preset",
+                Map.of("presets", String.join(", ", lobbyPresetOptions())));
+        return true;
+    }
+
+    /**
+     * Preset names for completion and error text: the configured
+     * lobby-presets keys that name a real preset, else every preset.
+     */
+    private List<String> lobbyPresetOptions() {
+        ConfigurationSection section = plugin.getConfig().getConfigurationSection("world-engine.lobby-presets");
+        List<String> options = new ArrayList<>();
+        if (section != null) {
+            for (String key : section.getKeys(false)) {
+                if (LobbyPreset.tryParse(key).isPresent() && !options.contains(key)) {
+                    options.add(key);
+                }
+            }
+        }
+        if (options.isEmpty()) {
+            for (LobbyPreset preset : LobbyPreset.values()) {
+                options.add(preset.name());
+            }
+        }
+        return options;
     }
 
     /** Teleports targets to the game world spawn. Never generates anything. */
@@ -1971,7 +2035,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /** Teleports targets to the lobby world, generating it once confirmed. */
-    private boolean worldEngineTptoLobby(CommandSender sender, List<Player> targets) {
+    private boolean worldEngineTptoLobby(CommandSender sender, List<Player> targets, Optional<LobbyPreset> preset) {
         if (game.lobbyWorldNameClashes()) {
             return message(sender, "manhunt.worldengine-tpto-lobby-world-clash");
         }
@@ -1985,7 +2049,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             }
             message(sender, "manhunt.worldengine-tpto-creating", Map.of("world", worldName));
         }
-        Optional<LobbyWorld> ensured = game.ensureLobbyWorld();
+        Optional<LobbyWorld> ensured = game.ensureLobbyWorld(preset);
         if (ensured.isEmpty()) {
             message(sender, "manhunt.worldengine-tpto-failed", Map.of("world", worldName));
             return true;

@@ -21,6 +21,13 @@ import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.player.SpawnCampService;
 import com.jruk8.jmanhunt.stats.StatisticsRepository;
 import com.jruk8.jmanhunt.stats.StatsManager;
+import com.jruk8.jmanhunt.tutorial.TutorialChatListener;
+import com.jruk8.jmanhunt.tutorial.TutorialConfigRegistrar;
+import com.jruk8.jmanhunt.tutorial.TutorialService;
+import com.jruk8.jmanhunt.tutorial.jmanhunt.JManhuntTutorialCommands;
+import com.jruk8.jmanhunt.tutorial.jmanhunt.JManhuntTutorialLogger;
+import com.jruk8.jmanhunt.tutorial.jmanhunt.JManhuntTutorialMessenger;
+import com.jruk8.jmanhunt.tutorial.jmanhunt.JManhuntTutorialSounds;
 import com.jruk8.jmanhunt.api.JManhuntApi;
 import com.jruk8.jmanhunt.api.JManhuntApiImpl;
 import com.jruk8.jmanhunt.config.SettingsListener;
@@ -66,6 +73,8 @@ public final class JManhuntPlugin extends JavaPlugin {
     private DebugService debugService;
     private LobbyService lobbyService;
     private LobbyConfigRegistrar lobbyConfigs;
+    private TutorialConfigRegistrar tutorialConfigs;
+    private TutorialService tutorialService;
     private RoleTeamService roleTeams;
     private SpawnCampService spawnCamp;
     private final List<SettingsListener> settings = new ArrayList<>();
@@ -79,6 +88,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         lobbyService = new LobbyService(this);
         lobbyConfigs = new LobbyConfigRegistrar(this);
         lobbyConfigs.register();
+        tutorialConfigs = new TutorialConfigRegistrar(this);
+        tutorialConfigs.register();
         reload();
         debugService.resetToDefaults(getConfig().getBoolean("debug.enabled", false));
 
@@ -91,6 +102,11 @@ public final class JManhuntPlugin extends JavaPlugin {
 
         configService = new ConfigService(this);
         sounds = new SoundService(this, configService);
+        tutorialService = new TutorialService(tutorialConfigs.getTutorialConfig(),
+                new JManhuntTutorialMessenger(messages),
+                new JManhuntTutorialSounds(tutorialConfigs.getTutorialConfig(), sounds),
+                new JManhuntTutorialCommands(),
+                new JManhuntTutorialLogger(logger));
         compass = new CompassManager(this, messages, sounds, playerStates,
                 new NamespacedKey(this, "hunters_compass"));
         worldEngine = new WorldEngineService(this, messages, configService, engineState);
@@ -194,6 +210,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new LobbyBoundsService(
                 this, lobbyService, playerStates, game, messages, sounds,
                 worldEngine::lobbyWorldName), this);
+        getServer().getPluginManager().registerEvents(new TutorialChatListener(this, tutorialService), this);
     }
 
     private void setupScheduling() {
@@ -206,6 +223,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         BukkitTask actionbars = Bukkit.getScheduler().runTaskTimer(this,
                 () -> compass.showHeldActionbars(game.isActive()), 1L, 20L);
         Bukkit.getScheduler().runTaskTimer(this, game::broadcastAutostartShortfalls, 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(this, tutorialService::checkTimeouts, 100L, 100L);
     }
 
     @Override public void onDisable() {
@@ -242,6 +260,11 @@ public final class JManhuntPlugin extends JavaPlugin {
         return lobbyConfigs == null ? null : lobbyConfigs.getLobbyConfig();
     }
 
+    /** Interactive setup tutorial engine. */
+    public TutorialService tutorial() {
+        return tutorialService;
+    }
+
     public void reload() {
         YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION, CONFIG_MOVES);
         reloadConfig();
@@ -258,6 +281,10 @@ public final class JManhuntPlugin extends JavaPlugin {
 
         if (lobbyConfigs != null) {
             lobbyConfigs.reload();
+        }
+
+        if (tutorialConfigs != null) {
+            tutorialConfigs.reload();
         }
 
         if (winConditionEngine != null) {

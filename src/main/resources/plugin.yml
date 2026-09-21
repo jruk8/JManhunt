@@ -73,6 +73,9 @@ permissions:
   jmanhunt.command.game:
     description: Join players to or remove them from a running match.
     default: op
+  jmanhunt.command.setup:
+    description: Use the interactive setup tutorial (/manhunt setup).
+    default: op
   jmanhunt.hunter:
     description: Allows a player to become a hunter.
     default: true

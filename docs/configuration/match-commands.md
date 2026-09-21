@@ -48,6 +48,9 @@ gamestate-commands:
 - `disable-phantoms` stops phantoms from spawning while a match runs, and
   re-enables them afterwards.
 
+Pillager patrols (`spawn_patrols`) are always paused while a match runs and
+restored when the last match ends. This one has no toggle.
+
 # Console Commands
 
 Under `gamestate-commands.console-commands`, you can configure console commands

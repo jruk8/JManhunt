@@ -583,6 +583,13 @@ public final class GameStateCommandManager {
         // This is the native gamerule equivalent of the old spectator chunk
         // generation toggle and avoids lag from spectators exploring.
         worlds.forEach(world -> world.setGameRule(GameRules.SPECTATORS_GENERATE_CHUNKS, false));
+        // Pillager patrols never spawn while a match runs; restored when the
+        // last match ends. Unconditional like the spectator chunk rule above.
+        GameRule spawnPatrols = Registry.GAME_RULE.get(NamespacedKey.minecraft("spawn_patrols"));
+        if (spawnPatrols != null) {
+            boolean patrolsEnabled = phase.equals("end") && lastMatch;
+            worlds.forEach(world -> world.setGameRule(spawnPatrols, patrolsEnabled));
+        }
         if (plugin.getConfig().getBoolean(path + "set-daytime", false)) {
             Bukkit.getWorlds().forEach(this::setDaytime);
         }

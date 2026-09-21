@@ -92,6 +92,14 @@ public final class LobbyWorldManager {
      * configured. Empty when creation fails.
      */
     public Optional<LobbyWorld> ensureLobbyWorld() {
+        return ensureLobbyWorld(Optional.empty());
+    }
+
+    /**
+     * Same, but a present override replaces the configured preset for this
+     * fresh generation only. Already generated worlds ignore it entirely.
+     */
+    public Optional<LobbyWorld> ensureLobbyWorld(Optional<LobbyPreset> presetOverride) {
         String name = lobbyWorldName();
         if (namesClash(name, plugin.getConfig().getString("world-engine.world-name", "world"))) {
             plugin.logger().warning("Refusing to load lobby world '" + name
@@ -120,8 +128,8 @@ public final class LobbyWorldManager {
             // Our leftover from before a restart: paste and spawn persist.
             return Optional.of(new LobbyWorld(world, false, false));
         }
-        LobbyPreset preset = LobbyPreset.parse(
-                plugin.getConfig().getString("world-engine.lobby-preset", "DEFAULT"));
+        LobbyPreset preset = presetOverride.orElseGet(() -> LobbyPreset.parse(
+                plugin.getConfig().getString("world-engine.lobby-preset", "DEFAULT")));
         new LobbySchematicService(plugin).applyPreset(world, preset);
         Location spawn = safeSpawn(world);
         world.setSpawnLocation(spawn);

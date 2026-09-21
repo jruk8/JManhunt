@@ -1,5 +1,7 @@
 package com.jruk8.jmanhunt.lobby;
 
+import java.util.Optional;
+
 /**
  * Lobby-world generation preset. Every preset pastes only: no block is
  * ever built in code, so each preset needs its .nbt in
@@ -12,13 +14,18 @@ public enum LobbyPreset {
 
     /** Parses leniently; unknown values fall back to DEFAULT. */
     public static LobbyPreset parse(String raw) {
+        return tryParse(raw).orElse(DEFAULT);
+    }
+
+    /** Parses strictly for command input; empty when the name is unknown. */
+    public static Optional<LobbyPreset> tryParse(String raw) {
         if (raw != null) {
             for (LobbyPreset preset : values()) {
                 if (preset.name().equalsIgnoreCase(raw.trim())) {
-                    return preset;
+                    return Optional.of(preset);
                 }
             }
         }
-        return DEFAULT;
+        return Optional.empty();
     }
 }

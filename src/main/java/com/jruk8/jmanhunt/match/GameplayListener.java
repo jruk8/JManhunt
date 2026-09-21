@@ -149,10 +149,20 @@ public final class GameplayListener implements Listener {
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
         if (match.isPresent()) {
             Role role = playerStates.role(player);
+            // Pre-start quits disqualify instantly: no strikes, no grace.
+            boolean preStart = !match.get().begun();
             if (role == Role.SPEEDRUNNER && playerStates.isActiveSpeedrunner(player.getUniqueId())) {
-                handleDisconnect(player, Role.SPEEDRUNNER, match.get().matchId());
+                if (preStart) {
+                    eliminateDisconnectedPlayer(player.getUniqueId(), match.get().matchId(), role);
+                } else {
+                    handleDisconnect(player, Role.SPEEDRUNNER, match.get().matchId());
+                }
             } else if (role == Role.HUNTER) {
-                handleDisconnect(player, Role.HUNTER, match.get().matchId());
+                if (preStart) {
+                    eliminateDisconnectedPlayer(player.getUniqueId(), match.get().matchId(), role);
+                } else {
+                    handleDisconnect(player, Role.HUNTER, match.get().matchId());
+                }
             }
         }
         game.updateAutostartState();
@@ -664,12 +674,16 @@ public final class GameplayListener implements Listener {
         game.sendToInstance(instance, "game." + roleKey + "-disconnect-removed", Map.of());
 
         // No last-died lines: the win that follows is the announcement.
-        if (role == Role.SPEEDRUNNER) {
-            if (game.activeRunnerCount(instance) == 0) {
-                game.finishLater(instance, Role.HUNTER);
+        // Unbegun matches never crown a winner: they cancel instead.
+        boolean bucketEmpty = role == Role.SPEEDRUNNER
+                ? game.activeRunnerCount(instance) == 0
+                : game.activeHunterCount(instance) == 0;
+        if (bucketEmpty) {
+            if (instance.begun()) {
+                game.finishLater(instance, role == Role.SPEEDRUNNER ? Role.HUNTER : Role.SPEEDRUNNER);
+            } else {
+                game.cancel(instance);
             }
-        } else if (game.activeHunterCount(instance) == 0) {
-            game.finishLater(instance, Role.SPEEDRUNNER);
         }
 
         String soundKey = role == Role.SPEEDRUNNER ? "game.speedrunner-death" : "game.hunter-death";
