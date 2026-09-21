@@ -335,7 +335,7 @@ public final class GameManager {
         // Hunters with infinite lives can never be eliminated, so the
         // elimination line hides instead of promising an un-winnable goal.
         List<String> conditions = new ArrayList<>();
-        int hunterLives = plugin.getConfig().getInt("settings.hunter-respawn.lives.hunter", -1);
+        int hunterLives = plugin.getConfig().getInt("settings.respawn.hunter.lives", -1);
         if (hunterLives != -1) {
             conditions.add(winconFragment("eliminate-hunters", Map.of()));
         }
@@ -826,10 +826,10 @@ public final class GameManager {
     /** Configured starting lives for a role. -1 means unlimited. */
     private int livesFor(Role role) {
         if (role == Role.HUNTER) {
-            return plugin.getConfig().getInt("settings.hunter-respawn.lives.hunter", -1);
+            return plugin.getConfig().getInt("settings.respawn.hunter.lives", -1);
         }
         if (role == Role.SPEEDRUNNER) {
-            return plugin.getConfig().getInt("settings.hunter-respawn.lives.speedrunner", 1);
+            return plugin.getConfig().getInt("settings.respawn.speedrunner.lives", 1);
         }
         return -1;
     }

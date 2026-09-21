@@ -130,6 +130,8 @@ game:
   hunter-death: "{prefix}<yellow>A hunter has died!"
   hunter-respawn-scheduled: "{prefix}<yellow>{player} will respawn in <white>{seconds}s</white>."
   hunter-respawn-imminent: "{prefix}<green>{player} has respawned."
+  speedrunner-respawn-scheduled: "{prefix}<yellow>{player} will respawn in <white>{seconds}s</white>."
+  speedrunner-respawn-imminent: "{prefix}<green>{player} has respawned."
   hunter-out-of-lives: "{prefix}<yellow>A hunter has run out of lives and is eliminated."
   speedrunner-out-of-lives: "{prefix}<yellow>A speedrunner has run out of lives and is eliminated."
   speedrunners-unlimited-lives: "{prefix}<yellow>Speedrunners have unlimited lives."

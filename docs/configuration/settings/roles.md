@@ -117,29 +117,31 @@ matches with more than one.
 
 `hunter` toggles whether hunters can damage other hunters.
 
-# Hunter Respawn & Lives
+# Respawn & Lives
 
-Under `settings.hunter-respawn`, you can delay hunter respawns and set how
-many lives each role has before elimination.
+Under `settings.respawn`, each role configures its own respawn delay and how
+many lives it has before elimination.
 
 ```yaml
 settings:
-  hunter-respawn:
-    enabled: false
-    delay-seconds: 60
-    lives:
-      speedrunner: 1
-      hunter: -1
+  respawn:
+    hunter:
+      enabled: true
+      delay-seconds: 15
+      lives: -1
+    speedrunner:
+      enabled: false
+      delay-seconds: 60
+      lives: 1
 ```
-
-> **Note:** despite the section's name, `lives` configures both roles, not
-> just hunters.
 
 ## Respawn Delay
 
-When `enabled`, a hunter who dies must wait out `delay-seconds` before
-respawning, rather than respawning immediately. Set `delay-seconds` to `-1`
-for an immediate respawn.
+When a role's `enabled` is true, a dead player of that role must wait out
+`delay-seconds` in spectator mode before respawning, rather than respawning
+immediately. Set `delay-seconds` to `-1` for an immediate respawn. Delayed
+respawns are announced to the match when the timer starts and when the
+player returns.
 
 ## Lives
 

@@ -733,22 +733,37 @@ settings:
     speedrunner: true
     hunter: true
 
-  # Delayed hunter respawn and per-role lives.
-  hunter-respawn:
-    # When true, deceased hunters wait before respawning instead of respawning
-    # immediately.
-    # Default: false
-    enabled: true
-    # Seconds a hunter must wait before respawning after death.
-    # Set to -1 for no delay (respawn immediately).
-    # Default: 60
-    delay-seconds: 15
-    # Lives per role. A player is eliminated when their lives run out.
-    # Set to -1 for unlimited lives.
-    # Default: one speedrunner life, unlimited hunter lives.
-    lives:
-      speedrunner: 1
-      hunter: -1
+  # Delayed respawn and lives, configured independently per role.
+  respawn:
+    # Delayed hunter respawn and hunter lives.
+    hunter:
+      # When true, deceased hunters wait before respawning instead of
+      # respawning immediately.
+      # Default: true
+      enabled: true
+      # Seconds a hunter must wait before respawning after death.
+      # Set to -1 for no delay (respawn immediately).
+      # Default: 15
+      delay-seconds: 15
+      # Hunter lives. A hunter is eliminated when their lives run out.
+      # Set to -1 for unlimited lives.
+      # Default: -1
+      lives: -1
+    # Delayed speedrunner respawn and speedrunner lives.
+    speedrunner:
+      # When true, deceased speedrunners wait before respawning instead of
+      # respawning immediately.
+      # Default: false
+      enabled: false
+      # Seconds a speedrunner must wait before respawning after death.
+      # Set to -1 for no delay (respawn immediately).
+      # Default: 60
+      delay-seconds: 60
+      # Speedrunner lives. A speedrunner is eliminated when their lives run
+      # out.
+      # Set to -1 for unlimited lives.
+      # Default: 1
+      lives: 1
 
   # Invulnerability settings.
   invulnerability:

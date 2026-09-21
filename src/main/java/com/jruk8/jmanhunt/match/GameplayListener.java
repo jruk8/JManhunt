@@ -201,6 +201,9 @@ public final class GameplayListener implements Listener {
         playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
         long matchId = instance.matchId();
         int lives = playerStates.getLives(player.getUniqueId());
+        int delaySeconds = effectiveRespawnDelay(
+                plugin.getConfig().getBoolean("settings.respawn.speedrunner.enabled", false),
+                plugin.getConfig().getInt("settings.respawn.speedrunner.delay-seconds", 60));
         if (lives != -1) {
             playerStates.decrementLives(player.getUniqueId());
             if (playerStates.getLives(player.getUniqueId()) <= 0) {
@@ -231,7 +234,8 @@ public final class GameplayListener implements Listener {
                 game.sendToInstance(instance, "game.speedrunner-death", Map.of("value", Integer.toString(game.activeRunnerCount(instance))));
             }
             game.playInstanceSound(instance, "game.speedrunner-death");
-            respawnParticipant(player, 0, matchId);
+            scheduleRespawn(player, instance, quiet, delaySeconds,
+                    "game.speedrunner-respawn-scheduled", matchId);
             return;
         }
         // Unlimited lives (-1): never eliminated permanently by lives. The
@@ -245,7 +249,8 @@ public final class GameplayListener implements Listener {
             game.sendToInstance(instance, "game.speedrunner-death", Map.of("value", Integer.toString(game.activeRunnerCount(instance))));
         }
         game.playInstanceSound(instance, "game.speedrunner-death");
-        respawnParticipant(player, 0, matchId);
+        scheduleRespawn(player, instance, quiet, delaySeconds,
+                "game.speedrunner-respawn-scheduled", matchId);
     }
 
     private void handleHunterDeath(Player player, GameInstance instance, boolean quiet) {
@@ -253,8 +258,9 @@ public final class GameplayListener implements Listener {
         disconnects.clear(player.getUniqueId());
         long matchId = instance.matchId();
         int lives = playerStates.getLives(player.getUniqueId());
-        boolean delayed = plugin.getConfig().getBoolean("settings.hunter-respawn.enabled", false);
-        int delaySeconds = plugin.getConfig().getInt("settings.hunter-respawn.delay-seconds", 60);
+        int delaySeconds = effectiveRespawnDelay(
+                plugin.getConfig().getBoolean("settings.respawn.hunter.enabled", false),
+                plugin.getConfig().getInt("settings.respawn.hunter.delay-seconds", 60));
         if (lives != -1) {
             playerStates.decrementLives(player.getUniqueId());
             if (playerStates.getLives(player.getUniqueId()) <= 0) {
@@ -282,13 +288,34 @@ public final class GameplayListener implements Listener {
             instance.setHunterUnlimitedAnnounced(true);
             game.sendToInstance(instance, "game.hunters-unlimited-lives", Map.of());
         }
-        if (delayed && delaySeconds > 0) {
-            if (!quiet) {
-                game.sendToInstance(instance, "game.hunter-respawn-scheduled",
-                        Map.of("player", player.getName(), "seconds", Integer.toString(delaySeconds)));
-            }
-            respawnParticipant(player, delaySeconds, matchId);
+        // Undelayed hunters respawn through vanilla mechanics; only a
+        // positive delay routes them through the spectator revive.
+        if (delaySeconds > 0) {
+            scheduleRespawn(player, instance, quiet, delaySeconds,
+                    "game.hunter-respawn-scheduled", matchId);
         }
+    }
+
+    /**
+     * Announces a delayed respawn, then routes through the spectator
+     * revive. A non-positive delay revives immediately without announcing.
+     */
+    private void scheduleRespawn(Player player, GameInstance instance, boolean quiet,
+            int delaySeconds, String scheduledKey, long matchId) {
+        if (!quiet && delaySeconds > 0) {
+            game.sendToInstance(instance, scheduledKey,
+                    Map.of("player", player.getName(), "seconds", Integer.toString(delaySeconds)));
+        }
+        respawnParticipant(player, delaySeconds, matchId);
+    }
+
+    /**
+     * Effective respawn delay in seconds: the configured delay when delayed
+     * respawn is enabled and positive, otherwise immediate (0). Pure for
+     * tests.
+     */
+    static int effectiveRespawnDelay(boolean enabled, int delaySeconds) {
+        return enabled && delaySeconds > 0 ? delaySeconds : 0;
     }
 
     /**
@@ -301,18 +328,18 @@ public final class GameplayListener implements Listener {
         if (existing != null) existing.cancel();
         Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
         if (delaySeconds <= 0) {
-            Bukkit.getScheduler().runTask(plugin, () -> revivePlayer(player, matchId));
+            Bukkit.getScheduler().runTask(plugin, () -> revivePlayer(player, matchId, false));
             return;
         }
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             respawnTasks.remove(playerId);
             if (!game.isActiveInInstance(matchId, playerId)) return;
-            revivePlayer(player, matchId);
+            revivePlayer(player, matchId, true);
         }, delaySeconds * 20L);
         respawnTasks.put(playerId, task);
     }
 
-    private void revivePlayer(Player player, long matchId) {
+    private void revivePlayer(Player player, long matchId, boolean delayed) {
         Optional<GameInstance> match = game.instance(matchId);
         if (match.isEmpty() || !match.get().isActive(player.getUniqueId())) return;
         GameInstance instance = match.get();
@@ -328,8 +355,14 @@ public final class GameplayListener implements Listener {
         if (playerStates.role(player).isParticipant()) {
             compass.giveCompass(player);
             compass.refreshCompass(player);
-            if (playerStates.role(player) == Role.HUNTER) {
-                game.sendToInstance(instance, "game.hunter-respawn-imminent", Map.of("player", player.getName()));
+            // Immediate revives stay silent, as before; only a waited-out
+            // delay announces the return, for either role.
+            if (delayed) {
+                if (playerStates.role(player) == Role.HUNTER) {
+                    game.sendToInstance(instance, "game.hunter-respawn-imminent", Map.of("player", player.getName()));
+                } else if (playerStates.role(player) == Role.SPEEDRUNNER) {
+                    game.sendToInstance(instance, "game.speedrunner-respawn-imminent", Map.of("player", player.getName()));
+                }
             }
         }
         if (!instance.begun() || !playerStates.role(player).isParticipant()) return;

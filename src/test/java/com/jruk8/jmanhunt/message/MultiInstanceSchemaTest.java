@@ -45,6 +45,23 @@ class MultiInstanceSchemaTest {
     }
 
     @Test
+    void respawnDefaults() {
+        YamlConfiguration config = bundledConfig();
+        YamlConfiguration messages = bundledMessages();
+
+        assertFalse(config.contains("settings.hunter-respawn"));
+        assertTrue(config.getBoolean("settings.respawn.hunter.enabled"));
+        assertEquals(15, config.getInt("settings.respawn.hunter.delay-seconds"));
+        assertEquals(-1, config.getInt("settings.respawn.hunter.lives"));
+        assertFalse(config.getBoolean("settings.respawn.speedrunner.enabled"));
+        assertEquals(60, config.getInt("settings.respawn.speedrunner.delay-seconds"));
+        assertEquals(1, config.getInt("settings.respawn.speedrunner.lives"));
+        assertTrue(messages.getString("game.speedrunner-respawn-scheduled", "").contains("{player}"));
+        assertTrue(messages.getString("game.speedrunner-respawn-scheduled", "").contains("{seconds}"));
+        assertTrue(messages.getString("game.speedrunner-respawn-imminent", "").contains("{player}"));
+    }
+
+    @Test
     void preloadingDefaults() {
         YamlConfiguration config = bundledConfig();
 
