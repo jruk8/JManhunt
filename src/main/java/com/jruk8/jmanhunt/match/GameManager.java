@@ -12,8 +12,8 @@ import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.lobby.SubLobby;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.NumberWords;
 import com.jruk8.jmanhunt.message.SoundService;
-import com.jruk8.jmanhunt.player.CapLimits;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.stats.Stats;
@@ -39,6 +39,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -65,6 +66,8 @@ public final class GameManager {
     private final Map<Long, GameInstance> instances = new HashMap<>();
     /** Per-lobby autostart countdowns, keyed by lobby id. */
     private final Map<Integer, AutostartCountdown> autostartCountdowns = new HashMap<>();
+    /** Last shortfall broadcast per lobby, for the needs-more interval. */
+    private final Map<Integer, Long> lastShortfallBroadcast = new HashMap<>();
 
     /** Mutable per-lobby countdown state; the task ticks in GameManager. */
     private static final class AutostartCountdown {
@@ -1463,18 +1466,101 @@ public final class GameManager {
     }
 
     private boolean isEligibleToStart(Lobby lobby) {
-        boolean hasHunter = false;
-        boolean hasSpeedrunner = false;
+        return shortfallFor(lobby).isEmpty();
+    }
+
+    /** Per-role shortfall of a lobby's online members against the autostart minimums. */
+    private Map<Role, Integer> shortfallFor(Lobby lobby) {
+        int hunters = 0;
+        int speedrunners = 0;
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (!lobby.contains(player.getUniqueId())) {
                 continue;
             }
-            Role playerRole = role(player);
-            if (playerRole == Role.HUNTER) hasHunter = true;
-            else if (playerRole == Role.SPEEDRUNNER) hasSpeedrunner = true;
-            if (hasHunter && hasSpeedrunner) return true;
+            if (role(player) == Role.HUNTER) {
+                hunters++;
+            } else if (role(player) == Role.SPEEDRUNNER) {
+                speedrunners++;
+            }
         }
-        return false;
+        return autostartShortfall(hunters, speedrunners,
+                plugin.getConfig().getInt("settings.autostart.minimums.hunter", 1),
+                plugin.getConfig().getInt("settings.autostart.minimums.speedrunner", 1));
+    }
+
+    /**
+     * Roles still missing queued players against the autostart minimums,
+     * mapped to how many more each needs. Empty means eligible to start.
+     * Minimums clamp to a hard minimum of 1 per role. Pure for tests.
+     */
+    static Map<Role, Integer> autostartShortfall(int hunters, int speedrunners,
+            int minHunters, int minSpeedrunners) {
+        int needHunters = Math.max(1, minHunters);
+        int needSpeedrunners = Math.max(1, minSpeedrunners);
+        Map<Role, Integer> missing = new EnumMap<>(Role.class);
+        if (hunters < needHunters) {
+            missing.put(Role.HUNTER, needHunters - hunters);
+        }
+        if (speedrunners < needSpeedrunners) {
+            missing.put(Role.SPEEDRUNNER, needSpeedrunners - speedrunners);
+        }
+        return missing;
+    }
+
+    /**
+     * Tells queued players of ineligible lobbies how many more of each
+     * role autostart needs, at most once per configured interval. Runs
+     * every second from the plugin scheduler; eligible, counting-down,
+     * and in-match lobbies are skipped and reset so the next shortfall
+     * announces immediately. Players only: the console is spared the
+     * nag.
+     */
+    public void broadcastAutostartShortfalls() {
+        if (!plugin.getConfig().getBoolean("settings.autostart.enabled", false)) {
+            return;
+        }
+        int intervalSeconds = Math.max(1, plugin.getConfig()
+                .getInt("settings.autostart.needs-broadcast-interval-seconds", 30));
+        long now = System.currentTimeMillis();
+        for (int lobbyId : lobbies.lobbyIds()) {
+            if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
+                continue;
+            }
+            Optional<Lobby> lobby = lobbies.get(lobbyId);
+            if (lobby.isEmpty() || instanceForLobby(lobbyId).isPresent()
+                    || autostartCountdowns.containsKey(lobbyId)) {
+                lastShortfallBroadcast.remove(lobbyId);
+                continue;
+            }
+            Map<Role, Integer> missing = shortfallFor(lobby.get());
+            List<Player> recipients = lobbyRecipients(lobbyId);
+            if (missing.isEmpty() || recipients.isEmpty()) {
+                lastShortfallBroadcast.remove(lobbyId);
+                continue;
+            }
+            Long last = lastShortfallBroadcast.get(lobbyId);
+            if (last != null && now - last < intervalSeconds * 1000L) {
+                continue;
+            }
+            lastShortfallBroadcast.put(lobbyId, now);
+            messages.sendTo(recipients, "manhunt.autostart-needs-more",
+                    Map.of("details", shortfallDetails(missing)));
+        }
+        lastShortfallBroadcast.keySet().removeIf(id -> lobbies.get(id).isEmpty());
+    }
+
+    /** "two more Hunters and one more Speedrunner" for a shortfall, role-colored. */
+    private String shortfallDetails(Map<Role, Integer> missing) {
+        List<String> parts = new ArrayList<>();
+        for (Role role : List.of(Role.HUNTER, Role.SPEEDRUNNER)) {
+            Integer need = missing.get(role);
+            if (need == null) {
+                continue;
+            }
+            String name = messages.roleName(role) + (need == 1 ? "" : "s");
+            parts.add("<white>" + NumberWords.word(need) + "</white> more " + name);
+        }
+        return String.join(" and ", parts);
     }
 
     /** Shows the starting roster to one match's players. */
@@ -1688,42 +1774,36 @@ public final class GameManager {
     /**
      * Quick-starts a match by assigning eligible players of one lobby to
      * teams and immediately starting the game, bypassing the autostart
-     * system. Queue caps apply unless forced; cap-skipped players keep
-     * their current role and may fail validation below.
+     * system. Queue caps never apply and NONE players always join the
+     * convertible pool.
      *
      * @param speedrunnerPercent the percentage of convertible players that
      *                           should become speedrunners (0-100), or -1 for
      *                           default (keep teams, converting only what is
      *                           missing to start)
-     * @param force when true, queue caps are ignored and NONE players join
-     *              the convertible pool
      * @param lobbyId the lobby whose members form the convertible pool
-     * @return the start result plus any roles blocked by caps
+     * @return whether the match started
      */
-    public QuickStartOutcome quickStart(int speedrunnerPercent, boolean force, int lobbyId) {
-        if (instanceForLobby(lobbyId).isPresent()) return new QuickStartOutcome(false, Set.of());
+    public QuickStartOutcome quickStart(int speedrunnerPercent, int lobbyId) {
+        if (instanceForLobby(lobbyId).isPresent()) return new QuickStartOutcome(false);
         Optional<Lobby> lobby = lobbies.get(lobbyId);
-        if (lobby.isEmpty()) return new QuickStartOutcome(false, Set.of());
+        if (lobby.isEmpty()) return new QuickStartOutcome(false);
         Lobby resolved = lobby.get();
-        // Every online participant lobby member is convertible: existing
-        // hunters and speedrunners keep their roles unless conversion is
-        // needed. AFK players and spectators are never touched, and NONEs
-        // sit out like AFK unless forced — the one case where NONE can
-        // still be picked.
+        // Every online non-AFK, non-spectator lobby member is convertible:
+        // existing hunters and speedrunners keep their roles unless
+        // conversion is needed, and NONEs always join the pool.
         List<Player> pool = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> role(p) != Role.AFK && role(p) != Role.SPECTATOR
-                        && (force || role(p) != Role.NONE))
+                .filter(p -> role(p) != Role.AFK && role(p) != Role.SPECTATOR)
                 .filter(p -> resolved.contains(p.getUniqueId()))
                 .map(p -> (Player) p)
                 .toList();
         // Cancel any autostart countdown silently
         cancelAllAutostartCountdowns(false);
-        Set<Role> capped = new java.util.HashSet<>();
         // A match needs at least one hunter and one speedrunner, so with
         // fewer than two convertible players there is nothing to assign.
-        if (pool.size() < 2) return new QuickStartOutcome(start(lobbyId), capped);
+        if (pool.size() < 2) return new QuickStartOutcome(start(lobbyId));
         if (speedrunnerPercent < 0) {
-            ensureMinimumTeams(pool, force, resolved, capped);
+            ensureMinimumTeams(pool);
         } else {
             // Percentage-based assignment over the whole convertible pool:
             // random selection, players become speedrunners until the count
@@ -1734,10 +1814,6 @@ public final class GameManager {
             int runners = 0;
             for (Player player : shuffled) {
                 Role want = runners < speedrunnerCount ? Role.SPEEDRUNNER : Role.HUNTER;
-                if (!force && !allowsInLobby(resolved, want)) {
-                    capped.add(want);
-                    continue;
-                }
                 playerStates.setRole(player, want);
                 plugin.roleTeams().sync(player);
                 if (want == Role.SPEEDRUNNER) {
@@ -1747,19 +1823,7 @@ public final class GameManager {
         }
         // Validate after assignment: start() requires at least one hunter and
         // one speedrunner, so e.g. two players online with one AFK will fail.
-        return new QuickStartOutcome(start(lobbyId), capped);
-    }
-
-    /** True when one more player may take a role in a lobby queue. */
-    private boolean allowsInLobby(Lobby lobby, Role role) {
-        int count = 0;
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (role(online) == role && lobby.contains(online.getUniqueId())) {
-                count++;
-            }
-        }
-        return CapLimits.allows(count, plugin.getConfig().getInt(
-                "lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1));
+        return new QuickStartOutcome(start(lobbyId));
     }
 
     /**
@@ -1779,41 +1843,28 @@ public final class GameManager {
      * Guarantees at least one hunter and one speedrunner by converting random
      * pool members only where a team is missing, so an all-hunter or an
      * all-speedrunner lobby still starts. NONE players become hunters and
-     * everyone else keeps their current role. Conversions that would overflow
-     * a queue cap are skipped and recorded instead.
+     * everyone else keeps their current role.
      */
-    private void ensureMinimumTeams(List<Player> pool, boolean force, Lobby lobby, Set<Role> capped) {
+    private void ensureMinimumTeams(List<Player> pool) {
         boolean hasHunter = pool.stream().anyMatch(p -> role(p) == Role.HUNTER);
         boolean hasSpeedrunner = pool.stream().anyMatch(p -> role(p) == Role.SPEEDRUNNER);
         Player converted = null;
         if (!hasSpeedrunner) {
-            if (!force && !allowsInLobby(lobby, Role.SPEEDRUNNER)) {
-                capped.add(Role.SPEEDRUNNER);
-            } else {
-                converted = pickConvertible(pool, null);
-                if (converted != null) {
-                    playerStates.setRole(converted, Role.SPEEDRUNNER);
-                    plugin.roleTeams().sync(converted);
-                }
+            converted = pickConvertible(pool, null);
+            if (converted != null) {
+                playerStates.setRole(converted, Role.SPEEDRUNNER);
+                plugin.roleTeams().sync(converted);
             }
         }
         if (!hasHunter) {
-            if (!force && !allowsInLobby(lobby, Role.HUNTER)) {
-                capped.add(Role.HUNTER);
-            } else {
-                Player hunter = pickConvertible(pool, converted);
-                if (hunter != null) {
-                    playerStates.setRole(hunter, Role.HUNTER);
-                    plugin.roleTeams().sync(hunter);
-                }
+            Player hunter = pickConvertible(pool, converted);
+            if (hunter != null) {
+                playerStates.setRole(hunter, Role.HUNTER);
+                plugin.roleTeams().sync(hunter);
             }
         }
         for (Player p : pool) {
             if (role(p) != Role.NONE) {
-                continue;
-            }
-            if (!force && !allowsInLobby(lobby, Role.HUNTER)) {
-                capped.add(Role.HUNTER);
                 continue;
             }
             playerStates.setRole(p, Role.HUNTER);

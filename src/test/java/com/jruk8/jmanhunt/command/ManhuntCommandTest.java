@@ -55,28 +55,44 @@ class ManhuntCommandTest {
     void subcommandOptionsAreReversedForDisplay() {
         assertEquals(List.of("challenges", "help", "reload", "worldengine", "config",
                 "configuration", "debug", "lobby", "qs", "quickstart", "game", "end", "start",
-                "setplayer", "status", "dev"), ManhuntCommand.subcommandOptions());
+                "setplayer", "status"), ManhuntCommand.subcommandOptions());
+    }
+
+    @Test
+    void subcommandOptionsHideDevOnPurpose() {
+        assertFalse(ManhuntCommand.subcommandOptions().contains("dev"));
+    }
+
+    @Test
+    void silentFlagAcceptsShortAndLongForms() {
+        assertTrue(ManhuntCommand.isSilentFlag("-s"));
+        assertTrue(ManhuntCommand.isSilentFlag("-silent"));
+        assertTrue(ManhuntCommand.isSilentFlag("-S"));
+        assertTrue(ManhuntCommand.isSilentFlag("-SILENT"));
+    }
+
+    @Test
+    void silentFlagRejectsAnythingElse() {
+        assertFalse(ManhuntCommand.isSilentFlag("silent"));
+        assertFalse(ManhuntCommand.isSilentFlag("-f"));
+        assertFalse(ManhuntCommand.isSilentFlag(""));
+        assertFalse(ManhuntCommand.isSilentFlag("-silence"));
     }
 
     @Test
     void parseQuickStartArgsAcceptsForms() {
-        assertEquals(new QuickStartArgs(null, false, true),
+        assertEquals(new QuickStartArgs(null, true),
                 ManhuntCommand.parseQuickStartArgs(new String[]{"qs"}));
-        assertEquals(new QuickStartArgs(50, false, true),
+        assertEquals(new QuickStartArgs(50, true),
                 ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "50"}));
-        assertEquals(new QuickStartArgs(null, true, true),
-                ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "-f"}));
-        assertEquals(new QuickStartArgs(50, true, true),
-                ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "50", "-force"}));
-        assertEquals(new QuickStartArgs(50, true, true),
-                ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "-f", "50"}));
     }
 
     @Test
     void parseQuickStartArgsRejectsJunk() {
         assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "soon"}).valid());
         assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "50", "60"}).valid());
-        assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "-f", "-force"}).valid());
+        assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "-f"}).valid());
+        assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "50", "-force"}).valid());
         assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "50", "-f", "x"}).valid());
     }
 

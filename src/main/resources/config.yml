@@ -490,14 +490,25 @@ settings:
     # Default: false
     custom-piglin-barter: false
 
-  # Automatically start a match when at least one hunter and one speedrunner
-  # are queued.
+  # Automatically start a match once each role reaches its configured
+  # minimum queued players.
   # Default: false
   autostart:
     enabled: true
     # Seconds to wait before automatically running /manhunt start.
     # Set to 0 to start immediately as soon as the queue is eligible.
     countdown-seconds: 45
+    # Minimum queued players per role before the autostart countdown can
+    # begin. Only applies to autostart; manual /manhunt start keeps its
+    # own one-hunter-one-speedrunner check. Hard minimum: 1 per role.
+    # Default: 1 hunter, 1 speedrunner
+    minimums:
+      hunter: 1
+      speedrunner: 1
+    # Seconds between shortfall broadcasts telling queued players how
+    # many more of each role autostart needs.
+    # Default: 30
+    needs-broadcast-interval-seconds: 30
 
   # How player roles are assigned and reset around the lifecycle of a match.
   roles:

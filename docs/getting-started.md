@@ -16,8 +16,7 @@
 
    You may also run `/manhunt quickstart` (or `/mh qs`) to quickly start a match
    with one random speedrunner and the rest being hunters. Unassigned
-   (`none`) players sit out unless you pass `-f` (`-force`), so a fresh
-   lobby needs `/manhunt quickstart -force`.
+   (`none`) players are always included, so a fresh lobby starts as-is.
 
 2. Start the match with `/manhunt start`.
 3. Check the teams at any time with `/manhunt status` (or simply `/manhunt`.)

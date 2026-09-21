@@ -454,11 +454,20 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * else's AFK role needs a second run within 10 seconds.
      */
     private boolean setPlayer(CommandSender sender, String[] args) {
-        if (args.length < 3 || args.length > 4
-                || (args.length == 4 && !isForceFlag(args[3]))) {
+        boolean force = false;
+        boolean silent = false;
+        int end = args.length;
+        while (end > 3 && (isForceFlag(args[end - 1]) || isSilentFlag(args[end - 1]))) {
+            if (isForceFlag(args[end - 1])) {
+                force = true;
+            } else {
+                silent = true;
+            }
+            end--;
+        }
+        if (end != 3) {
             return message(sender, "manhunt.setplayer-usage");
         }
-        boolean force = args.length == 4;
         Optional<Role> parsed = Role.parse(args[2]);
         if (parsed.isEmpty()) {
             return message(sender, "manhunt.setplayer-usage");
@@ -512,13 +521,17 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 Role from = playerStates.role(player);
                 playerStates.setRole(player, role); changed++;
                 plugin.roleTeams().sync(player);
-                game.announceRoleChange(player, from, role);
+                if (!silent) {
+                    game.announceRoleChange(player, from, role);
+                }
                 assigned.add(player.getUniqueId());
-                message(player, "manhunt.role-assigned", Map.of("role", messages.roleName(role)));
-                sounds.playNeutralSound(player);
+                if (!silent) {
+                    message(player, "manhunt.role-assigned", Map.of("role", messages.roleName(role)));
+                    sounds.playNeutralSound(player);
+                }
                 if (!member) {
                     held++;
-                    if (role != Role.AFK) {
+                    if (!silent && role != Role.AFK) {
                         message(player, "manhunt.setplayer-held", Map.of("role", messages.roleName(role)));
                     }
                 }
@@ -530,10 +543,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             Role from = playerStates.role(player);
             playerStates.setRole(player, role); changed++;
             plugin.roleTeams().sync(player);
-            game.announceRoleChange(player, from, role);
+            if (!silent) {
+                game.announceRoleChange(player, from, role);
+            }
             assigned.add(player.getUniqueId());
-            message(player, "manhunt.role-assigned", Map.of("role", messages.roleName(role)));
-            sounds.playNeutralSound(player);
+            if (!silent) {
+                message(player, "manhunt.role-assigned", Map.of("role", messages.roleName(role)));
+                sounds.playNeutralSound(player);
+            }
         }
         message(sender, unchanged == 0 ? "manhunt.set-success" : "manhunt.set-success-unchanged",
                 Map.of("count", String.valueOf(changed), "role", messages.roleName(role), "unchanged", String.valueOf(unchanged)));
@@ -620,16 +637,21 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /**
      * Moves players to a lobby: join &lt;selector&gt; &lt;lobby-id&gt; [role]
-     * [-f|-force] [-notp]. The role defaults to none and joiners teleport
-     * to the lobby unless -notp is given.
+     * [-f|-force] [-notp] [-s|-silent]. The role defaults to none and
+     * joiners teleport to the lobby unless -notp is given. Silent joiners
+     * get no role message or sound.
      */
     private boolean lobbyJoin(CommandSender sender, String[] args) {
         boolean force = false;
         boolean noTeleport = false;
+        boolean silent = false;
         int end = args.length;
-        while (end > 2 && (isForceFlag(args[end - 1]) || isNoTeleportFlag(args[end - 1]))) {
+        while (end > 2 && (isForceFlag(args[end - 1]) || isNoTeleportFlag(args[end - 1])
+                || isSilentFlag(args[end - 1]))) {
             if (isForceFlag(args[end - 1])) {
                 force = true;
+            } else if (isSilentFlag(args[end - 1])) {
+                silent = true;
             } else {
                 noTeleport = true;
             }
@@ -685,7 +707,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             playerStates.setRole(target, role);
             plugin.roleTeams().sync(target);
             moved.add(target);
-            if (previous != role) {
+            if (!silent && previous != role) {
                 message(target, "manhunt.role-assigned", Map.of("role", messages.roleName(role)));
                 sounds.playNeutralSound(target);
             }
@@ -756,9 +778,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** True for the -f and -force flags accepted by setplayer, quickstart, and lobby join. */
+    /** True for the -f and -force flags accepted by setplayer and lobby join. */
     static boolean isForceFlag(String arg) {
         return arg.equalsIgnoreCase("-f") || arg.equalsIgnoreCase("-force");
+    }
+
+    /** True for the -s and -silent flags accepted by setplayer and lobby join. */
+    static boolean isSilentFlag(String arg) {
+        return arg.equalsIgnoreCase("-s") || arg.equalsIgnoreCase("-silent");
     }
 
     /** True for the -notp flag accepted by lobby join (no shorthand, for clarity). */
@@ -1559,11 +1586,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[1], selectorOptions());
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) return partial(args[2], List.of("hunter", "speedrunner", "spectator", "afk", "none"));
-        if (args.length == 4 && args[0].equalsIgnoreCase("setplayer")) return partial(args[3], List.of("-f", "-force"));
+        if ((args.length == 4 || args.length == 5) && args[0].equalsIgnoreCase("setplayer"))
+            return partial(args[args.length - 1], List.of("-f", "-force", "-s", "-silent"));
         if (args.length == 2 && (args[0].equalsIgnoreCase("quickstart") || args[0].equalsIgnoreCase("qs")))
-            return partial(args[1], List.of("50", "-f", "-force"));
-        if (args.length == 3 && (args[0].equalsIgnoreCase("quickstart") || args[0].equalsIgnoreCase("qs")))
-            return partial(args[2], List.of("-f", "-force"));
+            return partial(args[1], List.of("50"));
         if (args.length == 2 && args[0].equalsIgnoreCase("lobby")) return partial(args[1], List.of("join", "leave"));
         if (args.length == 3 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join"))
             return partial(args[2], selectorOptions());
@@ -1573,11 +1599,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[3], lobbyIdOptions());
         if (args.length == 5 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join"))
             return partial(args[4], List.of("hunter", "speedrunner", "spectator", "afk", "none",
-                    "-f", "-force", "-notp"));
+                    "-f", "-force", "-notp", "-s", "-silent"));
         if (args.length == 6 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join"))
-            return partial(args[5], List.of("-f", "-force", "-notp"));
+            return partial(args[5], List.of("-f", "-force", "-notp", "-s", "-silent"));
         if (args.length == 7 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join"))
-            return partial(args[6], List.of("-f", "-force", "-notp"));
+            return partial(args[6], List.of("-f", "-force", "-notp", "-s", "-silent"));
+        if (args.length == 8 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join"))
+            return partial(args[7], List.of("-f", "-force", "-notp", "-s", "-silent"));
         return List.of();
     }
 
@@ -1625,10 +1653,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * these bottom-up, so the source lists them reversed to read properly
      * in game.
      */
+    /**
+     * First-level completions. {@code dev} stays out on purpose (developer
+     * tooling), but everything after a typed {@code dev} still completes.
+     */
     static List<String> subcommandOptions() {
         return new ArrayList<>(List.of("challenges", "help", "reload", "worldengine", "config",
                 "configuration", "debug", "lobby", "qs", "quickstart", "game", "end", "start",
-                "setplayer", "status", "dev"));
+                "setplayer", "status"));
     }
 
     /** Instance id completion: live match ids, oldest first. */
@@ -1829,7 +1861,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (!parsed.valid()) {
             return message(sender, "manhunt.quickstart-usage");
         }
-        boolean force = parsed.force();
         int percent = parsed.percent() == null ? -1 : parsed.percent();
         if (parsed.percent() != null && (percent < 0 || percent > 100)) {
             return message(sender, "manhunt.quickstart-invalid-percent");
@@ -1843,36 +1874,24 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         if (lobbyId < 0) return message(sender, "manhunt.quickstart-failed");
         if (game.instanceForLobby(lobbyId).isPresent()) return message(sender, "manhunt.already-active");
-        QuickStartOutcome outcome = game.quickStart(percent, force, lobbyId);
-        for (Role cappedRole : outcome.cappedRoles()) {
-            message(sender, "manhunt.lobby-full", Map.of("lobby", String.valueOf(lobbyId),
-                    "role", messages.roleName(cappedRole)));
-        }
+        QuickStartOutcome outcome = game.quickStart(percent, lobbyId);
         if (!outcome.started()) return message(sender, "manhunt.quickstart-failed");
         return true;
     }
 
 
     static QuickStartArgs parseQuickStartArgs(String[] args) {
-        Integer percent = null;
-        boolean force = false;
-        for (int i = 1; i < args.length; i++) {
-            if (isForceFlag(args[i])) {
-                if (force) {
-                    return new QuickStartArgs(null, false, false);
-                }
-                force = true;
-            } else if (percent == null) {
-                try {
-                    percent = Integer.parseInt(args[i]);
-                } catch (NumberFormatException exception) {
-                    return new QuickStartArgs(null, false, false);
-                }
-            } else {
-                return new QuickStartArgs(null, false, false);
-            }
+        if (args.length > 2) {
+            return new QuickStartArgs(null, false);
         }
-        return new QuickStartArgs(percent, force, true);
+        if (args.length == 1) {
+            return new QuickStartArgs(null, true);
+        }
+        try {
+            return new QuickStartArgs(Integer.parseInt(args[1]), true);
+        } catch (NumberFormatException exception) {
+            return new QuickStartArgs(null, false);
+        }
     }
 
     private boolean message(CommandSender sender, String key) { messages.message(sender, key); return true; }

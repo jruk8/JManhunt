@@ -55,7 +55,9 @@ engine off the in-match block stays and `/manhunt game join` plus
 `/manhunt game leave` are the mid-match tools (`-force` never bypasses
 this). Assigning someone else away from `afk` needs the command run
 twice within 10 seconds; changing your own role never needs
-confirmation.
+confirmation. `-s` (`-silent`) suppresses the role messages and sounds
+the targets would get (including any role-change announcement); the
+sender still sees the full summary.
 
 ## Quick Start
 
@@ -75,14 +77,13 @@ from the console) and can only be used when that lobby has no running match.
   are rounded to the nearest whole player, and there is always at least one
   Speedrunner.
 
-Every online lobby member except AFK players, spectators, and (without
-`-f`) `none` players is convertible, including existing Hunters and
-Speedrunners; default mode preserves queued roles and only converts the
-minimum needed, preferring `none` players for conversion when `-f`
-(`-force`) includes them. AFK players and spectators are never touched.
-The match is validated after assignment: it requires at least one Hunter
-and one Speedrunner, so a lobby with two online members where one is AFK
-will fail to start. Queue caps apply unless `-f` (`-force`) is passed.
+Every online lobby member except AFK players and spectators is convertible,
+including existing Hunters and Speedrunners as well as `none` players;
+default mode preserves queued roles and only converts the minimum needed,
+preferring `none` players for conversion. AFK players and spectators are
+never touched. The match is validated after assignment: it requires at
+least one Hunter and one Speedrunner, so a lobby with two online members
+where one is AFK will fail to start. Queue caps never apply to Quick Start.
 
 Quick Start bypasses the autostart system entirely: no countdowns or
 autostart messages are displayed.
@@ -94,7 +95,8 @@ matches can run at the same time (see [Concurrent Matches](multi-instance.md)).
 Players join the default lobby on login. `/manhunt lobby join` moves players
 into a lobby (default role `none`) and teleports them to it unless `-notp`
 is passed, honoring the per-role queue caps unless `-f` (`-force`) is
-passed; `/manhunt lobby leave [selector]` removes players from whatever
+passed; `-s` (`-silent`) skips the role message and sound for moved
+players. `/manhunt lobby leave [selector]` removes players from whatever
 lobby they are in. Re-joining the same lobby with the same role is refused
 with a notice. Multiple lobbies need the world engine; with it off,
 everyone shares lobby 0. New to lobbies? Start with the [Lobby Quick

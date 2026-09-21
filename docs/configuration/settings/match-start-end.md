@@ -9,11 +9,22 @@ settings:
   autostart:
     enabled: false
     countdown-seconds: 60
+    minimums:
+      hunter: 1
+      speedrunner: 1
+    needs-broadcast-interval-seconds: 30
 ```
 
-Autostart triggers once at least one hunter and one speedrunner are queued.
-Each lobby runs its own countdown and starts its own match; see
-[Concurrent Matches](../../multi-instance.md).
+Autostart triggers once each role reaches its `minimums` queued players
+(one hunter and one speedrunner by default; hard minimum 1 per role).
+Each lobby runs its own countdown and starts its own match;
+see [Concurrent Matches](../../multi-instance.md). Minimums only gate
+autostart: manual `/manhunt start` keeps its own
+one-hunter-one-speedrunner check.
+
+While a lobby sits below its minimums, its queued players are told what
+is still missing every `needs-broadcast-interval-seconds`, for example
+"The game needs *two* more Hunters and *one* more Speedrunner to begin."
 
 ## Countdown
 

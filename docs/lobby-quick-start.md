@@ -15,9 +15,10 @@ Engine](configuration/world-engine.md) for presets and regeneration.
 
 Players join the default lobby on login. To move people yourself:
 
-- `/manhunt lobby join <selector> <lobby-id> [role] [-notp]`: moves players
-  into a lobby queue and teleports them there (add `-notp` to skip the
-  teleport). Unknown lobby ids are created on join.
+- `/manhunt lobby join <selector> <lobby-id> [role] [-notp] [-s]`: moves
+  players into a lobby queue and teleports them there (add `-notp` to skip
+  the teleport, `-s` to skip the role message). Unknown lobby ids are
+  created on join.
 - `/manhunt lobby leave [selector]`: removes players from a lobby.
 
 ## 3. Assign roles

@@ -177,6 +177,20 @@ class MultiInstanceSchemaTest {
     }
 
     @Test
+    void autostartMinimumDefaults() {
+        YamlConfiguration config = bundledConfig();
+        YamlConfiguration messages = bundledMessages();
+
+        assertEquals(1, config.getInt("settings.autostart.minimums.hunter"));
+        assertEquals(1, config.getInt("settings.autostart.minimums.speedrunner"));
+        assertEquals(30, config.getInt("settings.autostart.needs-broadcast-interval-seconds"));
+        assertTrue(messages.getString("manhunt.autostart-needs-more", "").contains("{details}"));
+        assertFalse(messages.getString("manhunt.quickstart-usage", "").contains("-force"));
+        assertTrue(messages.getString("manhunt.setplayer-usage", "").contains("-silent"));
+        assertTrue(messages.getString("manhunt.lobby-join-usage", "").contains("-silent"));
+    }
+
+    @Test
     void antiSpawnCampDefaults() {
         YamlConfiguration config = bundledConfig();
         YamlConfiguration messages = bundledMessages();

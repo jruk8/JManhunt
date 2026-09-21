@@ -26,3 +26,6 @@ moment each runs. `save <name>` captures everything between the corners
 block. The commands are world agnostic: save and load work in whatever
 world you stand in. Only `list` works from the console; the rest need a
 player position and refuse console senders.
+
+`dev` is deliberately hidden from `/manhunt <tab>` completion, but once
+typed, its subcommands complete normally.

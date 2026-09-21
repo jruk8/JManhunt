@@ -48,9 +48,10 @@ see [World Engine](configuration/world-engine.md).
 ## Queue Caps
 
 `caps` limits how many players may queue for each role per lobby. `-1`
-means no limit. Caps apply to queueing (`setplayer`, `lobby join`, and
-`quickstart`) and are bypassed with `-f` (`-force`). Lowering a cap never
-removes already-queued players, and joining a running match ignores caps.
+means no limit. Caps apply to queueing (`setplayer` and `lobby join`)
+and are bypassed with `-f` (`-force`); `quickstart` ignores caps.
+Lowering a cap never removes already-queued players, and joining a
+running match ignores caps.
 
 ## Starting and Stopping
 
