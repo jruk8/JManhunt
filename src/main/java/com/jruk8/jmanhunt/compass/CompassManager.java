@@ -46,6 +46,8 @@ public final class CompassManager {
     private final Map<UUID, Long> lastAutoRefresh = new HashMap<>();
     /** Last right-click refresh per holder; the click's own cooldown. */
     private final Map<UUID, Long> lastClickRefresh = new HashMap<>();
+    /** Last accepted left-click scroll per holder; throttles held clicks. */
+    private final Map<UUID, Long> lastScroll = new HashMap<>();
     /** Manual left-click target locks: holder id -> locked target id. */
     private final Map<UUID, UUID> locks = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
@@ -134,6 +136,12 @@ public final class CompassManager {
             locks.remove(holder.getUniqueId());
             return;
         }
+        Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
+        String targetRoleString = messages.roleName(targetRole);
+        if (holder.getGameMode() == GameMode.SPECTATOR) {
+            showNoTarget(holder, item, slot, targetRoleString);
+            return;
+        }
         if (game == null) {
             return;
         }
@@ -143,17 +151,23 @@ public final class CompassManager {
             return;
         }
         GameInstance instance = match.get();
-        Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
-        String targetRoleString = messages.roleName(targetRole);
 
         List<CompassCandidate> opponents = collectOpponents(holder, targetRole, instance);
         List<CompassSighting> sightings = collectSightings(holder, targetRole, instance);
-        UUID locked = locks.get(holder.getUniqueId());
-        if (locked != null) {
-            if (trackLockedTarget(holder, item, slot, locked, opponents, sightings, targetRoleString)) {
-                return;
+        UUID lockedId = locks.get(holder.getUniqueId());
+        boolean locked = lockedId != null;
+        if (locked) {
+            List<CompassCandidate> lockedOpponents = opponents.stream()
+                    .filter(candidate -> candidate.id().equals(lockedId)).toList();
+            List<CompassSighting> lockedSightings = sightings.stream()
+                    .filter(sighting -> sighting.ownerId().equals(lockedId)).toList();
+            if (lockedOpponents.isEmpty() && lockedSightings.isEmpty()) {
+                locks.remove(holder.getUniqueId());
+                locked = false;
+            } else {
+                opponents = lockedOpponents;
+                sightings = lockedSightings;
             }
-            locks.remove(holder.getUniqueId());
         }
         String roleBase = "settings.compass." + holderRole.name().toLowerCase(Locale.ROOT) + ".";
         boolean nearbyEnabled = plugin.getConfig()
@@ -166,15 +180,19 @@ public final class CompassManager {
                 : -1.0;
         CompassPick pick = CompassPick.resolve(opponents, sightings, nearbyEnabled, nearbyThreshold,
                 trackingDistance);
+        if (pick.kind() != CompassPick.Kind.NONE && badSignalForPick(holder, pick)) {
+            showBadSignal(holder, item, slot);
+            return;
+        }
         switch (pick.kind()) {
-            case TRACK_PLAYER -> trackPlayer(holder, item, slot, pick, targetRoleString, false);
+            case TRACK_PLAYER -> trackPlayer(holder, item, slot, pick, targetRoleString, locked);
             case NEARBY -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
                 compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
                         Map.of("player", pick.name())));
             }
-            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, false);
+            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked);
             case TOO_FAR -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
@@ -211,44 +229,11 @@ public final class CompassManager {
         return Math.sqrt(dx * dx + dz * dz);
     }
 
-    /**
-     * Points a locked compass at its target: live location for a live
-     * opponent, else their last-seen location. A manual lock bypasses the
-     * min/max distance overrides, but signal interference still applies.
-     * Returns false when the
-     * target is no longer trackable, so the caller falls back to
-     * automatic.
-     */
-    private boolean trackLockedTarget(Player holder, ItemStack item, int slot, UUID locked,
-            List<CompassCandidate> opponents, List<CompassSighting> sightings, String targetRoleString) {
-        for (CompassCandidate candidate : opponents) {
-            if (candidate.id().equals(locked)) {
-                trackPlayer(holder, item, slot,
-                        new CompassPick(CompassPick.Kind.TRACK_PLAYER, locked, candidate.name()),
-                        targetRoleString, true);
-                return true;
-            }
-        }
-        for (CompassSighting sighting : sightings) {
-            if (sighting.ownerId().equals(locked)) {
-                trackSighting(holder, item, slot,
-                        new CompassPick(CompassPick.Kind.TRACK_SIGHTING, locked, sighting.name()),
-                        targetRoleString, true);
-                return true;
-            }
-        }
-        return false;
-    }
-
     private void trackPlayer(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
             boolean locked) {
         Player target = Bukkit.getPlayer(pick.id());
         if (target == null) {
             showNoTarget(holder, item, slot, targetRoleString);
-            return;
-        }
-        if (badSignal(holder, target.getLocation())) {
-            showBadSignal(holder, item, slot);
             return;
         }
         setLodestone(item, target.getLocation());
@@ -268,10 +253,6 @@ public final class CompassManager {
         if (location == null || location.getWorld() == null
                 || skipLastSeen(seen != null, seen == null ? null : seen.getGameMode())) {
             showNoTarget(holder, item, slot, targetRoleString);
-            return;
-        }
-        if (badSignal(holder, location)) {
-            showBadSignal(holder, item, slot);
             return;
         }
         setLodestone(item, location);
@@ -303,15 +284,79 @@ public final class CompassManager {
      * holder's spot (and, with two-way, the target's spot) resolves to a
      * bad signal that the bypass roll does not save.
      */
-    private boolean badSignal(Player holder, Location target) {
+    private boolean badSignal(Player holder, Location target, SignalInterference.Config interference,
+            Boolean hasLineOfSight) {
         if (!plugin.getConfig().getBoolean("settings.compass.signal-interference.enabled", false)) {
             return false;
         }
+        boolean ignoreTransparent = plugin.getConfig().getBoolean(
+                "settings.compass.signal-interference.underground.ignore-transparent", true);
+        SignalInterference.Snapshot targetSnapshot = interference.twoWay()
+                ? targetSnapshot(target, ignoreTransparent) : null;
+        return SignalInterference.badSignal(signalSnapshot(holder.getLocation(), ignoreTransparent),
+                targetSnapshot, interference, ThreadLocalRandom.current().nextDouble(), hasLineOfSight);
+    }
+
+    /**
+     * Interference verdict for a resolved pick. Sightings use their
+     * recorded location; every live kind uses the player's location, or
+     * none when they logged out between selection and this check. Only
+     * live targets get a line-of-sight reading.
+     */
+    private boolean badSignalForPick(Player holder, CompassPick pick) {
         SignalInterference.Config interference = interferenceConfig();
-        SignalInterference.Snapshot targetSnapshot =
-                interference.twoWay() ? targetSnapshot(target) : null;
-        return SignalInterference.badSignal(signalSnapshot(holder.getLocation()), targetSnapshot,
-                interference, ThreadLocalRandom.current().nextDouble());
+        Location target = null;
+        Player seen = null;
+        if (pick.kind() == CompassPick.Kind.TRACK_SIGHTING) {
+            target = playerStates.sightings().getOrDefault(pick.id(), Map.of())
+                    .get(holder.getWorld().getUID());
+        } else if (pick.id() != null) {
+            seen = Bukkit.getPlayer(pick.id());
+            target = seen == null ? null : seen.getLocation();
+        }
+        Boolean sight = interference.losEnabled() ? lineOfSight(holder, seen, interference) : null;
+        return badSignal(holder, target, interference, sight);
+    }
+
+    /**
+     * Interference verdict for a scroll attempt, evaluated against the
+     * nearest candidate: live opponents first, then sightings.
+     */
+    private boolean badSignalForScroll(Player holder, List<CompassCandidate> opponents,
+            List<CompassSighting> sightings) {
+        SignalInterference.Config interference = interferenceConfig();
+        Location target = null;
+        Player seen = null;
+        if (!opponents.isEmpty()) {
+            seen = Bukkit.getPlayer(opponents.get(0).id());
+            target = seen == null ? null : seen.getLocation();
+        }
+        if (target == null && !sightings.isEmpty()) {
+            target = playerStates.sightings().getOrDefault(sightings.get(0).ownerId(), Map.of())
+                    .get(holder.getWorld().getUID());
+        }
+        Boolean sight = interference.losEnabled() ? lineOfSight(holder, seen, interference) : null;
+        return badSignal(holder, target, interference, sight);
+    }
+
+    /**
+     * Eye-to-eye sight from the holder to a live target, or null when no
+     * ray applies: no target, another world, or a target the holder
+     * cannot share a world with.
+     */
+    private Boolean lineOfSight(Player holder, Player target, SignalInterference.Config interference) {
+        if (target == null || !target.getWorld().equals(holder.getWorld())) {
+            return null;
+        }
+        Location from = holder.getEyeLocation();
+        Location to = target.getEyeLocation();
+        World world = holder.getWorld();
+        boolean clear = rayClear(from.getX(), from.getY(), from.getZ(), to.getX(), to.getY(), to.getZ(),
+                interference.losMaxDistance(),
+                (x, y, z) -> y >= world.getMinHeight() && y < world.getMaxHeight()
+                        && world.isChunkLoaded(x >> 4, z >> 4)
+                        && world.getBlockAt(x, y, z).getType().isOccluding());
+        return clear;
     }
 
     private SignalInterference.Config interferenceConfig() {
@@ -332,6 +377,14 @@ public final class CompassManager {
         } catch (IllegalArgumentException e) {
             when = SignalInterference.InterfereWhen.ONE_UNMET;
         }
+        SignalInterference.InterfereWhenVisible losWhen;
+        try {
+            String raw = plugin.getConfig().getString(base + "line-of-sight.interfere-when", "VISIBLE");
+            losWhen = SignalInterference.InterfereWhenVisible.valueOf(
+                    (raw == null ? "VISIBLE" : raw).trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            losWhen = SignalInterference.InterfereWhenVisible.VISIBLE;
+        }
         return new SignalInterference.Config(
                 plugin.getConfig().getBoolean(base + "light-level.enabled", false),
                 plugin.getConfig().getInt(base + "light-level.min-sky-light", 10),
@@ -339,6 +392,8 @@ public final class CompassManager {
                 when,
                 plugin.getConfig().getBoolean(base + "underground.enabled", false),
                 plugin.getConfig().getInt(base + "underground.max-blocks-above", 3),
+                plugin.getConfig().getBoolean(base + "underwater.enabled", true),
+                plugin.getConfig().getInt(base + "underwater.max-blocks-above", 2),
                 plugin.getConfig().getBoolean(base + "altitude.enabled", false),
                 plugin.getConfig().getInt(base + "altitude.min-y", -20),
                 plugin.getConfig().getInt(base + "altitude.max-y", 120),
@@ -346,13 +401,16 @@ public final class CompassManager {
                 during,
                 plugin.getConfig().getBoolean(base + "biome.enabled", false),
                 new HashSet<>(plugin.getConfig().getStringList(base + "biome.interfere-in")),
+                plugin.getConfig().getBoolean(base + "line-of-sight.enabled", false),
+                losWhen,
+                plugin.getConfig().getInt(base + "line-of-sight.max-ray-distance", 300),
                 plugin.getConfig().getInt(base + "required-to-fail", 1),
                 plugin.getConfig().getBoolean(base + "two-way", false),
                 plugin.getConfig().getDouble(base + "chance-to-bypass", 0.0));
     }
 
     /** Signal snapshot for a spot, read from its feet block. */
-    private SignalInterference.Snapshot signalSnapshot(Location location) {
+    private SignalInterference.Snapshot signalSnapshot(Location location, boolean ignoreTransparent) {
         Block block = location.getBlock();
         World world = block.getWorld();
         SignalInterference.Weather weather;
@@ -367,7 +425,8 @@ public final class CompassManager {
                 block.getLightFromSky(),
                 block.getLightFromBlocks(),
                 world.getEnvironment() == World.Environment.NORMAL,
-                solidBlocksAbove(block),
+                solidBlocksAbove(block, ignoreTransparent),
+                fluidBlocksAbove(block),
                 block.getY(),
                 weather,
                 block.getBiome().getKey().toString());
@@ -378,29 +437,93 @@ public final class CompassManager {
      * chunk is not loaded. An unloaded sighting never fails the target
      * side, so refreshes never force chunk loads.
      */
-    private SignalInterference.Snapshot targetSnapshot(Location target) {
+    private SignalInterference.Snapshot targetSnapshot(Location target, boolean ignoreTransparent) {
         if (target == null || target.getWorld() == null
                 || !target.getWorld().isChunkLoaded(target.getBlockX() >> 4, target.getBlockZ() >> 4)) {
             return null;
         }
-        return signalSnapshot(target);
+        return signalSnapshot(target, ignoreTransparent);
     }
 
-    /** Solid blocks strictly above the feet block, capped for cheap reads. */
-    private static final int MAX_SOLID_COUNT = 380;
+    /** Blocks strictly above the feet block, capped for cheap reads. */
+    private static final int MAX_ABOVE_COUNT = 380;
 
-    private int solidBlocksAbove(Block feet) {
+    private int solidBlocksAbove(Block feet, boolean ignoreTransparent) {
         World world = feet.getWorld();
         int count = 0;
         for (int y = feet.getY() + 1; y < world.getMaxHeight(); y++) {
-            if (world.getBlockAt(feet.getX(), y, feet.getZ()).isSolid()) {
+            Block block = world.getBlockAt(feet.getX(), y, feet.getZ());
+            if (countsAsCover(block.isSolid(), block.getType().isOccluding(), ignoreTransparent)) {
                 count++;
-                if (count > MAX_SOLID_COUNT) {
+                if (count > MAX_ABOVE_COUNT) {
                     break;
                 }
             }
         }
         return count;
+    }
+
+    /**
+     * True when a block above the feet counts as cover: any solid block,
+     * or only whole occluding ones when transparent blocks are ignored.
+     * Pure for tests.
+     */
+    static boolean countsAsCover(boolean solid, boolean occluding, boolean ignoreTransparent) {
+        if (!solid) {
+            return false;
+        }
+        return !ignoreTransparent || occluding;
+    }
+
+    /** Water or lava blocks strictly above the feet block. */
+    private int fluidBlocksAbove(Block feet) {
+        World world = feet.getWorld();
+        int count = 0;
+        for (int y = feet.getY() + 1; y < world.getMaxHeight(); y++) {
+            Material type = world.getBlockAt(feet.getX(), y, feet.getZ()).getType();
+            if (type == Material.WATER || type == Material.LAVA) {
+                count++;
+                if (count > MAX_ABOVE_COUNT) {
+                    break;
+                }
+            }
+        }
+        return count;
+    }
+
+    /** Answers whether one block coordinate blocks sight. */
+    interface SightProbe {
+        boolean blocks(int x, int y, int z);
+    }
+
+    /** Ray sampling step in blocks; whole cubes cannot hide between samples. */
+    static final double LOS_STEP = 0.5;
+
+    /**
+     * Eye-to-eye sight along one ray: false past maxDistance or when any
+     * sampled block between the endpoints blocks sight. The start block
+     * is skipped, the end block counts. Pure for tests.
+     */
+    static boolean rayClear(double x0, double y0, double z0, double x1, double y1, double z1,
+            double maxDistance, SightProbe probe) {
+        double dx = x1 - x0;
+        double dy = y1 - y0;
+        double dz = z1 - z0;
+        double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (distance > maxDistance) {
+            return false;
+        }
+        int steps = Math.max(1, (int) Math.ceil(distance / LOS_STEP));
+        for (int step = 1; step <= steps; step++) {
+            double fraction = (double) step / steps;
+            int x = (int) Math.floor(x0 + dx * fraction);
+            int y = (int) Math.floor(y0 + dy * fraction);
+            int z = (int) Math.floor(z0 + dz * fraction);
+            if (probe.blocks(x, y, z)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -574,10 +697,8 @@ public final class CompassManager {
             material = Material.COMPASS;
         }
         ItemStack item = new ItemStack(material);
+        applyCompassIdentity(item, role(player));
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(messages.nonItalic(component("compass.compass-name")));
-        meta.lore(messages.strings("compass.compass-lore").stream()
-                .map(messages::parse).map(messages::nonItalic).toList());
         if (plugin.getConfig().getBoolean("settings.compass.drop-on-death.enabled", false)) {
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         } else {
@@ -660,6 +781,73 @@ public final class CompassManager {
                         .has(compassKey, PersistentDataType.BYTE);
     }
 
+    /**
+     * True when the player may keep a compass: a hunter or speedrunner
+     * inside a live match. Everyone else loses picked-up compasses.
+     */
+    public boolean mayHoldCompass(Player player) {
+        Role holderRole = role(player);
+        if (holderRole != Role.HUNTER && holderRole != Role.SPEEDRUNNER) {
+            return false;
+        }
+        return game != null && game.instanceOf(player.getUniqueId()).isPresent();
+    }
+
+    /** Restamps the holder's compass with their role's name and lore. */
+    public void refreshCompassIdentity(Player player) {
+        int slot = findCompassSlot(player);
+        if (slot < 0) {
+            return;
+        }
+        ItemStack item = player.getInventory().getItem(slot);
+        if (!isCompass(item)) {
+            return;
+        }
+        applyCompassIdentity(item, role(player));
+        player.getInventory().setItem(slot, item);
+    }
+
+    /**
+     * Stamps a compass with its holder role's name and lore. Missing
+     * per-role keys fall back to the legacy shared text.
+     */
+    private void applyCompassIdentity(ItemStack item, Role holderRole) {
+        ItemMeta meta = item.getItemMeta();
+        String nameKey = compassNameKey(holderRole);
+        if (messages.string(nameKey, null) == null) {
+            nameKey = "compass.compass-name";
+        }
+        meta.displayName(messages.nonItalic(messages.component(nameKey)));
+        List<String> lore = messages.strings(compassLoreKey(holderRole));
+        if (lore.isEmpty()) {
+            lore = messages.strings("compass.compass-lore");
+        }
+        meta.lore(lore.stream().map(messages::parse).map(messages::nonItalic).toList());
+        item.setItemMeta(meta);
+    }
+
+    /** Message key for a role's compass name. Pure for tests. */
+    static String compassNameKey(Role holderRole) {
+        if (holderRole == Role.SPEEDRUNNER) {
+            return "compass.speedrunner-name";
+        }
+        if (holderRole == Role.HUNTER) {
+            return "compass.hunter-name";
+        }
+        return "compass.compass-name";
+    }
+
+    /** Message key for a role's compass lore. Pure for tests. */
+    static String compassLoreKey(Role holderRole) {
+        if (holderRole == Role.SPEEDRUNNER) {
+            return "compass.speedrunner-lore";
+        }
+        if (holderRole == Role.HUNTER) {
+            return "compass.hunter-lore";
+        }
+        return "compass.compass-lore";
+    }
+
     public boolean mustBeInventory() {
         return plugin.getConfig().getBoolean("settings.compass.must-be-inventory.enabled", true);
     }
@@ -667,6 +855,9 @@ public final class CompassManager {
     public void handleRightClick(Player player) {
         if (!plugin.getConfig()
                 .getBoolean("settings.compass.right-click.refresh-on-right-click", false)) {
+            return;
+        }
+        if (player.getGameMode() == GameMode.SPECTATOR) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -692,12 +883,27 @@ public final class CompassManager {
      * the nearest candidate, further clicks advance through the rest,
      * and cycling past the last candidate returns to automatic. No-op
      * unless left-click cycling is enabled and the holder participates
-     * in a live match. Locks survive automatic refreshes; the refresh
-     * after each click applies the new lock immediately.
+     * in a live match. Clicks inside the scroll cooldown are ignored,
+     * which also stops held clicks from scrolling; scrolling is refused
+     * with one or fewer candidates, during bad signal, and during
+     * analysis. Locks survive automatic refreshes; the refresh after
+     * each click applies the new lock immediately.
      */
     public void handleLeftClick(Player player) {
         if (!plugin.getConfig()
                 .getBoolean("settings.compass.left-click.enabled", false)) {
+            return;
+        }
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            return;
+        }
+        if (analyzing.contains(player.getUniqueId())) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long cooldownMs = (long) (Math.max(0.0, plugin.getConfig()
+                .getDouble("settings.compass.left-click.scroll-cooldown", 0.5)) * 1000);
+        if (!shouldRefresh(now, lastScroll.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
             return;
         }
         if (game == null || !role(player).isParticipant()) {
@@ -714,6 +920,15 @@ public final class CompassManager {
         List<CompassSighting> sightings = collectSightings(player, targetRole, instance);
         int maxTargets = plugin.getConfig()
                 .getInt("settings.compass.left-click.max-targets", 5);
+        if (CompassPick.orderedCandidates(opponents, sightings, maxTargets).size() <= 1) {
+            locks.remove(player.getUniqueId());
+            refreshCompass(player);
+            return;
+        }
+        if (badSignalForScroll(player, opponents, sightings)) {
+            refreshCompass(player);
+            return;
+        }
         UUID current = locks.get(player.getUniqueId());
         UUID next = CompassPick.cycleLock(opponents, sightings, current, maxTargets);
         if (!Objects.equals(next, current)) {
@@ -724,6 +939,7 @@ public final class CompassManager {
         } else {
             locks.put(player.getUniqueId(), next);
         }
+        lastScroll.put(player.getUniqueId(), now);
         refreshCompass(player);
     }
 

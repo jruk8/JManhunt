@@ -31,6 +31,9 @@ in-range live player first, then a too-close player, then another
 player's last seen location. Anything else (no targets at all, or
 only out-of-range ones) makes the needle spin instead of freezing.
 
+The compass does nothing while its holder is in spectator mode:
+refreshes show no target and clicks are ignored.
+
 ## Given to Roles
 
 Under `settings.compass.given-to`, you can configure which roles receive a
@@ -67,6 +70,15 @@ change; new ones use the configured item.
 Note that only `compass` points its needle at the tracked player. A
 `recovery_compass` always points at its holder's last death location, so it
 works as a match token while direction readout stays on the actionbar.
+
+## Compass Names
+
+Each role gets its own compass name and lore from `messages.yml`:
+`compass.hunter-name` and `compass.hunter-lore` for hunters,
+`compass.speedrunner-name` and `compass.speedrunner-lore` for
+speedrunners. Picking up a compass restamps it to your role. Players
+who are not hunters or speedrunners in a live match cannot pick up a
+compass at all: the item is removed instead.
 
 ## Inventory Lock
 
@@ -119,8 +131,8 @@ Under `settings.compass.left-click`, you can let holders left-click the
 compass to cycle a manual target lock through the nearest candidates: live
 opponents nearest-first, then last-seen locations nearest-first, up to
 `max-targets` total. While locked, the actionbar shows `LOCKED` and
-automatic refreshes keep pointing at the locked target (a manual lock also
-bypasses the min/max distance limits). Cycling past
+automatic refreshes keep pointing at the locked target, within the same
+min/max distance limits. Cycling past
 the last candidate returns to automatic tracking, as does clicking again
 after the locked target left the candidate set. Only left-clicks on air or
 blocks cycle the lock; attacking an entity with the compass does not.
@@ -129,7 +141,13 @@ blocks cycle the lock; attacking an entity with the compass does not.
 left-click:
   enabled: true
   max-targets: 5
+  scroll-cooldown: 0.5
 ```
+
+`scroll-cooldown` is the seconds between accepted scrolls; clicks inside
+the window are ignored, so holding the button cannot scroll. Set it to
+`0` for no throttling. Scrolling is also refused with one or fewer
+candidates, while the signal is bad, and while an analysis is running.
 
 Each successful scroll plays a short click. You can change it under
 `sounds.compass.left-click`, or turn it off there. No sound plays when
@@ -208,28 +226,40 @@ out-of-range message and either points at a closer last seen location of
 another player or spins its needle. Set the distance to `-1` for
 unlimited range.
 
-A manually locked target ignores both limits.
+A manually locked target obeys both limits: a locked target that is
+too close shows the nearby message, and one that is too far shows the
+out-of-range message.
 
 ## Signal Interference
 
 Under `settings.compass.signal-interference`, you can make tracking fail
 with a gray Bad signal readout when conditions are bad. The master
-`enabled` switch defaults to off, and every sub-option defaults to off
-too, so the signal is always good until you opt in.
+`enabled` switch defaults to off, so the signal is always good until
+you opt in.
 
-Each sub-option watches one thing at the compass holder's feet:
+Each sub-option watches one thing:
 
 - `light-level`: fails in the dark, with separate sky and block light
   minimums. Only applies in the overworld.
-- `underground`: fails under too many solid blocks overhead.
+- `underground`: fails under too many solid blocks overhead. Glass,
+  leaves, and other non-whole blocks do not count unless you turn
+  `ignore-transparent` off.
+- `underwater`: fails under too much water or lava overhead. Works
+  like `underground` but counts fluid blocks.
 - `altitude`: fails outside a min/max height band.
 - `weather`: fails during the listed weather (storm, rain, clear).
 - `biome`: fails in the listed biomes, written as full keys like
   `minecraft:desert`.
+- `line-of-sight`: fails based on whether the holder can see the
+  target. One eye-to-eye ray is checked; glass and leaves never block
+  it. `interfere-when` picks the failing side (`VISIBLE` by default,
+  `NOT_VISIBLE` for the opposite), and `max-ray-distance` (default
+  300) caps the ray: past it, there is no line of sight. Only live
+  targets in the same world are checked.
 
 Three extra knobs shape the failure: `required-to-fail` sets how many
 options must agree before the compass fails (default 1), `two-way`
 checks the target's spot as well as the holder's, and
 `chance-to-bypass` gives a bad signal a random chance to track anyway.
-Locked targets can fail too; the nearby, out-of-range, and no-target
-readouts never consult interference.
+Locked targets can fail too. The nearby and out-of-range readouts
+consult interference as well; only the no-target readout never does.

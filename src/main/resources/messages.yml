@@ -203,9 +203,14 @@ game:
     entered_end: "<#5fe888>Entered the End"
 
 compass:
-  compass-name: "{role-color-hunter}Hunter's Compass"
-  compass-lore:
+  hunter-name: "{role-color-hunter}Hunter's Compass"
+  hunter-lore:
     - "<gray>Tracks the nearest speedrunner."
+    - "<gray><white>Right-click</white> to refresh when enabled."
+    - "<gray><white>Left-click</white> to cycle targets when enabled."
+  speedrunner-name: "{role-color-speedrunner}Speedrunner's Compass"
+  speedrunner-lore:
+    - "<gray>Tracks the nearest hunter."
     - "<gray><white>Right-click</white> to refresh when enabled."
     - "<gray><white>Left-click</white> to cycle targets when enabled."
   compass-actionbar: "<#de7766>Tracking <white>{player}<#de7766> • <white>{distance}m"

@@ -693,13 +693,20 @@ settings:
       # through the nearest candidates (live opponents first, then
       # last-seen locations). While locked, the actionbar shows LOCKED and
       # automatic refreshes keep pointing at the locked target. Cycling
-      # past the last candidate returns to automatic tracking.
+      # past the last candidate returns to automatic tracking. Locking
+      # needs at least two candidates, and is refused during bad signal
+      # and during analysis.
       # Default: true
       enabled: true
       # How many nearest candidates the lock cycles through at most.
       # Minimum: 1.
       # Default: 5
       max-targets: 5
+      # Seconds between manual target scrolls. Clicks inside the window
+      # are ignored, which also stops a held click from scrolling.
+      # Set to 0 for no throttling.
+      # Default: 0.5
+      scroll-cooldown: 0.5
     # Purposeful lag before a compass refresh resolves, showing
     # "Analyzing..." while it runs. No second refresh starts mid-analysis,
     # and click cooldowns restart when the analysis ends.
@@ -727,7 +734,7 @@ settings:
           speedrunner: []
           hunter: []
     # Per-role tracking distances. The holder's role picks which block
-    # applies. Manually locked targets bypass both distances.
+    # applies. Manually locked targets obey the same limits.
     hunter:
       # When true, the compass stops tracking when the target is within
       # the configured flat distance. Only X/Z coordinates are compared,
@@ -794,6 +801,19 @@ settings:
         # Maximum solid blocks above before interference, 1 to 380.
         # Default: 3
         max-blocks-above: 3
+        # When true, glass, leaves, and other non-whole blocks are not
+        # counted. Set to false to count every solid block.
+        # Default: true
+        ignore-transparent: true
+      # Water or lava above the holder's head. Counts fluid blocks
+      # strictly above the feet block; interferes when the count passes
+      # the maximum.
+      # Default: true
+      underwater:
+        enabled: true
+        # Maximum fluid blocks above before interference, 1 to 380.
+        # Default: 2
+        max-blocks-above: 2
       # Height band with good signal. Interferes outside min-y to max-y.
       # Default: false
       altitude:
@@ -827,6 +847,20 @@ settings:
           - minecraft:soul_sand_valley
           - minecraft:basalt_deltas
           - minecraft:the_end
+      # Line of sight between holder and target. Raycasts one eye-to-eye
+      # ray; glass, leaves, and other non-whole blocks never block it.
+      # Only live targets in the same world are evaluated.
+      # Default: false
+      line-of-sight:
+        enabled: false
+        # VISIBLE interferes when the target is visible; NOT_VISIBLE
+        # interferes when hidden.
+        # Default: VISIBLE
+        interfere-when: VISIBLE
+        # Hard cap on the ray length. Past this distance there is no
+        # line of sight. From 1 to 1000.
+        # Default: 300
+        max-ray-distance: 300
 
   # Friendly fire rules for participants. When disabled for a role, players of
   # that role cannot damage players of the same role once the game has begun.

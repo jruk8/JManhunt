@@ -99,9 +99,17 @@ public final class CompassProtectionListener implements Listener {
         if (!compass.isCompass(event.getItem().getItemStack())) {
             return;
         }
-        // Schedule deduplication next tick to handle multiple compasses
-        // picked up in the same tick
-        Bukkit.getScheduler().runTask(plugin, () -> compass.deduplicateCompasses(player));
+        if (!compass.mayHoldCompass(player)) {
+            event.setCancelled(true);
+            event.getItem().remove();
+            return;
+        }
+        // Schedule next tick to handle multiple compasses picked up in
+        // the same tick; the kept compass takes the picker's role text.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            compass.deduplicateCompasses(player);
+            compass.refreshCompassIdentity(player);
+        });
     }
 
     @EventHandler public void onInteract(PlayerInteractEvent event) {

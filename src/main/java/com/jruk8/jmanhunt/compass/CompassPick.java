@@ -50,15 +50,13 @@ public record CompassPick(Kind kind, UUID id, String name) {
     }
 
     /**
-     * Next manual compass lock when left-click cycling, or null for
-     * automatic tracking. Candidates run live opponents nearest-first,
+     * Lockable candidates in cycle order: live opponents nearest-first,
      * then last-seen locations nearest-first, capped at maxTargets total
-     * (at least one). From automatic the first candidate locks; from the
-     * last candidate, or from a lock that left the candidate set, cycling
-     * returns to automatic. Pure for tests.
+     * (at least one). Live players win over their own sightings. Pure for
+     * tests.
      */
-    public static UUID cycleLock(List<CompassCandidate> opponents, List<CompassSighting> sightings,
-            UUID currentLock, int maxTargets) {
+    public static List<UUID> orderedCandidates(List<CompassCandidate> opponents,
+            List<CompassSighting> sightings, int maxTargets) {
         int cap = Math.max(1, maxTargets);
         List<UUID> ordered = new ArrayList<>();
         opponents.stream()
@@ -73,6 +71,18 @@ public record CompassPick(Kind kind, UUID id, String name) {
                 .filter(id -> id != null && !ordered.contains(id))
                 .limit(cap - ordered.size())
                 .forEachOrdered(ordered::add);
+        return ordered;
+    }
+
+    /**
+     * Next manual compass lock when left-click cycling, or null for
+     * automatic tracking. From automatic the first candidate locks; from
+     * the last candidate, or from a lock that left the candidate set,
+     * cycling returns to automatic. Pure for tests.
+     */
+    public static UUID cycleLock(List<CompassCandidate> opponents, List<CompassSighting> sightings,
+            UUID currentLock, int maxTargets) {
+        List<UUID> ordered = orderedCandidates(opponents, sightings, maxTargets);
         if (ordered.isEmpty()) {
             return null;
         }

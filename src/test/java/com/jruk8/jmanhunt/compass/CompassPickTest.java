@@ -175,4 +175,39 @@ class CompassPickTest {
         assertEquals(ALICE, CompassPick.cycleLock(opponents, List.of(), null, 0));
         assertNull(CompassPick.cycleLock(opponents, List.of(), ALICE, -3));
     }
+
+    @Test
+    void orderedCandidatesRunsOpponentsThenSightings() {
+        List<CompassCandidate> opponents = List.of(
+                candidate(BOB, "Bob", 200.0, 200.0),
+                candidate(ALICE, "Alice", 100.0, 100.0));
+        List<CompassSighting> sightings = List.of(sighting(CAROL, "Carol", 50.0));
+
+        assertEquals(List.of(ALICE, BOB, CAROL),
+                CompassPick.orderedCandidates(opponents, sightings, 5));
+    }
+
+    @Test
+    void orderedCandidatesCapsAndDedupes() {
+        List<CompassCandidate> opponents = List.of(
+                candidate(ALICE, "Alice", 100.0, 100.0),
+                candidate(BOB, "Bob", 200.0, 200.0));
+        List<CompassSighting> sightings = List.of(
+                sighting(ALICE, "Alice", 50.0),
+                sighting(CAROL, "Carol", 60.0));
+
+        assertEquals(List.of(ALICE, BOB),
+                CompassPick.orderedCandidates(opponents, sightings, 2));
+        assertEquals(List.of(ALICE, BOB, CAROL),
+                CompassPick.orderedCandidates(opponents, sightings, 5));
+    }
+
+    @Test
+    void singleCandidateLeavesNothingToLock() {
+        List<CompassCandidate> opponents =
+                List.of(candidate(ALICE, "Alice", 100.0, 100.0));
+
+        assertEquals(1, CompassPick.orderedCandidates(opponents, List.of(), 5).size());
+        assertEquals(0, CompassPick.orderedCandidates(List.of(), List.of(), 5).size());
+    }
 }
