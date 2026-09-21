@@ -948,11 +948,7 @@ world-engine:
       # NO_MATCH_RUNNING only refills while no match is running.
       # Default: ALWAYS
       increment-when: ALWAYS
-  # When extra end dimensions beyond the cell buffer are deleted. ALWAYS
-  # prunes one extra dimension per match start until the buffer is reached,
-  # NEVER keeps extra dimensions around.
-  # Default: NEVER
-  end-cell-prune-when: NEVER
+
   # World border configuration for cell confinement.
   world-border:
     # When true, the world border is used to limit the spiral cell area.

@@ -89,13 +89,13 @@ Held players count against queue caps; joined players ignore them, like
 ## Sublobbies
 
 With the default `SUBLOBBY` policy, a lobby never hosts a match
-directly: it only orchestrates sublobbies, and every match — the first
-included — runs as one. Sublobbies are numbered per lobby from zero and
+directly: it only orchestrates sublobbies, and every match (the first
+included) runs as one. Sublobbies are numbered per lobby from zero and
 shown as `L{lobby-id}-{sublobby-id}` (so the first match in lobby 2 is
 `L2-0`); ids are never reused within a run.
 
 Sublobbies run one live match per parent lobby, exactly like direct
-hosting — the queue keeps gathering in the parent while its sublobby
+hosting: the queue keeps gathering in the parent while its sublobby
 plays. `setplayer` into a live sublobby queues the role for the next
 one, and status output shows the tag (`L2-0|G5` in `status`,
 `L2-0|G5`-style entries in `status all`). Switch the policy to `HOLD`
@@ -113,7 +113,7 @@ delay cannot be joined.
 and speedrunners confirm with a second run within 10 seconds, drop their
 gear, and land wherever `settings.game-leave.destination` points
 (`SPECTATOR` by default, `LOBBY` to return to the queue as `none`). If a
-role change ever leaves a side empty — a last leaver included — the other
+role change ever leaves a side empty (a last leaver included), the other
 side wins immediately.
 
 ## Match Area Enforcement
@@ -141,15 +141,8 @@ match's slice of the shared nether, so concurrent matches never meet there.
 End portals lead to the match's own end dimension, and leaving the end
 returns to the match cell.
 
-Extra end dimensions accumulate over time. `end-cell-prune-when` controls
-cleanup: `ALWAYS` deletes one extra dimension per match start until only the
-cell buffer remains, while `NEVER` (the default) keeps them. Busy servers
-should use `ALWAYS`.
-
-```yaml
-world-engine:
-  end-cell-prune-when: NEVER
-```
+Each match's end dimension is deleted when the match ends. Anything
+left behind by a crash is cleaned up on the next startup.
 
 ## Preloading
 

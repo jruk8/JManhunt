@@ -79,7 +79,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         this.netherStructuresDatapackManager = new NetherStructuresDatapackManager(plugin);
         this.overworldStructuresDatapackManager = new OverworldStructuresDatapackManager(plugin);
         this.endResetManager = new EndResetManager(plugin);
-        this.endCells = new EndCellManager(plugin);
+        this.endCells = new EndCellManager(plugin, engineState);
         this.lobbyWorlds = new LobbyWorldManager(plugin);
     }
 
@@ -525,6 +525,18 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         return Optional.empty();
     }
 
+    /**
+     * Startup sweep for orphaned end dimensions: reservations left by
+     * restarts or crashes plus stray folders from older versions.
+     */
+    public void deleteOrphanedEndCells() {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        int deleted = endCells.deleteOrphans(config.worldName());
+        if (deleted > 0) {
+            plugin.logger().info("Deleted " + deleted + " orphaned end dimension(s).");
+        }
+    }
+
     /** True when lobby-world-name collides with the game world name. */
     public boolean lobbyWorldNameClashes() {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
@@ -691,11 +703,7 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
             player.setRespawnLocation(cellRoot, true);
         }
 
-        Location lobby = resolveLobby(lobbyId, false);
         endCells.ensureEndCell(config, origin.index(), matchId);
-        if ("ALWAYS".equalsIgnoreCase(plugin.getConfig().getString("world-engine.end-cell-prune-when", "NEVER"))) {
-            endCells.pruneExtras(config.worldName(), bufferTarget(), lobby);
-        }
 
         if (applyBorder) {
             setWorldBorder(world, config, origin);

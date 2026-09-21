@@ -2,8 +2,6 @@ package com.jruk8.jmanhunt.world.end;
 
 import org.junit.jupiter.api.Test;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class EndCellManagerTest {
@@ -15,29 +13,21 @@ class EndCellManagerTest {
     }
 
     @Test
-    void pruneCandidateIsOldestBeyondBuffer() {
-        List<String> dirs = List.of("world_the_end_9", "world_the_end_2", "world_the_end_7");
-
-        assertEquals(Optional.of("world_the_end_2"),
-                EndCellManager.selectPruneCandidate(dirs, "world_the_end_", Set.of(), 2));
-        assertEquals(Optional.empty(),
-                EndCellManager.selectPruneCandidate(dirs, "world_the_end_", Set.of(), 3));
-    }
-
-    @Test
-    void pruneCandidateSkipsReservedAndUnrelated() {
+    void strayEndWorldsMatchPrefixSorted() {
         List<String> dirs = List.of(
-                "world_the_end_2", "world_the_end_7", "world_the_end_9", "world_the_end_old", "other");
+                "world_the_end_9", "other", "world_the_end_2", "world", "world_the_end_old");
 
-        assertEquals(Optional.of("world_the_end_7"),
-                EndCellManager.selectPruneCandidate(dirs, "world_the_end_", Set.of("world_the_end_2"), 2));
+        assertEquals(
+                List.of("world_the_end_2", "world_the_end_9", "world_the_end_old"),
+                EndCellManager.strayEndWorlds(dirs, "world_the_end_"));
     }
 
     @Test
-    void pruneCandidateSortsUnparsableSuffixesLast() {
-        List<String> dirs = List.of("world_the_end_old", "world_the_end_9");
+    void strayEndWorldsSpareTheSharedEnd() {
+        List<String> dirs = List.of("world_the_end", "world_the_end_1");
 
-        assertEquals(Optional.of("world_the_end_9"),
-                EndCellManager.selectPruneCandidate(dirs, "world_the_end_", Set.of(), 0));
+        assertEquals(
+                List.of("world_the_end_1"),
+                EndCellManager.strayEndWorlds(dirs, "world_the_end_"));
     }
 }

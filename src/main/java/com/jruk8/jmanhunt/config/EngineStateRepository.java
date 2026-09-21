@@ -8,11 +8,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * Small always-SQLite store for engine state. It currently owns the
- * world-engine spiral cell index; other internal counters may move here
- * later. Career statistics live in {@link StatisticsRepository} instead.
+ * Small always-SQLite store for engine state. It owns the world-engine
+ * spiral cell index plus the live end-dimension reservations; other
+ * internal counters may move here later. Career statistics live in
+ * {@link StatisticsRepository} instead.
  */
 public final class EngineStateRepository implements AutoCloseable {
     private final HikariDataSource dataSource;
@@ -42,6 +45,8 @@ public final class EngineStateRepository implements AutoCloseable {
         try (Connection connection = connection(); Statement statement = connection.createStatement()) {
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS engine_state ("
                     + "state_key VARCHAR(64) PRIMARY KEY, state_value BIGINT NOT NULL)");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS end_reservations ("
+                    + "match_id BIGINT PRIMARY KEY, world_name VARCHAR(128) NOT NULL)");
         }
     }
 
@@ -111,6 +116,39 @@ public final class EngineStateRepository implements AutoCloseable {
                 connection.setAutoCommit(true);
             }
         }
+    }
+
+    public synchronized void putEndReservation(long matchId, String worldName) throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement update = connection.prepareStatement(
+                        "INSERT INTO end_reservations (match_id, world_name) VALUES (?, ?) "
+                                + "ON CONFLICT (match_id) DO UPDATE SET world_name=EXCLUDED.world_name")) {
+            update.setLong(1, matchId);
+            update.setString(2, worldName);
+            update.executeUpdate();
+        }
+    }
+
+    public synchronized void removeEndReservation(long matchId) throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement delete = connection.prepareStatement(
+                        "DELETE FROM end_reservations WHERE match_id=?")) {
+            delete.setLong(1, matchId);
+            delete.executeUpdate();
+        }
+    }
+
+    public synchronized Map<Long, String> endReservations() throws SQLException {
+        Map<Long, String> rows = new LinkedHashMap<>();
+        try (Connection connection = connection();
+                PreparedStatement select = connection.prepareStatement(
+                        "SELECT match_id, world_name FROM end_reservations");
+                ResultSet result = select.executeQuery()) {
+            while (result.next()) {
+                rows.put(result.getLong(1), result.getString(2));
+            }
+        }
+        return rows;
     }
 
     @Override public void close() {

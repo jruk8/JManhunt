@@ -4,7 +4,9 @@ import com.jruk8.jmanhunt.world.WorldCellAllocator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
+import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EngineStateRepositoryTest {
 
@@ -33,6 +35,35 @@ class EngineStateRepositoryTest {
             assertEquals(0L, repository.getWorldCellIndex());
             repository.setWorldCellIndex(41L);
             assertEquals(41L, repository.getWorldCellIndex());
+        }
+    }
+
+    @Test
+    void endReservationsRoundTrip(@TempDir Path dataFolder) throws Exception {
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertTrue(repository.endReservations().isEmpty());
+
+            repository.putEndReservation(7L, "world_the_end_3");
+            repository.putEndReservation(9L, "world_the_end_9");
+            assertEquals(Map.of(7L, "world_the_end_3", 9L, "world_the_end_9"),
+                    repository.endReservations());
+
+            repository.putEndReservation(7L, "world_the_end_4");
+            assertEquals(Map.of(7L, "world_the_end_4", 9L, "world_the_end_9"),
+                    repository.endReservations());
+
+            repository.removeEndReservation(7L);
+            assertEquals(Map.of(9L, "world_the_end_9"), repository.endReservations());
+        }
+    }
+
+    @Test
+    void endReservationsSurviveReopen(@TempDir Path dataFolder) throws Exception {
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            repository.putEndReservation(7L, "world_the_end_3");
+        }
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertEquals(Map.of(7L, "world_the_end_3"), repository.endReservations());
         }
     }
 

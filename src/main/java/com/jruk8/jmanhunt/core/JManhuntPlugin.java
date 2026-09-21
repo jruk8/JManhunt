@@ -94,6 +94,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         compass = new CompassManager(this, messages, sounds, playerStates,
                 new NamespacedKey(this, "hunters_compass"));
         worldEngine = new WorldEngineService(this, messages, configService, engineState);
+        worldEngine.deleteOrphanedEndCells();
         winConditionEngine = new WinConditionEngine(getConfig());
         game = new GameManager(
                 this, messages, sounds, playerStates, compass, stats,

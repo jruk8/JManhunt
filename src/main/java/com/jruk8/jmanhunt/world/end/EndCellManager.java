@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.world.end;
 
+import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.world.FileUtils;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.core.JManhuntPlugin;
@@ -11,27 +12,30 @@ import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Owns per-match end dimensions. Each match cell gets its own end world so
  * concurrent matches never share a dragon fight; reservations map live
- * matches to their dimension and extras are pruned back to the buffer.
+ * matches to their dimension, persist across restarts, and are deleted
+ * with their world when the match ends.
  */
 public final class EndCellManager {
     private final JManhuntPlugin plugin;
+    private final EngineStateRepository engineState;
     /** Live reservations, match id to end world name. */
     private final Map<Long, String> reservations = new HashMap<>();
 
-    public EndCellManager(JManhuntPlugin plugin) {
+    public EndCellManager(JManhuntPlugin plugin, EngineStateRepository engineState) {
         this.plugin = plugin;
+        this.engineState = engineState;
     }
 
     /** Dedicated end world name for a match cell. The trailing underscore keeps it distinct from the shared end. */
@@ -46,6 +50,7 @@ public final class EndCellManager {
     public String ensureEndCell(WorldEngineConfig config, long cellIndex, long matchId) {
         String name = endCellName(config.worldName(), cellIndex);
         reservations.put(matchId, name);
+        persistReservation(matchId, name);
         plugin.logger().debug("debug.end-cell-reserved",
                 Map.of("cell", name, "id", String.valueOf(matchId)));
         World existing = Bukkit.getWorld(name);
@@ -70,29 +75,71 @@ public final class EndCellManager {
         return Optional.ofNullable(Bukkit.getWorld(name));
     }
 
-    /** Releases a match reservation. True when one existed. */
+    /**
+     * Releases a match reservation, deleting its end dimension. The
+     * caller evacuates players first. A failed delete keeps the
+     * reservation so the startup sweep retries it. True when a
+     * reservation existed.
+     */
     public boolean release(long matchId) {
-        return reservations.remove(matchId) != null;
+        String name = reservations.get(matchId);
+        if (name == null) {
+            return false;
+        }
+        if (!deleteEndWorld(name, null)) {
+            return true;
+        }
+        reservations.remove(matchId);
+        dropReservation(matchId);
+        return true;
     }
 
     /**
-     * Prunes one unreserved end-cell dimension beyond the buffer, oldest
-     * first. Stragglers still inside ride to the fallback location. Restart
-     * leftovers are pruned from disk the same way.
+     * Deletes every tracked end reservation plus any stray
+     * &lt;base&gt;_the_end_* world folders. No match survives a
+     * restart, so every reservation is an orphan; strays are leftovers
+     * from older versions. The shared &lt;base&gt;_the_end stays
+     * untouched: the prefix keeps its trailing underscore. Returns the
+     * number deleted.
      */
-    public void pruneExtras(String baseWorldName, int buffer, Location fallback) {
-        String prefix = baseWorldName + "_the_end_";
+    public int deleteOrphans(String baseWorldName) {
+        Map<Long, String> rows = loadReservations();
+        Set<String> targets = new TreeSet<>(rows.values());
         File container = plugin.getServer().getWorldContainer();
-        String[] entries = container.list((dir, name) -> name.startsWith(prefix) && new File(dir, name).isDirectory());
-        if (entries == null) {
-            return;
+        String[] entries = container.list((dir, name) -> new File(dir, name).isDirectory());
+        if (entries != null) {
+            targets.addAll(strayEndWorlds(Arrays.asList(entries), baseWorldName + "_the_end_"));
         }
-        Optional<String> victim = selectPruneCandidate(Arrays.asList(entries), prefix,
-                new HashSet<>(reservations.values()), buffer);
-        if (victim.isEmpty()) {
-            return;
+        int deleted = 0;
+        for (String name : targets) {
+            if (!deleteEndWorld(name, null)) {
+                continue;
+            }
+            deleted++;
+            for (Map.Entry<Long, String> row : rows.entrySet()) {
+                if (row.getValue().equals(name)) {
+                    dropReservation(row.getKey());
+                }
+            }
+            reservations.values().removeIf(name::equals);
         }
-        World loaded = Bukkit.getWorld(victim.get());
+        return deleted;
+    }
+
+    /**
+     * Container entries that are stray end worlds for the prefix,
+     * sorted. Pure for tests.
+     */
+    static List<String> strayEndWorlds(List<String> dirNames, String prefix) {
+        return dirNames.stream().filter(name -> name.startsWith(prefix)).sorted().toList();
+    }
+
+    /**
+     * Unloads and deletes one end world, riding stragglers to the
+     * fallback first. True when the directory is gone.
+     */
+    private boolean deleteEndWorld(String name, Location fallback) {
+        World loaded = Bukkit.getWorld(name);
         if (loaded != null) {
             if (fallback != null) {
                 for (Player player : loaded.getPlayers()) {
@@ -106,35 +153,49 @@ public final class EndCellManager {
             Bukkit.unloadWorld(loaded, false);
         }
         try {
-            FileUtils.deleteRecursively(new File(container, victim.get()));
+            FileUtils.deleteRecursively(new File(plugin.getServer().getWorldContainer(), name));
         } catch (IOException exception) {
-            plugin.logger().warning("Failed to prune end dimension " + victim.get() + ": " + exception.getMessage());
+            plugin.logger().warning("Failed to delete end dimension " + name + ": " + exception.getMessage());
+            return false;
+        }
+        plugin.logger().debug("debug.end-cell-pruned", Map.of("cell", name));
+        return true;
+    }
+
+    private void persistReservation(long matchId, String name) {
+        if (engineState == null) {
             return;
         }
-        plugin.logger().debug("debug.end-cell-pruned", Map.of("cell", victim.get()));
-    }
-
-    /**
-     * Oldest unreserved end-cell directory beyond the buffer, if any.
-     * Unparsable suffixes sort last so numbered cells prune first.
-     */
-    static Optional<String> selectPruneCandidate(List<String> dirNames, String prefix, Set<String> reserved, int buffer) {
-        List<String> owned = dirNames.stream()
-                .filter(name -> name.startsWith(prefix) && !reserved.contains(name))
-                .sorted(Comparator.comparingLong((String name) -> cellSuffix(name, prefix))
-                        .thenComparing(Comparator.naturalOrder()))
-                .toList();
-        if (owned.size() <= buffer) {
-            return Optional.empty();
-        }
-        return Optional.of(owned.get(0));
-    }
-
-    private static long cellSuffix(String name, String prefix) {
         try {
-            return Long.parseLong(name.substring(prefix.length()));
-        } catch (NumberFormatException | IndexOutOfBoundsException exception) {
-            return Long.MAX_VALUE;
+            engineState.putEndReservation(matchId, name);
+        } catch (SQLException exception) {
+            plugin.logger().warning("Could not persist end reservation for match " + matchId
+                    + ": " + exception.getMessage());
+        }
+    }
+
+    private void dropReservation(long matchId) {
+        if (engineState == null) {
+            return;
+        }
+        try {
+            engineState.removeEndReservation(matchId);
+        } catch (SQLException exception) {
+            plugin.logger().warning("Could not drop end reservation for match " + matchId
+                    + ": " + exception.getMessage());
+        }
+    }
+
+    private Map<Long, String> loadReservations() {
+        if (engineState == null) {
+            return Map.of();
+        }
+        try {
+            return engineState.endReservations();
+        } catch (SQLException exception) {
+            plugin.logger().warning("Could not load end reservations; sweeping stray folders only: "
+                    + exception.getMessage());
+            return Map.of();
         }
     }
 

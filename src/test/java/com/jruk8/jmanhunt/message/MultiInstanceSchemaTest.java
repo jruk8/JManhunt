@@ -68,7 +68,7 @@ class MultiInstanceSchemaTest {
         assertTrue(config.getStringList("world-engine.preloading.commands").isEmpty());
         assertEquals(1, config.getInt("world-engine.preloading.cell-buffer.stored-cells-buffer"));
         assertEquals("ALWAYS", config.getString("world-engine.preloading.cell-buffer.increment-when"));
-        assertEquals("NEVER", config.getString("world-engine.end-cell-prune-when"));
+        assertFalse(config.contains("world-engine.end-cell-prune-when"));
         assertFalse(config.getBoolean("debug.enabled"));
         assertFalse(config.contains("world-engine.on-fetch-new-cell"));
         assertEquals("jmh-lobby", config.getString("world-engine.lobby-world-name"));
