@@ -19,8 +19,8 @@ public record CompassPick(Kind kind, UUID id, String name) {
     }
 
     /**
-     * Ranks opponents (nearest first wins) against the nearby and
-     * tracking-distance settings, then last-seen locations of other
+     * Ranks opponents (nearest first wins) against the per-role min/max
+     * distance settings, then last-seen locations of other
      * players. Never returns null. Pure for tests.
      */
     public static CompassPick resolve(List<CompassCandidate> opponents, List<CompassSighting> sightings,

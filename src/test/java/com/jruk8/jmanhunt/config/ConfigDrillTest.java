@@ -23,7 +23,7 @@ class ConfigDrillTest {
         YamlConfiguration root = new YamlConfiguration();
         root.set("settings.compass.given-to.hunters", true);
         root.set("settings.compass.given-to.speedrunners", false);
-        root.set("settings.compass.tracking-distance", -1.0);
+        root.set("settings.compass.hunter.max-distance.distance", -1.0);
         root.set("settings.autostart.enabled", false);
         root.set("match.end-delay", 10.0);
         root.set("config-version", 3);
@@ -114,7 +114,7 @@ class ConfigDrillTest {
     void childrenHideScalarLeavesOutsideTheEditableSet() {
         YamlConfiguration root = fixture();
 
-        // tracking-distance exists in config but is not editable, so the
+        // hunter.max-distance exists in config but is not editable, so the
         // compass level only offers given-to.
         assertEquals(List.of("given-to"),
                 ManhuntCommand.drillChildren(root, editable(), List.of("settings", "compass")));
@@ -152,7 +152,7 @@ class ConfigDrillTest {
 
     @Test
     void nextSegmentsHideNonEditableSubtrees() {
-        // tracking-distance exists in config but is not editable, so the
+        // hunter.max-distance exists in config but is not editable, so the
         // compass level only lists given-to as a section.
         var listing = ManhuntCommand.nextSegments(editable(), "settings.compass");
 

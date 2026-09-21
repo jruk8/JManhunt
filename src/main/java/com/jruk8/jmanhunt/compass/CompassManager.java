@@ -149,12 +149,15 @@ public final class CompassManager {
             }
             locks.remove(holder.getUniqueId());
         }
+        String roleBase = "settings.compass." + holderRole.name().toLowerCase(Locale.ROOT) + ".";
         boolean nearbyEnabled = plugin.getConfig()
-                .getBoolean("settings.compass.disable-when-nearby.enabled", false);
+                .getBoolean(roleBase + "min-distance.enabled", true);
         double nearbyThreshold = plugin.getConfig()
-                .getDouble("settings.compass.disable-when-nearby.distance", 25.0);
+                .getDouble(roleBase + "min-distance.distance", 25.0);
         double trackingDistance = plugin.getConfig()
-                .getDouble("settings.compass.tracking-distance", -1.0);
+                        .getBoolean(roleBase + "max-distance.enabled", true)
+                ? plugin.getConfig().getDouble(roleBase + "max-distance.distance", -1.0)
+                : -1.0;
         CompassPick pick = CompassPick.resolve(opponents, sightings, nearbyEnabled, nearbyThreshold,
                 trackingDistance);
         switch (pick.kind()) {
@@ -205,7 +208,7 @@ public final class CompassManager {
     /**
      * Points a locked compass at its target: live location for a live
      * opponent, else their last-seen location. A manual lock bypasses the
-     * nearby and tracking-distance overrides. Returns false when the
+     * min/max distance overrides. Returns false when the
      * target is no longer trackable, so the caller falls back to
      * automatic.
      */

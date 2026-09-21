@@ -119,7 +119,7 @@ compass to cycle a manual target lock through the nearest candidates: live
 opponents nearest-first, then last-seen locations nearest-first, up to
 `max-targets` total. While locked, the actionbar shows `LOCKED` and
 automatic refreshes keep pointing at the locked target (a manual lock also
-bypasses the nearby-disable and tracking-distance overrides). Cycling past
+bypasses the min/max distance limits). Cycling past
 the last candidate returns to automatic tracking, as does clicking again
 after the locked target left the candidate set. Only left-clicks on air or
 blocks cycle the lock; attacking an entity with the compass does not.
@@ -185,32 +185,32 @@ debuffs:
 
 ## Tracking Distance
 
-### Minimum Distance
-
-Under `settings.compass.disable-when-nearby`, you can configure the minimum
-distance at which the compass stops tracking. This is useful for making _camping_
-a viable strategy for speedrunners.
+Each role gets its own tracking limits under `settings.compass.hunter` and
+`settings.compass.speedrunner`. The compass uses the block matching the
+role of the player holding it.
 
 ```yaml
-disable-when-nearby:
-  enabled: true
-  # The flat distance in blocks at which the compass stops tracking.
-  # Default: 25
-  distance: 25.0
+hunter:
+  min-distance:
+    enabled: true
+    distance: 25.0
+  max-distance:
+    enabled: true
+    distance: -1.0
 ```
+
+### Minimum Distance
+
+When the target is at or inside the min distance, the compass stops
+tracking and shows the nearby message instead. Only flat distance counts:
+a target directly above or below you still reads as nearby. This makes
+camping a viable strategy for speedrunners.
 
 ### Maximum Distance
 
-Under `settings.compass.tracking-distance`, you can limit how far the
-compass can track a player. When the target is beyond this distance, the
-compass shows a meterless out-of-range actionbar and either points at a
-closer last seen location of another player or spins its needle.
+When the target is beyond the max distance, the compass shows an
+out-of-range message and either points at a closer last seen location of
+another player or spins its needle. Set the distance to `-1` for
+unlimited range.
 
-```yaml
-settings:
-  compass:
-    tracking-distance: -1.0    # radius in blocks
-```
-
-Set to a negative value like `-1.0` for unlimited distance. Any positive value
-over zero enables this feature.
+A manually locked target ignores both limits.

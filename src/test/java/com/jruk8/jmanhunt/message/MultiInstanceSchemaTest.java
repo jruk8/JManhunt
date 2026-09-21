@@ -181,6 +181,21 @@ class MultiInstanceSchemaTest {
     }
 
     @Test
+    void compassPerRoleDistanceDefaults() {
+        YamlConfiguration config = bundledConfig();
+
+        assertFalse(config.contains("settings.compass.disable-when-nearby"));
+        assertFalse(config.contains("settings.compass.tracking-distance"));
+        for (String role : List.of("hunter", "speedrunner")) {
+            String base = "settings.compass." + role;
+            assertTrue(config.getBoolean(base + ".min-distance.enabled"));
+            assertEquals(25.0, config.getDouble(base + ".min-distance.distance"));
+            assertTrue(config.getBoolean(base + ".max-distance.enabled"));
+            assertEquals(-1.0, config.getDouble(base + ".max-distance.distance"));
+        }
+    }
+
+    @Test
     void autostartMinimumDefaults() {
         YamlConfiguration config = bundledConfig();
         YamlConfiguration messages = bundledMessages();
