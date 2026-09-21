@@ -89,10 +89,10 @@ public final class JManhuntPlugin extends JavaPlugin {
         stats = new StatsManager(this, messages, statistics);
         setupPlaceholderApi();
 
-        compass = new CompassManager(this, messages, playerStates,
-                new NamespacedKey(this, "hunters_compass"));
         configService = new ConfigService(this);
         sounds = new SoundService(this, configService);
+        compass = new CompassManager(this, messages, sounds, playerStates,
+                new NamespacedKey(this, "hunters_compass"));
         worldEngine = new WorldEngineService(this, messages, configService, engineState);
         winConditionEngine = new WinConditionEngine(getConfig());
         game = new GameManager(

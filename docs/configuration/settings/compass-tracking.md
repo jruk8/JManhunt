@@ -28,8 +28,8 @@ targets, neither live nor through their last seen location.
 
 When several options exist, the compass ranks them: the nearest
 in-range live player first, then a too-close player, then another
-player's last seen location. Anything else — no targets at all, or
-only out-of-range ones — makes the needle spin instead of freezing.
+player's last seen location. Anything else (no targets at all, or
+only out-of-range ones) makes the needle spin instead of freezing.
 
 ## Given to Roles
 
@@ -126,9 +126,13 @@ blocks cycle the lock; attacking an entity with the compass does not.
 
 ```yaml
 left-click:
-  enabled: false
+  enabled: true
   max-targets: 5
 ```
+
+Each successful scroll plays a short click. You can change it under
+`sounds.compass.left-click`, or turn it off there. No sound plays when
+there is nothing to scroll to.
 
 ## Spin Speed
 

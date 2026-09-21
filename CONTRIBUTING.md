@@ -41,7 +41,7 @@ JManhunt is a Minecraft Manhunt plugin built on Paper. The project values:
 
 ## Testing Expectations
 
-- **Logic-based tests** are required for new features. Use JUnit 5.
+- **Logic-based tests** are required for new features. Use **JUnit 5**.
 - Tests should not require a running Minecraft server. Mock or stub Bukkit
   dependencies where needed.
 - **Do not add runtime or integration tests.** Tests that require a live
@@ -61,12 +61,12 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 Types:
 
-- `feat` — a new feature
-- `fix` — a bug fix
-- `docs` — documentation only changes
-- `refactor` — code changes that neither fix a bug nor add a feature
-- `test` — adding or fixing tests
-- `chore` — maintenance tasks (dependencies, build config, etc.)
+- `feat`: a new feature
+- `fix`: a bug fix
+- `docs`: documentation-only changes
+- `refactor`: code changes that neither fix a bug nor add a feature
+- `test`: adding or fixing tests
+- `chore`: maintenance tasks (dependencies, build config, etc.)
 
 Example:
 
@@ -82,9 +82,8 @@ without touching JManhunt internals.
 
 - Update `docs/` when adding or changing user-facing features.
 - Update `docs/commands.md` for new commands.
-- Update `docs/configuration.md` for new configuration options.
+- Update `docs/configuration` for new configuration options.
 - Update `docs/permissions.md` for new permissions.
-- Update `docs/getting-started.md` for new workflows.
 - Keep documentation accurate and concise.
 
 ## Pull Request Guidelines
@@ -92,11 +91,11 @@ without touching JManhunt internals.
 1. **Branch** from `main` with a descriptive name (e.g.
    `feat/structure-outcomes`).
 2. **Commit** using the style above. Squash fixup commits before submitting.
-3. **Test** — ensure `./gradlew test` passes.
-4. **Build** — ensure `./gradlew build` passes (includes checkstyle).
-5. **Document** — update relevant docs.
-6. **Describe** — write a clear PR description explaining what and why.
-7. **Review** — respond to feedback promptly. CI must pass before merge.
+3. **Test**: ensure `./gradlew test` passes.
+4. **Build**: ensure `./gradlew build` passes (includes checkstyle).
+5. **Document**: update relevant docs.
+6. **Describe**: write a clear PR description explaining what and why.
+7. **Review**: respond to feedback promptly. CI must pass before merge.
 
 ## Code of Conduct
 

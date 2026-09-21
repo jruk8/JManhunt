@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.core.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
@@ -35,6 +36,7 @@ import java.util.UUID;
 public final class CompassManager {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final SoundService sounds;
     private final PlayerStateStore playerStates;
     private final NamespacedKey compassKey;
     private final Map<UUID, Long> lastRefresh = new HashMap<>();
@@ -44,10 +46,11 @@ public final class CompassManager {
     private final Set<UUID> analyzing = new HashSet<>();
     private GameManager game;
 
-    public CompassManager(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
-                          NamespacedKey compassKey) {
+    public CompassManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
+                          PlayerStateStore playerStates, NamespacedKey compassKey) {
         this.plugin = plugin;
         this.messages = messages;
+        this.sounds = sounds;
         this.playerStates = playerStates;
         this.compassKey = compassKey;
     }
@@ -578,7 +581,11 @@ public final class CompassManager {
         List<CompassSighting> sightings = collectSightings(player, targetRole, instance);
         int maxTargets = plugin.getConfig()
                 .getInt("settings.compass.left-click.max-targets", 5);
-        UUID next = CompassPick.cycleLock(opponents, sightings, locks.get(player.getUniqueId()), maxTargets);
+        UUID current = locks.get(player.getUniqueId());
+        UUID next = CompassPick.cycleLock(opponents, sightings, current, maxTargets);
+        if (!Objects.equals(next, current)) {
+            sounds.playSound(player, "compass.left-click");
+        }
         if (next == null) {
             locks.remove(player.getUniqueId());
         } else {

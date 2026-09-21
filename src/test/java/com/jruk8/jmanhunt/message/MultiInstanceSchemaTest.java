@@ -170,8 +170,10 @@ class MultiInstanceSchemaTest {
         YamlConfiguration config = bundledConfig();
         YamlConfiguration messages = bundledMessages();
 
-        assertFalse(config.getBoolean("settings.compass.left-click.enabled"));
+        assertTrue(config.getBoolean("settings.compass.left-click.enabled"));
         assertEquals(5, config.getInt("settings.compass.left-click.max-targets"));
+        assertTrue(config.getBoolean("sounds.compass.left-click.enabled"));
+        assertEquals("ui.button.click", config.getString("sounds.compass.left-click.sound"));
         assertTrue(messages.getString("compass.compass-locked-actionbar", "").contains("[LOCKED]"));
         assertTrue(messages.getString("compass.compass-last-seen-locked-actionbar", "").contains("[LOCKED]"));
     }

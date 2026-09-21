@@ -694,8 +694,8 @@ settings:
       # last-seen locations). While locked, the actionbar shows LOCKED and
       # automatic refreshes keep pointing at the locked target. Cycling
       # past the last candidate returns to automatic tracking.
-      # Default: false
-      enabled: false
+      # Default: true
+      enabled: true
       # How many nearest candidates the lock cycles through at most.
       # Minimum: 1.
       # Default: 5
@@ -1056,3 +1056,12 @@ sounds:
       sound: block.note_block.chime
       pitch: 1.0
       volume: 0.8
+  # Compass interaction sounds.
+  compass:
+    # Heard by the holder when left-click cycling the compass target
+    # lock. Only plays when the scroll changes the lock.
+    left-click:
+      enabled: true
+      sound: ui.button.click
+      pitch: 1.0
+      volume: 1.0
