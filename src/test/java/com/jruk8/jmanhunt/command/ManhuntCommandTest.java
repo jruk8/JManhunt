@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.command;
 
-import com.jruk8.jmanhunt.lobby.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 import java.util.List;

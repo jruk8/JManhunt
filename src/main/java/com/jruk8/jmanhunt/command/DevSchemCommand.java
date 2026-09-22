@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.command;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.lobby.LobbySchematicService;
+import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import org.bukkit.Bukkit;

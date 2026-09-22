@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.config;
 
-import com.jruk8.jmanhunt.world.WorldCellAllocator;
+import com.jruk8.jmanhunt.world.cell.WorldCellAllocator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;

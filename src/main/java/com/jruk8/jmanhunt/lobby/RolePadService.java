@@ -146,7 +146,7 @@ public final class RolePadService implements Listener {
      * Case-insensitive Bukkit material lookup; null on blank or unknown
      * names. Pure for tests.
      */
-    static Material parsePadMaterial(String raw) {
+    public static Material parsePadMaterial(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
@@ -158,7 +158,7 @@ public final class RolePadService implements Listener {
     }
 
     /** Packs block coordinates into one long for the position cache. Pure for tests. */
-    static long packBlock(int x, int y, int z) {
+    public static long packBlock(int x, int y, int z) {
         return ((long) x & 0x3FFFFFFL) << 38 | ((long) z & 0x3FFFFFFL) << 12 | (long) y & 0xFFFL;
     }
 

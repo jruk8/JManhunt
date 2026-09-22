@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
+import com.jruk8.jmanhunt.match.prestart.HeadstartState;
 
 /**
  * Identity, roster, and mutable execution state for one running match.

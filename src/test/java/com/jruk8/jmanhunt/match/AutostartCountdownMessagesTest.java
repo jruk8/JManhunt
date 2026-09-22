@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.match;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.jruk8.jmanhunt.match.autostart.AutostartCountdownMessages;
 
 class AutostartCountdownMessagesTest {
     @Test

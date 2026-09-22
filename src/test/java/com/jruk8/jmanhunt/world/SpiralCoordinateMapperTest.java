@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt.world;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.jruk8.jmanhunt.world.cell.CellCoordinate;
+import com.jruk8.jmanhunt.world.cell.SpiralCoordinateMapper;
 
 class SpiralCoordinateMapperTest {
     @Test

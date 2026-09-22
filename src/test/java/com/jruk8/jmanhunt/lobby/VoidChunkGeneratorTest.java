@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.lobby;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import com.jruk8.jmanhunt.lobby.world.VoidChunkGenerator;
 
 class VoidChunkGeneratorTest {
 

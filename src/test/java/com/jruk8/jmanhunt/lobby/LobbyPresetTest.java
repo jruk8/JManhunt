@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 
 class LobbyPresetTest {
 

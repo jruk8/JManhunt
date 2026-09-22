@@ -71,7 +71,7 @@ public final class LobbyService {
      * Testable core of {@link #assignDefault(UUID)}. Package-visible so unit
      * tests can exercise it without a running server.
      */
-    void assignDefault(UUID playerId, int defaultId) {
+    public void assignDefault(UUID playerId, int defaultId) {
         if (defaultId < 0) {
             remove(playerId);
             return;

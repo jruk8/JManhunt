@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.world;
 
-import com.jruk8.jmanhunt.lobby.LobbyPreset;
-import com.jruk8.jmanhunt.lobby.LobbyWorld;
+import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
+import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.world.end.EndCellManager;
 import com.jruk8.jmanhunt.world.end.EndResetManager;
@@ -22,6 +22,10 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.function.BooleanSupplier;
+import com.jruk8.jmanhunt.world.border.WorldBorderService;
+import com.jruk8.jmanhunt.world.cell.WorldCellService;
+import com.jruk8.jmanhunt.world.teleport.LobbyWorldService;
+import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
 
 public final class WorldEngineService implements SettingsListener {
     private final JManhuntPlugin plugin;

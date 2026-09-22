@@ -1,11 +1,12 @@
 package com.jruk8.jmanhunt.world;
 
-import com.jruk8.jmanhunt.lobby.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.jruk8.jmanhunt.world.teleport.LobbyWorldService;
 
 class WorldEngineServiceTest {
     @Test

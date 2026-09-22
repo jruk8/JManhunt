@@ -4,9 +4,9 @@ import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.lobby.LobbyPreset;
+import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyService;
-import com.jruk8.jmanhunt.lobby.LobbyWorld;
+import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -25,6 +25,15 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import com.jruk8.jmanhunt.match.autostart.AutostartService;
+import com.jruk8.jmanhunt.match.lifecycle.MatchControl;
+import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
+import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
+import com.jruk8.jmanhunt.match.lifecycle.MatchStartService;
+import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
+import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
+import com.jruk8.jmanhunt.match.lifecycle.TimeLimitService;
+import com.jruk8.jmanhunt.match.prestart.PrestartService;
 
 public final class GameManager implements MatchControl {
     private final JManhuntPlugin plugin;
@@ -560,7 +569,7 @@ public final class GameManager implements MatchControl {
 
 
     /** Debug label for a match cell, "none" when the engine is off. */
-    static String cellString(GameInstance instance) {
+    public static String cellString(GameInstance instance) {
         return instance.cellIndex().isPresent()
                 ? String.valueOf(instance.cellIndex().getAsLong())
                 : "none";
@@ -612,7 +621,7 @@ public final class GameManager implements MatchControl {
     public boolean cellIndex(long value) { return worldEngine.cellIndex(value); }
 
     /** Maps an internal role to the API player role, defaulting to the winner role of NONE. */
-    static com.jruk8.jmanhunt.api.PlayerRole roleToPlayerRole(Role role) {
+    public static com.jruk8.jmanhunt.api.PlayerRole roleToPlayerRole(Role role) {
         if (role == null) {
             return com.jruk8.jmanhunt.api.PlayerRole.NONE;
         }
@@ -624,6 +633,4 @@ public final class GameManager implements MatchControl {
             case SPECTATOR -> com.jruk8.jmanhunt.api.PlayerRole.SPECTATOR;
         };
     }
-
-
 }

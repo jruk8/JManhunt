@@ -5,6 +5,7 @@ import org.bukkit.util.BlockVector;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
 
 class LobbySchematicServiceTest {
 

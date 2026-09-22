@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.world;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.jruk8.jmanhunt.world.border.BorderMode;
 
 class BorderModeTest {
 
