@@ -3,9 +3,9 @@ package com.jruk8.jmanhunt.match;
 import com.jruk8.jmanhunt.player.Role;
 
 /**
- * Callbacks from the leaf match services into the start/finish paths that
- * still live on GameManager. The leaves schedule and decide; the facade
- * owns the match lifecycle transitions until phase 2e moves them.
+ * Callbacks from the leaf match services into the start/finish paths.
+ * The leaves schedule and decide; the facade breaks the constructor
+ * cycle by implementing these with the start and finish services.
  */
 interface MatchControl {
     /** Begins play for a waiting match (force-start path). */

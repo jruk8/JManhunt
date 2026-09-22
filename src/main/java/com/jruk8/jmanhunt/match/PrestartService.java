@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  * Runs the pre-start phase: headstart arming and countdowns plus the
  * waiting-for-damage reminders and expiry. The start/finish transitions
- * themselves stay on GameManager behind {@link MatchControl}.
+ * themselves live in the start and finish services behind {@link MatchControl}.
  */
 final class PrestartService {
     private final JManhuntPlugin plugin;

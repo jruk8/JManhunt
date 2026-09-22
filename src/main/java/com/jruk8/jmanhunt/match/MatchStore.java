@@ -59,10 +59,6 @@ final class MatchStore {
         return Optional.ofNullable(instances.remove(matchId));
     }
 
-    void clear() {
-        instances.clear();
-    }
-
     /** Live instances oldest first. */
     List<GameInstance> liveInstances() {
         return instances.values().stream().sorted(Comparator.comparingLong(GameInstance::matchId)).toList();
