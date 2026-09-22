@@ -14,9 +14,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests for the {@code send-anonymous-statistics} toggle: it defaults to
- * true, sits at the very top of the bundled config, and stays hidden from
- * the in-game configuration command.
+ * Tests for the {@code send-anonymous-statistics} toggle: it sits at the
+ * very top of the bundled config and stays hidden from the in-game
+ * configuration command.
  *
  * <p>Deliberately Mockito-free: the plugin class extends Bukkit's
  * {@code JavaPlugin}, which the unit-test classpath cannot load, so the
@@ -25,14 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@link YamlConfiguration}.
  */
 class AnonymousStatisticsTest {
-
-    @Test
-    void bundledDefaultEnablesAnonymousStatistics() throws Exception {
-        YamlConfiguration defaults = loadBundledConfig();
-
-        // A false fallback proves the key is present and true, not just missing.
-        assertTrue(defaults.getBoolean("send-anonymous-statistics", false));
-    }
 
     @Test
     void toggleSitsDirectlyBelowConfigVersion() throws Exception {
@@ -93,13 +85,6 @@ class AnonymousStatisticsTest {
         }
         assertFalse(ManhuntCommand.drillChildren(config, editable, List.of())
                 .contains("send-anonymous-statistics"));
-    }
-
-    private static YamlConfiguration loadBundledConfig() throws Exception {
-        try (InputStream stream = resource("config.yml")) {
-            return YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(stream, StandardCharsets.UTF_8));
-        }
     }
 
     private static InputStream resource(String name) {

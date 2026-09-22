@@ -50,6 +50,12 @@ class MessagesStyleTest {
         assertEquals(8, messages.getInt("messages-version"));
     }
 
+    @Test
+    void bundledResourcesContainNoEmDashes() throws Exception {
+        assertFalse(rawResource("config.yml").contains("\u2014"), "config.yml");
+        assertFalse(rawResource("messages.yml").contains("\u2014"), "messages.yml");
+    }
+
     private static int count(String text, String token) {
         int found = 0;
         int index = 0;
@@ -66,6 +72,14 @@ class MessagesStyleTest {
                 "missing test resource: messages.yml")) {
             return YamlConfiguration.loadConfiguration(
                     new InputStreamReader(stream, StandardCharsets.UTF_8));
+        }
+    }
+
+    private static String rawResource(String name) throws Exception {
+        try (InputStream stream = Objects.requireNonNull(
+                MessagesStyleTest.class.getClassLoader().getResourceAsStream(name),
+                "missing test resource: " + name)) {
+            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
 }
