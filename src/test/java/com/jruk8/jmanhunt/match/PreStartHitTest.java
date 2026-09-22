@@ -8,14 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PreStartHitTest {
     @Test
     void hunterHitsOnSpeedrunnersNeverLand() {
-        assertTrue(GameplayListener.blockPreStartHit(true, Role.HUNTER, Role.SPEEDRUNNER));
+        assertTrue(PlayerCombatListener.blockPreStartHit(true, Role.HUNTER, Role.SPEEDRUNNER));
     }
 
     @Test
     void otherPreStartHitsStillLand() {
-        assertFalse(GameplayListener.blockPreStartHit(true, Role.SPEEDRUNNER, Role.HUNTER));
-        assertFalse(GameplayListener.blockPreStartHit(true, Role.HUNTER, Role.HUNTER));
-        assertFalse(GameplayListener.blockPreStartHit(true, Role.SPEEDRUNNER, Role.SPEEDRUNNER));
-        assertFalse(GameplayListener.blockPreStartHit(false, Role.HUNTER, Role.SPEEDRUNNER));
+        assertFalse(PlayerCombatListener.blockPreStartHit(true, Role.SPEEDRUNNER, Role.HUNTER));
+        assertFalse(PlayerCombatListener.blockPreStartHit(true, Role.HUNTER, Role.HUNTER));
+        assertFalse(PlayerCombatListener.blockPreStartHit(true, Role.SPEEDRUNNER, Role.SPEEDRUNNER));
+        assertFalse(PlayerCombatListener.blockPreStartHit(false, Role.HUNTER, Role.SPEEDRUNNER));
     }
 }

@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class WorldEngineServiceTest {
     @Test
     void careDueRunsOncePerInterval() {
-        assertTrue(WorldEngineService.careDue(100_000L, 0L, 15));
-        assertTrue(WorldEngineService.careDue(115_000L, 100_000L, 15));
-        assertFalse(WorldEngineService.careDue(114_999L, 100_000L, 15));
-        assertFalse(WorldEngineService.careDue(100_000L, 100_000L, 15));
+        assertTrue(LobbyWorldService.careDue(100_000L, 0L, 15));
+        assertTrue(LobbyWorldService.careDue(115_000L, 100_000L, 15));
+        assertFalse(LobbyWorldService.careDue(114_999L, 100_000L, 15));
+        assertFalse(LobbyWorldService.careDue(100_000L, 100_000L, 15));
     }
 
     @Test

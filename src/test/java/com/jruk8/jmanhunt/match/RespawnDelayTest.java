@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class RespawnDelayTest {
     @Test
     void delayAppliesOnlyWhenEnabledAndPositive() {
-        assertEquals(15, GameplayListener.effectiveRespawnDelay(true, 15));
-        assertEquals(0, GameplayListener.effectiveRespawnDelay(false, 15));
-        assertEquals(0, GameplayListener.effectiveRespawnDelay(true, 0));
-        assertEquals(0, GameplayListener.effectiveRespawnDelay(true, -1));
-        assertEquals(0, GameplayListener.effectiveRespawnDelay(false, -1));
+        assertEquals(15, PlayerRespawnListener.effectiveRespawnDelay(true, 15));
+        assertEquals(0, PlayerRespawnListener.effectiveRespawnDelay(false, 15));
+        assertEquals(0, PlayerRespawnListener.effectiveRespawnDelay(true, 0));
+        assertEquals(0, PlayerRespawnListener.effectiveRespawnDelay(true, -1));
+        assertEquals(0, PlayerRespawnListener.effectiveRespawnDelay(false, -1));
     }
 }

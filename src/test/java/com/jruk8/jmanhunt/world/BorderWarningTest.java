@@ -7,14 +7,14 @@ class BorderWarningTest {
 
     @Test
     void warningIsAHundredthOfAppliedSize() {
-        assertEquals(100, WorldEngineService.warningDistance(10_000));
-        assertEquals(200, WorldEngineService.warningDistance(20_000));
+        assertEquals(100, WorldBorderService.warningDistance(10_000));
+        assertEquals(200, WorldBorderService.warningDistance(20_000));
     }
 
     @Test
     void warningFloorsAtOneBlock() {
-        assertEquals(1, WorldEngineService.warningDistance(22));
-        assertEquals(1, WorldEngineService.warningDistance(2.75));
-        assertEquals(12, WorldEngineService.warningDistance(10_000 / 8.0));
+        assertEquals(1, WorldBorderService.warningDistance(22));
+        assertEquals(1, WorldBorderService.warningDistance(2.75));
+        assertEquals(12, WorldBorderService.warningDistance(10_000 / 8.0));
     }
 }

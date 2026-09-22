@@ -25,6 +25,7 @@ import com.jruk8.jmanhunt.api.events.JMatchStartEvent;
 import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
 import com.jruk8.jmanhunt.world.BorderMode;
 import com.jruk8.jmanhunt.world.CellBounds;
+import com.jruk8.jmanhunt.world.MatchTeleportService;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import net.kyori.adventure.text.Component;
@@ -96,7 +97,8 @@ public final class GameManager {
         this.worldEngine = worldEngine;
         this.winConditionEngine = winConditionEngine;
         this.lobbies = lobbyService;
-        this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService, worldEngine, this);
+        this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService,
+                worldEngine.teleportService(), this);
 
         // assign events
         configService.onChange("settings.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
@@ -717,7 +719,7 @@ public final class GameManager {
         int centerX = center.getBlockX();
         int centerZ = center.getBlockZ();
         for (Player player : participants) {
-            player.teleport(WorldEngineService.spreadSpawn(world, centerX, centerZ, SURROUND_RADIUS,
+            player.teleport(MatchTeleportService.spreadSpawn(world, centerX, centerZ, SURROUND_RADIUS,
                     player.getLocation().getYaw(), player.getLocation().getPitch()));
         }
     }

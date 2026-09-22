@@ -17,13 +17,17 @@ import com.jruk8.jmanhunt.lobby.LobbyConfigRegistrar;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.RolePadService;
 import com.jruk8.jmanhunt.match.GameManager;
-import com.jruk8.jmanhunt.match.GameplayListener;
+import com.jruk8.jmanhunt.match.PlayerCombatListener;
+import com.jruk8.jmanhunt.match.PlayerConnectionListener;
+import com.jruk8.jmanhunt.match.PlayerMovementListener;
+import com.jruk8.jmanhunt.match.PlayerRespawnListener;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.player.SpawnCampService;
+import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
 import com.jruk8.jmanhunt.stats.StatisticsRepository;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.tutorial.TutorialChatListener;
@@ -46,8 +50,10 @@ import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.configuration.file.YamlConfiguration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public final class JManhuntPlugin extends JavaPlugin {
     private static final int CONFIG_VERSION = 5;
@@ -213,15 +219,24 @@ public final class JManhuntPlugin extends JavaPlugin {
         settings.add(piglinBarter);
 
         ManhuntCommand command = new ManhuntCommand(
-                this, messages, configService, sounds, playerStates, game, worldEngine, debugService,
-                lobbyService);
+                this, messages, configService, sounds, playerStates, game, worldEngine.teleportService(),
+                debugService, lobbyService);
         getCommand("manhunt").setExecutor(command);
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);
         getServer().getPluginManager().registerEvents(new PortalRouter(this, game, worldEngine), this);
-        getServer().getPluginManager().registerEvents(new GameplayListener(
-                this, playerStates, game, messages, configService, sounds,
-                compass, stats, worldEngine, winConditionEngine, lobbyService, worldEngine), this);
+        PlayerRespawnListener respawn = new PlayerRespawnListener(this, playerStates, game, compass);
+        SpeedrunnerDisconnectTracker disconnects = new SpeedrunnerDisconnectTracker();
+        Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
+        getServer().getPluginManager().registerEvents(new PlayerConnectionListener(
+                this, playerStates, game, messages, configService, lobbyService,
+                worldEngine.teleportService(), worldEngine, disconnects, disconnectTasks), this);
+        getServer().getPluginManager().registerEvents(new PlayerCombatListener(
+                this, playerStates, game, configService, compass, stats, lobbyService,
+                worldEngine, winConditionEngine, respawn, disconnects, disconnectTasks), this);
+        getServer().getPluginManager().registerEvents(new PlayerMovementListener(
+                playerStates, game, winConditionEngine, worldEngine), this);
+        getServer().getPluginManager().registerEvents(respawn, this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
         getServer().getPluginManager().registerEvents(new RolePadService(
                 this, lobbyService, playerStates, game, messages, sounds,
