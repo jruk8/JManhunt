@@ -12,37 +12,37 @@ class CompassItemTest {
 
     @Test
     void resolvesModernNames() {
-        assertEquals(Material.COMPASS, CompassManager.resolveCompassMaterial("compass"));
-        assertEquals(Material.COMPASS, CompassManager.resolveCompassMaterial("minecraft:compass"));
+        assertEquals(Material.COMPASS, CompassItemService.resolveCompassMaterial("compass"));
+        assertEquals(Material.COMPASS, CompassItemService.resolveCompassMaterial("minecraft:compass"));
         assertEquals(Material.RECOVERY_COMPASS,
-                CompassManager.resolveCompassMaterial("recovery_compass"));
-        assertEquals(Material.CLOCK, CompassManager.resolveCompassMaterial("minecraft:clock"));
+                CompassItemService.resolveCompassMaterial("recovery_compass"));
+        assertEquals(Material.CLOCK, CompassItemService.resolveCompassMaterial("minecraft:clock"));
     }
 
     @Test
     void rejectsUnknownNames() {
-        assertNull(CompassManager.resolveCompassMaterial("compas"));
-        assertNull(CompassManager.resolveCompassMaterial(null));
-        assertNull(CompassManager.resolveCompassMaterial("  "));
-        assertNull(CompassManager.resolveCompassMaterial("other:compass"));
+        assertNull(CompassItemService.resolveCompassMaterial("compas"));
+        assertNull(CompassItemService.resolveCompassMaterial(null));
+        assertNull(CompassItemService.resolveCompassMaterial("  "));
+        assertNull(CompassItemService.resolveCompassMaterial("other:compass"));
     }
 
     @Test
     void rejectsPlaceableItems() {
-        assertNull(CompassManager.resolveCompassMaterial("dirt"));
-        assertNull(CompassManager.resolveCompassMaterial("minecraft:oak_sign"));
-        assertNull(CompassManager.resolveCompassMaterial("redstone"));
-        assertNull(CompassManager.resolveCompassMaterial("minecraft:water_bucket"));
-        assertNull(CompassManager.resolveCompassMaterial("zombie_spawn_egg"));
+        assertNull(CompassItemService.resolveCompassMaterial("dirt"));
+        assertNull(CompassItemService.resolveCompassMaterial("minecraft:oak_sign"));
+        assertNull(CompassItemService.resolveCompassMaterial("redstone"));
+        assertNull(CompassItemService.resolveCompassMaterial("minecraft:water_bucket"));
+        assertNull(CompassItemService.resolveCompassMaterial("zombie_spawn_egg"));
     }
 
     @Test
     void allowsRawItems() {
-        assertTrue(CompassManager.isAllowedCompassItem(Material.COMPASS));
-        assertTrue(CompassManager.isAllowedCompassItem(Material.CLOCK));
-        assertTrue(CompassManager.isAllowedCompassItem(Material.RECOVERY_COMPASS));
-        assertFalse(CompassManager.isAllowedCompassItem(Material.DIRT));
-        assertFalse(CompassManager.isAllowedCompassItem(null));
+        assertTrue(CompassItemService.isAllowedCompassItem(Material.COMPASS));
+        assertTrue(CompassItemService.isAllowedCompassItem(Material.CLOCK));
+        assertTrue(CompassItemService.isAllowedCompassItem(Material.RECOVERY_COMPASS));
+        assertFalse(CompassItemService.isAllowedCompassItem(Material.DIRT));
+        assertFalse(CompassItemService.isAllowedCompassItem(null));
     }
 
     @Test
@@ -56,9 +56,9 @@ class CompassItemTest {
 
     @Test
     void analyzeDelayTicksConvertsSeconds() {
-        assertEquals(20L, CompassManager.analyzeDelayTicks(1.0));
-        assertEquals(10L, CompassManager.analyzeDelayTicks(0.5));
-        assertEquals(1L, CompassManager.analyzeDelayTicks(0.0));
-        assertEquals(1L, CompassManager.analyzeDelayTicks(-2.0));
+        assertEquals(20L, CompassLockService.analyzeDelayTicks(1.0));
+        assertEquals(10L, CompassLockService.analyzeDelayTicks(0.5));
+        assertEquals(1L, CompassLockService.analyzeDelayTicks(0.0));
+        assertEquals(1L, CompassLockService.analyzeDelayTicks(-2.0));
     }
 }
