@@ -146,7 +146,8 @@ public final class ConfigService {
         return names;
     }
 
-    private static void collectExtraModifierNames(ConfigurationSection section, String prefix, String root, Set<String> names) {
+    private static void collectExtraModifierNames(ConfigurationSection section, String prefix, String root,
+            Set<String> names) {
         if (section == null) {
             return;
         }

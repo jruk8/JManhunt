@@ -117,10 +117,14 @@ public final class MessageService {
     }
 
     public void broadcast(String key) {
-        if (!isDisabled(key)) Bukkit.broadcast(component(key));
+        if (!isDisabled(key)) {
+            Bukkit.broadcast(component(key));
+        }
     }
     public void broadcast(String key, Map<String, String> values) {
-        if (!isDisabled(key)) Bukkit.broadcast(component(key, values));
+        if (!isDisabled(key)) {
+            Bukkit.broadcast(component(key, values));
+        }
     }
 
     /** Sends a message to exactly the given recipients (lobby or instance members). */
@@ -130,7 +134,9 @@ public final class MessageService {
 
     /** Sends a message to exactly the given recipients (lobby or instance members). */
     public void sendTo(Collection<? extends Player> recipients, String key, Map<String, String> values) {
-        if (isDisabled(key)) return;
+        if (isDisabled(key)) {
+            return;
+        }
         Component rendered = component(key, values);
         for (Player recipient : recipients) {
             recipient.sendMessage(rendered);
@@ -138,9 +144,13 @@ public final class MessageService {
     }
 
     public void message(CommandSender sender, String key) {
-        if (!isDisabled(key)) sender.sendMessage(component(key));
+        if (!isDisabled(key)) {
+            sender.sendMessage(component(key));
+        }
     }
     public void message(CommandSender sender, String key, Map<String, String> values) {
-        if (!isDisabled(key)) sender.sendMessage(component(key, values));
+        if (!isDisabled(key)) {
+            sender.sendMessage(component(key, values));
+        }
     }
 }

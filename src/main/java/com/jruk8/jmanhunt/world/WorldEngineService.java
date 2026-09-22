@@ -100,9 +100,13 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
                                      boolean applyBorder, int lobbyId, long matchId) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        if (!config.enabled() || participants.isEmpty()) return OptionalLong.empty();
+        if (!config.enabled() || participants.isEmpty()) {
+            return OptionalLong.empty();
+        }
         World world = Bukkit.getWorld(config.worldName());
-        if (world == null) return OptionalLong.empty();
+        if (world == null) {
+            return OptionalLong.empty();
+        }
 
         CellOrigin origin = cellBuffer.poll();
         if (origin == null) {
@@ -197,7 +201,9 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
      */
     private void refillBuffer() {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        if (!config.enabled()) return;
+        if (!config.enabled()) {
+            return;
+        }
         if (BufferRefillPolicy.parse(plugin.getConfig()
                 .getString("world-engine.preloading.cell-buffer.increment-when", "ALWAYS"))
                 == BufferRefillPolicy.NO_MATCH_RUNNING && matchRunning.getAsBoolean()) {
@@ -206,7 +212,9 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         int target = bufferTarget();
         while (cellBuffer.size() < target) {
             World world = Bukkit.getWorld(config.worldName());
-            if (world == null) return;
+            if (world == null) {
+                return;
+            }
             Optional<CellOrigin> fetched = fetchCell(world, config);
             if (fetched.isEmpty()) {
                 scheduleRefillRetry();
@@ -254,7 +262,9 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
      * If the start-border is active, expands it to the full cell size.
      */
     public void onBeginGame() {
-        if (!startBorderActive || startBorderWorld == null || startBorderConfig == null) return;
+        if (!startBorderActive || startBorderWorld == null || startBorderConfig == null) {
+            return;
+        }
 
         if (startBorderConfig.skipFadeout()) {
             // Snap to cell size immediately, no animation.
@@ -271,12 +281,16 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     public void onMatchEnd(List<Player> participants, List<Player> spectators, int lobbyId, long matchId) {
         clearInstanceBorders();
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        if (!config.enabled()) return;
+        if (!config.enabled()) {
+            return;
+        }
 
         List<Player> returning = new ArrayList<>(participants);
         returning.addAll(spectators);
         Location lobby = resolveLobbyTeleport(lobbyId, returning);
-        if (lobby == null) return;
+        if (lobby == null) {
+            return;
+        }
 
         endCells.endWorldFor(matchId).ifPresentOrElse(endWorld -> {
             // Everyone in the dedicated end rides to the lobby, including
@@ -346,7 +360,9 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     @Override
     public boolean teleportToLobby(List<Player> targets, int lobbyId) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        if (!config.enabled()) return false;
+        if (!config.enabled()) {
+            return false;
+        }
 
         Location lobby = resolveLobbyTeleport(lobbyId, targets);
         if (lobby == null) {
@@ -361,10 +377,14 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     @Override
     public boolean setSpawnToLobby(List<Player> targets, int lobbyId) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
-        if (!config.enabled()) return false;
+        if (!config.enabled()) {
+            return false;
+        }
 
         Location lobby = resolveLobbyTeleport(lobbyId, targets);
-        if (lobby == null) return false;
+        if (lobby == null) {
+            return false;
+        }
 
         for (Player player : targets) {
             player.setRespawnLocation(lobby, true);
@@ -732,7 +752,9 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
         enforceCellIndexCap(config);
         for (int iter = 0; iter < MAX_CELL_ALLOCATE_ATTEMPTS; iter++) {
             OptionalLong startIndex = cellAllocator.reserveStartIndex(1);
-            if (startIndex.isEmpty()) return Optional.empty();
+            if (startIndex.isEmpty()) {
+                return Optional.empty();
+            }
             long baseIndex = startIndex.getAsLong();
 
             CellCoordinate cell = SpiralCoordinateMapper.toCoordinate(baseIndex);
@@ -955,8 +977,12 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
     }
 
     private int toBlockCoordinate(long value) {
-        if (value > Integer.MAX_VALUE) return Integer.MAX_VALUE;
-        if (value < Integer.MIN_VALUE) return Integer.MIN_VALUE;
+        if (value > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        if (value < Integer.MIN_VALUE) {
+            return Integer.MIN_VALUE;
+        }
         return (int) value;
     }
 
@@ -968,13 +994,19 @@ public final class WorldEngineService implements SettingsListener, LobbyTeleport
      */
     private void runPreloadingCommands(WorldEngineConfig config, CellOrigin origin) {
         List<String> commands = plugin.getConfig().getStringList("world-engine.preloading.commands");
-        if (commands.isEmpty()) return;
+        if (commands.isEmpty()) {
+            return;
+        }
         for (String command : commands) {
-            if (command.isBlank()) continue;
+            if (command.isBlank()) {
+                continue;
+            }
             String parsed = command.replace("<cellX>", String.valueOf(origin.x()))
                     .replace("<cellZ>", String.valueOf(origin.z()))
                     .replace("<world>", config.worldName());
-            if (parsed.startsWith("/")) parsed = parsed.substring(1);
+            if (parsed.startsWith("/")) {
+                parsed = parsed.substring(1);
+            }
             try {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception e) {

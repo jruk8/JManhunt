@@ -81,43 +81,9 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        messages = new MessageService();
-        spawnCamp = new SpawnCampService(this, messages);
-        debugService = new DebugService();
-        logger = new JManhuntLogger(getLogger(), debugService, messages, BukkitDebugSink.INSTANCE);
-        lobbyService = new LobbyService(this);
-        lobbyConfigs = new LobbyConfigRegistrar(this);
-        lobbyConfigs.register();
-        tutorialConfigs = new TutorialConfigRegistrar(this);
-        tutorialConfigs.register();
-        reload();
-        debugService.resetToDefaults(getConfig().getBoolean("debug.enabled", false));
-
-        playerStates = new PlayerStateStore();
-        roleTeams = new RoleTeamService(playerStates);
-        setupStatistics();
-        setupEngineState();
-        stats = new StatsManager(this, messages, statistics);
-        setupPlaceholderApi();
-
-        configService = new ConfigService(this);
-        sounds = new SoundService(this, configService);
-        tutorialService = new TutorialService(tutorialConfigs.getTutorialConfig(),
-                new JManhuntTutorialMessenger(messages),
-                new JManhuntTutorialSounds(tutorialConfigs.getTutorialConfig(), sounds),
-                new JManhuntTutorialCommands(),
-                new JManhuntTutorialLogger(logger));
-        compass = new CompassManager(this, messages, sounds, playerStates,
-                new NamespacedKey(this, "hunters_compass"));
-        worldEngine = new WorldEngineService(this, messages, configService, engineState);
-        worldEngine.deleteOrphanedEndCells();
-        winConditionEngine = new WinConditionEngine(getConfig());
-        game = new GameManager(
-                this, messages, sounds, playerStates, compass, stats,
-                configService, worldEngine, winConditionEngine, lobbyService);
-        compass.setGameManager(game);
-        worldEngine.setMatchRunningSupplier(game::isActive);
-        setupListeners();
+        bootstrapCore();
+        bootstrapServices();
+        bootstrapGame();
 
         Bukkit.getServicesManager().register(JManhuntApi.class,
                 new JManhuntApiImpl(game, playerStates, lobbyService), this, ServicePriority.High);
@@ -139,6 +105,54 @@ public final class JManhuntPlugin extends JavaPlugin {
         // every online player's membership from their current role.
         roleTeams.syncAll();
         game.validateLobbyWorldName();
+    }
+
+    /** Creates messaging, logging, lobby, and tutorial configuration services. */
+    private void bootstrapCore() {
+        messages = new MessageService();
+        spawnCamp = new SpawnCampService(this, messages);
+        debugService = new DebugService();
+        logger = new JManhuntLogger(getLogger(), debugService, messages, BukkitDebugSink.INSTANCE);
+        lobbyService = new LobbyService(this);
+        lobbyConfigs = new LobbyConfigRegistrar(this);
+        lobbyConfigs.register();
+        tutorialConfigs = new TutorialConfigRegistrar(this);
+        tutorialConfigs.register();
+        reload();
+        debugService.resetToDefaults(getConfig().getBoolean("debug.enabled", false));
+    }
+
+    /** Creates player, stats, config, sound, tutorial, compass, and world services. */
+    private void bootstrapServices() {
+        playerStates = new PlayerStateStore();
+        roleTeams = new RoleTeamService(playerStates);
+        setupStatistics();
+        setupEngineState();
+        stats = new StatsManager(this, messages, statistics);
+        setupPlaceholderApi();
+
+        configService = new ConfigService(this);
+        sounds = new SoundService(this, configService);
+        tutorialService = new TutorialService(tutorialConfigs.getTutorialConfig(),
+                new JManhuntTutorialMessenger(messages),
+                new JManhuntTutorialSounds(tutorialConfigs.getTutorialConfig(), sounds),
+                new JManhuntTutorialCommands(),
+                new JManhuntTutorialLogger(logger));
+        compass = new CompassManager(this, messages, sounds, playerStates,
+                new NamespacedKey(this, "hunters_compass"));
+        worldEngine = new WorldEngineService(this, messages, configService, engineState);
+        worldEngine.deleteOrphanedEndCells();
+    }
+
+    /** Creates the game manager and wires it to the compass, world engine, and listeners. */
+    private void bootstrapGame() {
+        winConditionEngine = new WinConditionEngine(getConfig());
+        game = new GameManager(
+                this, messages, sounds, playerStates, compass, stats,
+                configService, worldEngine, winConditionEngine, lobbyService);
+        compass.setGameManager(game);
+        worldEngine.setMatchRunningSupplier(game::isActive);
+        setupListeners();
     }
 
     /** Scoreboard-team mirror of manhunt roles. */

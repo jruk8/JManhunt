@@ -20,7 +20,8 @@ public final class CareerStats {
     public boolean isEmpty() {
         return timeSpeedrunner == 0 && timeHunter == 0 && kills == 0 && hunterKills == 0
                 && speedrunnerKills == 0 && finalKills == 0 && damage == 0 && wins == 0 && hunterWins == 0
-                && speedrunnerWins == 0 && sessions == 0 && speedrunnerSessions == 0 && hunterSessions == 0 && deaths == 0;
+                && speedrunnerWins == 0 && sessions == 0 && speedrunnerSessions == 0
+                && hunterSessions == 0 && deaths == 0;
     }
 
     public void copyFrom(CareerStats source) {

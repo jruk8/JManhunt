@@ -49,15 +49,21 @@ public final class StatsManager {
     }
 
     private void loadCareerAsync(UUID id) {
-        if (repository == null || careerLoaded.contains(id) || !careerLoading.add(id)) return;
+        if (repository == null || careerLoaded.contains(id) || !careerLoading.add(id)) {
+            return;
+        }
         career.computeIfAbsent(id, ignored -> new CareerStats());
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 CareerStats loaded = repository.load(id);
                 CareerStats current = career.get(id);
                 synchronized (current) {
-                    if (current.isEmpty()) current.copyFrom(loaded);
-                    else current.add(loaded);
+                    if (current.isEmpty()) {
+                        current.copyFrom(loaded);
+                    }
+                    else {
+                        current.add(loaded);
+                    }
                 }
                 careerLoaded.add(id);
             } catch (Exception exception) {
@@ -89,54 +95,82 @@ public final class StatsManager {
         long now = System.currentTimeMillis();
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
         for (Map.Entry<UUID, Stats> entry : slice.entrySet()) {
-            Stats match = entry.getValue();
-            CareerStats total = career(entry.getKey());
-            synchronized (total) {
-                total.player = match.player;
-                long elapsed = Math.max(0L, now - match.matchStartedAt);
-                if (match.role == Role.HUNTER) {
-                    total.timeHunter += elapsed;
-                    total.hunterKills += match.kills;
-                    total.hunterSessions++;
-                    if (winner == Role.HUNTER) {
-                        total.hunterWins++;
-                        total.wins++;
-                    }
-                } else if (match.role == Role.SPEEDRUNNER) {
-                    total.timeSpeedrunner += elapsed;
-                    total.speedrunnerKills += match.kills;
-                    total.speedrunnerSessions++;
-                    if (winner == Role.SPEEDRUNNER) {
-                        total.speedrunnerWins++;
-                        total.wins++;
-                    }
-                }
-                total.kills += match.kills;
-                total.finalKills += match.finalKills;
-                total.damage += match.damage / 2.0;
-                if (match.role.isParticipant()) total.sessions++;
-                CareerStats delta = new CareerStats();
-                delta.player = match.player;
-                if (match.role == Role.HUNTER) {
-                    delta.timeHunter = elapsed; delta.hunterKills = match.kills;
-                    delta.hunterSessions = 1;
-                    if (winner == Role.HUNTER) delta.hunterWins = 1;
-                } else if (match.role == Role.SPEEDRUNNER) {
-                    delta.timeSpeedrunner = elapsed; delta.speedrunnerKills = match.kills;
-                    delta.speedrunnerSessions = 1;
-                    if (winner == Role.SPEEDRUNNER) delta.speedrunnerWins = 1;
-                }
-                delta.kills = match.kills; delta.finalKills = match.finalKills; delta.damage = match.damage / 2.0;
-                if (match.role.isParticipant()) delta.sessions = 1;
-                saveAsync(entry.getKey(), delta);
-            }
+            foldMatchStats(entry.getKey(), entry.getValue(), now, winner);
         }
         // The slice stays until teardown clears it so the end-of-match screen,
         // shown during the end delay, still has numbers to display.
     }
 
+    /** Folds one player's match slice into career totals and persists the delta. */
+    private void foldMatchStats(UUID playerId, Stats match, long now, Role winner) {
+        CareerStats total = career(playerId);
+        synchronized (total) {
+            total.player = match.player;
+            long elapsed = Math.max(0L, now - match.matchStartedAt);
+            accumulateRoleTotals(total, match, elapsed, winner);
+            total.kills += match.kills;
+            total.finalKills += match.finalKills;
+            total.damage += match.damage / 2.0;
+            if (match.role.isParticipant()) {
+                total.sessions++;
+            }
+            CareerStats delta = new CareerStats();
+            delta.player = match.player;
+            accumulateRoleDelta(delta, match, elapsed, winner);
+            delta.kills = match.kills;
+            delta.finalKills = match.finalKills;
+            delta.damage = match.damage / 2.0;
+            if (match.role.isParticipant()) {
+                delta.sessions = 1;
+            }
+            saveAsync(playerId, delta);
+        }
+    }
+
+    /** Accumulates role-specific career totals for one match slice. */
+    private void accumulateRoleTotals(CareerStats total, Stats match, long elapsed, Role winner) {
+        if (match.role == Role.HUNTER) {
+            total.timeHunter += elapsed;
+            total.hunterKills += match.kills;
+            total.hunterSessions++;
+            if (winner == Role.HUNTER) {
+                total.hunterWins++;
+                total.wins++;
+            }
+        } else if (match.role == Role.SPEEDRUNNER) {
+            total.timeSpeedrunner += elapsed;
+            total.speedrunnerKills += match.kills;
+            total.speedrunnerSessions++;
+            if (winner == Role.SPEEDRUNNER) {
+                total.speedrunnerWins++;
+                total.wins++;
+            }
+        }
+    }
+
+    /** Accumulates the role-specific persisted delta for one match slice. */
+    private void accumulateRoleDelta(CareerStats delta, Stats match, long elapsed, Role winner) {
+        if (match.role == Role.HUNTER) {
+            delta.timeHunter = elapsed;
+            delta.hunterKills = match.kills;
+            delta.hunterSessions = 1;
+            if (winner == Role.HUNTER) {
+                delta.hunterWins = 1;
+            }
+        } else if (match.role == Role.SPEEDRUNNER) {
+            delta.timeSpeedrunner = elapsed;
+            delta.speedrunnerKills = match.kills;
+            delta.speedrunnerSessions = 1;
+            if (winner == Role.SPEEDRUNNER) {
+                delta.speedrunnerWins = 1;
+            }
+        }
+    }
+
     private void saveAsync(UUID id, CareerStats snapshot) {
-        if (repository == null) return;
+        if (repository == null) {
+            return;
+        }
         CompletableFuture<Void> save = CompletableFuture.runAsync(() -> {
             try {
                 repository.increment(id, snapshot);
@@ -156,12 +190,16 @@ public final class StatsManager {
     public void showStats(long matchId, Collection<? extends Player> recipients) {
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
         for (String statistic : plugin.getConfig().getStringList("match.end-statistics")) {
-            if (statistic.equalsIgnoreCase("PROGRESSION")) updateProgression(matchId);
+            if (statistic.equalsIgnoreCase("PROGRESSION")) {
+                updateProgression(matchId);
+            }
             var ranked = slice.values().stream()
                     .sorted(Comparator.comparingDouble((Stats stat) -> stat.value(statistic)).reversed())
                     .filter(stat -> stat.appliesTo(statistic))
                     .filter(stat -> stat.value(statistic) > 0).limit(3).toList();
-            if (ranked.isEmpty()) continue;
+            if (ranked.isEmpty()) {
+                continue;
+            }
             String displayName = messages.string("game.stat-names." + statistic, statistic);
             String prefix = messages.string("game.stat-header-prefix", "<#de7766>");
             sendStat(recipients, "game.stat-header", Map.of("stat-prefix", prefix, "stat", displayName));
@@ -190,13 +228,17 @@ public final class StatsManager {
     private void updateProgression(long matchId) {
         Map<String, String> milestones = new LinkedHashMap<>();
         milestones.put("got_wood", "story/mine_wood"); milestones.put("got_iron", "story/smelt_iron");
-        milestones.put("entered_nether", "story/enter_the_nether"); milestones.put("found_bastion", "nether/find_bastion");
-        milestones.put("found_fortress", "nether/find_fortress"); milestones.put("entered_stronghold", "story/follow_ender_eye");
+        milestones.put("entered_nether", "story/enter_the_nether");
+        milestones.put("found_bastion", "nether/find_bastion");
+        milestones.put("found_fortress", "nether/find_fortress");
+        milestones.put("entered_stronghold", "story/follow_ender_eye");
         milestones.put("entered_end", "story/enter_the_end");
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
         for (Stats stat : slice.values()) {
             Player player = Bukkit.getPlayer(stat.uuid);
-            if (player == null) continue;
+            if (player == null) {
+                continue;
+            }
             stat.progression = 0; stat.progressionKey = null; int rank = 0;
             for (Map.Entry<String, String> milestone : milestones.entrySet()) {
                 rank++;

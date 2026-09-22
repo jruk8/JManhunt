@@ -121,54 +121,96 @@ public final class CompassManager {
     }
 
     public void refreshCompass(Player holder) {
+        Optional<RefreshSlot> slot = refreshSlot(holder);
+        if (slot.isEmpty()) {
+            return;
+        }
+        Optional<RefreshMatch> match = refreshMatch(holder, slot.get());
+        if (match.isEmpty()) {
+            return;
+        }
+        RefreshMatch target = match.get();
+        List<CompassCandidate> opponents = collectOpponents(holder, target.targetRole(), target.instance());
+        List<CompassSighting> sightings = collectSightings(holder, target.targetRole(), target.instance());
+        LockedTargets narrowed = narrowToLock(holder.getUniqueId(), opponents, sightings);
+        CompassPick pick = resolveCompassPick(target.holderRole(), narrowed.opponents(), narrowed.sightings());
+        renderCompassPick(holder, slot.get().item(), slot.get().slot(), pick,
+                target.targetRoleString(), narrowed.locked());
+    }
+
+    /** Compass slot and item that are eligible for a refresh. */
+    private record RefreshSlot(int slot, ItemStack item) {
+    }
+
+    /** Match context for a compass refresh. */
+    private record RefreshMatch(GameInstance instance, Role holderRole, Role targetRole,
+            String targetRoleString) {
+    }
+
+    /** Opponents and sightings narrowed to the holder's manual lock. */
+    private record LockedTargets(List<CompassCandidate> opponents, List<CompassSighting> sightings,
+            boolean locked) {
+    }
+
+    /** Finds the compass slot and item to refresh, if any. */
+    private Optional<RefreshSlot> refreshSlot(Player holder) {
         deduplicateCompasses(holder);
         int slot = findCompassSlot(holder);
         if (slot < 0) {
-            return;
+            return Optional.empty();
         }
         ItemStack item = holder.getInventory().getItem(slot);
         if (!isCompass(item)) {
-            return;
+            return Optional.empty();
         }
+        return Optional.of(new RefreshSlot(slot, item));
+    }
 
+    /** Resolves the match and roles for a refresh, rendering the spectator fallback. */
+    private Optional<RefreshMatch> refreshMatch(Player holder, RefreshSlot slot) {
         Role holderRole = role(holder);
         if (!holderRole.isParticipant()) {
             locks.remove(holder.getUniqueId());
-            return;
+            return Optional.empty();
         }
         Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
         String targetRoleString = messages.roleName(targetRole);
         if (holder.getGameMode() == GameMode.SPECTATOR) {
-            showNoTarget(holder, item, slot, targetRoleString);
-            return;
+            showNoTarget(holder, slot.item(), slot.slot(), targetRoleString);
+            return Optional.empty();
         }
         if (game == null) {
-            return;
+            return Optional.empty();
         }
         Optional<GameInstance> match = game.instanceOf(holder.getUniqueId());
         if (match.isEmpty()) {
             locks.remove(holder.getUniqueId());
-            return;
+            return Optional.empty();
         }
-        GameInstance instance = match.get();
+        return Optional.of(new RefreshMatch(match.get(), holderRole, targetRole, targetRoleString));
+    }
 
-        List<CompassCandidate> opponents = collectOpponents(holder, targetRole, instance);
-        List<CompassSighting> sightings = collectSightings(holder, targetRole, instance);
-        UUID lockedId = locks.get(holder.getUniqueId());
-        boolean locked = lockedId != null;
-        if (locked) {
-            List<CompassCandidate> lockedOpponents = opponents.stream()
-                    .filter(candidate -> candidate.id().equals(lockedId)).toList();
-            List<CompassSighting> lockedSightings = sightings.stream()
-                    .filter(sighting -> sighting.ownerId().equals(lockedId)).toList();
-            if (lockedOpponents.isEmpty() && lockedSightings.isEmpty()) {
-                locks.remove(holder.getUniqueId());
-                locked = false;
-            } else {
-                opponents = lockedOpponents;
-                sightings = lockedSightings;
-            }
+    /** Narrows targets to the manual lock, clearing stale locks. */
+    private LockedTargets narrowToLock(UUID holderId, List<CompassCandidate> opponents,
+            List<CompassSighting> sightings) {
+        UUID lockedId = locks.get(holderId);
+        if (lockedId == null) {
+            return new LockedTargets(opponents, sightings, false);
         }
+        List<CompassCandidate> lockedOpponents = opponents.stream()
+                .filter(candidate -> candidate.id().equals(lockedId)).toList();
+        List<CompassSighting> lockedSightings = sightings.stream()
+                .filter(sighting -> sighting.ownerId().equals(lockedId)).toList();
+        if (lockedOpponents.isEmpty() && lockedSightings.isEmpty()) {
+            locks.remove(holderId);
+            return new LockedTargets(opponents, sightings, false);
+        }
+        return new LockedTargets(lockedOpponents, lockedSightings, true);
+    }
+
+    /** Resolves the compass pick for the narrowed targets. */
+    private CompassPick resolveCompassPick(Role holderRole, List<CompassCandidate> opponents,
+            List<CompassSighting> sightings) {
         String roleBase = "settings.compass." + holderRole.name().toLowerCase(Locale.ROOT) + ".";
         boolean nearbyEnabled = plugin.getConfig()
                 .getBoolean(roleBase + "min-distance.enabled", true);
@@ -178,8 +220,13 @@ public final class CompassManager {
                         .getBoolean(roleBase + "max-distance.enabled", true)
                 ? plugin.getConfig().getDouble(roleBase + "max-distance.distance", -1.0)
                 : -1.0;
-        CompassPick pick = CompassPick.resolve(opponents, sightings, nearbyEnabled, nearbyThreshold,
+        return CompassPick.resolve(opponents, sightings, nearbyEnabled, nearbyThreshold,
                 trackingDistance);
+    }
+
+    /** Renders a resolved pick onto the compass item and actionbar. */
+    private void renderCompassPick(Player holder, ItemStack item, int slot, CompassPick pick,
+            String targetRoleString, boolean locked) {
         if (pick.kind() != CompassPick.Kind.NONE && badSignalForPick(holder, pick)) {
             showBadSignal(holder, item, slot);
             return;
@@ -361,30 +408,9 @@ public final class CompassManager {
 
     private SignalInterference.Config interferenceConfig() {
         String base = "settings.compass.signal-interference.";
-        Set<SignalInterference.Weather> during = new HashSet<>();
-        for (String raw : plugin.getConfig().getStringList(base + "weather.interfere-during")) {
-            try {
-                during.add(SignalInterference.Weather.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException e) {
-                // Unknown buckets are ignored, so one typo cannot break refreshes.
-            }
-        }
-        SignalInterference.InterfereWhen when;
-        try {
-            String raw = plugin.getConfig().getString(base + "light-level.interfere-when", "ONE_UNMET");
-            when = SignalInterference.InterfereWhen.valueOf(
-                    (raw == null ? "ONE_UNMET" : raw).trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            when = SignalInterference.InterfereWhen.ONE_UNMET;
-        }
-        SignalInterference.InterfereWhenVisible losWhen;
-        try {
-            String raw = plugin.getConfig().getString(base + "line-of-sight.interfere-when", "VISIBLE");
-            losWhen = SignalInterference.InterfereWhenVisible.valueOf(
-                    (raw == null ? "VISIBLE" : raw).trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            losWhen = SignalInterference.InterfereWhenVisible.VISIBLE;
-        }
+        Set<SignalInterference.Weather> during = interfereDuring(base);
+        SignalInterference.InterfereWhen when = lightInterfereWhen(base);
+        SignalInterference.InterfereWhenVisible losWhen = losInterfereWhen(base);
         return new SignalInterference.Config(
                 plugin.getConfig().getBoolean(base + "light-level.enabled", false),
                 plugin.getConfig().getInt(base + "light-level.min-sky-light", 10),
@@ -407,6 +433,41 @@ public final class CompassManager {
                 plugin.getConfig().getInt(base + "required-to-fail", 1),
                 plugin.getConfig().getBoolean(base + "two-way", false),
                 plugin.getConfig().getDouble(base + "chance-to-bypass", 0.0));
+    }
+
+    /** Parses the weather buckets that interfere, ignoring unknown values. */
+    private Set<SignalInterference.Weather> interfereDuring(String base) {
+        Set<SignalInterference.Weather> during = new HashSet<>();
+        for (String raw : plugin.getConfig().getStringList(base + "weather.interfere-during")) {
+            try {
+                during.add(SignalInterference.Weather.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException e) {
+                // Unknown buckets are ignored, so one typo cannot break refreshes.
+            }
+        }
+        return during;
+    }
+
+    /** Parses the light-level interfere-when mode, defaulting to ONE_UNMET. */
+    private SignalInterference.InterfereWhen lightInterfereWhen(String base) {
+        try {
+            String raw = plugin.getConfig().getString(base + "light-level.interfere-when", "ONE_UNMET");
+            return SignalInterference.InterfereWhen.valueOf(
+                    (raw == null ? "ONE_UNMET" : raw).trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return SignalInterference.InterfereWhen.ONE_UNMET;
+        }
+    }
+
+    /** Parses the line-of-sight interfere-when mode, defaulting to VISIBLE. */
+    private SignalInterference.InterfereWhenVisible losInterfereWhen(String base) {
+        try {
+            String raw = plugin.getConfig().getString(base + "line-of-sight.interfere-when", "VISIBLE");
+            return SignalInterference.InterfereWhenVisible.valueOf(
+                    (raw == null ? "VISIBLE" : raw).trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return SignalInterference.InterfereWhenVisible.VISIBLE;
+        }
     }
 
     /** Signal snapshot for a spot, read from its feet block. */
@@ -890,28 +951,9 @@ public final class CompassManager {
      * each click applies the new lock immediately.
      */
     public void handleLeftClick(Player player) {
-        if (!plugin.getConfig()
-                .getBoolean("settings.compass.left-click.enabled", false)) {
-            return;
-        }
-        if (player.getGameMode() == GameMode.SPECTATOR) {
-            return;
-        }
-        if (analyzing.contains(player.getUniqueId())) {
-            return;
-        }
         long now = System.currentTimeMillis();
-        long cooldownMs = (long) (Math.max(0.0, plugin.getConfig()
-                .getDouble("settings.compass.left-click.scroll-cooldown", 0.5)) * 1000);
-        if (!shouldRefresh(now, lastScroll.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
-            return;
-        }
-        if (game == null || !role(player).isParticipant()) {
-            return;
-        }
-        Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
+        Optional<GameInstance> match = scrollMatch(player, now);
         if (match.isEmpty()) {
-            locks.remove(player.getUniqueId());
             return;
         }
         GameInstance instance = match.get();
@@ -929,6 +971,42 @@ public final class CompassManager {
             refreshCompass(player);
             return;
         }
+        applyScrollCycle(player, opponents, sightings, maxTargets);
+        lastScroll.put(player.getUniqueId(), now);
+        refreshCompass(player);
+    }
+
+    /** Resolves the scroll match, applying the enabled, cooldown, and membership gates. */
+    private Optional<GameInstance> scrollMatch(Player player, long now) {
+        if (!plugin.getConfig()
+                .getBoolean("settings.compass.left-click.enabled", false)) {
+            return Optional.empty();
+        }
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            return Optional.empty();
+        }
+        if (analyzing.contains(player.getUniqueId())) {
+            return Optional.empty();
+        }
+        long cooldownMs = (long) (Math.max(0.0, plugin.getConfig()
+                .getDouble("settings.compass.left-click.scroll-cooldown", 0.5)) * 1000);
+        if (!shouldRefresh(now, lastScroll.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
+            return Optional.empty();
+        }
+        if (game == null || !role(player).isParticipant()) {
+            return Optional.empty();
+        }
+        Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
+        if (match.isEmpty()) {
+            locks.remove(player.getUniqueId());
+            return Optional.empty();
+        }
+        return match;
+    }
+
+    /** Advances the manual lock to the next scroll target. */
+    private void applyScrollCycle(Player player, List<CompassCandidate> opponents,
+            List<CompassSighting> sightings, int maxTargets) {
         UUID current = locks.get(player.getUniqueId());
         UUID next = CompassPick.cycleLock(opponents, sightings, current, maxTargets);
         if (!Objects.equals(next, current)) {
@@ -939,8 +1017,6 @@ public final class CompassManager {
         } else {
             locks.put(player.getUniqueId(), next);
         }
-        lastScroll.put(player.getUniqueId(), now);
-        refreshCompass(player);
     }
 
     /**

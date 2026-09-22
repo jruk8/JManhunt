@@ -28,9 +28,12 @@ public final class StatisticsRepository implements AutoCloseable {
         if (type.equals("sqlite")) {
             String file = plugin.getConfig().getString("statistics.sqlite.file", "statistics.db");
             File database = new File(plugin.getDataFolder(), file);
-            if (database.getParentFile() != null) database.getParentFile().mkdirs();
+            if (database.getParentFile() != null) {
+                database.getParentFile().mkdirs();
+            }
             StatisticsRepository repository = new StatisticsRepository(plugin, false,
-                    dataSource("jdbc:sqlite:" + database, "", "", plugin.getConfig().getInt("statistics.pool-size", 4)));
+                    dataSource("jdbc:sqlite:" + database, "", "",
+                            plugin.getConfig().getInt("statistics.pool-size", 4)));
             repository.initialize();
             return repository;
         }
@@ -55,8 +58,12 @@ public final class StatisticsRepository implements AutoCloseable {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(url);
         config.setMaximumPoolSize(Math.max(1, poolSize));
-        if (!username.isEmpty()) config.setUsername(username);
-        if (!password.isEmpty()) config.setPassword(password);
+        if (!username.isEmpty()) {
+            config.setUsername(username);
+        }
+        if (!password.isEmpty()) {
+            config.setPassword(password);
+        }
         return new HikariDataSource(config);
     }
 
@@ -85,7 +92,9 @@ public final class StatisticsRepository implements AutoCloseable {
                         + "speedrunner_sessions, hunter_sessions, deaths FROM jmanhunt_player_stats WHERE uuid=?")) {
             statement.setString(1, uuid.toString());
             try (ResultSet result = statement.executeQuery()) {
-                if (!result.next()) return new CareerStats();
+                if (!result.next()) {
+                    return new CareerStats();
+                }
                 CareerStats stats = new CareerStats();
                 stats.player = result.getString(1);
                 stats.timeSpeedrunner = result.getLong(2);
@@ -109,16 +118,20 @@ public final class StatisticsRepository implements AutoCloseable {
 
     public void save(UUID uuid, CareerStats stats) throws SQLException {
         String sql = postgres
-                ? "INSERT INTO jmanhunt_player_stats (uuid,player_name,time_speedrunner,time_hunter,kills,hunter_kills,"
-                + "speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins,sessions,"
+                ? "INSERT INTO jmanhunt_player_stats (uuid,player_name,time_speedrunner,time_hunter,kills,"
+                + "hunter_kills,speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins,"
+                + "sessions,"
                 + "speedrunner_sessions,hunter_sessions,deaths) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
-                + "ON CONFLICT (uuid) DO UPDATE SET player_name=EXCLUDED.player_name,time_speedrunner=EXCLUDED.time_speedrunner,"
+                + "ON CONFLICT (uuid) DO UPDATE SET player_name=EXCLUDED.player_name,"
+                + "time_speedrunner=EXCLUDED.time_speedrunner,"
                 + "time_hunter=EXCLUDED.time_hunter,kills=EXCLUDED.kills,hunter_kills=EXCLUDED.hunter_kills,"
-                + "speedrunner_kills=EXCLUDED.speedrunner_kills,final_kills=EXCLUDED.final_kills,damage_dealt=EXCLUDED.damage_dealt,"
+                + "speedrunner_kills=EXCLUDED.speedrunner_kills,final_kills=EXCLUDED.final_kills,"
+                + "damage_dealt=EXCLUDED.damage_dealt,"
                 + "hunter_wins=EXCLUDED.hunter_wins,speedrunner_wins=EXCLUDED.speedrunner_wins,"
                 + "sessions=EXCLUDED.sessions,speedrunner_sessions=EXCLUDED.speedrunner_sessions,"
                 + "hunter_sessions=EXCLUDED.hunter_sessions,deaths=EXCLUDED.deaths,updated_at=CURRENT_TIMESTAMP"
-                : "INSERT OR REPLACE INTO jmanhunt_player_stats (uuid,player_name,time_speedrunner,time_hunter,kills,hunter_kills,"
+                : "INSERT OR REPLACE INTO jmanhunt_player_stats (uuid,player_name,time_speedrunner,time_hunter,"
+                + "kills,hunter_kills,"
                 + "speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins,sessions,"
                 + "speedrunner_sessions,hunter_sessions,deaths) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -142,13 +155,15 @@ public final class StatisticsRepository implements AutoCloseable {
     }
 
     public void increment(UUID uuid, CareerStats delta) throws SQLException {
-        String sql = "INSERT INTO jmanhunt_player_stats (uuid,player_name,time_speedrunner,time_hunter,kills,hunter_kills,"
+        String sql = "INSERT INTO jmanhunt_player_stats (uuid,player_name,time_speedrunner,time_hunter,"
+                + "kills,hunter_kills,"
                 + "speedrunner_kills,final_kills,damage_dealt,hunter_wins,speedrunner_wins,sessions,"
                 + "speedrunner_sessions,hunter_sessions,deaths) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
                 + "ON CONFLICT (uuid) DO UPDATE SET player_name=EXCLUDED.player_name,"
                 + "time_speedrunner=jmanhunt_player_stats.time_speedrunner+EXCLUDED.time_speedrunner,"
                 + "time_hunter=jmanhunt_player_stats.time_hunter+EXCLUDED.time_hunter,"
-                + "kills=jmanhunt_player_stats.kills+EXCLUDED.kills,hunter_kills=jmanhunt_player_stats.hunter_kills+EXCLUDED.hunter_kills,"
+                + "kills=jmanhunt_player_stats.kills+EXCLUDED.kills,"
+                + "hunter_kills=jmanhunt_player_stats.hunter_kills+EXCLUDED.hunter_kills,"
                 + "speedrunner_kills=jmanhunt_player_stats.speedrunner_kills+EXCLUDED.speedrunner_kills,"
                 + "final_kills=jmanhunt_player_stats.final_kills+EXCLUDED.final_kills,"
                 + "damage_dealt=jmanhunt_player_stats.damage_dealt+EXCLUDED.damage_dealt,"
@@ -161,7 +176,8 @@ public final class StatisticsRepository implements AutoCloseable {
         try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, uuid.toString()); statement.setString(2, delta.player);
             statement.setLong(3, delta.timeSpeedrunner); statement.setLong(4, delta.timeHunter);
-            statement.setInt(5, delta.kills); statement.setInt(6, delta.hunterKills); statement.setInt(7, delta.speedrunnerKills);
+            statement.setInt(5, delta.kills); statement.setInt(6, delta.hunterKills);
+            statement.setInt(7, delta.speedrunnerKills);
             statement.setInt(8, delta.finalKills); statement.setDouble(9, delta.damage);
             statement.setInt(10, delta.hunterWins); statement.setInt(11, delta.speedrunnerWins);
             statement.setInt(12, delta.sessions); statement.setInt(13, delta.speedrunnerSessions);

@@ -32,8 +32,12 @@ public final class Stats {
     }
 
     public String displayValue(String statistic, MessageService messages) {
-        if (statistic.equalsIgnoreCase("DAMAGE_DEALT")) return String.format(Locale.ROOT, "%.1f Hearts", value(statistic));
-        if (statistic.equalsIgnoreCase("PROGRESSION")) return messages.string("game.progression-names." + progressionKey, progressionKey);
+        if (statistic.equalsIgnoreCase("DAMAGE_DEALT")) {
+            return String.format(Locale.ROOT, "%.1f Hearts", value(statistic));
+        }
+        if (statistic.equalsIgnoreCase("PROGRESSION")) {
+            return messages.string("game.progression-names." + progressionKey, progressionKey);
+        }
         return String.valueOf((int) value(statistic));
     }
 }

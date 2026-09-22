@@ -277,7 +277,8 @@ class TutorialServiceTest {
         assertEquals(OptionalInt.empty(), TutorialService.parseAnswerNumber("9999999999999999999999"));
     }
 
-    private static TutorialConfig.TutorialNode node(List<String> question, List<TutorialConfig.TutorialAnswer> answers) {
+    private static TutorialConfig.TutorialNode node(List<String> question,
+            List<TutorialConfig.TutorialAnswer> answers) {
         TutorialConfig.TutorialNode node = new TutorialConfig.TutorialNode();
         node.setQuestion(new ArrayList<>(question));
         node.setAnswers(new ArrayList<>(answers));
@@ -290,7 +291,8 @@ class TutorialServiceTest {
                 .replace("{question}", question);
     }
 
-    private static TutorialConfig.TutorialAnswer answer(String text, String next, List<String> commands, boolean recommended) {
+    private static TutorialConfig.TutorialAnswer answer(String text, String next, List<String> commands,
+            boolean recommended) {
         TutorialConfig.TutorialAnswer answer = new TutorialConfig.TutorialAnswer();
         answer.setText(text);
         answer.setNext(next);

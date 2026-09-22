@@ -35,20 +35,19 @@ public final class GameStateCommandManager {
     /** One interval engine per live match, keyed by match id. */
     private final Map<Long, IntervalEngine> intervalEngines = new HashMap<>();
 
-    /** Per-match interval engine state; each match runs its own chains. */
-    private static final class IntervalEngine {
-        final List<BukkitTask> tasks = new ArrayList<>();
-        final List<BukkitTask> delayed = new ArrayList<>();
-        /** Bumped every time interval chains are (re)started so stale firings stop. */
-        long generation;
-        /** Modifiers with per-executor timing: name to player ids owning a chain. */
-        final Map<String, Set<UUID>> executors = new HashMap<>();
-        /** Modifiers with per-executor timing that currently own a console chain. */
-        final Set<String> consoleChained = new HashSet<>();
-    }
-
     private IntervalEngine engine(long matchId) {
         return intervalEngines.computeIfAbsent(matchId, ignored -> new IntervalEngine());
+    }
+
+    /** Names of all enabled custom modifiers. */
+    private List<String> enabledModifiers() {
+        List<String> enabled = new ArrayList<>();
+        for (String name : configService.modifierNames()) {
+            if (configService.modifierEnabled(name)) {
+                enabled.add(name);
+            }
+        }
+        return enabled;
     }
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
@@ -76,10 +75,13 @@ public final class GameStateCommandManager {
      * deferred modifiers still fire immediately.
      */
     public void runPostStartModifiers(long matchId) {
-        for (String name : configService.modifierNames()) {
-            if (!configService.modifierEnabled(name)) continue;
-            if (!runsOnContains(name, "ON_START")) continue;
-            if (!afterPrestart(name)) continue;
+        for (String name : enabledModifiers()) {
+            if (!runsOnContains(name, "ON_START")) {
+                continue;
+            }
+            if (!afterPrestart(name)) {
+                continue;
+            }
             runModifierCommands(name, matchId);
         }
     }
@@ -107,15 +109,13 @@ public final class GameStateCommandManager {
     }
 
     public void runConsoleCleanup() {
-        for (String name : configService.modifierNames()) {
-            if (!configService.modifierEnabled(name)) continue;
+        for (String name : enabledModifiers()) {
             runCommands("custom-modifiers." + name + ".commands.console-cleanup", null);
         }
     }
 
     public void runPlayerCleanup(List<Player> participants) {
-        for (String name : configService.modifierNames()) {
-            if (!configService.modifierEnabled(name)) continue;
+        for (String name : enabledModifiers()) {
             for (Player player : participants) {
                 runCommands("custom-modifiers." + name + ".commands.player-cleanup", player);
             }
@@ -144,12 +144,15 @@ public final class GameStateCommandManager {
      */
     public void startIntervalModifiers(long matchId) {
         cancelIntervalModifiers(matchId);
-        for (String name : configService.modifierNames()) {
-            if (!configService.modifierEnabled(name)) continue;
-            if (!runsOnContains(name, "INTERVAL")) continue;
+        for (String name : enabledModifiers()) {
+            if (!runsOnContains(name, "INTERVAL")) {
+                continue;
+            }
             String base = "custom-modifiers." + name + ".interval-settings.";
             double intervalSeconds = plugin.getConfig().getDouble(base + "interval", 60.0);
-            if (intervalSeconds < 0) continue;
+            if (intervalSeconds < 0) {
+                continue;
+            }
             double deviation = clampDeviation(plugin.getConfig().getDouble(base + "deviation", 0.0), intervalSeconds);
             TriggerScope scope = parseScope(plugin.getConfig().getString(base + "behavior", "PER_INVOKE"));
             if (deviation > 0.0 && scope == TriggerScope.PER_EXECUTOR) {
@@ -195,7 +198,9 @@ public final class GameStateCommandManager {
         long generation = engine.generation;
         double intervalSeconds = plugin.getConfig()
                 .getDouble("custom-modifiers." + name + ".interval-settings.interval", 60.0);
-        if (intervalSeconds < 0) return;
+        if (intervalSeconds < 0) {
+            return;
+        }
         double deviation = clampDeviation(plugin.getConfig()
                 .getDouble("custom-modifiers." + name + ".interval-settings.deviation", 0.0), intervalSeconds);
         if (deviation <= 0.0) {
@@ -204,7 +209,9 @@ public final class GameStateCommandManager {
             ref.set(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
                 if (generation != engine.generation || !configService.modifierEnabled(name)) {
                     BukkitTask task = ref.get();
-                    if (task != null) task.cancel();
+                    if (task != null) {
+                        task.cancel();
+                    }
                     engine.tasks.remove(ref.get());
                     return;
                 }
@@ -218,7 +225,9 @@ public final class GameStateCommandManager {
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
             engine.tasks.remove(ref.get());
-            if (generation != engine.generation || !configService.modifierEnabled(name)) return;
+            if (generation != engine.generation || !configService.modifierEnabled(name)) {
+                return;
+            }
             runModifierCommands(name, matchId);
             scheduleSharedFiring(name, matchId);
         }, delayTicks));
@@ -296,7 +305,9 @@ public final class GameStateCommandManager {
     private long currentJitteredDelay(String name) {
         double intervalSeconds = plugin.getConfig()
                 .getDouble("custom-modifiers." + name + ".interval-settings.interval", 60.0);
-        if (intervalSeconds < 0) return -1;
+        if (intervalSeconds < 0) {
+            return -1;
+        }
         double deviation = clampDeviation(plugin.getConfig()
                 .getDouble("custom-modifiers." + name + ".interval-settings.deviation", 0.0), intervalSeconds);
         return jitteredIntervalTicks(intervalSeconds, deviation, ThreadLocalRandom.current().nextDouble());
@@ -327,10 +338,13 @@ public final class GameStateCommandManager {
      * @param matchId the match the event belongs to
      */
     public void runEventModifiers(String event, Player player, long matchId) {
-        if (player == null) return;
-        for (String name : configService.modifierNames()) {
-            if (!configService.modifierEnabled(name)) continue;
-            if (!runsOnContains(name, event)) continue;
+        if (player == null) {
+            return;
+        }
+        for (String name : enabledModifiers()) {
+            if (!runsOnContains(name, event)) {
+                continue;
+            }
             runModifierWithDelay(name, () -> dispatchModifier(name, List.of(player)), matchId);
         }
     }
@@ -425,12 +439,16 @@ public final class GameStateCommandManager {
                 runCommandList(sharedPicks ? shared.get("console") : resolveCommandList(name, "console"), null);
             }
             for (Player target : targets) {
-                if (!rollChance(chance, random.nextDouble())) continue;
+                if (!rollChance(chance, random.nextDouble())) {
+                    continue;
+                }
                 runExecutorPlayerLists(name, target, shared, sharedPicks);
             }
             return;
         }
-        if (!rollChance(chance, random.nextDouble())) return;
+        if (!rollChance(chance, random.nextDouble())) {
+            return;
+        }
         runCommandList(shared.get("console"), null);
         for (Player target : targets) {
             runExecutorPlayerLists(name, target, shared, true);
@@ -463,13 +481,17 @@ public final class GameStateCommandManager {
 
     /** Parses a {@code PER_INVOKE} / {@code PER_EXECUTOR} behavior key. */
     static TriggerScope parseScope(String raw) {
-        if (raw != null && raw.trim().equalsIgnoreCase("PER_EXECUTOR")) return TriggerScope.PER_EXECUTOR;
+        if (raw != null && raw.trim().equalsIgnoreCase("PER_EXECUTOR")) {
+            return TriggerScope.PER_EXECUTOR;
+        }
         return TriggerScope.PER_INVOKE;
     }
 
     /** Parses a {@code commands.execution.selection} key. */
     static Selection parseSelection(String raw) {
-        if (raw != null && raw.trim().equalsIgnoreCase("PICK_RANDOM")) return Selection.PICK_RANDOM;
+        if (raw != null && raw.trim().equalsIgnoreCase("PICK_RANDOM")) {
+            return Selection.PICK_RANDOM;
+        }
         return Selection.IN_ORDER;
     }
 
@@ -487,7 +509,9 @@ public final class GameStateCommandManager {
      * fraction range. Unset or unreadable values fall back to 1.0 upstream.
      */
     static double clampChance(double chance) {
-        if (Double.isNaN(chance)) return 1.0;
+        if (Double.isNaN(chance)) {
+            return 1.0;
+        }
         return Math.min(1.0, Math.max(0.0, chance));
     }
 
@@ -506,8 +530,12 @@ public final class GameStateCommandManager {
 
     /** Clamps {@code interval-settings.deviation} to {@code [0, interval]}. */
     static double clampDeviation(double deviation, double intervalSeconds) {
-        if (Double.isNaN(deviation) || deviation <= 0.0) return 0.0;
-        if (Double.isNaN(intervalSeconds) || intervalSeconds <= 0.0) return 0.0;
+        if (Double.isNaN(deviation) || deviation <= 0.0) {
+            return 0.0;
+        }
+        if (Double.isNaN(intervalSeconds) || intervalSeconds <= 0.0) {
+            return 0.0;
+        }
         return Math.min(deviation, intervalSeconds);
     }
 
@@ -525,13 +553,17 @@ public final class GameStateCommandManager {
      */
     static long jitteredIntervalTicks(double intervalSeconds, double deviationSeconds, double roll) {
         double deviation = clampDeviation(deviationSeconds, intervalSeconds);
-        if (deviation <= 0.0) return secondsToTicks(intervalSeconds);
+        if (deviation <= 0.0) {
+            return secondsToTicks(intervalSeconds);
+        }
         return secondsToTicks(intervalSeconds - deviation + roll * deviation * 2.0);
     }
 
     /** Draws up to {@code count} distinct lines from a command list. */
     static List<String> pickCommands(List<String> commands, int count, Random random) {
-        if (commands == null || commands.isEmpty() || count <= 0) return List.of();
+        if (commands == null || commands.isEmpty() || count <= 0) {
+            return List.of();
+        }
         List<String> pool = new ArrayList<>(commands);
         Collections.shuffle(pool, random);
         return List.copyOf(pool.subList(0, Math.min(count, pool.size())));
@@ -539,37 +571,15 @@ public final class GameStateCommandManager {
 
     private void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
                             boolean lastMatch) {
-        if (!plugin.getConfig().getBoolean("gamestate-commands.default-commands.enabled", true)) return;
+        if (!plugin.getConfig().getBoolean("gamestate-commands.default-commands.enabled", true)) {
+            return;
+        }
         String path = "gamestate-commands.default-commands.";
         if (plugin.getConfig().getBoolean(path + "reset-players-stats", false)) {
             participants.forEach(this::resetPlayer);
         }
         if (plugin.getConfig().getBoolean(path + "auto-set-gamemode", false)) {
-            // AFK players are skipped above and always left alone; NONEs follow
-            // the toggle, keeping their gamemode like AFK when it is off.
-            boolean setNoneSpectator = plugin.getConfig().getBoolean("settings.roles.turn-nones-spectator.enabled", false);
-            List<Player> nonePlayers = new ArrayList<>();
-            for (Player player : participants) {
-                player.setGameMode(GameMode.SURVIVAL);
-            }
-            for (Player player : lobbySpectators) {
-                if (playerStates.role(player) == Role.AFK) continue; // AFK players are left alone
-                if (phase.equals("start")) {
-                    if (setNoneSpectator) player.setGameMode(GameMode.SPECTATOR);
-                    nonePlayers.add(player);
-                } else {
-                    player.setGameMode(GameMode.SURVIVAL);
-                }
-            }
-            // When the world engine is enabled, NONE spectators travel to the
-            // match cell with the players instead of waiting in the lobby.
-            boolean engineMovesSpectators = phase.equals("start")
-                    && setNoneSpectator
-                    && plugin.getConfig().getBoolean("world-engine.enabled", false);
-            if (!nonePlayers.isEmpty() && !engineMovesSpectators) {
-                lobbyTeleporter.teleportToLobby(nonePlayers, lobbyId);
-                lobbyTeleporter.setSpawnToLobby(nonePlayers, lobbyId);
-            }
+            applyDefaultGamemodes(phase, participants, lobbySpectators, lobbyId);
         }
         var worlds = Bukkit.getWorlds();
         boolean disableLocatorBar = plugin.getConfig().getBoolean(path + "disable-locator-bar", false);
@@ -600,6 +610,45 @@ public final class GameStateCommandManager {
         }
     }
 
+    /**
+     * Default gamemodes for a phase: participants to survival, NONEs to
+     * spectator on start (or back to survival on end) unless AFK, with
+     * lobby travel for NONEs when the engine does not move them.
+     */
+    private void applyDefaultGamemodes(String phase, List<Player> participants,
+            List<Player> lobbySpectators, int lobbyId) {
+        // AFK players are skipped above and always left alone; NONEs follow
+        // the toggle, keeping their gamemode like AFK when it is off.
+        boolean setNoneSpectator = plugin.getConfig().getBoolean(
+                "settings.roles.turn-nones-spectator.enabled", false);
+        List<Player> nonePlayers = new ArrayList<>();
+        for (Player player : participants) {
+            player.setGameMode(GameMode.SURVIVAL);
+        }
+        for (Player player : lobbySpectators) {
+            if (playerStates.role(player) == Role.AFK) {
+                continue; // AFK players are left alone
+            }
+            if (phase.equals("start")) {
+                if (setNoneSpectator) {
+                    player.setGameMode(GameMode.SPECTATOR);
+                }
+                nonePlayers.add(player);
+            } else {
+                player.setGameMode(GameMode.SURVIVAL);
+            }
+        }
+        // When the world engine is enabled, NONE spectators travel to the
+        // match cell with the players instead of waiting in the lobby.
+        boolean engineMovesSpectators = phase.equals("start")
+                && setNoneSpectator
+                && plugin.getConfig().getBoolean("world-engine.enabled", false);
+        if (!nonePlayers.isEmpty() && !engineMovesSpectators) {
+            lobbyTeleporter.teleportToLobby(nonePlayers, lobbyId);
+            lobbyTeleporter.setSpawnToLobby(nonePlayers, lobbyId);
+        }
+    }
+
     private void setDaytime(World world) {
         try {
             world.setTime(0L);
@@ -622,8 +671,7 @@ public final class GameStateCommandManager {
                 runCommands(base + "player-commands." + phase, player);
             }
         }
-        for (String name : configService.modifierNames()) {
-            if (!configService.modifierEnabled(name)) continue;
+        for (String name : enabledModifiers()) {
             if (phase.equals("start") && runsOnContains(name, "ON_START") && !afterPrestart(name)) {
                 runModifierCommands(name, matchId);
             }
@@ -636,14 +684,18 @@ public final class GameStateCommandManager {
 
     private void runCommandList(List<String> commands, Player player) {
         for (String command : commands) {
-            if (command.isBlank()) continue;
+            if (command.isBlank()) {
+                continue;
+            }
             try {
                 String playerName = player != null ? player.getName() : null;
                 double x = player != null ? player.getLocation().getX() : 0.0;
                 double y = player != null ? player.getLocation().getY() : 0.0;
                 double z = player != null ? player.getLocation().getZ() : 0.0;
                 String parsed = CommandPlaceholders.replace(command, playerName, x, y, z);
-                if (parsed.startsWith("/")) parsed = parsed.substring(1);
+                if (parsed.startsWith("/")) {
+                    parsed = parsed.substring(1);
+                }
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception e) {
                 plugin.logger().severe("Failed to run command '%s'. Skipping..".formatted(command));
