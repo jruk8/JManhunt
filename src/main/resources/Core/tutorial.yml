@@ -66,8 +66,8 @@ nodes:
         next: "nr_start"
   we_lobby:
     question:
-      - "World Engine is now enabled. Restart the server after this tutorial so it takes full effect."
-      - "Next: generate the lobby world. Pick a preset to build from."
+      - "World Engine is now enabled. Restart the server soon for all features to apply."
+      - "<#de7766>Next:</#de7766> generate the lobby. Pick one preset."
     answers:
       - text: "Create the DEFAULT lobby: one lobby with baskets."
         recommended: true
@@ -101,7 +101,7 @@ nodes:
   we_done:
     celebrate: true
     question:
-      - "That is basically it. Walk onto the colored concrete blocks to pick <#de666e>Hunter</#de666e> or <#74de66>Speedrunner</#74de66>, then start with <white>/mh start</white>."
+      - "That is basically it. Walk onto the baskets (colored concrete blocks) to pick <#de666e>Hunter</#de666e> or <#74de66>Speedrunner</#74de66>, then start with <gray>/mh start</gray> or wait for autostart."
       - "Remember to restart the server so World Engine fully applies."
       - "Want to go further?"
     answers:
@@ -183,7 +183,7 @@ nodes:
         next: "EXIT"
   mod_fun:
     question:
-      - "Pick one to turn it on. You land back here after each pick, so take as many as you like."
+      - "Pick n' mix! Note that this setup does not support disabling modifiers <gray>(disable with /mh config custom-modifiers NAME enabled false)</gray>."
     answers:
       - text: "Speedrunners get a speed potion."
         commands:
@@ -209,12 +209,12 @@ nodes:
         commands:
           - "jmanhunt:mh config custom-modifiers random-item-giver enabled true"
         next: "mod_fun"
-      - text: "Back to modifiers."
+      - text: "<yellow>Back to modifiers.</yellow>"
         next: "mod_intro"
   mod_toggle:
     question:
-      - "Run <white>/mh config custom-modifiers</white> to list every modifier."
-      - "Then switch one with <white>/mh config custom-modifiers NAME enabled true</white>, or <white>false</white> to switch it off."
+      - "Run <gray>/mh config custom-modifiers</gray> to list every modifier."
+      - "Then switch one with <gray>/mh config custom-modifiers NAME enabled true</gray>, or <gray>false</gray> to switch it off."
       - "Example: <white>/mh config custom-modifiers everyone-gets-beef enabled true</white>"
     answers:
       - text: "Show me the fun ones."

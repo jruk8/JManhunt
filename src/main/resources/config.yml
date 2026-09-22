@@ -9,10 +9,10 @@
 # Challenges Addon: https://builtbybit.com/resources/jmanhunt-challenges.121574/
 #
 # Save and apply your changes with /manhunt reload.
-# Stuck? Refer to the documentation:
+# Stuck? Use CTRL+F and refer to the documentation:
 # - https://jruk8.github.io/JManhunt/
 #
-# Issues? Report them on GitHub:
+# Issues? Report them on GitHub (star us!):
 # - https://github.com/jruk8/JManhunt/issues
 # For quick assistance and community modifiers, join our Discord server:
 # - https://discord.gg/hkWmCVmWDC
@@ -28,10 +28,12 @@
 config-version: 5
 
 
-# Send anonymous statistics via bStats. We never collect personal data or IP addresses.
+# Send anonymous statistics via bStats (open-source). We never collect personal data or IP addresses.
+# This setting is used to improve development and plugin stability.
 # Requires a server restart to take effect.
 # Default: true
 send-anonymous-statistics: true
+
 
 # Message parser used for messages.yml: minimessage or legacy.
 # Default: minimessage
@@ -127,23 +129,20 @@ placeholders:
     format: "{value}"
 
 
-# Built-in game-state actions and optional commands. All command sections are
-# disabled by default except default-commands.
-# The default-commands options below run at both match start and match end
-# when enabled.
+# Built-in game-state actions and optional commands.
 gamestate-commands:
+  # Default commands run at both match start and match end
   default-commands:
-    enabled: true
+    enabled: true # if false, nothing runs.
     auto-set-gamemode: true
     reset-players-stats: true
     disable-locator-bar: true
     set-respawn-immediate: true
     set-daytime: true
     disable-phantoms: true
-    # Sets send_command_feedback to false while a match runs. Unlike the
-    # options above, this one stays off unless you enable it.
     disable-command-feedback: false
   # Console commands run once per configured entry.
+  # Consider using custom modifiers.
   console-commands:
     enabled: false
     start:
@@ -152,6 +151,7 @@ gamestate-commands:
       - "say The hunt is over!"
   # Player commands run once for every online Hunter or Speedrunner. <p> is
   # replaced with that player's name. Commands may start with '/'.
+  # Consider using custom modifiers.
   player-commands:
     enabled: false
     start:
