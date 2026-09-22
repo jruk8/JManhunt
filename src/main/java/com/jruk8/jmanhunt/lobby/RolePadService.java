@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.lobby;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;

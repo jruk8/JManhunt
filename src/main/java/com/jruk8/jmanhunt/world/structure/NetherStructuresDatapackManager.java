@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.world.structure;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 
 /** Applies the world-engine nether structures (fortress/bastion) datapack. */
 public final class NetherStructuresDatapackManager extends DatapackManager {

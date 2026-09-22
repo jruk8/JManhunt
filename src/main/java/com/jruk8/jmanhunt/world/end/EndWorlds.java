@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.world.end;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.World;
 
 /** Shared end-dimension helpers for the legacy reset and end cells. */

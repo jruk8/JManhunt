@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.config;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;

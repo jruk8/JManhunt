@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.lobby;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;

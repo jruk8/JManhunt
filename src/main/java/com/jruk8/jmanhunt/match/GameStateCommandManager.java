@@ -1,8 +1,8 @@
-package com.jruk8.jmanhunt.command;
+package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.config.ConfigService;
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
-import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;

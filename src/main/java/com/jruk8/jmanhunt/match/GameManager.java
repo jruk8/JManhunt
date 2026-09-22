@@ -1,10 +1,9 @@
 package com.jruk8.jmanhunt.match;
 
-import com.jruk8.jmanhunt.command.GameStateCommandManager;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.DurationFormat;
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyService;

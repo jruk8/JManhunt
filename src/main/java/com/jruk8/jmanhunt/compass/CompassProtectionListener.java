@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameManager;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;

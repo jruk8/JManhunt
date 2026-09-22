@@ -3,7 +3,7 @@ package com.jruk8.jmanhunt.world.end;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.world.FileUtils;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;

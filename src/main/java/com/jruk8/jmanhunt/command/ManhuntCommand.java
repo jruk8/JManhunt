@@ -3,7 +3,7 @@ package com.jruk8.jmanhunt.command;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.core.DebugService;
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.LobbyPreset;

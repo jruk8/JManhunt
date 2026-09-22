@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.player;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.message.MessageService;
 
 import org.bukkit.entity.Player;

@@ -2,7 +2,7 @@ package com.jruk8.jmanhunt.loot;
 
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.config.SettingsListener;
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import java.io.File;

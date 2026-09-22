@@ -1,8 +1,13 @@
-package com.jruk8.jmanhunt.core;
+package com.jruk8.jmanhunt;
 
 import com.jruk8.jmanhunt.command.ManhuntCommand;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.compass.CompassProtectionListener;
+import com.jruk8.jmanhunt.core.BukkitDebugSink;
+import com.jruk8.jmanhunt.core.DebugService;
+import com.jruk8.jmanhunt.core.JManhuntExpansion;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.MetricsBootstrap;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.YamlFileUpdater;

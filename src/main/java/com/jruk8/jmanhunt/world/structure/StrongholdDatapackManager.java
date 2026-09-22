@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.world.structure;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 
 /** Applies the world-engine stronghold placement datapack. */
 public final class StrongholdDatapackManager extends DatapackManager {

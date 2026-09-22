@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.stats;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;

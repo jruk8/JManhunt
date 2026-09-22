@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.message;
 
 import com.jruk8.jmanhunt.config.ConfigService;
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;

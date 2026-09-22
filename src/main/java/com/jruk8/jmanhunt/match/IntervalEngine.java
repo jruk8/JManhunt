@@ -1,4 +1,4 @@
-package com.jruk8.jmanhunt.command;
+package com.jruk8.jmanhunt.match;
 
 import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayList;

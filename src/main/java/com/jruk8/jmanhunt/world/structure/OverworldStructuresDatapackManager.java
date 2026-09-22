@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.world.structure;
 
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import java.util.LinkedHashMap;
 import java.util.Map;
 

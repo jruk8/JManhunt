@@ -1,4 +1,4 @@
-package com.jruk8.jmanhunt.command;
+package com.jruk8.jmanhunt.match;
 
 import org.junit.jupiter.api.Test;
 import java.util.List;

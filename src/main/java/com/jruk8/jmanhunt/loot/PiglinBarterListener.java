@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.loot;
 
 import com.jruk8.jmanhunt.match.GameManager;
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.PiglinBarterEvent;
 

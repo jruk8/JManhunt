@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.core;
 
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.stats.CareerStats;
 import com.jruk8.jmanhunt.stats.StatsManager;

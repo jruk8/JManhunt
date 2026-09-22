@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.world.structure;
 
 import com.jruk8.jmanhunt.world.FileUtils;
-import com.jruk8.jmanhunt.core.JManhuntPlugin;
+import com.jruk8.jmanhunt.JManhuntPlugin;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
