@@ -12,6 +12,23 @@ public enum Role {
         return this == HUNTER || this == SPEEDRUNNER;
     }
 
+    /**
+     * Opposite side: hunters face speedrunners and back. Anything else maps
+     * to itself, so only participant roles ever switch sides.
+     */
+    public Role opposite() {
+        return switch (this) {
+            case HUNTER -> SPEEDRUNNER;
+            case SPEEDRUNNER -> HUNTER;
+            default -> this;
+        };
+    }
+
+    /** Returns true for spectators and lobby idlers watching a match. */
+    public boolean isWatching() {
+        return this == SPECTATOR || this == NONE;
+    }
+
     /** User-facing name, e.g. Hunter instead of HUNTER. */
     public String displayName() {
         return switch (this) {
