@@ -50,6 +50,8 @@ import com.jruk8.jmanhunt.tutorial.jmanhunt.JManhuntTutorialSounds;
 import com.jruk8.jmanhunt.api.JManhuntApi;
 import com.jruk8.jmanhunt.api.JManhuntApiImpl;
 import com.jruk8.jmanhunt.config.SettingsListener;
+import com.jruk8.jmanhunt.gui.GuiListener;
+import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.loot.PiglinBarterListener;
 import com.jruk8.jmanhunt.world.teleport.PortalRouter;
 import com.jruk8.jmanhunt.world.WorldEngineService;
@@ -67,7 +69,7 @@ import java.util.UUID;
 
 public final class JManhuntPlugin extends JavaPlugin {
     private static final int CONFIG_VERSION = 5;
-    private static final int MESSAGES_VERSION = 9;
+    private static final int MESSAGES_VERSION = 8;
     private static final int MODIFIERS_VERSION = 1;
     /**
      * Relocated config paths, applied on reload. Every key must live under a
@@ -104,6 +106,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private UpdateCheckNotifier updateCheckNotifier;
     private RoleTeamService roleTeams;
     private SpawnCampService spawnCamp;
+    private GuiService guiService;
     private final List<SettingsListener> settings = new ArrayList<>();
 
     @Override
@@ -163,6 +166,7 @@ public final class JManhuntPlugin extends JavaPlugin {
 
         configService = new ConfigService(this, modifierStore);
         sounds = new SoundService(this, configService);
+        guiService = new GuiService();
         tutorialService = new TutorialService(tutorialConfigs.getTutorialConfig(),
                 new JManhuntTutorialMessenger(messages),
                 new JManhuntTutorialSounds(tutorialConfigs.getTutorialConfig(), sounds),
@@ -291,6 +295,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 this, lobbyService, playerStates, game, messages, sounds,
                 worldEngine::lobbyWorldName, debugService), this);
         getServer().getPluginManager().registerEvents(new TutorialChatListener(this, tutorialService), this);
+        getServer().getPluginManager().registerEvents(new GuiListener(guiService), this);
         getServer().getPluginManager().registerEvents(
                 new UpdateCheckJoinListener(updateChecks, updateCheckNotifier), this);
     }
@@ -376,6 +381,11 @@ public final class JManhuntPlugin extends JavaPlugin {
     /** Interactive setup tutorial engine. */
     public TutorialService tutorial() {
         return tutorialService;
+    }
+
+    /** Chest-menu service (open, render, click routing). */
+    public GuiService guiService() {
+        return guiService;
     }
 
     public void reload() {

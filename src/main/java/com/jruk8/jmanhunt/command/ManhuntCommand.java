@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.command;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.core.DebugService;
+import com.jruk8.jmanhunt.gui.menus.ModifierMenus;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
@@ -108,6 +109,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final PendingConfirmations confirms = new PendingConfirmations();
     private final DevSchemCommand devSchem;
     private final ModifiersCommand modifiersCmd;
+    private ModifierMenus modifierMenus;
     /** Lobby-bounds corners per player, separate from the dev schem selection. */
     private final Map<UUID, Location> boundPos1 = new HashMap<>();
     private final Map<UUID, Location> boundPos2 = new HashMap<>();
@@ -121,7 +123,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.lobbyTeleporter = lobbyTeleporter; this.debugService = debugService;
         this.lobbies = lobbyService;
         this.devSchem = new DevSchemCommand(plugin, messages);
-        this.modifiersCmd = new ModifiersCommand(config, messages);
+        this.modifiersCmd = new ModifiersCommand(config, messages,
+                plugin.guiService(), () -> modifierMenus.mainMenu(), sounds);
+        this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,
+                plugin.guiService(), modifiersCmd);
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -163,7 +168,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt status [id|all]", "show match status"},
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt config <category> <key...> <value>", "view or change a setting"},
-                {"/manhunt modifiers [setmod|setpreset]", "toggle gameplay modifiers"},
+                {"/manhunt modifiers [setmod|setpreset]", "browse or toggle gameplay modifiers"},
                 {"/manhunt worldengine", "manage lobbies or teleport players"},
                 {"/manhunt debug [on|off]", "toggle debug output"},
                 {"/manhunt challenges", "show Challenges addon info"},
@@ -430,6 +435,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     static boolean canUseSubcommand(CommandSender sender, String sub) {
         return switch (sub.toLowerCase(Locale.ROOT)) {
             case "dev" -> sender.hasPermission("jmanhunt.command.dev.schem");
+            case "modifiers" -> sender.hasPermission("jmanhunt.modifiers");
             case "setplayer" -> sender.hasPermission("jmanhunt.command.setplayer")
                     || sender.hasPermission("jmanhunt.command.setplayer.self");
             case "config" -> sender.hasPermission("jmanhunt.command.config");
@@ -1264,26 +1270,29 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (RESTART_REQUIRED_SETTINGS.contains(setting)) {
             message(sender, "manhunt.setting-restart-required");
         }
-        announceSettingChange(sender, setting, newValue);
+        announceSettingChange(messages,
+                plugin.getConfig().getBoolean("settings.announce-config-changes", false),
+                sender, "manhunt.setting-change-announced", setting, String.valueOf(newValue));
         neutralSound(sender);
         return true;
     }
 
     /**
-     * Broadcasts a config change to every online player except the one who
-     * made it, when settings.announce-config-changes is enabled. Changes made
-     * from the console reach every online player.
+     * Broadcasts a setting or modifier change to every online player except
+     * the one who made it, when announcing is enabled. Changes made from the
+     * console reach every online player.
      */
-    private void announceSettingChange(CommandSender sender, String setting, Object newValue) {
-        if (!plugin.getConfig().getBoolean("settings.announce-config-changes", false)) {
+    static void announceSettingChange(MessageService messages, boolean announceEnabled,
+            CommandSender sender, String messageKey, String keySlot, String valueSlot) {
+        if (!announceEnabled) {
             return;
         }
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (sender instanceof Player changer && online.getUniqueId().equals(changer.getUniqueId())) {
                 continue;
             }
-            messages.message(online, "manhunt.setting-change-announced",
-                    Map.of("player", sender.getName(), "key", setting, "value", String.valueOf(newValue)));
+            messages.message(online, messageKey,
+                    Map.of("player", sender.getName(), "key", keySlot, "value", valueSlot));
         }
     }
 

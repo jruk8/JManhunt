@@ -1,9 +1,14 @@
 package com.jruk8.jmanhunt.command;
 
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.gui.GuiService;
+import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SoundService;
+import java.util.function.Supplier;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -17,18 +22,36 @@ import java.util.Set;
  * and console alike; no match needs to run.
  */
 public final class ModifiersCommand {
+    /** Single permission node gating the modifiers GUI and chat fallback. */
+    public static final String MODIFIERS_PERMISSION = "jmanhunt.modifiers";
+
     private final ConfigService config;
     private final MessageService messages;
+    private final GuiService gui;
+    private final Supplier<Menu> mainMenu;
+    private final SoundService sounds;
 
-    public ModifiersCommand(ConfigService config, MessageService messages) {
+    /**
+     * @param gui menu opener, main menu supplier, and sounds; all are only
+     *        touched on the bare-player path, so tests may pass nulls
+     */
+    public ModifiersCommand(ConfigService config, MessageService messages,
+            GuiService gui, Supplier<Menu> mainMenu, SoundService sounds) {
         this.config = config;
         this.messages = messages;
+        this.gui = gui;
+        this.mainMenu = mainMenu;
+        this.sounds = sounds;
     }
 
     /** Runs one modifiers action; args[0] is the action when present. */
     public boolean execute(CommandSender sender, String[] args) {
         if (args.length == 0) {
-            // Phase 5 opens the menu GUI here for players; console keeps the text list.
+            if (sender instanceof Player player) {
+                gui.open(player, mainMenu.get());
+                sounds.playNeutralSound(player);
+                return true;
+            }
             return list(sender);
         }
         return switch (args[0].toLowerCase(Locale.ROOT)) {
@@ -93,6 +116,10 @@ public final class ModifiersCommand {
     }
 
     private boolean setModifier(CommandSender sender, String[] args) {
+        if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
+            messages.message(sender, "command.no-permission");
+            return true;
+        }
         if (args.length < 3) {
             messages.message(sender, "modifiers.setmod-usage");
             return true;
@@ -111,10 +138,17 @@ public final class ModifiersCommand {
         config.setModifierEnabled(name, value);
         messages.message(sender, "modifiers.setmod-success",
                 Map.of("name", name, "state", value ? "on" : "off"));
+        ManhuntCommand.announceSettingChange(messages,
+                config.getBoolean("settings.announce-config-changes", false),
+                sender, "modifiers.toggle-announced", "modifier " + name, value ? "on" : "off");
         return true;
     }
 
     private boolean setPreset(CommandSender sender, String[] args) {
+        if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
+            messages.message(sender, "command.no-permission");
+            return true;
+        }
         if (args.length < 3) {
             messages.message(sender, "modifiers.setpreset-usage");
             return true;
@@ -134,6 +168,9 @@ public final class ModifiersCommand {
         messages.message(sender, "modifiers.setpreset-success",
                 Map.of("name", id, "state", value ? "on" : "off",
                         "count", String.valueOf(config.presetMembers(id).size())));
+        ManhuntCommand.announceSettingChange(messages,
+                config.getBoolean("settings.announce-config-changes", false),
+                sender, "modifiers.toggle-announced", "preset " + id, value ? "on" : "off");
         return true;
     }
 }

@@ -198,7 +198,7 @@ modifiers:
       commands:
         player:
           # <random-item> is replaced with a random item type.
-          - "give <p> <random-item> 1"
+          - "give <p> <random-item> <random-num:1,8>"
   # Gives every participating player a random ore stash when the match
   # starts: coal (4-12), iron (3-9), gold (3-9), or diamonds (1-3).
   random-start-resources:
@@ -318,7 +318,8 @@ modifiers:
         - ON_FIRST_END_ENTER
       # Ticks to wait after triggering before this modifier's commands run.
       # Applies to start, interval, and event triggers, but not to cleanup.
-      delay: 100 # delay in case speedrunner lags when loading into The End
+      # Delay in case the speedrunner lags when loading into The End.
+      delay: 100
       commands:
         speedrunner:
           # <all-players> covers only this match (raw @a is converted to it).
@@ -328,7 +329,7 @@ modifiers:
     enabled: false
     meta:
       name: "Lucky Blocks Start"
-      description: "Sponge and golden hoe starter for the Challenges addon"
+      description: "Lucky block and hoe starter for the Challenges addon"
       item: SPONGE
       author: JManhunt
     behavior:

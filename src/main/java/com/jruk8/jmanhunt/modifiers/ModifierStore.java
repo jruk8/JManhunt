@@ -187,6 +187,23 @@ public final class ModifierStore {
         return preset == null || preset.getModifiers() == null ? List.of() : preset.getModifiers();
     }
 
+    /**
+     * True when every member of the preset is enabled. Unknown or
+     * memberless presets read as off.
+     */
+    public boolean presetEnabled(String id) {
+        List<String> members = presetMembers(id);
+        if (members.isEmpty() || !presetNames().contains(id)) {
+            return false;
+        }
+        for (String member : members) {
+            if (!isEnabled(member)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public String presetName(String id) {
         ModifierPreset preset = config.getPresets().get(id);
         return orDefault(preset == null ? null : preset.getName(), DEFAULT_NAME);

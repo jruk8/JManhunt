@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 9
+messages-version: 8
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<#a6a6a6>[<gradient:#e66550:#de7766><bold>J</bold>Manhunt</gradient>]</#a6a6a6> "
@@ -293,3 +293,23 @@ modifiers:
   list-entry-off: "<white>» {name} <gray>[off]"
   list-presets-header: "\n<#de7766>Presets:"
   list-empty: "{prefix}<yellow>No modifiers defined."
+  toggle-announced: "{prefix}<white>{player} <yellow>set <gray>{key}</gray> to <white>{value}</white>.</yellow></white>"
+
+# Modifiers GUI text. Names render white, lore gray; user tags override.
+# {enabled} and {total} count enabled entries. Never add {prefix} here.
+modifiers-gui:
+  title-main: "Modifiers"
+  title-modifiers: "Modifiers"
+  title-presets: "Presets"
+  to-modifiers: "Modifiers"
+  to-modifiers-lore: "{enabled}/{total} enabled"
+  to-presets: "Presets"
+  to-presets-lore: "{enabled}/{total} enabled"
+  scroll-up: "Scroll up"
+  scroll-down: "Scroll down"
+  back: "Back"
+  toggle-all: "Toggle all"
+  toggle-all-modifiers-lore: "{total} modifiers"
+  toggle-all-presets-lore: "{total} presets"
+  state-on: "<green>Enabled"
+  state-off: "<red>Disabled"

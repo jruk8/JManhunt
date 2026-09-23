@@ -128,16 +128,12 @@ public final class ConfigService {
      * memberless presets read as off.
      */
     public boolean presetEnabled(String id) {
-        List<String> members = modifiers.presetMembers(id);
-        if (members.isEmpty() || !modifiers.presetNames().contains(id)) {
-            return false;
-        }
-        for (String member : members) {
-            if (!modifiers.isEnabled(member)) {
-                return false;
-            }
-        }
-        return true;
+        return modifiers.presetEnabled(id);
+    }
+
+    /** The wrapped modifier store, for menu text and icon reads. */
+    public ModifierStore modifiers() {
+        return modifiers;
     }
 
     /**

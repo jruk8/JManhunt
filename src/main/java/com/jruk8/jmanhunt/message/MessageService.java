@@ -109,7 +109,7 @@ public final class MessageService {
      * character after the &amp; converts; anything else (like Tom &amp;
      * Jerry) survives. Pure for tests.
      */
-    static String legacyToMiniMessage(String raw) {
+    public static String legacyToMiniMessage(String raw) {
         java.util.regex.Matcher matcher = LEGACY_CODE.matcher(raw);
         StringBuilder result = new StringBuilder();
         while (matcher.find()) {

@@ -47,7 +47,7 @@ class MessagesStyleTest {
                 "manhunt.worldengine-cellindex-unavailable")) {
             assertTrue(messages.getString(key, null) != null, key);
         }
-        assertEquals(9, messages.getInt("messages-version"));
+        assertEquals(8, messages.getInt("messages-version"));
     }
 
     @Test
@@ -62,6 +62,38 @@ class MessagesStyleTest {
                 "modifiers.list-entry-off", "modifiers.list-presets-header",
                 "modifiers.list-empty")) {
             assertTrue(messages.getString(key, null) != null, key);
+        }
+        String announced = messages.getString("modifiers.toggle-announced", "");
+        assertTrue(announced.contains("{player}"), "toggle-announced needs {player}");
+        assertTrue(announced.contains("{key}"), "toggle-announced needs {key}");
+        assertTrue(announced.contains("{value}"), "toggle-announced needs {value}");
+    }
+
+    @Test
+    void guiKeysExistAndCarryNoPrefix() throws Exception {
+        YamlConfiguration messages = loadBundledMessages();
+
+        for (String key : List.of("modifiers-gui.title-main", "modifiers-gui.title-modifiers",
+                "modifiers-gui.title-presets", "modifiers-gui.to-modifiers",
+                "modifiers-gui.to-modifiers-lore", "modifiers-gui.to-presets",
+                "modifiers-gui.to-presets-lore", "modifiers-gui.scroll-up",
+                "modifiers-gui.scroll-down", "modifiers-gui.back",
+                "modifiers-gui.toggle-all", "modifiers-gui.toggle-all-modifiers-lore",
+                "modifiers-gui.toggle-all-presets-lore",
+                "modifiers-gui.state-on", "modifiers-gui.state-off")) {
+            String value = messages.getString(key, null);
+            assertTrue(value != null, key);
+            assertFalse(value.contains("{prefix}"), key);
+        }
+        for (String key : List.of("modifiers-gui.toggle-all-modifiers-lore",
+                "modifiers-gui.toggle-all-presets-lore")) {
+            assertTrue(messages.getString(key, "").contains("{total}"), key);
+        }
+        for (String key : List.of("modifiers-gui.to-modifiers-lore",
+                "modifiers-gui.to-presets-lore")) {
+            String lore = messages.getString(key, "");
+            assertTrue(lore.contains("{enabled}"), key);
+            assertTrue(lore.contains("{total}"), key);
         }
     }
 

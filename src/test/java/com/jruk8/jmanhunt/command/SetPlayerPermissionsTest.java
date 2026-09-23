@@ -115,6 +115,16 @@ class SetPlayerPermissionsTest {
         assertFalse(ManhuntCommand.canUseWorldEngineAction(sender, "bogus"));
     }
 
+    @Test
+    void modifiersGateUsesItsOwnNode() {
+        CommandSender renamed = senderWith("jmanhunt.modifiers");
+        CommandSender legacy = senderWith("jmanhunt.command.modifiers");
+
+        assertTrue(ManhuntCommand.canUseSubcommand(renamed, "modifiers"));
+        assertFalse(ManhuntCommand.canUseSubcommand(legacy, "modifiers"));
+        assertFalse(ManhuntCommand.canUseSubcommand(renamed, "start"));
+    }
+
     private static CommandSender senderWith(String... permissions) {
         CommandSender sender = mock(CommandSender.class);
         java.util.Set<String> granted = java.util.Set.of(permissions);
