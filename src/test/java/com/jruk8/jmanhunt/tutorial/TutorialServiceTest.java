@@ -242,6 +242,8 @@ class TutorialServiceTest {
 
         assertFalse(tutorial.isInTutorial(playerId));
         assertEquals(List.of(config.getMessages().getQuit()), sent.get(sent.size() - 1));
+        assertEquals(2, neutralPlays);
+        assertEquals(0, congratulationsPlays);
     }
 
     @Test
@@ -254,6 +256,8 @@ class TutorialServiceTest {
 
         assertEquals(List.of("mh help"), ran);
         assertFalse(tutorial.isInTutorial(playerId));
+        assertEquals(2, neutralPlays);
+        assertEquals(0, congratulationsPlays);
     }
 
     @Test
@@ -266,6 +270,8 @@ class TutorialServiceTest {
 
         assertFalse(tutorial.isInTutorial(playerId));
         assertEquals(1, warnings.size());
+        assertEquals(2, neutralPlays);
+        assertEquals(0, congratulationsPlays);
     }
 
     @Test

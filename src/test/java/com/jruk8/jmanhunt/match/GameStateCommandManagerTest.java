@@ -1,7 +1,12 @@
 package com.jruk8.jmanhunt.match;
 
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -138,5 +143,16 @@ class GameStateCommandManagerTest {
         assertTrue(ModifierTriggers.isStaleDispatch(3L, 4L, true));
         assertTrue(ModifierTriggers.isStaleDispatch(3L, 3L, false));
         assertTrue(ModifierTriggers.isStaleDispatch(3L, 4L, false));
+    }
+
+    @Test
+    void bundledConfigDisablesPillagerPatrols() throws Exception {
+        try (InputStream stream = Objects.requireNonNull(
+                getClass().getClassLoader().getResourceAsStream("config.yml"),
+                "missing test resource: config.yml")) {
+            YamlConfiguration config = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8));
+            assertTrue(config.getBoolean("match.game-rules.rules.disable-pillager-patrols"));
+        }
     }
 }

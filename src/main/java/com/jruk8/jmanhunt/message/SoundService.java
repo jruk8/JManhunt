@@ -6,7 +6,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.entity.Player;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
 
 /*
  * Orchestrates sound playing.
@@ -17,6 +20,7 @@ public class SoundService {
     private static final String NEUTRAL_SOUND_KEY = "neutral-sound";
     private final JManhuntPlugin plugin;
     private final ConfigService config;
+    private final Set<UUID> neutralSuppressed = new HashSet<>();
 
     public SoundService(JManhuntPlugin plugin, ConfigService config) {
         this.plugin = plugin;
@@ -45,7 +49,23 @@ public class SoundService {
     }
 
     public void playNeutralSound(Player player) {
+        if (neutralSuppressed.contains(player.getUniqueId())) {
+            return;
+        }
         playSound(player, NEUTRAL_SOUND_KEY);
+    }
+
+    /**
+     * Silences playNeutralSound for one player until released. The tutorial
+     * wraps its nested commands in this so one click plays one sound.
+     * Main thread only, like every other Bukkit sound call.
+     */
+    public void suppressNeutral(UUID playerId) {
+        neutralSuppressed.add(playerId);
+    }
+
+    public void releaseNeutral(UUID playerId) {
+        neutralSuppressed.remove(playerId);
     }
 
     /** Plays a sound with explicit parameters, e.g. from lucky-blocks.yml feedback. */

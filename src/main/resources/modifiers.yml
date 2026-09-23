@@ -1,0 +1,367 @@
+# Named command bundles and the presets that group them.
+# Toggle bundles in-game with the /mh modifiers menu or
+# /mh modifiers setmod <name> true|false (presets: setpreset).
+# Display fields live under meta: (name, description, item, author);
+# behavior holds triggers and commands. commands: is always last.
+# All commands run when the match starts (or on interval if configured),
+# except console-cleanup and player-cleanup which run when the match ends.
+# Need help writing commands? Generate up-to-date ones at https://mcstacker.net/
+modifiers-version: 1
+modifiers:
+  # Gives every participating player eight steaks when the match starts.
+  everyone-gets-beef:
+    enabled: false
+    meta:
+      name: "Everyone Gets Beef"
+      description: "Gives everyone 8 Steak at the start"
+      item: COOKED_BEEF
+      author: JManhunt
+    behavior:
+      # When should commands other than cleanup be run? A list of any of:
+      # ON_START - Once when the match starts (runs for all participants)
+      # INTERVAL - On a fixed interval that starts counting when the game begins
+      # ON_EVERY_KILL - When any participating player kills any entity (mobs included)
+      # ON_PLAYER_KILL - When a participating player kills another player
+      # ON_HUNTER_KILL - When a hunter kills a player
+      # ON_SPEEDRUNNER_KILL - When a speedrunner kills a player
+      # ON_NETHER_ENTER - When a participating player enters the Nether (once per player per match)
+      # ON_END_ENTER - When a participating player enters the End (once per player per match)
+      # ON_FIRST_NETHER_ENTER - When the first participating player enters the Nether (once per match)
+      # ON_FIRST_END_ENTER - When the first participating player enters the End (once per match)
+      # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
+      # ON_RESPAWN - When a player respawns (only the executing player)
+      # ON_SPEEDRUNNER_RESPAWN - When a speedrunner respawns (only the executing player)
+      # ON_HUNTER_RESPAWN - When a hunter respawns (only the executing player)
+      # If omitted, defaults to ON_START.
+      runs-on:
+        - ON_START
+      commands:
+        player:
+          # Runs for every participating player (only hunters and speedrunners, not including NONE)
+          - "give <p> minecraft:cooked_beef 8"
+  speedrunners-speed-potion:
+    enabled: false
+    meta:
+      name: "Speedrunner Swiftness"
+      description: "Speedrunners start with a strong swiftness potion"
+      item: POTION
+      author: JManhunt
+    behavior:
+      commands:
+        speedrunner:
+          # Runs only once for each Speedrunner, with <p> replaced by their name.
+          # Note the single quotes used to escape the double quotes inside the JSON.
+          - 'give <p> potion[potion_contents={potion:"minecraft:strong_swiftness"}] 1'
+  hunters-wooden-sword:
+    enabled: false
+    meta:
+      name: "Hunter Wooden Sword"
+      description: "Hunters start with a wooden sword"
+      item: WOODEN_SWORD
+      author: JManhunt
+    behavior:
+      commands:
+        hunter:
+          # Runs only once for each Hunter, with <p> replaced by their name.
+          - "give <p> wooden_sword"
+  # Softens the hunters right out of the gate: slowness II and weakness I
+  # for 10 seconds each.
+  hunter-start-debuffs:
+    enabled: false
+    meta:
+      name: "Hunter Start Debuffs"
+      description: "Slowness II and weakness I for hunters, 10 seconds"
+      item: FERMENTED_SPIDER_EYE
+      author: JManhunt
+    behavior:
+      on-start:
+        # When to run the commands? BEFORE or AFTER the match pre-start window?
+        pre-start-order: AFTER
+      commands:
+        hunter:
+          # Runs only once for each Hunter, with <p> replaced by their name.
+          # Durations are in seconds, amplifiers zero-based.
+          - "effect give <p> minecraft:slowness 10 1 true"
+          - "effect give <p> minecraft:weakness 10 0 true"
+  # Speedrunners get buffed right out of the gate: speed II and strength I
+  speedrunner-start-buffs:
+    enabled: false
+    meta:
+      name: "Speedrunner Start Buffs"
+      description: "Speed II for 30s and strength I for 15s at start"
+      item: BLAZE_POWDER
+      author: JManhunt
+    behavior:
+      on-start:
+        pre-start-order: AFTER
+      commands:
+        speedrunner:
+          - "effect give <p> minecraft:speed 30 1 true"
+          - "effect give <p> minecraft:strength 15 0 true"
+  # A semi-op kit for players to start with.
+  full-iron-kit:
+    enabled: false
+    meta:
+      name: "Full Iron Kit"
+      description: "Stone sword, iron tools and armor, food and shield"
+      item: IRON_CHESTPLATE
+      author: JManhunt
+    behavior:
+      commands:
+        player:
+          - "give <p> stone_sword 1"
+          - "give <p> iron_pickaxe 1"
+          - "give <p> cooked_chicken 8"
+          - "give <p> lava_bucket 1"
+          - "give <p> shield 1"
+          - "give <p> iron_boots 1"
+          - "give <p> iron_leggings 1"
+          - "give <p> iron_chestplate 1"
+          - "give <p> iron_helmet 1"
+  # Speedrunners get a health advantage while hunters' health gets a debuff.
+  speedrunner-health-advantage:
+    enabled: false
+    meta:
+      name: "Speedrunner Health Advantage"
+      description: "Speedrunners 15 hearts, hunters 8, restored after"
+      item: GOLDEN_APPLE
+      author: JManhunt
+    behavior:
+      commands:
+        hunter:
+          # Runs only once for each Hunter, with <p> replaced by their name.
+          # Sets health to 8 full hearts for all hunters.
+          - "attribute <p> minecraft:max_health base set 16"
+          - "effect give <p> minecraft:instant_health 1 50 true"
+        speedrunner:
+          # Runs only once for each Speedrunner, with <p> replaced by their name.
+          # Sets health to 15 full hearts for all speedrunners.
+          - "attribute <p> minecraft:max_health base set 30"
+          - "effect give <p> minecraft:instant_health 1 50 true"
+        player-cleanup:
+          # Runs for every participating player (only hunters and speedrunners, not including NONE)
+          - "attribute <p> minecraft:max_health base set 20"
+  # Sets to night permanently for the duration of the match.
+  perma-night:
+    enabled: false
+    meta:
+      name: "Permanent Night"
+      description: "Locks the match to midnight until it ends"
+      item: CLOCK
+      author: JManhunt
+    behavior:
+      commands:
+        console:
+          # Ran by the console when the match starts.
+          - "gamerule advance_time false"
+          - "time set midnight"
+        console-cleanup:
+          # Ran by the console when the match ends.
+          - "gamerule advance_time true"
+  # Spawns a random mob on every speedrunner every 90 seconds.
+  random-mob-spawner:
+    enabled: false
+    meta:
+      name: "Random Mob Spawner"
+      description: "Summons a random mob on every speedrunner, 90s"
+      item: SPAWNER
+      author: JManhunt
+    behavior:
+      runs-on:
+        - INTERVAL
+      # Only applicable when "runs-on" contains INTERVAL.
+      interval-settings:
+        # Interval duration in seconds.
+        interval: 90
+        deviation: 5
+        behavior: PER_EXECUTOR
+      commands:
+        player:
+          # <random-mob> is replaced with a random spawnable living entity type.
+          # Tildes (~) are resolved to the player's position automatically.
+          - "summon <random-mob> ~ ~1 ~"
+  # Gives every participating player a random item every 30 seconds.
+  random-item-giver:
+    enabled: false
+    meta:
+      name: "Random Item Giver"
+      description: "Gives everyone a random item every 30s"
+      item: CHEST
+      author: JManhunt
+    behavior:
+      runs-on:
+        - INTERVAL
+      interval-settings:
+        interval: 30
+        deviation: 5
+        behavior: PER_EXECUTOR
+      commands:
+        player:
+          # <random-item> is replaced with a random item type.
+          - "give <p> <random-item> 1"
+  # Gives every participating player a random ore stash when the match
+  # starts: coal (4-12), iron (3-9), gold (3-9), or diamonds (1-3).
+  random-start-resources:
+    enabled: false
+    meta:
+      name: "Random Start Resources"
+      description: "Random ore stash at start: coal, iron, gold, or diamond"
+      item: DIAMOND_ORE
+      author: JManhunt
+    behavior:
+      runs-on:
+        - ON_START
+      commands:
+        player:
+          # Tags evaluate from the inside out: each <random-num> rolls first,
+          # then <random-pick> chooses one "item amount" pair.
+          - "give <p> <random-pick:coal <random-num:4,12>, iron_ingot <random-num:3,9>, gold_ingot <random-num:3,9>, diamond <random-num:1,3>>"
+  # Gives a random reward to each player about every 45-75 seconds.
+  gear-dice:
+    enabled: false
+    meta:
+      name: "Gear Dice"
+      description: "Random gear reward about every 45 to 75s"
+      item: BUNDLE
+      author: JManhunt
+    behavior:
+      runs-on:
+        - INTERVAL
+      # Only applicable when "runs-on" contains INTERVAL.
+      interval-settings:
+        # Interval duration in seconds.
+        interval: 15
+        # Random spread in seconds. 20 and 10 means every 10 to 30 seconds.
+        # Cannot go above interval. Defaults to 0.
+        deviation: 5
+        # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
+        # console their own timer. Defaults to PER_INVOKE.
+        behavior: PER_EXECUTOR
+      # Success chance for running the commands.
+      # Must be between 0 and 1.0 where 1.0 means 100% chance.
+      # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls for each player.
+      # Ignored by cleanup commands.
+      success-chance:
+        chance: 0.5
+        behavior: PER_EXECUTOR
+      commands:
+        # IN_ORDER runs every line sequentially.
+        # PICK_RANDOM runs a random few instead.
+        # Defaults to IN_ORDER.
+        execution:
+          selection: PICK_RANDOM
+          pick-random:
+            # How many lines to pick. Minimum 1. Defaults to 1.
+            count: 1
+            # PER_INVOKE picks once for everyone; PER_EXECUTOR picks separately
+            # for the console and each player. Defaults to PER_INVOKE.
+            behavior: PER_EXECUTOR
+        player:
+          - "give <p> minecraft:golden_apple 1"
+          - "give <p> minecraft:golden_apple 2"
+          - "give <p> minecraft:cobblestone 24"
+          - "give <p> minecraft:cobblestone 32"
+          - "give <p> minecraft:oak_planks 24"
+          - "give <p> minecraft:oak_planks 32"
+          - "give <p> minecraft:lava_bucket 1"
+          - "give <p> minecraft:iron_ingot 8"
+          - "give <p> minecraft:ender_pearl 1"
+          - "give <p> minecraft:diamond 2"
+  regen-on-kill:
+    enabled: false
+    meta:
+      name: "Regen On Kill"
+      description: "Regeneration II for 10s on every player kill"
+      item: GHAST_TEAR
+      author: JManhunt
+    behavior:
+      runs-on:
+        - ON_PLAYER_KILL
+      commands:
+        player:
+          - "effect give <p> minecraft:regeneration 10 1 true"
+  diamond-on-advancement:
+    enabled: false
+    meta:
+      name: "Diamond On Advancement"
+      description: "A diamond for every advancement earned"
+      item: DIAMOND
+      author: JManhunt
+    behavior:
+      runs-on:
+        - ON_EVERY_ADVANCEMENT
+      commands:
+        player:
+          - "give <p> minecraft:diamond 1"
+  fireres-on-nether-enter:
+    enabled: false
+    meta:
+      name: "Nether Fire Resistance"
+      description: "Fire resistance potion on entering the Nether"
+      item: MAGMA_CREAM
+      author: JManhunt
+    behavior:
+      runs-on:
+        - ON_NETHER_ENTER
+      commands:
+        player:
+          - "give <p> potion[potion_contents={potion:\"minecraft:fire_resistance\",custom_effects:[{id:\"minecraft:fire_resistance\",amplifier:0,duration:6000,show_particles:1b,show_icon:1b}]}] 1"
+  tpall-on-end:
+    enabled: false
+    meta:
+      name: "Teleport All On End"
+      description: "Teleports everyone to the first End enterer"
+      item: ENDER_PEARL
+      author: JManhunt
+    behavior:
+      runs-on:
+        - ON_FIRST_END_ENTER
+      # Ticks to wait after triggering before this modifier's commands run.
+      # Applies to start, interval, and event triggers, but not to cleanup.
+      delay: 100 # delay in case speedrunner lags when loading into The End
+      commands:
+        speedrunner:
+          # <all-players> covers only this match (raw @a is converted to it).
+          - "tp <all-players> <p>"
+  # Install the Challenges addon to use this modifier.
+  start-with-luckyblocks-requires-challenges-addon:
+    enabled: false
+    meta:
+      name: "Lucky Blocks Start"
+      description: "Sponge and golden hoe starter for the Challenges addon"
+      item: SPONGE
+      author: JManhunt
+    behavior:
+      commands:
+        player:
+          - "give <p> sponge 24"
+          - "give <p> golden_hoe 1"
+
+# Named groups of modifiers. A preset has no state of its own: it reads
+# as on when every modifier inside is enabled, and toggling it flips
+# everything inside at once. Lists hold modifier ids from above.
+presets:
+  vanilla-plus:
+    name: "Vanilla+"
+    description: "Light extras that can help balance Manhunts"
+    item: GRASS_BLOCK
+    modifiers:
+      - everyone-gets-beef
+      - regen-on-kill
+      - fireres-on-nether-enter
+  speedrunner-buffs:
+    name: "Speedrunner Buffs"
+    description: "Buffs for speedrunners, pressure on hunters"
+    item: SUGAR
+    modifiers:
+      - speedrunners-speed-potion
+      - hunter-start-debuffs
+      - speedrunner-health-advantage
+  chaos-mode:
+    name: "Chaos Mode"
+    description: "Random mobs, random items, gear dice"
+    item: TNT
+    modifiers:
+      - random-mob-spawner
+      - random-item-giver
+      - gear-dice

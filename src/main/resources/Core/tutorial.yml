@@ -88,7 +88,7 @@ nodes:
   we_teleport:
     question:
       - "Done. Everyone joins the hunt from the lobby world."
-      - "This command teleports all players there: <white>/mh worldengine tpto lobbyworld @a</white>"
+      - "This command teleports all players there: <gray>/mh worldengine tpto lobbyworld @a</gray>"
       - "Run it now so everyone teleports there right away?"
     answers:
       - text: "Yes, teleport everyone now."
@@ -183,39 +183,39 @@ nodes:
         next: "EXIT"
   mod_fun:
     question:
-      - "Pick n' mix! Note that this setup does not support disabling modifiers <gray>(disable with /mh config modifiers NAME enabled false)</gray>."
+      - "Pick n' mix! Note that this setup does not support disabling modifiers <gray>(disable with /mh modifiers setmod NAME false)</gray>."
     answers:
       - text: "Speedrunners get a speed potion."
         commands:
-          - "jmanhunt:mh config modifiers speedrunners-speed-potion enabled true"
+          - "jmanhunt:mh modifiers setmod speedrunners-speed-potion enabled true"
         next: "mod_fun"
       - text: "Everyone starts with an iron kit."
         commands:
-          - "jmanhunt:mh config modifiers full-iron-kit enabled true"
+          - "jmanhunt:mh modifiers setmod full-iron-kit enabled true"
         next: "mod_fun"
       - text: "Killers regenerate health."
         commands:
-          - "jmanhunt:mh config modifiers regen-on-kill enabled true"
+          - "jmanhunt:mh modifiers setmod regen-on-kill enabled true"
         next: "mod_fun"
       - text: "A diamond for every advancement."
         commands:
-          - "jmanhunt:mh config modifiers diamond-on-advancement enabled true"
+          - "jmanhunt:mh modifiers setmod diamond-on-advancement enabled true"
         next: "mod_fun"
       - text: "A random mob visits the runners."
         commands:
-          - "jmanhunt:mh config modifiers random-mob-spawner enabled true"
+          - "jmanhunt:mh modifiers setmod random-mob-spawner enabled true"
         next: "mod_fun"
       - text: "A random item for everyone."
         commands:
-          - "jmanhunt:mh config modifiers random-item-giver enabled true"
+          - "jmanhunt:mh modifiers setmod random-item-giver enabled true"
         next: "mod_fun"
       - text: "<yellow>Back to modifiers.</yellow>"
         next: "mod_intro"
   mod_toggle:
     question:
-      - "Run <gray>/mh config modifiers</gray> to list every modifier."
-      - "Then switch one with <gray>/mh config modifiers NAME enabled true</gray>, or <gray>false</gray> to switch it off."
-      - "Example: <white>/mh config modifiers everyone-gets-beef enabled true</white>"
+      - "Run <gray>/mh modifiers</gray> to browse every modifier in a menu."
+      - "Or switch one from chat with <gray>/mh modifiers setmod NAME true</gray>, or <gray>false</gray> to switch it off."
+      - "Example: <gray>/mh modifiers setmod everyone-gets-beef true</gray>"
     answers:
       - text: "Show me the fun ones."
         recommended: true
@@ -228,7 +228,7 @@ nodes:
         next: "EXIT"
   mod_create:
     question:
-      - "Open <gray>config.yml</gray>, find <gray>modifiers</gray>, copy the <white>everyone-gets-beef</white> block, rename it, and change its commands. Save, then run <white>/mh reload</white>."
+      - "Open <gray>modifiers.yml</gray>, copy the <white>everyone-gets-beef</white> block, rename it, and change its behavior. Save, then run <white>/mh reload</white>."
       - "Stuck? Grab ready-made ones from the community."
     answers:
       - text: "Get community modifiers on Discord."

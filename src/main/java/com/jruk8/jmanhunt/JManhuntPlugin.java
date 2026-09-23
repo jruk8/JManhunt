@@ -24,6 +24,8 @@ import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.modifiers.ModifierStore;
+import com.jruk8.jmanhunt.modifiers.config.ModifiersRegistrar;
 import com.jruk8.jmanhunt.placeholders.PlaceholderConfigRegistrar;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.RoleTeamService;
@@ -66,6 +68,7 @@ import java.util.UUID;
 public final class JManhuntPlugin extends JavaPlugin {
     private static final int CONFIG_VERSION = 5;
     private static final int MESSAGES_VERSION = 8;
+    private static final int MODIFIERS_VERSION = 1;
     /**
      * Relocated config paths, applied on reload. Every key must live under a
      * real category so the in-game config command can drill into it.
@@ -86,6 +89,8 @@ public final class JManhuntPlugin extends JavaPlugin {
     private EngineStateRepository engineState;
     private JManhuntExpansion expansion;
     private ConfigService configService;
+    private ModifierStore modifierStore;
+    private ModifiersRegistrar modifierConfigs;
     private WorldEngineService worldEngine;
     private WinConditionEngine winConditionEngine;
     private JManhuntLogger logger;
@@ -156,12 +161,12 @@ public final class JManhuntPlugin extends JavaPlugin {
         stats = new StatsManager(this, messages, statistics);
         stats.loadLobbySessionsAsync();
 
-        configService = new ConfigService(this);
+        configService = new ConfigService(this, modifierStore);
         sounds = new SoundService(this, configService);
         tutorialService = new TutorialService(tutorialConfigs.getTutorialConfig(),
                 new JManhuntTutorialMessenger(messages),
                 new JManhuntTutorialSounds(tutorialConfigs.getTutorialConfig(), sounds),
-                new JManhuntTutorialCommands(),
+                new JManhuntTutorialCommands(sounds),
                 new JManhuntTutorialLogger(logger));
         compass = new CompassManager(this, messages, sounds, playerStates,
                 new NamespacedKey(this, "hunters_compass"));
@@ -386,6 +391,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
         messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")));
 
+        reloadModifiers();
+
         if (lobbyConfigs != null) {
             lobbyConfigs.reload();
         }
@@ -410,6 +417,22 @@ public final class JManhuntPlugin extends JavaPlugin {
             listener.onReload();
         }
         logger().info("JManhunt has been reloaded.");
+    }
+
+    private void reloadModifiers() {
+        YamlFileUpdater.update(this, "modifiers.yml", "modifiers-version", MODIFIERS_VERSION);
+        if (modifierConfigs == null) {
+            modifierConfigs = new ModifiersRegistrar(this);
+            modifierConfigs.register();
+            modifierStore = new ModifierStore(modifierConfigs.getModifiersConfig(), getLogger());
+        } else {
+            modifierConfigs.reload();
+            modifierStore.clearItemWarnings();
+        }
+        if (getConfig().contains("modifiers")) {
+            logger().warning("config.yml still has a modifiers: block. Modifiers moved to"
+                    + " modifiers.yml; the old block is ignored and can be deleted.");
+        }
     }
 
 }

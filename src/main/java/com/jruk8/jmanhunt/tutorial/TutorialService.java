@@ -182,25 +182,28 @@ public final class TutorialService {
         session.answered(clock.getAsLong());
         String next = answer.getNext();
         TutorialConfig.TutorialNode target = node(next);
-        if (target != null && target.isCelebrate()) {
-            sounds.playCongratulations(player);
-        } else {
-            sounds.playNeutral(player);
-        }
         if (next == null || next.isBlank() || EXIT.equalsIgnoreCase(next)) {
             quitWithMessage(player, session);
         } else if (HELP_EXIT.equalsIgnoreCase(next)) {
+            sounds.playNeutral(player);
             commands.runAsPlayer(player, HELP_COMMAND);
             sessions.remove(session.playerId());
         } else if (target == null) {
             logger.warning("Unknown tutorial target '" + next + "'; closing the setup.");
             quitWithMessage(player, session);
-        } else if (session.revisit(next)) {
-            render(player, session);
         } else {
-            session.push(next);
-            session.shown();
-            render(player, session);
+            if (target.isCelebrate()) {
+                sounds.playCongratulations(player);
+            } else {
+                sounds.playNeutral(player);
+            }
+            if (session.revisit(next)) {
+                render(player, session);
+            } else {
+                session.push(next);
+                session.shown();
+                render(player, session);
+            }
         }
     }
 

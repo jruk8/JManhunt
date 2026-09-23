@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.config;
 
 import com.jruk8.jmanhunt.command.SettingValueParser;
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import java.util.ArrayList;
@@ -15,10 +16,12 @@ import java.util.function.BiConsumer;
 /** Central point for reading/writing plugin config settings and reacting to changes. */
 public final class ConfigService {
     private final JManhuntPlugin plugin;
+    private final ModifierStore modifiers;
     private final Map<String, List<BiConsumer<Boolean, Boolean>>> listeners = new HashMap<>();
 
-    public ConfigService(JManhuntPlugin plugin) {
+    public ConfigService(JManhuntPlugin plugin, ModifierStore modifiers) {
         this.plugin = plugin;
+        this.modifiers = modifiers;
     }
 
     /** Registers a callback fired whenever the given setting is changed via {@link #setBoolean}. */
@@ -48,9 +51,6 @@ public final class ConfigService {
                     names.add("match.game-rules.rules." + key);
                 }
             }
-        }
-        for (String name : modifierNames(config)) {
-            names.add("modifiers." + name + ".enabled");
         }
         names.addAll(extraModifierNames(config));
         return names;
@@ -104,16 +104,59 @@ public final class ConfigService {
     }
 
     public Set<String> modifierNames() {
-        return modifierNames(plugin.getConfig());
-    }
-
-    public static Set<String> modifierNames(FileConfiguration config) {
-        var section = config.getConfigurationSection("modifiers");
-        return section == null ? Set.of() : section.getKeys(false);
+        return modifiers.modifierNames();
     }
 
     public boolean modifierEnabled(String name) {
-        return plugin.getConfig().getBoolean("modifiers." + name + ".enabled", false);
+        return modifiers.isEnabled(name);
+    }
+
+    public List<String> runsOn(String name) {
+        return modifiers.runsOn(name);
+    }
+
+    public String preStartOrder(String name) {
+        return modifiers.preStartOrder(name);
+    }
+
+    public double intervalSeconds(String name) {
+        return modifiers.intervalSeconds(name);
+    }
+
+    public double intervalDeviation(String name) {
+        return modifiers.intervalDeviation(name);
+    }
+
+    public String intervalBehavior(String name) {
+        return modifiers.intervalBehavior(name);
+    }
+
+    public double chance(String name) {
+        return modifiers.chance(name);
+    }
+
+    public String chanceBehavior(String name) {
+        return modifiers.chanceBehavior(name);
+    }
+
+    public String pickBehavior(String name) {
+        return modifiers.pickBehavior(name);
+    }
+
+    public long delayTicks(String name) {
+        return modifiers.delayTicks(name);
+    }
+
+    public List<String> commandList(String name, String listKey) {
+        return modifiers.commandList(name, listKey);
+    }
+
+    public String selection(String name) {
+        return modifiers.selection(name);
+    }
+
+    public int pickCount(String name) {
+        return modifiers.pickCount(name);
     }
 
     private void fireChange(String setting, boolean oldValue, boolean newValue) {
@@ -129,9 +172,9 @@ public final class ConfigService {
     private static Set<String> extraModifierNames(FileConfiguration root) {
         Set<String> names = new TreeSet<>();
         for (String key : root.getKeys(false)) {
-            // config-version and send-anonymous-statistics are not editable
-            // and modifiers internals stay .enabled-only (see
-            // settingNames above).
+            // config-version and send-anonymous-statistics are not editable.
+            // A stale config.yml modifiers: block (pre-move leftover) stays
+            // hidden too; modifiers live in modifiers.yml now.
             if (key.equals("config-version")
                     || key.equals("send-anonymous-statistics")
                     || key.equals("modifiers")) {
