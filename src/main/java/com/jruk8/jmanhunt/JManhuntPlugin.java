@@ -266,7 +266,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 worldEngine::lobbyWorldName), this);
         getServer().getPluginManager().registerEvents(new LobbyBoundsService(
                 this, lobbyService, playerStates, game, messages, sounds,
-                worldEngine::lobbyWorldName), this);
+                worldEngine::lobbyWorldName, debugService), this);
         getServer().getPluginManager().registerEvents(new TutorialChatListener(this, tutorialService), this);
     }
 

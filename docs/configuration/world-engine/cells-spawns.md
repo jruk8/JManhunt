@@ -10,7 +10,9 @@ world-engine:
   world-name: world
   cell-size: 10000
   tp-spread-radius: 5
-  use-spawnpoint-algorithm: true
+  spawnpoint-algorithm:
+    enabled: true
+    max-retries: 5
 ```
 
 When `enabled`, teleports participants to a fresh cell when a match
@@ -53,9 +55,14 @@ in its size calculation.
 
 ## Spawnpoint Algorithm
 
-`use-spawnpoint-algorithm`, when true, uses the spawnpoint algorithm to find
-a valid spawn point for each player. This fixes spawning inside oceans or
-lava, but may cause server lag if many checks are required.
+`spawnpoint-algorithm`, when enabled, validates every player spawn: it
+lands below tree leaves and requires an air gap at the feet and head
+blocks. Transparent, non-solid blocks like grass and torches count as
+air; pressure plates do not. Ocean and lava cells are skipped when
+fetching. Invalid spawns retry with fresh random offsets up to
+`max-retries` times (minimum 0), then fall back to the plain spread.
+This fixes bad spawns, but may cause server lag if many checks are
+required. Turn the algorithm off for plain highest-block spawns.
 
 ## Lobby Teleports & Bounds
 

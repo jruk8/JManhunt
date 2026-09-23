@@ -4,7 +4,9 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
+import org.bukkit.Tag;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import java.util.List;
@@ -78,6 +80,58 @@ public final class MatchTeleportService implements LobbyTeleporter {
         int z = centerZ + offsetZ;
         int y = world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING) + 1;
         return new Location(world, x + 0.5, y, z + 0.5, yaw, pitch);
+    }
+
+    /**
+     * Spread spawn honoring the spawnpoint-algorithm config: validated
+     * when enabled, plain otherwise.
+     */
+    public static Location spreadSpawnForConfig(World world, int centerX, int centerZ, int radius,
+            float yaw, float pitch, WorldEngineConfig config) {
+        if (config.spawnpointAlgorithmEnabled()) {
+            return spreadSpawnValidated(world, centerX, centerZ, radius, yaw, pitch,
+                    config.spawnpointMaxRetries());
+        }
+        return spreadSpawn(world, centerX, centerZ, radius, yaw, pitch);
+    }
+
+    /**
+     * Validated spread spawn: lands below tree leaves and requires an air
+     * gap at the feet and head blocks. Retries with fresh random offsets
+     * up to {@code maxRetries} times after the first attempt, then falls
+     * back to the plain spread. Shared by cell spawns and the engine-off
+     * surround.
+     */
+    public static Location spreadSpawnValidated(World world, int centerX, int centerZ, int radius,
+            float yaw, float pitch, int maxRetries) {
+        int attempts = 1 + Math.max(0, maxRetries);
+        int top = world.getMaxHeight() - 2;
+        for (int attempt = 0; attempt < attempts; attempt++) {
+            int offsetX = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
+            int offsetZ = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
+            int x = centerX + offsetX;
+            int z = centerZ + offsetZ;
+            int y = Math.min(world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES) + 1, top);
+            if (isAirLike(world.getBlockAt(x, y, z)) && isAirLike(world.getBlockAt(x, y + 1, z))) {
+                return new Location(world, x + 0.5, y, z + 0.5, yaw, pitch);
+            }
+        }
+        return spreadSpawn(world, centerX, centerZ, radius, yaw, pitch);
+    }
+
+    /**
+     * True when a block counts as air for spawn validation: transparent
+     * and non-collidable, like grass or a torch. Pressure plates never
+     * count, even though players move through them.
+     */
+    static boolean isAirLike(Block block) {
+        return isAirLike(block.getType().isOccluding(), block.isPassable(),
+                Tag.PRESSURE_PLATES.isTagged(block.getType()));
+    }
+
+    /** Pure air-like truth table for tests. */
+    static boolean isAirLike(boolean occluding, boolean passable, boolean pressurePlate) {
+        return !occluding && passable && !pressurePlate;
     }
 
     public static int toBlockCoordinate(long value) {

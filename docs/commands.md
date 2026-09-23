@@ -27,7 +27,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt worldengine cellindex get`              | Shows the current world-engine cell index. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex buffer`           | Lists the buffered ready-cell ids. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
-| `/manhunt debug [on\|off]`                         | Toggles debug output for yourself or the console. | `jmanhunt.command.debug` |
+| `/manhunt debug [on\|off]`                         | Toggles debug output for yourself or the console. Nearby lobby bounds also draw as colored edge particles while debug is on. | `jmanhunt.command.debug` |
 | `/manhunt reload`                                 | Reloads `config.yml`, `messages.yml`, and `lobby-config.yml`. | `jmanhunt.command.reload` |
 
 Tab completion only suggests subcommands and worldengine actions the sender

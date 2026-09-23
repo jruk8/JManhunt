@@ -1,12 +1,15 @@
 package com.jruk8.jmanhunt.lobby.bounds;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,7 +17,9 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -41,11 +46,13 @@ public final class LobbyBoundsService implements Listener {
     private final MessageService messages;
     private final SoundService sounds;
     private final Supplier<String> lobbyWorldName;
+    private final DebugService debug;
     /** Last checked block position per player, packed for one-lookup exits. */
     private final Map<UUID, Long> lastChecked = new HashMap<>();
 
     public LobbyBoundsService(JManhuntPlugin plugin, LobbyService lobbies, PlayerStateStore playerStates,
-            GameManager game, MessageService messages, SoundService sounds, Supplier<String> lobbyWorldName) {
+            GameManager game, MessageService messages, SoundService sounds, Supplier<String> lobbyWorldName,
+            DebugService debug) {
         this.plugin = plugin;
         this.lobbies = lobbies;
         this.playerStates = playerStates;
@@ -53,6 +60,9 @@ public final class LobbyBoundsService implements Listener {
         this.messages = messages;
         this.sounds = sounds;
         this.lobbyWorldName = lobbyWorldName;
+        this.debug = debug;
+        Bukkit.getScheduler().runTaskTimer(plugin, this::showBoundsParticles,
+                LobbyBoundsPalette.refreshTicks(), LobbyBoundsPalette.refreshTicks());
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -110,6 +120,43 @@ public final class LobbyBoundsService implements Listener {
             sounds.playNeutralSound(player);
         }
         game.updateAutostartState();
+    }
+
+    /**
+     * Draws lobby edge particles for debug players standing near a box.
+     * Boxes are colored in lobby-id order from the contrast palette.
+     */
+    private void showBoundsParticles() {
+        if (debug.debugPlayerIds().isEmpty()) {
+            return;
+        }
+        Map<Integer, LobbyBounds.Bound> bounds = boundsByLobby();
+        if (bounds.isEmpty()) {
+            return;
+        }
+        List<Integer> ids = new ArrayList<>(bounds.keySet());
+        ids.sort(Integer::compareTo);
+        double radiusSquared = LobbyBoundsPalette.CHECK_RADIUS_BLOCKS * LobbyBoundsPalette.CHECK_RADIUS_BLOCKS;
+        String lobbyWorld = lobbyWorldName.get();
+        for (UUID playerId : debug.debugPlayerIds()) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null || !player.getWorld().getName().equals(lobbyWorld)) {
+                continue;
+            }
+            Location at = player.getLocation();
+            for (int order = 0; order < ids.size(); order++) {
+                LobbyBounds.Bound bound = bounds.get(ids.get(order));
+                if (bound == null || LobbyBounds.distanceSquaredToBox(
+                        bound, at.getX(), at.getY(), at.getZ()) > radiusSquared) {
+                    continue;
+                }
+                Particle.DustOptions dust = new Particle.DustOptions(
+                        LobbyBoundsPalette.colorForIndex(order), LobbyBoundsPalette.PARTICLE_SIZE);
+                for (double[] point : LobbyBounds.edgePoints(bound, LobbyBoundsPalette.EDGE_STEP_BLOCKS)) {
+                    player.spawnParticle(Particle.DUST, point[0], point[1], point[2], 1, dust);
+                }
+            }
+        }
     }
 
     /** Complete bounds boxes keyed by lobby id; partial entries are skipped. */

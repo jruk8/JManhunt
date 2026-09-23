@@ -321,9 +321,10 @@ public final class MatchStartService {
         World world = center.getWorld();
         int centerX = center.getBlockX();
         int centerZ = center.getBlockZ();
+        WorldEngineConfig spawnConfig = WorldEngineConfig.fromConfig(plugin.getConfig());
         for (Player player : participants) {
-            player.teleport(MatchTeleportService.spreadSpawn(world, centerX, centerZ, SURROUND_RADIUS,
-                    player.getLocation().getYaw(), player.getLocation().getPitch()));
+            player.teleport(MatchTeleportService.spreadSpawnForConfig(world, centerX, centerZ, SURROUND_RADIUS,
+                    player.getLocation().getYaw(), player.getLocation().getPitch(), spawnConfig));
         }
         return center;
     }

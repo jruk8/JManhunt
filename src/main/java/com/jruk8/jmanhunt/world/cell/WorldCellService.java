@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.world.cell;
 
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.world.end.EndCellManager;
@@ -29,7 +28,6 @@ public final class WorldCellService {
     private static final int MAX_CELL_ALLOCATE_ATTEMPTS = 20;
 
     private final JManhuntPlugin plugin;
-    private final ConfigService configService;
     private final WorldCellAllocator cellAllocator;
     private final EndCellManager endCells;
     private final WorldBorderService borders;
@@ -39,10 +37,9 @@ public final class WorldCellService {
     private BukkitTask refillRetryTask;
     private BooleanSupplier matchRunning = () -> false;
 
-    public WorldCellService(JManhuntPlugin plugin, ConfigService configService, EngineStateRepository engineState,
+    public WorldCellService(JManhuntPlugin plugin, EngineStateRepository engineState,
             EndCellManager endCells, WorldBorderService borders) {
         this.plugin = plugin;
-        this.configService = configService;
         this.cellAllocator = new WorldCellAllocator(engineState);
         this.endCells = endCells;
         this.borders = borders;
@@ -135,8 +132,9 @@ public final class WorldCellService {
                 world.getHighestBlockYAt(originX, originZ, HeightMap.MOTION_BLOCKING) + 1,
                 originZ + 0.5);
         for (Player player : joiners) {
-            Location spawn = MatchTeleportService.spreadSpawn(world, originX, originZ, config.tpSpreadRadius(),
-                    player.getLocation().getYaw(), player.getLocation().getPitch());
+            Location spawn = MatchTeleportService.spreadSpawnForConfig(world, originX, originZ,
+                    config.tpSpreadRadius(), player.getLocation().getYaw(), player.getLocation().getPitch(),
+                    config);
             player.teleport(spawn);
             player.setRespawnLocation(cellRoot, true);
         }
@@ -285,8 +283,7 @@ public final class WorldCellService {
             int originX = MatchTeleportService.toBlockCoordinate(cell.x() * config.cellSize());
             int originZ = MatchTeleportService.toBlockCoordinate(cell.z() * config.cellSize());
 
-            boolean useAlgo = configService.getBoolean("world-engine.use-spawnpoint-algorithm", true);
-            if (useAlgo) {
+            if (config.spawnpointAlgorithmEnabled()) {
                 Block centerBlock = world.getHighestBlockAt(originX, originZ);
                 Material type = centerBlock.getType();
                 boolean isLastAttempt = (iter == MAX_CELL_ALLOCATE_ATTEMPTS - 1);
@@ -314,8 +311,9 @@ public final class WorldCellService {
                 world.getHighestBlockYAt(origin.x(), origin.z(), HeightMap.MOTION_BLOCKING) + 1,
                 origin.z() + 0.5);
         for (Player player : participants) {
-            Location spawn = MatchTeleportService.spreadSpawn(world, origin.x(), origin.z(), config.tpSpreadRadius(),
-                    player.getLocation().getYaw(), player.getLocation().getPitch());
+            Location spawn = MatchTeleportService.spreadSpawnForConfig(world, origin.x(), origin.z(),
+                    config.tpSpreadRadius(), player.getLocation().getYaw(), player.getLocation().getPitch(),
+                    config);
             player.teleport(spawn);
             player.setRespawnLocation(cellRoot, true);
         }

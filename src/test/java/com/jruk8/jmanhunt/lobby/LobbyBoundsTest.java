@@ -58,4 +58,49 @@ class LobbyBoundsTest {
         assertEquals(OptionalInt.of(1), LobbyBounds.match(bounds, 5.0, 66.0, 5.0));
         assertEquals(OptionalInt.empty(), LobbyBounds.match(Map.of(), 5.0, 66.0, 5.0));
     }
+
+    @Test
+    void edgePointsCoverTwelveEdges() {
+        // Unit cube at step 1: 12 edges with 2 points each.
+        java.util.List<double[]> points = LobbyBounds.edgePoints(bound(0.0, 0.0, 0.0, 1.0, 1.0, 1.0), 1.0);
+
+        assertEquals(24, points.size());
+        for (double[] point : points) {
+            int extremes = 0;
+            if (point[0] == 0.0 || point[0] == 1.0) {
+                extremes++;
+            }
+            if (point[1] == 0.0 || point[1] == 1.0) {
+                extremes++;
+            }
+            if (point[2] == 0.0 || point[2] == 1.0) {
+                extremes++;
+            }
+            assertTrue(extremes >= 2, "point off the edges");
+        }
+    }
+
+    @Test
+    void edgePointsSubdivideLongEdges() {
+        // 2-long x edges hold 3 points each; 1-long edges hold 2.
+        java.util.List<double[]> points = LobbyBounds.edgePoints(bound(0.0, 0.0, 0.0, 2.0, 1.0, 1.0), 1.0);
+
+        assertEquals(28, points.size());
+    }
+
+    @Test
+    void distanceSquaredToBoxIsZeroInside() {
+        LobbyBounds.Bound box = bound(0.0, 64.0, 0.0, 10.0, 70.0, 10.0);
+
+        assertEquals(0.0, LobbyBounds.distanceSquaredToBox(box, 5.0, 66.0, 5.0));
+        assertEquals(0.0, LobbyBounds.distanceSquaredToBox(box, 0.0, 64.0, 0.0));
+    }
+
+    @Test
+    void distanceSquaredToBoxMeasuresOutsideGap() {
+        LobbyBounds.Bound box = bound(0.0, 64.0, 0.0, 10.0, 70.0, 10.0);
+
+        assertEquals(9.0, LobbyBounds.distanceSquaredToBox(box, 13.0, 66.0, 5.0));
+        assertEquals(25.0, LobbyBounds.distanceSquaredToBox(box, 5.0, 66.0, 15.0));
+    }
 }

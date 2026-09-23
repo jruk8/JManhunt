@@ -1,9 +1,41 @@
 package com.jruk8.jmanhunt.world;
 
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WorldEngineConfigTest {
+
+    @Test
+    void spawnpointAlgorithmDefaultsToEnabledWithFiveRetries() {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(new YamlConfiguration());
+
+        assertTrue(config.spawnpointAlgorithmEnabled());
+        assertEquals(5, config.spawnpointMaxRetries());
+    }
+
+    @Test
+    void spawnpointAlgorithmReadsConfig() {
+        YamlConfiguration yaml = new YamlConfiguration();
+        yaml.set("world-engine.spawnpoint-algorithm.enabled", false);
+        yaml.set("world-engine.spawnpoint-algorithm.max-retries", 2);
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(yaml);
+
+        assertFalse(config.spawnpointAlgorithmEnabled());
+        assertEquals(2, config.spawnpointMaxRetries());
+    }
+
+    @Test
+    void spawnpointRetriesClampAtZero() {
+        YamlConfiguration yaml = new YamlConfiguration();
+        yaml.set("world-engine.spawnpoint-algorithm.max-retries", -3);
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(yaml);
+
+        assertEquals(0, config.spawnpointMaxRetries());
+    }
+
 
     @Test
     void calculatesDiameterUsingLargerOfConfiguredRadiusAndSpreadPlusOne() {
