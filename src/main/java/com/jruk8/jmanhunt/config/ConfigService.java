@@ -111,6 +111,49 @@ public final class ConfigService {
         return modifiers.isEnabled(name);
     }
 
+    public boolean setModifierEnabled(String name, boolean value) {
+        return modifiers.setEnabled(name, value);
+    }
+
+    public Set<String> presetNames() {
+        return modifiers.presetNames();
+    }
+
+    public List<String> presetMembers(String id) {
+        return modifiers.presetMembers(id);
+    }
+
+    /**
+     * True when every member of the preset is enabled. Unknown or
+     * memberless presets read as off.
+     */
+    public boolean presetEnabled(String id) {
+        List<String> members = modifiers.presetMembers(id);
+        if (members.isEmpty() || !modifiers.presetNames().contains(id)) {
+            return false;
+        }
+        for (String member : members) {
+            if (!modifiers.isEnabled(member)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Flips every member of the preset at once. Returns false when the
+     * preset is unknown; unknown member ids are skipped.
+     */
+    public boolean setPreset(String id, boolean value) {
+        if (!modifiers.presetNames().contains(id)) {
+            return false;
+        }
+        for (String member : modifiers.presetMembers(id)) {
+            modifiers.setEnabled(member, value);
+        }
+        return true;
+    }
+
     public List<String> runsOn(String name) {
         return modifiers.runsOn(name);
     }

@@ -47,7 +47,22 @@ class MessagesStyleTest {
                 "manhunt.worldengine-cellindex-unavailable")) {
             assertTrue(messages.getString(key, null) != null, key);
         }
-        assertEquals(8, messages.getInt("messages-version"));
+        assertEquals(9, messages.getInt("messages-version"));
+    }
+
+    @Test
+    void modifiersKeysExist() throws Exception {
+        YamlConfiguration messages = loadBundledMessages();
+
+        for (String key : List.of("modifiers.usage", "modifiers.setmod-usage",
+                "modifiers.setpreset-usage", "modifiers.unknown-modifier",
+                "modifiers.unknown-preset", "modifiers.invalid-state",
+                "modifiers.setmod-success", "modifiers.setpreset-success",
+                "modifiers.list-header", "modifiers.list-entry-on",
+                "modifiers.list-entry-off", "modifiers.list-presets-header",
+                "modifiers.list-empty")) {
+            assertTrue(messages.getString(key, null) != null, key);
+        }
     }
 
     @Test

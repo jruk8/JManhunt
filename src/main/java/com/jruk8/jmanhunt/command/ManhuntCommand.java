@@ -107,6 +107,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final LobbyService lobbies;
     private final PendingConfirmations confirms = new PendingConfirmations();
     private final DevSchemCommand devSchem;
+    private final ModifiersCommand modifiersCmd;
     /** Lobby-bounds corners per player, separate from the dev schem selection. */
     private final Map<UUID, Location> boundPos1 = new HashMap<>();
     private final Map<UUID, Location> boundPos2 = new HashMap<>();
@@ -120,6 +121,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.lobbyTeleporter = lobbyTeleporter; this.debugService = debugService;
         this.lobbies = lobbyService;
         this.devSchem = new DevSchemCommand(plugin, messages);
+        this.modifiersCmd = new ModifiersCommand(config, messages);
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -136,6 +138,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "end" -> end(sender, args);
             case "game" -> game(sender, args);
             case "config" -> configCommand(sender, args);
+            case "modifiers" -> modifiers(sender, args);
             case "worldengine" -> worldEngine(sender, args);
             case "quickstart", "qs" -> quickStart(sender, args);
             case "reload" -> reload(sender);
@@ -160,6 +163,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt status [id|all]", "show match status"},
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt config <category> <key...> <value>", "view or change a setting"},
+                {"/manhunt modifiers [setmod|setpreset]", "toggle gameplay modifiers"},
                 {"/manhunt worldengine", "manage lobbies or teleport players"},
                 {"/manhunt debug [on|off]", "toggle debug output"},
                 {"/manhunt challenges", "show Challenges addon info"},
@@ -1809,6 +1813,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return devSchem.execute(sender, java.util.Arrays.copyOfRange(args, 2, args.length));
     }
 
+    private boolean modifiers(CommandSender sender, String[] args) {
+        return modifiersCmd.execute(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
+    }
+
     private boolean toggleDebug(CommandSender sender) {
         if (sender instanceof Player player) {
             return debugService.togglePlayer(player.getUniqueId());
@@ -1853,7 +1861,31 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (completion == null) {
             completion = completeLobbyTab(args);
         }
+        if (completion == null) {
+            completion = completeModifiersTab(args);
+        }
         return completion == null ? List.of() : completion;
+    }
+
+    /** Tab completion for modifiers toggles. Null when inapplicable. */
+    private List<String> completeModifiersTab(String[] args) {
+        if (args.length == 2 && args[0].equalsIgnoreCase("modifiers")) {
+            return partial(args[1], List.of("setmod", "setpreset"));
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {
+            if (args[1].equalsIgnoreCase("setmod")) {
+                return partial(args[2], modifiersCmd.modifierNameOptions());
+            }
+            if (args[1].equalsIgnoreCase("setpreset")) {
+                return partial(args[2], modifiersCmd.presetIdOptions());
+            }
+            return null;
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("modifiers")
+                && (args[1].equalsIgnoreCase("setmod") || args[1].equalsIgnoreCase("setpreset"))) {
+            return partial(args[3], List.of("true", "false"));
+        }
+        return null;
     }
 
     /** Tab completion for status, start, and end. Null when inapplicable. */
@@ -2134,7 +2166,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      */
     static List<String> subcommandOptions() {
         return new ArrayList<>(List.of("challenges", "help", "reload", "worldengine", "config",
-                "debug", "lobby", "qs", "quickstart", "game", "end", "start",
+                "modifiers", "debug", "lobby", "qs", "quickstart", "game", "end", "start",
                 "setplayer", "setup", "status"));
     }
 

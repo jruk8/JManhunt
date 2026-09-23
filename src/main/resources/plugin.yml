@@ -46,6 +46,9 @@ permissions:
   jmanhunt.command.config:
     description: View or change configuration by category.
     default: op
+  jmanhunt.command.modifiers:
+    description: View and toggle gameplay modifiers.
+    default: op
   jmanhunt.command.worldengine:
     description: View world-engine settings.
     default: op

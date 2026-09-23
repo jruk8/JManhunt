@@ -67,7 +67,7 @@ import java.util.UUID;
 
 public final class JManhuntPlugin extends JavaPlugin {
     private static final int CONFIG_VERSION = 5;
-    private static final int MESSAGES_VERSION = 8;
+    private static final int MESSAGES_VERSION = 9;
     private static final int MODIFIERS_VERSION = 1;
     /**
      * Relocated config paths, applied on reload. Every key must live under a

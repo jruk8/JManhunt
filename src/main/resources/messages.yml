@@ -1,5 +1,5 @@
 # Version used by JManhunt to add missing message entries during upgrades.
-messages-version: 8
+messages-version: 9
 
 # Placeholders: {prefix}, {player}, {role}, {distance}, {world}, {winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.
 prefix: "<#a6a6a6>[<gradient:#e66550:#de7766><bold>J</bold>Manhunt</gradient>]</#a6a6a6> "
@@ -277,3 +277,19 @@ dev:
   load-failed: "{prefix}<red>Could not paste schematic <white>{name}<red>."
   list: "{prefix}<green>Schematics: <white>{value}"
   list-empty: "{prefix}<yellow>No schematics saved yet."
+
+# Modifier toggles (/manhunt modifiers ...). {state} is on or off.
+modifiers:
+  usage: "{prefix}<yellow>Usage: <white>/manhunt modifiers [setmod <name> <true|false>|setpreset <id> <true|false>]<yellow>."
+  setmod-usage: "{prefix}<yellow>Usage: <white>/manhunt modifiers setmod <name> <true|false><yellow>."
+  setpreset-usage: "{prefix}<yellow>Usage: <white>/manhunt modifiers setpreset <id> <true|false><yellow>."
+  unknown-modifier: "{prefix}<red>Unknown modifier <white>{name}<red>. Use one of: <white>{valid}<red>."
+  unknown-preset: "{prefix}<red>Unknown preset <white>{name}<red>. Use one of: <white>{valid}<red>."
+  invalid-state: "{prefix}<red>State must be <white>true<red> or <white>false<red>."
+  setmod-success: "{prefix}<green>Modifier <white>{name}<green> is now <white>{state}<green>."
+  setpreset-success: "{prefix}<green>Preset <white>{name}<green> is now <white>{state}<green> (<white>{count}<green> modifiers)."
+  list-header: "\n{prefix}\n<#de7766>Modifiers:"
+  list-entry-on: "<white>» {name} <green>[on]"
+  list-entry-off: "<white>» {name} <gray>[off]"
+  list-presets-header: "\n<#de7766>Presets:"
+  list-empty: "{prefix}<yellow>No modifiers defined."
