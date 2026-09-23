@@ -24,7 +24,7 @@ and a bunch of actions and custom modifiers. The plug-and-play defaults work **i
 
 ## Challenges
 
-The plugin provides dedicated **Custom Modifiers** which allow you to easily create or toggle gamemode presets. These can be as simple as a list of give commands for items, or as configurable as giving a random item on every achievement or mob killed. Best yet, if the modifier engine is not enough (e.g., you're a server network), you can hook custom datapack functions or hook into the API. Modifier options can be accessed in-game via `/mh config custom-modifiers`, or through the config file.
+The plugin provides dedicated **Custom Modifiers** which allow you to easily create or toggle gamemode presets. These can be as simple as a list of give commands for items, or as configurable as giving a random item on every achievement or mob killed. Best yet, if the modifier engine is not enough (e.g., you're a server network), you can hook custom datapack functions or hook into the API. Modifier options can be accessed in-game via `/mh config modifiers`, or through the config file.
 
 Default custom modifiers include:
 
