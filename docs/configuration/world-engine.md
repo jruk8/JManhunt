@@ -33,7 +33,9 @@ world-engine:
 
 Prefer your own world instead? Set `world-engine.lobby-world-name` to its
 name, reload, and `tpto lobbyworld` takes you there without generating
-anything. Hop back to the game world any time with
+anything. The lobby world is remembered across restarts: while its
+folder exists, it loads on boot and `tpto lobbyworld` just takes you
+there. Hop back to the game world any time with
 `/manhunt worldengine tpto gameworld`. The lobby world name can never
 equal the game world name: a clash is refused with a warning until it is
 renamed.

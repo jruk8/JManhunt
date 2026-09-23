@@ -142,8 +142,10 @@ public final class PlayerCombatListener implements Listener {
     private void surviveRunnerDeath(Player player, GameInstance instance, boolean quiet,
             long matchId, int delaySeconds) {
         if (!quiet) {
+            // The dying runner is already flagged not-alive but will respawn, so count them.
+            int remaining = game.activeRunnerCount(instance) + 1;
             game.sendToInstance(instance, "game.speedrunner-death",
-                    Map.of("value", Integer.toString(game.activeRunnerCount(instance))));
+                    Map.of("value", Integer.toString(remaining)));
         }
         game.playInstanceSound(instance, "game.speedrunner-death");
         respawn.scheduleRespawn(player, instance, quiet, delaySeconds,

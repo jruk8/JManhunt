@@ -176,6 +176,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 new NamespacedKey(this, "hunters_compass"));
         worldEngine = new WorldEngineService(this, messages, configService, engineState);
         worldEngine.deleteOrphanedEndCells();
+        loadLobbyWorldOnBoot();
         checkCrashFlag();
         updateCheckNotifier = new JManhuntUpdateCheckNotifier(messages);
         updateChecks = new UpdateCheckService(new JManhuntUpdateCheckHttp("jruk8", "JManhunt"),
@@ -263,6 +264,22 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
     }
 
+    /**
+     * Loads the lobby world when its folder survived a restart but Bukkit
+     * has not loaded it. Never generates: creation stays behind tpto confirm.
+     */
+    private void loadLobbyWorldOnBoot() {
+        if (!getConfig().getBoolean("world-engine.enabled", false)) {
+            return;
+        }
+        String name = worldEngine.lobbyWorldName();
+        if (Bukkit.getWorld(name) != null || !worldEngine.lobbyWorldExists()) {
+            return;
+        }
+        worldEngine.ensureLobbyWorld().ifPresent(
+                lobbyWorld -> logger().info("Loaded existing lobby world '" + name + "'."));
+    }
+
     private void setupListeners() {
         var piglinBarter = new PiglinBarterListener(this, game);
         settings.add(worldEngine);
@@ -293,7 +310,9 @@ public final class JManhuntPlugin extends JavaPlugin {
                 worldEngine::lobbyWorldName), this);
         getServer().getPluginManager().registerEvents(new LobbyBoundsService(
                 this, lobbyService, playerStates, game, messages, sounds,
-                worldEngine::lobbyWorldName, debugService), this);
+                worldEngine::lobbyWorldName, debugService,
+                command::boundPos1View, command::boundPos2View,
+                command::devPos1View, command::devPos2View), this);
         getServer().getPluginManager().registerEvents(new TutorialChatListener(this, tutorialService), this);
         getServer().getPluginManager().registerEvents(new GuiListener(guiService), this);
         getServer().getPluginManager().registerEvents(
@@ -386,6 +405,11 @@ public final class JManhuntPlugin extends JavaPlugin {
     /** Chest-menu service (open, render, click routing). */
     public GuiService guiService() {
         return guiService;
+    }
+
+    /** Chat and component message service. */
+    public MessageService messages() {
+        return messages;
     }
 
     public void reload() {

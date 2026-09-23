@@ -171,6 +171,14 @@ public final class WorldEngineService implements SettingsListener {
         return teleport.setSpawnToLobby(targets, lobbyId);
     }
 
+    public boolean teleportToLobbyQuiet(List<Player> targets, int lobbyId) {
+        return teleport.teleportToLobbyQuiet(targets, lobbyId);
+    }
+
+    public boolean setSpawnToLobbyQuiet(List<Player> targets, int lobbyId) {
+        return teleport.setSpawnToLobbyQuiet(targets, lobbyId);
+    }
+
     /**
      * True when newcomers have a lobby to wait in: the engine is on and
      * the lobby (or a fallback lobby) has a valid teleport.

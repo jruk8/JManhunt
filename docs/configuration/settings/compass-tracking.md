@@ -146,8 +146,9 @@ left-click:
 
 `scroll-cooldown` is the seconds between accepted scrolls; clicks inside
 the window are ignored, so holding the button cannot scroll. Set it to
-`0` for no throttling. Scrolling is also refused with one or fewer
-candidates, while the signal is bad, and while an analysis is running.
+`0` for no throttling. A click that passes the window restarts it even
+when the scroll itself is refused: with one or fewer candidates, while
+the signal is bad, or while an analysis is running.
 
 Each successful scroll plays a short click. You can change it under
 `sounds.compass.left-click`, or turn it off there. No sound plays when

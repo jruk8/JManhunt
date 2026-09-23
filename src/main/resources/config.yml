@@ -142,6 +142,21 @@ lobbies:
   # teleport for one invocation.
   # Default: true
   join-teleports-to-lobby: true
+  # Who hears lobby leave and join lines. Only positive lobbies announce,
+  # and only to the subject plus members of the affected lobbies.
+  # - ALL tells the subject and the other members
+  # - SELF tells only the subject
+  # - MEMBERS tells only the other members
+  # - NONE stays silent
+  # Default: ALL
+  announce-lobby-changes: ALL
+  bounds:
+    # Where lobby members go when they leave their lobby's bounds box.
+    # Only fires for members whose lobby has complete bounds, and never
+    # for players in a live match. Use -1 (or any negative value) to
+    # leave them without a lobby.
+    # Default: -1
+    exit-lobby-id: -1
   # What /manhunt setplayer does when the target's lobby has a live match.
   # Only applies with the world engine on; otherwise the in-match block
   # stays since only one match can run without the engine.

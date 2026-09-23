@@ -12,4 +12,12 @@ public interface LobbyTeleporter {
      * disabled or the lobby location is invalid.
      */
     public boolean setSpawnToLobby(List<Player> targets, int lobbyId);
+
+    /**
+     * Quiet twins for paired calls (teleport plus spawn): same behavior
+     * but no chat on a missing location, so one failure reports once.
+     */
+    public boolean teleportToLobbyQuiet(List<Player> targets, int lobbyId);
+
+    public boolean setSpawnToLobbyQuiet(List<Player> targets, int lobbyId);
 }

@@ -214,11 +214,22 @@ public final class LobbyWorldService {
      * administrator, and the miss is debug-logged.
      */
     public Location resolveLobbyTeleport(int lobbyId, List<Player> targets) {
+        return resolveLobbyTeleport(lobbyId, targets, true);
+    }
+
+    /**
+     * Resolves a lobby teleport, optionally silent on chat for the second
+     * half of a paired teleport-plus-spawn call. The debug log always fires.
+     */
+    public Location resolveLobbyTeleport(int lobbyId, List<Player> targets, boolean announce) {
         Location lobby = resolveLobby(lobbyId, true);
         if (lobby != null) {
             return lobby;
         }
         plugin.logger().debug("debug.lobby-missing", Map.of("lobby", String.valueOf(lobbyId)));
+        if (!announce) {
+            return null;
+        }
         for (Player target : targets) {
             messages.message(target, "manhunt.lobby-no-location-anywhere",
                     Map.of("lobby", String.valueOf(lobbyId)));

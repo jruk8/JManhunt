@@ -18,6 +18,7 @@ import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -208,5 +209,33 @@ class ModifierMenusTest {
 
         assertTrue(allOn.glow());
         assertEquals(List.of(plain("3 modifiers", NamedTextColor.GRAY)), allOn.lore());
+    }
+
+    @Test
+    void presetLoreCollapsesBeyondEightMembers() {
+        ModifiersConfig config = new ModifiersConfig();
+        List<String> members = new ArrayList<>();
+        for (int index = 0; index < 10; index++) {
+            String id = "m" + index;
+            members.add(id);
+            addModifier(config, id, true, "M" + index, "", null, null);
+        }
+        addPreset(config, "big", "Big", null, members);
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        MessageService fresh = new MessageService();
+        fresh.reload(new YamlConfiguration());
+        ModifierMenus big =
+                new ModifierMenus(new ModifierStore(config, log), fresh, null, null, null);
+
+        MenuButton button = big.presetsMenu().buttonAt(2);
+
+        assertEquals(plain("Big", NamedTextColor.WHITE), button.name());
+        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 3, button.lore().size());
+        assertEquals("» M0", textOf(button.lore().get(0)));
+        assertEquals("» M7", textOf(button.lore().get(7)));
+        assertEquals("and 2 more", textOf(button.lore().get(8)));
+        assertEquals(Component.text(" "), button.lore().get(9));
+        assertEquals(plain("Enabled", NamedTextColor.GRAY), button.lore().get(10));
     }
 }

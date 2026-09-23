@@ -36,8 +36,8 @@ class LobbyBoundsPaletteTest {
     }
 
     @Test
-    void refreshIntervalIsOneSecond() {
-        assertEquals(20L, LobbyBoundsPalette.refreshTicks());
+    void refreshIntervalIsHalfASecond() {
+        assertEquals(10L, LobbyBoundsPalette.refreshTicks());
         assertEquals(25.0, LobbyBoundsPalette.CHECK_RADIUS_BLOCKS);
     }
 }

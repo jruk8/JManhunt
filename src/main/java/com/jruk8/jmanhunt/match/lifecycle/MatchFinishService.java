@@ -205,7 +205,7 @@ public final class MatchFinishService {
         if (destination == GameManager.LeaveDestination.LOBBY) {
             playerStates.setRole(player, Role.NONE);
             worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
-            worldEngine.setSpawnToLobby(List.of(player), instance.originLobbyId());
+            worldEngine.setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
             if (player.getGameMode() == GameMode.SPECTATOR) {
                 player.setGameMode(GameMode.SURVIVAL);
             }

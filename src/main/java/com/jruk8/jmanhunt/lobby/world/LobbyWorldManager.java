@@ -68,7 +68,12 @@ public final class LobbyWorldManager {
         if (Bukkit.getWorld(name) != null) {
             return true;
         }
-        return new File(plugin.getServer().getWorldContainer(), name).isDirectory();
+        return folderExists(plugin.getServer().getWorldContainer(), name);
+    }
+
+    /** Folder check for an unloaded leftover world. Pure for tests. */
+    public static boolean folderExists(File container, String name) {
+        return new File(container, name).isDirectory();
     }
 
     /**

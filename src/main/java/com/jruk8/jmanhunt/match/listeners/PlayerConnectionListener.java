@@ -80,7 +80,7 @@ public final class PlayerConnectionListener implements Listener {
         // Everyone else keeps their queued role and is sent to their lobby.
         if (lobbyId >= 0) {
             lobbyTeleporter.teleportToLobby(List.of(player), lobbyId);
-            lobbyTeleporter.setSpawnToLobby(List.of(player), lobbyId);
+            lobbyTeleporter.setSpawnToLobbyQuiet(List.of(player), lobbyId);
         }
     }
 

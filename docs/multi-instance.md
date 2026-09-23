@@ -17,6 +17,7 @@ restarts.
 lobbies:
   default-lobby-id: 0
   join-teleports-to-lobby: true
+  announce-lobby-changes: ALL
   caps:
     speedrunner: -1
     hunter: -1
@@ -28,6 +29,9 @@ value to leave joining players lobby-less until they join one manually.
 location when they join it (see
 [Cells & Spawns](configuration/world-engine/cells-spawns.md#lobby-teleports-bounds)).
 Pass `-notp` to skip that teleport for one join.
+`announce-lobby-changes` picks who hears the join and leave lines for
+positive lobbies: `ALL` (the moved player plus lobby members), `SELF`,
+`MEMBERS`, or `NONE`. Lobby 0 moves never announce.
 
 Move players between lobbies with:
 

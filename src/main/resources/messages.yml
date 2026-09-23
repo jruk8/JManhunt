@@ -111,9 +111,14 @@ manhunt:
   game-join-usage: "{prefix}<yellow>Usage: /manhunt game join <id> [role] [selector]"
   game-leave-usage: "{prefix}<yellow>Usage: /manhunt game leave [id] [selector]"
   lobby-usage: "{prefix}<yellow>Usage: /manhunt lobby <join|leave> ..."
-  lobby-join-usage: "{prefix}<yellow>Usage: /manhunt lobby join <selector> <lobby-id> [role] [-f|-force] [-notp] [-s|-silent]"
+  lobby-join-usage: "{prefix}<yellow>Usage: /manhunt lobby join <selector> <lobby-id> [role] [-f|-force] [-notp]"
   lobby-leave-usage: "{prefix}<yellow>Usage: /manhunt lobby leave [selector]"
   lobby-already-member: "{prefix}<yellow>{player} is already in lobby <white>{lobby}<yellow> as <white>{role}<yellow>."
+  lobby-left: "{prefix}<yellow>Left lobby <white>{lobby}</white>."
+  lobby-left-member: "{prefix}<white>{player}</white> <yellow>left lobby <white>{lobby}</white>."
+  lobby-joined: "{prefix}<yellow>Joined lobby <white>{lobby}</white>."
+  lobby-joined-member: "{prefix}<white>{player}</white> <yellow>joined lobby <white>{lobby}</white>."
+  worldengine-lobbyconfig-duplicate-bounds: "{prefix}<red>Those exact bounds are already set on lobby <white>{other}<red>."
   lobby-join-in-match: "{prefix}<yellow>{player} is in a running match. Use <white>/manhunt game join<yellow> to move them."
   lobby-leave-not-member: "{prefix}<yellow>{player} is not in a lobby."
   lobby-leave-in-match: "{prefix}<yellow>{player} is in a running match. Use <white>/manhunt game leave<yellow> to remove them."
@@ -294,6 +299,8 @@ modifiers:
   list-presets-header: "\n<#de7766>Presets:"
   list-empty: "{prefix}<yellow>No modifiers defined."
   toggle-announced: "{prefix}<white>{player} <yellow>set <gray>{key}</gray> to <white>{value}</white>.</yellow></white>"
+  toggle-all-success: "{prefix}<green>Toggled all <white>{count} {kind}</white> to <white>{state}</white>."
+  toggle-all-announced: "{prefix}<white>{player} <yellow>toggled all <gray>{count} {kind}</gray> to <white>{state}</white>.</yellow></white>"
 
 # Modifiers GUI text. Names render white, lore gray; user tags override.
 # {enabled} and {total} count enabled entries. Never add {prefix} here.
@@ -311,5 +318,6 @@ modifiers-gui:
   toggle-all: "Toggle all"
   toggle-all-modifiers-lore: "{total} modifiers"
   toggle-all-presets-lore: "{total} presets"
+  preset-more: "and {count} more"
   state-on: "<green>Enabled"
   state-off: "<red>Disabled"

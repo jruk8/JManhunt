@@ -114,11 +114,15 @@ while in the lobby world joins that lobby with role `none`, the same as
 `/manhunt lobby join` with role `none` (no teleport, since they are
 already there). Players already in that lobby, and players in a running
 match, are left alone. Where boxes overlap, the box whose midpoint is
-nearest wins. Record two opposite feet-block corners with
+nearest wins. Walking out of every box moves members to
+`lobbies.bounds.exit-lobby-id`, which leaves them lobby-less by default;
+this only fires for members whose lobby has complete bounds, and never
+for players in a live match. Record two opposite feet-block corners with
 `/manhunt worldengine lobbyconfig pos1|pos2`, then store them with
 `/manhunt worldengine lobbyconfig setbounds <lobby-id>` (tab completion
 suggests the next id without bounds; overwriting existing bounds needs
-the command run twice within 10 seconds). Remove a whole entry with
+the command run twice within 10 seconds). Bounds identical to another
+lobby's box are refused. Remove a whole entry with
 `/manhunt worldengine lobbyconfig deletelobby <lobby-id>`, also run
 twice to confirm. This only deletes the stored entry, never the live
 lobby or its players.

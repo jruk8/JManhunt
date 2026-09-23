@@ -27,7 +27,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt worldengine cellindex get`              | Shows the current world-engine cell index. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex buffer`           | Lists the buffered ready-cell ids. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
-| `/manhunt debug [on\|off]`                         | Toggles debug output for yourself or the console. Nearby lobby bounds also draw as colored edge particles while debug is on. | `jmanhunt.command.debug` |
+| `/manhunt debug [on\|off]`                         | Toggles debug output for yourself or the console. Nearby lobby bounds also draw as colored edge particles while debug is on, plus white draft boxes for your own pending lobby and schem corners. | `jmanhunt.command.debug` |
 | `/manhunt reload`                                 | Reloads `config.yml`, `messages.yml`, and `lobby-config.yml`. | `jmanhunt.command.reload` |
 
 Tab completion only suggests subcommands and worldengine actions the sender
@@ -102,12 +102,14 @@ matches can run at the same time (see [Concurrent Matches](multi-instance.md)).
 Players join the default lobby on login. `/manhunt lobby join` moves players
 into a lobby (default role `none`) and teleports them to it unless `-notp`
 is passed, honoring the per-role queue caps unless `-f` (`-force`) is
-passed; `-s` (`-silent`) skips the role message and sound for moved
-players. `/manhunt lobby leave [selector]` removes players from whatever
-lobby they are in. Re-joining the same lobby with the same role is refused
-with a notice. Multiple lobbies need the world engine; with it off,
-everyone shares lobby 0. New to lobbies? Start with the [Lobby Quick
-Start](lobby-quick-start.md).
+passed. Joining or leaving a positive lobby prints join and leave lines
+to the moved player and that lobby's members; lobby 0 moves stay silent.
+`lobbies.announce-lobby-changes` (`ALL`, `SELF`, `MEMBERS`, `NONE`) trims
+who hears those lines. `/manhunt lobby leave [selector]` removes players
+from whatever lobby they are in. Re-joining the same lobby with the same
+role is refused with a notice. Multiple lobbies need the world engine;
+with it off, everyone shares lobby 0. New to lobbies? Start with the
+[Lobby Quick Start](lobby-quick-start.md).
 
 ## Joining and Leaving a Running Match
 

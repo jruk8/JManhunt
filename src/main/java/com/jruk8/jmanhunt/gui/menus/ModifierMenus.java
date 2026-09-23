@@ -30,6 +30,9 @@ import org.bukkit.entity.Player;
  */
 public final class ModifierMenus {
 
+    /** Member lines shown in preset lore before collapsing to "and n more". */
+    public static final int MAX_PRESET_LORE_LINES = 8;
+
     private final ModifierStore store;
     private final MessageService messages;
     private final SoundService sounds;
@@ -52,34 +55,46 @@ public final class ModifierMenus {
 
     /** 27-slot root with links to both lists. */
     public Menu mainMenu() {
-        MenuLayout layout = MenuLayout.parse("#########", "###m#p###", "#########");
+        return new Menu(GuiTexts.title(messages, text("title-main", "Modifiers")),
+                MenuLayout.parse("#########", "###m#p###", "#########"),
+                this::mainStatic, List::of, null);
+    }
+
+    private Map<Integer, MenuButton> mainStatic() {
         Map<Integer, MenuButton> fixed = new HashMap<>();
         fixed.put(12, linkButton(Material.DIAMOND, "to-modifiers", "to-modifiers-lore",
                 "Modifiers", enabledModifiers(), store.modifierNames().size(),
                 this::modifiersMenu));
         fixed.put(14, linkButton(Material.FILLED_MAP, "to-presets", "to-presets-lore",
                 "Presets", enabledPresets(), store.presetNames().size(), this::presetsMenu));
-        return new Menu(GuiTexts.title(messages, text("title-main", "Modifiers")),
-                layout, fixed, List::of, null);
+        return fixed;
     }
 
     /** 45-slot modifiers scroll list. */
     public Menu modifiersMenu() {
         return listMenu("title-modifiers", this::modifierButtons,
-                this::mainMenu, toggleAllModifiersButton());
+                this::mainMenu, this::toggleAllModifiersButton);
     }
 
     /** 45-slot presets scroll list. */
     public Menu presetsMenu() {
         return listMenu("title-presets", this::presetButtons,
-                this::mainMenu, toggleAllPresetsButton());
+                this::mainMenu, this::toggleAllPresetsButton);
     }
 
     private Menu listMenu(String titleKey, Function<Integer, List<MenuButton>> content,
-            Supplier<Menu> parent, MenuButton toggleAll) {
+            Supplier<Menu> parent, Supplier<MenuButton> toggleAll) {
         MenuLayout layout = MenuLayout.parse(
                 "##xxxxxx#", "u#xxxxxx#", "b#xxxxxxt", "d#xxxxxx#", "##xxxxxx#");
         final Menu[] self = new Menu[1];
+        self[0] = new Menu(GuiTexts.title(messages, text(titleKey, "Modifiers")),
+                layout, () -> listStatic(self, toggleAll),
+                () -> content.apply(layout.contentColumns()), parent);
+        return self[0];
+    }
+
+    private Map<Integer, MenuButton> listStatic(
+            Menu[] self, Supplier<MenuButton> toggleAll) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
         fixed.put(9, scrollButton(Material.ARROW, "scroll-up", "Scroll up", self, -1));
         fixed.put(18, new MenuButton(Material.PAPER,
@@ -89,11 +104,9 @@ public final class ModifierMenus {
                     gui.back(player, self[0]);
                     sounds.playNeutralSound(player);
                 }));
-        fixed.put(26, toggleAll);
+        fixed.put(26, toggleAll.get());
         fixed.put(27, scrollButton(Material.ARROW, "scroll-down", "Scroll down", self, 1));
-        self[0] = new Menu(GuiTexts.title(messages, text(titleKey, "Modifiers")),
-                layout, fixed, () -> content.apply(layout.contentColumns()), parent);
-        return self[0];
+        return fixed;
     }
 
     private MenuButton toggleAllModifiersButton() {
@@ -108,10 +121,8 @@ public final class ModifierMenus {
                         messages.message(player, "command.no-permission");
                         return;
                     }
-                    String value = String.valueOf(!allModifiersOn());
-                    for (String id : store.modifierNames()) {
-                        toggles.execute(player, new String[]{"setmod", id, value});
-                    }
+                    toggles.toggleAllModifiers(player,
+                            new ArrayList<>(store.modifierNames()), !allModifiersOn());
                     sounds.playNeutralSound(player);
                 });
     }
@@ -128,10 +139,8 @@ public final class ModifierMenus {
                         messages.message(player, "command.no-permission");
                         return;
                     }
-                    String value = String.valueOf(!allPresetsOn());
-                    for (String id : store.presetNames()) {
-                        toggles.execute(player, new String[]{"setpreset", id, value});
-                    }
+                    toggles.toggleAllPresets(player,
+                            new ArrayList<>(store.presetNames()), !allPresetsOn());
                     sounds.playNeutralSound(player);
                 });
     }
@@ -248,9 +257,17 @@ public final class ModifierMenus {
 
     private List<Component> presetLore(String id, boolean allOn) {
         List<Component> lore = new ArrayList<>();
-        for (String member : store.presetMembers(id)) {
+        List<String> members = store.presetMembers(id);
+        int shown = Math.min(members.size(), MAX_PRESET_LORE_LINES);
+        for (int index = 0; index < shown; index++) {
+            String member = members.get(index);
             String color = store.isEnabled(member) ? "<green>" : "<red>";
             lore.addAll(GuiTexts.lore(messages, color + "» " + store.metaName(member)));
+        }
+        if (members.size() > shown) {
+            String more = text("preset-more", "and {count} more")
+                    .replace("{count}", String.valueOf(members.size() - shown));
+            lore.addAll(GuiTexts.lore(messages, more));
         }
         if (!lore.isEmpty()) {
             lore.add(Component.text(" "));

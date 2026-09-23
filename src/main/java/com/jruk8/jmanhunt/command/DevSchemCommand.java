@@ -15,6 +15,7 @@ import org.bukkit.util.BlockVector;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -173,6 +174,16 @@ public final class DevSchemCommand {
     }
 
     /** Feet location to its block vector. Pure for tests. */
+    /** Live pending corners for the debug particle draft boxes. */
+    public Map<UUID, Location> pos1View() {
+        return Collections.unmodifiableMap(pos1);
+    }
+
+    /** Live pending corners for the debug particle draft boxes. */
+    public Map<UUID, Location> pos2View() {
+        return Collections.unmodifiableMap(pos2);
+    }
+
     static BlockVector blockVector(Location location) {
         return new BlockVector(location.getBlockX(), location.getBlockY(), location.getBlockZ());
     }

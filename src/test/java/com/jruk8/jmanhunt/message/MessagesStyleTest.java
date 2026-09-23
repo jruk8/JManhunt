@@ -70,6 +70,23 @@ class MessagesStyleTest {
     }
 
     @Test
+    void lobbyChangeKeysExistWithSlots() throws Exception {
+        YamlConfiguration messages = loadBundledMessages();
+
+        for (String key : List.of("manhunt.lobby-left", "manhunt.lobby-joined")) {
+            String value = messages.getString(key, "");
+            assertTrue(value.contains("{lobby}"), key);
+        }
+        for (String key : List.of("manhunt.lobby-left-member", "manhunt.lobby-joined-member")) {
+            String value = messages.getString(key, "");
+            assertTrue(value.contains("{player}"), key);
+            assertTrue(value.contains("{lobby}"), key);
+        }
+        assertTrue(messages.getString("manhunt.worldengine-lobbyconfig-duplicate-bounds", "")
+                .contains("{other}"));
+    }
+
+    @Test
     void guiKeysExistAndCarryNoPrefix() throws Exception {
         YamlConfiguration messages = loadBundledMessages();
 

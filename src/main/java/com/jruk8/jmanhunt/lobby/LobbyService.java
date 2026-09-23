@@ -1,14 +1,18 @@
 package com.jruk8.jmanhunt.lobby;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.message.MessageService;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 /**
  * Owns lobby membership. Unknown ids are created on join and empty lobbies
@@ -112,6 +116,71 @@ public final class LobbyService {
     public Optional<Lobby> lobbyOf(UUID playerId) {
         Integer lobbyId = membership.get(playerId);
         return lobbyId == null ? Optional.empty() : Optional.ofNullable(lobbies.get(lobbyId));
+    }
+
+    /**
+     * Announces an explicit lobby change after the move. Only positive
+     * lobbies announce, and only to the subject plus members of the
+     * affected lobbies, per {@code lobbies.announce-lobby-changes}.
+     */
+    public void announceLobbyChange(Player subject, OptionalInt oldId, OptionalInt newId) {
+        if (oldId.equals(newId)) {
+            return;
+        }
+        String mode = plugin.getConfig().getString("lobbies.announce-lobby-changes", "ALL")
+                .toUpperCase(Locale.ROOT);
+        boolean toSelf = mode.equals("ALL") || mode.equals("SELF");
+        boolean toMembers = mode.equals("ALL") || mode.equals("MEMBERS");
+        if (!toSelf && !toMembers) {
+            return;
+        }
+        MessageService messages = plugin.messages();
+        if (oldId.isPresent() && oldId.getAsInt() > 0) {
+            announceLeave(subject, oldId.getAsInt(), toSelf, toMembers, messages);
+        }
+        if (newId.isPresent() && newId.getAsInt() > 0) {
+            announceJoin(subject, newId.getAsInt(), toSelf, toMembers, messages);
+        }
+    }
+
+    private void announceLeave(Player subject, int lobbyId, boolean toSelf,
+            boolean toMembers, MessageService messages) {
+        if (toSelf) {
+            messages.message(subject, "manhunt.lobby-left",
+                    Map.of("lobby", String.valueOf(lobbyId)));
+        }
+        if (toMembers) {
+            announceToMembers(lobbyId, subject, "manhunt.lobby-left-member", messages);
+        }
+    }
+
+    private void announceJoin(Player subject, int lobbyId, boolean toSelf,
+            boolean toMembers, MessageService messages) {
+        if (toSelf) {
+            messages.message(subject, "manhunt.lobby-joined",
+                    Map.of("lobby", String.valueOf(lobbyId)));
+        }
+        if (toMembers) {
+            announceToMembers(lobbyId, subject, "manhunt.lobby-joined-member", messages);
+        }
+    }
+
+    private void announceToMembers(int lobbyId, Player subject, String key,
+            MessageService messages) {
+        Lobby lobby = lobbies.get(lobbyId);
+        if (lobby == null) {
+            return;
+        }
+        for (UUID memberId : lobby.memberIds()) {
+            if (memberId.equals(subject.getUniqueId())) {
+                continue;
+            }
+            Player member = Bukkit.getPlayer(memberId);
+            if (member != null) {
+                messages.message(member, key, Map.of("player", subject.getName(),
+                        "lobby", String.valueOf(lobbyId)));
+            }
+        }
     }
 
     public Optional<Lobby> get(int lobbyId) {

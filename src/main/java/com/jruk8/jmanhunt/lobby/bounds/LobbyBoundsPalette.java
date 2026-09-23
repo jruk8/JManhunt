@@ -10,11 +10,13 @@ public final class LobbyBoundsPalette {
     /** Only boxes within this many blocks of the player are drawn. */
     public static final double CHECK_RADIUS_BLOCKS = 25.0;
     /** Seconds between particle refreshes. */
-    public static final double REFRESH_SECONDS = 1.0;
+    public static final double REFRESH_SECONDS = 0.5;
     /** Spacing between particles along a box edge, in blocks. */
     public static final double EDGE_STEP_BLOCKS = 1.0;
     /** Dust particle size. */
     public static final float PARTICLE_SIZE = 1.0f;
+    /** Pending-selection boxes are always white. */
+    public static final Color PENDING_COLOR = Color.WHITE;
 
     private static final int COLORS_PER_LEVEL = 6;
     private static final int LEVELS = 4;

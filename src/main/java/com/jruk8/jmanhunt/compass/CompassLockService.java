@@ -99,6 +99,7 @@ final class CompassLockService {
         if (match.isEmpty()) {
             return;
         }
+        lastScroll.put(player.getUniqueId(), now);
         GameInstance instance = match.get();
         Role targetRole = playerStates.role(player) == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
         List<CompassCandidate> opponents = targets.collectOpponents(player, targetRole, instance);
@@ -115,7 +116,6 @@ final class CompassLockService {
             return;
         }
         applyScrollCycle(player, opponents, sightings, maxTargets);
-        lastScroll.put(player.getUniqueId(), now);
         refresher.accept(player);
     }
 

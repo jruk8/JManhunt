@@ -57,6 +57,9 @@ public final class ConfigService {
     }
 
     public boolean getBoolean(String setting, boolean defaultValue) {
+        if (plugin == null) {
+            return defaultValue;
+        }
         return plugin.getConfig().getBoolean(setting, defaultValue);
     }
 

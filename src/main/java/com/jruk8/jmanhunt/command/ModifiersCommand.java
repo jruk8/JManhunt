@@ -135,7 +135,41 @@ public final class ModifiersCommand {
             messages.message(sender, "modifiers.invalid-state");
             return true;
         }
-        config.setModifierEnabled(name, value);
+        applyModifierToggle(sender, name, value, false);
+        return true;
+    }
+
+    /**
+     * Flips every listed modifier at once with one summary line and one
+     * bulk announce. Used by the GUI toggle-all button.
+     */
+    public boolean toggleAllModifiers(CommandSender sender, List<String> ids, boolean value) {
+        if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
+            messages.message(sender, "command.no-permission");
+            return true;
+        }
+        int flipped = 0;
+        for (String id : ids) {
+            if (applyModifierToggle(sender, id, value, true)) {
+                flipped++;
+            }
+        }
+        announceBulkToggle(sender, flipped, "modifiers", value);
+        return true;
+    }
+
+    /**
+     * Flips one modifier, optionally quiet for bulk runs. Returns false
+     * when the modifier is unknown.
+     */
+    private boolean applyModifierToggle(CommandSender sender, String name, boolean value,
+            boolean quiet) {
+        if (!config.setModifierEnabled(name, value)) {
+            return false;
+        }
+        if (quiet) {
+            return true;
+        }
         messages.message(sender, "modifiers.setmod-success",
                 Map.of("name", name, "state", value ? "on" : "off"));
         ManhuntCommand.announceSettingChange(messages,
@@ -164,7 +198,41 @@ public final class ModifiersCommand {
             messages.message(sender, "modifiers.invalid-state");
             return true;
         }
-        config.setPreset(id, value);
+        applyPresetToggle(sender, id, value, false);
+        return true;
+    }
+
+    /**
+     * Flips every listed preset at once with one summary line and one
+     * bulk announce. Used by the GUI toggle-all button.
+     */
+    public boolean toggleAllPresets(CommandSender sender, List<String> ids, boolean value) {
+        if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
+            messages.message(sender, "command.no-permission");
+            return true;
+        }
+        int flipped = 0;
+        for (String id : ids) {
+            if (applyPresetToggle(sender, id, value, true)) {
+                flipped++;
+            }
+        }
+        announceBulkToggle(sender, flipped, "presets", value);
+        return true;
+    }
+
+    /**
+     * Flips one preset, optionally quiet for bulk runs. Returns false
+     * when the preset is unknown.
+     */
+    private boolean applyPresetToggle(CommandSender sender, String id, boolean value,
+            boolean quiet) {
+        if (!config.setPreset(id, value)) {
+            return false;
+        }
+        if (quiet) {
+            return true;
+        }
         messages.message(sender, "modifiers.setpreset-success",
                 Map.of("name", id, "state", value ? "on" : "off",
                         "count", String.valueOf(config.presetMembers(id).size())));
@@ -172,5 +240,14 @@ public final class ModifiersCommand {
                 config.getBoolean("settings.announce-config-changes", false),
                 sender, "modifiers.toggle-announced", "preset " + id, value ? "on" : "off");
         return true;
+    }
+
+    private void announceBulkToggle(CommandSender sender, int count, String kind, boolean value) {
+        String state = value ? "on" : "off";
+        messages.message(sender, "modifiers.toggle-all-success",
+                Map.of("count", String.valueOf(count), "kind", kind, "state", state));
+        ManhuntCommand.announceSettingChange(messages,
+                config.getBoolean("settings.announce-config-changes", false),
+                sender, "modifiers.toggle-all-announced", count + " " + kind, state);
     }
 }

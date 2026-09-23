@@ -23,6 +23,9 @@ dependencies {
     // the plugin.yml libraries section instead of bundling them.
     testRuntimeOnly 'com.zaxxer:HikariCP:7.1.0'
     testRuntimeOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
+    // Tests mock JManhuntPlugin, and mocking resolves the PlaceholderAPI
+    // expansion superclass, so PAPI must be present at test runtime too.
+    testRuntimeOnly 'me.clip:placeholderapi:2.12.3'
 }
 
 // Publishes the JManhunt API so other plugins (e.g. JManhunt-Challenges) can

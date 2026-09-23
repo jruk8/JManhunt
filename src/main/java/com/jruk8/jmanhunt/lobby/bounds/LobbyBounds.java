@@ -1,6 +1,10 @@
 package com.jruk8.jmanhunt.lobby.bounds;
 
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.OptionalInt;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
@@ -52,17 +56,57 @@ public final class LobbyBounds {
     }
 
     /**
+     * Lowest id of another lobby whose box exactly equals the given
+     * corners (normalized, so corner order does not matter), if any.
+     * Partial entries and negative ids never count. Pure for tests.
+     */
+    public static OptionalInt duplicateOf(Map<String, LobbyConfig.LobbyEntry> entries, int selfId,
+            int x1, int y1, int z1, int x2, int y2, int z2) {
+        long[] want = normalizedBox(x1, y1, z1, x2, y2, z2);
+        Integer best = null;
+        for (Map.Entry<String, LobbyConfig.LobbyEntry> entry : entries.entrySet()) {
+            int id;
+            try {
+                id = Integer.parseInt(entry.getKey().trim());
+            } catch (NumberFormatException expected) {
+                continue;
+            }
+            if (id < 0 || id == selfId || entry.getValue() == null
+                    || entry.getValue().getBounds() == null) {
+                continue;
+            }
+            LobbyConfig.Position pos1 = entry.getValue().getBounds().getPos1();
+            LobbyConfig.Position pos2 = entry.getValue().getBounds().getPos2();
+            if (pos1 == null || pos2 == null) {
+                continue;
+            }
+            long[] have = normalizedBox((long) pos1.getX(), (long) pos1.getY(), (long) pos1.getZ(),
+                    (long) pos2.getX(), (long) pos2.getY(), (long) pos2.getZ());
+            if (Arrays.equals(want, have) && (best == null || id < best)) {
+                best = id;
+            }
+        }
+        return best == null ? OptionalInt.empty() : OptionalInt.of(best);
+    }
+
+    private static long[] normalizedBox(long x1, long y1, long z1, long x2, long y2, long z2) {
+        return new long[]{Math.min(x1, x2), Math.min(y1, y2), Math.min(z1, z2),
+                Math.max(x1, x2), Math.max(y1, y2), Math.max(z1, z2)};
+    }
+
+    /**
      * Points along the box's 12 edges as {x, y, z} triples, spaced
-     * {@code step} blocks apart. Corners repeat across edges. Pure for
-     * tests.
+     * {@code step} blocks apart. Corners repeat across edges. Max faces
+     * sit at max plus one so the drawn box encloses the contained
+     * blocks. Pure for tests.
      */
     public static List<double[]> edgePoints(Bound bound, double step) {
         double x1 = Math.min(bound.x1(), bound.x2());
-        double x2 = Math.max(bound.x1(), bound.x2());
+        double x2 = Math.max(bound.x1(), bound.x2()) + 1.0;
         double y1 = Math.min(bound.y1(), bound.y2());
-        double y2 = Math.max(bound.y1(), bound.y2());
+        double y2 = Math.max(bound.y1(), bound.y2()) + 1.0;
         double z1 = Math.min(bound.z1(), bound.z2());
-        double z2 = Math.max(bound.z1(), bound.z2());
+        double z2 = Math.max(bound.z1(), bound.z2()) + 1.0;
         List<double[]> points = new ArrayList<>();
         for (double y : new double[]{y1, y2}) {
             for (double z : new double[]{z1, z2}) {

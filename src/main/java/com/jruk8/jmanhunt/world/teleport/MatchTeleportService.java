@@ -25,12 +25,21 @@ public final class MatchTeleportService implements LobbyTeleporter {
 
     @Override
     public boolean teleportToLobby(List<Player> targets, int lobbyId) {
+        return teleportToLobby(targets, lobbyId, true);
+    }
+
+    @Override
+    public boolean teleportToLobbyQuiet(List<Player> targets, int lobbyId) {
+        return teleportToLobby(targets, lobbyId, false);
+    }
+
+    private boolean teleportToLobby(List<Player> targets, int lobbyId, boolean announce) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) {
             return false;
         }
 
-        Location lobby = lobbyWorlds.resolveLobbyTeleport(lobbyId, targets);
+        Location lobby = lobbyWorlds.resolveLobbyTeleport(lobbyId, targets, announce);
         if (lobby == null) {
             return false;
         }
@@ -42,12 +51,21 @@ public final class MatchTeleportService implements LobbyTeleporter {
 
     @Override
     public boolean setSpawnToLobby(List<Player> targets, int lobbyId) {
+        return setSpawnToLobby(targets, lobbyId, true);
+    }
+
+    @Override
+    public boolean setSpawnToLobbyQuiet(List<Player> targets, int lobbyId) {
+        return setSpawnToLobby(targets, lobbyId, false);
+    }
+
+    private boolean setSpawnToLobby(List<Player> targets, int lobbyId, boolean announce) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
         if (!config.enabled()) {
             return false;
         }
 
-        Location lobby = lobbyWorlds.resolveLobbyTeleport(lobbyId, targets);
+        Location lobby = lobbyWorlds.resolveLobbyTeleport(lobbyId, targets, announce);
         if (lobby == null) {
             return false;
         }

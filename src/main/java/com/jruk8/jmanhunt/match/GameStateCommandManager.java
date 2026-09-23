@@ -549,7 +549,7 @@ public final class GameStateCommandManager {
                 && configService.getBoolean("world-engine.enabled", false);
         if (!nonePlayers.isEmpty() && !engineMovesSpectators) {
             lobbyTeleporter.teleportToLobby(nonePlayers, lobbyId);
-            lobbyTeleporter.setSpawnToLobby(nonePlayers, lobbyId);
+            lobbyTeleporter.setSpawnToLobbyQuiet(nonePlayers, lobbyId);
         }
     }
 

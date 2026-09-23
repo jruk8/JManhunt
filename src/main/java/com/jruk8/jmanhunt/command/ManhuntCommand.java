@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.gui.menus.ModifierMenus;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
+import com.jruk8.jmanhunt.lobby.bounds.LobbyBounds;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyService;
@@ -39,6 +40,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -432,6 +434,26 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * share their canonical permission node, and setplayer additionally
      * accepts the self-only node (setPlayer enforces the self target).
      */
+    /** Live pending lobby corners for the debug particle draft boxes. */
+    public Map<UUID, Location> boundPos1View() {
+        return Collections.unmodifiableMap(boundPos1);
+    }
+
+    /** Live pending lobby corners for the debug particle draft boxes. */
+    public Map<UUID, Location> boundPos2View() {
+        return Collections.unmodifiableMap(boundPos2);
+    }
+
+    /** Live pending dev schem corners for the debug particle draft boxes. */
+    public Map<UUID, Location> devPos1View() {
+        return devSchem.pos1View();
+    }
+
+    /** Live pending dev schem corners for the debug particle draft boxes. */
+    public Map<UUID, Location> devPos2View() {
+        return devSchem.pos2View();
+    }
+
     static boolean canUseSubcommand(CommandSender sender, String sub) {
         return switch (sub.toLowerCase(Locale.ROOT)) {
             case "dev" -> sender.hasPermission("jmanhunt.command.dev.schem");
@@ -756,7 +778,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         List<Player> moved = new ArrayList<>();
         Set<Role> capped = new HashSet<>();
         for (Player target : targets) {
-            applyLobbyJoinToPlayer(sender, target, lobbyId.getAsInt(), role, flags.force(), flags.silent(),
+            applyLobbyJoinToPlayer(sender, target, lobbyId.getAsInt(), role, flags.force(),
                     moved, capped);
         }
         reportLobbyJoinResults(sender, moved, capped, lobbyId.getAsInt(), role, flags.noTeleport());
@@ -767,25 +789,21 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private LobbyJoinFlags parseLobbyJoinFlags(String[] args) {
         boolean force = false;
         boolean noTeleport = false;
-        boolean silent = false;
         int end = args.length;
-        while (end > 2 && (isForceFlag(args[end - 1]) || isNoTeleportFlag(args[end - 1])
-                || isSilentFlag(args[end - 1]))) {
+        while (end > 2 && (isForceFlag(args[end - 1]) || isNoTeleportFlag(args[end - 1]))) {
             if (isForceFlag(args[end - 1])) {
                 force = true;
-            } else if (isSilentFlag(args[end - 1])) {
-                silent = true;
             } else {
                 noTeleport = true;
             }
             end--;
         }
-        return new LobbyJoinFlags(force, noTeleport, silent, end);
+        return new LobbyJoinFlags(force, noTeleport, end);
     }
 
     /** Moves one player into a lobby, recording moves and caps. */
     private void applyLobbyJoinToPlayer(CommandSender sender, Player target, int lobbyId, Role role,
-            boolean force, boolean silent, List<Player> moved, Set<Role> capped) {
+            boolean force, List<Player> moved, Set<Role> capped) {
         if (game.instanceOf(target.getUniqueId()).isPresent()) {
             message(sender, "manhunt.lobby-join-in-match", Map.of("player", target.getName()));
             return;
@@ -803,15 +821,12 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             capped.add(role);
             return;
         }
-        Role previous = playerStates.role(target);
+        OptionalInt before = current.map(own -> OptionalInt.of(own.id())).orElseGet(OptionalInt::empty);
         lobbies.setLobby(target.getUniqueId(), lobbyId);
         playerStates.setRole(target, role);
         plugin.roleTeams().sync(target);
         moved.add(target);
-        if (!silent && previous != role) {
-            message(target, "manhunt.role-assigned", Map.of("role", messages.roleName(role)));
-            sounds.playNeutralSound(target);
-        }
+        lobbies.announceLobbyChange(target, before, OptionalInt.of(lobbyId));
     }
 
     /** Reports one lobby join run and teleports the movers. */
@@ -836,7 +851,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /** Trailing flags parsed from a lobby join invocation. */
-    private record LobbyJoinFlags(boolean force, boolean noTeleport, boolean silent, int end) {
+    private record LobbyJoinFlags(boolean force, boolean noTeleport, int end) {
     }
 
     /**
@@ -1697,6 +1712,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return message(sender, "manhunt.worldengine-lobbyconfig-world-mismatch");
         }
         LobbyConfig lobbyConfig = plugin.lobbyConfig();
+        OptionalInt duplicate = LobbyBounds.duplicateOf(lobbyConfig.getLobbies(), lobbyId.getAsInt(),
+                first.getBlockX(), first.getBlockY(), first.getBlockZ(),
+                second.getBlockX(), second.getBlockY(), second.getBlockZ());
+        if (duplicate.isPresent()) {
+            message(sender, "manhunt.worldengine-lobbyconfig-duplicate-bounds",
+                    Map.of("other", String.valueOf(duplicate.getAsInt())));
+            return true;
+        }
         LobbyConfig.LobbyEntry entry =
                 lobbyConfig.getLobbies().get(String.valueOf(lobbyId.getAsInt()));
         boolean hasBounds = entry != null && entry.getBounds() != null

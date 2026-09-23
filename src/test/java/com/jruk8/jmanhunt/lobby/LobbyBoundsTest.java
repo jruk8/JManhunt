@@ -61,19 +61,20 @@ class LobbyBoundsTest {
 
     @Test
     void edgePointsCoverTwelveEdges() {
-        // Unit cube at step 1: 12 edges with 2 points each.
+        // Unit cube at step 1 with max faces pushed out by one: 12 edges
+        // with 3 points each, spanning 0 to 2 on every axis.
         java.util.List<double[]> points = LobbyBounds.edgePoints(bound(0.0, 0.0, 0.0, 1.0, 1.0, 1.0), 1.0);
 
-        assertEquals(24, points.size());
+        assertEquals(36, points.size());
         for (double[] point : points) {
             int extremes = 0;
-            if (point[0] == 0.0 || point[0] == 1.0) {
+            if (point[0] == 0.0 || point[0] == 2.0) {
                 extremes++;
             }
-            if (point[1] == 0.0 || point[1] == 1.0) {
+            if (point[1] == 0.0 || point[1] == 2.0) {
                 extremes++;
             }
-            if (point[2] == 0.0 || point[2] == 1.0) {
+            if (point[2] == 0.0 || point[2] == 2.0) {
                 extremes++;
             }
             assertTrue(extremes >= 2, "point off the edges");
@@ -82,10 +83,10 @@ class LobbyBoundsTest {
 
     @Test
     void edgePointsSubdivideLongEdges() {
-        // 2-long x edges hold 3 points each; 1-long edges hold 2.
+        // 3-long x edges hold 4 points each; 2-long edges hold 3.
         java.util.List<double[]> points = LobbyBounds.edgePoints(bound(0.0, 0.0, 0.0, 2.0, 1.0, 1.0), 1.0);
 
-        assertEquals(28, points.size());
+        assertEquals(40, points.size());
     }
 
     @Test

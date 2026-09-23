@@ -36,7 +36,7 @@ class MenuDispatchTest {
         }
         Menu menu = new Menu(Component.text("Modifiers"),
                 MenuLayout.parse("m#######p", "#xxxxxx##", "b###d###u"),
-                fixed, () -> new ArrayList<>(content), null);
+                () -> fixed, () -> new ArrayList<>(content), null);
 
         assertSame(main, menu.buttonAt(0));
         assertSame(presets, menu.buttonAt(8));
@@ -92,5 +92,23 @@ class MenuDispatchTest {
         assertEquals(2, builds.get());
         assertEquals(0, menu.window().lineOffset());
         assertSame(content.get(0), menu.buttonAt(10));
+    }
+
+    @Test
+    void refreshRebuildsStaticButtons() {
+        AtomicInteger builds = new AtomicInteger();
+        Menu menu = new Menu(Component.text("Modifiers"),
+                MenuLayout.parse("#########", "#########", "#########"),
+                () -> Map.of(0,
+                        button("toggle" + builds.incrementAndGet(), new ArrayList<>())),
+                List::of, null);
+
+        assertEquals(1, builds.get());
+        assertEquals(Component.text("toggle1"), menu.buttonAt(0).name());
+
+        menu.refresh();
+
+        assertEquals(2, builds.get());
+        assertEquals(Component.text("toggle2"), menu.buttonAt(0).name());
     }
 }
