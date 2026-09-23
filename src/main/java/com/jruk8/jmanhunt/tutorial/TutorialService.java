@@ -195,6 +195,8 @@ public final class TutorialService {
         } else if (target == null) {
             logger.warning("Unknown tutorial target '" + next + "'; closing the setup.");
             quitWithMessage(player, session);
+        } else if (session.revisit(next)) {
+            render(player, session);
         } else {
             session.push(next);
             session.shown();

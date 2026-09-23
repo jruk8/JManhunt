@@ -82,7 +82,64 @@ public final class StatisticsRepository implements AutoCloseable {
                     + "speedrunner_wins INTEGER NOT NULL DEFAULT 0, sessions INTEGER NOT NULL DEFAULT 0, "
                     + "speedrunner_sessions INTEGER NOT NULL DEFAULT 0, hunter_sessions INTEGER NOT NULL DEFAULT 0, "
                     + "deaths INTEGER NOT NULL DEFAULT 0, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS jmanhunt_player_streaks ("
+                    + "uuid VARCHAR(36) PRIMARY KEY, current_streak INTEGER NOT NULL DEFAULT 0, "
+                    + "best_streak INTEGER NOT NULL DEFAULT 0)");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS jmanhunt_lobby_stats ("
+                    + "lobby_id INTEGER PRIMARY KEY, lifetime_sessions INTEGER NOT NULL DEFAULT 0)");
         }
+    }
+
+    /** Overwrites one player's streaks (streaks reset, so they never increment). */
+    public void updateStreaks(UUID uuid, int current, int best) throws SQLException {
+        try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(
+                "INSERT INTO jmanhunt_player_streaks (uuid, current_streak, best_streak) VALUES (?, ?, ?) "
+                        + "ON CONFLICT (uuid) DO UPDATE SET current_streak=EXCLUDED.current_streak, "
+                        + "best_streak=EXCLUDED.best_streak")) {
+            statement.setString(1, uuid.toString());
+            statement.setInt(2, current);
+            statement.setInt(3, best);
+            statement.executeUpdate();
+        }
+    }
+
+    /** Loads one player's streaks into the given career totals. */
+    public void loadStreaks(UUID uuid, CareerStats stats) throws SQLException {
+        try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(
+                "SELECT current_streak, best_streak FROM jmanhunt_player_streaks WHERE uuid=?")) {
+            statement.setString(1, uuid.toString());
+            try (ResultSet result = statement.executeQuery()) {
+                if (result.next()) {
+                    stats.currentWinStreak = result.getInt(1);
+                    stats.bestWinStreak = result.getInt(2);
+                }
+            }
+        }
+    }
+
+    /** Adds one lifetime session to a lobby. */
+    public void incrementLobbySessions(int lobbyId) throws SQLException {
+        try (Connection connection = connection(); PreparedStatement statement = connection.prepareStatement(
+                "INSERT INTO jmanhunt_lobby_stats (lobby_id, lifetime_sessions) VALUES (?, 1) "
+                        + "ON CONFLICT (lobby_id) DO UPDATE SET "
+                        + "lifetime_sessions=jmanhunt_lobby_stats.lifetime_sessions+1")) {
+            statement.setInt(1, lobbyId);
+            statement.executeUpdate();
+        }
+    }
+
+    /** Lifetime sessions per lobby. */
+    public java.util.Map<Integer, Integer> loadLobbySessions() throws SQLException {
+        java.util.Map<Integer, Integer> rows = new java.util.HashMap<>();
+        try (Connection connection = connection();
+                PreparedStatement statement = connection.prepareStatement(
+                        "SELECT lobby_id, lifetime_sessions FROM jmanhunt_lobby_stats");
+                ResultSet result = statement.executeQuery()) {
+            while (result.next()) {
+                rows.put(result.getInt(1), result.getInt(2));
+            }
+        }
+        return rows;
     }
 
     public CareerStats load(UUID uuid) throws SQLException {

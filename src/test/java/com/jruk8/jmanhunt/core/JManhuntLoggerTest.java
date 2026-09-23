@@ -120,7 +120,7 @@ class JManhuntLoggerTest {
         config.set("debug.prefix", "<gray>[D]</gray> ");
         config.set("debug.probe", "{debug-prefix}<gray>value <white>{value}<gray>.");
         MessageService messages = new MessageService();
-        messages.reload(config, "minimessage");
+        messages.reload(config);
         return messages;
     }
 }

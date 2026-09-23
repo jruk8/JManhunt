@@ -87,7 +87,7 @@ class SetPlayerPermissionsTest {
     @Test
     void subcommandGateAcceptsAliasesAndSelfNode() {
         CommandSender selfOnly = senderWith("jmanhunt.command.setplayer.self");
-        CommandSender config = senderWith("jmanhunt.command.configuration");
+        CommandSender config = senderWith("jmanhunt.command.config");
         CommandSender quick = senderWith("jmanhunt.command.quickstart");
 
         assertTrue(ManhuntCommand.canUseSubcommand(selfOnly, "setplayer"));

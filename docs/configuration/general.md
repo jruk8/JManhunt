@@ -3,7 +3,7 @@
 The plugin creates `config.yml` in its data folder. It includes match
 behavior, default game actions, command bundles, custom modifiers, compass
 tracking settings under `settings.compass`, end-screen statistics, sounds,
-text formatting, and optional PlaceholderAPI settings. Use `/manhunt configuration`
+text formatting, and optional PlaceholderAPI settings. Use `/manhunt config`
 to browse and change built-in actions and settings in-game.
 
 ## Settings

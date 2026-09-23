@@ -146,6 +146,53 @@ class TutorialServiceTest {
     }
 
     @Test
+    void revisitingStartRewindsStepAndWipesHistory() {
+        config.getNodes().get("second").getAnswers()
+                .add(answer("Menu.", "start", List.of(), false));
+        tutorial.start(player);
+        tutorial.handleInput(player, "1");
+
+        tutorial.handleInput(player, "2");
+
+        assertTrue(sent.get(sent.size() - 1).contains(stepLine(1, "First?")));
+        tutorial.handleInput(player, "b");
+        assertFalse(tutorial.isInTutorial(playerId));
+    }
+
+    @Test
+    void revisitingMiddleNodeKeepsEarlierHistory() {
+        config.getNodes().put("third", node(List.of("Third?"),
+                List.of(answer("To second.", "second", List.of(), false))));
+        config.getNodes().get("second").getAnswers()
+                .add(answer("Deeper.", "third", List.of(), false));
+        tutorial.start(player);
+        tutorial.handleInput(player, "1");
+        tutorial.handleInput(player, "2");
+
+        tutorial.handleInput(player, "1");
+
+        assertTrue(sent.get(sent.size() - 1).contains(stepLine(2, "Second?")));
+        tutorial.handleInput(player, "b");
+        assertTrue(tutorial.isInTutorial(playerId));
+        assertTrue(sent.get(sent.size() - 1).contains(stepLine(1, "First?")));
+    }
+
+    @Test
+    void sameNodeLoopKeepsStepNumber() {
+        config.getNodes().put("loop", node(List.of("Loop?"),
+                List.of(answer("Again.", "loop", List.of(), false),
+                        answer("Out.", "EXIT", List.of(), false))));
+        config.getNodes().get("start").getAnswers()
+                .add(answer("Loop.", "loop", List.of(), false));
+        tutorial.start(player);
+        tutorial.handleInput(player, "3");
+
+        tutorial.handleInput(player, "1");
+
+        assertTrue(sent.get(sent.size() - 1).contains(stepLine(2, "Loop?")));
+    }
+
+    @Test
     void celebrateNodePlaysCongratulations() {
         config.getNodes().get("second").setCelebrate(true);
         tutorial.start(player);

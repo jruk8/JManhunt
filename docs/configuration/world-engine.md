@@ -20,7 +20,7 @@ world-engine:
 
 ## Quick Start (3 minutes)
 
-1. Enable World Engine in-game with `/manhunt configuration world-engine enabled true`.
+1. Enable World Engine in-game with `/manhunt config world-engine enabled true`.
 2. Run `/manhunt worldengine tpto lobbyworld` twice. The first run tells you
    the lobby world does not exist yet; the second run (within 10 seconds)
    generates a clean void world, pastes your lobby schematic (see Lobby

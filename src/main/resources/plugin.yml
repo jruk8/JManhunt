@@ -43,7 +43,7 @@ permissions:
   jmanhunt.command.reload:
     description: Reload JManhunt configuration.
     default: op
-  jmanhunt.command.configuration:
+  jmanhunt.command.config:
     description: View or change configuration by category.
     default: op
   jmanhunt.command.worldengine:
@@ -75,6 +75,9 @@ permissions:
     default: op
   jmanhunt.command.setup:
     description: Use the interactive setup tutorial (/manhunt setup).
+    default: op
+  jmanhunt.admin:
+    description: Receive plugin update notices and other admin messages.
     default: op
   jmanhunt.hunter:
     description: Allows a player to become a hunter.

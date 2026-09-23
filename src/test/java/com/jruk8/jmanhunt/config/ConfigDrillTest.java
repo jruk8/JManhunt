@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests for the /manhunt configuration drill-down resolution. YamlConfiguration
+ * Tests for the /manhunt config drill-down resolution. YamlConfiguration
  * is a pure YAML wrapper, so these tests run without a Bukkit server.
  */
 class ConfigDrillTest {

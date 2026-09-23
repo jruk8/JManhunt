@@ -84,7 +84,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             <gray> » Challenges status: [{status}<gray>]</gray>
             
             <gray>Looking for modifiers instead? Try \
-            <white>/mh configuration modifiers <key> <value></white>.</gray>
+            <white>/mh config modifiers <key> <value></white>.</gray>
             """;
     public static final String CHALLENGES_URL = "https://builtbybit.com/resources/jmanhunt-challenges.121574/";
     private static final String CHALLENGES_LINK_TOKEN = "{link}";
@@ -135,7 +135,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "start" -> start(sender, args);
             case "end" -> end(sender, args);
             case "game" -> game(sender, args);
-            case "configuration", "config" -> configuration(sender, args);
+            case "config" -> configCommand(sender, args);
             case "worldengine" -> worldEngine(sender, args);
             case "quickstart", "qs" -> quickStart(sender, args);
             case "reload" -> reload(sender);
@@ -159,7 +159,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt game leave [id] [selector]", "remove players from a running match"},
                 {"/manhunt status [id|all]", "show match status"},
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
-                {"/manhunt configuration <category> <key...> <value>", "view or change a setting"},
+                {"/manhunt config <category> <key...> <value>", "view or change a setting"},
                 {"/manhunt worldengine", "manage lobbies or teleport players"},
                 {"/manhunt debug [on|off]", "toggle debug output"},
                 {"/manhunt challenges", "show Challenges addon info"},
@@ -168,8 +168,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         for (String[] line : lines) {
             message(sender, "manhunt.help-line", Map.of("command", line[0], "description", line[1]));
         }
-        // Clickable links need MiniMessage parsing regardless of text-format,
-        // so this footer stays hardcoded instead of living in messages.yml.
+        // Clickable links use hardcoded MiniMessage instead of living in
+        // messages.yml.
         sender.sendMessage(messages.miniMessage(
                 "\n<green>Still need help? Check <#de7766><click:open_url:'https://jruk8.github.io/JManhunt/'>"
                         + "<underlined>Docs</underlined></click></#de7766> or join our "
@@ -428,7 +428,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "dev" -> sender.hasPermission("jmanhunt.command.dev.schem");
             case "setplayer" -> sender.hasPermission("jmanhunt.command.setplayer")
                     || sender.hasPermission("jmanhunt.command.setplayer.self");
-            case "config", "configuration" -> sender.hasPermission("jmanhunt.command.configuration");
+            case "config" -> sender.hasPermission("jmanhunt.command.config");
             case "qs", "quickstart" -> sender.hasPermission("jmanhunt.command.quickstart");
             default -> sender.hasPermission("jmanhunt.command." + sub.toLowerCase(Locale.ROOT));
         };
@@ -1173,13 +1173,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Views or changes configuration by category: /manhunt configuration
+     * Views or changes configuration by category: /manhunt config
      * &lt;category&gt; &lt;path...&gt; [value]. Every argument drills one level
      * deeper and tab completion only suggests the children of the current
      * level. A path resolving to a section lists its settings; a path
      * resolving to an editable leaf views it, or sets it when a value follows.
      */
-    private boolean configuration(CommandSender sender, String[] args) {
+    private boolean configCommand(CommandSender sender, String[] args) {
         List<String> segments = new ArrayList<>();
         for (int i = 1; i < args.length; i++) {
             segments.add(args[i]);
@@ -1201,7 +1201,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return showOrUpdateSetting(sender, resolved.path(), resolved.remainder());
         }
         if (!resolved.section() || !resolved.remainder().isEmpty()) {
-            return message(sender, "manhunt.configuration-usage");
+            return message(sender, "manhunt.config-usage");
         }
         DrillListing listing = nextSegments(game.settingNames(), resolved.path());
         Map<String, String> entries = new LinkedHashMap<>();
@@ -1221,9 +1221,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * prefixed line per entry.
      */
     private void listEntries(CommandSender sender, String key, Map<String, String> entries) {
-        String template = messages.string("manhunt.configuration-entry",
+        String template = messages.string("manhunt.config-entry",
                 "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>");
-        message(sender, "manhunt.configuration-list",
+        message(sender, "manhunt.config-list",
                 Map.of("key", key, "entries", renderEntries(entries, template)));
     }
 
@@ -1244,7 +1244,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         if (values.size() > 1) {
-            return message(sender, "manhunt.configuration-usage");
+            return message(sender, "manhunt.config-usage");
         }
         String raw = values.get(0);
         boolean isBoolean = oldValue instanceof Boolean;
@@ -1838,7 +1838,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             completion = completeDevDebugTab(args);
         }
         if (args.length >= 2
-                && (args[0].equalsIgnoreCase("configuration") || args[0].equalsIgnoreCase("config"))) {
+                && args[0].equalsIgnoreCase("config")) {
             return completeDrill(args);
         }
         if (completion == null) {
@@ -2134,7 +2134,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      */
     static List<String> subcommandOptions() {
         return new ArrayList<>(List.of("challenges", "help", "reload", "worldengine", "config",
-                "configuration", "debug", "lobby", "qs", "quickstart", "game", "end", "start",
+                "debug", "lobby", "qs", "quickstart", "game", "end", "start",
                 "setplayer", "setup", "status"));
     }
 

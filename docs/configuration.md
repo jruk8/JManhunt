@@ -21,23 +21,15 @@ See the individual configuration pages for detailed documentation:
 
 ## Core Settings
 
-Under `text-format`, you can choose the message parser used for
-`messages.yml`:
-
-```yaml
-# Message parser used for messages.yml: minimessage or legacy.
-text-format: minimessage
-```
-
-`minimessage` enables MiniMessage formatting; `legacy` keeps classic `&`
-color codes. Placeholder formatting in `config.yml` follows the same setting.
-Changes apply after `/manhunt reload`.
+Messages in `messages.yml` use MiniMessage formatting. Classic `&` color
+codes (like `&7` or `&6`) still work anywhere: they convert
+automatically. Placeholder formatting in `config.yml` follows the same
+rules. Changes apply after `/manhunt reload`.
 
 Set any message in `messages.yml` to an empty string (`""`) to disable it:
 it will never be sent. (A single space still counts as a message.) Each
 role's color lives under `role-colors:` as one key per role, used by role
-headers and every message that names a role; legacy servers can put `&`
-codes there instead of the default hex tags.
+headers and every message that names a role; `&` codes work there too.
 
 ## Anonymous Statistics
 

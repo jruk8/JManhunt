@@ -18,7 +18,8 @@
 | `jmanhunt.command.debug` | Toggle JManhunt debug output. | OP |
 | `jmanhunt.command.dev.schem` | Use the developer schematic tools. | OP |
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |
-| `jmanhunt.command.configuration` | View or change configuration by category. | OP |
+| `jmanhunt.command.config` | View or change configuration by category. | OP |
+| `jmanhunt.admin` | Receive plugin update notices and other admin messages. | OP |
 | `jmanhunt.command.worldengine` | View world-engine settings. Implies every worldengine action below. | OP |
 | `jmanhunt.command.worldengine.lobbyconfig` | Manage lobby teleports, bounds, and entries. | OP |
 | `jmanhunt.command.worldengine.tpto` | Teleport to the lobby world or game world. | OP |

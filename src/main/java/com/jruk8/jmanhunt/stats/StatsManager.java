@@ -23,6 +23,7 @@ public final class StatsManager {
     private final StatisticsRepository repository;
     private final Map<Long, Map<UUID, Stats>> matchStats = new HashMap<>();
     private final Map<UUID, CareerStats> career = new ConcurrentHashMap<>();
+    private final Map<Integer, Integer> lobbySessions = new ConcurrentHashMap<>();
     private final Set<UUID> careerLoading = ConcurrentHashMap.newKeySet();
     private final Set<UUID> careerLoaded = ConcurrentHashMap.newKeySet();
     private final Set<CompletableFuture<Void>> pendingSaves = ConcurrentHashMap.newKeySet();
@@ -48,6 +49,12 @@ public final class StatsManager {
                 .computeIfAbsent(id, ignored -> new Stats());
     }
 
+    /** One player's match slice, or empty when they have no numbers yet. */
+    public java.util.Optional<Stats> matchStats(long matchId, UUID id) {
+        Map<UUID, Stats> slice = matchStats.get(matchId);
+        return slice == null ? java.util.Optional.empty() : java.util.Optional.ofNullable(slice.get(id));
+    }
+
     private void loadCareerAsync(UUID id) {
         if (repository == null || careerLoaded.contains(id) || !careerLoading.add(id)) {
             return;
@@ -56,6 +63,7 @@ public final class StatsManager {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try {
                 CareerStats loaded = repository.load(id);
+                repository.loadStreaks(id, loaded);
                 CareerStats current = career.get(id);
                 synchronized (current) {
                     if (current.isEmpty()) {
@@ -113,6 +121,8 @@ public final class StatsManager {
             total.damage += match.damage / 2.0;
             if (match.role.isParticipant()) {
                 total.sessions++;
+                total.currentWinStreak = match.role == winner ? total.currentWinStreak + 1 : 0;
+                total.bestWinStreak = Math.max(total.bestWinStreak, total.currentWinStreak);
             }
             CareerStats delta = new CareerStats();
             delta.player = match.player;
@@ -124,7 +134,25 @@ public final class StatsManager {
                 delta.sessions = 1;
             }
             saveAsync(playerId, delta);
+            if (match.role.isParticipant()) {
+                saveStreaksAsync(playerId, total.currentWinStreak, total.bestWinStreak);
+            }
         }
+    }
+
+    private void saveStreaksAsync(UUID id, int current, int best) {
+        if (repository == null) {
+            return;
+        }
+        CompletableFuture<Void> save = CompletableFuture.runAsync(() -> {
+            try {
+                repository.updateStreaks(id, current, best);
+            } catch (Exception exception) {
+                plugin.logger().warning("Could not save win streaks for " + id + ": " + exception.getMessage());
+            }
+        });
+        pendingSaves.add(save);
+        save.whenComplete((ignored, exception) -> pendingSaves.remove(save));
     }
 
     /** Accumulates role-specific career totals for one match slice. */
@@ -184,6 +212,47 @@ public final class StatsManager {
 
     public void flush() {
         pendingSaves.forEach(CompletableFuture::join);
+    }
+
+    /** Loads persisted lobby session counts; sums with any already recorded. */
+    public void loadLobbySessionsAsync() {
+        if (repository == null) {
+            return;
+        }
+        CompletableFuture<Void> load = CompletableFuture.runAsync(() -> {
+            try {
+                for (Map.Entry<Integer, Integer> entry : repository.loadLobbySessions().entrySet()) {
+                    lobbySessions.merge(entry.getKey(), entry.getValue(), Integer::sum);
+                }
+            } catch (Exception exception) {
+                plugin.logger().warning("Could not load lobby sessions: " + exception.getMessage());
+            }
+        });
+        pendingSaves.add(load);
+        load.whenComplete((ignored, exception) -> pendingSaves.remove(load));
+    }
+
+    /** Records one started session for a lobby, in memory and in the database. */
+    public void recordLobbySession(int lobbyId) {
+        lobbySessions.merge(lobbyId, 1, Integer::sum);
+        if (repository == null) {
+            return;
+        }
+        CompletableFuture<Void> save = CompletableFuture.runAsync(() -> {
+            try {
+                repository.incrementLobbySessions(lobbyId);
+            } catch (Exception exception) {
+                plugin.logger().warning("Could not save lobby sessions for lobby " + lobbyId
+                        + ": " + exception.getMessage());
+            }
+        });
+        pendingSaves.add(save);
+        save.whenComplete((ignored, exception) -> pendingSaves.remove(save));
+    }
+
+    /** Lifetime started sessions for a lobby, or 0 when none are known. */
+    public int lifetimeSessions(int lobbyId) {
+        return lobbySessions.getOrDefault(lobbyId, 0);
     }
 
     /** End-screen lines go to the match plus the console, never other matches. */

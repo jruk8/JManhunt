@@ -75,6 +75,7 @@ nav:
       - Sounds: configuration/sounds.md
   - Permissions: permissions.md
   - Placeholders: placeholders.md
+  - Update Checker: update-checker.md
   - API: api.md
   - Developer Tools: dev-tools.md
 

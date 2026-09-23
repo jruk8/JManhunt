@@ -61,8 +61,8 @@ manhunt:
   setting-change-announced: "{prefix}<white>{player} <yellow>set setting <gray>{key}</gray> to <white>{value}</white>.</yellow></white>"
   setting-restart-required: "{prefix}<gray>This setting requires a server restart to take effect."
   setting-entry: "{prefix}<gray>{setting}:</gray> <white>{value}"
-  configuration-list: "\n{prefix}<white>Available configs in <gray>{key}:{entries}"
-  configuration-entry: "\n<green>» <white>{key}</white><gray>{suffix}</gray>"
+  config-list: "\n{prefix}<white>Available configs in <gray>{key}:{entries}"
+  config-entry: "\n<green>» <white>{key}</white><gray>{suffix}</gray>"
   setting-status: "{prefix}<white>{setting}<gray> is currently <white>{value}<gray>."
   worldengine-usage: "{prefix}<yellow>Usage: /manhunt worldengine <lobbyconfig|cellindex|tpto>"
   worldengine-cellindex-usage: "{prefix}<yellow>Usage: /manhunt worldengine cellindex <get|set <value>|buffer>"
@@ -70,7 +70,7 @@ manhunt:
   worldengine-cellindex-set: "{prefix}<green>Set world-engine cell index to <white>{index}<green> (was <white>{was}<green>, max <white>{max}<green>)."
   worldengine-cellindex-invalid: "{prefix}<red>Invalid cell index. Use a number between 0 and <white>{max}<red>."
   worldengine-cellindex-unavailable: "{prefix}<red>Cell index storage is unavailable."
-  worldengine-disabled: '{prefix}<red>World engine is disabled. Enable it through <gray>"/manhunt configuration world-engine enabled true"</gray> to use this command.'
+  worldengine-disabled: '{prefix}<red>World engine is disabled. Enable it through <gray>"/manhunt config world-engine enabled true"</gray> to use this command.'
   worldengine-no-targets: "{prefix}<yellow>No players matched that selector."
   worldengine-invalid-location: "{prefix}<red>Invalid lobby location. Use <yellow>x y z yaw pitch<red>."
   worldengine-tpto-confirm: "{prefix}<yellow>Lobby world <white>{world}</white> does not exist. Run the command again within <white>{seconds}s</white> to generate it."
@@ -118,7 +118,7 @@ manhunt:
   lobby-leave-not-member: "{prefix}<yellow>{player} is not in a lobby."
   lobby-leave-in-match: "{prefix}<yellow>{player} is in a running match. Use <white>/manhunt game leave<yellow> to remove them."
   quickstart-usage: "{prefix}<yellow>Usage: /manhunt quickstart [percentage]"
-  configuration-usage: "{prefix}<yellow>Usage: /manhunt configuration <category> <key...> [value]"
+  config-usage: "{prefix}<yellow>Usage: /manhunt config <category> <key...> [value]"
   debug-usage: "{prefix}<yellow>Usage: /manhunt debug [on|off]"
   worldengine-lobbyconfig-usage: "{prefix}<yellow>Usage: /manhunt worldengine lobbyconfig <pos1|pos2|setbounds <lobby-id>|setlobbytp <lobby-id> [x y z yaw pitch]|deletelobby <lobby-id>>"
   worldengine-lobbyconfig-pos1: "{prefix}<green>Bounds position 1 set to <white>{pos}<green>."

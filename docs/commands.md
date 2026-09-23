@@ -18,7 +18,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt game leave [id] [selector]`             | Removes players from a running match; leaving participants need a second run within 10 seconds. | `jmanhunt.command.game` |
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
 | `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
-| `/manhunt configuration <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.configuration` |
+| `/manhunt config <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.config` |
 | `/manhunt worldengine lobbyconfig pos1\|pos2`                    | Records a lobby-bounds corner at your feet block. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
 | `/manhunt worldengine lobbyconfig setbounds <lobby-id>`       | Stores the recorded corners as a lobby's bounds. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
 | `/manhunt worldengine lobbyconfig setlobbytp <lobby-id> [coords]` | Sets a lobby's teleport (your position, or `x y z yaw pitch`). | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
@@ -148,28 +148,28 @@ spawn and never generates anything. Without a selector, both target you
 
 ## Editing Settings In-Game
 
-`/manhunt configuration` (alias `/mh config`) browses and changes scalar
+`/manhunt config` (alias `/mh config`) browses and changes scalar
 settings in-game, one category at a time. Each argument drills one level
 deeper, and tab completion only suggests the children of the current level.
 Boolean toggles accept `true` or `false`:
 
 ```text
-/manhunt configuration settings headstarts hunter enabled true
+/manhunt config settings headstarts hunter enabled true
 ```
 
 Numerical settings (ints, floats, doubles) accept their numeric value:
 
 ```text
-/manhunt configuration settings compass refresh-interval 5.0
-/manhunt configuration settings win-conditions speedrunner survive-time time 1800.0
-/manhunt configuration world-engine cell-size 20000
+/manhunt config settings compass refresh-interval 5.0
+/manhunt config settings win-conditions speedrunner survive-time time 1800.0
+/manhunt config world-engine cell-size 20000
 ```
 
 Strings and enum-like values are stored verbatim:
 
 ```text
-/manhunt configuration settings start-on-speedrunner-damage on-expire FORCE_START
-/manhunt configuration settings win-conditions speedrunner acquire-item item minecraft:diamond
+/manhunt config settings start-on-speedrunner-damage on-expire FORCE_START
+/manhunt config settings win-conditions speedrunner acquire-item item minecraft:diamond
 ```
 
 With no category, the command lists categories; with a section path, it lists
@@ -177,8 +177,8 @@ that section's next level: sub-sections as bare names, editable settings
 as `child: value`. Non-editable branches never surface:
 
 ```text
-/manhunt configuration
-/manhunt configuration settings compass
+/manhunt config
+/manhunt config settings compass
 ```
 
 Setting names are matched case-insensitively. When tab-completing a value,
@@ -206,7 +206,7 @@ ends, either from the console or once for each participating player.
 To enable a modifier, use its configuration name:
 
 ```text
-/manhunt configuration modifiers everyone-gets-beef enabled true
+/manhunt config modifiers everyone-gets-beef enabled true
 ```
 
 The example modifier in the default config gives players food and applies

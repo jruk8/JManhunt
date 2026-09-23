@@ -279,7 +279,7 @@ nodes:
         next: "EXIT"
   discord:
     question:
-      - "<click:open_url:'https://discord.gg/hkWmCVmWDC'><underlined>Click to join Discord</underlined></click> for community modifiers and setup help."
+      - "<click:open_url:'https://discord.gg/hkWmCVmWDC'><#5865F2><underlined>Click to join Discord</underlined></#5865F2></click> for community modifiers and setup help."
     answers:
       - text: "Back to menu."
         next: "start"

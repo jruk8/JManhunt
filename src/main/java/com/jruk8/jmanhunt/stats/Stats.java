@@ -11,6 +11,7 @@ public final class Stats {
     public Role role = Role.NONE;
     public double damage;
     public int kills;
+    public int deaths;
     public int finalKills;
     public int progression;
     public String progressionKey;

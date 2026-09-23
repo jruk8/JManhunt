@@ -14,12 +14,22 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class MessageService {
-    private FileConfiguration messages;
-    private String format = "minimessage";
+    private static final java.util.regex.Pattern LEGACY_CODE =
+            java.util.regex.Pattern.compile("(?i)&([0-9a-fk-or])");
+    private static final Map<Character, String> LEGACY_TAGS = Map.ofEntries(
+            Map.entry('0', "black"), Map.entry('1', "dark_blue"), Map.entry('2', "dark_green"),
+            Map.entry('3', "dark_aqua"), Map.entry('4', "dark_red"), Map.entry('5', "dark_purple"),
+            Map.entry('6', "gold"), Map.entry('7', "gray"), Map.entry('8', "dark_gray"),
+            Map.entry('9', "blue"), Map.entry('a', "green"), Map.entry('b', "aqua"),
+            Map.entry('c', "red"), Map.entry('d', "light_purple"), Map.entry('e', "yellow"),
+            Map.entry('f', "white"), Map.entry('k', "obfuscated"), Map.entry('l', "bold"),
+            Map.entry('m', "strikethrough"), Map.entry('n', "underlined"), Map.entry('o', "italic"),
+            Map.entry('r', "reset"));
 
-    public void reload(FileConfiguration configuration, String textFormat) {
+    private FileConfiguration messages;
+
+    public void reload(FileConfiguration configuration) {
         messages = configuration;
-        format = textFormat;
     }
 
     public Component component(String key) {
@@ -32,9 +42,10 @@ public final class MessageService {
 
     /**
      * Renders pre-composed text that still carries placeholders: substitutes
-     * the prefixes and custom values, then parses per the text format. For
-     * messages assembled from multiple keys (like the win announcement) that
-     * can never pass through {@link #component(String, Map)}.
+     * the prefixes and custom values, then parses as MiniMessage (legacy
+     * &amp; codes convert first). For messages assembled from multiple keys
+     * (like the win announcement) that can never pass through
+     * {@link #component(String, Map)}.
      */
     public Component renderLiteral(String raw, Map<String, String> values) {
         String rendered = raw.replace("{prefix}", messages.getString("prefix", ""))
@@ -76,27 +87,41 @@ public final class MessageService {
         return raw != null && raw.isEmpty();
     }
 
+    /**
+     * Parses raw text as MiniMessage. Legacy &amp; color/format codes are
+     * converted first, so users can still write codes like &amp;7 or &amp;6;
+     * any other &amp; use survives untouched.
+     */
     public Component parse(String raw) {
-        return "legacy".equalsIgnoreCase(format)
-                ? LegacyComponentSerializer.legacyAmpersand().deserialize(raw)
-                : MiniMessage.miniMessage().deserialize(raw);
+        return MiniMessage.miniMessage().deserialize(legacyToMiniMessage(raw));
     }
 
     /**
-     * Parses raw text as MiniMessage regardless of the configured text-format,
-     * for hard-coded messages that embed MiniMessage tags.
+     * Parses hard-coded text as pure MiniMessage, for messages that embed
+     * MiniMessage tags and never carry legacy codes.
      */
     public Component miniMessage(String raw) {
         return MiniMessage.miniMessage().deserialize(raw);
     }
 
-    public String formatPlaceholder(String raw) {
-        if ("legacy".equalsIgnoreCase(format)) {
-            return LegacyComponentSerializer.legacySection().serialize(
-                    LegacyComponentSerializer.legacyAmpersand().deserialize(raw));
+    /**
+     * Converts legacy &amp; codes to MiniMessage tags. Only a code
+     * character after the &amp; converts; anything else (like Tom &amp;
+     * Jerry) survives. Pure for tests.
+     */
+    static String legacyToMiniMessage(String raw) {
+        java.util.regex.Matcher matcher = LEGACY_CODE.matcher(raw);
+        StringBuilder result = new StringBuilder();
+        while (matcher.find()) {
+            char code = Character.toLowerCase(matcher.group(1).charAt(0));
+            matcher.appendReplacement(result, "<" + LEGACY_TAGS.get(code) + ">");
         }
-        return LegacyComponentSerializer.legacySection().serialize(
-                MiniMessage.miniMessage().deserialize(raw));
+        matcher.appendTail(result);
+        return result.toString();
+    }
+
+    public String formatPlaceholder(String raw) {
+        return LegacyComponentSerializer.legacySection().serialize(parse(raw));
     }
 
     public String addSeparators(String text) {

@@ -79,6 +79,7 @@ public final class PlayerCombatListener implements Listener {
         event.setDeathMessage(null);
         GameInstance instance = match.get();
         stats.recordDeath(player.getUniqueId());
+        stats.getOrCreate(instance.matchId(), player.getUniqueId()).deaths++;
         Role role = playerStates.role(player);
         // Spawncamp punishment kills re-enter here synchronously: their state
         // changes run intact, but the punishment broadcast already said it.

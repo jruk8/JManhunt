@@ -44,15 +44,31 @@ class MessageServiceTest {
     }
 
     @Test
-    void renderLiteralResolvesLegacyPrefix() {
+    void renderLiteralConvertsLegacyPrefixCodes() {
         YamlConfiguration config = new YamlConfiguration();
         config.set("prefix", "&8[T]&7 ");
         MessageService messages = new MessageService();
-        messages.reload(config, "legacy");
+        messages.reload(config);
 
         Component rendered = messages.renderLiteral("{prefix}plain win.", Map.of());
 
         assertEquals("[T] plain win.", plain(rendered));
+    }
+
+    @Test
+    void legacyCodesConvertToMiniMessageTags() {
+        assertEquals("<gray>hi", MessageService.legacyToMiniMessage("&7hi"));
+        assertEquals("<gold>hi", MessageService.legacyToMiniMessage("&6hi"));
+        assertEquals("<bold>hi", MessageService.legacyToMiniMessage("&Lhi"));
+        assertEquals("Tom & Jerry <red>hi", MessageService.legacyToMiniMessage("Tom & Jerry &chi"));
+    }
+
+    @Test
+    void parseAppliesLegacyCodes() {
+        MessageService messages = messages();
+
+        assertEquals("hi", plain(messages.parse("&7hi")));
+        assertEquals("hi", plain(messages.parse("<gray>hi")));
     }
 
     @Test
@@ -62,7 +78,7 @@ class MessageServiceTest {
         config.set("a.space", " ");
         config.set("a.kept", "hi");
         MessageService messages = new MessageService();
-        messages.reload(config, "minimessage");
+        messages.reload(config);
 
         assertTrue(messages.isDisabled("a.gone"));
         assertFalse(messages.isDisabled("a.space"));
@@ -75,7 +91,7 @@ class MessageServiceTest {
         YamlConfiguration config = new YamlConfiguration();
         config.set("role-colors.hunter", "&c");
         MessageService messages = new MessageService();
-        messages.reload(config, "minimessage");
+        messages.reload(config);
 
         assertEquals("&cHunter", messages.roleName(Role.HUNTER));
         assertEquals("<#74de66>Speedrunner", messages.roleName(Role.SPEEDRUNNER));
@@ -86,7 +102,7 @@ class MessageServiceTest {
         YamlConfiguration config = new YamlConfiguration();
         config.set("role-colors.hunter", "<red>");
         MessageService messages = new MessageService();
-        messages.reload(config, "minimessage");
+        messages.reload(config);
 
         Component rendered = messages.renderLiteral(
                 "No {role-color-hunter}Hunter<gray> here.", Map.of());
@@ -101,7 +117,7 @@ class MessageServiceTest {
         config.set("debug.probe", "{debug-prefix}<gray>value <white>{value}<gray>.");
         config.set("manhunt.probe", "{prefix}<gray>value <white>{value}<gray>.");
         MessageService messages = new MessageService();
-        messages.reload(config, "minimessage");
+        messages.reload(config);
         return messages;
     }
 

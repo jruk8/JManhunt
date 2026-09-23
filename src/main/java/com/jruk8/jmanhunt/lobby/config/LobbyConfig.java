@@ -11,7 +11,7 @@ import java.util.Map;
  * is never stored here: every lobbytp resolves in the configured lobby
  * world at teleport time. Generated with defaults on first load and
  * reloaded with /manhunt reload; not editable through
- * /manhunt configuration (use the lobbyconfig commands instead).
+ * /manhunt config (use the lobbyconfig commands instead).
  */
 @SuppressWarnings("FieldMayBeFinal")
 @Header({

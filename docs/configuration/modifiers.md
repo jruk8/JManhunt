@@ -27,7 +27,7 @@ Under `modifiers.<name>`, the `enabled` flag decides whether the
 bundle runs at all. Toggle a bundle in-game with:
 
 ```text
-/manhunt configuration modifiers everyone-gets-beef enabled true
+/manhunt config modifiers everyone-gets-beef enabled true
 ```
 
 You can also flip `enabled` in `config.yml` directly, then run

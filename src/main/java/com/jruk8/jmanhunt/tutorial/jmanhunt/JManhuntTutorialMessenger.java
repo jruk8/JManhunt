@@ -7,9 +7,8 @@ import java.util.List;
 
 /**
  * Sends tutorial lines as MiniMessage. Tutorial templates are MiniMessage
- * by design (like the hardcoded challenges footer), so the configured
- * text format does not apply here. Resolves {prefix} from messages.yml
- * and {logo} as the prefix minus its square brackets.
+ * by design (like the hardcoded challenges footer). Resolves {prefix}
+ * from messages.yml and {logo} as the prefix minus its square brackets.
  */
 public final class JManhuntTutorialMessenger implements TutorialMessenger {
 

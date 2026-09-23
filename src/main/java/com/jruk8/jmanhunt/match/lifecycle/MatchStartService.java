@@ -167,14 +167,11 @@ public final class MatchStartService {
         }
         OptionalLong matchCell = worldEngine.onMatchStart(participants, spectators, firstMatch,
                 lobbyId, currentMatchId);
-        Location startCenter = null;
-        if (matchCell.isEmpty() && !plugin.getConfig().getBoolean("world-engine.enabled", false)) {
-            startCenter = surroundParticipants(participants, surroundOrigin);
-        }
         GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell,
                 assignees, spectators);
-        instance.setStartCenter(startCenter);
+        instance.setStartCenter(engineOffStartCenter(participants, surroundOrigin, matchCell));
         store.registerInstance(instance);
+        stats.recordLobbySession(lobbyId);
         applyStartState(instance, participants, spectators, lobbyId);
         publishMatchStart(instance, participants, spectators, lobbyId, matchCell);
         beginMatchPlay(instance);
@@ -182,6 +179,18 @@ public final class MatchStartService {
                 Map.of("lobby", String.valueOf(lobbyId), "index", GameManager.cellString(instance)));
         finishService.logBorderMode();
         return true;
+    }
+
+    /**
+     * Engine-off start center: surrounds participants around the origin
+     * and returns the center, or null when the engine runs the match.
+     */
+    private Location engineOffStartCenter(List<Player> participants, Location surroundOrigin,
+            OptionalLong matchCell) {
+        if (matchCell.isPresent() || plugin.getConfig().getBoolean("world-engine.enabled", false)) {
+            return null;
+        }
+        return surroundParticipants(participants, surroundOrigin);
     }
 
     /** Lobby id used when a start has no other context; negative disables it. */

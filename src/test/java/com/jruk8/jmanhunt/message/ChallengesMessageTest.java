@@ -20,38 +20,38 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ChallengesMessageTest {
 
     @Test
-    void messageIsAlwaysParsedAsMiniMessage() {
-        // The constant embeds MiniMessage tags, so a server configured with the
-        // legacy text format must not turn them into literal tag soup.
-        assertTrue(joined("legacy", true)
+    void messageIsParsedAsMiniMessage() {
+        // The constant embeds MiniMessage tags, which must render, not
+        // print as literal tag soup.
+        assertTrue(joined(true)
                 .contains("you can find the optional addon here."));
     }
 
     @Test
     void hereWordOpensTheBuiltByBitResource() {
         ClickEvent expected = ClickEvent.openUrl(ManhuntCommand.CHALLENGES_URL);
-        List<Component> children = ManhuntCommand.challengesComponents(messages("minimessage"), true).stream()
+        List<Component> children = ManhuntCommand.challengesComponents(messages(), true).stream()
                 .flatMap(line -> line.children().stream()).toList();
         assertTrue(children.stream().anyMatch(child -> isHereLink(child, expected)));
     }
 
     @Test
     void statusShowsActiveWhenCompanionPluginIsEnabled() {
-        assertTrue(joined("minimessage", true).contains("Challenges status: [ACTIVE]"));
+        assertTrue(joined(true).contains("Challenges status: [ACTIVE]"));
     }
 
     @Test
     void statusShowsInactiveWhenCompanionPluginIsMissing() {
-        assertTrue(joined("minimessage", false).contains("Challenges status: [INACTIVE]"));
+        assertTrue(joined(false).contains("Challenges status: [INACTIVE]"));
     }
 
     @Test
     void statusValueIsColoredGreenOrRed() {
-        List<Component> active = ManhuntCommand.challengesComponents(messages("minimessage"), true).stream()
+        List<Component> active = ManhuntCommand.challengesComponents(messages(), true).stream()
                 .flatMap(line -> line.children().stream()).toList();
         assertTrue(active.stream().anyMatch(child ->
                 "ACTIVE".equals(plain(child)) && NamedTextColor.GREEN == child.color()));
-        List<Component> inactive = ManhuntCommand.challengesComponents(messages("minimessage"), false).stream()
+        List<Component> inactive = ManhuntCommand.challengesComponents(messages(), false).stream()
                 .flatMap(line -> line.children().stream()).toList();
         assertTrue(inactive.stream().anyMatch(child ->
                 "INACTIVE".equals(plain(child)) && NamedTextColor.RED == child.color()));
@@ -63,14 +63,14 @@ class ChallengesMessageTest {
                 ManhuntCommand.CHALLENGES_URL);
     }
 
-    private MessageService messages(String format) {
+    private MessageService messages() {
         MessageService messages = new MessageService();
-        messages.reload(new YamlConfiguration(), format);
+        messages.reload(new YamlConfiguration());
         return messages;
     }
 
-    private String joined(String format, boolean companionEnabled) {
-        return ManhuntCommand.challengesComponents(messages(format), companionEnabled).stream()
+    private String joined(boolean companionEnabled) {
+        return ManhuntCommand.challengesComponents(messages(), companionEnabled).stream()
                 .map(this::plain)
                 .collect(Collectors.joining(" "));
     }

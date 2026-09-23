@@ -94,7 +94,7 @@ players fall back to the lowest lobby id that has one (noted in debug
 output). When no teleport exists anywhere, or the lobby world itself is
 missing, players are told no lobby exists and to contact an
 administrator. This file is not editable through
-`/manhunt configuration`.
+`/manhunt config`.
 
 The same file holds lobby upkeep under `care`: arrivals are healed
 and fed at once, and everyone inside is topped up every `interval`

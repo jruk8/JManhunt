@@ -34,6 +34,22 @@ public final class TutorialSession {
         stack.push(node);
     }
 
+    /**
+     * Rewinds to an already-visited node: truncates the stack to it and
+     * resets the step number to the depth, so back history matches the
+     * step. False when the node was never visited (caller pushes fresh).
+     */
+    public boolean revisit(String node) {
+        if (!stack.contains(node)) {
+            return false;
+        }
+        while (!node.equals(stack.peek())) {
+            stack.pop();
+        }
+        shownCount = stack.size();
+        return true;
+    }
+
     /** Pops one node, never the last one. */
     public void pop() {
         if (stack.size() > 1) {

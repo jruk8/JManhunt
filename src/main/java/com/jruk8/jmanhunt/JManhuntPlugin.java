@@ -24,6 +24,7 @@ import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.placeholders.PlaceholderConfigRegistrar;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.player.SpawnCampService;
@@ -33,6 +34,13 @@ import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.tutorial.TutorialChatListener;
 import com.jruk8.jmanhunt.tutorial.TutorialConfigRegistrar;
 import com.jruk8.jmanhunt.tutorial.TutorialService;
+import com.jruk8.jmanhunt.updatechecker.UpdateCheckJoinListener;
+import com.jruk8.jmanhunt.updatechecker.UpdateCheckService;
+import com.jruk8.jmanhunt.updatechecker.UpdateCheckSettings;
+import com.jruk8.jmanhunt.updatechecker.jmanhunt.JManhuntUpdateCheckHttp;
+import com.jruk8.jmanhunt.updatechecker.jmanhunt.JManhuntUpdateCheckLogger;
+import com.jruk8.jmanhunt.updatechecker.jmanhunt.JManhuntUpdateCheckNotifier;
+import com.jruk8.jmanhunt.updatechecker.ports.UpdateCheckNotifier;
 import com.jruk8.jmanhunt.tutorial.jmanhunt.JManhuntTutorialCommands;
 import com.jruk8.jmanhunt.tutorial.jmanhunt.JManhuntTutorialLogger;
 import com.jruk8.jmanhunt.tutorial.jmanhunt.JManhuntTutorialMessenger;
@@ -85,7 +93,10 @@ public final class JManhuntPlugin extends JavaPlugin {
     private LobbyService lobbyService;
     private LobbyConfigRegistrar lobbyConfigs;
     private TutorialConfigRegistrar tutorialConfigs;
+    private PlaceholderConfigRegistrar placeholderConfigs;
     private TutorialService tutorialService;
+    private UpdateCheckService updateChecks;
+    private UpdateCheckNotifier updateCheckNotifier;
     private RoleTeamService roleTeams;
     private SpawnCampService spawnCamp;
     private final List<SettingsListener> settings = new ArrayList<>();
@@ -95,6 +106,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         bootstrapCore();
         bootstrapServices();
         bootstrapGame();
+        setupPlaceholderApi();
 
         Bukkit.getServicesManager().register(JManhuntApi.class,
                 new JManhuntApiImpl(game, playerStates, lobbyService), this, ServicePriority.High);
@@ -129,6 +141,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         lobbyConfigs.register();
         tutorialConfigs = new TutorialConfigRegistrar(this);
         tutorialConfigs.register();
+        placeholderConfigs = new PlaceholderConfigRegistrar(this);
+        placeholderConfigs.register();
         reload();
         debugService.resetToDefaults(getConfig().getBoolean("debug.enabled", false));
     }
@@ -140,7 +154,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         setupStatistics();
         setupEngineState();
         stats = new StatsManager(this, messages, statistics);
-        setupPlaceholderApi();
+        stats.loadLobbySessionsAsync();
 
         configService = new ConfigService(this);
         sounds = new SoundService(this, configService);
@@ -154,6 +168,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         worldEngine = new WorldEngineService(this, messages, configService, engineState);
         worldEngine.deleteOrphanedEndCells();
         checkCrashFlag();
+        updateCheckNotifier = new JManhuntUpdateCheckNotifier(messages);
+        updateChecks = new UpdateCheckService(new JManhuntUpdateCheckHttp("jruk8", "JManhunt"),
+                updateCheckNotifier, new JManhuntUpdateCheckLogger(logger()));
     }
 
     /**
@@ -227,7 +244,8 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     private void setupPlaceholderApi() {
         if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-            expansion = new JManhuntExpansion(this, stats, messages);
+            expansion = new JManhuntExpansion(this, stats, messages, game, playerStates,
+                    winConditionEngine, placeholderConfigs.getPlaceholderConfig());
             expansion.register();
             logger().info("Hooked into PlaceholderAPI as the %jmanhunt_<placeholder>% expansion.");
         } else {
@@ -268,6 +286,8 @@ public final class JManhuntPlugin extends JavaPlugin {
                 this, lobbyService, playerStates, game, messages, sounds,
                 worldEngine::lobbyWorldName, debugService), this);
         getServer().getPluginManager().registerEvents(new TutorialChatListener(this, tutorialService), this);
+        getServer().getPluginManager().registerEvents(
+                new UpdateCheckJoinListener(updateChecks, updateCheckNotifier), this);
     }
 
     private void setupScheduling() {
@@ -282,6 +302,16 @@ public final class JManhuntPlugin extends JavaPlugin {
         Bukkit.getScheduler().runTaskTimer(this, game::broadcastAutostartShortfalls, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(this, tutorialService::checkTimeouts, 100L, 100L);
         Bukkit.getScheduler().runTaskTimer(this, worldEngine::careTick, 20L, 20L);
+        Bukkit.getScheduler().runTaskAsynchronously(this,
+                () -> updateChecks.checkNow(updateCheckSettings(), getPluginMeta().getVersion()));
+    }
+
+    /** Update checker toggles from config.yml. */
+    private UpdateCheckSettings updateCheckSettings() {
+        return new UpdateCheckSettings(getConfig().getBoolean("update-checker.enabled", true),
+                getConfig().getBoolean("update-checker.releases.major", true),
+                getConfig().getBoolean("update-checker.releases.minor", true),
+                getConfig().getBoolean("update-checker.releases.hotfix", false));
     }
 
     @Override public void onDisable() {
@@ -347,15 +377,14 @@ public final class JManhuntPlugin extends JavaPlugin {
         YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION, CONFIG_MOVES);
         reloadConfig();
         YamlFileUpdater.update(this, "messages.yml", "messages-version", MESSAGES_VERSION);
-        if (!new java.io.File(getDataFolder(), "placeholders.yml").exists()) {
-            saveResource("placeholders.yml", false);
+        if (placeholderConfigs != null) {
+            placeholderConfigs.reload();
         }
 
         if (messages == null) {
             messages = new MessageService();
         }
-        messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")),
-                getConfig().getString("text-format", "minimessage"));
+        messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")));
 
         if (lobbyConfigs != null) {
             lobbyConfigs.reload();
