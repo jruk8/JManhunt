@@ -54,4 +54,47 @@ class TimeLimitTest {
         assertEquals(List.of(1_800L, 900L, 600L, 300L, 120L),
                 GameManager.dueThresholds(3_600L, 100L, Set.of()));
     }
+
+    @Test
+    void survivePicksLowestClock() {
+        var outcome = GameManager.resolveSurvive(3_600.0, 1_800.0, 28_800.0);
+        assertEquals(Role.HUNTER, outcome.winner());
+        assertEquals(1_800.0, outcome.limitSecs());
+    }
+
+    @Test
+    void surviveCancelWinsWhenLowest() {
+        var outcome = GameManager.resolveSurvive(3_600.0, 1_800.0, 900.0);
+        assertEquals(true, outcome.cancel());
+        assertEquals(900.0, outcome.limitSecs());
+    }
+
+    @Test
+    void surviveFullTieFavorsSpeedrunners() {
+        var outcome = GameManager.resolveSurvive(1_800.0, 1_800.0, 1_800.0);
+        assertEquals(Role.SPEEDRUNNER, outcome.winner());
+    }
+
+    @Test
+    void surviveRunnerCancelTieFavorsSpeedrunners() {
+        var outcome = GameManager.resolveSurvive(900.0, 1_800.0, 900.0);
+        assertEquals(Role.SPEEDRUNNER, outcome.winner());
+    }
+
+    @Test
+    void surviveHunterCancelTieCancels() {
+        var outcome = GameManager.resolveSurvive(1_800.0, 900.0, 900.0);
+        assertEquals(true, outcome.cancel());
+    }
+
+    @Test
+    void surviveSingleClockWins() {
+        assertEquals(Role.HUNTER, GameManager.resolveSurvive(null, 1_800.0, null).winner());
+        assertEquals(true, GameManager.resolveSurvive(null, null, 28_800.0).cancel());
+    }
+
+    @Test
+    void surviveNoClockResolvesNull() {
+        assertEquals(null, GameManager.resolveSurvive(null, null, null));
+    }
 }

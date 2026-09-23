@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.lobby.SubLobby;
 import com.jruk8.jmanhunt.player.Role;
+import org.bukkit.Location;
 import org.bukkit.scheduler.BukkitTask;
 import java.util.Collections;
 import java.util.HashSet;
@@ -39,6 +40,7 @@ public final class GameInstance {
     private final java.util.Set<Long> timeAnnounced = new java.util.HashSet<>();
     private boolean runnerUnlimitedAnnounced;
     private boolean hunterUnlimitedAnnounced;
+    private Location startCenter;
 
 
     public GameInstance(long matchId, int originLobbyId, OptionalLong cellIndex, long startedAtMillis) {
@@ -243,5 +245,17 @@ public final class GameInstance {
     /** Whole seconds between match start and the given moment. */
     public long elapsedSeconds(long nowMillis) {
         return Math.max(0L, (nowMillis - startedAtMillis) / 1000L);
+    }
+
+    /**
+     * Engine-off start center: participants scatter around it at match
+     * start and again at match end. Null with the engine on.
+     */
+    public Location startCenter() {
+        return startCenter;
+    }
+
+    public void setStartCenter(Location startCenter) {
+        this.startCenter = startCenter;
     }
 }

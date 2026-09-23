@@ -153,6 +153,29 @@ public final class JManhuntPlugin extends JavaPlugin {
                 new NamespacedKey(this, "hunters_compass"));
         worldEngine = new WorldEngineService(this, messages, configService, engineState);
         worldEngine.deleteOrphanedEndCells();
+        checkCrashFlag();
+    }
+
+    /**
+     * Reads the crash flag left by the previous run: a set flag means the
+     * server crashed (disable never ran), so stale end reservations are
+     * cleared after orphan deletion already consumed them. The flag is
+     * then set for this run and cleared again on disable.
+     */
+    private void checkCrashFlag() {
+        if (engineState == null) {
+            return;
+        }
+        try {
+            if (engineState.getCrashFlag()) {
+                logger().warning("JManhunt did not shut down cleanly last run; "
+                        + "clearing stale match reservations from the engine database.");
+                engineState.clearEndReservations();
+            }
+            engineState.setCrashFlag(true);
+        } catch (Exception exception) {
+            logger().warning("Could not check the crash flag: " + exception.getMessage());
+        }
     }
 
     /** Creates the game manager and wires it to the compass, world engine, and listeners. */
@@ -262,6 +285,13 @@ public final class JManhuntPlugin extends JavaPlugin {
     }
 
     @Override public void onDisable() {
+        if (game != null) {
+            try {
+                game.shutdownMatches();
+            } catch (Exception exception) {
+                getLogger().warning("Error while ending matches on shutdown: " + exception.getMessage());
+            }
+        }
         Bukkit.getServicesManager().unregister(JManhuntApi.class);
         if (expansion != null) {
             expansion.unregister();
@@ -269,11 +299,24 @@ public final class JManhuntPlugin extends JavaPlugin {
         if (stats != null) {
             stats.flush();
         }
+        clearCrashFlag();
         if (statistics != null) {
             statistics.close();
         }
         if (engineState != null) {
             engineState.close();
+        }
+    }
+
+    /** Marks a clean shutdown; runs before the engine database closes. */
+    private void clearCrashFlag() {
+        if (engineState == null) {
+            return;
+        }
+        try {
+            engineState.setCrashFlag(false);
+        } catch (Exception exception) {
+            getLogger().warning("Could not clear the crash flag: " + exception.getMessage());
         }
     }
 

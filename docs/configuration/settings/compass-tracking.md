@@ -179,7 +179,7 @@ enable either or both. `delay-seconds` is how long each analysis takes.
 ### Analysis Debuffs
 
 Under `settings.compass.analyze.debuffs`, you can run console commands
-every time an analysis starts, in custom-modifier style: `<p>` is the
+every time an analysis starts, in modifier style: `<p>` is the
 compass holder, `~` resolves against their location, and `<duration>` is
 the analysis delay in whole seconds (floored). The `player` list runs for
 every analyzing holder plus their own role list, and only participants

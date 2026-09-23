@@ -183,39 +183,39 @@ nodes:
         next: "EXIT"
   mod_fun:
     question:
-      - "Pick n' mix! Note that this setup does not support disabling modifiers <gray>(disable with /mh config custom-modifiers NAME enabled false)</gray>."
+      - "Pick n' mix! Note that this setup does not support disabling modifiers <gray>(disable with /mh config modifiers NAME enabled false)</gray>."
     answers:
       - text: "Speedrunners get a speed potion."
         commands:
-          - "jmanhunt:mh config custom-modifiers speedrunners-speed-potion enabled true"
+          - "jmanhunt:mh config modifiers speedrunners-speed-potion enabled true"
         next: "mod_fun"
       - text: "Everyone starts with an iron kit."
         commands:
-          - "jmanhunt:mh config custom-modifiers full-iron-kit enabled true"
+          - "jmanhunt:mh config modifiers full-iron-kit enabled true"
         next: "mod_fun"
       - text: "Killers regenerate health."
         commands:
-          - "jmanhunt:mh config custom-modifiers regen-on-kill enabled true"
+          - "jmanhunt:mh config modifiers regen-on-kill enabled true"
         next: "mod_fun"
       - text: "A diamond for every advancement."
         commands:
-          - "jmanhunt:mh config custom-modifiers diamond-on-advancement enabled true"
+          - "jmanhunt:mh config modifiers diamond-on-advancement enabled true"
         next: "mod_fun"
       - text: "A random mob visits the runners."
         commands:
-          - "jmanhunt:mh config custom-modifiers random-mob-spawner enabled true"
+          - "jmanhunt:mh config modifiers random-mob-spawner enabled true"
         next: "mod_fun"
       - text: "A random item for everyone."
         commands:
-          - "jmanhunt:mh config custom-modifiers random-item-giver enabled true"
+          - "jmanhunt:mh config modifiers random-item-giver enabled true"
         next: "mod_fun"
       - text: "<yellow>Back to modifiers.</yellow>"
         next: "mod_intro"
   mod_toggle:
     question:
-      - "Run <gray>/mh config custom-modifiers</gray> to list every modifier."
-      - "Then switch one with <gray>/mh config custom-modifiers NAME enabled true</gray>, or <gray>false</gray> to switch it off."
-      - "Example: <white>/mh config custom-modifiers everyone-gets-beef enabled true</white>"
+      - "Run <gray>/mh config modifiers</gray> to list every modifier."
+      - "Then switch one with <gray>/mh config modifiers NAME enabled true</gray>, or <gray>false</gray> to switch it off."
+      - "Example: <white>/mh config modifiers everyone-gets-beef enabled true</white>"
     answers:
       - text: "Show me the fun ones."
         recommended: true
@@ -228,7 +228,7 @@ nodes:
         next: "EXIT"
   mod_create:
     question:
-      - "Open <gray>config.yml</gray>, find <gray>custom-modifiers</gray>, copy the <white>everyone-gets-beef</white> block, rename it, and change its commands. Save, then run <white>/mh reload</white>."
+      - "Open <gray>config.yml</gray>, find <gray>modifiers</gray>, copy the <white>everyone-gets-beef</white> block, rename it, and change its commands. Save, then run <white>/mh reload</white>."
       - "Stuck? Grab ready-made ones from the community."
     answers:
       - text: "Get community modifiers on Discord."
@@ -265,7 +265,7 @@ nodes:
     question:
       - "<white>/mh config</white> browses every setting in-game: each word drills one level deeper. A section lists its keys; a leaf shows its value, plus a value to set it."
       - "Example: <white>/mh config world-engine enabled true</white> (needs a restart)."
-      - "Modifiers work the same way: <white>/mh config custom-modifiers everyone-gets-beef enabled true</white>"
+      - "Modifiers work the same way: <white>/mh config modifiers everyone-gets-beef enabled true</white>"
     answers:
       - text: "Learn about Modifiers."
         next: "mod_intro"

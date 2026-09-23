@@ -1,7 +1,7 @@
-# Custom Modifiers
+# Modifiers
 
-**Custom modifiers** are named command bundles you define in `config.yml`
-under `custom-modifiers`. They are disabled by default. A modifier can run
+**Modifiers** are named command bundles you define in `config.yml`
+under `modifiers`. They are disabled by default. A modifier can run
 commands when a match starts, on a recurring interval during the match, when
 specific game events happen, and when the match ends, either from the console
 or once for each participating player.
@@ -9,21 +9,25 @@ or once for each participating player.
 All command examples are the default config settings. Refer to the latest
 version of `config.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
 
-Settings for custom modifiers are categorized under `custom-modifiers`:
+Settings for modifiers are categorized under `modifiers`:
 
 ```yaml
-custom-modifiers:
+modifiers:
   everyone-gets-beef:
     enabled: false
 ```
 
+Writing commands by hand is tedious. Use
+[mcstacker.net](https://mcstacker.net/) to generate up-to-date commands,
+then paste them into your modifier.
+
 # Enabling a Modifier
 
-Under `custom-modifiers.<name>`, the `enabled` flag decides whether the
+Under `modifiers.<name>`, the `enabled` flag decides whether the
 bundle runs at all. Toggle a bundle in-game with:
 
 ```text
-/manhunt configuration custom-modifiers everyone-gets-beef enabled true
+/manhunt configuration modifiers everyone-gets-beef enabled true
 ```
 
 You can also flip `enabled` in `config.yml` directly, then run
@@ -32,12 +36,12 @@ one. Currently only manual YAML file editing is supported for creation.
 
 # Command Lists
 
-Under `custom-modifiers.<name>.commands`, you can configure which commands run
+Under `modifiers.<name>.commands`, you can configure which commands run
 and for whom. The bundled `everyone-gets-beef` example gives every
 participating player eight steaks when the match starts:
 
 ```yaml
-custom-modifiers:
+modifiers:
   everyone-gets-beef:
     enabled: false
     commands:
@@ -66,7 +70,7 @@ commands run in parallel regardless of any player's role.
 
 # Run Timing
 
-Under `custom-modifiers.<name>.runs-on`, you can configure when the commands
+Under `modifiers.<name>.runs-on`, you can configure when the commands
 (other than cleanup) run. It is a list of any of:
 
 | Value | Trigger |
@@ -94,11 +98,11 @@ Except for `ON_START`, every event trigger runs the `player`, `hunter`, and
 
 ## Start Timing
 
-Under `custom-modifiers.<name>.on-start`, an `ON_START` modifier can wait
+Under `modifiers.<name>.on-start`, an `ON_START` modifier can wait
 out the pre-start window before running:
 
 ```yaml
-custom-modifiers:
+modifiers:
   hunter-post-start-speed:
     on-start:
       # BEFORE runs at /manhunt start; AFTER waits until the speedrunner
@@ -112,11 +116,11 @@ there is no pre-start window, so both settings run at match start.
 
 ## Success Chance
 
-Under `custom-modifiers.<name>.success-chance`, you can make the modifier run
+Under `modifiers.<name>.success-chance`, you can make the modifier run
 only sometimes:
 
 ```yaml
-custom-modifiers:
+modifiers:
   gear-dice:
     success-chance:
       # Chance to run, from 0.0 (never) to 1.0 (always). This is a fraction,
@@ -133,11 +137,11 @@ never rolled.
 
 ## Command Execution
 
-Under `custom-modifiers.<name>.commands.execution`, you can run a random line
+Under `modifiers.<name>.commands.execution`, you can run a random line
 from a command list instead of every line:
 
 ```yaml
-custom-modifiers:
+modifiers:
   gear-dice:
     commands:
       execution:
@@ -158,12 +162,12 @@ changes are reliably undone.
 
 ## Interval Settings
 
-Under `custom-modifiers.<name>.interval-settings`, you can configure how often
+Under `modifiers.<name>.interval-settings`, you can configure how often
 an `INTERVAL` modifier repeats. It only applies when `runs-on` contains
 `INTERVAL`:
 
 ```yaml
-custom-modifiers:
+modifiers:
   random-mob-spawner:
     enabled: false
     runs-on:
@@ -191,11 +195,11 @@ tick = 0.05 seconds). Values between `0` and `0.05` execute every tick. Set to
 
 ## Command Delay
 
-Under `custom-modifiers.<name>.delay`, you can delay the modifier's commands
+Under `modifiers.<name>.delay`, you can delay the modifier's commands
 by a number of ticks after they trigger:
 
 ```yaml
-custom-modifiers:
+modifiers:
   everyone-gets-beef:
     delay: 5
 ```
@@ -207,13 +211,37 @@ commands are dropped.
 
 ## Placeholders in Commands
 
-Commands can use these placeholders:
+Commands can use these tags:
 
-| Placeholder | Replaced with |
+| Tag | Replaced with |
 | --- | --- |
 | `<p>` | The participating player's name. Use this in player and role commands. |
 | `<random-mob>` | A random spawnable living entity type in lowercase (e.g. `zombie`, `creeper`). A new roll is made for each command execution. |
 | `<random-item>` | A random item material in lowercase (e.g. `diamond_sword`, `bread`). A new roll is made for each command execution. |
+| `<all-players>` | Every participating player in this match. The command runs once per player with their name. Never touches other matches. |
+| `<all-players:HUNTER>` | Same, but only hunters. `SPEEDRUNNER` works too. |
+| `<random-player>` | One random participating player in this match. |
+| `<random-num:4,12>` | A random whole number between 4 and 12. Order does not matter: `<random-num:12,4>` works the same. |
+| `<random-pick:coal, "dirt", 'sand'>` | One random item from the list. Items can be bare, `"double-quoted"`, or `'single-quoted'`, and may hold spaces. |
+
+Tags evaluate from the inside out, so they nest. The bundled
+`random-start-resources` modifier uses this to hand out a random ore stash:
+
+```yaml
+- "give <p> <random-pick:coal <random-num:4,12>, iron_ingot <random-num:3,9>, gold_ingot <random-num:3,9>, diamond <random-num:1,3>>"
+```
+
+Each `<random-num>` rolls first, then `<random-pick>` chooses one
+`item amount` pair, giving coal (4-12), iron (3-9), gold (3-9), or
+diamonds (1-3).
+
+If a `<random-pick>` item is malformed (mixed quotes, two quoted strings in
+one item), it is skipped with a console warning and another item is tried.
+
+Raw `@a` and `@r` selectors are converted to `<all-players>` and
+`<random-player>` automatically, so old commands stay match-safe. A
+`team=` argument on `@a[...]` survives as a role filter; other vanilla
+selector arguments are dropped.
 
 ## Relative Coordinates
 
@@ -232,7 +260,7 @@ Manhunt roles mirror to vanilla scoreboard teams (`HUNTER`,
 side with the `team` selector argument:
 
 ```yaml
-custom-modifiers:
+modifiers:
   hunter-fear:
     enabled: false
     runs-on:
@@ -241,13 +269,15 @@ custom-modifiers:
       interval: 30
     commands:
       console:
-        - "effect give @a[distance=..15,team=HUNTER] minecraft:darkness 5 0"
+        - "effect give <all-players:HUNTER> minecraft:darkness 5 0"
 ```
 
-Membership follows roles exactly (repaired on every role change and
-login), carries no colors or friendly-fire rules, and `none`/`afk` players
-sit in no team. Pair with `player`/`hunter`/`speedrunner` lists when you
-need per-player placeholders like `<p>` or `~` coordinates instead.
+`<all-players:HUNTER>` only covers hunters in the running match, so it
+stays safe when several matches run at once. Membership follows roles
+exactly (repaired on every role change and login), carries no colors or
+friendly-fire rules, and `none`/`afk` players sit in no team. Pair with
+`player`/`hunter`/`speedrunner` lists when you need per-player tags like
+`<p>` or `~` coordinates instead.
 
 # Match-End Cleanup
 
@@ -257,7 +287,7 @@ bundled `perma-night` modifier, for example, re-enables daylight when the
 match is over:
 
 ```yaml
-custom-modifiers:
+modifiers:
   perma-night:
     enabled: false
     commands:
@@ -279,7 +309,7 @@ match or the lobby.
 A minimal modifier that hands every participant a starter kit looks like this:
 
 ```yaml
-custom-modifiers:
+modifiers:
   starter-kit:
     enabled: false
     commands:
@@ -294,7 +324,7 @@ custom-modifiers:
 
 The default `config.yml` ships more examples to copy from: `full-iron-kit`,
 `speedrunner-health-advantage`, `random-mob-spawner`, `random-item-giver`,
-`gear-dice`, `regen-on-kill`, `diamond-on-advancement`,
+`random-start-resources`, `gear-dice`, `regen-on-kill`, `diamond-on-advancement`,
 `fireres-on-nether-enter`, `hunter-start-debuffs` (slowness II plus
 weakness I on every hunter at match start), and `hunter-post-start-speed`
 (speed for hunters once the game actually begins).

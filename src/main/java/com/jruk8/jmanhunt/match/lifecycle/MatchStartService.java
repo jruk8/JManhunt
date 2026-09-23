@@ -167,11 +167,13 @@ public final class MatchStartService {
         }
         OptionalLong matchCell = worldEngine.onMatchStart(participants, spectators, firstMatch,
                 lobbyId, currentMatchId);
+        Location startCenter = null;
         if (matchCell.isEmpty() && !plugin.getConfig().getBoolean("world-engine.enabled", false)) {
-            surroundParticipants(participants, surroundOrigin);
+            startCenter = surroundParticipants(participants, surroundOrigin);
         }
         GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell,
                 assignees, spectators);
+        instance.setStartCenter(startCenter);
         store.registerInstance(instance);
         applyStartState(instance, participants, spectators, lobbyId);
         publishMatchStart(instance, participants, spectators, lobbyId, matchCell);
@@ -305,15 +307,16 @@ public final class MatchStartService {
      * Gathers participants around the surround origin when the world
      * engine is off, using the same safe-spawn scatter as cell spawns.
      * A null origin (console, autostart) falls back to a random
-     * wilderness point in the game world.
+     * wilderness point in the game world. Returns the center used, or
+     * null when nobody scattered.
      */
-    private void surroundParticipants(List<Player> participants, Location surroundOrigin) {
+    private Location surroundParticipants(List<Player> participants, Location surroundOrigin) {
         if (participants.isEmpty()) {
-            return;
+            return null;
         }
-        Location center = surroundOrigin != null ? surroundOrigin : fallbackOrigin();
+        Location center = surroundOrigin != null ? surroundOrigin.clone() : fallbackOrigin();
         if (center == null || center.getWorld() == null) {
-            return;
+            return null;
         }
         World world = center.getWorld();
         int centerX = center.getBlockX();
@@ -322,6 +325,7 @@ public final class MatchStartService {
             player.teleport(MatchTeleportService.spreadSpawn(world, centerX, centerZ, SURROUND_RADIUS,
                     player.getLocation().getYaw(), player.getLocation().getPitch()));
         }
+        return center;
     }
 
     /** Random origin in the game world for executor-less starts. */

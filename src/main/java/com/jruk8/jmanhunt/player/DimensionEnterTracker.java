@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Tracks per-match Nether/End entry for custom-modifier triggers.
+ * Tracks per-match Nether/End entry for modifier triggers.
  *
  * <p>Each player fires the per-player trigger ({@code ON_NETHER_ENTER} /
  * {@code ON_END_ENTER}) at most once per match, while the first player to

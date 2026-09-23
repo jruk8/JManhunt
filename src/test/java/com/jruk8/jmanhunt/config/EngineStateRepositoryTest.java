@@ -84,4 +84,34 @@ class EngineStateRepositoryTest {
             assertEquals(1L, allocator.reserveStartIndex(1).orElseThrow());
         }
     }
+
+    @Test
+    void crashFlagRoundTrip(@TempDir Path dataFolder) throws Exception {
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertEquals(false, repository.getCrashFlag());
+            repository.setCrashFlag(true);
+            assertEquals(true, repository.getCrashFlag());
+            repository.setCrashFlag(false);
+            assertEquals(false, repository.getCrashFlag());
+        }
+    }
+
+    @Test
+    void crashFlagSurvivesReopen(@TempDir Path dataFolder) throws Exception {
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            repository.setCrashFlag(true);
+        }
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertEquals(true, repository.getCrashFlag());
+        }
+    }
+
+    @Test
+    void clearEndReservationsDropsAll(@TempDir Path dataFolder) throws Exception {
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            repository.putEndReservation(7L, "world_the_end_3");
+            repository.clearEndReservations();
+            assertTrue(repository.endReservations().isEmpty());
+        }
+    }
 }

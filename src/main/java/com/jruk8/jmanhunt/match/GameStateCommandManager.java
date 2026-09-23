@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
+import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
@@ -14,18 +15,16 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
-/** Executes built-in and configured actions at match state transitions. */
+/** Executes game rules and modifiers at match state transitions. */
 public final class GameStateCommandManager {
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
@@ -39,7 +38,7 @@ public final class GameStateCommandManager {
         return intervalEngines.computeIfAbsent(matchId, ignored -> new IntervalEngine());
     }
 
-    /** Names of all enabled custom modifiers. */
+    /** Names of all enabled modifiers. */
     private List<String> enabledModifiers() {
         List<String> enabled = new ArrayList<>();
         for (String name : configService.modifierNames()) {
@@ -63,7 +62,7 @@ public final class GameStateCommandManager {
     public void runStart(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId) {
         cancelPendingDelayed(matchId);
         runDefault("start", participants, lobbySpectators, lobbyId, false);
-        runConfigured("start", participants, matchId);
+        runModifierStarts(matchId);
     }
 
     /**
@@ -88,14 +87,13 @@ public final class GameStateCommandManager {
 
     /** True when the modifier defers its ON_START sequence past the pre-start hit. */
     private boolean afterPrestart(String name) {
-        return runsAfterPrestart(plugin.getConfig()
-                .getString("custom-modifiers." + name + ".on-start.pre-start-order", "BEFORE"));
+        return ModifierTriggers.runsAfterPrestart(plugin.getConfig()
+                .getString("modifiers." + name + ".on-start.pre-start-order", "BEFORE"));
     }
 
     public void runEnd(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
                        boolean lastMatch) {
         cancelPendingDelayed(matchId);
-        runConfigured("end", participants, matchId);
         runDefault("end", participants, lobbySpectators, lobbyId, lastMatch);
     }
 
@@ -109,31 +107,38 @@ public final class GameStateCommandManager {
     }
 
     public void runConsoleCleanup() {
+        ModifierTagScope scope = ModifierTagScope.executor(null, plugin.logger()::warning);
         for (String name : enabledModifiers()) {
-            runCommands("custom-modifiers." + name + ".commands.console-cleanup", null);
+            runCommands("modifiers." + name + ".commands.console-cleanup", null, scope);
         }
     }
 
     public void runPlayerCleanup(List<Player> participants) {
         for (String name : enabledModifiers()) {
             for (Player player : participants) {
-                runCommands("custom-modifiers." + name + ".commands.player-cleanup", player);
+                runCommands("modifiers." + name + ".commands.player-cleanup", player,
+                        matchScope(player, participants));
             }
         }
     }
 
-    /** Per-activation versus per-executor random behavior. */
-    enum TriggerScope {
-        PER_INVOKE, PER_EXECUTOR
-    }
-
-    /** Command selection mode for {@code commands.execution.selection}. */
-    enum Selection {
-        IN_ORDER, PICK_RANDOM
+    /**
+     * Match scope covering the given participants for tag evaluation:
+     * {@code <all-players>} fans out to them and {@code <random-player>}
+     * draws from them, so neither can leak into another match.
+     */
+    private ModifierTagScope matchScope(Player executor, List<Player> participants) {
+        List<ModifierTagScope.Participant> scope = new ArrayList<>(participants.size());
+        for (Player participant : participants) {
+            scope.add(new ModifierTagScope.Participant(participant.getName(),
+                    playerStates.role(participant).name()));
+        }
+        return ModifierTagScope.match(executor == null ? null : executor.getName(),
+                scope, ThreadLocalRandom.current(), plugin.logger()::warning);
     }
 
     /**
-     * Starts interval-based custom modifiers. Should be called when the game
+     * Starts interval-based modifiers. Should be called when the game
      * begins (via {@link GameManager#beginGame()}). Modifiers whose
      * {@code runs-on} list contains INTERVAL are scheduled on a repeating task.
      * Supports decimal intervals: 0-0.05 seconds executes every tick, rounds to
@@ -148,14 +153,16 @@ public final class GameStateCommandManager {
             if (!runsOnContains(name, "INTERVAL")) {
                 continue;
             }
-            String base = "custom-modifiers." + name + ".interval-settings.";
+            String base = "modifiers." + name + ".interval-settings.";
             double intervalSeconds = plugin.getConfig().getDouble(base + "interval", 60.0);
             if (intervalSeconds < 0) {
                 continue;
             }
-            double deviation = clampDeviation(plugin.getConfig().getDouble(base + "deviation", 0.0), intervalSeconds);
-            TriggerScope scope = parseScope(plugin.getConfig().getString(base + "behavior", "PER_INVOKE"));
-            if (deviation > 0.0 && scope == TriggerScope.PER_EXECUTOR) {
+            double deviation = ModifierTriggers.clampDeviation(
+                    plugin.getConfig().getDouble(base + "deviation", 0.0), intervalSeconds);
+            ModifierTriggers.TriggerScope scope = ModifierTriggers.parseScope(
+                    plugin.getConfig().getString(base + "behavior", "PER_INVOKE"));
+            if (deviation > 0.0 && scope == ModifierTriggers.TriggerScope.PER_EXECUTOR) {
                 startPerExecutorInterval(name, matchId);
             } else {
                 scheduleSharedFiring(name, matchId);
@@ -197,14 +204,14 @@ public final class GameStateCommandManager {
         IntervalEngine engine = engine(matchId);
         long generation = engine.generation;
         double intervalSeconds = plugin.getConfig()
-                .getDouble("custom-modifiers." + name + ".interval-settings.interval", 60.0);
+                .getDouble("modifiers." + name + ".interval-settings.interval", 60.0);
         if (intervalSeconds < 0) {
             return;
         }
-        double deviation = clampDeviation(plugin.getConfig()
-                .getDouble("custom-modifiers." + name + ".interval-settings.deviation", 0.0), intervalSeconds);
+        double deviation = ModifierTriggers.clampDeviation(plugin.getConfig()
+                .getDouble("modifiers." + name + ".interval-settings.deviation", 0.0), intervalSeconds);
         if (deviation <= 0.0) {
-            long intervalTicks = secondsToTicks(intervalSeconds);
+            long intervalTicks = ModifierTriggers.secondsToTicks(intervalSeconds);
             AtomicReference<BukkitTask> ref = new AtomicReference<>();
             ref.set(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
                 if (generation != engine.generation || !configService.modifierEnabled(name)) {
@@ -220,7 +227,7 @@ public final class GameStateCommandManager {
             engine.tasks.add(ref.get());
             return;
         }
-        long delayTicks = jitteredIntervalTicks(intervalSeconds, deviation,
+        long delayTicks = ModifierTriggers.jitteredIntervalTicks(intervalSeconds, deviation,
                 ThreadLocalRandom.current().nextDouble());
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -262,7 +269,7 @@ public final class GameStateCommandManager {
                 engine.consoleChained.remove(name);
                 return;
             }
-            runModifierWithDelay(name, () -> dispatchModifier(name, List.of()), matchId);
+            runModifierWithDelay(name, () -> dispatchModifier(name, List.of(), matchId), matchId);
             reconcilePlayerChains(name, matchId);
             scheduleConsoleFiring(name, matchId);
         }, delayTicks));
@@ -289,7 +296,7 @@ public final class GameStateCommandManager {
             boolean present = target != null && playerStates.role(target).isParticipant()
                     && game.isActiveInInstance(matchId, playerId);
             if (present) {
-                runModifierWithDelay(name, () -> dispatchModifier(name, List.of(target)), matchId);
+                runModifierWithDelay(name, () -> dispatchModifier(name, List.of(target), matchId), matchId);
             } else {
                 chainedPlayers(matchId, name).remove(playerId);
             }
@@ -304,13 +311,14 @@ public final class GameStateCommandManager {
     /** Reads the live interval config and rolls the next delay, or -1 when disabled. */
     private long currentJitteredDelay(String name) {
         double intervalSeconds = plugin.getConfig()
-                .getDouble("custom-modifiers." + name + ".interval-settings.interval", 60.0);
+                .getDouble("modifiers." + name + ".interval-settings.interval", 60.0);
         if (intervalSeconds < 0) {
             return -1;
         }
-        double deviation = clampDeviation(plugin.getConfig()
-                .getDouble("custom-modifiers." + name + ".interval-settings.deviation", 0.0), intervalSeconds);
-        return jitteredIntervalTicks(intervalSeconds, deviation, ThreadLocalRandom.current().nextDouble());
+        double deviation = ModifierTriggers.clampDeviation(plugin.getConfig()
+                .getDouble("modifiers." + name + ".interval-settings.deviation", 0.0), intervalSeconds);
+        return ModifierTriggers.jitteredIntervalTicks(intervalSeconds, deviation,
+                ThreadLocalRandom.current().nextDouble());
     }
 
     private Set<UUID> chainedPlayers(long matchId, String name) {
@@ -345,7 +353,7 @@ public final class GameStateCommandManager {
             if (!runsOnContains(name, event)) {
                 continue;
             }
-            runModifierWithDelay(name, () -> dispatchModifier(name, List.of(player)), matchId);
+            runModifierWithDelay(name, () -> dispatchModifier(name, List.of(player), matchId), matchId);
         }
     }
 
@@ -355,7 +363,7 @@ public final class GameStateCommandManager {
      * when they trigger. Cleanup commands never go through here.
      */
     private void runModifierWithDelay(String name, Runnable dispatch, long matchId) {
-        long delay = Math.max(0L, plugin.getConfig().getLong("custom-modifiers." + name + ".delay", 0L));
+        long delay = Math.max(0L, plugin.getConfig().getLong("modifiers." + name + ".delay", 0L));
         if (delay <= 0L) {
             dispatch.run();
             return;
@@ -368,7 +376,8 @@ public final class GameStateCommandManager {
                 // A restart or teardown between scheduling and firing voids
                 // the dispatch: stale interval output never leaks into a
                 // new match.
-                if (!isStaleDispatch(generation, engine.generation, intervalEngines.get(matchId) == engine)) {
+                if (!ModifierTriggers.isStaleDispatch(generation, engine.generation,
+                        intervalEngines.get(matchId) == engine)) {
                     dispatch.run();
                 }
             } finally {
@@ -378,88 +387,73 @@ public final class GameStateCommandManager {
         engine.delayed.add(ref.get());
     }
 
-    /**
-     * True when a delayed dispatch must not fire: its engine restarted
-     * (new generation) or was torn down. Pure for tests.
-     */
-    static boolean isStaleDispatch(long capturedGeneration, long currentGeneration, boolean engineAlive) {
-        return capturedGeneration != currentGeneration || !engineAlive;
-    }
-
-    /**
-     * Canonicalizes a {@code runs-on} trigger name. Currently this only trims
-     * surrounding whitespace; unknown keys (including the removed legacy
-     * {@code ON_FIRST_ENTER_NETHER} / {@code ON_FIRST_ENTER_END} aliases)
-     * pass through unchanged and therefore never match an event.
-     */
-    static String normalizeTrigger(String trigger) {
-        if (trigger == null) {
-            return null;
-        }
-        return trigger.trim();
-    }
-
     private boolean runsOnContains(String name, String event) {
-        List<String> runsOn = plugin.getConfig().getStringList("custom-modifiers." + name + ".runs-on");
-        String canonical = normalizeTrigger(event);
+        List<String> runsOn = plugin.getConfig().getStringList("modifiers." + name + ".runs-on");
+        String canonical = ModifierTriggers.normalizeTrigger(event);
         // When runs-on is omitted, default to ON_START.
         if (runsOn.isEmpty()) {
             return "ON_START".equalsIgnoreCase(canonical);
         }
-        return runsOn.stream().map(GameStateCommandManager::normalizeTrigger).anyMatch(canonical::equalsIgnoreCase);
+        return runsOn.stream().map(ModifierTriggers::normalizeTrigger).anyMatch(canonical::equalsIgnoreCase);
     }
 
     private void runModifierCommands(String name, long matchId) {
-        runModifierWithDelay(name, () -> dispatchModifier(name, game.onlineParticipants(matchId)), matchId);
+        runModifierWithDelay(name, () -> dispatchModifier(name, game.onlineParticipants(matchId), matchId), matchId);
     }
 
     /**
      * Dispatches one modifier activation to its executors. {@code targets} are
      * the players this activation covers: every participant for start/interval
      * triggers, or just the involved player for event triggers. Console always
-     * counts as its own executor. Cleanup commands never pass through here.
+     * counts as its own executor. Match tags ({@code <all-players>},
+     * {@code <random-player>}) always resolve against the full match roster so
+     * event triggers stay match-scoped too. Cleanup commands never pass here.
      */
-    private void dispatchModifier(String name, List<Player> targets) {
-        double chance = clampChance(plugin.getConfig()
-                .getDouble("custom-modifiers." + name + ".success-chance.chance", 1.0));
-        TriggerScope chanceScope = parseScope(plugin.getConfig()
-                .getString("custom-modifiers." + name + ".success-chance.behavior", "PER_INVOKE"));
-        TriggerScope pickScope = parseScope(plugin.getConfig().getString(
-                "custom-modifiers." + name + ".commands.execution.pick-random.behavior", "PER_INVOKE"));
+    private void dispatchModifier(String name, List<Player> targets, long matchId) {
+        List<Player> match = game.onlineParticipants(matchId);
+        double chance = ModifierTriggers.clampChance(plugin.getConfig()
+                .getDouble("modifiers." + name + ".success-chance.chance", 1.0));
+        ModifierTriggers.TriggerScope chanceScope = ModifierTriggers.parseScope(plugin.getConfig()
+                .getString("modifiers." + name + ".success-chance.behavior", "PER_INVOKE"));
+        ModifierTriggers.TriggerScope pickScope = ModifierTriggers.parseScope(plugin.getConfig().getString(
+                "modifiers." + name + ".commands.execution.pick-random.behavior", "PER_INVOKE"));
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        boolean sharedPicks = pickScope == TriggerScope.PER_INVOKE;
+        boolean sharedPicks = pickScope == ModifierTriggers.TriggerScope.PER_INVOKE;
         Map<String, List<String>> shared = new HashMap<>();
         if (sharedPicks) {
             for (String list : List.of("console", "player", "hunter", "speedrunner")) {
                 shared.put(list, resolveCommandList(name, list));
             }
         }
-        if (chanceScope == TriggerScope.PER_EXECUTOR) {
-            if (rollChance(chance, random.nextDouble())) {
-                runCommandList(sharedPicks ? shared.get("console") : resolveCommandList(name, "console"), null);
+        ModifierTagScope consoleScope = matchScope(null, match);
+        if (chanceScope == ModifierTriggers.TriggerScope.PER_EXECUTOR) {
+            if (ModifierTriggers.rollChance(chance, random.nextDouble())) {
+                runCommandList(sharedPicks ? shared.get("console") : resolveCommandList(name, "console"), null,
+                        consoleScope);
             }
             for (Player target : targets) {
-                if (!rollChance(chance, random.nextDouble())) {
+                if (!ModifierTriggers.rollChance(chance, random.nextDouble())) {
                     continue;
                 }
-                runExecutorPlayerLists(name, target, shared, sharedPicks);
+                runExecutorPlayerLists(name, target, shared, sharedPicks, matchScope(target, match));
             }
             return;
         }
-        if (!rollChance(chance, random.nextDouble())) {
+        if (!ModifierTriggers.rollChance(chance, random.nextDouble())) {
             return;
         }
-        runCommandList(shared.get("console"), null);
+        runCommandList(shared.get("console"), null, consoleScope);
         for (Player target : targets) {
-            runExecutorPlayerLists(name, target, shared, true);
+            runExecutorPlayerLists(name, target, shared, true, matchScope(target, match));
         }
     }
 
     private void runExecutorPlayerLists(String name, Player target, Map<String, List<String>> shared,
-                                        boolean useShared) {
-        runCommandList(useShared ? shared.get("player") : resolveCommandList(name, "player"), target);
+                                        boolean useShared, ModifierTagScope scope) {
+        runCommandList(useShared ? shared.get("player") : resolveCommandList(name, "player"), target, scope);
         String roleCommands = playerStates.role(target) == Role.HUNTER ? "hunter" : "speedrunner";
-        runCommandList(useShared ? shared.get(roleCommands) : resolveCommandList(name, roleCommands), target);
+        runCommandList(useShared ? shared.get(roleCommands) : resolveCommandList(name, roleCommands), target,
+                scope);
     }
 
     /**
@@ -469,55 +463,14 @@ public final class GameStateCommandManager {
      */
     private List<String> resolveCommandList(String name, String listKey) {
         List<String> commands = plugin.getConfig()
-                .getStringList("custom-modifiers." + name + ".commands." + listKey);
-        String execBase = "custom-modifiers." + name + ".commands.execution.";
-        if (parseSelection(plugin.getConfig().getString(execBase + "selection", "IN_ORDER"))
-                != Selection.PICK_RANDOM) {
+                .getStringList("modifiers." + name + ".commands." + listKey);
+        String execBase = "modifiers." + name + ".commands.execution.";
+        if (ModifierTriggers.parseSelection(plugin.getConfig().getString(execBase + "selection", "IN_ORDER"))
+                != ModifierTriggers.Selection.PICK_RANDOM) {
             return commands;
         }
         int count = Math.max(1, plugin.getConfig().getInt(execBase + "pick-random.count", 1));
-        return pickCommands(commands, count, ThreadLocalRandom.current());
-    }
-
-    /** Parses a {@code PER_INVOKE} / {@code PER_EXECUTOR} behavior key. */
-    static TriggerScope parseScope(String raw) {
-        if (raw != null && raw.trim().equalsIgnoreCase("PER_EXECUTOR")) {
-            return TriggerScope.PER_EXECUTOR;
-        }
-        return TriggerScope.PER_INVOKE;
-    }
-
-    /** Parses a {@code commands.execution.selection} key. */
-    static Selection parseSelection(String raw) {
-        if (raw != null && raw.trim().equalsIgnoreCase("PICK_RANDOM")) {
-            return Selection.PICK_RANDOM;
-        }
-        return Selection.IN_ORDER;
-    }
-
-    /**
-     * Parses an {@code on-start.pre-start-order} key. Only AFTER defers
-     * the ON_START sequence past the pre-start hit; anything else runs at
-     * match start.
-     */
-    static boolean runsAfterPrestart(String raw) {
-        return raw != null && raw.trim().equalsIgnoreCase("AFTER");
-    }
-
-    /**
-     * Clamps a {@code success-chance.chance} value to the 0.0-1.0 decimal
-     * fraction range. Unset or unreadable values fall back to 1.0 upstream.
-     */
-    static double clampChance(double chance) {
-        if (Double.isNaN(chance)) {
-            return 1.0;
-        }
-        return Math.min(1.0, Math.max(0.0, chance));
-    }
-
-    /** Rolls a clamped chance against a {@code [0.0, 1.0)} draw. */
-    static boolean rollChance(double clampedChance, double roll) {
-        return roll < clampedChance;
+        return ModifierTriggers.pickCommands(commands, count, ThreadLocalRandom.current());
     }
 
     /**
@@ -528,53 +481,12 @@ public final class GameStateCommandManager {
         return (phase.equals("end") && lastMatch) || !toggleEnabled;
     }
 
-    /** Clamps {@code interval-settings.deviation} to {@code [0, interval]}. */
-    static double clampDeviation(double deviation, double intervalSeconds) {
-        if (Double.isNaN(deviation) || deviation <= 0.0) {
-            return 0.0;
-        }
-        if (Double.isNaN(intervalSeconds) || intervalSeconds <= 0.0) {
-            return 0.0;
-        }
-        return Math.min(deviation, intervalSeconds);
-    }
-
-    /**
-     * Converts seconds to ticks, rounding to the nearest tick. Anything at or
-     * below zero ticks becomes a single tick so scheduling never stalls.
-     */
-    static long secondsToTicks(double seconds) {
-        return Math.max(1L, (long) Math.round(seconds * 20.0));
-    }
-
-    /**
-     * Rolls the next interval delay within {@code [interval - deviation,
-     * interval + deviation]} seconds for a {@code [0.0, 1.0)} draw.
-     */
-    static long jitteredIntervalTicks(double intervalSeconds, double deviationSeconds, double roll) {
-        double deviation = clampDeviation(deviationSeconds, intervalSeconds);
-        if (deviation <= 0.0) {
-            return secondsToTicks(intervalSeconds);
-        }
-        return secondsToTicks(intervalSeconds - deviation + roll * deviation * 2.0);
-    }
-
-    /** Draws up to {@code count} distinct lines from a command list. */
-    static List<String> pickCommands(List<String> commands, int count, Random random) {
-        if (commands == null || commands.isEmpty() || count <= 0) {
-            return List.of();
-        }
-        List<String> pool = new ArrayList<>(commands);
-        Collections.shuffle(pool, random);
-        return List.copyOf(pool.subList(0, Math.min(count, pool.size())));
-    }
-
     private void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
                             boolean lastMatch) {
-        if (!plugin.getConfig().getBoolean("gamestate-commands.default-commands.enabled", true)) {
+        if (!plugin.getConfig().getBoolean("match.game-rules.enabled", true)) {
             return;
         }
-        String path = "gamestate-commands.default-commands.";
+        String path = "match.game-rules.rules.";
         if (plugin.getConfig().getBoolean(path + "reset-players-stats", false)) {
             participants.forEach(this::resetPlayer);
         }
@@ -661,28 +573,20 @@ public final class GameStateCommandManager {
         }
     }
 
-    private void runConfigured(String phase, List<Player> participants, long matchId) {
-        String base = "gamestate-commands.";
-        if (plugin.getConfig().getBoolean(base + "console-commands.enabled", false)) {
-            runCommands(base + "console-commands." + phase, null);
-        }
-        if (plugin.getConfig().getBoolean(base + "player-commands.enabled", false)) {
-            for (Player player : participants) {
-                runCommands(base + "player-commands." + phase, player);
-            }
-        }
+    /** Runs ON_START modifiers that do not wait out the pre-start window. */
+    private void runModifierStarts(long matchId) {
         for (String name : enabledModifiers()) {
-            if (phase.equals("start") && runsOnContains(name, "ON_START") && !afterPrestart(name)) {
+            if (runsOnContains(name, "ON_START") && !afterPrestart(name)) {
                 runModifierCommands(name, matchId);
             }
         }
     }
 
-    private void runCommands(String path, Player player) {
-        runCommandList(plugin.getConfig().getStringList(path), player);
+    private void runCommands(String path, Player player, ModifierTagScope scope) {
+        runCommandList(plugin.getConfig().getStringList(path), player, scope);
     }
 
-    private void runCommandList(List<String> commands, Player player) {
+    private void runCommandList(List<String> commands, Player player, ModifierTagScope scope) {
         for (String command : commands) {
             if (command.isBlank()) {
                 continue;
@@ -692,11 +596,13 @@ public final class GameStateCommandManager {
                 double x = player != null ? player.getLocation().getX() : 0.0;
                 double y = player != null ? player.getLocation().getY() : 0.0;
                 double z = player != null ? player.getLocation().getZ() : 0.0;
-                String parsed = CommandPlaceholders.replace(command, playerName, x, y, z);
-                if (parsed.startsWith("/")) {
-                    parsed = parsed.substring(1);
+                for (String expanded : CommandPlaceholders.expandAllPlayers(command, scope)) {
+                    String parsed = CommandPlaceholders.replace(expanded, playerName, x, y, z, scope);
+                    if (parsed.startsWith("/")) {
+                        parsed = parsed.substring(1);
+                    }
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
                 }
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception e) {
                 plugin.logger().severe("Failed to run command '%s'. Skipping..".formatted(command));
                 e.printStackTrace();

@@ -84,6 +84,16 @@ public final class WinConditionEngine {
                 "minecraft:story/enter_the_nether");
     }
 
+    /** True when the cancel survived-time condition is enabled. */
+    public boolean cancelSurviveEnabled() {
+        return config.getBoolean("settings.win-conditions.cancel.survived-time.enabled", true);
+    }
+
+    /** Cancel survived-time in seconds. */
+    public double cancelSurviveTime() {
+        return config.getDouble("settings.win-conditions.cancel.survived-time.time", 28800.0);
+    }
+
     /**
      * Returns true if the player's inventory contains the configured item
      * for their side's acquire-item win condition.

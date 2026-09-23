@@ -37,19 +37,20 @@ public final class ConfigService {
      */
     public static Set<String> settingNames(FileConfiguration config) {
         Set<String> names = new TreeSet<>();
-        var defaults = config.getConfigurationSection("gamestate-commands.default-commands");
-        if (defaults != null) {
-            if (defaults.contains("enabled")) {
-                names.add("default-commands.enabled");
+        var gameRules = config.getConfigurationSection("match.game-rules");
+        if (gameRules != null) {
+            if (gameRules.contains("enabled")) {
+                names.add("match.game-rules.enabled");
             }
-            for (String key : defaults.getKeys(false)) {
-                if (!key.equals("enabled")) {
-                    names.add("default-commands." + key);
+            var rules = gameRules.getConfigurationSection("rules");
+            if (rules != null) {
+                for (String key : rules.getKeys(false)) {
+                    names.add("match.game-rules.rules." + key);
                 }
             }
         }
         for (String name : modifierNames(config)) {
-            names.add("custom-modifiers." + name + ".enabled");
+            names.add("modifiers." + name + ".enabled");
         }
         names.addAll(extraModifierNames(config));
         return names;
@@ -107,12 +108,12 @@ public final class ConfigService {
     }
 
     public static Set<String> modifierNames(FileConfiguration config) {
-        var section = config.getConfigurationSection("custom-modifiers");
+        var section = config.getConfigurationSection("modifiers");
         return section == null ? Set.of() : section.getKeys(false);
     }
 
     public boolean modifierEnabled(String name) {
-        return plugin.getConfig().getBoolean("custom-modifiers." + name + ".enabled", false);
+        return plugin.getConfig().getBoolean("modifiers." + name + ".enabled", false);
     }
 
     private void fireChange(String setting, boolean oldValue, boolean newValue) {
@@ -129,11 +130,11 @@ public final class ConfigService {
         Set<String> names = new TreeSet<>();
         for (String key : root.getKeys(false)) {
             // config-version and send-anonymous-statistics are not editable
-            // and custom-modifiers internals stay .enabled-only (see
+            // and modifiers internals stay .enabled-only (see
             // settingNames above).
             if (key.equals("config-version")
                     || key.equals("send-anonymous-statistics")
-                    || key.equals("custom-modifiers")) {
+                    || key.equals("modifiers")) {
                 continue;
             }
             ConfigurationSection child = root.getConfigurationSection(key);

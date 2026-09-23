@@ -11,6 +11,7 @@ import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.border.BorderMode;
 import com.jruk8.jmanhunt.world.cell.CellBounds;
+import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 
@@ -400,6 +401,7 @@ public final class MatchFinishService {
         List<Player> spectators = instanceNonePlayers(instance);
         boolean lastMatch = store.instances().size() <= 1;
         stateCommands.runEnd(teardownId, participants, spectators, instance.originLobbyId(), lastMatch);
+        scatterEngineOffEnd(instance, participants);
         worldEngine.onMatchEnd(participants, spectators, instance.originLobbyId(), teardownId);
         if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
             playerStates.resetRoles(instance.assignedPlayerIds());
@@ -416,6 +418,55 @@ public final class MatchFinishService {
         restoreSingleBorder();
         logBorderMode();
         autostart.updateAutostartState();
+    }
+
+    /**
+     * With the world engine off, gathers participants around the original
+     * start center with fresh random offsets. A no-op with the engine on
+     * or when no center was recorded.
+     */
+    private void scatterEngineOffEnd(GameInstance instance, List<Player> participants) {
+        Location center = instance.startCenter();
+        if (participants.isEmpty() || center == null || center.getWorld() == null
+                || plugin.getConfig().getBoolean("world-engine.enabled", false)) {
+            return;
+        }
+        World world = center.getWorld();
+        int centerX = center.getBlockX();
+        int centerZ = center.getBlockZ();
+        for (Player player : participants) {
+            player.teleport(MatchTeleportService.spreadSpawn(world, centerX, centerZ,
+                    MatchStartService.SURROUND_RADIUS,
+                    player.getLocation().getYaw(), player.getLocation().getPitch()));
+        }
+    }
+
+    /**
+     * Ends every live match at once for server shutdown: tasks cancelled,
+     * cleanup commands run, synchronous teardown. No announcements, no
+     * scheduler use, and no career statistics are recorded.
+     */
+    public void shutdownAll() {
+        for (GameInstance instance : List.copyOf(store.liveInstances())) {
+            shutdown(instance);
+        }
+    }
+
+    /** Synchronous no-stats teardown of one match for server shutdown. */
+    private void shutdown(GameInstance instance) {
+        if (!instance.active()) {
+            return;
+        }
+        instance.setEnding(true);
+        gameEndListeners.forEach(listener -> listener.accept(instance));
+        Bukkit.getPluginManager().callEvent(new JMatchCancelEvent(instance.matchId()));
+        prestart.cancelWaitingTasks(instance);
+        prestart.cancelHeadstarts(instance);
+        timeLimits.cancelTimeLimit(instance);
+        stateCommands.cancelIntervalModifiers(instance.matchId());
+        stateCommands.runConsoleCleanup();
+        stateCommands.runPlayerCleanup(store.onlineActivePlayers(instance));
+        teardownNow(instance);
     }
 
     /** Cancels the match when exactly one is live; a no-op otherwise. */

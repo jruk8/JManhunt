@@ -94,11 +94,11 @@ public final class YamlFileUpdater {
                 }
                 mergeMissing(user, defaults.getConfigurationSection(key), path);
             } else if (!user.contains(path)) {
-                // Under custom-modifiers.*.commands, treat the section as
+                // Under modifiers.*.commands, treat the section as
                 // user-owned and do not inject default command role keys
                 // (player / speedrunner / hunter / console / ...) so that
                 // renamed or removed keys are not resurrected on reload.
-                if (isCustomModifierCommands(prefix)) {
+                if (isModifierCommands(prefix)) {
                     ConfigurationSection commandsSection = user.getConfigurationSection(prefix);
                     if (commandsSection != null) {
                         continue;
@@ -109,8 +109,8 @@ public final class YamlFileUpdater {
         }
     }
 
-    private static boolean isCustomModifierCommands(String prefix) {
-        if (!prefix.startsWith("custom-modifiers.")) {
+    private static boolean isModifierCommands(String prefix) {
+        if (!prefix.startsWith("modifiers.")) {
             return false;
         }
         return prefix.contains(".commands");

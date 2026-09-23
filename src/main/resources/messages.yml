@@ -180,6 +180,7 @@ game:
   auto-left-bounds: "{prefix}<yellow>You left the match area and were removed from the match."
   auto-left-lobby-world: "{prefix}<yellow>You entered the lobby world and were removed from the match."
   time-left: "{prefix}<yellow>{winner} win in <white>{time}<yellow>."
+  cancel-in: "{prefix}<yellow>Match cancels in <white>{time}<yellow>."
   stat-header: "\n{stat-prefix}{stat}:"
   stat-header-prefix: "<bold><gradient:white:#dbdbdb:white>"
   stat-entry: "{rank-color}#{rank}: {player}: {value}"

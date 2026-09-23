@@ -161,4 +161,23 @@ class WinConditionEngineTest {
 
         assertFalse(engine.materialWins(null, Role.SPEEDRUNNER));
     }
+
+    @Test
+    void cancelSurviveEnabledByDefaultAtEightHours() {
+        WinConditionEngine engine = engine(new YamlConfiguration());
+
+        assertTrue(engine.cancelSurviveEnabled());
+        assertEquals(28800.0, engine.cancelSurviveTime());
+    }
+
+    @Test
+    void cancelSurviveCanBeDisabled() {
+        YamlConfiguration config = new YamlConfiguration();
+        config.set("settings.win-conditions.cancel.survived-time.enabled", false);
+        config.set("settings.win-conditions.cancel.survived-time.time", 60.0);
+        WinConditionEngine engine = engine(config);
+
+        assertFalse(engine.cancelSurviveEnabled());
+        assertEquals(60.0, engine.cancelSurviveTime());
+    }
 }

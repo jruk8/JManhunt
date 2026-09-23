@@ -129,7 +129,7 @@ speedrunner leaves, the other side wins on the spot.
 `/manhunt [id|all]` groups everyone by role and ends with a spectator roll
 call whenever someone is watching. Four extras can be toggled under
 `settings.status`: the per-side win conditions (`show-win-conditions`),
-the running time (`show-elapsed-time`), the enabled custom modifiers
+the running time (`show-elapsed-time`), the enabled modifiers
 (`show-modifiers`, hidden when none are enabled), and a gray
 `L{lobby}|G{game}` tag (`show-ids`, on by default).
 
@@ -196,17 +196,17 @@ is announced to all online players except the one who made it
 > guaranteed-valid enum keys or strict type checking, edit `config.yml`
 > directly and run `/manhunt reload`.
 
-## Custom Modifiers
+## Modifiers
 
 Custom modifiers are named command bundles in `config.yml` under
-`custom-modifiers`. They are disabled by default. A modifier can run commands
+`modifiers`. They are disabled by default. A modifier can run commands
 when a match starts, on a recurring interval during the match, and when it
 ends, either from the console or once for each participating player.
 
 To enable a modifier, use its configuration name:
 
 ```text
-/manhunt configuration custom-modifiers everyone-gets-beef enabled true
+/manhunt configuration modifiers everyone-gets-beef enabled true
 ```
 
 The example modifier in the default config gives players food and applies
@@ -219,8 +219,8 @@ only manual YAML file editing is supported for creation.
 
 ### Full Reference
 
-The complete custom-modifier reference lives in
-[Custom Modifiers](configuration/modifiers.md).
+The complete modifier reference lives in
+[Modifiers](configuration/modifiers.md).
 
 ## Challenges
 

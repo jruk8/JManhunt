@@ -1,5 +1,5 @@
 site_name: JManhunt
-site_description: 🧭 Highly customizable Manhunt plugin for 26.2-26.3+ with compass tracking, custom modifiers, and an automated world reset engine.
+site_description: 🧭 Highly customizable Manhunt plugin for 26.2-26.3+ with compass tracking, modifiers, and an automated world reset engine.
 site_url: https://jruk8.github.io/JManhunt/
 repo_url: https://github.com/jruk8/JManhunt
 repo_name: jruk8/JManhunt
@@ -69,8 +69,8 @@ nav:
           - Pre-generating Cells: configuration/world-engine/pregenerating-cells.md
           - Borders: configuration/world-engine/borders.md
           - Troubleshooting: configuration/world-engine/troubleshooting.md
-      - Custom Modifiers: configuration/modifiers.md
-      - Built-in Match Commands: configuration/match-commands.md
+      - Modifiers: configuration/modifiers.md
+      - Game Rules: configuration/game-rules.md
       - Statistics & PlaceholderAPI: configuration/statistics.md
       - Sounds: configuration/sounds.md
   - Permissions: permissions.md

@@ -84,7 +84,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             <gray> » Challenges status: [{status}<gray>]</gray>
             
             <gray>Looking for modifiers instead? Try \
-            <white>/mh configuration custom-modifiers <key> <value></white>.</gray>
+            <white>/mh configuration modifiers <key> <value></white>.</gray>
             """;
     public static final String CHALLENGES_URL = "https://builtbybit.com/resources/jmanhunt-challenges.121574/";
     private static final String CHALLENGES_LINK_TOKEN = "{link}";

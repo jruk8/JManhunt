@@ -340,8 +340,14 @@ public final class GameManager implements MatchControl {
     }
 
     /** Cancels one match with no winner. */
+    @Override
     public void cancel(GameInstance instance) {
         matchFinish.cancel(instance);
+    }
+
+    /** Ends every live match at once for server shutdown: no stats, no scheduling. */
+    public void shutdownMatches() {
+        matchFinish.shutdownAll();
     }
 
     /**
@@ -497,6 +503,11 @@ public final class GameManager implements MatchControl {
     /** Winner when both time limits run: earlier expiry wins, ties favor runners. Pure for tests. */
     static Role timeLimitWinner(double runnerSecs, double hunterSecs) {
         return TimeLimitService.timeLimitWinner(runnerSecs, hunterSecs);
+    }
+
+    /** Winning survive clock across runners, hunters, and cancel; null when none runs. Pure for tests. */
+    static TimeLimitService.SurviveOutcome resolveSurvive(Double runnerSecs, Double hunterSecs, Double cancelSecs) {
+        return TimeLimitService.resolveSurvive(runnerSecs, hunterSecs, cancelSecs);
     }
 
     /**

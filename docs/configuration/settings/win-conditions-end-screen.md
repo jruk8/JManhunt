@@ -36,6 +36,10 @@ settings:
       kill-mob:
         enabled: false
         mob: "minecraft:ender_dragon"
+    cancel:
+      survived-time:
+        enabled: true
+        time: 28800.0
 ```
 
 ## Speedrunner Conditions
@@ -64,13 +68,21 @@ mirror the speedrunner conditions for the other side: hunters win when
 the clock runs out, when a hunter holds the item, when a hunter completes
 the advancement, or when a hunter kills the mob. All default to off.
 
+## Cancel Conditions
+
+`cancel.survived-time` ends the match with no winner once its `time`
+expires. It is a safety valve for games that never end: enabled by
+default at 8 hours (28800 seconds). Whenever any cancel condition
+succeeds, the match cancels instead of crowning a side.
+
 ## Time Announcements
 
 Whenever a time limit is running, the match hears it count down: 8h, 6h,
 4h, 2h, 1h, 30m, 15m, 10m, 5m, 2m, 1m, 30s, 15s, 10s, then 5-4-3-2-1. A
 mark matching the limit itself stays silent (it would fire the instant
-the match starts). If both sides' clocks are set, the earlier expiry wins
-(ties favor the speedrunners) and the console logs which one was picked.
+the match starts). The lowest enabled time across the speedrunner,
+hunter, and cancel clocks wins; full ties favor the speedrunners, and
+the console logs which clock was picked.
 
 Enable `settings.status.show-win-conditions` to print each side's rules in
 `/manhunt status`, e.g. `Speedrunners win on: eliminate all hunters and

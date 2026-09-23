@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
+import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -219,9 +220,10 @@ final class CompassLockService {
                 continue;
             }
             try {
+                ModifierTagScope scope = ModifierTagScope.executor(holder.getName(), plugin.logger()::warning);
                 String parsed = CommandPlaceholders.replace(
                         CommandPlaceholders.withDuration(command, delaySeconds),
-                        holder.getName(), location.getX(), location.getY(), location.getZ());
+                        holder.getName(), location.getX(), location.getY(), location.getZ(), scope);
                 if (parsed.startsWith("/")) {
                     parsed = parsed.substring(1);
                 }

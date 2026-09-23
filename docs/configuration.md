@@ -11,10 +11,10 @@ See the individual configuration pages for detailed documentation:
   tracking, hunters & speedrunners, win conditions, and game boosts.
 - [World Engine](configuration/world-engine.md): grid-based world
   engine setup, cell pre-generation commands, world border, and troubleshooting.
-- [Custom Modifiers](configuration/modifiers.md): named command bundles,
+- [Modifiers](configuration/modifiers.md): named command bundles,
   run timing, and match-end cleanup.
-- [Built-in Match Commands](configuration/match-commands.md): default
-  game-state actions and match start/end command lists.
+- [Game Rules](configuration/game-rules.md): built-in
+  game-state actions applied at match start and end.
 - [Statistics & PlaceholderAPI](configuration/statistics.md): career
   statistics database and placeholder configuration.
 - [Sounds](configuration/sounds.md): sound configuration for game events.

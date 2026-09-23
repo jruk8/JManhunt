@@ -15,6 +15,9 @@ public interface MatchControl {
     /** Finishes a begun match with the given winner. */
     void finish(GameInstance instance, Role winner);
 
+    /** Cancels a match with no winner. */
+    void cancel(GameInstance instance);
+
     /** Tears down a match and frees its world-engine resources. */
     void teardownNow(GameInstance instance);
 

@@ -9,7 +9,6 @@ import org.bukkit.Bukkit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.WinCondition;
@@ -44,79 +43,127 @@ public final class TimeLimitService {
     }
 
     /**
-     * Starts the time-limit win countdown for a match. With both sides'
-     * limits set, the earlier expiry wins (ties favor the speedrunners)
-     * and a console warning explains the pick. A single per-second task
-     * announces each threshold once and ends the match at zero.
+     * Starts the survive-clock countdown for a match. The lowest enabled
+     * time across the speedrunner, hunter, and cancel clocks wins; full
+     * ties favor the speedrunners, and a console warning explains the pick
+     * when several clocks are set. A single per-second task announces each
+     * threshold once and ends (or cancels) the match at zero.
      */
     public void scheduleTimeLimit(GameInstance instance, long currentMatchId) {
-        boolean runnerClock = winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME);
-        boolean hunterClock = winConditionEngine.enabled(Role.HUNTER, WinCondition.TIME_LIMIT);
-        if (!runnerClock && !hunterClock) {
+        Double runnerSecs = winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME)
+                ? winConditionEngine.time(Role.SPEEDRUNNER) : null;
+        Double hunterSecs = winConditionEngine.enabled(Role.HUNTER, WinCondition.TIME_LIMIT)
+                ? winConditionEngine.time(Role.HUNTER) : null;
+        Double cancelSecs = winConditionEngine.cancelSurviveEnabled()
+                ? winConditionEngine.cancelSurviveTime() : null;
+        SurviveOutcome limit = resolveSurvive(runnerSecs, hunterSecs, cancelSecs);
+        if (limit == null || limit.limitSecs() <= 0.0) {
             return;
         }
-        Optional<TimeLimit> limit = resolveTimeLimit(runnerClock, hunterClock);
-        if (limit.isEmpty()) {
-            return;
+        if (clocksSet(runnerSecs, hunterSecs, cancelSecs) > 1) {
+            plugin.logger().warning("Several survive clocks are set (speedrunners "
+                    + describeClock(runnerSecs) + ", hunters " + describeClock(hunterSecs)
+                    + ", cancel " + describeClock(cancelSecs) + "); the earliest expiry wins: "
+                    + describeOutcome(limit) + ".");
         }
-        Role winner = limit.get().winner();
-        double limitSecs = limit.get().limitSecs();
+        double limitSecs = limit.limitSecs();
         long limitSecsWhole = Math.round(limitSecs);
         long limitMillis = Math.round(limitSecs * 1000.0);
-        String winnerName = winner.displayName() + "s";
-        Role finalWinner = winner;
-        instance.setTimeLimitTask(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (store.instance(currentMatchId).orElse(null) != instance
-                    || !instance.active() || instance.ending()) {
-                cancelTimeLimit(instance);
-                return;
-            }
-            long elapsedMillis = System.currentTimeMillis() - instance.startedAtMillis();
-            long remainingSecs = Math.max(0L, (limitMillis - elapsedMillis) / 1000L);
-            if (remainingSecs > 0L) {
-                for (long mark : dueThresholds(limitSecsWhole, remainingSecs, instance.timeAnnounced())) {
-                    instance.timeAnnounced().add(mark);
+        String winnerName = limit.winner() == null ? null : limit.winner().displayName() + "s";
+        instance.setTimeLimitTask(Bukkit.getScheduler().runTaskTimer(plugin,
+                () -> tickCountdown(instance, currentMatchId, limit, winnerName, limitSecsWhole, limitMillis),
+                20L, 20L));
+    }
+
+    /** One countdown tick: announce due thresholds, or end/cancel at zero. */
+    private void tickCountdown(GameInstance instance, long currentMatchId, SurviveOutcome limit,
+            String winnerName, long limitSecsWhole, long limitMillis) {
+        if (store.instance(currentMatchId).orElse(null) != instance
+                || !instance.active() || instance.ending()) {
+            cancelTimeLimit(instance);
+            return;
+        }
+        long elapsedMillis = System.currentTimeMillis() - instance.startedAtMillis();
+        long remainingSecs = Math.max(0L, (limitMillis - elapsedMillis) / 1000L);
+        if (remainingSecs > 0L) {
+            for (long mark : dueThresholds(limitSecsWhole, remainingSecs, instance.timeAnnounced())) {
+                instance.timeAnnounced().add(mark);
+                if (limit.cancel()) {
+                    messaging.sendToInstance(instance, "game.cancel-in",
+                            Map.of("time", DurationFormat.format(mark)));
+                } else {
                     messaging.sendToInstance(instance, "game.time-left",
                             Map.of("winner", winnerName, "time", DurationFormat.format(mark)));
                 }
-            } else {
-                cancelTimeLimit(instance);
-                control.finish(instance, finalWinner);
             }
-        }, 20L, 20L));
-    }
-
-    /** Resolved time-limit clock: the winner on expiry and the limit in seconds. */
-    private record TimeLimit(Role winner, double limitSecs) {
-    }
-
-    /** Resolves which clock wins, warning when both sides configure one. Empty when disabled. */
-    private Optional<TimeLimit> resolveTimeLimit(boolean runnerClock, boolean hunterClock) {
-        double runnerSecs = winConditionEngine.time(Role.SPEEDRUNNER);
-        double hunterSecs = winConditionEngine.time(Role.HUNTER);
-        double limitSecs;
-        Role winner;
-        if (runnerClock && hunterClock) {
-            if (runnerSecs == hunterSecs) {
-                plugin.logger().warning("Both time-limit win conditions are " + runnerSecs
-                        + "s; favoring the speedrunners.");
-            } else {
-                plugin.logger().warning("Both time-limit win conditions are set (speedrunners "
-                        + runnerSecs + "s, hunters " + hunterSecs + "s); the earlier expiry wins.");
-            }
-            winner = timeLimitWinner(runnerSecs, hunterSecs);
-            limitSecs = Math.min(runnerSecs, hunterSecs);
-        } else if (runnerClock) {
-            winner = Role.SPEEDRUNNER;
-            limitSecs = runnerSecs;
+        } else if (limit.cancel()) {
+            cancelTimeLimit(instance);
+            control.cancel(instance);
         } else {
-            winner = Role.HUNTER;
-            limitSecs = hunterSecs;
+            cancelTimeLimit(instance);
+            control.finish(instance, limit.winner());
         }
-        if (limitSecs <= 0.0) {
-            return Optional.empty();
+    }
+
+    /**
+     * Resolved survive clock: whether the match cancels on expiry, the
+     * winning role (null when cancelling), and the limit in seconds.
+     */
+    public record SurviveOutcome(boolean cancel, Role winner, double limitSecs) {
+    }
+
+    /**
+     * Picks the winning survive clock from the enabled times (null when
+     * disabled). Lowest time wins; ties resolve to the speedrunners first,
+     * then the cancel clock, then the hunters. Null when no clock runs.
+     * Pure for tests.
+     */
+    public static SurviveOutcome resolveSurvive(Double runnerSecs, Double hunterSecs, Double cancelSecs) {
+        double lowest = Double.MAX_VALUE;
+        if (runnerSecs != null) {
+            lowest = Math.min(lowest, runnerSecs);
         }
-        return Optional.of(new TimeLimit(winner, limitSecs));
+        if (hunterSecs != null) {
+            lowest = Math.min(lowest, hunterSecs);
+        }
+        if (cancelSecs != null) {
+            lowest = Math.min(lowest, cancelSecs);
+        }
+        if (lowest == Double.MAX_VALUE) {
+            return null;
+        }
+        if (runnerSecs != null && runnerSecs == lowest) {
+            return new SurviveOutcome(false, Role.SPEEDRUNNER, lowest);
+        }
+        if (cancelSecs != null && cancelSecs == lowest) {
+            return new SurviveOutcome(true, null, lowest);
+        }
+        return new SurviveOutcome(false, Role.HUNTER, lowest);
+    }
+
+    private static int clocksSet(Double runnerSecs, Double hunterSecs, Double cancelSecs) {
+        int set = 0;
+        if (runnerSecs != null) {
+            set++;
+        }
+        if (hunterSecs != null) {
+            set++;
+        }
+        if (cancelSecs != null) {
+            set++;
+        }
+        return set;
+    }
+
+    private static String describeClock(Double secs) {
+        return secs == null ? "off" : secs + "s";
+    }
+
+    private static String describeOutcome(SurviveOutcome limit) {
+        if (limit.cancel()) {
+            return "cancel at " + limit.limitSecs() + "s";
+        }
+        return limit.winner().displayName() + "s at " + limit.limitSecs() + "s";
     }
 
     /** Stops a match's time-limit countdown, if any. */

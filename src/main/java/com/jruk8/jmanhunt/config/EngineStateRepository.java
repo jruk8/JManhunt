@@ -18,6 +18,7 @@ import java.util.Map;
  * {@link StatisticsRepository} instead.
  */
 public final class EngineStateRepository implements AutoCloseable {
+    private static final String CRASH_FLAG_KEY = "crash_flag";
     private final HikariDataSource dataSource;
 
     private EngineStateRepository(HikariDataSource dataSource) {
@@ -149,6 +150,42 @@ public final class EngineStateRepository implements AutoCloseable {
             }
         }
         return rows;
+    }
+
+    /** Drops every end reservation, used after a crash leaves them stale. */
+    public synchronized void clearEndReservations() throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement delete = connection.prepareStatement(
+                        "DELETE FROM end_reservations")) {
+            delete.executeUpdate();
+        }
+    }
+
+    /**
+     * True when the previous run never shut down cleanly. The flag is set
+     * on every enable and cleared on every disable, so a set flag at
+     * enable time means the server crashed (or was killed) mid-run.
+     */
+    public synchronized boolean getCrashFlag() throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement select = connection.prepareStatement(
+                        "SELECT state_value FROM engine_state WHERE state_key=?")) {
+            select.setString(1, CRASH_FLAG_KEY);
+            try (ResultSet result = select.executeQuery()) {
+                return result.next() && result.getLong(1) != 0L;
+            }
+        }
+    }
+
+    public synchronized void setCrashFlag(boolean crashed) throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement update = connection.prepareStatement(
+                        "INSERT INTO engine_state (state_key, state_value) VALUES (?, ?) "
+                                + "ON CONFLICT (state_key) DO UPDATE SET state_value=EXCLUDED.state_value")) {
+            update.setString(1, CRASH_FLAG_KEY);
+            update.setLong(2, crashed ? 1L : 0L);
+            update.executeUpdate();
+        }
     }
 
     @Override public void close() {
