@@ -20,7 +20,7 @@ import java.util.function.LongSupplier;
  * punishment is broadcast server-wide.
  */
 public final class SpawnCampService {
-    /** Punishment for spawn camping, from settings.anti-spawn-camp.punishment. */
+    /** Punishment for spawn camping, from settings.server.anti-spawn-camp.punishment. */
     public enum Punishment {
         KILL,
         GEAR_WIPE;
@@ -58,12 +58,12 @@ public final class SpawnCampService {
      * the configured rolling limit on the same victim.
      */
     public void handleKill(long matchId, Player attacker, Player victim) {
-        if (!plugin.getConfig().getBoolean("settings.anti-spawn-camp.enabled", true)) {
+        if (!plugin.configService().getBoolean("settings.server.anti-spawn-camp.enabled", true)) {
             return;
         }
-        int limit = plugin.getConfig().getInt("settings.anti-spawn-camp.kills", 3);
-        long windowMillis = (long) (plugin.getConfig()
-                .getDouble("settings.anti-spawn-camp.window-seconds", 120.0) * 1000.0);
+        int limit = plugin.configService().getInt("settings.server.anti-spawn-camp.kills", 3);
+        long windowMillis = (long) (plugin.configService()
+                .getDouble("settings.server.anti-spawn-camp.window-seconds", 120.0) * 1000.0);
         int count = recordKill(matchId, attacker.getUniqueId(), victim.getUniqueId(), windowMillis);
         if (count < Math.max(1, limit)) {
             if (shouldWarn(count, limit)) {
@@ -73,7 +73,7 @@ public final class SpawnCampService {
             return;
         }
         Punishment punishment = Punishment.parse(
-                plugin.getConfig().getString("settings.anti-spawn-camp.punishment", "KILL"));
+                plugin.configService().getString("settings.server.anti-spawn-camp.punishment", "KILL"));
         if (punishment == Punishment.GEAR_WIPE) {
             wipeGear(attacker);
             broadcast("game.spawncamp-gear-wipe", attacker, victim, count);

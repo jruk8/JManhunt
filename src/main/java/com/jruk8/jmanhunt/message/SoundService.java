@@ -1,7 +1,8 @@
 package com.jruk8.jmanhunt.message;
 
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.config.SoundsConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
@@ -15,16 +16,20 @@ import java.util.UUID;
  * Orchestrates sound playing.
  */
 public class SoundService {
-    private static final String SOUND_PATH_PREFIX = "sounds.";
     private static final String FALLBACK_SOUND = "minecraft:entity.experience_orb.pickup";
-    private static final String NEUTRAL_SOUND_KEY = "neutral-sound";
+    private static final String NEUTRAL_SOUND_KEY = "ui.neutral-sound";
+    private static final String ANGRY_SOUND_KEY = "ui.angry-sound";
     private final JManhuntPlugin plugin;
-    private final ConfigService config;
+    private final SoundsConfig sounds;
     private final Set<UUID> neutralSuppressed = new HashSet<>();
 
-    public SoundService(JManhuntPlugin plugin, ConfigService config) {
+    /**
+     * @param sounds live sounds store, held by reference across reloads
+     *        (null only in unit tests that never play stored sounds)
+     */
+    public SoundService(JManhuntPlugin plugin, SoundsConfig sounds) {
         this.plugin = plugin;
-        this.config = config;
+        this.sounds = sounds;
     }
 
     public void playGlobalSound(String configKey) {
@@ -53,6 +58,11 @@ public class SoundService {
             return;
         }
         playSound(player, NEUTRAL_SOUND_KEY);
+    }
+
+    /** Shared angry blip for validation errors and invalid input. */
+    public void playAngrySound(Player player) {
+        playSound(player, ANGRY_SOUND_KEY);
     }
 
     /**
@@ -86,10 +96,13 @@ public class SoundService {
     }
 
     private SoundSettings getSoundSettings(String configKey) {
-        String soundPath = getSoundPath(configKey);
-        boolean isEnabled = config.getBoolean(soundPath + ".enabled", false);
+        Object node = sounds == null ? null : ConfigPathMapper.get(sounds, configKey);
+        if (!(node instanceof SoundsConfig.SoundEntry entry)) {
+            return new SoundSettings(configKey, false, FALLBACK_SOUND, 1.0f, 1.0f);
+        }
+        boolean isEnabled = entry.isEnabled();
 
-        String soundInput = config.getString(soundPath + ".sound", FALLBACK_SOUND);
+        String soundInput = entry.getSound();
         NamespacedKey soundKey = NamespacedKey.fromString(soundInput.toLowerCase(Locale.ROOT));
         if (soundKey == null) {
             soundKey = NamespacedKey.minecraft(soundInput.toLowerCase(Locale.ROOT));
@@ -102,15 +115,11 @@ public class SoundService {
             sound = FALLBACK_SOUND;
         }
 
-        float pitch = config.getFloat(soundPath + ".pitch", 1.0f);
-        float volume = config.getFloat(soundPath + ".volume", 1.0f);
+        float pitch = (float) entry.getPitch();
+        float volume = (float) entry.getVolume();
         pitch = Math.min(pitch, 2.0f);
         volume = Math.min(volume, 1.0f);
 
         return new SoundSettings(configKey, isEnabled, sound, pitch, volume);
-    }
-
-    private String getSoundPath(String soundName) {
-        return SOUND_PATH_PREFIX + soundName;
     }
 }

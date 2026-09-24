@@ -183,195 +183,166 @@ lobbies:
 # Settings that modify the game.
 # These can be toggled in-game with the 'config' subcommand.
 settings:
-  # When true, every in-game config change is announced to all online
-  # players except the one who made the change.
-  # Default: false
-  announce-config-changes: false
-  # When true, role changes between passive (none, afk, spectator) and
-  # active (hunter, speedrunner) roles are announced to the player's
-  # lobby mates who are not in a live match.
-  # Good for small setups.
-  # Default: false
-  announce-role-changes: false
 
-  # Game boosts that skew world generation and loot odds in the speedrunners'
-  # favor, without touching any actual gameplay rules.
-  game-boosts:
-    # When true, a datapack that significantly boosts nether structure (fortress and
-    # bastion remnant) spawn frequency is applied to the world.
-    # Requires a server restart to take effect.
+  # Match flow: autostart, pre-start wait, head starts, leaving, win rules, and world boosts.
+  match:
+    # Automatically start a match once each role reaches its configured
+    # minimum queued players.
     # Default: false
-    nether-structures:
-      enabled: false
-    # When true, a datapack that moderately boosts overworld structure (village,
-    # shipwreck, buried treasure, dungeon, ruined portal) spawn frequency is
-    # applied to the world.
-    # Requires a server restart to take effect.
-    # Default: false
-    overworld-structures:
-      enabled: false
-    # Custom loot tables for things like piglin bartering.
-    # Tables may be found in settings/loot-tables.
-    # Loot tables are JSON files with the same format as vanilla Minecraft loot tables
-    # but parsed with some limitations.
-    #
-    # Toggles between custom piglin barter odds.
-    # By default, the custom odds have boosted up ender pearl and obsidian rates.
-    # This may help in balancing the game.
-    # Default: true
-    custom-piglin-barter: true
-
-  # Automatically start a match once each role reaches its configured
-  # minimum queued players.
-  # Default: false
-  autostart:
-    enabled: true
-    # Seconds to wait before automatically running /manhunt start.
-    # Set to 0 to start immediately as soon as the queue is eligible.
-    countdown-seconds: 45
-    # Minimum queued players per role before the autostart countdown can
-    # begin. Only applies to autostart; manual /manhunt start keeps its
-    # own one-hunter-one-speedrunner check. Hard minimum: 1 per role.
-    # Default: 1 hunter, 1 speedrunner
-    minimums:
-      hunter: 1
-      speedrunner: 1
-    # Shortfall broadcasts telling queued players how many more of
-    # each role autostart needs.
-    # Default: false
-    broadcast-requirements:
-      enabled: false
-      # Seconds between broadcasts.
-      # Default: 60
-      interval-seconds: 60
-
-  # How player roles are assigned and reset around the lifecycle of a match.
-  roles:
-    # When true, all queued hunters/speedrunners are reset to NONE when a match
-    # finishes.
-    # Default: true
-    reset-on-game-end:
+    autostart:
       enabled: true
-    # When true, players are reset to NONE when they leave the server.
-    # (only when no game is running, otherwise they are reset to NONE on game end)
+      # Seconds to wait before automatically running /manhunt start.
+      # Set to 0 to start immediately as soon as the queue is eligible.
+      countdown-seconds: 45
+      # Minimum queued players per role before the autostart countdown can
+      # begin. Only applies to autostart; manual /manhunt start keeps its
+      # own one-hunter-one-speedrunner check. Hard minimum: 1 per role.
+      # Default: 1 hunter, 1 speedrunner
+      minimums:
+        hunter: 1
+        speedrunner: 1
+      # Shortfall broadcasts telling queued players how many more of
+      # each role autostart needs.
+      # Default: false
+      broadcast-requirements:
+        enabled: false
+        # Seconds between broadcasts.
+        # Default: 60
+        interval-seconds: 60
+
+    # Start the game only after a speedrunner hits a hunter.
     # Default: true
-    reset-on-leave:
+    start-on-speedrunner-damage:
       enabled: true
-    # Turn NONE-role players into spectators (gamemode plus match
-    # spectating) wherever the plugin would otherwise leave them alone.
-    # AFK players are always left alone.
-    # true: NONEs are put in spectator
-    # false: NONEs keep their gamemode and stay put, like AFK
-    # Default: false
-    turn-nones-spectator:
-      enabled: false
+      # Seconds to wait for a speedrunner to hit a hunter before timing out.
+      # Values below 5 are clamped to 5 seconds. Set to -1 to wait indefinitely.
+      # Default: 45 seconds
+      delay-seconds: 45
+      # What happens if delay-seconds expires before a hit occurs:
+      # CANCEL - Abort the match without recording stats.
+      # FORCE_START - Force the match to start anyway.
+      # Default: FORCE_START
+      on-expire: FORCE_START
+      # When true, all participating players are set to adventure mode during
+      # the pre-start window (before a speedrunner hits a hunter). This prevents
+      # breaking blocks while waiting. Players are restored to survival when the
+      # game begins.
+      # Default: true
+      start-in-adventure-mode: true
 
-  # Where players go when they leave a running match, voluntarily or
-  # automatically: SPECTATOR keeps them at the match as a watcher, LOBBY
-  # sends them back to their lobby as NONE.
-  # Default: SPECTATOR
-  game-leave:
-    destination: SPECTATOR
+    # Head starts that hold one role in spectator mode while the other role
+    # plays. Each side is configured independently.
+    # If start-on-speedrunner-damage is also enabled, the
+    # headstarts only begin when a speedrunner first damages a hunter.
+    headstarts:
+      # Gives speedrunners a head start at match start by holding hunters in
+      # spectator mode.
+      # Default: false
+      speedrunner:
+        enabled: false
+        # Delay in seconds. Values <= 0 mean no delay.
+        # Default: 30
+        delay-seconds: 30
+      # Same, but for hunters.
+      # Default: false
+      hunter:
+        enabled: false
+        # Default: 30
+        delay-seconds: 30
 
-  # Start the game only after a speedrunner hits a hunter.
-  # Default: true
-  start-on-speedrunner-damage:
-    enabled: true
-    # Seconds to wait for a speedrunner to hit a hunter before timing out.
-    # Values below 5 are clamped to 5 seconds. Set to -1 to wait indefinitely.
-    # Default: 45 seconds
-    delay-seconds: 45
-    # What happens if delay-seconds expires before a hit occurs:
-    # CANCEL - Abort the match without recording stats.
-    # FORCE_START - Force the match to start anyway.
-    # Default: FORCE_START
-    on-expire: FORCE_START
-    # When true, all participating players are set to adventure mode during
-    # the pre-start window (before a speedrunner hits a hunter). This prevents
-    # breaking blocks while waiting. Players are restored to survival when the
-    # game begins.
-    # Default: true
-    start-in-adventure-mode: true
+    # Where players go when they leave a running match, voluntarily or
+    # automatically: SPECTATOR keeps them at the match as a watcher, LOBBY
+    # sends them back to their lobby as NONE.
+    # Default: SPECTATOR
+    game-leave:
+      destination: SPECTATOR
 
-  # Head starts that hold one role in spectator mode while the other role
-  # plays. Each side is configured independently.
-  # If start-on-speedrunner-damage is also enabled, the
-  # headstarts only begin when a speedrunner first damages a hunter.
-  headstarts:
-    # Gives speedrunners a head start at match start by holding hunters in
-    # spectator mode.
-    # Default: false
-    speedrunner:
-      enabled: false
-      # Delay in seconds. Values <= 0 mean no delay.
-      # Default: 30
-      delay-seconds: 30
-    # Same, but for hunters.
-    # Default: false
-    hunter:
-      enabled: false
-      # Default: 30
-      delay-seconds: 30
+    # Alternate win conditions. Multiple conditions can be enabled at the same
+    # time; any satisfied condition leads to a win.
+    # Default: exit-end enabled, all others disabled
+    win-conditions:
+      # Conditions the speedrunners can win with.
+      speedrunner:
+        # Speedrunners win by entering the End and returning to the Overworld.
+        exit-end:
+          enabled: true
+        # Speedrunners win by surviving for the configured time.
+        survive-time:
+          enabled: false
+          # Time in seconds the speedrunner(s) must survive.
+          # Default: 3600.0
+          time: 3600.0
+        # Speedrunners win by acquiring the configured item.
+        acquire-item:
+          enabled: false
+          # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
+          # Default: minecraft:netherite_ingot
+          item: "minecraft:netherite_ingot"
+        # Speedrunners win by completing the configured advancement.
+        reach-advancement:
+          enabled: false
+          # The advancement to reach (namespaced key, e.g. minecraft:story/enter_the_nether).
+          # Default: minecraft:story/enter_the_nether
+          advancement: "minecraft:story/enter_the_nether"
+        # Speedrunners win when a speedrunner kills the configured mob.
+        kill-mob:
+          enabled: false
+          # The mob to kill (namespaced key, e.g. minecraft:wither).
+          # Default: minecraft:wither
+          mob: "minecraft:wither"
+      # Conditions the hunters can win with.
+      hunter:
+        # Hunters win when the time expires before the speedrunners win.
+        survive-time:
+          enabled: false
+          time: 3600.0
+        # Hunters win when a hunter acquires the configured item.
+        acquire-item:
+          enabled: false
+          item: "minecraft:netherite_ingot"
+        # Hunters win by completing the configured advancement.
+        reach-advancement:
+          enabled: false
+          advancement: "minecraft:story/enter_the_nether"
+        # Hunters win when a hunter kills the configured mob.
+        kill-mob:
+          enabled: false
+          mob: "minecraft:ender_dragon"
+      # Conditions that cancel the match instead of crowning a winner.
+      cancel:
+        # The match is cancelled once the configured time expires.
+        survived-time:
+          enabled: true
+          # Time in seconds before the match is cancelled.
+          # Default: 28800.0 (8 hours)
+          time: 28800.0
 
-  # Alternate win conditions. Multiple conditions can be enabled at the same
-  # time; any satisfied condition leads to a win.
-  # Default: exit-end enabled, all others disabled
-  win-conditions:
-    # Conditions the speedrunners can win with.
-    speedrunner:
-      # Speedrunners win by entering the End and returning to the Overworld.
-      exit-end:
-        enabled: true
-      # Speedrunners win by surviving for the configured time.
-      survive-time:
+    # Game boosts that skew world generation and loot odds in the speedrunners'
+    # favor, without touching any actual gameplay rules.
+    game-boosts:
+      # When true, a datapack that significantly boosts nether structure (fortress and
+      # bastion remnant) spawn frequency is applied to the world.
+      # Requires a server restart to take effect.
+      # Default: false
+      nether-structures:
         enabled: false
-        # Time in seconds the speedrunner(s) must survive.
-        # Default: 3600.0
-        time: 3600.0
-      # Speedrunners win by acquiring the configured item.
-      acquire-item:
+      # When true, a datapack that moderately boosts overworld structure (village,
+      # shipwreck, buried treasure, dungeon, ruined portal) spawn frequency is
+      # applied to the world.
+      # Requires a server restart to take effect.
+      # Default: false
+      overworld-structures:
         enabled: false
-        # The item to acquire (namespaced key, e.g. minecraft:netherite_ingot).
-        # Default: minecraft:netherite_ingot
-        item: "minecraft:netherite_ingot"
-      # Speedrunners win by completing the configured advancement.
-      reach-advancement:
-        enabled: false
-        # The advancement to reach (namespaced key, e.g. minecraft:story/enter_the_nether).
-        # Default: minecraft:story/enter_the_nether
-        advancement: "minecraft:story/enter_the_nether"
-      # Speedrunners win when a speedrunner kills the configured mob.
-      kill-mob:
-        enabled: false
-        # The mob to kill (namespaced key, e.g. minecraft:wither).
-        # Default: minecraft:wither
-        mob: "minecraft:wither"
-    # Conditions the hunters can win with.
-    hunter:
-      # Hunters win when the time expires before the speedrunners win.
-      survive-time:
-        enabled: false
-        time: 3600.0
-      # Hunters win when a hunter acquires the configured item.
-      acquire-item:
-        enabled: false
-        item: "minecraft:netherite_ingot"
-      # Hunters win by completing the configured advancement.
-      reach-advancement:
-        enabled: false
-        advancement: "minecraft:story/enter_the_nether"
-      # Hunters win when a hunter kills the configured mob.
-      kill-mob:
-        enabled: false
-        mob: "minecraft:ender_dragon"
-    # Conditions that cancel the match instead of crowning a winner.
-    cancel:
-      # The match is cancelled once the configured time expires.
-      survived-time:
-        enabled: true
-        # Time in seconds before the match is cancelled.
-        # Default: 28800.0 (8 hours)
-        time: 28800.0
+      # Custom loot tables for things like piglin bartering.
+      # Tables may be found in settings/loot-tables.
+      # Loot tables are JSON files with the same format as vanilla Minecraft loot tables
+      # but parsed with some limitations.
+      #
+      # Toggles between custom piglin barter odds.
+      # By default, the custom odds have boosted up ender pearl and obsidian rates.
+      # This may help in balancing the game.
+      # Default: true
+      custom-piglin-barter: true
 
   # Compass tracking settings.
   # The compass selects its target in this order:
@@ -453,6 +424,9 @@ settings:
       # Seconds the analysis takes before the compass updates.
       # Default: 1.0
       delay-seconds: 1.0
+      # Seconds between analysis tick sounds, rounded to whole ticks.
+      # Default: 0.5
+      sound-interval-seconds: 0.5
       # Commands run as console when an analysis starts, in modifier
       # style: <p> is the holder, ~ resolves against their location, and
       # <duration> is the analysis delay in whole seconds (floored). The
@@ -595,105 +569,140 @@ settings:
         # Default: 300
         max-ray-distance: 300
 
-  # Friendly fire rules for participants. When disabled for a role, players of
-  # that role cannot damage players of the same role once the game has begun.
-  # Friendly fire is never active during the pre-start window.
-  # Default: true for both
-  friendly-fire:
-    speedrunner: true
-    hunter: true
+# Players: roles, respawn and lives, friendly fire, invulnerability, and role announcements.
+  players:
+    # How player roles are assigned and reset around the lifecycle of a match.
+    roles:
+      # When true, all queued hunters/speedrunners are reset to NONE when a match
+      # finishes.
+      # Default: true
+      reset-on-game-end:
+        enabled: true
+      # When true, players are reset to NONE when they leave the server.
+      # (only when no game is running, otherwise they are reset to NONE on game end)
+      # Default: true
+      reset-on-leave:
+        enabled: true
+      # Turn NONE-role players into spectators (gamemode plus match
+      # spectating) wherever the plugin would otherwise leave them alone.
+      # AFK players are always left alone.
+      # true: NONEs are put in spectator
+      # false: NONEs keep their gamemode and stay put, like AFK
+      # Default: false
+      turn-nones-spectator:
+        enabled: false
 
-  # Delayed respawn and lives, configured independently per role.
-  respawn:
-    # Delayed hunter respawn and hunter lives.
-    hunter:
-      # When true, deceased hunters wait before respawning instead of
-      # respawning immediately.
+    # Delayed respawn and lives, configured independently per role.
+    respawn:
+      # Delayed hunter respawn and hunter lives.
+      hunter:
+        # When true, deceased hunters wait before respawning instead of
+        # respawning immediately.
+        # Default: true
+        enabled: true
+        # Seconds a hunter must wait before respawning after death.
+        # Set to -1 for no delay (respawn immediately).
+        # Default: 15
+        delay-seconds: 15
+        # Hunter lives. A hunter is eliminated when their lives run out.
+        # Set to -1 for unlimited lives.
+        # Default: -1
+        lives: -1
+      # Delayed speedrunner respawn and speedrunner lives.
+      speedrunner:
+        # When true, deceased speedrunners wait before respawning instead of
+        # respawning immediately.
+        # Default: false
+        enabled: false
+        # Seconds a speedrunner must wait before respawning after death.
+        # Set to -1 for no delay (respawn immediately).
+        # Default: 60
+        delay-seconds: 60
+        # Speedrunner lives. A speedrunner is eliminated when their lives run
+        # out.
+        # Set to -1 for unlimited lives.
+        # Default: 1
+        lives: 1
+
+    # Friendly fire rules for participants. When disabled for a role, players of
+    # that role cannot damage players of the same role once the game has begun.
+    # Friendly fire is never active during the pre-start window.
+    # Default: true for both
+    friendly-fire:
+      speedrunner: true
+      hunter: true
+
+    # Invulnerability settings.
+    invulnerability:
+      # Makes all online players invulnerable when the game ends.
+      # Invulnerability is removed when the next match starts.
+      # Default: true
+      on-game-end:
+        enabled: true
+      # Makes players with role NONE (spectators) invulnerable at all times.
+      # Default: true
+      none-players:
+        enabled: true
+
+    # Announces each participant's role when a match starts, in chat and/or as a
+    # title. Both are toggled independently; when both are off, no announcement
+    # (including sounds) plays.
+    # Default: both enabled
+    announce-roles:
+      chat:
+        enabled: true
+      title:
+        enabled: true
+        # Title timing in seconds.
+        fade-in-seconds: 0.5
+        stay-seconds: 3.0
+        fade-out-seconds: 0.5
+
+  # Server: config and role announcements, spawn-camp guard, and status extras.
+  server:
+    # When true, every in-game config change is announced to all online
+    # players except the one who made the change.
+    # Default: false
+    announce-config-changes: false
+    # When true, role changes between passive (none, afk, spectator) and
+    # active (hunter, speedrunner) roles are announced to the player's
+    # lobby mates who are not in a live match.
+    # Good for small setups.
+    # Default: false
+    announce-role-changes: false
+
+    # Rolling anti-spawn-camp guard: too many kills by one attacker on the
+    # same victim inside the window punishes the camper, broadcast to all.
+    anti-spawn-camp:
       # Default: true
       enabled: true
-      # Seconds a hunter must wait before respawning after death.
-      # Set to -1 for no delay (respawn immediately).
-      # Default: 15
-      delay-seconds: 15
-      # Hunter lives. A hunter is eliminated when their lives run out.
-      # Set to -1 for unlimited lives.
-      # Default: -1
-      lives: -1
-    # Delayed speedrunner respawn and speedrunner lives.
-    speedrunner:
-      # When true, deceased speedrunners wait before respawning instead of
-      # respawning immediately.
+      # Kills on the same victim that trigger the punishment.
+      # Default: 3
+      kills: 3
+      # Rolling window in seconds.
+      # Default: 90.0
+      window-seconds: 90.0
+      # Punishment: KILL slays the camper, GEAR-WIPE clears their armor,
+      # offhand, and main hand.
+      # Default: KILL
+      punishment: KILL
+
+    # Optional /manhunt status extras. Each toggles independently.
+    status:
+      # Show "Speedrunners win on ..." and "Hunters win on ..." lines.
       # Default: false
-      enabled: false
-      # Seconds a speedrunner must wait before respawning after death.
-      # Set to -1 for no delay (respawn immediately).
-      # Default: 60
-      delay-seconds: 60
-      # Speedrunner lives. A speedrunner is eliminated when their lives run
-      # out.
-      # Set to -1 for unlimited lives.
-      # Default: 1
-      lives: 1
-
-  # Invulnerability settings.
-  invulnerability:
-    # Makes all online players invulnerable when the game ends.
-    # Invulnerability is removed when the next match starts.
-    # Default: true
-    on-game-end:
-      enabled: true
-    # Makes players with role NONE (spectators) invulnerable at all times.
-    # Default: true
-    none-players:
-      enabled: true
-
-  # Announces each participant's role when a match starts, in chat and/or as a
-  # title. Both are toggled independently; when both are off, no announcement
-  # (including sounds) plays.
-  # Default: both enabled
-  announce-roles:
-    chat:
-      enabled: true
-    title:
-      enabled: true
-      # Title timing in seconds.
-      fade-in-seconds: 0.5
-      stay-seconds: 3.0
-      fade-out-seconds: 0.5
-
-  # Optional /manhunt status extras. Each toggles independently.
-  status:
-    # Show "Speedrunners win on ..." and "Hunters win on ..." lines.
-    # Default: false
-    show-win-conditions: false
-    # Show how long the match has been running.
-    # Default: false
-    show-elapsed-time: false
-    # Show enabled custom modifiers as "Modifiers: a, b, and c".
-    # Hidden when no custom modifier is enabled.
-    # Default: false
-    show-modifiers: false
-    # Show lobby and game ids as L{lobby}|G{game}.
-    # Useful for debugging.
-    # Default: false
-    show-ids: false
-
-  # Rolling anti-spawn-camp guard: too many kills by one attacker on the
-  # same victim inside the window punishes the camper, broadcast to all.
-  anti-spawn-camp:
-    # Default: true
-    enabled: true
-    # Kills on the same victim that trigger the punishment.
-    # Default: 3
-    kills: 3
-    # Rolling window in seconds.
-    # Default: 90.0
-    window-seconds: 90.0
-    # Punishment: KILL slays the camper, GEAR-WIPE clears their armor,
-    # offhand, and main hand.
-    # Default: KILL
-    punishment: KILL
-
+      show-win-conditions: false
+      # Show how long the match has been running.
+      # Default: false
+      show-elapsed-time: false
+      # Show enabled custom modifiers as "Modifiers: a, b, and c".
+      # Hidden when no custom modifier is enabled.
+      # Default: false
+      show-modifiers: false
+      # Show lobby and game ids as L{lobby}|G{game}.
+      # Useful for debugging.
+      # Default: false
+      show-ids: false
 
 # Grid-based single-world manhunt engine.
 # Uses persistent square-spiral cell indexing and teleports participants to
@@ -714,11 +723,6 @@ world-engine:
   # at your own world to use it instead.
   # Default: jmh-lobby
   lobby-world-name: "jmh-lobby"
-  # Teleport players who fall into the void in the lobby world back to their
-  # lobby location (or lobby 0 when theirs is unset). Never applies in the
-  # game world.
-  # Default: true
-  lobby-world-void-rescue: true
   # Preset applied when the lobby world is generated. Delete the world
   # folder and run tpto twice to regenerate with another preset.
   # Default: DEFAULT
@@ -844,83 +848,3 @@ world-engine:
       # immediately.
       # Default: 5
       fadeout-time: 5
-
-
-# Sound names are namespaced Minecraft keys.
-# eg. block.note_block.pling
-# It's recommended to use a sound explorer like
-# https://mudkipdev.github.io/minecraft-sound-explorer/
-sounds:
-  neutral-sound:
-    enabled: true
-    sound: block.note_block.pling
-    pitch: 1.0
-    volume: 1.0
-
-  game:
-    # Runs on autostart countdown and hunter spawn countdown
-    autostart-countdown:
-      enabled: true
-      sound: block.stone_button.click_on
-      pitch: 2.0
-      volume: 1.0
-    # Runs on speedrunner killed (by any means)
-    speedrunner-death:
-      enabled: true
-      sound: block.trial_spawner.detect_player
-      pitch: 1.2
-      volume: 1.0
-    # Runs on hunter killed (by any means)
-    hunter-death:
-      enabled: true
-      sound: entity.player.hurt_sweet_berry_bush
-      pitch: 0.9
-      volume: 1.0
-    # Runs when speedrunners win
-    win-sound:
-      enabled: true
-      sound: entity.ender_dragon.death
-      pitch: 1.0
-      volume: 1.0
-    # Runs when hunters win
-    fail-sound:
-      enabled: true
-      sound: entity.wither.spawn
-      pitch: 1.0
-      volume: 1.0
-    # Runs when a match is canceled
-    cancelled-sound:
-      enabled: true
-      sound: block.bubble_column.whirlpool_ambient
-      pitch: 0.9
-      volume: 1.0
-  # Per-role sounds for the start-of-match role announcement. Each participant
-  # hears their own role's sound.
-  announce:
-    # Heard by each hunter when roles are announced.
-    hunter:
-      enabled: true
-      sound: entity.wither.break_block
-      pitch: 1.3
-      volume: 0.8
-    # Heard by each speedrunner when roles are announced.
-    speedrunner:
-      enabled: true
-      sound: block.copper_chest.close
-      pitch: 1.0
-      volume: 1.0
-    # Heard by each spectator when roles are announced.
-    spectator:
-      enabled: true
-      sound: block.note_block.chime
-      pitch: 1.0
-      volume: 0.8
-  # Compass interaction sounds.
-  compass:
-    # Heard by the holder when left-click cycling the compass target
-    # lock. Only plays when the scroll changes the lock.
-    left-click:
-      enabled: true
-      sound: ui.button.click
-      pitch: 1.0
-      volume: 1.0

@@ -5,7 +5,6 @@ import com.jruk8.jmanhunt.message.MessageService;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -53,14 +52,14 @@ public final class LobbyService {
     }
 
     public int defaultLobbyId() {
-        return plugin.getConfig().getInt("lobbies.default-lobby-id", 0);
+        return plugin.configService().getInt("lobbies.default-lobby-id", 0);
     }
 
     /**
      * Multiple lobbies exist only with the world engine on.
      */
     public boolean multiLobbyAllowed() {
-        return plugin.getConfig().getBoolean("world-engine.enabled", false);
+        return plugin.configService().getBoolean("world-engine.enabled", false);
     }
 
     /**
@@ -127,10 +126,10 @@ public final class LobbyService {
         if (oldId.equals(newId)) {
             return;
         }
-        String mode = plugin.getConfig().getString("lobbies.announce-lobby-changes", "ALL")
-                .toUpperCase(Locale.ROOT);
-        boolean toSelf = mode.equals("ALL") || mode.equals("SELF");
-        boolean toMembers = mode.equals("ALL") || mode.equals("MEMBERS");
+        AnnounceMode mode = plugin.configService().getEnum(
+                "lobbies.announce-lobby-changes", AnnounceMode.class, AnnounceMode.ALL);
+        boolean toSelf = mode.tellsSelf();
+        boolean toMembers = mode.tellsMembers();
         if (!toSelf && !toMembers) {
             return;
         }

@@ -24,30 +24,30 @@ public final class StatisticsRepository implements AutoCloseable {
     }
 
     public static StatisticsRepository open(JManhuntPlugin plugin) throws SQLException {
-        String type = plugin.getConfig().getString("statistics.type", "sqlite").toLowerCase();
+        String type = plugin.configService().getString("statistics.type", "sqlite").toLowerCase();
         if (type.equals("sqlite")) {
-            String file = plugin.getConfig().getString("statistics.sqlite.file", "statistics.db");
+            String file = plugin.configService().getString("statistics.sqlite.file", "statistics.db");
             File database = new File(plugin.getDataFolder(), file);
             if (database.getParentFile() != null) {
                 database.getParentFile().mkdirs();
             }
             StatisticsRepository repository = new StatisticsRepository(plugin, false,
                     dataSource("jdbc:sqlite:" + database, "", "",
-                            plugin.getConfig().getInt("statistics.pool-size", 4)));
+                            plugin.configService().getInt("statistics.pool-size", 4)));
             repository.initialize();
             return repository;
         }
         if (type.equals("postgresql") || type.equals("postgres")) {
-            String host = plugin.getConfig().getString("statistics.postgresql.host", "localhost");
-            int port = plugin.getConfig().getInt("statistics.postgresql.port", 5432);
-            String database = plugin.getConfig().getString("statistics.postgresql.database", "jmanhunt");
-            String user = plugin.getConfig().getString("statistics.postgresql.username", "jmanhunt");
-            String pass = plugin.getConfig().getString("statistics.postgresql.password", "change-me");
-            boolean ssl = plugin.getConfig().getBoolean("statistics.postgresql.ssl", false);
+            String host = plugin.configService().getString("statistics.postgresql.host", "localhost");
+            int port = plugin.configService().getInt("statistics.postgresql.port", 5432);
+            String database = plugin.configService().getString("statistics.postgresql.database", "jmanhunt");
+            String user = plugin.configService().getString("statistics.postgresql.username", "jmanhunt");
+            String pass = plugin.configService().getString("statistics.postgresql.password", "change-me");
+            boolean ssl = plugin.configService().getBoolean("statistics.postgresql.ssl", false);
             String jdbc = "jdbc:postgresql://" + host + ":" + port + "/" + database + "?sslmode="
                     + (ssl ? "require" : "disable");
             StatisticsRepository repository = new StatisticsRepository(plugin, true,
-                    dataSource(jdbc, user, pass, plugin.getConfig().getInt("statistics.pool-size", 4)));
+                    dataSource(jdbc, user, pass, plugin.configService().getInt("statistics.pool-size", 4)));
             repository.initialize();
             return repository;
         }
@@ -140,6 +140,23 @@ public final class StatisticsRepository implements AutoCloseable {
             }
         }
         return rows;
+    }
+
+    /**
+     * Server-wide lifetime totals in one aggregate row for the history book.
+     */
+    public HistoryPlaceholders.Totals lifetime() throws SQLException {
+        String sql = "SELECT SUM(sessions), SUM(kills), SUM(hunter_kills), SUM(speedrunner_kills), "
+                + "SUM(hunter_wins), SUM(speedrunner_wins), SUM(damage_dealt), "
+                + "SUM(time_speedrunner + time_hunter) FROM jmanhunt_player_stats";
+        try (Connection connection = connection();
+                PreparedStatement statement = connection.prepareStatement(sql);
+                ResultSet result = statement.executeQuery()) {
+            result.next();
+            return new HistoryPlaceholders.Totals(result.getInt(1), result.getInt(2),
+                    result.getInt(3), result.getInt(4), result.getInt(5), result.getInt(6),
+                    result.getDouble(7), result.getLong(8));
+        }
     }
 
     public CareerStats load(UUID uuid) throws SQLException {

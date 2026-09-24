@@ -5,26 +5,26 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
-import org.bukkit.configuration.file.FileConfiguration;
+import com.jruk8.jmanhunt.config.ConfigService;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Evaluates alternate win conditions from the {@code settings.win-conditions}
+ * Evaluates alternate win conditions from the {@code settings.match.win-conditions}
  * section of config.yml, grouped by winning side. Multiple conditions can
  * be enabled simultaneously; each side wins as soon as any one of its
  * conditions is satisfied. One role-parameterized core serves both sides.
  */
 public final class WinConditionEngine {
-    private FileConfiguration config;
+    private ConfigService config;
 
-    public WinConditionEngine(FileConfiguration config) {
+    public WinConditionEngine(ConfigService config) {
         this.config = config;
     }
 
     /** Updates the config reference after a reload. */
-    public void reload(FileConfiguration config) {
+    public void reload(ConfigService config) {
         this.config = config;
     }
 
@@ -86,12 +86,12 @@ public final class WinConditionEngine {
 
     /** True when the cancel survived-time condition is enabled. */
     public boolean cancelSurviveEnabled() {
-        return config.getBoolean("settings.win-conditions.cancel.survived-time.enabled", true);
+        return config.getBoolean("settings.match.win-conditions.cancel.survived-time.enabled", true);
     }
 
     /** Cancel survived-time in seconds. */
     public double cancelSurviveTime() {
-        return config.getDouble("settings.win-conditions.cancel.survived-time.time", 28800.0);
+        return config.getDouble("settings.match.win-conditions.cancel.survived-time.time", 28800.0);
     }
 
     /**
@@ -140,7 +140,7 @@ public final class WinConditionEngine {
     }
 
     private String base(Role role, WinCondition condition) {
-        return "settings.win-conditions." + side(role) + "." + leaf(condition) + ".";
+        return "settings.match.win-conditions." + side(role) + "." + leaf(condition) + ".";
     }
 
     private static String side(Role role) {
@@ -149,7 +149,7 @@ public final class WinConditionEngine {
 
     private static String leaf(WinCondition condition) {
         // Both clock variants share the survive-time leaf: hunters read
-        // settings.win-conditions.hunter.survive-time.* like speedrunners.
+        // settings.match.win-conditions.hunter.survive-time.* like speedrunners.
         return switch (condition) {
             case EXIT_END -> "exit-end";
             case SURVIVE_TIME, TIME_LIMIT -> "survive-time";

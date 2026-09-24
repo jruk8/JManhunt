@@ -104,7 +104,7 @@ final class CompassLockService {
         Role targetRole = playerStates.role(player) == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
         List<CompassCandidate> opponents = targets.collectOpponents(player, targetRole, instance);
         List<CompassSighting> sightings = targets.collectSightings(player, targetRole, instance);
-        int maxTargets = plugin.getConfig()
+        int maxTargets = plugin.configService()
                 .getInt("settings.compass.left-click.max-targets", 5);
         if (CompassPick.orderedCandidates(opponents, sightings, maxTargets).size() <= 1) {
             locks.remove(player.getUniqueId());
@@ -121,7 +121,7 @@ final class CompassLockService {
 
     /** Resolves the scroll match, applying the enabled, cooldown, and membership gates. */
     private Optional<GameInstance> scrollMatch(Player player, long now) {
-        if (!plugin.getConfig()
+        if (!plugin.configService()
                 .getBoolean("settings.compass.left-click.enabled", false)) {
             return Optional.empty();
         }
@@ -131,7 +131,7 @@ final class CompassLockService {
         if (analyzing.contains(player.getUniqueId())) {
             return Optional.empty();
         }
-        long cooldownMs = (long) (Math.max(0.0, plugin.getConfig()
+        long cooldownMs = (long) (Math.max(0.0, plugin.configService()
                 .getDouble("settings.compass.left-click.scroll-cooldown", 0.5)) * 1000);
         // Shared pure helper lives on the facade.
         if (!CompassManager.shouldRefresh(now, lastScroll.getOrDefault(player.getUniqueId(), 0L),
@@ -166,23 +166,40 @@ final class CompassLockService {
 
     /**
      * Purposeful analysis lag before a refresh resolves: shows
-     * "Analyzing...", waits out the configured delay, then refreshes.
-     * No second analysis starts while one runs. The caller stamps the
-     * universal refresh clock at analysis start, so cooldowns run from
-     * the click (or auto fire), not from resolution.
+     * "Analyzing...", ticks the analysis sound on the configured interval,
+     * waits out the configured delay, then refreshes. No second analysis
+     * starts while one runs. The caller stamps the universal refresh clock
+     * at analysis start, so cooldowns run from the click (or auto fire),
+     * not from resolution. Click-initiated runs close with the refresh
+     * click sound; automatic runs stay silent at the end.
      */
-    void startAnalysis(Player holder) {
+    void startAnalysis(Player holder, boolean fromClick) {
         UUID id = holder.getUniqueId();
         if (!analyzing.add(id)) {
             return;
         }
         runAnalysisDebuffs(holder);
         actionbars.put(id, messages.component("compass.analyzing-actionbar"));
+        sounds.playSound(holder, "compass.analysis");
+        long intervalTicks = analysisTickInterval(plugin.configService()
+                .getDouble("settings.compass.analyze.sound-interval-seconds", 0.5));
+        Bukkit.getScheduler().runTaskTimer(plugin, task -> {
+            if (!analyzing.contains(id)) {
+                task.cancel();
+                return;
+            }
+            if (holder.isOnline()) {
+                sounds.playSound(holder, "compass.analysis");
+            }
+        }, intervalTicks, intervalTicks);
         long delayTicks = analyzeDelayTicks(
-                plugin.getConfig().getDouble("settings.compass.analyze.delay-seconds", 1.0));
+                plugin.configService().getDouble("settings.compass.analyze.delay-seconds", 1.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             analyzing.remove(id);
             refresher.accept(holder);
+            if (fromClick && holder.isOnline()) {
+                sounds.playSound(holder, "compass.right-click");
+            }
             boolean live = game != null && game.instanceOf(holder.getUniqueId()).isPresent();
             if (!live || !playerStates.role(holder).isParticipant()) {
                 actionbars.remove(id);
@@ -196,23 +213,31 @@ final class CompassLockService {
     }
 
     /**
+     * Analysis tick interval in ticks: seconds rounded to whole ticks
+     * (the game runs 20 ticks per second), at least one. Pure for tests.
+     */
+    static long analysisTickInterval(double intervalSeconds) {
+        return Math.max(1L, Math.round(intervalSeconds * 20.0));
+    }
+
+    /**
      * Runs the configured analysis debuff commands for a participant
      * holder: the shared player list plus their own role list, resolved
      * modifier-style and dispatched as console.
      */
     private void runAnalysisDebuffs(Player holder) {
-        if (!plugin.getConfig().getBoolean("settings.compass.analyze.debuffs.enabled", false)) {
+        if (!plugin.configService().getBoolean("settings.compass.analyze.debuffs.enabled", false)) {
             return;
         }
         Role holderRole = playerStates.role(holder);
         if (!holderRole.isParticipant()) {
             return;
         }
-        double delaySeconds = plugin.getConfig()
+        double delaySeconds = plugin.configService()
                 .getDouble("settings.compass.analyze.delay-seconds", 1.0);
-        List<String> commands = new ArrayList<>(plugin.getConfig()
+        List<String> commands = new ArrayList<>(plugin.configService()
                 .getStringList("settings.compass.analyze.debuffs.commands.player"));
-        commands.addAll(plugin.getConfig().getStringList(
+        commands.addAll(plugin.configService().getStringList(
                 "settings.compass.analyze.debuffs.commands." + holderRole.name().toLowerCase(Locale.ROOT)));
         Location location = holder.getLocation();
         for (String command : commands) {
@@ -237,7 +262,7 @@ final class CompassLockService {
     }
 
     boolean analyzeEnabled(boolean auto) {
-        return plugin.getConfig().getBoolean(auto
+        return plugin.configService().getBoolean(auto
                 ? "settings.compass.analyze.auto" : "settings.compass.analyze.right-click", false);
     }
 }

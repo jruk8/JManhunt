@@ -73,7 +73,7 @@ public final class WorldBorderService {
      * matches that have not begun yet.
      */
     public void applyInstanceBorder(long cellIndex, boolean begun) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         if (!config.enabled() || !config.worldBorderEnabled()) {
             return;
         }
@@ -108,7 +108,7 @@ public final class WorldBorderService {
         trackBorderedWorlds(overworld);
 
         // Check if start-border should be used (requires start-on-speedrunner-damage enabled).
-        boolean startOnDamage = configService.getBoolean("settings.start-on-speedrunner-damage.enabled", false);
+        boolean startOnDamage = configService.getBoolean("settings.match.start-on-speedrunner-damage.enabled", false);
         boolean useStartBorder = config.startBorderActive() && startOnDamage;
 
         if (useStartBorder) {

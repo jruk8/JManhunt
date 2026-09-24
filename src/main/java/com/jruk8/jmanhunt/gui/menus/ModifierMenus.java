@@ -55,31 +55,61 @@ public final class ModifierMenus {
 
     /** 27-slot root with links to both lists. */
     public Menu mainMenu() {
-        return new Menu(GuiTexts.title(messages, text("title-main", "Modifiers")),
-                MenuLayout.parse("#########", "###m#p###", "#########"),
-                this::mainStatic, List::of, null);
+        return mainMenu(null);
     }
 
-    private Map<Integer, MenuButton> mainStatic() {
+    /**
+     * Root with an optional parent. An embedded root (parent supplied)
+     * gains a back button so Back returns to the embedding menu.
+     */
+    public Menu mainMenu(Supplier<Menu> parent) {
+        final Menu[] self = new Menu[1];
+        self[0] = new Menu(GuiTexts.title(messages, text("title-main", "Modifiers")),
+                MenuLayout.parse("#########", "###m#p###", "#########"),
+                () -> mainStatic(self[0], parent), List::of, parent);
+        return self[0];
+    }
+
+    private Map<Integer, MenuButton> mainStatic(Menu self, Supplier<Menu> parent) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
         fixed.put(12, linkButton(Material.DIAMOND, "to-modifiers", "to-modifiers-lore",
                 "Modifiers", enabledModifiers(), store.modifierNames().size(),
-                this::modifiersMenu));
+                () -> modifiersMenu(parent)));
         fixed.put(14, linkButton(Material.FILLED_MAP, "to-presets", "to-presets-lore",
-                "Presets", enabledPresets(), store.presetNames().size(), this::presetsMenu));
+                "Presets", enabledPresets(), store.presetNames().size(),
+                () -> presetsMenu(parent)));
+        if (parent != null) {
+            fixed.put(13, new MenuButton(Material.PAPER,
+                    GuiTexts.name(messages, text("back", "Back"), "Back"),
+                    null, false, false,
+                    player -> {
+                        gui.back(player, self);
+                        sounds.playNeutralSound(player);
+                    }));
+        }
         return fixed;
     }
 
     /** 45-slot modifiers scroll list. */
     public Menu modifiersMenu() {
+        return modifiersMenu(null);
+    }
+
+    /** Modifiers scroll list with an explicit root parent. */
+    public Menu modifiersMenu(Supplier<Menu> parent) {
         return listMenu("title-modifiers", this::modifierButtons,
-                this::mainMenu, this::toggleAllModifiersButton);
+                () -> mainMenu(parent), this::toggleAllModifiersButton);
     }
 
     /** 45-slot presets scroll list. */
     public Menu presetsMenu() {
+        return presetsMenu(null);
+    }
+
+    /** Presets scroll list with an explicit root parent. */
+    public Menu presetsMenu(Supplier<Menu> parent) {
         return listMenu("title-presets", this::presetButtons,
-                this::mainMenu, this::toggleAllPresetsButton);
+                () -> mainMenu(parent), this::toggleAllPresetsButton);
     }
 
     private Menu listMenu(String titleKey, Function<Integer, List<MenuButton>> content,

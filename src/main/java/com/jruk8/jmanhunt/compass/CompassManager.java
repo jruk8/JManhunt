@@ -26,6 +26,7 @@ import java.util.UUID;
 public final class CompassManager {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final SoundService sounds;
     private final PlayerStateStore playerStates;
     private final CompassTargetService targets;
     private final CompassSignalService signal;
@@ -42,6 +43,7 @@ public final class CompassManager {
                           PlayerStateStore playerStates, NamespacedKey compassKey) {
         this.plugin = plugin;
         this.messages = messages;
+        this.sounds = sounds;
         this.playerStates = playerStates;
         this.targets = new CompassTargetService(playerStates);
         this.signal = new CompassSignalService(plugin, playerStates);
@@ -62,7 +64,7 @@ public final class CompassManager {
             // The automatic clock only: holders refreshed less than an
             // interval ago keep their fresh target. Right-clicks stamp
             // this clock too, so each click restarts the interval.
-            long intervalMs = (long) (plugin.getConfig()
+            long intervalMs = (long) (plugin.configService()
                     .getDouble("settings.compass.refresh-interval", 10.0) * 1000);
             long now = System.currentTimeMillis();
             boolean analyze = locks.analyzeEnabled(true);
@@ -77,7 +79,7 @@ public final class CompassManager {
                         }
                         lastAutoRefresh.put(id, now);
                         if (analyze) {
-                            locks.startAnalysis(holder);
+                            locks.startAnalysis(holder, false);
                         } else {
                             refreshCompass(holder);
                         }
@@ -182,13 +184,13 @@ public final class CompassManager {
     private CompassPick resolveCompassPick(Role holderRole, List<CompassCandidate> opponents,
             List<CompassSighting> sightings) {
         String roleBase = "settings.compass." + holderRole.name().toLowerCase(Locale.ROOT) + ".";
-        boolean nearbyEnabled = plugin.getConfig()
+        boolean nearbyEnabled = plugin.configService()
                 .getBoolean(roleBase + "min-distance.enabled", true);
-        double nearbyThreshold = plugin.getConfig()
+        double nearbyThreshold = plugin.configService()
                 .getDouble(roleBase + "min-distance.distance", 25.0);
-        double trackingDistance = plugin.getConfig()
+        double trackingDistance = plugin.configService()
                         .getBoolean(roleBase + "max-distance.enabled", true)
-                ? plugin.getConfig().getDouble(roleBase + "max-distance.distance", -1.0)
+                ? plugin.configService().getDouble(roleBase + "max-distance.distance", -1.0)
                 : -1.0;
         return CompassPick.resolve(opponents, sightings, nearbyEnabled, nearbyThreshold,
                 trackingDistance);
@@ -346,7 +348,7 @@ public final class CompassManager {
     }
 
     public void handleRightClick(Player player) {
-        if (!plugin.getConfig()
+        if (!plugin.configService()
                 .getBoolean("settings.compass.right-click.refresh-on-right-click", false)) {
             return;
         }
@@ -354,7 +356,7 @@ public final class CompassManager {
             return;
         }
         long now = System.currentTimeMillis();
-        long cooldownMs = (long) (plugin.getConfig()
+        long cooldownMs = (long) (plugin.configService()
                 .getDouble("settings.compass.right-click.right-click-cooldown", 3.0) * 1000);
         if (!shouldRefresh(now, lastClickRefresh.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
             return;
@@ -365,9 +367,10 @@ public final class CompassManager {
         lastClickRefresh.put(player.getUniqueId(), now);
         lastAutoRefresh.put(player.getUniqueId(), now);
         if (locks.analyzeEnabled(false)) {
-            locks.startAnalysis(player);
+            locks.startAnalysis(player, true);
             return;
         }
+        sounds.playSound(player, "compass.right-click");
         refreshCompass(player);
     }
 

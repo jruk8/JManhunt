@@ -16,6 +16,7 @@ import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
 
 /** Records Adventure messages; permission checks follow the factory used. */
+@SuppressWarnings("deprecation")
 final class FakeSender implements CommandSender {
 
     private final List<Component> received = new ArrayList<>();

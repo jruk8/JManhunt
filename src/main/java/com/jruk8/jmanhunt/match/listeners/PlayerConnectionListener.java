@@ -104,7 +104,7 @@ public final class PlayerConnectionListener implements Listener {
             // Joining NONEs take spectator gamemode only with the toggle;
             // AFK players keep their role and their gamemode.
             if (playerStates.role(player) == Role.NONE
-                    && config.getBoolean("settings.roles.turn-nones-spectator.enabled", false)) {
+                    && config.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
                 player.setGameMode(GameMode.SPECTATOR);
             }
         }
@@ -115,7 +115,7 @@ public final class PlayerConnectionListener implements Listener {
         plugin.roleTeams().remove(player);
         int lobbyId = lobbyIdFor(player.getUniqueId());
         lobbies.remove(player.getUniqueId());
-        if (config.getBoolean("settings.roles.reset-on-leave.enabled", true)
+        if (config.getBoolean("settings.players.roles.reset-on-leave.enabled", true)
                 && playerStates.role(player) != Role.AFK
                 && (lobbyId < 0 || game.instanceForLobby(lobbyId).isEmpty())) {
             playerStates.setRole(player.getUniqueId(), Role.NONE);
@@ -184,7 +184,7 @@ public final class PlayerConnectionListener implements Listener {
         // Disconnect removal always lands on NONE; the toggle decides the
         // gamemode. AFK players are never tracked, so they keep theirs.
         Player onlinePlayer = Bukkit.getPlayer(playerId);
-        if (onlinePlayer != null && config.getBoolean("settings.roles.turn-nones-spectator.enabled", false)) {
+        if (onlinePlayer != null && config.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
             onlinePlayer.setGameMode(GameMode.SPECTATOR);
         }
         if (onlinePlayer != null) {

@@ -72,7 +72,7 @@ public final class AutostartService {
             Bukkit.getScheduler().runTask(plugin, () -> updateAutostartState());
             return;
         }
-        if (!plugin.getConfig().getBoolean("settings.autostart.enabled", false)) {
+        if (!plugin.configService().getBoolean("settings.match.autostart.enabled", false)) {
             cancelAllAutostartCountdowns(true);
             return;
         }
@@ -104,7 +104,7 @@ public final class AutostartService {
         if (autostartCountdowns.containsKey(lobbyId)) {
             return;
         }
-        int configured = Math.max(0, plugin.getConfig().getInt("settings.autostart.countdown-seconds", 60));
+        int configured = Math.max(0, plugin.configService().getInt("settings.match.autostart.countdown-seconds", 60));
         if (configured == 0) {
             control.start(lobbyId);
             return;
@@ -181,8 +181,8 @@ public final class AutostartService {
             }
         }
         return autostartShortfall(hunters, speedrunners,
-                plugin.getConfig().getInt("settings.autostart.minimums.hunter", 1),
-                plugin.getConfig().getInt("settings.autostart.minimums.speedrunner", 1));
+                plugin.configService().getInt("settings.match.autostart.minimums.hunter", 1),
+                plugin.configService().getInt("settings.match.autostart.minimums.speedrunner", 1));
     }
 
     /**
@@ -214,14 +214,14 @@ public final class AutostartService {
      * members.
      */
     public void broadcastAutostartShortfalls() {
-        if (!plugin.getConfig().getBoolean("settings.autostart.enabled", false)) {
+        if (!plugin.configService().getBoolean("settings.match.autostart.enabled", false)) {
             return;
         }
-        if (!plugin.getConfig().getBoolean("settings.autostart.broadcast-requirements.enabled", false)) {
+        if (!plugin.configService().getBoolean("settings.match.autostart.broadcast-requirements.enabled", false)) {
             return;
         }
-        int intervalSeconds = Math.max(1, plugin.getConfig()
-                .getInt("settings.autostart.broadcast-requirements.interval-seconds", 60));
+        int intervalSeconds = Math.max(1, plugin.configService()
+                .getInt("settings.match.autostart.broadcast-requirements.interval-seconds", 60));
         long now = System.currentTimeMillis();
         for (int lobbyId : lobbies.lobbyIds()) {
             broadcastLobbyShortfall(lobbyId, now, intervalSeconds);

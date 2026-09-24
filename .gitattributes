@@ -1,0 +1,6 @@
+# Default everything to auto-detect text line endings
+* text=auto
+
+# Force Unix line endings for shell scripts and Gradle wrappers
+*.sh text eol=lf
+gradlew text eol=lf

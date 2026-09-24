@@ -109,7 +109,7 @@ public final class WorldEngineService implements SettingsListener {
 
     public void onMatchEnd(List<Player> participants, List<Player> spectators, int lobbyId, long matchId) {
         borders.clearInstanceBorders();
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         if (!config.enabled()) {
             return;
         }
@@ -140,7 +140,7 @@ public final class WorldEngineService implements SettingsListener {
         // Spectators placed at the cell center at match start return to the
         // lobby with everyone else. When NONE spectator handling is disabled
         // they were never moved, so they are left alone.
-        if (plugin.getConfig().getBoolean("settings.roles.turn-nones-spectator.enabled", false)) {
+        if (configService.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
             for (Player spectator : spectators) {
                 spectator.teleport(lobby);
                 spectator.setRespawnLocation(lobby, true);
@@ -277,7 +277,7 @@ public final class WorldEngineService implements SettingsListener {
      * restarts or crashes plus stray folders from older versions.
      */
     public void deleteOrphanedEndCells() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         int deleted = endCells.deleteOrphans(config.worldName());
         if (deleted > 0) {
             plugin.logger().info("Deleted " + deleted + " orphaned end dimension(s).");
@@ -314,18 +314,19 @@ public final class WorldEngineService implements SettingsListener {
      * enabled state.
      */
     private void refreshDatapacks() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         boolean worldEnabled = configService.getBoolean("world-engine.enabled", false);
         strongholdDatapackManager.apply(config.worldName(), worldEnabled);
         if (!worldEnabled) {
             strongholdDatapackManager.remove(config.worldName(), false);
         }
-        boolean netherEnabled = configService.getBoolean("settings.game-boosts.nether-structures.enabled", false);
+        boolean netherEnabled = configService.getBoolean("settings.match.game-boosts.nether-structures.enabled", false);
         netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);
         if (!netherEnabled) {
             netherStructuresDatapackManager.remove(config.worldName(), false);
         }
-        boolean overworldEnabled = configService.getBoolean("settings.game-boosts.overworld-structures.enabled", false);
+        boolean overworldEnabled = configService.getBoolean(
+                "settings.match.game-boosts.overworld-structures.enabled", false);
         overworldStructuresDatapackManager.apply(config.worldName(), overworldEnabled);
         if (!overworldEnabled) {
             overworldStructuresDatapackManager.remove(config.worldName(), false);

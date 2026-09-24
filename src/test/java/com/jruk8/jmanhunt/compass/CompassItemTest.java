@@ -61,4 +61,14 @@ class CompassItemTest {
         assertEquals(1L, CompassLockService.analyzeDelayTicks(0.0));
         assertEquals(1L, CompassLockService.analyzeDelayTicks(-2.0));
     }
+
+    @Test
+    void analysisTickIntervalRoundsToWholeTicks() {
+        assertEquals(10L, CompassLockService.analysisTickInterval(0.5));
+        assertEquals(20L, CompassLockService.analysisTickInterval(1.0));
+        assertEquals(1L, CompassLockService.analysisTickInterval(0.07));
+        assertEquals(2L, CompassLockService.analysisTickInterval(0.08));
+        assertEquals(1L, CompassLockService.analysisTickInterval(0.0));
+        assertEquals(1L, CompassLockService.analysisTickInterval(-1.0));
+    }
 }

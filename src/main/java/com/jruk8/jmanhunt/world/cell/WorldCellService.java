@@ -58,7 +58,7 @@ public final class WorldCellService {
      */
     public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
             boolean applyBorder, int lobbyId, long matchId) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled() || participants.isEmpty()) {
             return OptionalLong.empty();
         }
@@ -98,7 +98,7 @@ public final class WorldCellService {
         }
         // AFK players never reach this list; the toggle moves NONE and
         // spectator-role watchers together, and leaves them put when off.
-        if (!plugin.getConfig().getBoolean("settings.roles.turn-nones-spectator.enabled", false)) {
+        if (!plugin.configService().getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
             return;
         }
         for (Player spectator : spectators) {
@@ -117,7 +117,7 @@ public final class WorldCellService {
         if (joiners.isEmpty()) {
             return;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled()) {
             return;
         }
@@ -151,11 +151,11 @@ public final class WorldCellService {
      * failed fetches after a delay instead of spinning.
      */
     public void refillBuffer() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled()) {
             return;
         }
-        if (BufferRefillPolicy.parse(plugin.getConfig()
+        if (BufferRefillPolicy.parse(plugin.configService()
                 .getString("world-engine.preloading.cell-buffer.increment-when", "ALWAYS"))
                 == BufferRefillPolicy.NO_MATCH_RUNNING && matchRunning.getAsBoolean()) {
             return;
@@ -182,7 +182,7 @@ public final class WorldCellService {
 
     /** Ready cells to keep on hand. Minimum 1. */
     private int bufferTarget() {
-        return Math.max(1, plugin.getConfig()
+        return Math.max(1, plugin.configService()
                 .getInt("world-engine.preloading.cell-buffer.stored-cells-buffer", 1));
     }
 
@@ -210,7 +210,7 @@ public final class WorldCellService {
 
     /** Surface center of a match cell, for end-exit routing. */
     public Optional<Location> cellRoot(long cellIndex) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled()) {
             return Optional.empty();
         }
@@ -241,7 +241,7 @@ public final class WorldCellService {
 
     /** Current cell index cap for the live configuration. */
     public long cellIndexCap() {
-        return maxCellIndex(WorldEngineConfig.fromConfig(plugin.getConfig()).cellSize());
+        return maxCellIndex(WorldEngineConfig.fromConfig(plugin.configService()).cellSize());
     }
 
     /** Current cell index, or empty when the engine store is unavailable. */
@@ -333,7 +333,7 @@ public final class WorldCellService {
      * as Chunky before players teleport in.
      */
     private void runPreloadingCommands(WorldEngineConfig config, CellOrigin origin) {
-        List<String> commands = plugin.getConfig().getStringList("world-engine.preloading.commands");
+        List<String> commands = plugin.configService().getStringList("world-engine.preloading.commands");
         if (commands.isEmpty()) {
             return;
         }

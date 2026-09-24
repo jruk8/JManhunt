@@ -11,6 +11,10 @@ public final class Stats {
     public Role role = Role.NONE;
     public double damage;
     public int kills;
+    /** Opposite-role kills while playing hunter this match. */
+    public int hunterKills;
+    /** Opposite-role kills while playing speedrunner this match. */
+    public int speedrunnerKills;
     public int deaths;
     public int finalKills;
     public int progression;

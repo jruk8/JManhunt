@@ -173,7 +173,7 @@ public final class ModifiersCommand {
         messages.message(sender, "modifiers.setmod-success",
                 Map.of("name", name, "state", value ? "on" : "off"));
         ManhuntCommand.announceSettingChange(messages,
-                config.getBoolean("settings.announce-config-changes", false),
+                config.getBoolean("settings.server.announce-config-changes", false),
                 sender, "modifiers.toggle-announced", "modifier " + name, value ? "on" : "off");
         return true;
     }
@@ -237,7 +237,7 @@ public final class ModifiersCommand {
                 Map.of("name", id, "state", value ? "on" : "off",
                         "count", String.valueOf(config.presetMembers(id).size())));
         ManhuntCommand.announceSettingChange(messages,
-                config.getBoolean("settings.announce-config-changes", false),
+                config.getBoolean("settings.server.announce-config-changes", false),
                 sender, "modifiers.toggle-announced", "preset " + id, value ? "on" : "off");
         return true;
     }
@@ -247,7 +247,7 @@ public final class ModifiersCommand {
         messages.message(sender, "modifiers.toggle-all-success",
                 Map.of("count", String.valueOf(count), "kind", kind, "state", state));
         ManhuntCommand.announceSettingChange(messages,
-                config.getBoolean("settings.announce-config-changes", false),
+                config.getBoolean("settings.server.announce-config-changes", false),
                 sender, "modifiers.toggle-all-announced", count + " " + kind, state);
     }
 }

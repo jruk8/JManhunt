@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -150,6 +151,93 @@ public final class CommandPlaceholders {
             expanded.add(matcher.replaceAll(Matcher.quoteReplacement(name)));
         }
         return expanded;
+    }
+
+    /**
+     * Pre-resolves random-mob and random-item tags to activation-shared rolls
+     * so PER_INVOKE sees one mob and one item across every executor. Rolls
+     * come from the given roller and are cached in sharedDraws (one cache per
+     * modifier activation, shared across every command list); lines without
+     * those tags pass through untouched, and every other tag still resolves
+     * per executor downstream. Matching mirrors tag evaluation: innermost
+     * spans whose name (before any colon, trimmed, case-blind) is random-mob
+     * or random-item. Pure apart from the roller, so unit tests cover it
+     * with fixed draws.
+     */
+    public static List<String> preresolveSharedRandoms(List<String> lines, Map<String, String> sharedDraws,
+            java.util.function.Function<String, String> roller) {
+        boolean wanted = false;
+        for (String line : lines) {
+            if (containsSharedRandom(line)) {
+                wanted = true;
+                break;
+            }
+        }
+        if (!wanted) {
+            return lines;
+        }
+        List<String> fixed = new ArrayList<>(lines.size());
+        for (String line : lines) {
+            fixed.add(preresolveLine(line, sharedDraws, roller));
+        }
+        return fixed;
+    }
+
+    /** Draws one shared roll for a random tag name. */
+    public static String rollSharedRandom(String name) {
+        return "random-mob".equals(name) ? randomMob() : randomItem();
+    }
+
+    private static boolean containsSharedRandom(String line) {
+        Matcher matcher = INNER_TAG.matcher(line);
+        while (matcher.find()) {
+            if (isSharedRandom(matcher.group(1))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String preresolveLine(String line, Map<String, String> sharedDraws,
+            java.util.function.Function<String, String> roller) {
+        String current = line;
+        for (int pass = 0; pass < MAX_TAG_PASSES; pass++) {
+            Matcher matcher = INNER_TAG.matcher(current);
+            StringBuffer result = new StringBuffer();
+            boolean changed = false;
+            while (matcher.find()) {
+                String name = tagName(matcher.group(1));
+                String draw = sharedDraws.get(name);
+                if (draw == null && isSharedRandom(matcher.group(1))) {
+                    draw = roller.apply(name);
+                    sharedDraws.put(name, draw);
+                }
+                if (draw != null) {
+                    matcher.appendReplacement(result, Matcher.quoteReplacement(draw));
+                    changed = true;
+                } else {
+                    matcher.appendReplacement(result, Matcher.quoteReplacement(matcher.group(0)));
+                }
+            }
+            matcher.appendTail(result);
+            current = result.toString();
+            if (!changed) {
+                return current;
+            }
+        }
+        return current;
+    }
+
+    /** Tag name: before any colon, trimmed, lowercase. Mirrors tag evaluation. */
+    private static String tagName(String body) {
+        int separator = body.indexOf(':');
+        String name = separator < 0 ? body : body.substring(0, separator);
+        return name.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean isSharedRandom(String body) {
+        String name = tagName(body);
+        return "random-mob".equals(name) || "random-item".equals(name);
     }
 
     /** Inside-out tag evaluation; unknown tags survive untouched. */

@@ -34,7 +34,7 @@ public final class MatchTeleportService implements LobbyTeleporter {
     }
 
     private boolean teleportToLobby(List<Player> targets, int lobbyId, boolean announce) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled()) {
             return false;
         }
@@ -60,7 +60,7 @@ public final class MatchTeleportService implements LobbyTeleporter {
     }
 
     private boolean setSpawnToLobby(List<Player> targets, int lobbyId, boolean announce) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled()) {
             return false;
         }
@@ -81,7 +81,7 @@ public final class MatchTeleportService implements LobbyTeleporter {
      * the lobby (or a fallback lobby) has a valid teleport.
      */
     public boolean hasLobbyLocation(int lobbyId) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         return config.enabled() && lobbyWorlds.resolveLobby(lobbyId, false) != null;
     }
 

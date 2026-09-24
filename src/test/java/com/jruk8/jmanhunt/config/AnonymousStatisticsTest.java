@@ -1,7 +1,6 @@
 package com.jruk8.jmanhunt.config;
 
 import com.jruk8.jmanhunt.command.ManhuntCommand;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -20,9 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>Deliberately Mockito-free: the plugin class extends Bukkit's
  * {@code JavaPlugin}, which the unit-test classpath cannot load, so the
- * name logic is exercised through the static
- * {@link ConfigService#settingNames} overload with a plain
- * {@link YamlConfiguration}.
+ * name logic is exercised through the static setting registry.
  */
 class AnonymousStatisticsTest {
 
@@ -54,28 +51,17 @@ class AnonymousStatisticsTest {
 
     @Test
     void toggleIsHiddenFromInGameConfiguration() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("config-version", 3);
-        config.set("send-anonymous-statistics", true);
-        config.set("settings.autostart.enabled", true);
-
-        var names = ConfigService.settingNames(config);
+        var names = SettingRegistry.settingNames();
 
         assertFalse(names.contains("send-anonymous-statistics"));
         assertFalse(names.contains("config-version"));
-        assertTrue(names.contains("settings.autostart.enabled"));
+        assertTrue(names.contains("settings.match.autostart.enabled"));
     }
 
     @Test
     void inGameDrillCannotReachToggleAsEditableLeaf() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("config-version", 3);
-        config.set("send-anonymous-statistics", true);
-        config.set("settings.autostart.enabled", true);
-
-        var editable = ConfigService.settingNames(config);
         var resolved = ManhuntCommand.resolveDrill(
-                config, editable, List.of("send-anonymous-statistics"));
+                List.of("send-anonymous-statistics"), path -> null);
 
         // The key exists in the file, but it must never resolve as a leaf the
         // configuration command would view or update, nor appear in tab
@@ -83,7 +69,7 @@ class AnonymousStatisticsTest {
         if (resolved != null) {
             assertFalse(resolved.leaf());
         }
-        assertFalse(ManhuntCommand.drillChildren(config, editable, List.of())
+        assertFalse(ManhuntCommand.drillChildren(List.of(), path -> null)
                 .contains("send-anonymous-statistics"));
     }
 

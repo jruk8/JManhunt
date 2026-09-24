@@ -42,7 +42,7 @@ public final class PortalRouter implements Listener {
         if (match.isEmpty() || match.get().cellIndex().isEmpty()) {
             return;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled()) {
             return;
         }

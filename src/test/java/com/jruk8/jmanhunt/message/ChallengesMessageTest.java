@@ -5,7 +5,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -65,7 +64,7 @@ class ChallengesMessageTest {
 
     private MessageService messages() {
         MessageService messages = new MessageService();
-        messages.reload(new YamlConfiguration());
+        messages.reload(new MessagesConfig());
         return messages;
     }
 

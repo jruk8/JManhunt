@@ -47,7 +47,7 @@ class MessagesStyleTest {
                 "manhunt.worldengine-cellindex-unavailable")) {
             assertTrue(messages.getString(key, null) != null, key);
         }
-        assertEquals(8, messages.getInt("messages-version"));
+        assertFalse(messages.contains("messages-version"));
     }
 
     @Test
@@ -118,6 +118,7 @@ class MessagesStyleTest {
     void bundledResourcesContainNoEmDashes() throws Exception {
         assertFalse(rawResource("config.yml").contains("\u2014"), "config.yml");
         assertFalse(rawResource("messages.yml").contains("\u2014"), "messages.yml");
+        assertFalse(rawResource("sounds.yml").contains("\u2014"), "sounds.yml");
     }
 
     private static int count(String text, String token) {

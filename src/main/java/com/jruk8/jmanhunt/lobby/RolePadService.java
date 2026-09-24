@@ -79,10 +79,15 @@ public final class RolePadService implements Listener {
     }
 
     private void check(Player player) {
-        if (!plugin.getConfig().getBoolean("world-engine.role-pads.enabled", true)) {
+        if (!plugin.configService().getBoolean("world-engine.role-pads.enabled", true)) {
             return;
         }
         if (!player.getWorld().getName().equals(lobbyWorldName.get())) {
+            return;
+        }
+        // Spectators watch: standing on a pad must never pull them back
+        // into a playing role.
+        if (playerStates.role(player) == Role.SPECTATOR) {
             return;
         }
         Location location = player.getLocation();
@@ -129,7 +134,7 @@ public final class RolePadService implements Listener {
     }
 
     private void matchPad(Map<Material, Role> pads, String key, Role role) {
-        String raw = plugin.getConfig().getString("world-engine.role-pads.blocks." + key, "");
+        String raw = plugin.configService().getString("world-engine.role-pads.blocks." + key, "");
         Material material = parsePadMaterial(raw);
         if (material == null) {
             if (raw != null && !raw.isBlank() && warnedMaterials.add(key)) {
@@ -175,7 +180,7 @@ public final class RolePadService implements Listener {
                 return;
             }
             MidMatchPolicy policy = MidMatchPolicy.parse(
-                    plugin.getConfig().getString("lobbies.mid-match-setplayer", "SUBLOBBY"));
+                    plugin.configService().getString("lobbies.mid-match-setplayer", "SUBLOBBY"));
             if (policy.joinsMidMatch(role)
                     && game.joinPlayers(live.get(), List.of(player), role) == 1) {
                 return;
@@ -216,7 +221,7 @@ public final class RolePadService implements Listener {
 
     /** True when pads assign roles quietly. */
     private boolean padSilent() {
-        return plugin.getConfig().getBoolean("world-engine.role-pads.silent-role-assignment", false);
+        return plugin.configService().getBoolean("world-engine.role-pads.silent-role-assignment", false);
     }
 
     private boolean capAllows(Optional<Lobby> lobby, Role role) {
@@ -229,7 +234,7 @@ public final class RolePadService implements Listener {
                 count++;
             }
         }
-        return CapLimits.allows(count, plugin.getConfig()
+        return CapLimits.allows(count, plugin.configService()
                 .getInt("lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1));
     }
 

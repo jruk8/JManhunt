@@ -40,6 +40,17 @@ public final class GuiTexts {
         return loreWithAuthor(messages, raw, null);
     }
 
+    /** Lore lines from a list; every entry becomes one line, blanks kept. */
+    public static List<Component> lore(MessageService messages, List<String> lines) {
+        List<Component> lore = new ArrayList<>();
+        if (lines != null) {
+            for (String line : lines) {
+                lore.add(messages.nonItalic(messages.parse("<gray>" + line)));
+            }
+        }
+        return lore;
+    }
+
     /** Lore lines plus a trailing author line when the author is not blank. */
     public static List<Component> loreWithAuthor(MessageService messages, String raw, String author) {
         List<Component> lore = new ArrayList<>();

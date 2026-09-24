@@ -13,7 +13,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 class MenuDispatchTest {
 
@@ -54,6 +58,19 @@ class MenuDispatchTest {
         menu.buttonAt(10).action().accept(null);
         menu.buttonAt(0).action().accept(null);
         assertEquals(List.of("c6", "main"), clicked);
+    }
+
+    @Test
+    void backWithMissingMenuOrRootClosesInventory() {
+        GuiService gui = new GuiService();
+        Player player = mock(Player.class);
+        Menu root = new Menu(Component.text("Root"),
+                MenuLayout.parse("#########"), null, List::of, null);
+
+        gui.back(player, null);
+        gui.back(player, root);
+
+        verify(player, times(2)).closeInventory();
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.message;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -7,7 +8,6 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import java.util.Collection;
 import java.util.Locale;
@@ -26,10 +26,10 @@ public final class MessageService {
             Map.entry('m', "strikethrough"), Map.entry('n', "underlined"), Map.entry('o', "italic"),
             Map.entry('r', "reset"));
 
-    private FileConfiguration messages;
+    private MessagesConfig messages = new MessagesConfig();
 
-    public void reload(FileConfiguration configuration) {
-        messages = configuration;
+    public void reload(MessagesConfig configuration) {
+        messages = configuration == null ? new MessagesConfig() : configuration;
     }
 
     public Component component(String key) {
@@ -37,7 +37,7 @@ public final class MessageService {
     }
 
     public Component component(String key, Map<String, String> values) {
-        return renderLiteral(messages.getString(key, key), values);
+        return renderLiteral(raw(key, key), values);
     }
 
     /**
@@ -48,8 +48,8 @@ public final class MessageService {
      * {@link #component(String, Map)}.
      */
     public Component renderLiteral(String raw, Map<String, String> values) {
-        String rendered = raw.replace("{prefix}", messages.getString("prefix", ""))
-                .replace("{debug-prefix}", messages.getString("debug.prefix", ""));
+        String rendered = raw.replace("{prefix}", string("prefix", ""))
+                .replace("{debug-prefix}", string("debug.prefix", ""));
         for (Map.Entry<String, String> entry : values.entrySet()) {
             rendered = rendered.replace("{" + entry.getKey() + "}", entry.getValue());
         }
@@ -83,8 +83,8 @@ public final class MessageService {
      * disables that message everywhere it would be sent.
      */
     public boolean isDisabled(String key) {
-        String raw = messages.getString(key, null);
-        return raw != null && raw.isEmpty();
+        Object raw = ConfigPathMapper.get(messages, key);
+        return raw instanceof String text && text.isEmpty();
     }
 
     /**
@@ -134,11 +134,25 @@ public final class MessageService {
     }
 
     public String string(String path, String fallback) {
-        return messages.getString(path, fallback);
+        return raw(path, fallback);
     }
 
     public java.util.List<String> strings(String path) {
-        return messages.getStringList(path);
+        Object value = ConfigPathMapper.get(messages, path);
+        if (!(value instanceof java.util.List<?> list)) {
+            return java.util.List.of();
+        }
+        java.util.List<String> lines = new java.util.ArrayList<>(list.size());
+        for (Object entry : list) {
+            lines.add(String.valueOf(entry));
+        }
+        return lines;
+    }
+
+    /** Stored string at the path, or the fallback when it does not resolve to text. */
+    private String raw(String path, String fallback) {
+        Object value = ConfigPathMapper.get(messages, path);
+        return value instanceof String text ? text : fallback;
     }
 
     public void broadcast(String key) {

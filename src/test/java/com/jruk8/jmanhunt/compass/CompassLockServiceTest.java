@@ -17,7 +17,12 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.bukkit.GameMode;
-import org.bukkit.configuration.file.YamlConfiguration;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.modifiers.ModifierStore;
+import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import java.util.logging.Logger;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 
@@ -26,11 +31,15 @@ class CompassLockServiceTest {
     @Test
     @SuppressWarnings("unchecked")
     void rapidClicksRefreshOncePerCooldown() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.compass.left-click.enabled", true);
-        config.set("settings.compass.left-click.scroll-cooldown", 10.0);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.compass.left-click.enabled", true);
+        ConfigPathMapper.set(root, "settings.compass.left-click.scroll-cooldown", 10.0);
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ConfigService configService = new ConfigService(root,
+                new ModifierStore(new ModifiersConfig(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.getConfig()).thenReturn(config);
+        when(plugin.configService()).thenReturn(configService);
         UUID holderId = UUID.randomUUID();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(holderId);

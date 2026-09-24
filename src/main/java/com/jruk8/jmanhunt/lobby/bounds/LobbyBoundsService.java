@@ -190,7 +190,7 @@ public final class LobbyBoundsService implements Listener {
             return;
         }
         int lobbyId = current.get().id();
-        int target = plugin.getConfig().getInt("lobbies.bounds.exit-lobby-id", -1);
+        int target = plugin.configService().getInt("lobbies.bounds.exit-lobby-id", -1);
         if (target == lobbyId) {
             return;
         }

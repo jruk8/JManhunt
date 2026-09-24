@@ -51,8 +51,8 @@ public final class PrestartService {
     }
 
     public void armHeadstarts(GameInstance instance) {
-        armHeadstartSide(instance, Role.HUNTER, Headstart.parse(plugin.getConfig(), "hunter"));
-        armHeadstartSide(instance, Role.SPEEDRUNNER, Headstart.parse(plugin.getConfig(), "speedrunner"));
+        armHeadstartSide(instance, Role.HUNTER, Headstart.parse(configService, "hunter"));
+        armHeadstartSide(instance, Role.SPEEDRUNNER, Headstart.parse(configService, "speedrunner"));
     }
 
     private void armHeadstartSide(GameInstance instance, Role role, Headstart side) {
@@ -228,9 +228,9 @@ public final class PrestartService {
                     instance.waitingReminderTask().cancel();
                     instance.setWaitingReminderTask(null);
                 }
-                boolean forceStart = plugin.getConfig()
-                        .getString("settings.start-on-speedrunner-damage.on-expire", "CANCEL")
-                        .equals("FORCE_START");
+                boolean forceStart = configService.getEnum(
+                        "settings.match.start-on-speedrunner-damage.on-expire",
+                        OnExpire.class, OnExpire.FORCE_START) == OnExpire.FORCE_START;
                 if (forceStart) {
                     messaging.sendToInstance(instance, WaitingReminder.expiryMessageKey(true), Map.of());
                 } else {
@@ -257,7 +257,7 @@ public final class PrestartService {
         stateCommands.runPlayerCleanup(store.onlineActivePlayers(instance));
         List<Player> assigned = store.onlineAssignedPlayers(instance);
         control.teardownNow(instance);
-        if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
+        if (configService.getBoolean("settings.players.invulnerability.on-game-end.enabled", true)) {
             assigned.forEach(p -> p.setInvulnerable(true));
         }
     }

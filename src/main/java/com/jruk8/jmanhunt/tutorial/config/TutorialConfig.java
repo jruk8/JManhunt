@@ -30,7 +30,7 @@ public class TutorialConfig extends OkaeriConfig {
     @Comment("Dialogue line templates and the recommendation tag.")
     private TutorialFormat format = new TutorialFormat();
 
-    @Comment("Neutral and angry feedback sounds.")
+    @Comment("Path-completion feedback sound. Neutral and angry feedback use sounds.yml ui sounds.")
     private TutorialSounds sounds = new TutorialSounds();
 
     @Comment("Fixed engine messages.")
@@ -209,35 +209,13 @@ public class TutorialConfig extends OkaeriConfig {
         }
     }
 
-    /** Neutral, angry, and congratulations feedback sounds. */
+    /** Path-completion feedback sound. */
     @SuppressWarnings("FieldMayBeFinal")
     public static class TutorialSounds extends OkaeriConfig {
-
-        @Comment("Heard on start, valid answers, back, and quit.")
-        private TutorialSound neutral = TutorialSound.of("block.note_block.pling");
-
-        @Comment("Heard on invalid input and on timeout.")
-        private TutorialSound angry = TutorialSound.of("block.bamboo_wood.place");
 
         @Comment("Heard when a path completes.")
         private TutorialSound congratulations =
                 TutorialSound.of("entity.player.levelup", 1.0f, 0.8f);
-
-        public TutorialSound getNeutral() {
-            return neutral;
-        }
-
-        public void setNeutral(TutorialSound neutral) {
-            this.neutral = neutral;
-        }
-
-        public TutorialSound getAngry() {
-            return angry;
-        }
-
-        public void setAngry(TutorialSound angry) {
-            this.angry = angry;
-        }
 
         public TutorialSound getCongratulations() {
             return congratulations;

@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.world;
 
-import org.bukkit.configuration.file.FileConfiguration;
+import com.jruk8.jmanhunt.config.ConfigService;
 
 public record WorldEngineConfig(
         boolean enabled,
@@ -22,7 +22,7 @@ public record WorldEngineConfig(
     private static final double DEFAULT_DAMAGE_BUFFER = 5.0;
     private static final double DEFAULT_DAMAGE_AMOUNT = 1.0;
 
-    public static WorldEngineConfig fromConfig(FileConfiguration config) {
+    public static WorldEngineConfig fromConfig(ConfigService config) {
         String base = "world-engine.";
         int configuredCellSize = config.getInt(base + "cell-size", DEFAULT_CELL_SIZE);
         int cellSize = Math.clamp(configuredCellSize, 1, MAX_CELL_SIZE);

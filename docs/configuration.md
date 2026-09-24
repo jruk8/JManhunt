@@ -31,6 +31,16 @@ it will never be sent. (A single space still counts as a message.) Each
 role's color lives under `role-colors:` as one key per role, used by role
 headers and every message that names a role; `&` codes work there too.
 
+## Upgrading
+
+This release regroups every setting under four categories
+(`settings.match`, `settings.compass`, `settings.players`,
+`settings.server`) and moves sounds to `sounds.yml`. Old flat
+`settings.*` keys and the `sounds:` block are dropped: affected values
+reset to fresh defaults, and startup logs a warning naming the stale
+blocks. Re-apply your tweaks under the new paths after upgrading; every
+other top-level key keeps its path.
+
 ## Anonymous Statistics
 
 JManhunt collects anonymous usage statistics through bStats, which helps guide

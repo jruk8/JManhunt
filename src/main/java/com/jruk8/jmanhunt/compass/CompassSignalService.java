@@ -74,10 +74,10 @@ final class CompassSignalService {
      */
     private boolean badSignal(Player holder, Location target, SignalInterference.Config interference,
             Boolean hasLineOfSight) {
-        if (!plugin.getConfig().getBoolean("settings.compass.signal-interference.enabled", false)) {
+        if (!plugin.configService().getBoolean("settings.compass.signal-interference.enabled", false)) {
             return false;
         }
-        boolean ignoreTransparent = plugin.getConfig().getBoolean(
+        boolean ignoreTransparent = plugin.configService().getBoolean(
                 "settings.compass.signal-interference.underground.ignore-transparent", true);
         SignalInterference.Snapshot targetSnapshot = interference.twoWay()
                 ? targetSnapshot(target, ignoreTransparent) : null;
@@ -111,33 +111,33 @@ final class CompassSignalService {
         SignalInterference.InterfereWhen when = lightInterfereWhen(base);
         SignalInterference.InterfereWhenVisible losWhen = losInterfereWhen(base);
         return new SignalInterference.Config(
-                plugin.getConfig().getBoolean(base + "light-level.enabled", false),
-                plugin.getConfig().getInt(base + "light-level.min-sky-light", 10),
-                plugin.getConfig().getInt(base + "light-level.min-block-light", 5),
+                plugin.configService().getBoolean(base + "light-level.enabled", false),
+                plugin.configService().getInt(base + "light-level.min-sky-light", 10),
+                plugin.configService().getInt(base + "light-level.min-block-light", 5),
                 when,
-                plugin.getConfig().getBoolean(base + "underground.enabled", false),
-                plugin.getConfig().getInt(base + "underground.max-blocks-above", 3),
-                plugin.getConfig().getBoolean(base + "underwater.enabled", true),
-                plugin.getConfig().getInt(base + "underwater.max-blocks-above", 2),
-                plugin.getConfig().getBoolean(base + "altitude.enabled", false),
-                plugin.getConfig().getInt(base + "altitude.min-y", -20),
-                plugin.getConfig().getInt(base + "altitude.max-y", 120),
-                plugin.getConfig().getBoolean(base + "weather.enabled", false),
+                plugin.configService().getBoolean(base + "underground.enabled", false),
+                plugin.configService().getInt(base + "underground.max-blocks-above", 3),
+                plugin.configService().getBoolean(base + "underwater.enabled", true),
+                plugin.configService().getInt(base + "underwater.max-blocks-above", 2),
+                plugin.configService().getBoolean(base + "altitude.enabled", false),
+                plugin.configService().getInt(base + "altitude.min-y", -20),
+                plugin.configService().getInt(base + "altitude.max-y", 120),
+                plugin.configService().getBoolean(base + "weather.enabled", false),
                 during,
-                plugin.getConfig().getBoolean(base + "biome.enabled", false),
-                new HashSet<>(plugin.getConfig().getStringList(base + "biome.interfere-in")),
-                plugin.getConfig().getBoolean(base + "line-of-sight.enabled", false),
+                plugin.configService().getBoolean(base + "biome.enabled", false),
+                new HashSet<>(plugin.configService().getStringList(base + "biome.interfere-in")),
+                plugin.configService().getBoolean(base + "line-of-sight.enabled", false),
                 losWhen,
-                plugin.getConfig().getInt(base + "line-of-sight.max-ray-distance", 300),
-                plugin.getConfig().getInt(base + "required-to-fail", 1),
-                plugin.getConfig().getBoolean(base + "two-way", false),
-                plugin.getConfig().getDouble(base + "chance-to-bypass", 0.0));
+                plugin.configService().getInt(base + "line-of-sight.max-ray-distance", 300),
+                plugin.configService().getInt(base + "required-to-fail", 1),
+                plugin.configService().getBoolean(base + "two-way", false),
+                plugin.configService().getDouble(base + "chance-to-bypass", 0.0));
     }
 
     /** Parses the weather buckets that interfere, ignoring unknown values. */
     private Set<SignalInterference.Weather> interfereDuring(String base) {
         Set<SignalInterference.Weather> during = new HashSet<>();
-        for (String raw : plugin.getConfig().getStringList(base + "weather.interfere-during")) {
+        for (String raw : plugin.configService().getStringList(base + "weather.interfere-during")) {
             try {
                 during.add(SignalInterference.Weather.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
             } catch (IllegalArgumentException e) {
@@ -150,7 +150,7 @@ final class CompassSignalService {
     /** Parses the light-level interfere-when mode, defaulting to ONE_UNMET. */
     private SignalInterference.InterfereWhen lightInterfereWhen(String base) {
         try {
-            String raw = plugin.getConfig().getString(base + "light-level.interfere-when", "ONE_UNMET");
+            String raw = plugin.configService().getString(base + "light-level.interfere-when", "ONE_UNMET");
             return SignalInterference.InterfereWhen.valueOf(
                     (raw == null ? "ONE_UNMET" : raw).trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
@@ -161,7 +161,7 @@ final class CompassSignalService {
     /** Parses the line-of-sight interfere-when mode, defaulting to VISIBLE. */
     private SignalInterference.InterfereWhenVisible losInterfereWhen(String base) {
         try {
-            String raw = plugin.getConfig().getString(base + "line-of-sight.interfere-when", "VISIBLE");
+            String raw = plugin.configService().getString(base + "line-of-sight.interfere-when", "VISIBLE");
             return SignalInterference.InterfereWhenVisible.valueOf(
                     (raw == null ? "VISIBLE" : raw).trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {

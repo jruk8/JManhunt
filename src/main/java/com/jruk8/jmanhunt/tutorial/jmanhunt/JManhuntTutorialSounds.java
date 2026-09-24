@@ -18,12 +18,12 @@ public final class JManhuntTutorialSounds implements TutorialSoundPlayer {
 
     @Override
     public void playNeutral(Player player) {
-        play(player, config.getSounds().getNeutral());
+        sounds.playNeutralSound(player);
     }
 
     @Override
     public void playAngry(Player player) {
-        play(player, config.getSounds().getAngry());
+        sounds.playAngrySound(player);
     }
 
     @Override

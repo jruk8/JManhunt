@@ -52,6 +52,7 @@ nav:
   - Getting Started: getting-started.md
   - Gallery: gallery.md
   - Commands: commands.md
+  - Admin GUI: gui.md
   - Concurrent Matches: multi-instance.md
   - Lobby Quick Start: lobby-quick-start.md
   - Configuration:

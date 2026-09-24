@@ -216,8 +216,8 @@ Commands can use these tags:
 | Tag | Replaced with |
 | --- | --- |
 | `<p>` | The participating player's name. Use this in player and role commands. |
-| `<random-mob>` | A random spawnable living entity type in lowercase (e.g. `zombie`, `creeper`). A new roll is made for each command execution. |
-| `<random-item>` | A random item material in lowercase (e.g. `diamond_sword`, `bread`). A new roll is made for each command execution. |
+| `<random-mob>` | A random spawnable living entity type in lowercase (e.g. `zombie`, `creeper`). Under pick-random `PER_INVOKE` one mob is rolled per activation for everyone; under `PER_EXECUTOR` every executor rolls their own. |
+| `<random-item>` | A random item material in lowercase (e.g. `diamond_sword`, `bread`). Same scope rule as `<random-mob>`. |
 | `<all-players>` | Every participating player in this match. The command runs once per player with their name. Never touches other matches. |
 | `<all-players:HUNTER>` | Same, but only hunters. `SPEEDRUNNER` works too. |
 | `<random-player>` | One random participating player in this match. |

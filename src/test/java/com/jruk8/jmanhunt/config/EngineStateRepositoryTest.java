@@ -30,6 +30,18 @@ class EngineStateRepositoryTest {
     }
 
     @Test
+    void setupDoneDefaultsFalseAndSurvivesReopen(@TempDir Path dataFolder) throws Exception {
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertEquals(false, repository.getSetupDone());
+            repository.setSetupDone(true);
+            assertEquals(true, repository.getSetupDone());
+        }
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertEquals(true, repository.getSetupDone());
+        }
+    }
+
+    @Test
     void cellIndexRoundTrip(@TempDir Path dataFolder) throws Exception {
         try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
             assertEquals(0L, repository.getWorldCellIndex());

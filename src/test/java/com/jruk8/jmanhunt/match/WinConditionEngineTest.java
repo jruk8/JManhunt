@@ -1,7 +1,12 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.player.Role;
-import org.bukkit.configuration.file.YamlConfiguration;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.modifiers.ModifierStore;
+import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -9,53 +14,59 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WinConditionEngineTest {
 
-    private WinConditionEngine engine(YamlConfiguration config) {
+    private WinConditionEngine engine(ConfigService config) {
         return new WinConditionEngine(config);
+    }
+
+    private static ConfigService service(JManhuntConfig root) {
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        return new ConfigService(root, new ModifierStore(new ModifiersConfig(), log));
     }
 
     @Test
     void exitEndEnabledByDefaultForSpeedrunnersOnly() {
-        WinConditionEngine engine = engine(new YamlConfiguration());
+        WinConditionEngine engine = engine(service(new JManhuntConfig()));
         assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END));
         assertFalse(engine.enabled(Role.HUNTER, WinCondition.EXIT_END));
     }
 
     @Test
     void exitEndCanBeDisabled() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.speedrunner.exit-end.enabled", false);
-        WinConditionEngine engine = engine(config);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.match.win-conditions.speedrunner.exit-end.enabled", false);
+        WinConditionEngine engine = engine(service(root));
         assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END));
     }
 
     @Test
     void surviveTimeDisabledByDefault() {
-        WinConditionEngine engine = engine(new YamlConfiguration());
+        WinConditionEngine engine = engine(service(new JManhuntConfig()));
         assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME));
         assertFalse(engine.enabled(Role.HUNTER, WinCondition.SURVIVE_TIME));
     }
 
     @Test
     void timeIsSharedAcrossSides() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.speedrunner.survive-time.enabled", true);
-        config.set("settings.win-conditions.speedrunner.survive-time.time", 1200.0);
-        config.set("settings.win-conditions.hunter.survive-time.enabled", true);
-        config.set("settings.win-conditions.hunter.survive-time.time", 600.0);
-        WinConditionEngine engine = engine(config);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.match.win-conditions.speedrunner.survive-time.enabled", true);
+        ConfigPathMapper.set(root, "settings.match.win-conditions.speedrunner.survive-time.time", 1200.0);
+        ConfigPathMapper.set(root, "settings.match.win-conditions.hunter.survive-time.enabled", true);
+        ConfigPathMapper.set(root, "settings.match.win-conditions.hunter.survive-time.time", 600.0);
+        WinConditionEngine engine = engine(service(root));
         assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME));
         assertEquals(1200.0, engine.time(Role.SPEEDRUNNER));
         assertTrue(engine.enabled(Role.HUNTER, WinCondition.TIME_LIMIT));
         assertEquals(600.0, engine.time(Role.HUNTER));
-        assertEquals(3600.0, engine(new YamlConfiguration()).time(Role.SPECTATOR));
+        assertEquals(3600.0, engine(service(new JManhuntConfig())).time(Role.SPECTATOR));
     }
 
     @Test
     void acquireItemIsPerSide() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.speedrunner.acquire-item.enabled", true);
-        config.set("settings.win-conditions.speedrunner.acquire-item.item", "minecraft:diamond");
-        WinConditionEngine engine = engine(config);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.match.win-conditions.speedrunner.acquire-item.enabled", true);
+        ConfigPathMapper.set(root, "settings.match.win-conditions.speedrunner.acquire-item.item", "minecraft:diamond");
+        WinConditionEngine engine = engine(service(root));
         assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.ACQUIRE_ITEM));
         assertEquals("minecraft:diamond", engine.item(Role.SPEEDRUNNER));
         assertFalse(engine.enabled(Role.HUNTER, WinCondition.ACQUIRE_ITEM));
@@ -64,36 +75,36 @@ class WinConditionEngineTest {
 
     @Test
     void reachAdvancementIsPerSide() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.speedrunner.reach-advancement.enabled", true);
-        config.set("settings.win-conditions.speedrunner.reach-advancement.advancement",
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.match.win-conditions.speedrunner.reach-advancement.enabled", true);
+        ConfigPathMapper.set(root, "settings.match.win-conditions.speedrunner.reach-advancement.advancement",
                 "minecraft:story/enter_the_nether");
-        WinConditionEngine engine = engine(config);
+        WinConditionEngine engine = engine(service(root));
         assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT));
         assertFalse(engine.enabled(Role.HUNTER, WinCondition.REACH_ADVANCEMENT));
         assertEquals("minecraft:story/enter_the_nether", engine.advancement(Role.SPEEDRUNNER));
         assertEquals("minecraft:story/enter_the_nether",
-                engine(new YamlConfiguration()).advancement(Role.HUNTER));
+                engine(service(new JManhuntConfig())).advancement(Role.HUNTER));
     }
 
     @Test
     void killMobIsPerSide() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.hunter.kill-mob.enabled", true);
-        config.set("settings.win-conditions.hunter.kill-mob.mob", "minecraft:warden");
-        WinConditionEngine engine = engine(config);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.match.win-conditions.hunter.kill-mob.enabled", true);
+        ConfigPathMapper.set(root, "settings.match.win-conditions.hunter.kill-mob.mob", "minecraft:warden");
+        WinConditionEngine engine = engine(service(root));
         assertTrue(engine.enabled(Role.HUNTER, WinCondition.KILL_MOB));
         assertEquals("minecraft:warden", engine.mob(Role.HUNTER));
         assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.KILL_MOB));
-        assertEquals("minecraft:ender_dragon", engine.mob(Role.SPEEDRUNNER));
+        assertEquals("minecraft:wither", engine.mob(Role.SPEEDRUNNER));
     }
 
     @Test
     void nonParticipantsNeverEnabled() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.speedrunner.acquire-item.enabled", true);
-        config.set("settings.win-conditions.hunter.acquire-item.enabled", true);
-        WinConditionEngine engine = engine(config);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.match.win-conditions.speedrunner.acquire-item.enabled", true);
+        ConfigPathMapper.set(root, "settings.match.win-conditions.hunter.acquire-item.enabled", true);
+        WinConditionEngine engine = engine(service(root));
         for (Role role : new Role[] {Role.SPECTATOR, Role.AFK, Role.NONE}) {
             for (WinCondition condition : WinCondition.values()) {
                 assertFalse(engine.enabled(role, condition), role + " " + condition);
@@ -103,14 +114,14 @@ class WinConditionEngineTest {
 
     @Test
     void reloadUpdatesConfig() {
-        YamlConfiguration config = new YamlConfiguration();
-        WinConditionEngine engine = engine(config);
+        JManhuntConfig root = new JManhuntConfig();
+        WinConditionEngine engine = engine(service(root));
         assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME));
 
-        YamlConfiguration newConfig = new YamlConfiguration();
-        newConfig.set("settings.win-conditions.speedrunner.survive-time.enabled", true);
-        newConfig.set("settings.win-conditions.speedrunner.survive-time.time", 500.0);
-        engine.reload(newConfig);
+        JManhuntConfig root2 = new JManhuntConfig();
+        ConfigPathMapper.set(root2, "settings.match.win-conditions.speedrunner.survive-time.enabled", true);
+        ConfigPathMapper.set(root2, "settings.match.win-conditions.speedrunner.survive-time.time", 500.0);
+        engine.reload(service(root2));
 
         assertTrue(engine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME));
         assertEquals(500.0, engine.time(Role.SPEEDRUNNER));
@@ -133,11 +144,11 @@ class WinConditionEngineTest {
 
     @Test
     void reachAdvancementEnabledPerSide() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.hunter.reach-advancement.enabled", true);
-        config.set("settings.win-conditions.hunter.reach-advancement.advancement",
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.match.win-conditions.hunter.reach-advancement.enabled", true);
+        ConfigPathMapper.set(root, "settings.match.win-conditions.hunter.reach-advancement.advancement",
                 "minecraft:nether/get_wither_skull");
-        WinConditionEngine engine = engine(config);
+        WinConditionEngine engine = engine(service(root));
 
         assertTrue(engine.enabled(Role.HUNTER, WinCondition.REACH_ADVANCEMENT));
         assertFalse(engine.enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT));
@@ -147,7 +158,7 @@ class WinConditionEngineTest {
 
     @Test
     void materialWinsStaysFalseWhenDisabled() {
-        WinConditionEngine engine = engine(new YamlConfiguration());
+        WinConditionEngine engine = engine(service(new JManhuntConfig()));
 
         assertFalse(engine.materialWins(org.bukkit.Material.DIAMOND, Role.SPEEDRUNNER));
         assertFalse(engine.materialWins(org.bukkit.Material.DIAMOND, Role.HUNTER));
@@ -155,16 +166,16 @@ class WinConditionEngineTest {
 
     @Test
     void materialWinsRejectsNullWithoutTouchingRegistry() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.speedrunner.acquire-item.enabled", true);
-        WinConditionEngine engine = engine(config);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.match.win-conditions.speedrunner.acquire-item.enabled", true);
+        WinConditionEngine engine = engine(service(root));
 
         assertFalse(engine.materialWins(null, Role.SPEEDRUNNER));
     }
 
     @Test
     void cancelSurviveEnabledByDefaultAtEightHours() {
-        WinConditionEngine engine = engine(new YamlConfiguration());
+        WinConditionEngine engine = engine(service(new JManhuntConfig()));
 
         assertTrue(engine.cancelSurviveEnabled());
         assertEquals(28800.0, engine.cancelSurviveTime());
@@ -172,10 +183,10 @@ class WinConditionEngineTest {
 
     @Test
     void cancelSurviveCanBeDisabled() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("settings.win-conditions.cancel.survived-time.enabled", false);
-        config.set("settings.win-conditions.cancel.survived-time.time", 60.0);
-        WinConditionEngine engine = engine(config);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.match.win-conditions.cancel.survived-time.enabled", false);
+        ConfigPathMapper.set(root, "settings.match.win-conditions.cancel.survived-time.time", 60.0);
+        WinConditionEngine engine = engine(service(root));
 
         assertFalse(engine.cancelSurviveEnabled());
         assertEquals(60.0, engine.cancelSurviveTime());

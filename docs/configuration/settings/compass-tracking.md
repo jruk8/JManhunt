@@ -176,6 +176,9 @@ analyze:
 
 `right-click` covers manual refreshes, `auto` covers interval refreshes;
 enable either or both. `delay-seconds` is how long each analysis takes.
+`sound-interval-seconds` ticks the analysis sound while it runs (rounded
+to whole ticks, at least one). A right-click analysis ends with the
+refresh click sound; automatic analyses resolve silently.
 
 ### Analysis Debuffs
 

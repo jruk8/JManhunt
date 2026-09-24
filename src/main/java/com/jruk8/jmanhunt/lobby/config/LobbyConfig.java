@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.lobby.config;
 
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
+import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -32,6 +33,22 @@ public class LobbyConfig extends OkaeriConfig {
     })
     private Map<String, LobbyEntry> lobbies = defaultLobbies();
 
+    @CustomKey("protected")
+    @Comment({
+            "Protect the lobby world: breaking and placing blocks,",
+            "interacting, damaging entities, and losing hunger all need",
+            "jmanhunt.editlobby. Void rescue below still applies."
+    })
+    private boolean protectedWorld = true;
+
+    @CustomKey("lobby-world-void-rescue")
+    @Comment({
+            "Teleport players who fall into the void in the lobby world",
+            "back to their lobby location (or lobby 0 when theirs is",
+            "unset). Never applies in the game world."
+    })
+    private boolean voidRescue = true;
+
     @Comment({
             "Lobby-world upkeep: arrivals are healed and fed at once, and",
             "everyone inside is topped up every interval seconds."
@@ -44,6 +61,22 @@ public class LobbyConfig extends OkaeriConfig {
 
     public void setLobbies(Map<String, LobbyEntry> lobbies) {
         this.lobbies = lobbies;
+    }
+
+    public boolean isProtectedWorld() {
+        return protectedWorld;
+    }
+
+    public void setProtectedWorld(boolean protectedWorld) {
+        this.protectedWorld = protectedWorld;
+    }
+
+    public boolean isVoidRescue() {
+        return voidRescue;
+    }
+
+    public void setVoidRescue(boolean voidRescue) {
+        this.voidRescue = voidRescue;
     }
 
     public CareData getCare() {

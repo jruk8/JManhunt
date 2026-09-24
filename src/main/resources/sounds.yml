@@ -1,0 +1,101 @@
+# JManhunt sounds.
+#
+# Sound names are namespaced Minecraft keys.
+# eg. block.note_block.pling
+# It's recommended to use a sound explorer like
+# https://mudkipdev.github.io/minecraft-sound-explorer/
+# Used for sounds updates, don't change unless you know what you're doing.
+sounds-version: 2
+ui:
+  # Shared interface feedback: command and GUI confirmations.
+  neutral-sound:
+    enabled: true
+    sound: block.note_block.pling
+    pitch: 1.0
+    volume: 1.0
+  # Shared interface feedback: validation errors and invalid input.
+  angry-sound:
+    enabled: true
+    sound: block.bamboo_wood.place
+    pitch: 1.0
+    volume: 1.0
+
+game:
+  # Runs on autostart countdown and hunter spawn countdown
+  autostart-countdown:
+    enabled: true
+    sound: block.stone_button.click_on
+    pitch: 2.0
+    volume: 1.0
+  # Runs on speedrunner killed (by any means)
+  speedrunner-death:
+    enabled: true
+    sound: block.trial_spawner.detect_player
+    pitch: 1.2
+    volume: 1.0
+  # Runs on hunter killed (by any means)
+  hunter-death:
+    enabled: true
+    sound: entity.player.hurt_sweet_berry_bush
+    pitch: 0.9
+    volume: 1.0
+  # Runs when speedrunners win
+  win-sound:
+    enabled: true
+    sound: entity.ender_dragon.death
+    pitch: 1.0
+    volume: 1.0
+  # Runs when hunters win
+  fail-sound:
+    enabled: true
+    sound: entity.wither.spawn
+    pitch: 1.0
+    volume: 1.0
+  # Runs when a match is canceled
+  cancelled-sound:
+    enabled: true
+    sound: block.bubble_column.whirlpool_ambient
+    pitch: 0.9
+    volume: 1.0
+# Per-role sounds for the start-of-match role announcement. Each participant
+# hears their own role's sound.
+announce:
+  # Heard by each hunter when roles are announced.
+  hunter:
+    enabled: true
+    sound: entity.wither.break_block
+    pitch: 1.3
+    volume: 0.8
+  # Heard by each speedrunner when roles are announced.
+  speedrunner:
+    enabled: true
+    sound: block.copper_chest.close
+    pitch: 1.0
+    volume: 1.0
+  # Heard by each spectator when roles are announced.
+  spectator:
+    enabled: true
+    sound: block.note_block.chime
+    pitch: 1.0
+    volume: 0.8
+# Compass interaction sounds.
+compass:
+  # Heard by the holder when left-click cycling the compass target
+  # lock. Only plays when the scroll changes the lock.
+  left-click:
+    enabled: true
+    sound: ui.button.click
+    pitch: 1.0
+    volume: 1.0
+  # Heard by the holder on an accepted right-click compass refresh, and again when a click-initiated analysis resolves.
+  right-click:
+    enabled: true
+    sound: entity.experience_orb.pickup
+    pitch: 1.0
+    volume: 1.0
+  # Ticked while a compass analysis runs, on the analyze sound interval.
+  analysis:
+    enabled: true
+    sound: block.note_block.hat
+    pitch: 1.0
+    volume: 1.0

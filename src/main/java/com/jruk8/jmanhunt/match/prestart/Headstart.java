@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.match.prestart;
 
-import org.bukkit.configuration.file.FileConfiguration;
+import com.jruk8.jmanhunt.config.ConfigService;
 
 /** One headstart side: whether held roles wait, and for how long. */
 public record Headstart(boolean enabled, int delaySeconds) {
@@ -11,8 +11,8 @@ public record Headstart(boolean enabled, int delaySeconds) {
      *
      * @param side "hunter" or "speedrunner"
      */
-    public static Headstart parse(FileConfiguration config, String side) {
-        String base = "settings.headstarts." + side + ".";
+    public static Headstart parse(ConfigService config, String side) {
+        String base = "settings.match.headstarts." + side + ".";
         return new Headstart(
                 config.getBoolean(base + "enabled", false),
                 config.getInt(base + "delay-seconds", 30));

@@ -1,9 +1,9 @@
 package com.jruk8.jmanhunt.message;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,7 +17,7 @@ class MessageServiceTest {
     void debugPrefixTokenResolves() {
         MessageService messages = messages();
 
-        Component rendered = messages.component("debug.probe", Map.of("value", "7"));
+        Component rendered = messages.component("debug.cell-fetched", Map.of("value", "7"));
 
         assertEquals("[D] value 7.", plain(rendered));
     }
@@ -26,7 +26,7 @@ class MessageServiceTest {
     void regularPrefixStillResolves() {
         MessageService messages = messages();
 
-        Component rendered = messages.component("manhunt.probe", Map.of("value", "7"));
+        Component rendered = messages.component("manhunt.not-in-match", Map.of("value", "7"));
 
         assertEquals("[T] value 7.", plain(rendered));
     }
@@ -45,8 +45,8 @@ class MessageServiceTest {
 
     @Test
     void renderLiteralConvertsLegacyPrefixCodes() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("prefix", "&8[T]&7 ");
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "prefix", "&8[T]&7 ");
         MessageService messages = new MessageService();
         messages.reload(config);
 
@@ -73,23 +73,23 @@ class MessageServiceTest {
 
     @Test
     void emptyStringDisablesButWhitespaceDoesNot() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("a.gone", "");
-        config.set("a.space", " ");
-        config.set("a.kept", "hi");
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "command.player-only", "");
+        ConfigPathMapper.set(config, "command.no-permission", " ");
+        ConfigPathMapper.set(config, "command.invalid", "hi");
         MessageService messages = new MessageService();
         messages.reload(config);
 
-        assertTrue(messages.isDisabled("a.gone"));
-        assertFalse(messages.isDisabled("a.space"));
-        assertFalse(messages.isDisabled("a.kept"));
-        assertFalse(messages.isDisabled("a.missing"));
+        assertTrue(messages.isDisabled("command.player-only"));
+        assertFalse(messages.isDisabled("command.no-permission"));
+        assertFalse(messages.isDisabled("command.invalid"));
+        assertFalse(messages.isDisabled("command.bogus"));
     }
 
     @Test
     void roleNameUsesConfiguredColorOrDefault() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("role-colors.hunter", "&c");
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "role-colors.hunter", "&c");
         MessageService messages = new MessageService();
         messages.reload(config);
 
@@ -99,8 +99,8 @@ class MessageServiceTest {
 
     @Test
     void roleColorPlaceholdersResolveInTemplates() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("role-colors.hunter", "<red>");
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "role-colors.hunter", "<red>");
         MessageService messages = new MessageService();
         messages.reload(config);
 
@@ -110,12 +110,31 @@ class MessageServiceTest {
         assertEquals("No Hunter here.", plain(rendered));
     }
 
+    @Test
+    void missingKeyRendersKeyItself() {
+        MessageService messages = messages();
+
+        assertEquals("command.bogus", plain(messages.component("command.bogus")));
+    }
+
+    @Test
+    void missingListReadsEmpty() {
+        MessageService messages = messages();
+
+        assertTrue(messages.strings("compass.compass-lore").isEmpty());
+        assertEquals(3, messages.strings("compass.hunter-lore").size());
+    }
+
     private static MessageService messages() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("prefix", "<gray>[T]</gray> ");
-        config.set("debug.prefix", "<gray>[D]</gray> ");
-        config.set("debug.probe", "{debug-prefix}<gray>value <white>{value}<gray>.");
-        config.set("manhunt.probe", "{prefix}<gray>value <white>{value}<gray>.");
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "prefix", "<gray>[T]</gray> ");
+        ConfigPathMapper.set(config, "debug.prefix", "<gray>[D]</gray> ");
+        // Probe text rides on real keys: the store is typed, so there
+        // are no ad-hoc keys to hang fixtures on anymore.
+        ConfigPathMapper.set(config, "debug.cell-fetched",
+                "{debug-prefix}<gray>value <white>{value}<gray>.");
+        ConfigPathMapper.set(config, "manhunt.not-in-match",
+                "{prefix}<gray>value <white>{value}<gray>.");
         MessageService messages = new MessageService();
         messages.reload(config);
         return messages;

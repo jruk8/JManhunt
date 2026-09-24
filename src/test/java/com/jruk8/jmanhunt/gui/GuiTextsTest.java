@@ -65,7 +65,7 @@ class GuiTextsTest {
     void loreOmitsSeparatorWithoutDescription() {
         assertEquals(List.of(plain("by Okaeri", NamedTextColor.GRAY)),
                 GuiTexts.loreWithAuthor(messages, "  ", "Okaeri"));
-        assertEquals(List.of(), GuiTexts.lore(messages, null));
+        assertEquals(List.of(), GuiTexts.lore(messages, (String) null));
     }
 
     @Test

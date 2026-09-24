@@ -85,6 +85,16 @@ class SetPlayerPermissionsTest {
     }
 
     @Test
+    void statusArgsNeedTheirOwnNode() {
+        CommandSender base = senderWith("jmanhunt.command.status");
+        CommandSender full = senderWith("jmanhunt.command.status",
+                "jmanhunt.command.status.other");
+
+        assertFalse(ManhuntCommand.canUseStatusArgs(base));
+        assertTrue(ManhuntCommand.canUseStatusArgs(full));
+    }
+
+    @Test
     void subcommandGateAcceptsAliasesAndSelfNode() {
         CommandSender selfOnly = senderWith("jmanhunt.command.setplayer.self");
         CommandSender config = senderWith("jmanhunt.command.config");

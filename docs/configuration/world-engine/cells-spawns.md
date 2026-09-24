@@ -135,4 +135,9 @@ Set `world-engine.lobby-world-name` to use your own world instead.
 Players who fall into the void in the lobby world pop back at their lobby
 teleport (or lobby 0 when theirs is unset) instead of dying. This never
 applies in the game world, and can be turned off with
-`world-engine.lobby-world-void-rescue`.
+`lobby-world-void-rescue` in the same file.
+
+The same file protects the lobby world with `protected` (on by default):
+breaking and placing blocks, interacting, damaging entities, and losing
+hunger all need `jmanhunt.editlobby`. Give that node to builders, or turn
+`protected` off while setting the lobby up by hand.

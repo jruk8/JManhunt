@@ -187,7 +187,7 @@ public final class MatchStartService {
      */
     private Location engineOffStartCenter(List<Player> participants, Location surroundOrigin,
             OptionalLong matchCell) {
-        if (matchCell.isPresent() || plugin.getConfig().getBoolean("world-engine.enabled", false)) {
+        if (matchCell.isPresent() || configService.getBoolean("world-engine.enabled", false)) {
             return null;
         }
         return surroundParticipants(participants, surroundOrigin);
@@ -232,7 +232,7 @@ public final class MatchStartService {
         GameInstance instance = new GameInstance(currentMatchId, lobbyId, matchCell,
                 System.currentTimeMillis());
         if (lobbies.multiLobbyAllowed()
-                && MidMatchPolicy.parse(plugin.getConfig()
+                && MidMatchPolicy.parse(configService
                         .getString("lobbies.mid-match-setplayer", "SUBLOBBY")) == MidMatchPolicy.SUBLOBBY) {
             instance.setSubLobby(new SubLobby(lobbyId, lobbies.nextSubId(lobbyId)));
         }
@@ -270,9 +270,9 @@ public final class MatchStartService {
         // Set participants to adventure mode during the pre-start window if
         // configured, preventing block breaking while waiting for the first
         // speedrunner hit.
-        if (configService.getBoolean("settings.start-on-speedrunner-damage.enabled", false)
-                && plugin.getConfig().getBoolean(
-                        "settings.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
+        if (configService.getBoolean("settings.match.start-on-speedrunner-damage.enabled", false)
+                && configService.getBoolean(
+                        "settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
             for (Player player : players) {
                 player.setGameMode(GameMode.ADVENTURE);
             }
@@ -298,14 +298,14 @@ public final class MatchStartService {
         // start-on-speedrunner-damage is enabled, that happens only after
         // the speedrunner first damages a hunter.
         prestart.armHeadstarts(instance);
-        if (!configService.getBoolean("settings.start-on-speedrunner-damage.enabled", false)) {
+        if (!configService.getBoolean("settings.match.start-on-speedrunner-damage.enabled", false)) {
             prestart.beginHeadstarts(instance);
         }
         // load waiting delay configuration (enforces a 5 second minimum;
         // -1 waits indefinitely)
         instance.setWaitingDelayConfigured(WaitingReminder.clampDelay(
-                plugin.getConfig().getInt("settings.start-on-speedrunner-damage.delay-seconds", 30)));
-        if (configService.getBoolean("settings.start-on-speedrunner-damage.enabled", false)) {
+                configService.getInt("settings.match.start-on-speedrunner-damage.delay-seconds", 30)));
+        if (configService.getBoolean("settings.match.start-on-speedrunner-damage.enabled", false)) {
             prestart.scheduleWaitingReminder(instance);
         } else {
             beginGame(instance);
@@ -330,7 +330,7 @@ public final class MatchStartService {
         World world = center.getWorld();
         int centerX = center.getBlockX();
         int centerZ = center.getBlockZ();
-        WorldEngineConfig spawnConfig = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig spawnConfig = WorldEngineConfig.fromConfig(configService);
         for (Player player : participants) {
             player.teleport(MatchTeleportService.spreadSpawnForConfig(world, centerX, centerZ, SURROUND_RADIUS,
                     player.getLocation().getYaw(), player.getLocation().getPitch(), spawnConfig));
@@ -340,7 +340,7 @@ public final class MatchStartService {
 
     /** Random origin in the game world for executor-less starts. */
     private Location fallbackOrigin() {
-        World world = Bukkit.getWorld(plugin.getConfig().getString("world-engine.world-name", "world"));
+        World world = Bukkit.getWorld(configService.getString("world-engine.world-name", "world"));
         if (world == null) {
             return null;
         }
@@ -403,12 +403,12 @@ public final class MatchStartService {
         if (!role.isParticipant() && (role == Role.SPECTATOR
                 // NONE joiners take spectator gamemode only with the toggle;
                 // AFK cannot join at all (rejected in gameJoin).
-                || plugin.getConfig().getBoolean("settings.roles.turn-nones-spectator.enabled", false))) {
+                || configService.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false))) {
             player.setGameMode(GameMode.SPECTATOR);
         }
         if (!instance.begun()
-                && plugin.getConfig().getBoolean(
-                        "settings.start-on-speedrunner-damage.start-in-adventure-mode", true)
+                && configService.getBoolean(
+                        "settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)
                 && role.isParticipant()
                 && !instance.headstart(role.opposite()).armed()) {
             player.setGameMode(GameMode.ADVENTURE);
@@ -441,7 +441,7 @@ public final class MatchStartService {
         // Restore participants to survival when the game begins if they were
         // set to adventure mode during the pre-start window. Held headstart
         // sides stay out: their countdown moves them to spectator below.
-        if (plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
+        if (configService.getBoolean("settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
             for (Player player : store.onlineActivePlayers(instance)) {
                 Role playerRole = playerStates.role(player);
                 if (playerRole.isParticipant() && !instance.headstart(playerRole.opposite()).armed()) {
@@ -475,10 +475,10 @@ public final class MatchStartService {
     /** Configured starting lives for a role. -1 means unlimited. */
     private int livesFor(Role role) {
         if (role == Role.HUNTER) {
-            return plugin.getConfig().getInt("settings.respawn.hunter.lives", -1);
+            return configService.getInt("settings.players.respawn.hunter.lives", -1);
         }
         if (role == Role.SPEEDRUNNER) {
-            return plugin.getConfig().getInt("settings.respawn.speedrunner.lives", 1);
+            return configService.getInt("settings.players.respawn.speedrunner.lives", 1);
         }
         return -1;
     }
@@ -492,14 +492,14 @@ public final class MatchStartService {
      * all.
      */
     private void announceRoles(List<Player> players, List<Player> spectators) {
-        boolean chat = configService.getBoolean("settings.announce-roles.chat.enabled", true);
-        boolean title = configService.getBoolean("settings.announce-roles.title.enabled", true);
+        boolean chat = configService.getBoolean("settings.players.announce-roles.chat.enabled", true);
+        boolean title = configService.getBoolean("settings.players.announce-roles.title.enabled", true);
         if (!chat && !title) {
             return;
         }
-        long fadeIn = toMillis(plugin.getConfig().getDouble("settings.announce-roles.title.fade-in-seconds", 0.5));
-        long stay = toMillis(plugin.getConfig().getDouble("settings.announce-roles.title.stay-seconds", 3.0));
-        long fadeOut = toMillis(plugin.getConfig().getDouble("settings.announce-roles.title.fade-out-seconds", 0.5));
+        long fadeIn = toMillis(configService.getDouble("settings.players.announce-roles.title.fade-in-seconds", 0.5));
+        long stay = toMillis(configService.getDouble("settings.players.announce-roles.title.stay-seconds", 3.0));
+        long fadeOut = toMillis(configService.getDouble("settings.players.announce-roles.title.fade-out-seconds", 0.5));
         Title.Times times = Title.Times.times(
                 Duration.ofMillis(fadeIn), Duration.ofMillis(stay), Duration.ofMillis(fadeOut));
         for (Player player : players) {
@@ -597,7 +597,7 @@ public final class MatchStartService {
     }
 
     private void teleportToGameWorldSpawn(Player player) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         World world = Bukkit.getWorld(config.worldName());
         Location spawn = world != null ? world.getSpawnLocation() : player.getWorld().getSpawnLocation();
         player.teleport(spawn);

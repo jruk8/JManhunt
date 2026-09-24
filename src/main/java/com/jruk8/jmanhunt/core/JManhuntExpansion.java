@@ -157,7 +157,7 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
     }
 
     private boolean prestartEnabled() {
-        return plugin.getConfig().getBoolean("settings.start-on-speedrunner-damage.enabled", false);
+        return plugin.configService().getBoolean("settings.match.start-on-speedrunner-damage.enabled", false);
     }
 
     /** Survive clock left in milliseconds, or -1 when none runs. */

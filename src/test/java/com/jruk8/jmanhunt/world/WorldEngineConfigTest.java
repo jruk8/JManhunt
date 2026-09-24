@@ -1,6 +1,11 @@
 package com.jruk8.jmanhunt.world;
 
-import org.bukkit.configuration.file.YamlConfiguration;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.modifiers.ModifierStore;
+import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -8,9 +13,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WorldEngineConfigTest {
 
+    private static ConfigService service(JManhuntConfig root) {
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        return new ConfigService(root, new ModifierStore(new ModifiersConfig(), log));
+    }
+
     @Test
     void spawnpointAlgorithmDefaultsToEnabledWithFiveRetries() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(new YamlConfiguration());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(new JManhuntConfig()));
 
         assertTrue(config.spawnpointAlgorithmEnabled());
         assertEquals(5, config.spawnpointMaxRetries());
@@ -18,10 +29,10 @@ class WorldEngineConfigTest {
 
     @Test
     void spawnpointAlgorithmReadsConfig() {
-        YamlConfiguration yaml = new YamlConfiguration();
-        yaml.set("world-engine.spawnpoint-algorithm.enabled", false);
-        yaml.set("world-engine.spawnpoint-algorithm.max-retries", 2);
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(yaml);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.enabled", false);
+        ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.max-retries", 2);
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
 
         assertFalse(config.spawnpointAlgorithmEnabled());
         assertEquals(2, config.spawnpointMaxRetries());
@@ -29,9 +40,9 @@ class WorldEngineConfigTest {
 
     @Test
     void spawnpointRetriesClampAtZero() {
-        YamlConfiguration yaml = new YamlConfiguration();
-        yaml.set("world-engine.spawnpoint-algorithm.max-retries", -3);
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(yaml);
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.max-retries", -3);
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
 
         assertEquals(0, config.spawnpointMaxRetries());
     }

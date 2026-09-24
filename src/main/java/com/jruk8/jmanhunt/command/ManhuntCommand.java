@@ -1,8 +1,13 @@
 package com.jruk8.jmanhunt.command;
 
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.SettingDescriptor;
+import com.jruk8.jmanhunt.config.SettingRegistry;
+import com.jruk8.jmanhunt.config.SettingType;
 import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.core.DebugService;
+import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
+import com.jruk8.jmanhunt.gui.menus.ManhuntMenus;
 import com.jruk8.jmanhunt.gui.menus.ModifierMenus;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
@@ -28,10 +33,8 @@ import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -41,6 +44,7 @@ import org.bukkit.entity.Player;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -51,26 +55,10 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.UUID;
 
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
-    private static final Set<String> RESTART_REQUIRED_SETTINGS = Set.of(
-            "world-engine.enabled",
-            "settings.game-boosts.nether-structures.enabled",
-            "settings.game-boosts.overworld-structures.enabled",
-            "statistics.enabled",
-            "statistics.type",
-            "statistics.sqlite.file",
-            "statistics.postgresql.host",
-            "statistics.postgresql.port",
-            "statistics.postgresql.database",
-            "statistics.postgresql.username",
-            "statistics.postgresql.password",
-            "statistics.postgresql.ssl",
-            "statistics.pool-size"
-    );
-
     /**
      * Readonly announcement printed by the challenges subcommand. This text is
      * intentionally not loaded from messages.yml so it cannot be edited or
@@ -99,6 +87,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     // the status line shows ACTIVE when any of these is loaded and enabled.
     private static final Set<String> CHALLENGES_PLUGIN_NAMES =
             Set.of("JManhunt-Challenges", "JManhuntChallenges", "JMHChallenges");
+    /**
+     * Extra node for the optional status arguments: bare status needs
+     * only the base node, while an instance id or all needs this too.
+     */
+    static final String STATUS_OTHER_PERMISSION = "jmanhunt.command.status.other";
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final ConfigService config;
@@ -110,8 +103,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final LobbyService lobbies;
     private final PendingConfirmations confirms = new PendingConfirmations();
     private final DevSchemCommand devSchem;
+    private final SettingFeedback feedback;
     private final ModifiersCommand modifiersCmd;
     private ModifierMenus modifierMenus;
+    private final ManhuntMenus menus;
     /** Lobby-bounds corners per player, separate from the dev schem selection. */
     private final Map<UUID, Location> boundPos1 = new HashMap<>();
     private final Map<UUID, Location> boundPos2 = new HashMap<>();
@@ -125,13 +120,21 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.lobbyTeleporter = lobbyTeleporter; this.debugService = debugService;
         this.lobbies = lobbyService;
         this.devSchem = new DevSchemCommand(plugin, messages);
+        this.feedback = new SettingFeedback(messages, config, sounds);
         this.modifiersCmd = new ModifiersCommand(config, messages,
                 plugin.guiService(), () -> modifierMenus.mainMenu(), sounds);
         this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,
                 plugin.guiService(), modifiersCmd);
+        SettingDialogs dialogs = new SettingDialogs(config, messages, sounds,
+                plugin.guiService(), feedback, plugin);
+        this.menus = new ManhuntMenus(config, plugin.guiConfig(), messages, sounds,
+                plugin.guiService(), dialogs, feedback, plugin.stats(), modifierMenus);
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (opensGui(args, sender)) {
+            return openGui((Player) sender);
+        }
         String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
         if (!canUseSubcommand(sender, sub)) {
             return message(sender, "command.no-permission");
@@ -160,7 +163,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private boolean help(CommandSender sender) {
         message(sender, "manhunt.help-header");
         String[][] lines = {{"/manhunt help", "show commands"}, {"/manhunt setup", "interactive setup guide"},
-                {"/manhunt", "show match status"},
+                {"/manhunt", "open the GUI or show match status"},
                 {"/manhunt setplayer <selector> <hunter|speedrunner|spectator|afk|none>", "assign roles"},
                 {"/manhunt lobby join <selector> <lobby-id> [role] [-notp]", "move players to a lobby"},
                 {"/manhunt lobby leave [selector]", "remove players from their lobby"},
@@ -198,7 +201,42 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player player)) {
             return message(sender, "command.player-only");
         }
+        plugin.markSetupDone();
         plugin.tutorial().start(player);
+        return true;
+    }
+
+    /**
+     * Bare /manhunt opens the admin GUI, but only for players holding
+     * the GUI node. Everyone else, including the console, gets status.
+     */
+    static boolean opensGui(String[] args, CommandSender sender) {
+        return args.length == 0 && sender instanceof Player
+                && sender.hasPermission("jmanhunt.gui");
+    }
+
+    /**
+     * Opens the root GUI, showing the Setup First nudge once when the
+     * global flag is unset. Confirm starts the setup guide, Cancel
+     * dismisses forever and opens the GUI.
+     */
+    private boolean openGui(Player player) {
+        if (!plugin.isSetupDone()) {
+            plugin.guiService().open(player, menus.setupFirstMenu(
+                    confirmed -> {
+                        plugin.markSetupDone();
+                        confirmed.closeInventory();
+                        plugin.tutorial().start(confirmed);
+                    },
+                    skipped -> {
+                        plugin.markSetupDone();
+                        plugin.guiService().navigate(skipped, menus.rootMenu());
+                        sounds.playNeutralSound(skipped);
+                    }));
+            return true;
+        }
+        plugin.guiService().open(player, menus.rootMenu());
+        sounds.playNeutralSound(player);
         return true;
     }
 
@@ -212,6 +250,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return message(sender, "manhunt.status-usage");
         }
         if (args.length == 2) {
+            if (!canUseStatusArgs(sender)) {
+                return message(sender, "command.no-permission");
+            }
             if (args[1].equalsIgnoreCase("all")) {
                 return statusAll(sender);
             }
@@ -280,7 +321,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Optional per-side win rules, off by default to keep status compact. */
     private void sendWinConditionLines(CommandSender sender) {
-        if (!plugin.getConfig().getBoolean("settings.status.show-win-conditions", false)) {
+        if (!config.getBoolean("settings.server.status.show-win-conditions", false)) {
             return;
         }
         message(sender, "manhunt.status-win-speedrunners",
@@ -290,7 +331,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Optional enabled-modifier roll call: hidden when off or when none are enabled. */
     private void sendModifiersLine(CommandSender sender) {
-        if (!plugin.getConfig().getBoolean("settings.status.show-modifiers", false)) {
+        if (!config.getBoolean("settings.server.status.show-modifiers", false)) {
             return;
         }
         List<String> enabled = new ArrayList<>();
@@ -308,7 +349,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Optional match runtime, off by default. */
     private void sendElapsedLine(CommandSender sender, GameInstance instance) {
-        if (!plugin.getConfig().getBoolean("settings.status.show-elapsed-time", false)) {
+        if (!config.getBoolean("settings.server.status.show-elapsed-time", false)) {
             return;
         }
         message(sender, "manhunt.status-elapsed", Map.of("duration",
@@ -317,30 +358,61 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Optional lobby/game tag (L1, L1-0|G2 when sublobbed), on by default. */
     private void sendIdLine(CommandSender sender, String value) {
-        if (!plugin.getConfig().getBoolean("settings.status.show-ids", true)) {
+        if (!config.getBoolean("settings.server.status.show-ids", true)) {
             return;
         }
         message(sender, "manhunt.status-ids", Map.of("value", value));
     }
 
-    /** Every running match: id, active/assigned counts, and duration. */
+    /**
+     * Every running match plus every populated lobby queue: ids with
+     * active and assigned counts and durations first, then one line per
+     * lobby holding at least one online member. Quiet servers still print
+     * the games empty line so the lobby section never hides alone.
+     */
     private boolean statusAll(CommandSender sender) {
         List<GameInstance> live = game.liveInstances();
         if (live.isEmpty()) {
-            return message(sender, "manhunt.status-all-empty");
+            message(sender, "manhunt.status-all-empty");
+        } else {
+            message(sender, "manhunt.status-all-header");
+            long now = System.currentTimeMillis();
+            for (GameInstance instance : live) {
+                message(sender, "manhunt.status-all-entry", Map.of(
+                        "lobby", instance.lobbyTag(),
+                        "id", String.valueOf(instance.matchId()),
+                        "remaining", String.valueOf(instance.activeIds().size()),
+                        "assigned", String.valueOf(instance.assignedCount()),
+                        "duration", DurationFormat.format(instance.elapsedSeconds(now))));
+            }
         }
-        message(sender, "manhunt.status-all-header");
-        long now = System.currentTimeMillis();
-        for (GameInstance instance : live) {
-            message(sender, "manhunt.status-all-entry", Map.of(
-                    "lobby", instance.lobbyTag(),
-                    "id", String.valueOf(instance.matchId()),
-                    "remaining", String.valueOf(instance.activeIds().size()),
-                    "assigned", String.valueOf(instance.assignedCount()),
-                    "duration", DurationFormat.format(instance.elapsedSeconds(now))));
-        }
+        sendLobbyQueues(sender);
         neutralSound(sender);
         return true;
+    }
+
+    /** One line per lobby holding at least one online member, by lobby id. */
+    private void sendLobbyQueues(CommandSender sender) {
+        List<Lobby> queued = new ArrayList<>();
+        for (int id : lobbies.lobbyIds()) {
+            lobbies.get(id).ifPresent(queued::add);
+        }
+        queued.sort(Comparator.comparingInt(Lobby::id));
+        boolean header = false;
+        for (Lobby lobby : queued) {
+            long online = Bukkit.getOnlinePlayers().stream()
+                    .filter(player -> lobby.contains(player.getUniqueId())).count();
+            if (online < 1) {
+                continue;
+            }
+            if (!header) {
+                message(sender, "manhunt.status-all-lobbies-header");
+                header = true;
+            }
+            message(sender, "manhunt.status-all-lobby-entry", Map.of(
+                    "lobby", String.valueOf(lobby.id()),
+                    "count", String.valueOf(online)));
+        }
     }
 
     private void sendRoleSection(CommandSender sender, List<Player> players, Role role, String header) {
@@ -452,6 +524,15 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     /** Live pending dev schem corners for the debug particle draft boxes. */
     public Map<UUID, Location> devPos2View() {
         return devSchem.pos2View();
+    }
+
+    /**
+     * Whether the sender may pass an argument to /manhunt status. Bare
+     * status needs only the base node; an instance id or all needs the
+     * args node on top of it.
+     */
+    static boolean canUseStatusArgs(CommandSender sender) {
+        return sender.hasPermission(STATUS_OTHER_PERMISSION);
     }
 
     static boolean canUseSubcommand(CommandSender sender, String sub) {
@@ -596,7 +677,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return;
         }
         MidMatchPolicy policy = MidMatchPolicy.parse(
-                plugin.getConfig().getString("lobbies.mid-match-setplayer", "SUBLOBBY"));
+                config.getString("lobbies.mid-match-setplayer", "SUBLOBBY"));
         if (policy.joinsMidMatch(role)
                 && game.joinPlayers(live, List.of(player), role) == 1) {
             tally.joined++;
@@ -842,7 +923,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             sounds.playNeutralSound(player);
         }
         if (!moved.isEmpty() && !noTeleport
-                && plugin.getConfig().getBoolean("lobbies.join-teleports-to-lobby", true)) {
+                && config.getBoolean("lobbies.join-teleports-to-lobby", true)) {
             teleportJoinersToLobby(sender, moved, lobbyId);
         }
         if (!moved.isEmpty()) {
@@ -929,7 +1010,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Configured queue cap for a participant role, -1 when uncapped. */
     private int capFor(Role role) {
-        return plugin.getConfig().getInt(
+        return config.getInt(
                 "lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1);
     }
 
@@ -1211,30 +1292,34 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         if (segments.isEmpty()) {
             Map<String, String> categories = new LinkedHashMap<>();
-            for (String category : drillCategories(plugin.getConfig())) {
+            for (String category : SettingRegistry.topCategories()) {
                 categories.put(category, "");
             }
             listEntries(sender, "config", categories);
             neutralSound(sender);
             return true;
         }
-        DrillResolve resolved = resolveDrill(plugin.getConfig(), game.settingNames(), segments);
+        DrillResolve resolved = resolveDrill(segments, config::getStringList);
         if (resolved == null) {
             return message(sender, "manhunt.setting-invalid");
         }
         if (resolved.leaf()) {
             return showOrUpdateSetting(sender, resolved.path(), resolved.remainder());
         }
+        if (SettingRegistry.isListPath(resolved.path())) {
+            return listCommand(sender, resolved.path(), resolved.remainder());
+        }
         if (!resolved.section() || !resolved.remainder().isEmpty()) {
             return message(sender, "manhunt.config-usage");
         }
-        DrillListing listing = nextSegments(game.settingNames(), resolved.path());
+        SettingRegistry.DrillChildren listing = SettingRegistry.children(resolved.path());
         Map<String, String> entries = new LinkedHashMap<>();
         for (String section : listing.sections()) {
             entries.put(section, "");
         }
         for (String leaf : listing.leaves()) {
-            entries.put(leaf, ": " + game.getSettingValue(resolved.path() + "." + leaf));
+            entries.put(leaf, ": " + ConfigService.displayValue(
+                    game.getSettingValue(resolved.path() + "." + leaf)));
         }
         listEntries(sender, resolved.path(), entries);
         neutralSound(sender);
@@ -1260,35 +1345,97 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return out.toString();
     }
 
+    /**
+     * Browses or edits one string list: bare lists entries by index with the
+     * add and remove forms, {@code add} appends, {@code remove} deletes.
+     */
+    private boolean listCommand(CommandSender sender, String listPath, List<String> args) {
+        if (args.isEmpty()) {
+            return listListEntries(sender, listPath);
+        }
+        if (args.get(0).equalsIgnoreCase("add")) {
+            return listAddEntry(sender, listPath, args);
+        }
+        if (args.get(0).equalsIgnoreCase("remove") && args.size() == 2) {
+            return listRemoveEntry(sender, listPath, args.get(1));
+        }
+        return message(sender, "manhunt.config-usage");
+    }
+
+    private boolean listListEntries(CommandSender sender, String listPath) {
+        List<String> entries = config.getStringList(listPath);
+        Map<String, String> rows = new LinkedHashMap<>();
+        for (int index = 0; index < entries.size(); index++) {
+            rows.put(String.valueOf(index), ": " + entries.get(index));
+        }
+        rows.put("add <value>", "");
+        rows.put("remove <index>", "");
+        listEntries(sender, listPath, rows);
+        neutralSound(sender);
+        return true;
+    }
+
+    private boolean listAddEntry(CommandSender sender, String listPath, List<String> args) {
+        if (args.size() < 2) {
+            return message(sender, "manhunt.config-usage");
+        }
+        ConfigService.SetOutcome outcome = config.listAdd(
+                listPath, String.join(" ", args.subList(1, args.size())));
+        if (!outcome.ok()) {
+            feedback.failed(sender, outcome);
+            return true;
+        }
+        feedback.listAdded(sender, listPath, outcome);
+        return true;
+    }
+
+    private boolean listRemoveEntry(CommandSender sender, String listPath, String rawIndex) {
+        int index;
+        try {
+            index = Integer.parseInt(rawIndex.trim());
+        } catch (NumberFormatException expected) {
+            message(sender, "manhunt.setting-index-invalid", Map.of("setting", listPath,
+                    "index", rawIndex.trim(),
+                    "size", String.valueOf(config.getStringList(listPath).size())));
+            return true;
+        }
+        ConfigService.SetOutcome outcome = config.listRemove(listPath, index);
+        if (!outcome.ok()) {
+            feedback.failed(sender, outcome);
+            return true;
+        }
+        feedback.listRemoved(sender, listPath, outcome);
+        return true;
+    }
+
     private boolean showOrUpdateSetting(CommandSender sender, String setting, List<String> values) {
         Object oldValue = game.getSettingValue(setting);
         if (values.isEmpty()) {
             message(sender, "manhunt.setting-status",
-                    Map.of("setting", setting, "value", String.valueOf(oldValue)));
+                    Map.of("setting", setting, "value", ConfigService.displayValue(oldValue)));
             neutralSound(sender);
             return true;
         }
-        if (values.size() > 1) {
+        SettingDescriptor descriptor = config.describe(setting);
+        boolean freeform = (descriptor != null && descriptor.type() == SettingType.STRING)
+                || config.isIndexPath(setting);
+        String raw;
+        if (freeform) {
+            raw = String.join(" ", values);
+        } else if (values.size() > 1) {
             return message(sender, "manhunt.config-usage");
+        } else {
+            raw = values.get(0);
         }
-        String raw = values.get(0);
-        boolean isBoolean = oldValue instanceof Boolean;
-        if (isBoolean && !raw.equalsIgnoreCase("true") && !raw.equalsIgnoreCase("false")) {
-            return message(sender, "manhunt.setting-invalid-value");
+        ConfigService.SetOutcome outcome = game.setSetting(setting, raw);
+        if (!outcome.ok()) {
+            feedback.failed(sender, outcome);
+            return true;
         }
-        if (!game.setSetting(setting, raw)) {
-            return message(sender, "manhunt.setting-invalid-number");
+        feedback.scalarUpdated(sender, setting, outcome);
+        if (setting.equals("world-engine.enabled")) {
+            plugin.observeWorldEngine();
         }
-        Object newValue = game.getSettingValue(setting);
-        message(sender, "manhunt.setting-updated", Map.of("setting", setting,
-                "value", String.valueOf(newValue), "old-value", String.valueOf(oldValue)));
-        if (RESTART_REQUIRED_SETTINGS.contains(setting)) {
-            message(sender, "manhunt.setting-restart-required");
-        }
-        announceSettingChange(messages,
-                plugin.getConfig().getBoolean("settings.announce-config-changes", false),
-                sender, "manhunt.setting-change-announced", setting, String.valueOf(newValue));
-        neutralSound(sender);
         return true;
     }
 
@@ -1312,143 +1459,121 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
 
-    public static DrillResolve resolveDrill(
-            ConfigurationSection root, Set<String> editable, List<String> segments) {
-        ConfigurationSection current = root;
-        StringBuilder path = new StringBuilder();
+    /**
+     * Resolves drill segments against the setting registry: each segment
+     * matches a child case-insensitively, list indices descend into list
+     * entries, and anything past a leaf is the value remainder.
+     */
+    public static DrillResolve resolveDrill(List<String> segments,
+            Function<String, List<String>> lists) {
+        String current = "";
         int consumed = 0;
         for (String segment : segments) {
-            String child = findChild(current, segment);
-            if (child == null) {
+            String match = matchChild(current, segment, lists);
+            if (match == null) {
                 break;
             }
-            if (!path.isEmpty()) {
-                path.append('.');
-            }
-            path.append(child);
+            current = current.isEmpty() ? match : current + "." + match;
             consumed++;
-            ConfigurationSection next = current.getConfigurationSection(child);
-            if (next == null) {
+            if (SettingRegistry.byPath(current) != null || isIndexPath(current, lists)) {
                 break;
             }
-            current = next;
         }
         if (consumed == 0) {
             return null;
         }
-        String canonical = path.toString();
-        boolean section = root.getConfigurationSection(canonical) != null;
-        return new DrillResolve(canonical, isEditable(editable, canonical), section,
+        boolean leaf = SettingRegistry.byPath(current) != null || isIndexPath(current, lists);
+        boolean section = !leaf
+                && (SettingRegistry.isSection(current) || SettingRegistry.isListPath(current));
+        return new DrillResolve(current, leaf, section,
                 List.copyOf(segments.subList(consumed, segments.size())));
     }
 
-    private static String findChild(ConfigurationSection section, String segment) {
-        for (String key : section.getKeys(false)) {
-            if (key.equalsIgnoreCase(segment)) {
-                return key;
+    private static String matchChild(String parent, String segment,
+            Function<String, List<String>> lists) {
+        if (!parent.isEmpty() && SettingRegistry.isListPath(parent)) {
+            List<String> entries = lists == null ? null : lists.apply(parent);
+            if (entries == null) {
+                return null;
+            }
+            try {
+                int index = Integer.parseInt(segment.trim());
+                return index >= 0 && index < entries.size() ? String.valueOf(index) : null;
+            } catch (NumberFormatException expected) {
+                return null;
+            }
+        }
+        List<String> candidates = new ArrayList<>();
+        if (parent.isEmpty()) {
+            candidates.addAll(SettingRegistry.topCategories());
+        } else {
+            SettingRegistry.DrillChildren children = SettingRegistry.children(parent);
+            candidates.addAll(children.sections());
+            candidates.addAll(children.leaves());
+        }
+        for (String candidate : candidates) {
+            if (candidate.equalsIgnoreCase(segment)) {
+                return candidate;
             }
         }
         return null;
     }
 
-    private static boolean isEditable(Set<String> editable, String path) {
-        for (String name : editable) {
-            if (name.equalsIgnoreCase(path)) {
-                return true;
-            }
+    /** True when the path addresses one list entry with a live index. */
+    private static boolean isIndexPath(String path, Function<String, List<String>> lists) {
+        int dot = path.lastIndexOf('.');
+        if (dot == -1 || !SettingRegistry.isListPath(path.substring(0, dot))) {
+            return false;
         }
-        return false;
-    }
-
-    private static boolean isUnder(String setting, String path) {
-        return setting.length() > path.length()
-                && setting.regionMatches(true, 0, path, 0, path.length())
-                && setting.charAt(path.length()) == '.';
-    }
-
-    /** Categories are the top-level config sections, excluding the version key. */
-    public static List<String> drillCategories(ConfigurationSection root) {
-        List<String> categories = new ArrayList<>();
-        for (String key : root.getKeys(false)) {
-            if (!key.equals("config-version") && root.getConfigurationSection(key) != null) {
-                categories.add(key);
-            }
+        List<String> entries = lists == null ? null : lists.apply(path.substring(0, dot));
+        if (entries == null) {
+            return false;
         }
-        categories.sort(String.CASE_INSENSITIVE_ORDER);
-        return categories;
+        try {
+            int index = Integer.parseInt(path.substring(dot + 1).trim());
+            return index >= 0 && index < entries.size();
+        } catch (NumberFormatException expected) {
+            return false;
+        }
     }
 
     /**
-     * Next-level completion options for the given resolved prefix: children
-     * that are editable themselves or lead to an editable setting, so
+     * Next-level completion options for the given prefix: child sections
+     * and leaves, or list indices with add and remove under lists, so
      * completion never suggests dead ends.
      */
-    public static List<String> drillChildren(
-            ConfigurationSection root, Set<String> editable, List<String> prefix) {
-        ConfigurationSection current = root;
-        StringBuilder path = new StringBuilder();
+    public static List<String> drillChildren(List<String> prefix,
+            Function<String, List<String>> lists) {
+        String current = "";
         for (String segment : prefix) {
-            String child = findChild(current, segment);
-            if (child == null) {
+            String match = matchChild(current, segment, lists);
+            if (match == null) {
                 return List.of();
             }
-            if (!path.isEmpty()) {
-                path.append('.');
-            }
-            path.append(child);
-            ConfigurationSection next = current.getConfigurationSection(child);
-            if (next == null) {
+            current = current.isEmpty() ? match : current + "." + match;
+            if (SettingRegistry.byPath(current) != null || isIndexPath(current, lists)) {
                 return List.of();
             }
-            current = next;
         }
-        String base = path.toString();
         List<String> options = new ArrayList<>();
-        for (String key : current.getKeys(false)) {
-            String full = base.isEmpty() ? key : base + "." + key;
-            if (isEditable(editable, full) || leadsToEditable(editable, full)) {
-                options.add(key);
+        if (current.isEmpty()) {
+            options.addAll(SettingRegistry.topCategories());
+        } else if (SettingRegistry.isListPath(current)) {
+            List<String> entries = lists == null ? null : lists.apply(current);
+            if (entries != null) {
+                for (int index = 0; index < entries.size(); index++) {
+                    options.add(String.valueOf(index));
+                }
             }
+            options.add("add");
+            options.add("remove");
+        } else {
+            SettingRegistry.DrillChildren children = SettingRegistry.children(current);
+            options.addAll(children.sections());
+            options.addAll(children.leaves());
         }
         options.sort(String.CASE_INSENSITIVE_ORDER);
         return options;
-    }
-
-    /**
-     * Next drill level under a resolved section path: intermediate segments
-     * of editable settings become bare sub-sections, terminal segments
-     * become leaves. Derived purely from editable paths via {@link #isUnder},
-     * so non-editable subtrees never surface. Pure for tests.
-     */
-    public static DrillListing nextSegments(Set<String> settings, String path) {
-        if (path.isEmpty()) {
-            return new DrillListing(List.of(), List.of());
-        }
-        Set<String> sections = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        Set<String> leaves = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        for (String setting : settings) {
-            if (!isUnder(setting, path)) {
-                continue;
-            }
-            String rest = setting.substring(path.length() + 1);
-            int dot = rest.indexOf('.');
-            if (dot == -1) {
-                leaves.add(rest);
-            } else {
-                sections.add(rest.substring(0, dot));
-            }
-        }
-        return new DrillListing(List.copyOf(sections), List.copyOf(leaves));
-    }
-
-    private static boolean leadsToEditable(Set<String> editable, String path) {
-        String prefix = path + ".";
-        for (String name : editable) {
-            if (name.length() > path.length() && name.regionMatches(true, 0, prefix, 0, prefix.length())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean worldEngine(CommandSender sender, String[] args) {
@@ -1870,7 +1995,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             options.removeIf(option -> !canUseSubcommand(sender, option));
             return partial(args[0], options);
         }
-        List<String> completion = completeStatusStartEndTab(args);
+        List<String> completion = completeStatusStartEndTab(sender, args);
         if (completion == null) {
             completion = completeGameTab(args);
         }
@@ -1921,8 +2046,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /** Tab completion for status, start, and end. Null when inapplicable. */
-    private List<String> completeStatusStartEndTab(String[] args) {
+    private List<String> completeStatusStartEndTab(CommandSender sender, String[] args) {
         if (args.length == 2 && args[0].equalsIgnoreCase("status")) {
+            if (!canUseStatusArgs(sender)) {
+                return List.of();
+            }
             List<String> options = new ArrayList<>(List.of("all"));
             options.addAll(instanceIdOptions());
             return partial(args[1], options);
@@ -2104,23 +2232,38 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             prefix.add(args[i]);
         }
         String completing = args[args.length - 1];
-        if (prefix.isEmpty()) {
-            return partial(completing, drillCategories(plugin.getConfig()));
-        }
-        DrillResolve resolved = resolveDrill(plugin.getConfig(), game.settingNames(), prefix);
-        if (resolved != null && resolved.leaf() && resolved.remainder().isEmpty()) {
-            Object current = game.getSettingValue(resolved.path());
-            if (current instanceof Boolean) {
-                return partial(completing, List.of("true", "false"));
-            }
-            // Tab-complete the default value from the bundled default config.
-            Object defaultValue = defaultConfigValue(resolved.path());
-            if (defaultValue != null) {
-                return partial(completing, List.of(String.valueOf(defaultValue)));
+        if (!prefix.isEmpty() && prefix.get(prefix.size() - 1).equalsIgnoreCase("remove")) {
+            DrillResolve parent = resolveDrill(
+                    prefix.subList(0, prefix.size() - 1), config::getStringList);
+            if (parent != null && SettingRegistry.isListPath(parent.path())
+                    && parent.remainder().isEmpty()) {
+                List<String> indices = new ArrayList<>();
+                for (int index = 0; index < config.getStringList(parent.path()).size(); index++) {
+                    indices.add(String.valueOf(index));
+                }
+                return partial(completing, indices);
             }
             return List.of();
         }
-        return partial(completing, drillChildren(plugin.getConfig(), game.settingNames(), prefix));
+        if (prefix.isEmpty()) {
+            return partial(completing, SettingRegistry.topCategories());
+        }
+        DrillResolve resolved = resolveDrill(prefix, config::getStringList);
+        if (resolved != null && resolved.leaf() && resolved.remainder().isEmpty()) {
+            SettingDescriptor descriptor = config.describe(resolved.path());
+            if (descriptor != null && descriptor.type() == SettingType.BOOL) {
+                return partial(completing, List.of("true", "false"));
+            }
+            if (descriptor != null && descriptor.type() == SettingType.OPTION) {
+                return partial(completing, descriptor.options());
+            }
+            Object defaultValue = config.defaultValue(resolved.path());
+            if (defaultValue != null) {
+                return partial(completing, List.of(ConfigService.displayValue(defaultValue)));
+            }
+            return List.of();
+        }
+        return partial(completing, drillChildren(prefix, config::getStringList));
     }
 
     /** Lobby id completion: live lobby ids, falling back to 0 when none exist. */
@@ -2290,13 +2433,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * lobby-presets keys that name a real preset, else every preset.
      */
     private List<String> lobbyPresetOptions() {
-        ConfigurationSection section = plugin.getConfig().getConfigurationSection("world-engine.lobby-presets");
         List<String> options = new ArrayList<>();
-        if (section != null) {
-            for (String key : section.getKeys(false)) {
-                if (LobbyPreset.tryParse(key).isPresent() && !options.contains(key)) {
-                    options.add(key);
-                }
+        for (String key : config.lobbyPresetKeys()) {
+            if (LobbyPreset.tryParse(key).isPresent() && !options.contains(key)) {
+                options.add(key);
             }
         }
         if (options.isEmpty()) {
@@ -2309,7 +2449,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Teleports targets to the game world spawn. Never generates anything. */
     private boolean worldEngineTptoGame(CommandSender sender, List<Player> targets) {
-        String worldName = plugin.getConfig().getString("world-engine.world-name", "world");
+        String worldName = config.getString("world-engine.world-name", "world");
         World world = Bukkit.getWorld(worldName);
         if (world == null) {
             message(sender, "manhunt.worldengine-tpto-no-world", Map.of("world", worldName));
@@ -2404,17 +2544,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * Loads the default value for a setting from the bundled default
      * config.yml so that tab completion can suggest the default entry.
      */
-    private Object defaultConfigValue(String setting) {
-        try (var stream = plugin.getResource("config.yml")) {
-            if (stream == null) {
-                return null;
-            }
-            return YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(stream,
-                    java.nio.charset.StandardCharsets.UTF_8)).get(setting);
-        } catch (java.io.IOException e) {
-            return null;
-        }
-    }
 
     private boolean quickStart(CommandSender sender, String[] args) {
         QuickStartArgs parsed = parseQuickStartArgs(args);

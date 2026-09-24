@@ -8,12 +8,14 @@ import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.core.JManhuntExpansion;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.core.MetricsBootstrap;
+import com.jruk8.jmanhunt.config.ConfigRegistrar;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.YamlFileUpdater;
 import com.jruk8.jmanhunt.lobby.bounds.LobbyBoundsService;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfigRegistrar;
+import com.jruk8.jmanhunt.lobby.LobbyProtectionService;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.RolePadService;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -23,6 +25,7 @@ import com.jruk8.jmanhunt.match.listeners.PlayerMovementListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesRegistrar;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersRegistrar;
@@ -50,6 +53,8 @@ import com.jruk8.jmanhunt.tutorial.jmanhunt.JManhuntTutorialSounds;
 import com.jruk8.jmanhunt.api.JManhuntApi;
 import com.jruk8.jmanhunt.api.JManhuntApiImpl;
 import com.jruk8.jmanhunt.config.SettingsListener;
+import com.jruk8.jmanhunt.gui.GuiConfig;
+import com.jruk8.jmanhunt.gui.GuiConfigRegistrar;
 import com.jruk8.jmanhunt.gui.GuiListener;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.loot.PiglinBarterListener;
@@ -60,7 +65,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.configuration.file.YamlConfiguration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -68,20 +72,9 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int CONFIG_VERSION = 5;
-    private static final int MESSAGES_VERSION = 8;
     private static final int MODIFIERS_VERSION = 1;
-    /**
-     * Relocated config paths, applied on reload. Every key must live under a
-     * real category so the in-game config command can drill into it.
-     */
-    private static final Map<String, String> CONFIG_MOVES = Map.of(
-            "database", "statistics",
-            "game-end-delay", "match.end-delay",
-            "start-reminder-interval", "match.start-reminder-interval",
-            "end-statistics", "match.end-statistics",
-            "disconnect-handling", "match.disconnect-handling");
     private MessageService messages;
+    private MessagesRegistrar messageConfigs;
     private SoundService sounds;
     private PlayerStateStore playerStates;
     private StatsManager stats;
@@ -90,6 +83,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private StatisticsRepository statistics;
     private EngineStateRepository engineState;
     private JManhuntExpansion expansion;
+    private ConfigRegistrar configRegistrar;
     private ConfigService configService;
     private ModifierStore modifierStore;
     private ModifiersRegistrar modifierConfigs;
@@ -100,6 +94,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private LobbyService lobbyService;
     private LobbyConfigRegistrar lobbyConfigs;
     private TutorialConfigRegistrar tutorialConfigs;
+    private GuiConfigRegistrar guiConfigs;
     private PlaceholderConfigRegistrar placeholderConfigs;
     private TutorialService tutorialService;
     private UpdateCheckService updateChecks;
@@ -128,7 +123,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         // Initialize bStats unless anonymous statistics are disabled. This is
         // intentionally read once at startup: the toggle lives outside the
         // in-game configuration command and takes effect on server restart.
-        if (getConfig().getBoolean("send-anonymous-statistics", true)) {
+        if (configService.getBoolean("send-anonymous-statistics", true)) {
             var metricsBootstrap = new MetricsBootstrap(this);
             metricsBootstrap.register();
         }
@@ -149,23 +144,28 @@ public final class JManhuntPlugin extends JavaPlugin {
         lobbyConfigs.register();
         tutorialConfigs = new TutorialConfigRegistrar(this);
         tutorialConfigs.register();
+        guiConfigs = new GuiConfigRegistrar(this);
+        guiConfigs.register();
         placeholderConfigs = new PlaceholderConfigRegistrar(this);
         placeholderConfigs.register();
+        configRegistrar = new ConfigRegistrar(this);
+        configRegistrar.register();
+        messageConfigs = new MessagesRegistrar(this);
+        messageConfigs.register();
         reload();
-        debugService.resetToDefaults(getConfig().getBoolean("debug.enabled", false));
     }
 
     /** Creates player, stats, config, sound, tutorial, compass, and world services. */
     private void bootstrapServices() {
+        configService = new ConfigService(configRegistrar.getRoot(), modifierStore);
+        sounds = new SoundService(this, configRegistrar.getSounds());
         playerStates = new PlayerStateStore();
         roleTeams = new RoleTeamService(playerStates);
         setupStatistics();
         setupEngineState();
         stats = new StatsManager(this, messages, statistics);
         stats.loadLobbySessionsAsync();
-
-        configService = new ConfigService(this, modifierStore);
-        sounds = new SoundService(this, configService);
+        debugService.resetToDefaults(configService.getBoolean("debug.enabled", false));
         guiService = new GuiService();
         tutorialService = new TutorialService(tutorialConfigs.getTutorialConfig(),
                 new JManhuntTutorialMessenger(messages),
@@ -207,7 +207,7 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     /** Creates the game manager and wires it to the compass, world engine, and listeners. */
     private void bootstrapGame() {
-        winConditionEngine = new WinConditionEngine(getConfig());
+        winConditionEngine = new WinConditionEngine(configService);
         game = new GameManager(
                 this, messages, sounds, playerStates, compass, stats,
                 configService, worldEngine, winConditionEngine, lobbyService);
@@ -227,7 +227,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     }
 
     private void setupStatistics() {
-        if (!getConfig().getBoolean("statistics.enabled", true)) {
+        if (!configService.getBoolean("statistics.enabled", true)) {
             return;
         }
         try {
@@ -269,7 +269,7 @@ public final class JManhuntPlugin extends JavaPlugin {
      * has not loaded it. Never generates: creation stays behind tpto confirm.
      */
     private void loadLobbyWorldOnBoot() {
-        if (!getConfig().getBoolean("world-engine.enabled", false)) {
+        if (!configService.getBoolean("world-engine.enabled", false)) {
             return;
         }
         String name = worldEngine.lobbyWorldName();
@@ -308,6 +308,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new RolePadService(
                 this, lobbyService, playerStates, game, messages, sounds,
                 worldEngine::lobbyWorldName), this);
+        getServer().getPluginManager().registerEvents(new LobbyProtectionService(
+                this, worldEngine::lobbyWorldName), this);
         getServer().getPluginManager().registerEvents(new LobbyBoundsService(
                 this, lobbyService, playerStates, game, messages, sounds,
                 worldEngine::lobbyWorldName, debugService,
@@ -320,7 +322,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     }
 
     private void setupScheduling() {
-        double refreshInterval = getConfig().getDouble("settings.compass.refresh-interval", 10.0);
+        double refreshInterval = configService.getDouble("settings.compass.refresh-interval", 10.0);
         if (refreshInterval != -1.0) {
             long ticks = Math.max(1L, Math.round(refreshInterval * 20.0));
             Bukkit.getScheduler().runTaskTimer(this,
@@ -337,10 +339,10 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     /** Update checker toggles from config.yml. */
     private UpdateCheckSettings updateCheckSettings() {
-        return new UpdateCheckSettings(getConfig().getBoolean("update-checker.enabled", true),
-                getConfig().getBoolean("update-checker.releases.major", true),
-                getConfig().getBoolean("update-checker.releases.minor", true),
-                getConfig().getBoolean("update-checker.releases.hotfix", false));
+        return new UpdateCheckSettings(configService.getBoolean("update-checker.enabled", true),
+                configService.getBoolean("update-checker.releases.major", true),
+                configService.getBoolean("update-checker.releases.minor", true),
+                configService.getBoolean("update-checker.releases.hotfix", false));
     }
 
     @Override public void onDisable() {
@@ -412,10 +414,70 @@ public final class JManhuntPlugin extends JavaPlugin {
         return messages;
     }
 
+    /** Typed config and modifier service. */
+    public ConfigService configService() {
+        return configService;
+    }
+
+    /** Match and lifetime statistics. */
+    public StatsManager stats() {
+        return stats;
+    }
+
+    /** Internal GUI data: category items plus setting descriptions. */
+    public GuiConfig guiConfig() {
+        return guiConfigs == null ? null : guiConfigs.getGuiConfig();
+    }
+
+    /**
+     * True once setup finished anywhere. A broken engine database fails
+     * open to the GUI so a stats hiccup never blocks the admin surface.
+     */
+    public boolean isSetupDone() {
+        if (engineState == null) {
+            return true;
+        }
+        try {
+            return engineState.getSetupDone();
+        } catch (Exception exception) {
+            logger().warning("Could not read the setup flag: " + exception.getMessage());
+            return true;
+        }
+    }
+
+    /** Marks setup finished forever: session start, dismiss, or engine seen on. */
+    public void markSetupDone() {
+        if (engineState == null) {
+            return;
+        }
+        try {
+            engineState.setSetupDone(true);
+        } catch (Exception exception) {
+            logger().warning("Could not write the setup flag: " + exception.getMessage());
+        }
+    }
+
+    /**
+     * Marks setup done when the world engine is enabled. Called on
+     * reload (which also covers enable) and after config writes.
+     */
+    public void observeWorldEngine() {
+        if (engineState == null || configService == null) {
+            return;
+        }
+        if (configService.getBoolean("world-engine.enabled", false)) {
+            markSetupDone();
+        }
+    }
+
     public void reload() {
-        YamlFileUpdater.update(this, "config.yml", "config-version", CONFIG_VERSION, CONFIG_MOVES);
-        reloadConfig();
-        YamlFileUpdater.update(this, "messages.yml", "messages-version", MESSAGES_VERSION);
+        if (configRegistrar != null) {
+            configRegistrar.reload();
+        }
+        observeWorldEngine();
+        if (messageConfigs != null) {
+            messageConfigs.reload();
+        }
         if (placeholderConfigs != null) {
             placeholderConfigs.reload();
         }
@@ -423,7 +485,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         if (messages == null) {
             messages = new MessageService();
         }
-        messages.reload(YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "messages.yml")));
+        if (messageConfigs != null) {
+            messages.reload(messageConfigs.getMessagesConfig());
+        }
 
         reloadModifiers();
 
@@ -435,8 +499,12 @@ public final class JManhuntPlugin extends JavaPlugin {
             tutorialConfigs.reload();
         }
 
+        if (guiConfigs != null) {
+            guiConfigs.reload();
+        }
+
         if (winConditionEngine != null) {
-            winConditionEngine.reload(getConfig());
+            winConditionEngine.reload(configService);
         }
 
         // Cancel any running interval modifier tasks before reloading settings
@@ -444,13 +512,18 @@ public final class JManhuntPlugin extends JavaPlugin {
         if (game != null) {
             game.stateCommands().cancelAllIntervalModifiers();
         }
+        reloadSettingsListeners();
+        logger().info("JManhunt has been reloaded.");
+    }
+
+    /** Re-runs every settings listener, generating missing data files first. */
+    private void reloadSettingsListeners() {
         for (SettingsListener listener : settings) {
             if (!new java.io.File(getDataFolder(), listener.getDataPath()).exists()) {
                 saveResource(listener.getDataPath(), false);
             }
             listener.onReload();
         }
-        logger().info("JManhunt has been reloaded.");
     }
 
     private void reloadModifiers() {
@@ -462,10 +535,6 @@ public final class JManhuntPlugin extends JavaPlugin {
         } else {
             modifierConfigs.reload();
             modifierStore.clearItemWarnings();
-        }
-        if (getConfig().contains("modifiers")) {
-            logger().warning("config.yml still has a modifiers: block. Modifiers moved to"
-                    + " modifiers.yml; the old block is ignored and can be deleted.");
         }
     }
 

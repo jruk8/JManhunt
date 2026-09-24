@@ -4,7 +4,8 @@ All commands are available under `/manhunt` and its alias `/mh`.
 
 | Command                                           | What it does | Permission |
 |---------------------------------------------------| --- | --- |
-| `/manhunt [id\|all]`                             | Shows your match roster, one match roster by id, or every running match with `all`. | `jmanhunt.command.status` |
+| `/manhunt`                                      | Opens the [admin GUI](gui.md) (needs `jmanhunt.gui`) or shows your match roster. | `jmanhunt.gui`, `jmanhunt.command.status` |
+| `/manhunt status [id\|all]`                    | Shows one match roster by id, or every running match plus populated lobbies with `all`. | `jmanhunt.command.status`, `jmanhunt.command.status.other` for the argument |
 | `/manhunt help`                                   | Shows the in-game command list. | `jmanhunt.command.help` |
 | `/manhunt setup`                                  | Starts the interactive setup tutorial (players only). | `jmanhunt.command.setup` |
 | `/manhunt challenges`                             | Shows a chat notice with a clickable link to the optional Challenges addon. | `jmanhunt.command.challenges` |
@@ -128,12 +129,16 @@ speedrunner leaves, the other side wins on the spot.
 
 ## Match Status
 
-`/manhunt [id|all]` groups everyone by role and ends with a spectator roll
-call whenever someone is watching. Four extras can be toggled under
-`settings.status`: the per-side win conditions (`show-win-conditions`),
-the running time (`show-elapsed-time`), the enabled modifiers
-(`show-modifiers`, hidden when none are enabled), and a gray
-`L{lobby}|G{game}` tag (`show-ids`, on by default).
+`/manhunt status` without an argument shows your own match, else your lobby
+queue. `/manhunt status [id|all]` needs `jmanhunt.command.status.other` on
+top of the base node: an id shows one match roster grouped by role with a
+spectator roll call whenever someone is watching, while `all` lists every
+running match first and then every lobby holding at least one player with
+its player count. Four extras can be toggled under `settings.status`: the
+per-side win conditions (`show-win-conditions`), the running time
+(`show-elapsed-time`), the enabled modifiers (`show-modifiers`, hidden when
+none are enabled), and a gray `L{lobby}|G{game}` tag (`show-ids`, on by
+default).
 
 ## Lobby and Game Worlds
 
@@ -150,28 +155,45 @@ spawn and never generates anything. Without a selector, both target you
 
 ## Editing Settings In-Game
 
-`/manhunt config` (alias `/mh config`) browses and changes scalar
-settings in-game, one category at a time. Each argument drills one level
-deeper, and tab completion only suggests the children of the current level.
-Boolean toggles accept `true` or `false`:
+`/manhunt config` (alias `/mh config`) browses and changes settings
+in-game, one category at a time. Each argument drills one level deeper,
+and tab completion only suggests the children of the current level.
+Settings live under four categories: `settings.match`,
+`settings.compass`, `settings.players`, and `settings.server`.
+Everything here can also be changed through the [admin GUI](gui.md).
+
+Every value is validated before it is stored. Booleans accept only
+`true` or `false`; numbers must be numeric and inside their documented
+bounds; choices accept only their listed options; anything else is
+rejected with an error naming what is allowed:
 
 ```text
-/manhunt config settings headstarts hunter enabled true
+/manhunt config settings match autostart enabled true
 ```
 
-Numerical settings (ints, floats, doubles) accept their numeric value:
+Numerical settings accept their numeric value:
 
 ```text
-/manhunt config settings compass refresh-interval 5.0
-/manhunt config settings win-conditions speedrunner survive-time time 1800.0
+/manhunt config settings compass refresh-interval 5
+/manhunt config settings match win-conditions speedrunner survive-time time 1800
 /manhunt config world-engine cell-size 20000
 ```
 
-Strings and enum-like values are stored verbatim:
+Choices accept one of their listed options, and text joins multiple
+words into one value:
 
 ```text
-/manhunt config settings start-on-speedrunner-damage on-expire FORCE_START
-/manhunt config settings win-conditions speedrunner acquire-item item minecraft:diamond
+/manhunt config settings match start-on-speedrunner-damage on-expire FORCE_START
+```
+
+String lists drill by index: view one entry, set one entry, append, or
+remove (only lists under `settings.*` also appear in the GUI):
+
+```text
+/manhunt config match end-statistics 0
+/manhunt config match end-statistics 0 <words>
+/manhunt config match end-statistics add <words>
+/manhunt config match end-statistics remove 0
 ```
 
 With no category, the command lists categories; with a section path, it lists
@@ -187,34 +209,24 @@ Setting names are matched case-insensitively. When tab-completing a value,
 non-boolean settings suggest the **default value from the bundled default
 config**.
 
-When `settings.announce-config-changes` is enabled, every successful change
-is announced to all online players except the one who made it
-(`manhunt.setting-change-announced`). It is disabled by default.
-
-> **Known limitation:** JManhunt does not use a type-safe configuration
-> framework (such as Cloud). Values are parsed against the current type in
-> `config.yml` only: booleans and numbers are validated, but strings and
-> enums are stored verbatim with **no schema validation**. If you need
-> guaranteed-valid enum keys or strict type checking, edit `config.yml`
-> directly and run `/manhunt reload`.
+When `settings.server.announce-config-changes` is enabled, every
+successful change is announced to all online players except the one who
+made it (`manhunt.setting-change-announced`). It is disabled by default.
 
 ## Modifiers
 
-Custom modifiers are named command bundles in `config.yml` under
-`modifiers`. They are disabled by default. A modifier can run commands
-when a match starts, on a recurring interval during the match, and when it
-ends, either from the console or once for each participating player.
+Custom modifiers are named command bundles in `modifiers.yml`. They
+are disabled by default. A modifier can run commands when a match
+starts, on a recurring interval during the match, and when it ends,
+either from the console or once for each participating player.
 
-To enable a modifier, use its configuration name:
-
-```text
-/manhunt config modifiers everyone-gets-beef enabled true
-```
+Browse and toggle them with `/manhunt modifiers`, through the
+[admin GUI](gui.md), or by editing `modifiers.yml` and running
+`/manhunt reload`.
 
 The example modifier in the default config gives players food and applies
 different commands to hunters and speedrunners. `perma-night` is another
-example. You can also toggle a modifier by changing its `enabled` value in
-`config.yml`, then running `/manhunt reload`.
+example.
 
 When creating a modifier, copy the structure of an existing one. Currently
 only manual YAML file editing is supported for creation.

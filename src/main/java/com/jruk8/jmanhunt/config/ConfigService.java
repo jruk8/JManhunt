@@ -1,109 +1,337 @@
 package com.jruk8.jmanhunt.config;
 
-import com.jruk8.jmanhunt.command.SettingValueParser;
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.FileConfiguration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.function.BiConsumer;
 
-/** Central point for reading/writing plugin config settings and reacting to changes. */
+/**
+ * Central point for reading and writing plugin config settings. Reads
+ * resolve dotted paths against the typed Okaeri root; writes validate
+ * through the setting registry, so the chat command and the GUI share
+ * one typed path with identical bounds and option checks.
+ */
 public final class ConfigService {
-    private final JManhuntPlugin plugin;
+    private static final JManhuntConfig DEFAULTS = new JManhuntConfig();
+
+    private final JManhuntConfig root;
     private final ModifierStore modifiers;
+    private final Runnable saver;
     private final Map<String, List<BiConsumer<Boolean, Boolean>>> listeners = new HashMap<>();
 
-    public ConfigService(JManhuntPlugin plugin, ModifierStore modifiers) {
-        this.plugin = plugin;
-        this.modifiers = modifiers;
+    /**
+     * @param root live Okaeri store, held by reference across reloads
+     *        (null only in modifier-only unit tests, where setting
+     *        reads fall back to their defaults)
+     */
+    public ConfigService(JManhuntConfig root, ModifierStore modifiers) {
+        this(root, modifiers, root == null ? () -> {} : root::save);
     }
 
-    /** Registers a callback fired whenever the given setting is changed via {@link #setBoolean}. */
+    /**
+     * Test seam: bare schema instances have no Okaeri binder, so unit
+     * tests pass a no-op saver while production saves through the root.
+     */
+    ConfigService(JManhuntConfig root, ModifierStore modifiers, Runnable saver) {
+        this.root = root;
+        this.modifiers = modifiers;
+        this.saver = saver;
+    }
+
+    /** Registers a callback fired whenever the given setting is changed via a boolean write. */
     public void onChange(String setting, BiConsumer<Boolean, Boolean> listener) {
         listeners.computeIfAbsent(setting, k -> new ArrayList<>()).add(listener);
     }
 
     public Set<String> settingNames() {
-        return settingNames(plugin.getConfig());
+        return SettingRegistry.settingNames();
     }
 
-    /**
-     * Editable setting names for the given config. Package-visible so unit
-     * tests can exercise it without a running server: the plugin instance
-     * itself is not mockable on the unit-test classpath.
-     */
-    public static Set<String> settingNames(FileConfiguration config) {
-        Set<String> names = new TreeSet<>();
-        var gameRules = config.getConfigurationSection("match.game-rules");
-        if (gameRules != null) {
-            if (gameRules.contains("enabled")) {
-                names.add("match.game-rules.enabled");
-            }
-            var rules = gameRules.getConfigurationSection("rules");
-            if (rules != null) {
-                for (String key : rules.getKeys(false)) {
-                    names.add("match.game-rules.rules." + key);
-                }
-            }
+    /** Registry descriptor for the path, or null when it is not an editable setting. */
+    public SettingDescriptor describe(String setting) {
+        return SettingRegistry.byPath(setting);
+    }
+
+    /** Lobby preset keys from the world-engine map, for completion and error text. */
+    public Set<String> lobbyPresetKeys() {
+        if (root == null || root.getWorldEngine() == null
+                || root.getWorldEngine().getLobbyPresets() == null) {
+            return Set.of();
         }
-        names.addAll(extraModifierNames(config));
-        return names;
+        return new LinkedHashSet<>(root.getWorldEngine().getLobbyPresets().keySet());
+    }
+
+    /** True when the path names an editable string list. */
+    public boolean isList(String setting) {
+        return SettingRegistry.isListPath(setting);
+    }
+
+    /** True when the path addresses one list entry (list path plus an integer tail). */
+    public boolean isIndexPath(String setting) {
+        if (setting == null) {
+            return false;
+        }
+        int dot = setting.lastIndexOf('.');
+        if (dot == -1 || !isList(setting.substring(0, dot))) {
+            return false;
+        }
+        try {
+            Integer.parseInt(setting.substring(dot + 1).trim());
+            return true;
+        } catch (NumberFormatException expected) {
+            return false;
+        }
     }
 
     public boolean getBoolean(String setting, boolean defaultValue) {
-        if (plugin == null) {
-            return defaultValue;
+        Object value = rawValue(setting);
+        if (value instanceof Boolean bool) {
+            return bool;
         }
-        return plugin.getConfig().getBoolean(setting, defaultValue);
+        return defaultValue;
     }
 
     public String getString(String setting, String defaultValue) {
-        return plugin.getConfig().getString(setting, defaultValue);
-    }
-
-    public float getFloat(String setting, float defaultValue) {
-        return (float) plugin.getConfig().getDouble(setting, defaultValue);
+        Object value = rawValue(setting);
+        if (value instanceof String text) {
+            return text;
+        }
+        if (value instanceof Enum<?> option) {
+            return option.name();
+        }
+        return defaultValue;
     }
 
     public int getInt(String setting, int defaultValue) {
-        return plugin.getConfig().getInt(setting, defaultValue);
+        Object value = rawValue(setting);
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return defaultValue;
     }
 
-    /** Returns the raw config value for the given path, or null if absent. */
+    public double getDouble(String setting, double defaultValue) {
+        Object value = rawValue(setting);
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        return defaultValue;
+    }
+
+    public float getFloat(String setting, float defaultValue) {
+        return (float) getDouble(setting, defaultValue);
+    }
+
+    public List<String> getStringList(String setting) {
+        Object value = rawValue(setting);
+        if (value instanceof List<?> list) {
+            List<String> strings = new ArrayList<>(list.size());
+            for (Object entry : list) {
+                strings.add(entry == null ? "null" : String.valueOf(entry));
+            }
+            return strings;
+        }
+        return List.of();
+    }
+
+    /** Returns the config value for the given path, with enums as their names, or null if absent. */
     public Object getValue(String setting) {
-        return plugin.getConfig().get(setting);
+        Object value = rawValue(setting);
+        if (value instanceof Enum<?> option) {
+            return option.name();
+        }
+        return value;
+    }
+
+    /** Reads an enum-typed path leniently, falling back when missing or unknown. */
+    public <T extends Enum<T>> T getEnum(String setting, Class<T> type, T fallback) {
+        Object value = rawValue(setting);
+        if (type.isInstance(value)) {
+            return type.cast(value);
+        }
+        if (value instanceof String raw) {
+            for (T constant : type.getEnumConstants()) {
+                if (constant.name().equalsIgnoreCase(raw.trim())) {
+                    return constant;
+                }
+            }
+        }
+        return fallback;
+    }
+
+    /** Schema default for the path, display-normalized, or null when unknown. */
+    public Object defaultValue(String setting) {
+        Object value = ConfigPathMapper.get(DEFAULTS, setting);
+        if (value instanceof Enum<?> option) {
+            return option.name();
+        }
+        return value;
+    }
+
+    /** True when the live value differs from the schema default. */
+    public boolean isModified(String setting) {
+        return !Objects.equals(displayValue(getValue(setting)), displayValue(defaultValue(setting)));
     }
 
     /**
-     * Sets a scalar config value parsed from a raw string. Values are parsed
-     * against the current type in config.yml: booleans and numbers are
-     * validated, strings/enums are stored verbatim. Returns true on success.
+     * Display form of a config value: enum names as-is, floating point
+     * trimmed to at most three decimals, everything else verbatim.
      */
-    public boolean setValue(String setting, String raw) {
-        Object current = plugin.getConfig().get(setting);
-        return SettingValueParser.parse(current, raw, (oldValue, newValue) -> {
-            if (newValue instanceof Boolean bool) {
-                setBoolean(setting, bool);
-            } else {
-                plugin.getConfig().set(setting, newValue);
-                plugin.saveConfig();
-            }
-        });
+    public static String displayValue(Object value) {
+        if (value instanceof Enum<?> option) {
+            return option.name();
+        }
+        if (value instanceof Double number) {
+            return trimDouble(number);
+        }
+        if (value instanceof Float number) {
+            return trimDouble(number.doubleValue());
+        }
+        return String.valueOf(value);
     }
 
-    public boolean setBoolean(String setting, boolean value) {
-        boolean oldValue = plugin.getConfig().getBoolean(setting);
-        plugin.getConfig().set(setting, value);
-        plugin.saveConfig();
+    private static String trimDouble(double value) {
+        if (!Double.isFinite(value)) {
+            return String.valueOf(value);
+        }
+        String text = String.format(Locale.ROOT, "%.3f", value);
+        while (text.contains(".") && (text.endsWith("0") || text.endsWith("."))) {
+            text = text.substring(0, text.length() - 1);
+        }
+        return text;
+    }
 
-        fireChange(setting, oldValue, value);
-        return true;
+    /**
+     * Validates and applies a raw string value. Returns the outcome with
+     * the canonical old and new values, or a message key plus slots that
+     * render the failure.
+     */
+    public SetOutcome setValue(String setting, String raw) {
+        SettingDescriptor descriptor = SettingRegistry.byPath(setting);
+        if (descriptor == null) {
+            if (isIndexPath(setting)) {
+                int dot = setting.lastIndexOf('.');
+                return listSet(setting.substring(0, dot),
+                        Integer.parseInt(setting.substring(dot + 1).trim()), raw);
+            }
+            return SetOutcome.fail("manhunt.setting-invalid", Map.of());
+        }
+        SettingRegistry.ValidationOutcome validation =
+                SettingRegistry.validate(descriptor, raw, this::getValue);
+        if (!validation.ok()) {
+            Map<String, String> slots = new HashMap<>(validation.slots());
+            slots.put("setting", descriptor.path());
+            return SetOutcome.fail(validation.errorKey(), slots);
+        }
+        return applyValue(descriptor, validation.value());
+    }
+
+    /** Replaces one list entry. Index errors fail with the list size attached. */
+    public SetOutcome listSet(String listPath, int index, String raw) {
+        List<Object> live = liveList(listPath);
+        if (live == null) {
+            return SetOutcome.fail("manhunt.setting-invalid", Map.of());
+        }
+        if (index < 0 || index >= live.size()) {
+            return SetOutcome.fail("manhunt.setting-index-invalid",
+                    Map.of("setting", listPath, "index", String.valueOf(index),
+                            "size", String.valueOf(live.size())));
+        }
+        Object oldValue = live.get(index);
+        live.set(index, raw == null ? "" : raw.trim());
+        saver.run();
+        return SetOutcome.ok(null, oldValue, live.get(index));
+    }
+
+    /** Appends one list entry. */
+    public SetOutcome listAdd(String listPath, String raw) {
+        List<Object> live = liveList(listPath);
+        if (live == null) {
+            return SetOutcome.fail("manhunt.setting-invalid", Map.of());
+        }
+        String value = raw == null ? "" : raw.trim();
+        live.add(value);
+        saver.run();
+        return SetOutcome.ok(null, "-", value);
+    }
+
+    /** Removes one list entry. Index errors fail with the list size attached. */
+    public SetOutcome listRemove(String listPath, int index) {
+        List<Object> live = liveList(listPath);
+        if (live == null) {
+            return SetOutcome.fail("manhunt.setting-invalid", Map.of());
+        }
+        if (index < 0 || index >= live.size()) {
+            return SetOutcome.fail("manhunt.setting-index-invalid",
+                    Map.of("setting", listPath, "index", String.valueOf(index),
+                            "size", String.valueOf(live.size())));
+        }
+        Object oldValue = live.remove(index);
+        saver.run();
+        return SetOutcome.ok(null, oldValue, "-");
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Object> liveList(String listPath) {
+        if (root == null) {
+            return null;
+        }
+        String canonical = SettingRegistry.canonicalListPath(listPath);
+        Object node = ConfigPathMapper.get(root, canonical == null ? listPath : canonical);
+        if (!(node instanceof List<?> list)) {
+            return null;
+        }
+        return (List<Object>) list;
+    }
+
+    /** Applies a pre-validated boolean and fires change listeners. */
+    public boolean setBoolean(String setting, boolean value) {
+        SettingDescriptor descriptor = SettingRegistry.byPath(setting);
+        if (descriptor == null || descriptor.type() != SettingType.BOOL) {
+            return false;
+        }
+        return applyValue(descriptor, value).ok();
+    }
+
+    private SetOutcome applyValue(SettingDescriptor descriptor, Object value) {
+        if (root == null) {
+            return SetOutcome.fail("manhunt.setting-invalid", Map.of());
+        }
+        Object oldValue = getValue(descriptor.path());
+        if (!ConfigPathMapper.set(root, descriptor.path(), value)) {
+            return SetOutcome.fail("manhunt.setting-invalid", Map.of());
+        }
+        saver.run();
+        if (value instanceof Boolean bool) {
+            boolean oldBool = oldValue instanceof Boolean old ? old : !bool;
+            fireChange(descriptor.path(), oldBool, bool);
+        }
+        return SetOutcome.ok(descriptor, oldValue, getValue(descriptor.path()));
+    }
+
+    private Object rawValue(String setting) {
+        if (root == null) {
+            return null;
+        }
+        return ConfigPathMapper.get(root, setting);
+    }
+
+    /** Typed write result: canonical values on success, message slots on failure. */
+    public record SetOutcome(boolean ok, SettingDescriptor descriptor, Object oldValue,
+            Object newValue, String errorKey, Map<String, String> slots) {
+        static SetOutcome ok(SettingDescriptor descriptor, Object oldValue, Object newValue) {
+            return new SetOutcome(true, descriptor, oldValue, newValue, null, Map.of());
+        }
+
+        static SetOutcome fail(String errorKey, Map<String, String> slots) {
+            return new SetOutcome(false, null, null, null, errorKey, slots);
+        }
     }
 
     public Set<String> modifierNames() {
@@ -208,52 +436,6 @@ public final class ConfigService {
         }
         for (BiConsumer<Boolean, Boolean> listener : list) {
             listener.accept(oldValue, newValue);
-        }
-    }
-
-    private static Set<String> extraModifierNames(FileConfiguration root) {
-        Set<String> names = new TreeSet<>();
-        for (String key : root.getKeys(false)) {
-            // config-version and send-anonymous-statistics are not editable.
-            // A stale config.yml modifiers: block (pre-move leftover) stays
-            // hidden too; modifiers live in modifiers.yml now.
-            if (key.equals("config-version")
-                    || key.equals("send-anonymous-statistics")
-                    || key.equals("modifiers")) {
-                continue;
-            }
-            ConfigurationSection child = root.getConfigurationSection(key);
-            if (child != null) {
-                collectExtraModifierNames(child, "", key + ".", names);
-            } else {
-                names.add(key);
-            }
-        }
-        return names;
-    }
-
-    private static void collectExtraModifierNames(ConfigurationSection section, String prefix, String root,
-            Set<String> names) {
-        if (section == null) {
-            return;
-        }
-        for (String key : section.getKeys(false)) {
-            String path = prefix.isEmpty() ? key : prefix + "." + key;
-            ConfigurationSection child = section.getConfigurationSection(key);
-            if (child != null) {
-                // Recurse into nested sections. Also add explicit "enabled"
-                // toggles so that boolean switches are listed under their
-                // .enabled path as before.
-                if (child.contains("enabled")) {
-                    names.add(root + path + ".enabled");
-                }
-                collectExtraModifierNames(child, path, root, names);
-            } else {
-                // Scalar leaf: booleans, ints, doubles, floats and strings
-                // (including enums) are all editable in-game via /manhunt
-                // modifiers. Lists and maps are excluded.
-                names.add(root + path);
-            }
         }
     }
 }

@@ -87,6 +87,42 @@ public final class StatsManager {
         return career.computeIfAbsent(id, ignored -> new CareerStats());
     }
 
+    /**
+     * Server-wide lifetime totals for the history book. A failed read
+     * logs once and yields zeros so menu opens never throw.
+     */
+    public HistoryPlaceholders.Totals lifetime() {
+        try {
+            return repository.lifetime();
+        } catch (java.sql.SQLException exception) {
+            plugin.getLogger().warning(
+                    "Could not load lifetime stats: " + exception.getMessage());
+            return HistoryPlaceholders.Totals.empty();
+        }
+    }
+
+    /**
+     * Records a player kill for the killer's match slice. Non-participant
+     * killers record nothing; the total otherwise always counts while the
+     * hunter and speedrunner splits only count opposite-role victims, so
+     * same-role kills never inflate them. Pure apart from the slice
+     * lookup, so unit tests cover it directly.
+     */
+    public void recordPlayerKill(long matchId, UUID killerId, Role killerRole, Role victimRole) {
+        if (!killerRole.isParticipant()) {
+            return;
+        }
+        Stats slice = getOrCreate(matchId, killerId);
+        slice.kills++;
+        if (killerRole.opposite() == victimRole) {
+            if (killerRole == Role.HUNTER) {
+                slice.hunterKills++;
+            } else if (killerRole == Role.SPEEDRUNNER) {
+                slice.speedrunnerKills++;
+            }
+        }
+    }
+
     /** Records a career death for the given player (persisted with the next match save). */
     public void recordDeath(UUID id) {
         CareerStats total = career(id);
@@ -159,7 +195,7 @@ public final class StatsManager {
     private void accumulateRoleTotals(CareerStats total, Stats match, long elapsed, Role winner) {
         if (match.role == Role.HUNTER) {
             total.timeHunter += elapsed;
-            total.hunterKills += match.kills;
+            total.hunterKills += match.hunterKills;
             total.hunterSessions++;
             if (winner == Role.HUNTER) {
                 total.hunterWins++;
@@ -167,7 +203,7 @@ public final class StatsManager {
             }
         } else if (match.role == Role.SPEEDRUNNER) {
             total.timeSpeedrunner += elapsed;
-            total.speedrunnerKills += match.kills;
+            total.speedrunnerKills += match.speedrunnerKills;
             total.speedrunnerSessions++;
             if (winner == Role.SPEEDRUNNER) {
                 total.speedrunnerWins++;
@@ -180,14 +216,14 @@ public final class StatsManager {
     private void accumulateRoleDelta(CareerStats delta, Stats match, long elapsed, Role winner) {
         if (match.role == Role.HUNTER) {
             delta.timeHunter = elapsed;
-            delta.hunterKills = match.kills;
+            delta.hunterKills = match.hunterKills;
             delta.hunterSessions = 1;
             if (winner == Role.HUNTER) {
                 delta.hunterWins = 1;
             }
         } else if (match.role == Role.SPEEDRUNNER) {
             delta.timeSpeedrunner = elapsed;
-            delta.speedrunnerKills = match.kills;
+            delta.speedrunnerKills = match.speedrunnerKills;
             delta.speedrunnerSessions = 1;
             if (winner == Role.SPEEDRUNNER) {
                 delta.speedrunnerWins = 1;
@@ -258,7 +294,7 @@ public final class StatsManager {
     /** End-screen lines go to the match plus the console, never other matches. */
     public void showStats(long matchId, Collection<? extends Player> recipients) {
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
-        for (String statistic : plugin.getConfig().getStringList("match.end-statistics")) {
+        for (String statistic : plugin.configService().getStringList("match.end-statistics")) {
             if (statistic.equalsIgnoreCase("PROGRESSION")) {
                 updateProgression(matchId);
             }

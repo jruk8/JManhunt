@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.api.events.JMatchCancelEvent;
 import com.jruk8.jmanhunt.api.events.JMatchEndEvent;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.match.LeaveDestination;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -134,9 +135,9 @@ public final class MatchFinishService {
     }
 
     /** Configured leave destination, SPECTATOR by default. */
-    public GameManager.LeaveDestination leaveDestination() {
-        return GameManager.LeaveDestination.parse(
-                plugin.getConfig().getString("settings.game-leave.destination", "SPECTATOR"));
+    public LeaveDestination leaveDestination() {
+        return LeaveDestination.parse(
+                configService.getString("settings.match.game-leave.destination", "SPECTATOR"));
     }
 
     /**
@@ -152,7 +153,7 @@ public final class MatchFinishService {
         if (!instance.active()) {
             return 0;
         }
-        GameManager.LeaveDestination destination = leaveDestination();
+        LeaveDestination destination = leaveDestination();
         int removed = 0;
         List<Role> leftRoles = new ArrayList<>();
         List<String> leftNames = new ArrayList<>();
@@ -175,7 +176,7 @@ public final class MatchFinishService {
 
     /** Removes one player from the instance. Returns the prior role, or null when not active. */
     private Role leavePlayer(GameInstance instance, Player player, boolean dropGear,
-            GameManager.LeaveDestination destination) {
+            LeaveDestination destination) {
         UUID playerId = player.getUniqueId();
         if (!instance.isActive(playerId)) {
             return null;
@@ -201,8 +202,8 @@ public final class MatchFinishService {
 
     /** Moves a leaver to the lobby or the spectator box. */
     private void applyLeaveDestination(GameInstance instance, Player player, boolean dropGear,
-            GameManager.LeaveDestination destination) {
-        if (destination == GameManager.LeaveDestination.LOBBY) {
+            LeaveDestination destination) {
+        if (destination == LeaveDestination.LOBBY) {
             playerStates.setRole(player, Role.NONE);
             worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
             worldEngine.setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
@@ -263,7 +264,7 @@ public final class MatchFinishService {
         if (environment != World.Environment.NORMAL && environment != World.Environment.NETHER) {
             return false;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         if (!config.enabled() || instance.cellIndex().isEmpty()) {
             return false;
         }
@@ -354,7 +355,7 @@ public final class MatchFinishService {
         stats.completeMatch(instance.matchId(), winner);
 
         // Make all players invulnerable on game end if configured
-        if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
+        if (configService.getBoolean("settings.players.invulnerability.on-game-end.enabled", true)) {
             store.onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 
@@ -366,7 +367,7 @@ public final class MatchFinishService {
 
         long delay = immediate
                 ? 0L
-                : Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
+                : Math.max(0L, Math.round(configService.getDouble("match.end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
     }
@@ -403,7 +404,7 @@ public final class MatchFinishService {
         stateCommands.runEnd(teardownId, participants, spectators, instance.originLobbyId(), lastMatch);
         scatterEngineOffEnd(instance, participants);
         worldEngine.onMatchEnd(participants, spectators, instance.originLobbyId(), teardownId);
-        if (plugin.getConfig().getBoolean("settings.roles.reset-on-game-end.enabled", true)) {
+        if (configService.getBoolean("settings.players.roles.reset-on-game-end.enabled", true)) {
             playerStates.resetRoles(instance.assignedPlayerIds());
         }
         // A finished match fields no sides, even when roles are kept.
@@ -428,13 +429,13 @@ public final class MatchFinishService {
     private void scatterEngineOffEnd(GameInstance instance, List<Player> participants) {
         Location center = instance.startCenter();
         if (participants.isEmpty() || center == null || center.getWorld() == null
-                || plugin.getConfig().getBoolean("world-engine.enabled", false)) {
+                || configService.getBoolean("world-engine.enabled", false)) {
             return;
         }
         World world = center.getWorld();
         int centerX = center.getBlockX();
         int centerZ = center.getBlockZ();
-        WorldEngineConfig spawnConfig = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig spawnConfig = WorldEngineConfig.fromConfig(configService);
         for (Player player : participants) {
             player.teleport(MatchTeleportService.spreadSpawnForConfig(world, centerX, centerZ,
                     MatchStartService.SURROUND_RADIUS,
@@ -514,7 +515,7 @@ public final class MatchFinishService {
         messaging.playInstanceSound(instance, "game.cancelled-sound");
 
         // Make all players invulnerable on cancel if configured
-        if (configService.getBoolean("settings.invulnerability.on-game-end.enabled", true)) {
+        if (configService.getBoolean("settings.players.invulnerability.on-game-end.enabled", true)) {
             store.onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 
@@ -526,7 +527,7 @@ public final class MatchFinishService {
 
         long delay = immediate
                 ? 0L
-                : Math.max(0L, Math.round(plugin.getConfig().getDouble("match.end-delay", 10.0) * 20.0));
+                : Math.max(0L, Math.round(configService.getDouble("match.end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
     }
@@ -558,7 +559,7 @@ public final class MatchFinishService {
 
     /** Logs the active border mode; silent when borders cannot apply. */
     public void logBorderMode() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         if (!config.enabled() || !config.worldBorderEnabled()) {
             return;
         }
@@ -590,7 +591,7 @@ public final class MatchFinishService {
         if (store.instances().size() < 2) {
             return;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         if (!config.enabled() || !config.worldBorderEnabled()) {
             return;
         }

@@ -17,16 +17,6 @@ format:
   recommendation: "<yellow>(recommended)</yellow> "
   notrecommended: "<red>(not recommended)</red> "
 sounds:
-  neutral:
-    enabled: true
-    id: "block.note_block.pling"
-    volume: 1.0
-    pitch: 1.0
-  angry:
-    enabled: true
-    id: "block.bamboo_wood.place"
-    volume: 1.0
-    pitch: 1.0
   congratulations:
     enabled: true
     id: "entity.player.levelup"
@@ -81,6 +71,7 @@ nodes:
           - "jmanhunt:mh worldengine tpto lobbyworld @s ADVANCED"
         next: "we_teleport"
       - text: "Create an EMPTY plot: nothing prebuilt."
+        notrecommended: true
         commands:
           - "jmanhunt:mh worldengine tpto lobbyworld @s EMPTY"
           - "jmanhunt:mh worldengine tpto lobbyworld @s EMPTY"

@@ -2,46 +2,35 @@ package com.jruk8.jmanhunt.config;
 
 import com.jruk8.jmanhunt.command.DrillResolve;
 import com.jruk8.jmanhunt.command.ManhuntCommand;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.function.Function;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests for the /manhunt config drill-down resolution. YamlConfiguration
- * is a pure YAML wrapper, so these tests run without a Bukkit server.
+ * Tests for the /manhunt config drill-down resolution against the real
+ * setting registry. List sizes come from fixture lookups; everything
+ * else is static registry data, so no server is needed.
  */
 class ConfigDrillTest {
 
-    private static YamlConfiguration fixture() {
-        YamlConfiguration root = new YamlConfiguration();
-        root.set("settings.compass.given-to.hunters", true);
-        root.set("settings.compass.given-to.speedrunners", false);
-        root.set("settings.compass.hunter.max-distance.distance", -1.0);
-        root.set("settings.autostart.enabled", false);
-        root.set("match.end-delay", 10.0);
-        root.set("config-version", 3);
-        return root;
+    private static Function<String, List<String>> lists(Map<String, List<String>> fixtures) {
+        return fixtures::get;
     }
 
-    private static Set<String> editable() {
-        return Set.of(
-                "settings.compass.given-to.hunters",
-                "settings.compass.given-to.speedrunners",
-                "settings.autostart.enabled",
-                "match.end-delay");
+    private static Function<String, List<String>> noLists() {
+        return path -> null;
     }
 
     @Test
     void fullLeafPathResolvesWithEmptyRemainder() {
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                fixture(), editable(), List.of("settings", "compass", "given-to", "hunters"));
+                List.of("settings", "compass", "given-to", "hunters"), noLists());
 
         assertEquals("settings.compass.given-to.hunters", resolved.path());
         assertTrue(resolved.leaf());
@@ -51,7 +40,7 @@ class ConfigDrillTest {
     @Test
     void trailingValueStaysAsRemainder() {
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                fixture(), editable(), List.of("settings", "compass", "given-to", "hunters", "true"));
+                List.of("settings", "compass", "given-to", "hunters", "true"), noLists());
 
         assertEquals("settings.compass.given-to.hunters", resolved.path());
         assertTrue(resolved.leaf());
@@ -61,7 +50,7 @@ class ConfigDrillTest {
     @Test
     void sectionResolvesAsSection() {
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                fixture(), editable(), List.of("settings", "compass"));
+                List.of("settings", "compass"), noLists());
 
         assertEquals("settings.compass", resolved.path());
         assertFalse(resolved.leaf());
@@ -70,67 +59,92 @@ class ConfigDrillTest {
 
     @Test
     void unknownFirstSegmentResolvesToNull() {
-        assertNull(ManhuntCommand.resolveDrill(fixture(), editable(), List.of("bogus")));
+        assertNull(ManhuntCommand.resolveDrill(List.of("bogus"), noLists()));
     }
 
     @Test
     void unknownDeeperSegmentLeavesSectionRemainder() {
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                fixture(), editable(), List.of("settings", "bogus"));
+                List.of("settings", "bogus"), noLists());
 
         assertEquals("settings", resolved.path());
         assertFalse(resolved.leaf());
+        assertTrue(resolved.section());
         assertEquals(List.of("bogus"), resolved.remainder());
     }
 
     @Test
     void matchingIsCaseInsensitiveButCanonical() {
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                fixture(), editable(), List.of("SETTINGS", "Compass", "Given-To", "HUNTERS"));
+                List.of("SETTINGS", "Compass", "Given-To", "HUNTERS"), noLists());
 
         assertEquals("settings.compass.given-to.hunters", resolved.path());
         assertTrue(resolved.leaf());
     }
 
     @Test
-    void categoriesExcludeTheVersionKey() {
-        List<String> categories = ManhuntCommand.drillCategories(fixture());
-
-        assertEquals(List.of("match", "settings"), categories);
+    void topLevelChildrenAreRegistryCategories() {
+        assertEquals(List.of("debug", "lobbies", "match", "settings", "statistics",
+                "update-checker", "world-engine"), ManhuntCommand.drillChildren(List.of(), noLists()));
     }
 
     @Test
-    void childrenOnlyOfferEditablePaths() {
-        YamlConfiguration root = fixture();
-
-        assertEquals(List.of("autostart", "compass"),
-                ManhuntCommand.drillChildren(root, editable(), List.of("settings")));
-        assertEquals(List.of("hunters", "speedrunners"),
-                ManhuntCommand.drillChildren(root, editable(),
-                        List.of("settings", "compass", "given-to")));
-    }
-
-    @Test
-    void childrenHideScalarLeavesOutsideTheEditableSet() {
-        YamlConfiguration root = fixture();
-
-        // hunter.max-distance exists in config but is not editable, so the
-        // compass level only offers given-to.
-        assertEquals(List.of("given-to"),
-                ManhuntCommand.drillChildren(root, editable(), List.of("settings", "compass")));
+    void childrenOfferSectionsAndLeaves() {
+        assertEquals(List.of("compass", "match", "players", "server"),
+                ManhuntCommand.drillChildren(List.of("settings"), noLists()));
+        assertEquals(List.of("hunters", "speedrunners"), ManhuntCommand.drillChildren(
+                List.of("settings", "compass", "given-to"), noLists()));
     }
 
     @Test
     void childrenOfUnknownPrefixAreEmpty() {
-        assertTrue(ManhuntCommand.drillChildren(fixture(), editable(), List.of("bogus")).isEmpty());
+        assertTrue(ManhuntCommand.drillChildren(List.of("bogus"), noLists()).isEmpty());
+        assertTrue(ManhuntCommand.drillChildren(
+                List.of("settings", "compass", "given-to", "hunters"), noLists()).isEmpty());
+    }
+
+    @Test
+    void listChildrenOfferIndicesAndVerbs() {
+        Function<String, List<String>> fixtures =
+                lists(Map.of("match.end-statistics", List.of("a", "b")));
+
+        assertEquals(List.of("0", "1", "add", "remove"),
+                ManhuntCommand.drillChildren(List.of("match", "end-statistics"), fixtures));
+    }
+
+    @Test
+    void indexPathResolvesAsLeaf() {
+        Function<String, List<String>> fixtures =
+                lists(Map.of("match.end-statistics", List.of("a", "b")));
+
+        DrillResolve resolved = ManhuntCommand.resolveDrill(
+                List.of("match", "end-statistics", "1"), fixtures);
+
+        assertEquals("match.end-statistics.1", resolved.path());
+        assertTrue(resolved.leaf());
+        assertTrue(resolved.remainder().isEmpty());
+    }
+
+    @Test
+    void indexOutOfRangeStopsAtList() {
+        Function<String, List<String>> fixtures =
+                lists(Map.of("match.end-statistics", List.of("a", "b")));
+
+        DrillResolve resolved = ManhuntCommand.resolveDrill(
+                List.of("match", "end-statistics", "7"), fixtures);
+
+        assertEquals("match.end-statistics", resolved.path());
+        assertFalse(resolved.leaf());
+        assertTrue(resolved.section());
+        assertEquals(List.of("7"), resolved.remainder());
     }
 
     @Test
     void entriesRenderKeyWhiteAndValueGray() {
         Map<String, String> entries = new LinkedHashMap<>();
-        entries.put("settings.autostart.enabled", ": true");
+        entries.put("settings.match.autostart.enabled", ": true");
         entries.put("settings", "");
-        assertEquals("\n<green>» <white>settings.autostart.enabled</white><gray>: true</gray></white>"
+        assertEquals("\n<green>» <white>settings.match.autostart.enabled</white><gray>: true</gray></white>"
                         + "\n<green>» <white>settings</white><gray></gray></white>",
                 ManhuntCommand.renderEntries(
                         entries, "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>"));
@@ -143,41 +157,20 @@ class ConfigDrillTest {
     }
 
     @Test
-    void nextSegmentsSplitSectionsFromLeaves() {
-        var listing = ManhuntCommand.nextSegments(editable(), "settings");
+    void registryChildrenSplitSectionsFromLeaves() {
+        var settings = SettingRegistry.children("settings");
+        assertEquals(List.of("compass", "match", "players", "server"), settings.sections());
+        assertEquals(List.of(), settings.leaves());
 
-        assertEquals(List.of("autostart", "compass"), listing.sections());
-        assertEquals(List.of(), listing.leaves());
-    }
-
-    @Test
-    void nextSegmentsHideNonEditableSubtrees() {
-        // hunter.max-distance exists in config but is not editable, so the
-        // compass level only lists given-to as a section.
-        var listing = ManhuntCommand.nextSegments(editable(), "settings.compass");
-
-        assertEquals(List.of("given-to"), listing.sections());
-        assertEquals(List.of(), listing.leaves());
-    }
-
-    @Test
-    void nextSegmentsListEditableLeaves() {
-        var autostart = ManhuntCommand.nextSegments(editable(), "settings.autostart");
-        assertEquals(List.of(), autostart.sections());
-        assertEquals(List.of("enabled"), autostart.leaves());
-
-        var givenTo = ManhuntCommand.nextSegments(editable(), "settings.compass.given-to");
+        var givenTo = SettingRegistry.children("settings.compass.given-to");
         assertEquals(List.of(), givenTo.sections());
         assertEquals(List.of("hunters", "speedrunners"), givenTo.leaves());
-    }
 
-    @Test
-    void nextSegmentsOfUnknownOrScalarPathAreEmpty() {
-        var missing = ManhuntCommand.nextSegments(editable(), "bogus");
+        var missing = SettingRegistry.children("bogus");
         assertEquals(List.of(), missing.sections());
         assertEquals(List.of(), missing.leaves());
 
-        var scalar = ManhuntCommand.nextSegments(editable(), "match.end-delay");
+        var scalar = SettingRegistry.children("match.end-delay");
         assertEquals(List.of(), scalar.sections());
         assertEquals(List.of(), scalar.leaves());
     }

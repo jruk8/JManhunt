@@ -80,14 +80,14 @@ public final class GameManager implements MatchControl {
                 prestart, autostart, matchFinish);
 
         // assign events
-        configService.onChange("settings.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
+        configService.onChange("settings.match.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
         configService.onChange("world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
         // Structure datapacks refresh exactly like the world-engine datapack:
         // toggling in-game applies or removes the files immediately instead of
         // waiting for a restart.
-        configService.onChange("settings.game-boosts.nether-structures.enabled",
+        configService.onChange("settings.match.game-boosts.nether-structures.enabled",
                 (oldValue, newValue) -> worldEngine.onReload());
-        configService.onChange("settings.game-boosts.overworld-structures.enabled",
+        configService.onChange("settings.match.game-boosts.overworld-structures.enabled",
                 (oldValue, newValue) -> worldEngine.onReload());
     }
 
@@ -383,7 +383,7 @@ public final class GameManager implements MatchControl {
         // Hunters with infinite lives can never be eliminated, so the
         // elimination line hides instead of promising an un-winnable goal.
         List<String> conditions = new ArrayList<>();
-        int hunterLives = plugin.getConfig().getInt("settings.respawn.hunter.lives", -1);
+        int hunterLives = configService.getInt("settings.players.respawn.hunter.lives", -1);
         if (hunterLives != -1) {
             conditions.add(winconFragment("eliminate-hunters", Map.of()));
         }
@@ -467,23 +467,11 @@ public final class GameManager implements MatchControl {
     public Set<String> settingNames() { return configService.settingNames(); }
     public boolean getSetting(String setting) { return configService.getBoolean(setting, false); }
     public Object getSettingValue(String setting) { return configService.getValue(setting); }
-    /** Sets a scalar setting parsed from a raw string. Returns false on invalid input. */
-    public boolean setSetting(String setting, String rawValue) { return configService.setValue(setting, rawValue); }
-
-
-    /** Where a match leaver goes, from settings.game-leave.destination. */
-    public enum LeaveDestination {
-        SPECTATOR,
-        LOBBY;
-
-        /** Parses case-insensitively; unknown values fall back to SPECTATOR. */
-        public static LeaveDestination parse(String raw) {
-            if (raw != null && raw.trim().equalsIgnoreCase("LOBBY")) {
-                return LOBBY;
-            }
-            return SPECTATOR;
-        }
+    /** Sets a scalar setting parsed from a raw string, with typed validation. */
+    public ConfigService.SetOutcome setSetting(String setting, String rawValue) {
+        return configService.setValue(setting, rawValue);
     }
+
 
 
     /** The other participant side; non-participants map to themselves. Pure for tests. */

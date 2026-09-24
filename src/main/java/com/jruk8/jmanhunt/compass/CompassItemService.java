@@ -39,7 +39,7 @@ final class CompassItemService {
     }
 
     boolean shouldReceiveCompass(Role role) {
-        return plugin.getConfig()
+        return plugin.configService()
                 .getBoolean("settings.compass.given-to." + role.name().toLowerCase(Locale.ROOT),
                         role == Role.HUNTER);
     }
@@ -108,7 +108,7 @@ final class CompassItemService {
             return;
         }
         removeCompasses(player);
-        String configured = plugin.getConfig().getString("settings.compass.item", "compass");
+        String configured = plugin.configService().getString("settings.compass.item", "compass");
         Material material = resolveCompassMaterial(configured);
         if (material == null) {
             plugin.logger().warning("Unknown or placeable settings.compass.item '"
@@ -118,7 +118,7 @@ final class CompassItemService {
         ItemStack item = new ItemStack(material);
         applyCompassIdentity(item, playerStates.role(player));
         ItemMeta meta = item.getItemMeta();
-        if (plugin.getConfig().getBoolean("settings.compass.drop-on-death.enabled", false)) {
+        if (plugin.configService().getBoolean("settings.compass.drop-on-death.enabled", false)) {
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         } else {
             meta.addEnchant(Enchantment.VANISHING_CURSE, 1, true);
@@ -277,6 +277,6 @@ final class CompassItemService {
     }
 
     boolean mustBeInventory() {
-        return plugin.getConfig().getBoolean("settings.compass.must-be-inventory.enabled", true);
+        return plugin.configService().getBoolean("settings.compass.must-be-inventory.enabled", true);
     }
 }

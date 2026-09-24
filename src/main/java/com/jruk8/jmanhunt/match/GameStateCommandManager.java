@@ -414,8 +414,14 @@ public final class GameStateCommandManager {
         boolean sharedPicks = pickScope == ModifierTriggers.TriggerScope.PER_INVOKE;
         Map<String, List<String>> shared = new HashMap<>();
         if (sharedPicks) {
+            // One mob and one item roll for the whole activation: the shared
+            // lists carry concrete values, so per-executor tag evaluation
+            // downstream finds nothing left to re-roll.
+            Map<String, String> sharedDraws = new HashMap<>();
             for (String list : List.of("console", "player", "hunter", "speedrunner")) {
-                shared.put(list, resolveCommandList(name, list));
+                shared.put(list, CommandPlaceholders.preresolveSharedRandoms(
+                        resolveCommandList(name, list), sharedDraws,
+                        CommandPlaceholders::rollSharedRandom));
             }
         }
         ModifierTagScope consoleScope = matchScope(null, match);
@@ -435,9 +441,12 @@ public final class GameStateCommandManager {
         if (!ModifierTriggers.rollChance(chance, random.nextDouble())) {
             return;
         }
-        runCommandList(shared.get("console"), null, consoleScope);
+        // The shared map only exists for PER_INVOKE picks; per-executor
+        // picks resolve their lists here instead of reading nulls.
+        runCommandList(sharedPicks ? shared.get("console") : resolveCommandList(name, "console"), null,
+                consoleScope);
         for (Player target : targets) {
-            runExecutorPlayerLists(name, target, shared, true, matchScope(target, match));
+            runExecutorPlayerLists(name, target, shared, sharedPicks, matchScope(target, match));
         }
     }
 
@@ -524,7 +533,7 @@ public final class GameStateCommandManager {
         // AFK players are skipped above and always left alone; NONEs follow
         // the toggle, keeping their gamemode like AFK when it is off.
         boolean setNoneSpectator = configService.getBoolean(
-                "settings.roles.turn-nones-spectator.enabled", false);
+                "settings.players.roles.turn-nones-spectator.enabled", false);
         List<Player> nonePlayers = new ArrayList<>();
         for (Player player : participants) {
             player.setGameMode(GameMode.SURVIVAL);

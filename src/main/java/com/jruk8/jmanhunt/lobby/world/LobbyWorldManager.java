@@ -53,7 +53,7 @@ public final class LobbyWorldManager {
 
     /** Configured lobby world name, live-read so renames apply on reload. */
     public String lobbyWorldName() {
-        return plugin.getConfig().getString("world-engine.lobby-world-name", "jmh-lobby");
+        return plugin.configService().getString("world-engine.lobby-world-name", "jmh-lobby");
     }
 
     /** True when the lobby world name collides with the game world name. Pure for tests. */
@@ -110,7 +110,7 @@ public final class LobbyWorldManager {
      */
     public Optional<LobbyWorld> ensureLobbyWorld(Optional<LobbyPreset> presetOverride) {
         String name = lobbyWorldName();
-        if (namesClash(name, plugin.getConfig().getString("world-engine.world-name", "world"))) {
+        if (namesClash(name, plugin.configService().getString("world-engine.world-name", "world"))) {
             plugin.logger().warning("Refusing to load lobby world '" + name
                     + "': it matches the game world. Rename world-engine.lobby-world-name.");
             return Optional.empty();
@@ -138,7 +138,7 @@ public final class LobbyWorldManager {
             return Optional.of(new LobbyWorld(world, false, false));
         }
         LobbyPreset preset = presetOverride.orElseGet(() -> LobbyPreset.parse(
-                plugin.getConfig().getString("world-engine.lobby-preset", "DEFAULT")));
+                plugin.configService().getString("world-engine.lobby-preset", "DEFAULT")));
         new LobbySchematicService(plugin).applyPreset(world, preset);
         applyLobbyDefaults(world);
         Location spawn = safeSpawn(world);

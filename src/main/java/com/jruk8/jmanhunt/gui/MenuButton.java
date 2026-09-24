@@ -24,6 +24,7 @@ public final class MenuButton {
     private final boolean glow;
     private final boolean hideTooltip;
     private final Consumer<Player> action;
+    private final Consumer<Player> rightAction;
 
     /**
      * @param material icon material, never air
@@ -35,12 +36,28 @@ public final class MenuButton {
      */
     public MenuButton(Material material, Component name, List<Component> lore,
             boolean glow, boolean hideTooltip, Consumer<Player> action) {
+        this(material, name, lore, glow, hideTooltip, action, null);
+    }
+
+    /**
+     * @param material icon material, never air
+     * @param name display name, may be null for no custom name
+     * @param lore lore lines, null means none
+     * @param glow true to force the enchantment glint
+     * @param hideTooltip true to hide the hover tooltip
+     * @param action click action, null for display-only buttons
+     * @param rightAction right-click action, null to reuse the main action
+     */
+    public MenuButton(Material material, Component name, List<Component> lore,
+            boolean glow, boolean hideTooltip, Consumer<Player> action,
+            Consumer<Player> rightAction) {
         this.material = material;
         this.name = name;
         this.lore = lore == null ? List.of() : List.copyOf(lore);
         this.glow = glow;
         this.hideTooltip = hideTooltip;
         this.action = action;
+        this.rightAction = rightAction;
     }
 
     /** Blank, tooltip-less filler pane with no action. */
@@ -95,5 +112,9 @@ public final class MenuButton {
 
     public Consumer<Player> action() {
         return action;
+    }
+
+    public Consumer<Player> rightAction() {
+        return rightAction;
     }
 }

@@ -25,6 +25,12 @@ permissions:
   jmanhunt.command.status:
     description: View the current Manhunt status.
     default: true
+  jmanhunt.command.status.other:
+    description: View any match roster or all matches with /manhunt status.
+    default: op
+  jmanhunt.editlobby:
+    description: Build and interact in the lobby world while it is protected.
+    default: op
   jmanhunt.command.challenges:
     description: Show info about the optional JManhunt Challenges addon.
     default: true
@@ -48,6 +54,9 @@ permissions:
     default: op
   jmanhunt.modifiers:
     description: View and toggle gameplay modifiers.
+    default: op
+  jmanhunt.gui:
+    description: Open the admin GUI with bare /manhunt.
     default: op
   jmanhunt.command.worldengine:
     description: View world-engine settings.

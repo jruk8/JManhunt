@@ -1,11 +1,27 @@
 package com.jruk8.jmanhunt.lobby;
 
+import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.player.PlayerStateStore;
+import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.junit.jupiter.api.Test;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class RolePadServiceTest {
 
@@ -21,6 +37,30 @@ class RolePadServiceTest {
         assertNull(RolePadService.parsePadMaterial(null));
         assertNull(RolePadService.parsePadMaterial(""));
         assertNull(RolePadService.parsePadMaterial("not-a-material"));
+    }
+
+    @Test
+    void spectatorsNeverTriggerPads() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        ConfigService config = mock(ConfigService.class);
+        when(plugin.configService()).thenReturn(config);
+        when(config.getBoolean("world-engine.role-pads.enabled", true)).thenReturn(true);
+        PlayerStateStore playerStates = mock(PlayerStateStore.class);
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("jmh-lobby");
+        Player player = mock(Player.class);
+        when(player.getWorld()).thenReturn(world);
+        when(playerStates.role(player)).thenReturn(Role.SPECTATOR);
+        PlayerMoveEvent event = mock(PlayerMoveEvent.class);
+        when(event.getPlayer()).thenReturn(player);
+        RolePadService pads = new RolePadService(plugin, mock(LobbyService.class),
+                playerStates, mock(GameManager.class), mock(MessageService.class),
+                mock(SoundService.class), () -> "jmh-lobby");
+
+        pads.onMove(event);
+
+        verify(playerStates, never()).setRole(any(Player.class), any(Role.class));
+        verify(playerStates, never()).setRole(any(UUID.class), any(Role.class));
     }
 
     @Test

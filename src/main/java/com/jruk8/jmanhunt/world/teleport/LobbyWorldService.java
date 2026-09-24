@@ -77,7 +77,7 @@ public final class LobbyWorldService {
         }
         String name = world.getName();
         return name.equals(lobbyWorldName())
-                && !name.equals(plugin.getConfig().getString("world-engine.world-name", "world"));
+                && !name.equals(plugin.configService().getString("world-engine.world-name", "world"));
     }
 
     /**
@@ -163,7 +163,7 @@ public final class LobbyWorldService {
 
     /** True when lobby-world-name collides with the game world name. */
     public boolean lobbyWorldNameClashes() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         return LobbyWorldManager.namesClash(lobbyWorlds.lobbyWorldName(), config.worldName());
     }
 
@@ -176,7 +176,7 @@ public final class LobbyWorldService {
         if (!lobbyWorldNameClashes()) {
             return true;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.getConfig());
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         plugin.logger().warning("world-engine.lobby-world-name '" + lobbyWorlds.lobbyWorldName()
                 + "' matches the game world '" + config.worldName()
                 + "'. Lobby world loading stays disabled until it is renamed.");

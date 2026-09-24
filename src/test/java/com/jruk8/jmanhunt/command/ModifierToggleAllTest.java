@@ -2,12 +2,12 @@ package com.jruk8.jmanhunt.command;
 
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import net.kyori.adventure.text.Component;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +26,7 @@ class ModifierToggleAllTest {
 
     private static MessageService messages() {
         MessageService messages = new MessageService();
-        messages.reload(new YamlConfiguration());
+        messages.reload(new MessagesConfig());
         return messages;
     }
 

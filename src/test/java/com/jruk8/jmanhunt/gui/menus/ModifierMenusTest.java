@@ -10,17 +10,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.logging.Logger;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -28,7 +25,6 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -60,11 +56,7 @@ class ModifierMenusTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         MessageService messages = new MessageService();
-        try (InputStream stream = Objects.requireNonNull(
-                ModifierMenusTest.class.getClassLoader().getResourceAsStream("messages.yml"))) {
-            messages.reload(YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(stream, StandardCharsets.UTF_8)));
-        }
+        messages.reload(new MessagesConfig());
         store = new ModifierStore(config, log);
         menus = new ModifierMenus(store, messages, null, null, null);
     }
@@ -224,7 +216,7 @@ class ModifierMenusTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         MessageService fresh = new MessageService();
-        fresh.reload(new YamlConfiguration());
+        fresh.reload(new MessagesConfig());
         ModifierMenus big =
                 new ModifierMenus(new ModifierStore(config, log), fresh, null, null, null);
 
@@ -236,6 +228,6 @@ class ModifierMenusTest {
         assertEquals("» M7", textOf(button.lore().get(7)));
         assertEquals("and 2 more", textOf(button.lore().get(8)));
         assertEquals(Component.text(" "), button.lore().get(9));
-        assertEquals(plain("Enabled", NamedTextColor.GRAY), button.lore().get(10));
+        assertEquals(plain("Enabled", NamedTextColor.GREEN), button.lore().get(10));
     }
 }

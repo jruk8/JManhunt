@@ -2,17 +2,21 @@ package com.jruk8.jmanhunt.command;
 
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.function.Function;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for the pure-logic parts of CommandPlaceholders (tilde resolution
  * and placeholder substitution that doesn't require a running Bukkit server).
- * The <random-mob> and <random-item> replacement logic depends on
- * EntityType.values() / Material.values() which require a server, so those
- * are not tested here.
+ * The live <random-mob> and <random-item> draws depend on
+ * EntityType.values() / Material.values() which require a server, so scope
+ * tests inject fixed draws instead.
  */
 class CommandPlaceholdersTest {
 
@@ -265,5 +269,43 @@ class CommandPlaceholdersTest {
     void randomPlayerFallsBackToExecutor() {
         assertEquals("give Steve apple",
                 CommandPlaceholders.replace("give <random-player> apple", "Steve", 0, 0, 0));
+    }
+
+    @Test
+    void sharedRandomsRollOncePerActivation() {
+        Map<String, String> draws = new HashMap<>();
+        Function<String, String> roller = tag -> "random-mob".equals(tag) ? "zombie" : "diamond_sword";
+        List<String> first = CommandPlaceholders.preresolveSharedRandoms(
+                List.of("summon <random-mob>", "give <p> <random-item>"), draws, roller);
+        List<String> second = CommandPlaceholders.preresolveSharedRandoms(
+                List.of("summon <random-mob>"), draws, tag -> "creeper");
+
+        assertEquals(List.of("summon zombie", "give <p> diamond_sword"), first);
+        assertEquals(List.of("summon zombie"), second);
+    }
+
+    @Test
+    void sharedRandomsMatchEvaluationSpelling() {
+        Map<String, String> draws = new HashMap<>();
+        List<String> fixed = CommandPlaceholders.preresolveSharedRandoms(
+                List.of("summon <Random-Mob>", "give <p> < random-item >"), draws, tag -> "x");
+
+        assertEquals(List.of("summon x", "give <p> x"), fixed);
+    }
+
+    @Test
+    void sharedRandomsResolveInsideOtherTags() {
+        Map<String, String> draws = new HashMap<>();
+        List<String> fixed = CommandPlaceholders.preresolveSharedRandoms(
+                List.of("give <p> <random-pick:<random-mob>|zombie>"), draws, tag -> "x");
+
+        assertEquals(List.of("give <p> <random-pick:x|zombie>"), fixed);
+    }
+
+    @Test
+    void sharedRandomsLeaveCleanLinesUntouched() {
+        List<String> lines = List.of("say hi <p>", "give <p> <random-num:1|5>");
+
+        assertSame(lines, CommandPlaceholders.preresolveSharedRandoms(lines, new HashMap<>(), tag -> "x"));
     }
 }

@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
@@ -98,8 +99,8 @@ public final class PlayerCombatListener implements Listener {
         long matchId = instance.matchId();
         int lives = playerStates.getLives(player.getUniqueId());
         int delaySeconds = PlayerRespawnListener.effectiveRespawnDelay(
-                plugin.getConfig().getBoolean("settings.respawn.speedrunner.enabled", false),
-                plugin.getConfig().getInt("settings.respawn.speedrunner.delay-seconds", 60));
+                config.getBoolean("settings.players.respawn.speedrunner.enabled", false),
+                config.getInt("settings.players.respawn.speedrunner.delay-seconds", 60));
         if (lives != -1) {
             playerStates.decrementLives(player.getUniqueId());
             if (playerStates.getLives(player.getUniqueId()) <= 0) {
@@ -115,10 +116,12 @@ public final class PlayerCombatListener implements Listener {
 
     /** Eliminates a speedrunner out of lives and finishes when none remain. */
     private void eliminateSpeedrunner(Player player, GameInstance instance, boolean quiet, long matchId) {
-        // Out of lives: eliminate permanently.
+        // Out of lives: eliminate permanently. Only an opposite-role
+        // killer earns the final kill: same-role finishes never count.
         instance.deactivate(player.getUniqueId());
-        if (player.getKiller() != null) {
-            stats.getOrCreate(matchId, player.getKiller().getUniqueId()).finalKills++;
+        Player finalKiller = player.getKiller();
+        if (finalKiller != null && playerStates.role(finalKiller.getUniqueId()) == Role.HUNTER) {
+            stats.getOrCreate(matchId, finalKiller.getUniqueId()).finalKills++;
         }
         Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
         if (!quiet) {
@@ -171,12 +174,15 @@ public final class PlayerCombatListener implements Listener {
         long matchId = instance.matchId();
         int lives = playerStates.getLives(player.getUniqueId());
         int delaySeconds = PlayerRespawnListener.effectiveRespawnDelay(
-                plugin.getConfig().getBoolean("settings.respawn.hunter.enabled", false),
-                plugin.getConfig().getInt("settings.respawn.hunter.delay-seconds", 60));
+                config.getBoolean("settings.players.respawn.hunter.enabled", false),
+                config.getInt("settings.players.respawn.hunter.delay-seconds", 60));
         if (lives != -1) {
             playerStates.decrementLives(player.getUniqueId());
             if (playerStates.getLives(player.getUniqueId()) <= 0) {
-                // Out of lives: eliminate permanently.
+                // Out of lives: eliminate permanently. A speedrunner
+                // finishing the hunter earns the final kill, mirroring
+                // the speedrunner elimination above.
+                creditHunterFinalKill(matchId, player);
                 if (!quiet) {
                     game.sendToInstance(instance, "game.hunter-out-of-lives", Map.of());
                 }
@@ -228,7 +234,7 @@ public final class PlayerCombatListener implements Listener {
         // pre-start window below blocks those, to avoid glitches.
         if (!playerStates.role(victim).isParticipant()
                 && event.getCause() != EntityDamageEvent.DamageCause.SUICIDE
-                && config.getBoolean("settings.invulnerability.none-players.enabled", true)) {
+                && config.getBoolean("settings.players.invulnerability.none-players.enabled", true)) {
             event.setCancelled(true);
             return;
         }
@@ -256,13 +262,31 @@ public final class PlayerCombatListener implements Listener {
         stats.getOrCreate(victimMatch.get().matchId(), attacker.getUniqueId()).damage += event.getFinalDamage();
     }
 
+    /** Credits a speedrunner who finishes a hunter out of lives. */
+    private void creditHunterFinalKill(long matchId, Player victim) {
+        Player hunterKiller = victim.getKiller();
+        if (hunterKiller != null
+                && playerStates.role(hunterKiller.getUniqueId()) == Role.SPEEDRUNNER) {
+            stats.getOrCreate(matchId, hunterKiller.getUniqueId()).finalKills++;
+        }
+    }
+
+    /**
+     * Lobby void rescue flag, now owned by the lobby config. Defaults to
+     * enabled when the store is unavailable, matching the old default.
+     */
+    private boolean voidRescueEnabled() {
+        LobbyConfig lobby = plugin.lobbyConfig();
+        return lobby == null || lobby.isVoidRescue();
+    }
+
     /** Rescues void falls in the lobby world. Returns true when the event was handled. */
     private boolean rescueLobbyVoid(EntityDamageEvent event, Player victim) {
         // Void rescue in the lobby world: falling off the platform returns
         // the player to their lobby instead of killing them. Never applies
         // in the game world.
         if (event.getCause() != EntityDamageEvent.DamageCause.VOID
-                || !plugin.getConfig().getBoolean("world-engine.lobby-world-void-rescue", true)
+                || !voidRescueEnabled()
                 || !worldEngine.rescuesVoidIn(victim.getWorld())) {
             return false;
         }
@@ -333,8 +357,8 @@ public final class PlayerCombatListener implements Listener {
             return false;
         }
         boolean friendlyFire = playerStates.role(attacker) == Role.HUNTER
-                ? config.getBoolean("settings.friendly-fire.hunter", false)
-                : config.getBoolean("settings.friendly-fire.speedrunner", false);
+                ? config.getBoolean("settings.players.friendly-fire.hunter", false)
+                : config.getBoolean("settings.players.friendly-fire.speedrunner", false);
         if (!friendlyFire) {
             event.setCancelled(true);
             return true;
@@ -371,7 +395,9 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         long matchId = match.get().matchId();
-        stats.getOrCreate(matchId, killer.getUniqueId()).kills++;
+        stats.recordPlayerKill(matchId, killer.getUniqueId(),
+                playerStates.role(killer.getUniqueId()),
+                playerStates.role(event.getEntity().getUniqueId()));
         game.stateCommands().runEventModifiers("ON_EVERY_KILL", killer, matchId);
         plugin.spawnCamp().handleKill(matchId, killer, (Player) event.getEntity());
         if (victimIsPlayer) {

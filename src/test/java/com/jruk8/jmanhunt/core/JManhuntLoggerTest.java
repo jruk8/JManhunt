@@ -1,9 +1,10 @@
 package com.jruk8.jmanhunt.core;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,7 +73,7 @@ class JManhuntLoggerTest {
         RecordingSink sink = sink();
         JManhuntLogger logger = logger(Logger.getAnonymousLogger(), new DebugService(), sink);
 
-        logger.debug("debug.probe", Map.of("value", "7"));
+        logger.debug("debug.cell-fetched", Map.of("value", "7"));
 
         assertTrue(sink.console().isEmpty());
         assertTrue(sink.players().isEmpty());
@@ -88,7 +89,7 @@ class JManhuntLoggerTest {
         MessageService messages = messages();
         JManhuntLogger logger = new JManhuntLogger(Logger.getAnonymousLogger(), debug, messages, sink);
 
-        logger.debug("debug.probe", Map.of("value", "7"));
+        logger.debug("debug.cell-fetched", Map.of("value", "7"));
 
         assertEquals(1, sink.console().size());
         assertEquals("[D] value 7.", plain(sink.console().get(0)));
@@ -115,10 +116,11 @@ class JManhuntLoggerTest {
     }
 
     private static MessageService messages() {
-        YamlConfiguration config = new YamlConfiguration();
-        config.set("prefix", "<gray>[T]</gray> ");
-        config.set("debug.prefix", "<gray>[D]</gray> ");
-        config.set("debug.probe", "{debug-prefix}<gray>value <white>{value}<gray>.");
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "prefix", "<gray>[T]</gray> ");
+        ConfigPathMapper.set(config, "debug.prefix", "<gray>[D]</gray> ");
+        ConfigPathMapper.set(config, "debug.cell-fetched",
+                "{debug-prefix}<gray>value <white>{value}<gray>.");
         MessageService messages = new MessageService();
         messages.reload(config);
         return messages;

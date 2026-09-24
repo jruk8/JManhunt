@@ -67,8 +67,10 @@ running match ignores caps.
 - `/manhunt end [id]` cancels one match. Without an id it cancels your own
   match; the console must pass an id. The `-i` (`-immediate`) flag skips the
   end delay intermission.
-- `/manhunt [id|all]` shows one match roster, or every running match with
-  `all`. Without an argument it shows your own match, else your lobby queue.
+- `/manhunt status [id|all]` shows one match roster, or every running match
+  plus every lobby holding at least one player with `all` (needs
+  `jmanhunt.command.status.other`). Without an argument it shows your own
+  match, else your lobby queue.
 
 Match ids are the incrementing numbers shown by `status all`. A match's
 world-engine cell index works as an alias wherever an id is accepted.

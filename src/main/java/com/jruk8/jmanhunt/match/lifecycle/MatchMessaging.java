@@ -71,7 +71,7 @@ public final class MatchMessaging {
      * changes stay silent. Only the active side of the change is named.
      */
     public void announceRoleChange(Player player, Role from, Role to) {
-        if (!configService.getBoolean("settings.announce-role-changes", false)) {
+        if (!configService.getBoolean("settings.server.announce-role-changes", false)) {
             return;
         }
         if (from.isParticipant() == to.isParticipant()) {

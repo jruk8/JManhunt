@@ -7,15 +7,15 @@ class LeaveDestinationTest {
 
     @Test
     void parseIsCaseInsensitive() {
-        assertEquals(GameManager.LeaveDestination.LOBBY, GameManager.LeaveDestination.parse("lobby"));
-        assertEquals(GameManager.LeaveDestination.LOBBY, GameManager.LeaveDestination.parse(" Lobby "));
-        assertEquals(GameManager.LeaveDestination.SPECTATOR, GameManager.LeaveDestination.parse("SPECTATOR"));
+        assertEquals(LeaveDestination.LOBBY, LeaveDestination.parse("lobby"));
+        assertEquals(LeaveDestination.LOBBY, LeaveDestination.parse(" Lobby "));
+        assertEquals(LeaveDestination.SPECTATOR, LeaveDestination.parse("SPECTATOR"));
     }
 
     @Test
     void parseFallsBackToSpectator() {
-        assertEquals(GameManager.LeaveDestination.SPECTATOR, GameManager.LeaveDestination.parse("void"));
-        assertEquals(GameManager.LeaveDestination.SPECTATOR, GameManager.LeaveDestination.parse(""));
-        assertEquals(GameManager.LeaveDestination.SPECTATOR, GameManager.LeaveDestination.parse(null));
+        assertEquals(LeaveDestination.SPECTATOR, LeaveDestination.parse("void"));
+        assertEquals(LeaveDestination.SPECTATOR, LeaveDestination.parse(""));
+        assertEquals(LeaveDestination.SPECTATOR, LeaveDestination.parse(null));
     }
 }

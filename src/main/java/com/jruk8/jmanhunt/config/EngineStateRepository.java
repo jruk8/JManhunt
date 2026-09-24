@@ -19,6 +19,7 @@ import java.util.Map;
  */
 public final class EngineStateRepository implements AutoCloseable {
     private static final String CRASH_FLAG_KEY = "crash_flag";
+    private static final String SETUP_DONE_KEY = "setup_done";
     private final HikariDataSource dataSource;
 
     private EngineStateRepository(HikariDataSource dataSource) {
@@ -178,12 +179,36 @@ public final class EngineStateRepository implements AutoCloseable {
     }
 
     public synchronized void setCrashFlag(boolean crashed) throws SQLException {
+        putFlag(CRASH_FLAG_KEY, crashed);
+    }
+
+    /**
+     * True once setup finished anywhere: a setup session started, the
+     * world engine was observed enabled, or Setup First was dismissed.
+     * Missing keys read false so fresh installs see the panel once.
+     */
+    public synchronized boolean getSetupDone() throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement select = connection.prepareStatement(
+                        "SELECT state_value FROM engine_state WHERE state_key=?")) {
+            select.setString(1, SETUP_DONE_KEY);
+            try (ResultSet result = select.executeQuery()) {
+                return result.next() && result.getLong(1) != 0L;
+            }
+        }
+    }
+
+    public synchronized void setSetupDone(boolean done) throws SQLException {
+        putFlag(SETUP_DONE_KEY, done);
+    }
+
+    private void putFlag(String key, boolean value) throws SQLException {
         try (Connection connection = connection();
                 PreparedStatement update = connection.prepareStatement(
                         "INSERT INTO engine_state (state_key, state_value) VALUES (?, ?) "
                                 + "ON CONFLICT (state_key) DO UPDATE SET state_value=EXCLUDED.state_value")) {
-            update.setString(1, CRASH_FLAG_KEY);
-            update.setLong(2, crashed ? 1L : 0L);
+            update.setString(1, key);
+            update.setLong(2, value ? 1L : 0L);
             update.executeUpdate();
         }
     }

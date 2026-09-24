@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.gui;
 
+import java.util.function.Consumer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -7,7 +8,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
-import org.bukkit.inventory.ItemStack;
 
 /**
  * Opens, renders, and click-routes chest menus.
@@ -21,8 +21,13 @@ public final class GuiService {
 
     private final MenuButton filler = MenuButton.filler();
 
-    /** Opens a fresh rendering of the menu for the player. */
+    /**
+     * Opens a fresh rendering of the menu for the player. Buttons rebuild
+     * first so navigation re-renders current state (glow, counts) instead
+     * of the buttons cached when the menu was built.
+     */
     public void open(Player player, Menu menu) {
+        menu.refresh();
         MenuHolder holder = new MenuHolder(menu);
         Inventory inventory = Bukkit.createInventory(holder, menu.layout().size(), menu.title());
         holder.setInventory(inventory);
@@ -35,13 +40,17 @@ public final class GuiService {
         open(player, menu);
     }
 
-    /** Returns to the parent menu, or closes the inventory at a root. */
+    /**
+     * Returns to the parent menu, or closes the inventory at a root. Never
+     * throws: a missing menu or parent just closes the inventory.
+     */
     public void back(Player player, Menu menu) {
-        if (menu.parent() == null) {
+        Menu parent = menu == null || menu.parent() == null ? null : menu.parent().get();
+        if (parent == null) {
             player.closeInventory();
             return;
         }
-        navigate(player, menu.parent().get());
+        navigate(player, parent);
     }
 
     /**
@@ -76,8 +85,9 @@ public final class GuiService {
         event.setCancelled(true);
         if (topSlot && event.getWhoClicked() instanceof Player player) {
             MenuButton button = menu.buttonAt(event.getRawSlot());
-            if (button != null && button.action() != null) {
-                button.action().accept(player);
+            Consumer<Player> action = clickAction(button, click);
+            if (action != null) {
+                action.accept(player);
                 refresh(player, menu);
             }
         }
@@ -101,6 +111,20 @@ public final class GuiService {
                 return;
             }
         }
+    }
+
+    /**
+     * Action for the click type: right clicks prefer the right action and
+     * fall back to the main action, every other click runs the main action.
+     */
+    static Consumer<Player> clickAction(MenuButton button, ClickType click) {
+        if (button == null) {
+            return null;
+        }
+        if (click.isRightClick() && button.rightAction() != null) {
+            return button.rightAction();
+        }
+        return button.action();
     }
 
     private void render(Menu menu, Inventory inventory) {
