@@ -127,6 +127,38 @@ class ConfigServiceValuesTest {
     }
 
     @Test
+    void listResetRestoresDefaults() {
+        assertTrue(service.listAdd("match.end-statistics", "EXTRA").ok());
+        assertTrue(service.isListModified("match.end-statistics"));
+
+        ConfigService.SetOutcome outcome = service.listReset("match.end-statistics");
+
+        assertTrue(outcome.ok());
+        assertEquals(List.of("DAMAGE_DEALT", "HUNTER_FINAL_KILLS", "SPEEDRUNNER_KILLS", "PROGRESSION"),
+                service.getStringList("match.end-statistics"));
+        assertFalse(service.isListModified("match.end-statistics"));
+    }
+
+    @Test
+    void listResetUnknownPathFails() {
+        ConfigService.SetOutcome outcome = service.listReset("match.nope");
+
+        assertFalse(outcome.ok());
+        assertEquals("manhunt.setting-invalid", outcome.errorKey());
+    }
+
+    @Test
+    void isListModifiedComparesAgainstDefaults() {
+        assertFalse(service.isListModified("match.end-statistics"));
+
+        assertTrue(service.listAdd("match.end-statistics", "EXTRA").ok());
+        assertTrue(service.isListModified("match.end-statistics"));
+
+        assertTrue(service.listRemove("match.end-statistics", 4).ok());
+        assertFalse(service.isListModified("match.end-statistics"));
+    }
+
+    @Test
     void isModifiedComparesAgainstDefaults() {
         assertFalse(service.isModified("settings.match.autostart.countdown-seconds"));
 

@@ -277,6 +277,48 @@ public final class ConfigService {
         return SetOutcome.ok(null, oldValue, "-");
     }
 
+    /** Restores a string list to its schema defaults. Unknown paths fail. */
+    public SetOutcome listReset(String listPath) {
+        List<Object> live = liveList(listPath);
+        if (live == null) {
+            return SetOutcome.fail("manhunt.setting-invalid", Map.of());
+        }
+        String canonical = SettingRegistry.canonicalListPath(listPath);
+        Object node = defaultValue(canonical == null ? listPath : canonical);
+        if (!(node instanceof List<?> fresh)) {
+            return SetOutcome.fail("manhunt.setting-invalid", Map.of());
+        }
+        List<Object> oldValue = new ArrayList<>(live);
+        live.clear();
+        for (Object entry : fresh) {
+            live.add(entry == null ? "" : String.valueOf(entry));
+        }
+        saver.run();
+        return SetOutcome.ok(null, oldValue, new ArrayList<>(live));
+    }
+
+    /** True when a string list differs from its schema defaults. */
+    public boolean isListModified(String listPath) {
+        List<Object> live = liveList(listPath);
+        if (live == null) {
+            return false;
+        }
+        String canonical = SettingRegistry.canonicalListPath(listPath);
+        Object node = defaultValue(canonical == null ? listPath : canonical);
+        if (!(node instanceof List<?> fresh)) {
+            return false;
+        }
+        List<String> current = new ArrayList<>(live.size());
+        for (Object entry : live) {
+            current.add(entry == null ? "" : String.valueOf(entry));
+        }
+        List<String> expected = new ArrayList<>(fresh.size());
+        for (Object entry : fresh) {
+            expected.add(entry == null ? "" : String.valueOf(entry));
+        }
+        return !current.equals(expected);
+    }
+
     @SuppressWarnings("unchecked")
     private List<Object> liveList(String listPath) {
         if (root == null) {

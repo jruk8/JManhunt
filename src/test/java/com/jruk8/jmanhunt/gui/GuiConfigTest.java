@@ -65,7 +65,7 @@ class GuiConfigTest {
         }
 
         assertEquals(Material.CLOCK, loaded.categoryItem("match"));
-        assertEquals(Material.NETHER_STAR,
+        assertEquals(Material.DIAMOND_SWORD,
                 loaded.sectionItem("settings.match.win-conditions.hunter"));
         assertEquals(Material.BARRIER,
                 loaded.sectionItem("settings.match.win-conditions.cancel"));

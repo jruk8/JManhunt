@@ -8,6 +8,7 @@ import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.core.JManhuntExpansion;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.core.MetricsBootstrap;
+import com.jruk8.jmanhunt.core.StartupBanner;
 import com.jruk8.jmanhunt.config.ConfigRegistrar;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
@@ -131,6 +132,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         // every online player's membership from their current role.
         roleTeams.syncAll();
         game.validateLobbyWorldName();
+        StartupBanner.print(logger, getPluginMeta().getVersion());
     }
 
     /** Creates messaging, logging, lobby, and tutorial configuration services. */

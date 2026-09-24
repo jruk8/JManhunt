@@ -1347,7 +1347,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /**
      * Browses or edits one string list: bare lists entries by index with the
-     * add and remove forms, {@code add} appends, {@code remove} deletes.
+     * add, remove, and reset forms; {@code add} appends, {@code remove}
+     * deletes, {@code reset} restores the schema defaults.
      */
     private boolean listCommand(CommandSender sender, String listPath, List<String> args) {
         if (args.isEmpty()) {
@@ -1358,6 +1359,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         if (args.get(0).equalsIgnoreCase("remove") && args.size() == 2) {
             return listRemoveEntry(sender, listPath, args.get(1));
+        }
+        if (args.get(0).equalsIgnoreCase("reset") && args.size() == 1) {
+            return listResetEntries(sender, listPath);
         }
         return message(sender, "manhunt.config-usage");
     }
@@ -1370,6 +1374,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         rows.put("add <value>", "");
         rows.put("remove <index>", "");
+        rows.put("reset", "");
         listEntries(sender, listPath, rows);
         neutralSound(sender);
         return true;
@@ -1405,6 +1410,16 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         feedback.listRemoved(sender, listPath, outcome);
+        return true;
+    }
+
+    private boolean listResetEntries(CommandSender sender, String listPath) {
+        ConfigService.SetOutcome outcome = config.listReset(listPath);
+        if (!outcome.ok()) {
+            feedback.failed(sender, outcome);
+            return true;
+        }
+        feedback.listReset(sender, listPath, outcome);
         return true;
     }
 
@@ -1567,6 +1582,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             }
             options.add("add");
             options.add("remove");
+            options.add("reset");
         } else {
             SettingRegistry.DrillChildren children = SettingRegistry.children(current);
             options.addAll(children.sections());

@@ -108,7 +108,7 @@ class ConfigDrillTest {
         Function<String, List<String>> fixtures =
                 lists(Map.of("match.end-statistics", List.of("a", "b")));
 
-        assertEquals(List.of("0", "1", "add", "remove"),
+        assertEquals(List.of("0", "1", "add", "remove", "reset"),
                 ManhuntCommand.drillChildren(List.of("match", "end-statistics"), fixtures));
     }
 

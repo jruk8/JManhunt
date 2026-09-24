@@ -34,7 +34,8 @@ default. Buttons glow when the value differs from the default.
 - Right-click any setting to reset it to the default after a confirm
   panel showing old versus default.
 - String lists show one paper per entry plus a stick to append; click
-  to edit, right-click to delete after a confirm panel.
+  to edit, right-click to delete after a confirm panel. Right-click
+  the list entry itself to reset the whole list to defaults.
 
 ## Sounds
 

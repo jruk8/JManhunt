@@ -34,6 +34,11 @@ public final class SettingFeedback {
     /** Reports a scalar write with the restart nudge, announce, and sound. */
     public void scalarUpdated(CommandSender sender, String setting,
             ConfigService.SetOutcome outcome) {
+        if (unchanged(outcome)) {
+            messages.message(sender, "manhunt.setting-unchanged", Map.of("setting", setting,
+                    "value", ConfigService.displayValue(outcome.newValue())));
+            return;
+        }
         messages.message(sender, "manhunt.setting-updated", Map.of("setting", setting,
                 "value", ConfigService.displayValue(outcome.newValue()),
                 "old-value", ConfigService.displayValue(outcome.oldValue())));
@@ -60,6 +65,25 @@ public final class SettingFeedback {
                 "value", ConfigService.displayValue(outcome.oldValue())));
         announce(sender, listPath, "-");
         neutralSound(sender);
+    }
+
+    /** Reports a list reset, or the nothing-changed line when already default. */
+    public void listReset(CommandSender sender, String listPath,
+            ConfigService.SetOutcome outcome) {
+        if (unchanged(outcome)) {
+            messages.message(sender, "manhunt.setting-unchanged", Map.of("setting", listPath,
+                    "value", ConfigService.displayValue(outcome.newValue())));
+            return;
+        }
+        messages.message(sender, "manhunt.setting-list-reset", Map.of("setting", listPath));
+        announce(sender, listPath, ConfigService.displayValue(outcome.newValue()));
+        neutralSound(sender);
+    }
+
+    /** True when a write left the canonical value untouched. */
+    private static boolean unchanged(ConfigService.SetOutcome outcome) {
+        return ConfigService.displayValue(outcome.oldValue())
+                .equals(ConfigService.displayValue(outcome.newValue()));
     }
 
     private void announce(CommandSender sender, String keySlot, String valueSlot) {

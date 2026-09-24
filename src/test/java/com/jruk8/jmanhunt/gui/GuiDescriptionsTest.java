@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
 import java.util.Objects;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -90,6 +92,29 @@ class GuiDescriptionsTest {
             }
         }
         assertTrue(longLines.isEmpty(), "descriptions over 80 chars: " + longLines);
+    }
+
+    @Test
+    void everySectionHasAUniqueIcon() throws Exception {
+        YamlConfiguration yaml = bundledGui();
+        ConfigurationSection categories = yaml.getConfigurationSection("categories");
+
+        List<String> missing = new ArrayList<>();
+        for (String section : sectionPaths()) {
+            String key = section.replaceFirst("^settings\\.", "").replace('.', '/');
+            String raw = categories == null ? null : categories.getString(key);
+            if (raw == null || raw.isBlank()) {
+                missing.add(key);
+            }
+        }
+        assertTrue(missing.isEmpty(), "sections without icons: " + missing);
+
+        List<String> materials = new ArrayList<>();
+        for (String key : Objects.requireNonNull(categories).getKeys(false)) {
+            materials.add(categories.getString(key));
+        }
+        assertEquals(materials.size(), new HashSet<>(materials).size(),
+                "duplicate category icons");
     }
 
     /** Every intermediate section path implied by the registry. */

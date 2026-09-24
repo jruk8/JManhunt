@@ -21,9 +21,11 @@ import io.papermc.paper.registry.data.dialog.action.DialogActionCallback;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.event.ClickCallback;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -43,6 +45,8 @@ import org.bukkit.plugin.Plugin;
 public final class SettingDialogs implements SettingDialog {
 
     private static final String VALUE_KEY = "value";
+    /** Text input ceiling: the classic full-string cap, far above any sane value. */
+    static final int TEXT_MAX_LENGTH = 32767;
 
     private final ConfigService config;
     private final MessageService messages;
@@ -71,10 +75,14 @@ public final class SettingDialogs implements SettingDialog {
                     "Dialogs edit INT, FLOAT, and STRING only: " + descriptor.path());
         }
         boolean ranged = DialogInputs.useNumberRange(descriptor);
+        if (!ranged && tooLong(player, currentText(descriptor), () -> reopenLater(player, reopen))) {
+            return;
+        }
         DialogInput input = ranged
                 ? rangeInput(descriptor, title)
                 : DialogInput.text(VALUE_KEY, title)
                         .initial(currentText(descriptor))
+                        .maxLength(TEXT_MAX_LENGTH)
                         .build();
         Dialog dialog = Dialog.create(factory -> factory.empty()
                 .base(DialogBase.builder(title)
@@ -116,7 +124,11 @@ public final class SettingDialogs implements SettingDialog {
     private void openText(Player player, Component title, String initial,
             List<DialogBody> body, Consumer<String> onSubmit,
             Runnable onCancel) {
-        DialogInput input = DialogInput.text(VALUE_KEY, title).initial(initial).build();
+        if (tooLong(player, initial, onCancel)) {
+            return;
+        }
+        DialogInput input = DialogInput.text(VALUE_KEY, title).initial(initial)
+                .maxLength(TEXT_MAX_LENGTH).build();
         Dialog dialog = Dialog.create(factory -> factory.empty()
                 .base(DialogBase.builder(title)
                         .body(body)
@@ -182,16 +194,37 @@ public final class SettingDialogs implements SettingDialog {
 
     private List<DialogBody> bodyLines(SettingDescriptor descriptor) {
         List<DialogBody> lines = new ArrayList<>();
-        lines.add(DialogBody.plainMessage(Component.text(messages
+        lines.add(DialogBody.plainMessage(messages.parse(messages
                 .string("manhunt-gui.dialog-current", "Current value: {value}")
-                .replace("{value}", currentText(descriptor)))));
+                .replace("{value}", escape(currentText(descriptor))))));
         if (descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT) {
-            lines.add(DialogBody.plainMessage(Component.text(messages
+            lines.add(DialogBody.plainMessage(messages.parse(messages
                     .string("manhunt-gui.dialog-bounds", "Allowed: {bounds}")
-                    .replace("{bounds}", SettingRegistry.boundsText(
-                            descriptor, config::getValue)))));
+                    .replace("{bounds}", escape(SettingRegistry.boundsText(
+                            descriptor, config::getValue))))));
         }
         return lines;
+    }
+
+    /**
+     * Refuses values even the ceiling cannot hold: chat error plus fail
+     * sound, then the cancel path. True when the dialog must not open.
+     */
+    private boolean tooLong(Player player, String initial, Runnable onCancel) {
+        if (initial != null && initial.length() <= TEXT_MAX_LENGTH) {
+            return false;
+        }
+        messages.message(player, "manhunt-gui.dialog-too-long", Map.of(
+                "length", String.valueOf(initial == null ? 0 : initial.length()),
+                "max", String.valueOf(TEXT_MAX_LENGTH)));
+        sounds.playAngrySound(player);
+        onCancel.run();
+        return true;
+    }
+
+    /** Escapes user data so only template markup parses as MiniMessage. */
+    private static String escape(String raw) {
+        return MiniMessage.miniMessage().escapeTags(raw);
     }
 
     private DialogAction submitAction(Player player, SettingDescriptor descriptor,

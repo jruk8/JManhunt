@@ -78,6 +78,19 @@ class ManhuntMenusTest {
     }
 
     @Test
+    void listMenuRebuildsEntriesOnRefresh() {
+        when(config.getStringList(anyString())).thenReturn(List.of("a"));
+        Menu menu = menus.listMenu("settings.compass.analyze.debuffs.commands.player", () -> null);
+
+        assertEquals(2, menu.window().visibleEntries().size());
+
+        when(config.getStringList(anyString())).thenReturn(List.of("a", "b", "c"));
+        menu.refresh();
+
+        assertEquals(4, menu.window().visibleEntries().size());
+    }
+
+    @Test
     void rootHasThreeLinksAndNoParent() {
         Menu root = menus.rootMenu();
 

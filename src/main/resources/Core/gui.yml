@@ -9,19 +9,62 @@ categories:
   match/start-on-speedrunner-damage: IRON_SWORD
   match/win-conditions: NETHER_STAR
   match/win-conditions/cancel: BARRIER
+  match/win-conditions/cancel/survived-time: SKELETON_SKULL
+  match/win-conditions/hunter: DIAMOND_SWORD
+  match/win-conditions/hunter/acquire-item: GOLD_INGOT
+  match/win-conditions/hunter/kill-mob: ZOMBIE_HEAD
+  match/win-conditions/hunter/reach-advancement: WRITTEN_BOOK
+  match/win-conditions/hunter/survive-time: GOLDEN_APPLE
+  match/win-conditions/speedrunner: DIAMOND_BOOTS
+  match/win-conditions/speedrunner/acquire-item: EMERALD
+  match/win-conditions/speedrunner/exit-end: END_PORTAL_FRAME
+  match/win-conditions/speedrunner/kill-mob: CREEPER_HEAD
+  match/win-conditions/speedrunner/reach-advancement: BOOK
+  match/win-conditions/speedrunner/survive-time: ENCHANTED_GOLDEN_APPLE
+  match/autostart/broadcast-requirements: OAK_SIGN
+  match/autostart/minimums: CAULDRON
+  match/game-boosts/nether-structures: NETHER_BRICKS
+  match/game-boosts/overworld-structures: MOSSY_COBBLESTONE
+  match/headstarts/hunter: CROSSBOW
+  match/headstarts/speedrunner: RABBIT_FOOT
   compass: COMPASS
   compass/given-to: CHEST
   compass/analyze: AMETHYST_SHARD
   compass/analyze/debuffs: POTION
+  compass/analyze/debuffs/commands: COMMAND_BLOCK
   compass/signal-interference: REDSTONE_TORCH
+  compass/signal-interference/altitude: ELYTRA
+  compass/signal-interference/biome: GRASS_BLOCK
+  compass/signal-interference/light-level: GLOWSTONE
+  compass/signal-interference/line-of-sight: ENDER_EYE
+  compass/signal-interference/underground: STONE
+  compass/signal-interference/underwater: WATER_BUCKET
+  compass/signal-interference/weather: LIGHTNING_ROD
   compass/hunter: BOW
+  compass/hunter/max-distance: ENDER_PEARL
+  compass/hunter/min-distance: TRIPWIRE_HOOK
   compass/speedrunner: LEATHER_BOOTS
+  compass/speedrunner/max-distance: SPECTRAL_ARROW
+  compass/speedrunner/min-distance: STRING
+  compass/drop-on-death: HOPPER
+  compass/left-click: STONE_BUTTON
+  compass/must-be-inventory: ENDER_CHEST
+  compass/right-click: OAK_BUTTON
   players: PLAYER_HEAD
   players/respawn: TOTEM_OF_UNDYING
+  players/respawn/hunter: RED_BED
+  players/respawn/speedrunner: LIME_BED
   players/roles: NAME_TAG
+  players/roles/reset-on-game-end: RECOVERY_COMPASS
+  players/roles/reset-on-leave: MAGMA_CREAM
+  players/roles/turn-nones-spectator: GLASS
   players/friendly-fire: TNT
   players/invulnerability: SHIELD
+  players/invulnerability/none-players: GHAST_TEAR
+  players/invulnerability/on-game-end: MILK_BUCKET
   players/announce-roles: JUKEBOX
+  players/announce-roles/chat: PAPER
+  players/announce-roles/title: OAK_HANGING_SIGN
   server: BELL
   server/status: MAP
   server/anti-spawn-camp: IRON_BARS

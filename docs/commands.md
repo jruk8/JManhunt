@@ -186,14 +186,16 @@ words into one value:
 /manhunt config settings match start-on-speedrunner-damage on-expire FORCE_START
 ```
 
-String lists drill by index: view one entry, set one entry, append, or
-remove (only lists under `settings.*` also appear in the GUI):
+String lists drill by index: view one entry, set one entry, append,
+remove, or reset to defaults (only lists under `settings.*` also
+appear in the GUI):
 
 ```text
 /manhunt config match end-statistics 0
 /manhunt config match end-statistics 0 <words>
 /manhunt config match end-statistics add <words>
 /manhunt config match end-statistics remove 0
+/manhunt config match end-statistics reset
 ```
 
 With no category, the command lists categories; with a section path, it lists

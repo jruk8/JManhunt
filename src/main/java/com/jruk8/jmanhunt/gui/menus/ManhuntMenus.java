@@ -90,15 +90,15 @@ public final class ManhuntMenus {
     /** String-list menu: one paper per index plus a trailing stick. */
     public Menu listMenu(String listPath, Supplier<Menu> parent) {
         final Menu[] self = new Menu[1];
-        List<MenuButton> entries = listButtons(listPath, () -> self[0]);
-        MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(entries.size()));
+        Supplier<List<MenuButton>> content = () -> listButtons(listPath, () -> self[0]);
+        MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(content.get().size()));
         self[0] = new Menu(
                 GuiTexts.title(messages, messages
                         .string("manhunt-gui.dialog-title-edit", "Edit {name}")
                         .replace("{name}", SettingButtons.prettify(leaf(listPath)))),
                 layout, () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
                         backButton(self)),
-                () -> entries, parent);
+                content::get, parent);
         return self[0];
     }
 
@@ -234,8 +234,40 @@ public final class ManhuntMenus {
                 GuiTexts.name(messages, SettingButtons.prettify(leaf(path)),
                         SettingButtons.prettify(leaf(path))),
                 GuiTexts.lore(messages, List.of(countLine(count),
-                        text("list-hint-open", "Click to open"))),
-                false, false, open(() -> listMenu(path, caller)));
+                        text("list-hint-open", "Click to open"),
+                        text("setting-hint-reset", "Right-click to reset"))),
+                config.isListModified(path), false, open(() -> listMenu(path, caller)),
+                player -> listResetConfirm(player, path, caller));
+    }
+
+    private void listResetConfirm(Player player, String listPath, Supplier<Menu> caller) {
+        // Already at default: resetting would be a no-op, so say so in
+        // chat instead of opening a confirm panel for nothing.
+        if (!config.isListModified(listPath)) {
+            messages.message(player, "manhunt-gui.setting-already-default");
+            return;
+        }
+        Menu confirm = ConfirmMenu.create(
+                GuiTexts.title(messages, messages
+                        .string("manhunt-gui.setting-reset-title", "Reset {name}?")
+                        .replace("{name}", SettingButtons.prettify(leaf(listPath)))),
+                Material.PAPER, null,
+                GuiTexts.lore(messages, List.of(countLine(config.getStringList(listPath).size()))),
+                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                back -> gui.navigate(back, caller.get()),
+                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                done -> {
+                    ConfigService.SetOutcome outcome = config.listReset(listPath);
+                    if (!outcome.ok()) {
+                        feedback.failed(done, outcome);
+                        sounds.playAngrySound(done);
+                    } else {
+                        feedback.listReset(done, listPath, outcome);
+                    }
+                    gui.navigate(done, caller.get());
+                },
+                caller);
+        gui.navigate(player, confirm);
     }
 
     private List<MenuButton> listButtons(String listPath, Supplier<Menu> caller) {

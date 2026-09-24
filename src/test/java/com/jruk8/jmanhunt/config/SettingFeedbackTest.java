@@ -106,6 +106,50 @@ class SettingFeedbackTest {
     }
 
     @Test
+    void scalarUpdatedWithSameValueReportsUnchanged() {
+        ConfigService.SetOutcome outcome =
+                config.setValue("settings.match.autostart.countdown-seconds", "45");
+
+        assertTrue(outcome.ok());
+        feedback.scalarUpdated(sender,
+                "settings.match.autostart.countdown-seconds", outcome);
+
+        assertEquals(1, sent.size());
+        assertEquals("[JManhunt] Nothing changed. "
+                + "settings.match.autostart.countdown-seconds was already 45.",
+                plain(sent.get(0)));
+        verifyNoInteractions(sounds);
+    }
+
+    @Test
+    void listResetReportsDefaults() {
+        assertTrue(config.listAdd("match.end-statistics", "EXTRA").ok());
+        ConfigService.SetOutcome outcome = config.listReset("match.end-statistics");
+
+        assertTrue(outcome.ok());
+        feedback.listReset(sender, "match.end-statistics", outcome);
+
+        assertEquals(1, sent.size());
+        assertEquals("[JManhunt] Reset match.end-statistics to defaults.",
+                plain(sent.get(0)));
+        verify(sounds, times(1)).playNeutralSound(sender);
+    }
+
+    @Test
+    void listResetUnmodifiedReportsUnchanged() {
+        ConfigService.SetOutcome outcome = config.listReset("match.end-statistics");
+
+        assertTrue(outcome.ok());
+        feedback.listReset(sender, "match.end-statistics", outcome);
+
+        assertEquals(1, sent.size());
+        assertEquals("[JManhunt] Nothing changed. match.end-statistics was already "
+                + "[DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION].",
+                plain(sent.get(0)));
+        verifyNoInteractions(sounds);
+    }
+
+    @Test
     void failedReportsOnlyTheError() {
         ConfigService.SetOutcome outcome = config.setValue(
                 "settings.compass.signal-interference.light-level.min-sky-light", "16");
