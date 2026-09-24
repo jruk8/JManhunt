@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.zip.CRC32;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Share-string codec: exact bytes out, strict schema back in. */
@@ -331,5 +332,14 @@ class ModifierCodecTest {
         } finally {
             inflater.end();
         }
+    }
+
+    @Test
+    void validIdMatchesCodecShape() {
+        assertTrue(ModifierCodec.validId("good-id_1"));
+        assertTrue(ModifierCodec.validId("a"));
+        assertFalse(ModifierCodec.validId("-lead"));
+        assertFalse(ModifierCodec.validId("has space"));
+        assertFalse(ModifierCodec.validId(null));
     }
 }

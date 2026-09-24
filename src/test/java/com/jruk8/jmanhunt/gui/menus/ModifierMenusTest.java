@@ -120,6 +120,21 @@ class ModifierMenusTest {
     }
 
     @Test
+    void listMenusCarryCreateButtonsAndEditActions() {
+        MenuButton modifierCreate = menus.modifiersMenu().buttonAt(8);
+        MenuButton presetCreate = menus.presetsMenu().buttonAt(8);
+
+        assertEquals(Material.WRITABLE_BOOK, modifierCreate.material());
+        assertEquals("Create Modifier", textOf(modifierCreate.name()));
+        assertNotNull(modifierCreate.action());
+        assertEquals("Create Preset", textOf(presetCreate.name()));
+        assertNotNull(presetCreate.action());
+
+        assertNotNull(menus.modifiersMenu().buttonAt(2).rightAction());
+        assertNotNull(menus.presetsMenu().buttonAt(2).rightAction());
+    }
+
+    @Test
     void modifiersMenuGroupsByFileOrderOnFreshRows() {
         Menu menu = menus.modifiersMenu();
 
@@ -138,7 +153,8 @@ class ModifierMenusTest {
         assertTrue(zebra.glow());
         assertEquals(List.of(plain("Stripes", NamedTextColor.GRAY), Component.text(" "),
                 plain("Enabled", NamedTextColor.GREEN), Component.text(" "),
-                plain("by JManhunt", NamedTextColor.GRAY)), zebra.lore());
+                plain("by JManhunt", NamedTextColor.GRAY), Component.text(" "),
+                plain("Right-click to edit", NamedTextColor.GRAY)), zebra.lore());
         assertNotNull(zebra.action());
         assertNull(menu.buttonAt(3));
         assertNull(menu.buttonAt(4));
@@ -157,7 +173,8 @@ class ModifierMenusTest {
         assertFalse(apple.glow());
         assertEquals(List.of(plain("Fruit", NamedTextColor.GRAY),
                 plain("Crisp", NamedTextColor.GRAY), Component.text(" "),
-                plain("Disabled", NamedTextColor.RED)), apple.lore());
+                plain("Disabled", NamedTextColor.RED), Component.text(" "),
+                plain("Right-click to edit", NamedTextColor.GRAY)), apple.lore());
 
         assertEquals("Modifiers", textOf(menu.parent().get().title()));
         assertNotSame(menu, menu.parent().get());
@@ -176,13 +193,14 @@ class ModifierMenusTest {
         assertEquals(plain("Solo", NamedTextColor.WHITE), solo.name());
         assertTrue(solo.glow());
         assertEquals(List.of(plain("» Zulu", NamedTextColor.GREEN), Component.text(" "),
-                plain("Enabled", NamedTextColor.GREEN)), solo.lore());
+                plain("Enabled", NamedTextColor.GREEN), Component.text(" "),
+                plain("Right-click to edit", NamedTextColor.GRAY)), solo.lore());
         assertNull(menu.buttonAt(3));
         assertNull(menu.buttonAt(7));
 
         MenuButton pair = menu.buttonAt(11);
         assertEquals(Material.CHEST, pair.material());
-        assertEquals(4, pair.lore().size());
+        assertEquals(6, pair.lore().size());
         assertEquals("» Zulu", textOf(pair.lore().get(0)));
         assertEquals("» Apple", textOf(pair.lore().get(1)));
         assertEquals(plain("Disabled", NamedTextColor.RED), pair.lore().get(3));
@@ -236,7 +254,7 @@ class ModifierMenusTest {
         MenuButton button = big.presetsMenu().buttonAt(2);
 
         assertEquals(plain("Big", NamedTextColor.WHITE), button.name());
-        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 3, button.lore().size());
+        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 5, button.lore().size());
         assertEquals("» M0", textOf(button.lore().get(0)));
         assertEquals("» M7", textOf(button.lore().get(7)));
         assertEquals("and 2 more", textOf(button.lore().get(8)));

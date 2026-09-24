@@ -127,11 +127,20 @@ public final class SettingDialogs implements SettingDialog {
      */
     public void prompt(Player player, String titleText, List<String> body,
             Consumer<String> onSubmit, Runnable onCancel) {
+        prompt(player, titleText, "", body, onSubmit, onCancel);
+    }
+
+    /**
+     * Same, with a prefilled value for editing existing text. Overlong
+     * initial values take the cancel path like any other text dialog.
+     */
+    public void prompt(Player player, String titleText, String initial, List<String> body,
+            Consumer<String> onSubmit, Runnable onCancel) {
         List<DialogBody> lines = new ArrayList<>();
         for (String line : body) {
             lines.add(DialogBody.plainMessage(messages.parse(line)));
         }
-        openText(player, GuiTexts.title(messages, titleText), "",
+        openText(player, GuiTexts.title(messages, titleText), initial,
                 lines,
                 value -> runLater(player, () -> onSubmit.accept(value)),
                 () -> runLater(player, onCancel));

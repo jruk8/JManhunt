@@ -123,4 +123,13 @@ public class ModifiersMessages extends OkaeriConfig {
 
     @CustomKey("create-command-warning")
     private String createCommandWarning = "{prefix}<yellow>Warning: {warning}";
+
+    @CustomKey("edit-invalid")
+    private String editInvalid = "{prefix}<red>Invalid value: {error}";
+
+    @CustomKey("edit-renamed")
+    private String editRenamed = "{prefix}<green>Renamed to <white>{name}<green>.";
+
+    @CustomKey("edit-deleted")
+    private String editDeleted = "{prefix}<green>Deleted <white>{name}<green>.";
 }

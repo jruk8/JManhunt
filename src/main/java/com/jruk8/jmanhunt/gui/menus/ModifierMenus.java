@@ -40,6 +40,8 @@ public final class ModifierMenus {
     private final GuiService gui;
     private final ModifiersCommand toggles;
     private final SettingDialogs dialogs;
+    private final ModifierEditorMenus modifierEditor;
+    private final PresetEditorMenus presetEditor;
 
     /**
      * @param store modifier and preset reads
@@ -54,6 +56,8 @@ public final class ModifierMenus {
         this.gui = gui;
         this.toggles = toggles;
         this.dialogs = dialogs;
+        this.modifierEditor = new ModifierEditorMenus(store, messages, sounds, gui, toggles, dialogs);
+        this.presetEditor = new PresetEditorMenus(store, messages, sounds, gui, toggles, dialogs);
     }
 
     /** 27-slot root with links to both lists. */
@@ -100,10 +104,15 @@ public final class ModifierMenus {
 
     /** Modifiers scroll list with an explicit root parent. */
     public Menu modifiersMenu(Supplier<Menu> parent) {
-        return listMenu("title-modifiers", this::modifierButtons,
+        return listMenu("title-modifiers",
+                columns -> modifierButtons(columns, () -> modifiersMenu(parent)),
                 () -> mainMenu(parent), this::toggleAllModifiersButton,
                 self -> importButton(self, "modifier", "import-modifier",
-                        "import-modifier-lore", "import-modifier-title"));
+                        "import-modifier-lore", "import-modifier-title"),
+                createButton(Material.WRITABLE_BOOK, "create-modifier", "Create Modifier",
+                        "create-modifier-lore", "Start a new modifier",
+                        player -> modifierEditor.createModifier(player,
+                                () -> modifiersMenu(parent))));
     }
 
     /** 45-slot presets scroll list. */
@@ -113,27 +122,34 @@ public final class ModifierMenus {
 
     /** Presets scroll list with an explicit root parent. */
     public Menu presetsMenu(Supplier<Menu> parent) {
-        return listMenu("title-presets", this::presetButtons,
+        return listMenu("title-presets",
+                columns -> presetButtons(columns, () -> presetsMenu(parent)),
                 () -> mainMenu(parent), this::toggleAllPresetsButton,
                 self -> importButton(self, "preset", "import-preset",
-                        "import-preset-lore", "import-preset-title"));
+                        "import-preset-lore", "import-preset-title"),
+                createButton(Material.WRITABLE_BOOK, "create-preset", "Create Preset",
+                        "create-preset-lore", "Start a new preset",
+                        player -> presetEditor.createPreset(player,
+                                () -> presetsMenu(parent))));
     }
 
     private Menu listMenu(String titleKey, Function<Integer, List<MenuButton>> content,
             Supplier<Menu> parent, Supplier<MenuButton> toggleAll,
-            Function<Menu[], MenuButton> importButton) {
+            Function<Menu[], MenuButton> importButton, MenuButton create) {
         MenuLayout layout = MenuLayout.parse(
                 "##xxxxxx#", "u#xxxxxx#", "b#xxxxxxt", "d#xxxxxx#", "##xxxxxx#");
         final Menu[] self = new Menu[1];
         self[0] = new Menu(GuiTexts.title(messages, text(titleKey, "Modifiers")),
-                layout, () -> listStatic(self, toggleAll, importButton),
+                layout, () -> listStatic(self, toggleAll, importButton, create),
                 () -> content.apply(layout.contentColumns()), parent);
         return self[0];
     }
 
     private Map<Integer, MenuButton> listStatic(
-            Menu[] self, Supplier<MenuButton> toggleAll, Function<Menu[], MenuButton> importButton) {
+            Menu[] self, Supplier<MenuButton> toggleAll,
+            Function<Menu[], MenuButton> importButton, MenuButton create) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
+        fixed.put(8, create);
         fixed.put(9, scrollButton(Material.ARROW, "scroll-up", "Scroll up", self, -1));
         fixed.put(18, new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
@@ -174,6 +190,15 @@ public final class ModifierMenus {
                             },
                             () -> gui.navigate(player, self[0]));
                 });
+    }
+
+    /** Top-right create button opening the creator flow. */
+    private MenuButton createButton(Material material, String nameKey, String nameFallback,
+            String loreKey, String loreFallback, Consumer<Player> action) {
+        return new MenuButton(material,
+                GuiTexts.name(messages, text(nameKey, nameFallback), nameFallback),
+                GuiTexts.lore(messages, text(loreKey, loreFallback)),
+                false, false, action);
     }
 
     private MenuButton toggleAllModifiersButton() {
@@ -238,7 +263,7 @@ public final class ModifierMenus {
                 });
     }
 
-    private List<MenuButton> modifierButtons(int columns) {
+    private List<MenuButton> modifierButtons(int columns, Supplier<Menu> listParent) {
         Map<String, Integer> order = fileOrder(store.modifierNames());
         List<String> ids = new ArrayList<>(store.modifierNames());
         ids.sort(MenuOrder.modifiers(store::metaName, store::isEnabled, order::get));
@@ -248,19 +273,27 @@ public final class ModifierMenus {
         }
         List<MenuButton> buttons = new ArrayList<>();
         for (int index = 0; index < enabled; index++) {
-            buttons.add(modifierButton(ids.get(index), true));
+            buttons.add(modifierButton(ids.get(index), true, listParent));
         }
         padGroup(buttons, enabled, columns);
         for (int index = enabled; index < ids.size(); index++) {
-            buttons.add(modifierButton(ids.get(index), false));
+            buttons.add(modifierButton(ids.get(index), false, listParent));
         }
         return buttons;
     }
 
-    private MenuButton modifierButton(String id, boolean enabled) {
+    private MenuButton modifierButton(String id, boolean enabled, Supplier<Menu> listParent) {
         return new MenuButton(store.metaItem(id),
                 GuiTexts.name(messages, store.metaName(id), ModifierStore.DEFAULT_NAME),
-                modifierLore(id, enabled), enabled, false, toggleModifier(id));
+                modifierLore(id, enabled), enabled, false, toggleModifier(id),
+                player -> {
+                    if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
+                        messages.message(player, "command.no-permission");
+                        return;
+                    }
+                    gui.navigate(player, modifierEditor.editor(id, listParent));
+                    sounds.playNeutralSound(player);
+                });
     }
 
     /**
@@ -294,10 +327,12 @@ public final class ModifierMenus {
             lore.add(Component.text(" "));
             lore.addAll(GuiTexts.lore(messages, "by " + author));
         }
+        lore.add(Component.text(" "));
+        lore.addAll(GuiTexts.lore(messages, text("edit-hint", "Right-click to edit")));
         return lore;
     }
 
-    private List<MenuButton> presetButtons(int columns) {
+    private List<MenuButton> presetButtons(int columns, Supplier<Menu> listParent) {
         Map<String, Integer> order = fileOrder(store.presetNames());
         List<String> ids = new ArrayList<>(store.presetNames());
         ids.sort(MenuOrder.presets(store::presetName, store::presetEnabled, order::get));
@@ -307,19 +342,27 @@ public final class ModifierMenus {
         }
         List<MenuButton> buttons = new ArrayList<>();
         for (int index = 0; index < allOn; index++) {
-            buttons.add(presetButton(ids.get(index), true));
+            buttons.add(presetButton(ids.get(index), true, listParent));
         }
         padGroup(buttons, allOn, columns);
         for (int index = allOn; index < ids.size(); index++) {
-            buttons.add(presetButton(ids.get(index), false));
+            buttons.add(presetButton(ids.get(index), false, listParent));
         }
         return buttons;
     }
 
-    private MenuButton presetButton(String id, boolean allOn) {
+    private MenuButton presetButton(String id, boolean allOn, Supplier<Menu> listParent) {
         return new MenuButton(store.presetItem(id),
                 GuiTexts.name(messages, store.presetName(id), ModifierStore.DEFAULT_NAME),
-                presetLore(id, allOn), allOn, false, togglePreset(id));
+                presetLore(id, allOn), allOn, false, togglePreset(id),
+                player -> {
+                    if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
+                        messages.message(player, "command.no-permission");
+                        return;
+                    }
+                    gui.navigate(player, presetEditor.editor(id, listParent));
+                    sounds.playNeutralSound(player);
+                });
     }
 
     private List<Component> presetLore(String id, boolean allOn) {
@@ -340,6 +383,8 @@ public final class ModifierMenus {
             lore.add(Component.text(" "));
         }
         lore.addAll(GuiTexts.lore(messages, text(stateKey(allOn), allOn ? "Enabled" : "Disabled")));
+        lore.add(Component.text(" "));
+        lore.addAll(GuiTexts.lore(messages, text("edit-hint", "Right-click to edit")));
         return lore;
     }
 

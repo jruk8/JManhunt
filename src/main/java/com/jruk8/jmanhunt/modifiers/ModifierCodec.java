@@ -55,6 +55,11 @@ public final class ModifierCodec {
     private ModifierCodec() {
     }
 
+    /** True when an id fits the shared modifier/preset id shape. */
+    public static boolean validId(String id) {
+        return id != null && ID_PATTERN.matcher(id).matches();
+    }
+
     /** Decoded share string: the kind, id, and validated entry. */
     public enum Kind {
         MODIFIER,
@@ -103,7 +108,7 @@ public final class ModifierCodec {
             JsonObject envelope = root.getAsJsonObject();
             String type = requiredString(envelope, "type");
             String id = requiredString(envelope, "id");
-            if (!ID_PATTERN.matcher(id).matches()) {
+            if (!validId(id)) {
                 return Optional.empty();
             }
             JsonObject data = optionalObject(envelope, "data");
