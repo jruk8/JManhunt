@@ -6,7 +6,12 @@ import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.modifiers.ModifierCodec;
+import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
+import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
+import java.util.Optional;
 import java.util.function.Supplier;
+import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
@@ -57,11 +62,25 @@ public final class ModifiersCommand {
         return switch (args[0].toLowerCase(Locale.ROOT)) {
             case "setmod" -> setModifier(sender, args);
             case "setpreset" -> setPreset(sender, args);
+            case "export" -> exportCommand(sender, args);
+            case "import" -> importCommand(sender, args);
             default -> {
                 messages.message(sender, "modifiers.usage");
                 yield true;
             }
         };
+    }
+
+    /** Parses the modifier-or-preset type word; null when invalid. Pure for tests. */
+    static String parseEntryType(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String normalized = raw.trim().toLowerCase(Locale.ROOT);
+        if (normalized.equals("modifier") || normalized.equals("preset")) {
+            return normalized;
+        }
+        return null;
     }
 
     /** Modifier ids, alphabetically, for tab completion. */
@@ -239,6 +258,101 @@ public final class ModifiersCommand {
         ManhuntCommand.announceSettingChange(messages,
                 config.getBoolean("settings.server.announce-config-changes", false),
                 sender, "modifiers.toggle-announced", "preset " + id, value ? "on" : "off");
+        return true;
+    }
+
+    private boolean exportCommand(CommandSender sender, String[] args) {
+        if (args.length < 3 || parseEntryType(args[1]) == null) {
+            messages.message(sender, "modifiers.export-usage");
+            return true;
+        }
+        exportEntry(sender, parseEntryType(args[1]), args[2]);
+        return true;
+    }
+
+    /**
+     * Sends a click-to-copy share string for one entry. Used by the
+     * export loom as well as the CLI. Returns false when unknown.
+     */
+    public boolean exportEntry(CommandSender sender, String type, String id) {
+        if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
+            messages.message(sender, "command.no-permission");
+            return false;
+        }
+        String payload;
+        String name;
+        if (type.equals("preset")) {
+            ModifierPreset preset =
+                    config.modifiers().presetEntry(id);
+            if (preset == null) {
+                messages.message(sender, "modifiers.unknown-preset",
+                        Map.of("name", id, "valid", ListFormatter.joinOxford(presetIdOptions())));
+                return false;
+            }
+            payload = ModifierCodec.exportPreset(id, preset);
+            name = config.modifiers().presetName(id);
+        } else {
+            ModifierEntry entry =
+                    config.modifiers().modifierEntry(id);
+            if (entry == null) {
+                messages.message(sender, "modifiers.unknown-modifier",
+                        Map.of("name", id, "valid", ListFormatter.joinOxford(modifierNameOptions())));
+                return false;
+            }
+            payload = ModifierCodec.exportModifier(id, entry);
+            name = config.modifiers().metaName(id);
+        }
+        sender.sendMessage(messages.component("modifiers.exported",
+                        Map.of("type", type, "name", name))
+                .clickEvent(ClickEvent.copyToClipboard(payload)));
+        if (sender instanceof Player player) {
+            sounds.playNeutralSound(player);
+        }
+        return true;
+    }
+
+    private boolean importCommand(CommandSender sender, String[] args) {
+        if (args.length < 3 || parseEntryType(args[1]) == null) {
+            messages.message(sender, "modifiers.import-usage");
+            return true;
+        }
+        importEntry(sender, parseEntryType(args[1]), args[2]);
+        return true;
+    }
+
+    /**
+     * Imports one share string, bumping the name when the id is taken.
+     * Used by the import button as well as the CLI. Returns false when
+     * the payload is corrupt, off-schema, or of the wrong kind.
+     */
+    public boolean importEntry(CommandSender sender, String type, String payload) {
+        if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
+            messages.message(sender, "command.no-permission");
+            return false;
+        }
+        Optional<ModifierCodec.Imported> decoded =
+                ModifierCodec.decode(payload);
+        if (decoded.isEmpty()) {
+            messages.message(sender, "modifiers.import-failed");
+            return false;
+        }
+        ModifierCodec.Imported imported = decoded.get();
+        boolean isPreset = imported.kind()
+                == ModifierCodec.Kind.PRESET;
+        if (!type.equals(isPreset ? "preset" : "modifier")) {
+            messages.message(sender, "modifiers.import-failed");
+            return false;
+        }
+        String finalId = isPreset
+                ? config.modifiers().addPreset(imported.id(), imported.preset())
+                : config.modifiers().addModifier(imported.id(), imported.entry());
+        String name = isPreset
+                ? config.modifiers().presetName(finalId)
+                : config.modifiers().metaName(finalId);
+        messages.message(sender, "modifiers.imported", Map.of("name", name));
+        if (sender instanceof Player player) {
+            sounds.playNeutralSound(player);
+        }
         return true;
     }
 

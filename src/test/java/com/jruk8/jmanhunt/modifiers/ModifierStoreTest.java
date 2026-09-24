@@ -1,6 +1,9 @@
 package com.jruk8.jmanhunt.modifiers;
 
 import com.jruk8.jmanhunt.modifiers.config.ModifierCommandsPack;
+import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
+import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
+import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
@@ -319,6 +322,42 @@ class ModifierStoreTest {
         assertEquals("AFTER", bundled.preStartOrder("hunter-start-debuffs"));
         assertEquals(3, bundled.presetMembers("chaos-mode").size());
         assertEquals(Material.TNT, bundled.presetItem("chaos-mode"));
+    }
+
+    @Test
+    void addModifierBumpsNameOnIdCollision() {
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ModifierStore store = new ModifierStore(new ModifiersConfig(), log);
+        ModifierEntry first = new ModifierEntry();
+        ModifierMeta firstMeta = new ModifierMeta();
+        firstMeta.setName("Gear Dice");
+        first.setMeta(firstMeta);
+        assertEquals("gear-dice", store.addModifier("gear-dice", first));
+
+        ModifierEntry second = new ModifierEntry();
+        ModifierMeta secondMeta = new ModifierMeta();
+        secondMeta.setName("Gear Dice");
+        second.setMeta(secondMeta);
+
+        assertEquals("gear-dice-2", store.addModifier("gear-dice", second));
+        assertEquals("Gear Dice 2", store.metaName("gear-dice-2"));
+    }
+
+    @Test
+    void addPresetBumpsNameOnIdCollision() {
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ModifierStore store = new ModifierStore(new ModifiersConfig(), log);
+        ModifierPreset first = new ModifierPreset();
+        first.setName("Chaos");
+        assertEquals("chaos", store.addPreset("chaos", first));
+
+        ModifierPreset second = new ModifierPreset();
+        second.setName("Chaos");
+
+        assertEquals("chaos-2", store.addPreset("chaos", second));
+        assertEquals("Chaos 2", store.presetName("chaos-2"));
     }
 
     private static ModifiersConfig load(File source) throws Exception {

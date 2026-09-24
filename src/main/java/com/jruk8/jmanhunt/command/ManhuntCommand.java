@@ -123,10 +123,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.feedback = new SettingFeedback(messages, config, sounds);
         this.modifiersCmd = new ModifiersCommand(config, messages,
                 plugin.guiService(), () -> modifierMenus.mainMenu(), sounds);
-        this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,
-                plugin.guiService(), modifiersCmd);
         SettingDialogs dialogs = new SettingDialogs(config, messages, sounds,
                 plugin.guiService(), feedback, plugin);
+        this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,
+                plugin.guiService(), modifiersCmd, dialogs);
         this.menus = new ManhuntMenus(config, plugin.guiConfig(), messages, sounds,
                 plugin.guiService(), dialogs, feedback, plugin.stats(), modifierMenus);
     }
@@ -2043,7 +2043,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     /** Tab completion for modifiers toggles. Null when inapplicable. */
     private List<String> completeModifiersTab(String[] args) {
         if (args.length == 2 && args[0].equalsIgnoreCase("modifiers")) {
-            return partial(args[1], List.of("setmod", "setpreset"));
+            return partial(args[1], List.of("setmod", "setpreset", "export", "import"));
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {
             if (args[1].equalsIgnoreCase("setmod")) {
@@ -2052,11 +2052,21 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             if (args[1].equalsIgnoreCase("setpreset")) {
                 return partial(args[2], modifiersCmd.presetIdOptions());
             }
+            if (args[1].equalsIgnoreCase("export") || args[1].equalsIgnoreCase("import")) {
+                return partial(args[2], List.of("modifier", "preset"));
+            }
             return null;
         }
         if (args.length == 4 && args[0].equalsIgnoreCase("modifiers")
                 && (args[1].equalsIgnoreCase("setmod") || args[1].equalsIgnoreCase("setpreset"))) {
             return partial(args[3], List.of("true", "false"));
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("modifiers")
+                && args[1].equalsIgnoreCase("export")) {
+            if (args[2].equalsIgnoreCase("preset")) {
+                return partial(args[3], modifiersCmd.presetIdOptions());
+            }
+            return partial(args[3], modifiersCmd.modifierNameOptions());
         }
         return null;
     }

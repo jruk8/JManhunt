@@ -332,3 +332,19 @@ The default `config.yml` ships more examples to copy from: `full-iron-kit`,
 `fireres-on-nether-enter`, `hunter-start-debuffs` (slowness II plus
 weakness I on every hunter at match start), and `hunter-post-start-speed`
 (speed for hunters once the game actually begins).
+
+# Sharing Modifiers and Presets
+
+Export any modifier or preset to a share string: a click-to-copy chat
+line you can paste to friends or the community. Import takes one back
+in; colliding names get numbered automatically. Strings that fail
+their checksum or schema check are refused without touching anything.
+
+```text
+/manhunt modifiers export modifier gear-dice
+/manhunt modifiers export preset chaos-mode
+/manhunt modifiers import modifier JMH1D:...
+```
+
+The modifiers and presets menus carry an import loom in the
+bottom-left corner that prompts for the string.

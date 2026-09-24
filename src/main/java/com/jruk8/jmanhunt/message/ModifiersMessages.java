@@ -63,4 +63,20 @@ public class ModifiersMessages extends OkaeriConfig {
     @CustomKey("toggle-all-announced")
     private String toggleAllAnnounced = "{prefix}<white>{player} <yellow>toggled all <gray>{count} {kind}</gray> " +
             "to <white>{state}</white>.</yellow></white>";
+
+    @CustomKey("export-usage")
+    private String exportUsage = "{prefix}<yellow>Usage: /manhunt modifiers export <modifier|preset> <id>";
+
+    @CustomKey("import-usage")
+    private String importUsage = "{prefix}<yellow>Usage: /manhunt modifiers import <modifier|preset> <payload>";
+
+    @CustomKey("exported")
+    private String exported = "{prefix}<green><underlined>Click to copy <white>{type} {name}</white> " +
+            "to clipboard</underlined>";
+
+    @CustomKey("imported")
+    private String imported = "{prefix}<green>Imported <white>{name}<green>.";
+
+    @CustomKey("import-failed")
+    private String importFailed = "{prefix}<red>That import string is invalid or corrupted.";
 }

@@ -58,7 +58,7 @@ class ModifierMenusTest {
         MessageService messages = new MessageService();
         messages.reload(new MessagesConfig());
         store = new ModifierStore(config, log);
-        menus = new ModifierMenus(store, messages, null, null, null);
+        menus = new ModifierMenus(store, messages, null, null, null, null);
     }
 
     private static void addModifier(ModifiersConfig config, String id, boolean enabled,
@@ -104,6 +104,19 @@ class ModifierMenusTest {
         assertNotNull(presets.action());
 
         assertNull(main.buttonAt(0));
+    }
+
+    @Test
+    void listMenusCarryImportLooms() {
+        MenuButton modifierImport = menus.modifiersMenu().buttonAt(36);
+        MenuButton presetImport = menus.presetsMenu().buttonAt(36);
+
+        assertEquals(Material.LOOM, modifierImport.material());
+        assertEquals("Import Modifier", textOf(modifierImport.name()));
+        assertNotNull(modifierImport.action());
+        assertEquals(Material.LOOM, presetImport.material());
+        assertEquals("Import Preset", textOf(presetImport.name()));
+        assertNotNull(presetImport.action());
     }
 
     @Test
@@ -218,7 +231,7 @@ class ModifierMenusTest {
         MessageService fresh = new MessageService();
         fresh.reload(new MessagesConfig());
         ModifierMenus big =
-                new ModifierMenus(new ModifierStore(config, log), fresh, null, null, null);
+                new ModifierMenus(new ModifierStore(config, log), fresh, null, null, null, null);
 
         MenuButton button = big.presetsMenu().buttonAt(2);
 

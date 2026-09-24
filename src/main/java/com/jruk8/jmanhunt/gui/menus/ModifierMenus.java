@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.MenuLayout;
+import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -38,19 +39,21 @@ public final class ModifierMenus {
     private final SoundService sounds;
     private final GuiService gui;
     private final ModifiersCommand toggles;
+    private final SettingDialogs dialogs;
 
     /**
      * @param store modifier and preset reads
-     * @param messages GUI text; sounds, gui, and toggles are only touched
-     *        inside click actions, so builders tolerate them as null
+     * @param messages GUI text; sounds, gui, toggles, and dialogs are only
+     *        touched inside click actions, so builders tolerate them as null
      */
     public ModifierMenus(ModifierStore store, MessageService messages, SoundService sounds,
-            GuiService gui, ModifiersCommand toggles) {
+            GuiService gui, ModifiersCommand toggles, SettingDialogs dialogs) {
         this.store = store;
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
         this.toggles = toggles;
+        this.dialogs = dialogs;
     }
 
     /** 27-slot root with links to both lists. */
@@ -98,7 +101,9 @@ public final class ModifierMenus {
     /** Modifiers scroll list with an explicit root parent. */
     public Menu modifiersMenu(Supplier<Menu> parent) {
         return listMenu("title-modifiers", this::modifierButtons,
-                () -> mainMenu(parent), this::toggleAllModifiersButton);
+                () -> mainMenu(parent), this::toggleAllModifiersButton,
+                self -> importButton(self, "modifier", "import-modifier",
+                        "import-modifier-lore", "import-modifier-title"));
     }
 
     /** 45-slot presets scroll list. */
@@ -109,22 +114,25 @@ public final class ModifierMenus {
     /** Presets scroll list with an explicit root parent. */
     public Menu presetsMenu(Supplier<Menu> parent) {
         return listMenu("title-presets", this::presetButtons,
-                () -> mainMenu(parent), this::toggleAllPresetsButton);
+                () -> mainMenu(parent), this::toggleAllPresetsButton,
+                self -> importButton(self, "preset", "import-preset",
+                        "import-preset-lore", "import-preset-title"));
     }
 
     private Menu listMenu(String titleKey, Function<Integer, List<MenuButton>> content,
-            Supplier<Menu> parent, Supplier<MenuButton> toggleAll) {
+            Supplier<Menu> parent, Supplier<MenuButton> toggleAll,
+            Function<Menu[], MenuButton> importButton) {
         MenuLayout layout = MenuLayout.parse(
                 "##xxxxxx#", "u#xxxxxx#", "b#xxxxxxt", "d#xxxxxx#", "##xxxxxx#");
         final Menu[] self = new Menu[1];
         self[0] = new Menu(GuiTexts.title(messages, text(titleKey, "Modifiers")),
-                layout, () -> listStatic(self, toggleAll),
+                layout, () -> listStatic(self, toggleAll, importButton),
                 () -> content.apply(layout.contentColumns()), parent);
         return self[0];
     }
 
     private Map<Integer, MenuButton> listStatic(
-            Menu[] self, Supplier<MenuButton> toggleAll) {
+            Menu[] self, Supplier<MenuButton> toggleAll, Function<Menu[], MenuButton> importButton) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
         fixed.put(9, scrollButton(Material.ARROW, "scroll-up", "Scroll up", self, -1));
         fixed.put(18, new MenuButton(Material.PAPER,
@@ -136,7 +144,36 @@ public final class ModifierMenus {
                 }));
         fixed.put(26, toggleAll.get());
         fixed.put(27, scrollButton(Material.ARROW, "scroll-down", "Scroll down", self, 1));
+        fixed.put(36, importButton.apply(self));
         return fixed;
+    }
+
+    /** Bottom-left import loom: prompts for a share string, then refreshes. */
+    private MenuButton importButton(Menu[] self, String type, String nameKey,
+            String loreKey, String titleKey) {
+        return new MenuButton(Material.LOOM,
+                GuiTexts.name(messages,
+                        text(nameKey, type.equals("preset") ? "Import Preset" : "Import Modifier"),
+                        "Import"),
+                GuiTexts.lore(messages, text(loreKey, "Paste an exported string.")),
+                false, false,
+                player -> {
+                    if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
+                        messages.message(player, "command.no-permission");
+                        return;
+                    }
+                    dialogs.prompt(player,
+                            text(titleKey,
+                                    type.equals("preset") ? "Import Preset" : "Import Modifier"),
+                            List.of(text("import-prompt", "Paste an exported string.")),
+                            payload -> {
+                                if (!toggles.importEntry(player, type, payload)) {
+                                    sounds.playAngrySound(player);
+                                }
+                                gui.navigate(player, self[0]);
+                            },
+                            () -> gui.navigate(player, self[0]));
+                });
     }
 
     private MenuButton toggleAllModifiersButton() {

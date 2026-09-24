@@ -320,6 +320,11 @@ modifiers:
   toggle-announced: "{prefix}<white>{player} <yellow>set <gray>{key}</gray> to <white>{value}</white>.</yellow></white>"
   toggle-all-success: "{prefix}<green>Toggled all <white>{count} {kind}</white> to <white>{state}</white>."
   toggle-all-announced: "{prefix}<white>{player} <yellow>toggled all <gray>{count} {kind}</gray> to <white>{state}</white>.</yellow></white>"
+  export-usage: "{prefix}<yellow>Usage: /manhunt modifiers export <modifier|preset> <id>"
+  import-usage: "{prefix}<yellow>Usage: /manhunt modifiers import <modifier|preset> <payload>"
+  exported: "{prefix}<green><underlined>Click to copy <white>{type} {name}</white> to clipboard</underlined>"
+  imported: "{prefix}<green>Imported <white>{name}<green>."
+  import-failed: "{prefix}<red>That import string is invalid or corrupted."
 
 # Modifiers GUI text. Names render white, lore gray; user tags override.
 # {enabled} and {total} count enabled entries. Never add {prefix} here.
@@ -340,6 +345,13 @@ modifiers-gui:
   preset-more: "and {count} more"
   state-on: "<green>Enabled"
   state-off: "<red>Disabled"
+  import-modifier: "Import Modifier"
+  import-modifier-lore: "Get modifiers by exporting them or\ncommunity modifiers through our Discord"
+  import-preset: "Import Preset"
+  import-preset-lore: "Get presets by exporting them or\ncommunity presets through our Discord"
+  import-modifier-title: "Import Modifier"
+  import-preset-title: "Import Preset"
+  import-prompt: "Paste an exported string."
 
 # Manhunt GUI chrome shared by the settings browser, confirm panels, and
 # value dialogs. Names render white, lore gray; user tags override.

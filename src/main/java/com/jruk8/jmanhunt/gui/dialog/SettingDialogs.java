@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.gui.dialog;
 import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
+import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SettingType;
 import com.jruk8.jmanhunt.gui.GuiService;
@@ -118,6 +119,22 @@ public final class SettingDialogs implements SettingDialog {
         openText(player, title, "", List.of(),
                 raw -> submitListAdd(player, listPath, reopen, raw),
                 () -> reopenLater(player, reopen));
+    }
+
+    /**
+     * Single free-text prompt with parsed body lines. Submit and cancel
+     * run one tick later so callers may navigate safely.
+     */
+    public void prompt(Player player, String titleText, List<String> body,
+            Consumer<String> onSubmit, Runnable onCancel) {
+        List<DialogBody> lines = new ArrayList<>();
+        for (String line : body) {
+            lines.add(DialogBody.plainMessage(messages.parse(line)));
+        }
+        openText(player, GuiTexts.title(messages, titleText), "",
+                lines,
+                value -> runLater(player, () -> onSubmit.accept(value)),
+                () -> runLater(player, onCancel));
     }
 
     /** Shared text dialog with caller-supplied submit and cancel behavior. */
@@ -270,6 +287,15 @@ public final class SettingDialogs implements SettingDialog {
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (player.isOnline()) {
                 gui.navigate(player, reopen.get());
+            }
+        });
+    }
+
+    /** Runs a dialog callback next tick, skipping offline players. */
+    private void runLater(Player player, Runnable callback) {
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (player.isOnline()) {
+                callback.run();
             }
         });
     }

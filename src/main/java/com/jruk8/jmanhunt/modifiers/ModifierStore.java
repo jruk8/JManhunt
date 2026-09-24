@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 public final class ModifierStore {
     public static final String DEFAULT_NAME = "My Modifier";
     public static final String DEFAULT_DESCRIPTION = "Enable for a twist!";
+    public static final String DEFAULT_PRESET_NAME = "My Preset";
 
     private final ModifiersConfig config;
     private final Logger log;
@@ -38,6 +39,81 @@ public final class ModifierStore {
     /** Clears one-per-load item warnings, e.g. after /mh reload. */
     public void clearItemWarnings() {
         warnedItems.clear();
+    }
+
+    /** Raw modifier entry, or null when unknown. */
+    public ModifierEntry modifierEntry(String name) {
+        return config.getModifiers().get(name);
+    }
+
+    /** Raw preset, or null when unknown. */
+    public ModifierPreset presetEntry(String id) {
+        return config.getPresets().get(id);
+    }
+
+    /**
+     * Adds a modifier, saving immediately. A taken id bumps the
+     * display name with " {n}" numbering and derives the id from it.
+     * Returns the final id.
+     */
+    public String addModifier(String id, ModifierEntry entry) {
+        String finalId = id;
+        if (config.getModifiers().containsKey(finalId)) {
+            Set<String> takenNames = new HashSet<>();
+            for (String key : config.getModifiers().keySet()) {
+                takenNames.add(metaName(key));
+            }
+            String base = metaNameOf(entry);
+            String name = base;
+            String slug;
+            do {
+                name = ModifierNames.uniqueName(name, takenNames);
+                takenNames.add(name);
+                slug = ModifierNames.kebab(name);
+                if (slug.isEmpty()) {
+                    slug = "modifier";
+                }
+            } while (config.getModifiers().containsKey(slug));
+            if (entry.getMeta() == null) {
+                entry.setMeta(new ModifierMeta());
+            }
+            entry.getMeta().setName(name);
+            finalId = slug;
+        }
+        config.getModifiers().put(finalId, entry);
+        save();
+        return finalId;
+    }
+
+    /**
+     * Adds a preset, saving immediately. A taken id bumps the display
+     * name with " {n}" numbering and derives the id from it. Returns
+     * the final id.
+     */
+    public String addPreset(String id, ModifierPreset preset) {
+        String finalId = id;
+        if (config.getPresets().containsKey(finalId)) {
+            Set<String> takenNames = new HashSet<>();
+            for (ModifierPreset existing : config.getPresets().values()) {
+                takenNames.add(orDefault(existing.getName(), DEFAULT_PRESET_NAME));
+            }
+            String base = orDefault(preset.getName(), DEFAULT_PRESET_NAME);
+            String name = base;
+            String slug;
+            do {
+                name = ModifierNames.uniqueName(name, takenNames);
+                takenNames.add(name);
+                slug = ModifierNames.kebab(name);
+                if (slug.isEmpty()) {
+                    slug = "preset";
+                }
+            } while (config.getPresets().containsKey(slug));
+            preset.setName(name);
+            finalId = slug;
+        }
+        config.getPresets().put(finalId, preset);
+        save();
+        return finalId;
     }
 
     public Set<String> modifierNames() {
@@ -262,6 +338,11 @@ public final class ModifierStore {
 
     private static String orDefault(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
+    }
+
+    private static String metaNameOf(ModifierEntry entry) {
+        return entry.getMeta() == null
+                ? DEFAULT_NAME : orDefault(entry.getMeta().getName(), DEFAULT_NAME);
     }
 
     /** Lenient material parse: trims, strips minecraft: prefix, ignores case. */

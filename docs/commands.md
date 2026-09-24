@@ -224,7 +224,13 @@ either from the console or once for each participating player.
 
 Browse and toggle them with `/manhunt modifiers`, through the
 [admin GUI](gui.md), or by editing `modifiers.yml` and running
-`/manhunt reload`.
+`/manhunt reload`. Share one with `export`, which prints a
+click-to-copy string, and take one in with `import`:
+
+```text
+/manhunt modifiers export modifier gear-dice
+/manhunt modifiers import modifier JMH1D:...
+```
 
 The example modifier in the default config gives players food and applies
 different commands to hunters and speedrunners. `perma-night` is another

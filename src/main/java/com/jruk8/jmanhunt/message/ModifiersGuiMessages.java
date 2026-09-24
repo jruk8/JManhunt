@@ -54,4 +54,27 @@ public class ModifiersGuiMessages extends OkaeriConfig {
 
     @CustomKey("state-off")
     private String stateOff = "<red>Disabled";
+
+    @CustomKey("import-modifier")
+    private String importModifier = "Import Modifier";
+
+    @CustomKey("import-modifier-lore")
+    private String importModifierLore = "Get modifiers by exporting them or\n" +
+            "community modifiers through our Discord";
+
+    @CustomKey("import-preset")
+    private String importPreset = "Import Preset";
+
+    @CustomKey("import-preset-lore")
+    private String importPresetLore = "Get presets by exporting them or\n" +
+            "community presets through our Discord";
+
+    @CustomKey("import-modifier-title")
+    private String importModifierTitle = "Import Modifier";
+
+    @CustomKey("import-preset-title")
+    private String importPresetTitle = "Import Preset";
+
+    @CustomKey("import-prompt")
+    private String importPrompt = "Paste an exported string.";
 }
