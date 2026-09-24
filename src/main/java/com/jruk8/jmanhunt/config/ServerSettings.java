@@ -36,6 +36,9 @@ public class ServerSettings extends OkaeriConfig {
     @Comment("Optional /manhunt status extras. Each toggles independently.")
     private Status status = new Status();
 
+    @Comment("Advanced server interop toggles.")
+    private Advanced advanced = new Advanced();
+
     public boolean isAnnounceConfigChanges() {
         return announceConfigChanges;
     }
@@ -66,6 +69,35 @@ public class ServerSettings extends OkaeriConfig {
 
     public void setStatus(Status status) {
         this.status = status;
+    }
+
+    public Advanced getAdvanced() {
+        return advanced;
+    }
+
+    public void setAdvanced(Advanced advanced) {
+        this.advanced = advanced;
+    }
+
+    /** Advanced server interop toggles. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Advanced extends OkaeriConfig {
+
+        @CustomKey("disable-worldedit-navwand")
+        @Comment({
+                "When true, compass clicks never trigger WorldEdit's navwand",
+                "teleport, with no WorldEdit dependency needed.",
+                "Default: true"
+        })
+        private boolean disableWorldeditNavwand = true;
+
+        public boolean isDisableWorldeditNavwand() {
+            return disableWorldeditNavwand;
+        }
+
+        public void setDisableWorldeditNavwand(boolean disableWorldeditNavwand) {
+            this.disableWorldeditNavwand = disableWorldeditNavwand;
+        }
     }
 
     /** Anti-spawn-camp guard. */

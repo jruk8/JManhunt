@@ -511,14 +511,15 @@ public final class SettingRegistry {
         entries.add(bool("settings.compass.drop-on-death.enabled", true));
         entries.add(floatMinusOne("settings.compass.refresh-interval", 10.0, 0.0));
         entries.add(bool("settings.compass.right-click.refresh-on-right-click", true));
-        entries.add(floatVal("settings.compass.right-click.right-click-cooldown", 3.0, -1.0, null));
+        entries.add(floatVal("settings.compass.click.click-cooldown", 3.0, -1.0, null));
         entries.add(bool("settings.compass.left-click.enabled", true));
         entries.add(intVal("settings.compass.left-click.max-targets", 5, 1, null));
         entries.add(floatVal("settings.compass.left-click.scroll-cooldown", 0.5, 0.0, null));
         entries.add(bool("settings.compass.analyze.right-click", false));
         entries.add(bool("settings.compass.analyze.auto", false));
         entries.add(floatVal("settings.compass.analyze.delay-seconds", 1.0, 0.0, null));
-        entries.add(floatVal("settings.compass.analyze.sound-interval-seconds", 0.5, 0.05, 60.0));
+        entries.add(floatVal("settings.compass.analyze.delay-deviation-seconds", 0.0, 0.0, null));
+        entries.add(floatVal("settings.compass.analyze.sound-interval-seconds", 0.5, 0.05, 3.0));
         entries.add(bool("settings.compass.analyze.debuffs.enabled", true));
         entries.add(bool("settings.compass.hunter.min-distance.enabled", true));
         entries.add(floatVal("settings.compass.hunter.min-distance.distance", 25.0, 0.0, null));
@@ -536,6 +537,7 @@ public final class SettingRegistry {
                 SettingDescriptor.DynamicBound.ENABLED_OPTION_COUNT));
         entries.add(bool("settings.compass.signal-interference.two-way", false));
         entries.add(floatVal("settings.compass.signal-interference.chance-to-bypass", 0.0, 0.0, 1.0));
+        entries.add(bool("settings.compass.signal-interference.show-reason-in-actionbar", true));
         entries.add(bool("settings.compass.signal-interference.light-level.enabled", false));
         entries.add(intVal("settings.compass.signal-interference.light-level.min-sky-light", 10, 0, 15));
         entries.add(intVal("settings.compass.signal-interference.light-level.min-block-light", 5, 0, 15));
@@ -591,6 +593,7 @@ public final class SettingRegistry {
         entries.add(bool("settings.server.status.show-elapsed-time", false));
         entries.add(bool("settings.server.status.show-modifiers", false));
         entries.add(bool("settings.server.status.show-ids", false));
+        entries.add(bool("settings.server.advanced.disable-worldedit-navwand", true));
     }
 
     private static void addWorldEngineEntries(List<SettingDescriptor> entries) {

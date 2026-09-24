@@ -21,7 +21,7 @@ class ConfigPathMapperTest {
                 ConfigPathMapper.get(root, "settings.match.autostart.countdown-seconds"));
         assertEquals(10.0,
                 ConfigPathMapper.get(root, "settings.compass.refresh-interval"));
-        assertEquals(5, ConfigPathMapper.get(root, "config-version"));
+        assertEquals(6, ConfigPathMapper.get(root, "config-version"));
     }
 
     @Test

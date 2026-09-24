@@ -34,6 +34,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
     })
     private double chanceToBypass = 0.0;
 
+    @CustomKey("show-reason-in-actionbar")
+    @Comment({
+            "When true, a bad signal names its cause in the actionbar.",
+            "Default: true"
+    })
+    private boolean showReasonInActionbar = true;
+
     @CustomKey("light-level")
     @Comment({
             "Light at the holder's feet. Only considered in the overworld;",
@@ -114,6 +121,14 @@ public class SignalInterferenceSettings extends OkaeriConfig {
 
     public void setChanceToBypass(double chanceToBypass) {
         this.chanceToBypass = chanceToBypass;
+    }
+
+    public boolean isShowReasonInActionbar() {
+        return showReasonInActionbar;
+    }
+
+    public void setShowReasonInActionbar(boolean showReasonInActionbar) {
+        this.showReasonInActionbar = showReasonInActionbar;
     }
 
     public LightLevel getLightLevel() {

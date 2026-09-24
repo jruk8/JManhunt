@@ -3,8 +3,11 @@ package com.jruk8.jmanhunt.compass;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameManager;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -14,6 +17,7 @@ import org.bukkit.event.inventory.InventoryPickupItemEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 
 public final class CompassProtectionListener implements Listener {
     private final JManhuntPlugin plugin;
@@ -121,5 +125,23 @@ public final class CompassProtectionListener implements Listener {
             case RIGHT_CLICK_AIR, RIGHT_CLICK_BLOCK -> compass.handleRightClick(event.getPlayer());
             default -> { }
         }
+    }
+
+    /**
+     * Beats WorldEdit's navwand listener to the event: WorldEdit reads
+     * useItemInHand (not the cancelled flag), so denying it at LOWEST
+     * priority stops compass teleports. Plain cancels would not.
+     */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onNavwand(PlayerInteractEvent event) {
+        if (!plugin.configService()
+                .getBoolean("settings.server.advanced.disable-worldedit-navwand", true)) {
+            return;
+        }
+        ItemStack item = event.getItem();
+        if (item == null || item.getType() != Material.COMPASS) {
+            return;
+        }
+        event.setUseItemInHand(Event.Result.DENY);
     }
 }

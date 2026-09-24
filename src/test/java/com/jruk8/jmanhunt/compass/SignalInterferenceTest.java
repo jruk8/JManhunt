@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.compass;
 
 import org.junit.jupiter.api.Test;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -262,5 +263,51 @@ class SignalInterferenceTest {
         assertEquals(SignalInterference.InterfereWhenVisible.VISIBLE, clamped.losWhen());
         assertEquals(1000, clamped.losMaxDistance());
         assertEquals(1.0, clamped.chanceToBypass());
+    }
+
+    @Test
+    void lastReasonNamesTheSingleFailure() {
+        SignalInterference.Config underground =
+                config(false, true, false, false, false, false, false);
+
+        assertEquals(Optional.of("underground"), SignalInterference.lastReason(
+                spot(15, 15, true, 10, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                null, underground, 0.99, null));
+    }
+
+    @Test
+    void lastReasonPicksTheMostRecentOfMany() {
+        SignalInterference.Config both =
+                config(false, true, false, false, true, false, false);
+
+        assertEquals(Optional.of("biome"), SignalInterference.lastReason(
+                spot(15, 15, true, 10, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:desert"),
+                null, both, 0.99, null));
+    }
+
+    @Test
+    void lastReasonEmptyWhenGoodOrBypassed() {
+        SignalInterference.Config underground =
+                config(false, true, false, false, false, false, false);
+        SignalInterference.Snapshot buried =
+                spot(15, 15, true, 10, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+
+        assertEquals(Optional.empty(),
+                SignalInterference.lastReason(clearSpot(), null, underground, 0.99, null));
+        assertEquals(Optional.empty(), SignalInterference.lastReason(
+                buried, null, withCounts(underground, 1, false, 1.0), 0.0, null));
+    }
+
+    @Test
+    void lastReasonPrefersTheHolderSide() {
+        SignalInterference.Config both =
+                withCounts(config(false, true, false, false, true, false, false), 1, true, 0.0);
+        SignalInterference.Snapshot buried =
+                spot(15, 15, true, 10, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+        SignalInterference.Snapshot desert =
+                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:desert");
+
+        assertEquals(Optional.of("underground"),
+                SignalInterference.lastReason(buried, desert, both, 0.99, null));
     }
 }

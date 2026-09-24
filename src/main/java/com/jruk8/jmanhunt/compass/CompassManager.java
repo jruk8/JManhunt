@@ -32,10 +32,10 @@ public final class CompassManager {
     private final CompassSignalService signal;
     private final CompassLockService locks;
     private final CompassItemService items;
-    /** Last automatic refresh per holder; right-clicks also stamp this. */
+    /** Last automatic refresh per holder; clicks also stamp this. */
     private final Map<UUID, Long> lastAutoRefresh = new HashMap<>();
-    /** Last right-click refresh per holder; the click's own cooldown. */
-    private final Map<UUID, Long> lastClickRefresh = new HashMap<>();
+    /** Last accepted compass click per holder; left and right share it. */
+    private final Map<UUID, Long> lastClick = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
     private GameManager game;
 
@@ -48,7 +48,7 @@ public final class CompassManager {
         this.targets = new CompassTargetService(playerStates);
         this.signal = new CompassSignalService(plugin, playerStates);
         this.locks = new CompassLockService(plugin, playerStates, sounds, messages, targets, signal,
-                compassActionbars, this::refreshCompass);
+                compassActionbars, this::refreshCompass, lastClick);
         this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
     }
 
@@ -199,8 +199,10 @@ public final class CompassManager {
     /** Renders a resolved pick onto the compass item and actionbar. */
     private void renderCompassPick(Player holder, ItemStack item, int slot, CompassPick pick,
             String targetRoleString, boolean locked) {
-        if (pick.kind() != CompassPick.Kind.NONE && signal.badSignalForPick(holder, pick)) {
-            showBadSignal(holder, item, slot);
+        Optional<String> reason = pick.kind() == CompassPick.Kind.NONE
+                ? Optional.empty() : signal.reasonForPick(holder, pick);
+        if (reason.isPresent()) {
+            showBadSignal(holder, item, slot, reason.get());
             return;
         }
         switch (pick.kind()) {
@@ -266,9 +268,15 @@ public final class CompassManager {
                 Map.of("role", targetRoleString)));
     }
 
-    private void showBadSignal(Player holder, ItemStack item, int slot) {
+    private void showBadSignal(Player holder, ItemStack item, int slot, String reason) {
         spinNeedle(item, holder);
         holder.getInventory().setItem(slot, item);
+        if (plugin.configService().getBoolean(
+                "settings.compass.signal-interference.show-reason-in-actionbar", true)) {
+            compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-reason-actionbar",
+                    Map.of("reason", messages.string("compass.signal-reason." + reason, reason))));
+            return;
+        }
         compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-actionbar"));
     }
 
@@ -355,21 +363,26 @@ public final class CompassManager {
         if (player.getGameMode() == GameMode.SPECTATOR) {
             return;
         }
-        long now = System.currentTimeMillis();
-        long cooldownMs = (long) (plugin.configService()
-                .getDouble("settings.compass.right-click.right-click-cooldown", 3.0) * 1000);
-        if (!shouldRefresh(now, lastClickRefresh.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
+        if (locks.isAnalyzing(player.getUniqueId())) {
             return;
         }
-        // Clicks run on their own cooldown, so a fresh automatic refresh
-        // never blocks them; each click also stamps the automatic clock
-        // at initiation, restarting the interval from here.
-        lastClickRefresh.put(player.getUniqueId(), now);
+        long now = System.currentTimeMillis();
+        long cooldownMs = (long) (plugin.configService()
+                .getDouble("settings.compass.click.click-cooldown", 3.0) * 1000);
+        if (!shouldRefresh(now, lastClick.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
+            return;
+        }
+        // Clicks run on their own shared cooldown, so a fresh automatic
+        // refresh never blocks them; each click also stamps the automatic
+        // clock at initiation, restarting the interval from here. With
+        // analysis, the shared stamp lands at resolution instead, so the
+        // full cooldown runs after the refresh.
         lastAutoRefresh.put(player.getUniqueId(), now);
         if (locks.analyzeEnabled(false)) {
             locks.startAnalysis(player, true);
             return;
         }
+        lastClick.put(player.getUniqueId(), now);
         sounds.playSound(player, "compass.right-click");
         refreshCompass(player);
     }
@@ -379,11 +392,14 @@ public final class CompassManager {
      * the nearest candidate, further clicks advance through the rest,
      * and cycling past the last candidate returns to automatic. No-op
      * unless left-click cycling is enabled and the holder participates
-     * in a live match. Clicks inside the scroll cooldown are ignored,
-     * which also stops held clicks from scrolling; scrolling is refused
-     * with one or fewer candidates, during bad signal, and during
-     * analysis. Locks survive automatic refreshes; the refresh after
-     * each click applies the new lock immediately.
+     * in a live match. Clicks inside the shared click cooldown or the
+     * scroll cooldown are ignored, which also stops held clicks from
+     * scrolling; scrolling is refused during bad signal and during
+     * analysis, and consumes analysis like a right-click when enabled.
+     * With one or fewer candidates the click only consumes the shared
+     * cooldown and refreshes nothing. Locks survive automatic
+     * refreshes; the refresh after each click applies the new lock
+     * immediately.
      */
     public void handleLeftClick(Player player) {
         locks.handleLeftClick(player);

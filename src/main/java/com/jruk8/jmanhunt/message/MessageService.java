@@ -107,10 +107,13 @@ public final class MessageService {
     /**
      * Converts legacy &amp; codes to MiniMessage tags. Only a code
      * character after the &amp; converts; anything else (like Tom &amp;
-     * Jerry) survives. Pure for tests.
+     * Jerry) survives. Section codes convert first, so serialized legacy
+     * text (including hex colors) never reaches the MiniMessage parser
+     * raw. Pure for tests.
      */
     public static String legacyToMiniMessage(String raw) {
-        java.util.regex.Matcher matcher = LEGACY_CODE.matcher(raw);
+        String sectioned = sectionToMiniMessage(raw);
+        java.util.regex.Matcher matcher = LEGACY_CODE.matcher(sectioned);
         StringBuilder result = new StringBuilder();
         while (matcher.find()) {
             char code = Character.toLowerCase(matcher.group(1).charAt(0));
@@ -118,6 +121,63 @@ public final class MessageService {
         }
         matcher.appendTail(result);
         return result.toString();
+    }
+
+    /**
+     * Converts section codes to MiniMessage tags: hex sequences first
+     * (a §x followed by six §hex digits becomes a hex tag), then single
+     * codes. Unknown sequences survive untouched. Pure for tests.
+     */
+    static String sectionToMiniMessage(String raw) {
+        StringBuilder result = new StringBuilder();
+        int index = 0;
+        while (index < raw.length()) {
+            char current = raw.charAt(index);
+            if (current != '§' || index + 1 >= raw.length()) {
+                result.append(current);
+                index++;
+                continue;
+            }
+            char code = Character.toLowerCase(raw.charAt(index + 1));
+            String hex = readSectionHex(raw, index);
+            if (hex != null) {
+                result.append(hex);
+                index += 14;
+                continue;
+            }
+            String tag = LEGACY_TAGS.get(code);
+            if (tag != null) {
+                result.append('<').append(tag).append('>');
+                index += 2;
+                continue;
+            }
+            result.append(current);
+            index++;
+        }
+        return result.toString();
+    }
+
+    /**
+     * Hex tag for a §x sequence at the index, or null when the sequence
+     * is absent or malformed. Pure for tests.
+     */
+    private static String readSectionHex(String raw, int index) {
+        if (Character.toLowerCase(raw.charAt(index + 1)) != 'x'
+                || index + 14 > raw.length()) {
+            return null;
+        }
+        StringBuilder hex = new StringBuilder();
+        for (int offset = 2; offset < 14; offset += 2) {
+            if (raw.charAt(index + offset) != '§') {
+                return null;
+            }
+            char digit = raw.charAt(index + offset + 1);
+            if (Character.digit(digit, 16) == -1) {
+                return null;
+            }
+            hex.append(digit);
+        }
+        return "<#" + hex + ">";
     }
 
     public String formatPlaceholder(String raw) {

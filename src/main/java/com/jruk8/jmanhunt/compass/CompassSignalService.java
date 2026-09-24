@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -32,6 +33,17 @@ final class CompassSignalService {
      * live targets get a line-of-sight reading.
      */
     boolean badSignalForPick(Player holder, CompassPick pick) {
+        return reasonForPick(holder, pick).isPresent();
+    }
+
+    /**
+     * Failing interference option id for a resolved pick, or empty when
+     * the signal is good. Sightings use their recorded location; every
+     * live kind uses the player's location, or none when they logged out
+     * between selection and this check. Only live targets get a
+     * line-of-sight reading.
+     */
+    Optional<String> reasonForPick(Player holder, CompassPick pick) {
         SignalInterference.Config interference = interferenceConfig();
         Location target = null;
         Player seen = null;
@@ -43,7 +55,7 @@ final class CompassSignalService {
             target = seen == null ? null : seen.getLocation();
         }
         Boolean sight = interference.losEnabled() ? lineOfSight(holder, seen, interference) : null;
-        return badSignal(holder, target, interference, sight);
+        return reason(holder, target, interference, sight);
     }
 
     /**
@@ -74,14 +86,23 @@ final class CompassSignalService {
      */
     private boolean badSignal(Player holder, Location target, SignalInterference.Config interference,
             Boolean hasLineOfSight) {
+        return reason(holder, target, interference, hasLineOfSight).isPresent();
+    }
+
+    /**
+     * Failing interference option id for one tracking attempt, or empty
+     * when the signal is good or the bypass roll saves it.
+     */
+    private Optional<String> reason(Player holder, Location target,
+            SignalInterference.Config interference, Boolean hasLineOfSight) {
         if (!plugin.configService().getBoolean("settings.compass.signal-interference.enabled", false)) {
-            return false;
+            return Optional.empty();
         }
         boolean ignoreTransparent = plugin.configService().getBoolean(
                 "settings.compass.signal-interference.underground.ignore-transparent", true);
         SignalInterference.Snapshot targetSnapshot = interference.twoWay()
                 ? targetSnapshot(target, ignoreTransparent) : null;
-        return SignalInterference.badSignal(signalSnapshot(holder.getLocation(), ignoreTransparent),
+        return SignalInterference.lastReason(signalSnapshot(holder.getLocation(), ignoreTransparent),
                 targetSnapshot, interference, ThreadLocalRandom.current().nextDouble(), hasLineOfSight);
     }
 

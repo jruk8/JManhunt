@@ -99,7 +99,7 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
             case "total_kd_as_hunter" -> formatKd(value.hunterKills, value.hunterSessions);
             case "current_win_streak" -> String.valueOf(value.currentWinStreak);
             case "best_win_streak" -> String.valueOf(value.bestWinStreak);
-            case "game_role" -> messages.formatPlaceholder(messages.roleName(roleOf(player)));
+            case "game_role" -> messages.roleName(roleOf(player));
             case "game_kills_this_session" -> String.valueOf(sessionStat(player, true));
             case "game_deaths_this_session" -> String.valueOf(sessionStat(player, false));
             default -> null;

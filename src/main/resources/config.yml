@@ -25,7 +25,7 @@
 #
 
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 5
+config-version: 6
 
 
 # Send anonymous statistics via bStats (open-source). We never collect personal data or IP addresses.
@@ -390,8 +390,10 @@ settings:
     right-click:
       # Optional refresh-on-right-click runs alongside interval refreshes.
       refresh-on-right-click: true
-      # Seconds between right-click refreshes. Set to -1 for no cooldown.
-      right-click-cooldown: 3.0
+    # Cooldown shared by left-click and right-click compass actions.
+    click:
+      # Seconds between accepted compass clicks. Set to -1 for no cooldown.
+      click-cooldown: 3.0
     left-click:
       # When true, left-clicking the compass cycles a manual target lock
       # through the nearest candidates (live opponents first, then
@@ -424,6 +426,10 @@ settings:
       # Seconds the analysis takes before the compass updates.
       # Default: 1.0
       delay-seconds: 1.0
+      # Random plus-or-minus jitter applied to delay-seconds per
+      # analysis. Capped at the delay itself.
+      # Default: 0.0
+      delay-deviation-seconds: 0.0
       # Seconds between analysis tick sounds, rounded to whole ticks.
       # Default: 0.5
       sound-interval-seconds: 0.5
@@ -485,6 +491,9 @@ settings:
       # Chance from 0.0 to 1.0 that a bad signal still tracks anyway.
       # Default: 0.0
       chance-to-bypass: 0.0
+      # When true, a bad signal names its cause in the actionbar.
+      # Default: true
+      show-reason-in-actionbar: true
       # Light at the holder's feet. Only considered in the overworld;
       # skipped in the nether and the end.
       # Default: false
@@ -703,6 +712,13 @@ settings:
       # Useful for debugging.
       # Default: false
       show-ids: false
+
+    # Advanced server interop toggles.
+    advanced:
+      # When true, compass clicks never trigger WorldEdit's navwand
+      # teleport, with no WorldEdit dependency needed.
+      # Default: true
+      disable-worldedit-navwand: true
 
 # Grid-based single-world manhunt engine.
 # Uses persistent square-spiral cell indexing and teleports participants to

@@ -238,6 +238,15 @@ compass:
   too-far-actionbar: "<yellow>{player} is out of tracking range."
   analyzing-actionbar: "<gray>Analyzing..."
   bad-signal-actionbar: "<gray>☹ Bad signal"
+  bad-signal-reason-actionbar: "<gray>:( Bad signal (<white>{reason}</white>)"
+  signal-reason:
+    light-level: "low light"
+    underground: "underground"
+    underwater: "underwater"
+    altitude: "altitude"
+    weather: "weather"
+    biome: "biome"
+    line-of-sight: "line of sight"
 
 # One color tag per role. Used directly in templates as {role-color-<role>}
 # and by code that builds colored role names. Legacy-format servers can set

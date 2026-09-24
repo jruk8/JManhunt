@@ -62,6 +62,9 @@ public class CompassSettings extends OkaeriConfig {
     @CustomKey("right-click")
     private RightClick rightClick = new RightClick();
 
+    @Comment("Cooldown shared by left-click and right-click compass actions.")
+    private Click click = new Click();
+
     @CustomKey("left-click")
     private LeftClick leftClick = new LeftClick();
 
@@ -138,6 +141,14 @@ public class CompassSettings extends OkaeriConfig {
         this.rightClick = rightClick;
     }
 
+    public Click getClick() {
+        return click;
+    }
+
+    public void setClick(Click click) {
+        this.click = click;
+    }
+
     public LeftClick getLeftClick() {
         return leftClick;
     }
@@ -209,10 +220,6 @@ public class CompassSettings extends OkaeriConfig {
         @Comment("Optional refresh-on-right-click runs alongside interval refreshes.")
         private boolean refreshOnRightClick = true;
 
-        @CustomKey("right-click-cooldown")
-        @Comment("Seconds between right-click refreshes. Set to -1 for no cooldown.")
-        private double rightClickCooldown = 3.0;
-
         public boolean isRefreshOnRightClick() {
             return refreshOnRightClick;
         }
@@ -220,13 +227,22 @@ public class CompassSettings extends OkaeriConfig {
         public void setRefreshOnRightClick(boolean refreshOnRightClick) {
             this.refreshOnRightClick = refreshOnRightClick;
         }
+    }
 
-        public double getRightClickCooldown() {
-            return rightClickCooldown;
+    /** Cooldown shared by left-click and right-click compass actions. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Click extends OkaeriConfig {
+
+        @CustomKey("click-cooldown")
+        @Comment("Seconds between accepted compass clicks. Set to -1 for no cooldown.")
+        private double clickCooldown = 3.0;
+
+        public double getClickCooldown() {
+            return clickCooldown;
         }
 
-        public void setRightClickCooldown(double rightClickCooldown) {
-            this.rightClickCooldown = rightClickCooldown;
+        public void setClickCooldown(double clickCooldown) {
+            this.clickCooldown = clickCooldown;
         }
     }
 
@@ -312,6 +328,14 @@ public class CompassSettings extends OkaeriConfig {
         })
         private double delaySeconds = 1.0;
 
+        @CustomKey("delay-deviation-seconds")
+        @Comment({
+                "Random plus-or-minus jitter applied to delay-seconds per",
+                "analysis. Capped at the delay itself.",
+                "Default: 0.0"
+        })
+        private double delayDeviationSeconds = 0.0;
+
         @CustomKey("sound-interval-seconds")
         @Comment({
                 "Seconds between analysis tick sounds, rounded to whole ticks.",
@@ -351,6 +375,14 @@ public class CompassSettings extends OkaeriConfig {
 
         public void setDelaySeconds(double delaySeconds) {
             this.delaySeconds = delaySeconds;
+        }
+
+        public double getDelayDeviationSeconds() {
+            return delayDeviationSeconds;
+        }
+
+        public void setDelayDeviationSeconds(double delayDeviationSeconds) {
+            this.delayDeviationSeconds = delayDeviationSeconds;
         }
 
         public double getSoundIntervalSeconds() {

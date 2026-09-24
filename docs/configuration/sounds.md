@@ -49,7 +49,7 @@ Under `game`, each entry plays at a fixed moment in the match:
 Under `compass`, heard by the compass holder:
 
 - `left-click`: when left-click cycling changes the target lock.
-- `right-click`: on an accepted right-click refresh, and again when a
+- `right-click`: on an accepted compass click refresh, and again when a
   click-initiated analysis resolves.
 - `analysis`: ticked while an analysis runs, every
   `settings.compass.analyze.sound-interval-seconds`.

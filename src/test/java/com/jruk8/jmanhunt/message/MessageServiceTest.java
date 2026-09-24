@@ -6,6 +6,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -69,6 +70,22 @@ class MessageServiceTest {
 
         assertEquals("hi", plain(messages.parse("&7hi")));
         assertEquals("hi", plain(messages.parse("<gray>hi")));
+    }
+
+    @Test
+    void sectionCodesConvertToMiniMessageTags() {
+        assertEquals("<gray>hi", MessageService.legacyToMiniMessage("§7hi"));
+        assertEquals("<#de666e>Hunter",
+                MessageService.legacyToMiniMessage("§x§d§e§6§6§6§eHunter"));
+        assertEquals("Tom § Jerry", MessageService.legacyToMiniMessage("Tom § Jerry"));
+    }
+
+    @Test
+    void doubleFormatNeverThrows() {
+        MessageService messages = messages();
+        String once = messages.formatPlaceholder(messages.roleName(Role.HUNTER));
+
+        assertDoesNotThrow(() -> messages.formatPlaceholder(once));
     }
 
     @Test

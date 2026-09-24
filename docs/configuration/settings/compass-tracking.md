@@ -115,16 +115,17 @@ refresh-interval: 10.0        # in seconds
 ```
 
 Under `settings.compass.right-click`, you can configure right-clicking the
-compass to refresh it. You may enable it, in which case right-clicking will
-refresh the compass if `right-click-cooldown` time has elapsed since the
-last click. Clicks run on their own cooldown, so a fresh automatic
-refresh never blocks them; each click still restarts the automatic
-interval.
+compass to refresh it. Left and right clicks share one cooldown under
+`settings.compass.click`: an accepted click of either kind blocks the
+other until `click-cooldown` time has elapsed. Clicks run apart from
+the automatic interval, so a fresh automatic refresh never blocks them;
+each click still restarts the automatic interval.
 
 ```yaml
 right-click:
   refresh-on-right-click: true
-  right-click-cooldown: 3.0      # in seconds
+click:
+  click-cooldown: 3.0      # in seconds
 ```
 
 Under `settings.compass.left-click`, you can let holders left-click the
@@ -146,9 +147,13 @@ left-click:
 
 `scroll-cooldown` is the seconds between accepted scrolls; clicks inside
 the window are ignored, so holding the button cannot scroll. Set it to
-`0` for no throttling. A click that passes the window restarts it even
-when the scroll itself is refused: with one or fewer candidates, while
-the signal is bad, or while an analysis is running.
+`0` for no throttling. Left clicks also pass through the shared
+`click-cooldown` above. A scroll runs an analysis first when click
+analysis is enabled, exactly like a right-click.
+
+With one or fewer candidates there is nothing to lock onto: the click
+only consumes the shared cooldown and refreshes nothing. Scrolls are
+also refused while the signal is bad or while an analysis is running.
 
 Each successful scroll plays a short click. You can change it under
 `sounds.compass.left-click`, or turn it off there. No sound plays when
@@ -163,22 +168,26 @@ a dimension you are not in. There is nothing to configure.
 
 Under `settings.compass.analyze`, a refresh can take a purposeful moment to
 resolve instead of answering instantly. While analyzing, the actionbar reads
-`Analyzing...`, no second refresh can start, and the refresh clocks
-stamp when the analysis starts, so cooldowns run from initiation rather
-than from resolution:
+`Analyzing...`, no second refresh can start, and compass clicks are
+ignored until it resolves. The automatic clock stamps when the analysis
+starts, but the shared click cooldown stamps when it resolves, so the
+full cooldown always runs after the refresh:
 
 ```yaml
 analyze:
   right-click: false
   auto: false
   delay-seconds: 1.0
+  delay-deviation-seconds: 0.0
 ```
 
 `right-click` covers manual refreshes, `auto` covers interval refreshes;
-enable either or both. `delay-seconds` is how long each analysis takes.
+enable either or both. `delay-seconds` is how long each analysis takes,
+and `delay-deviation-seconds` adds a random plus-or-minus jitter per
+analysis (capped at the delay, `0` for none).
 `sound-interval-seconds` ticks the analysis sound while it runs (rounded
-to whole ticks, at least one). A right-click analysis ends with the
-refresh click sound; automatic analyses resolve silently.
+to whole ticks, at least one, at most 3 seconds). A click analysis ends
+with the refresh click sound; automatic analyses resolve silently.
 
 ### Analysis Debuffs
 
@@ -267,3 +276,15 @@ checks the target's spot as well as the holder's, and
 `chance-to-bypass` gives a bad signal a random chance to track anyway.
 Locked targets can fail too. The nearby and out-of-range readouts
 consult interference as well; only the no-target readout never does.
+
+With `show-reason-in-actionbar` (default on), a bad signal names its
+cause: `:( Bad signal (underground)`. When several options fail at
+once, the most recently found one shows. The names come from the
+`compass.signal-reason` messages and can be reworded there.
+
+## WorldEdit Navwand
+
+WorldEdit teleports players who click with a compass, which fights the
+tracking compass. `settings.server.advanced.disable-worldedit-navwand`
+(default on) blocks that teleport for compass clicks without needing
+WorldEdit installed. Turn it off if you rely on the navwand.

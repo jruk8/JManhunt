@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
+import com.jruk8.jmanhunt.config.SettingDescriptor;
+import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -24,6 +26,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
 /**
@@ -44,11 +47,16 @@ final class CompassLockService {
     /** Last accepted left-click scroll per holder; throttles held clicks. */
     private final Map<UUID, Long> lastScroll = new HashMap<>();
     private final Set<UUID> analyzing = new HashSet<>();
+    /** Analysis generation per holder; stale tick tasks cancel themselves. */
+    private final Map<UUID, Long> generations = new HashMap<>();
+    /** Click cooldown stamps shared with right-clicks, owned by the facade. */
+    private final Map<UUID, Long> sharedClicks;
     private GameManager game;
 
     CompassLockService(JManhuntPlugin plugin, PlayerStateStore playerStates, SoundService sounds,
             MessageService messages, CompassTargetService targets, CompassSignalService signal,
-            Map<UUID, Component> actionbars, Consumer<Player> refresher) {
+            Map<UUID, Component> actionbars, Consumer<Player> refresher,
+            Map<UUID, Long> sharedClicks) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.sounds = sounds;
@@ -57,6 +65,7 @@ final class CompassLockService {
         this.signal = signal;
         this.actionbars = actionbars;
         this.refresher = refresher;
+        this.sharedClicks = sharedClicks;
     }
 
     /** Wires the game after construction; scroll and analysis need matches. */
@@ -92,6 +101,11 @@ final class CompassLockService {
         locks.remove(holderId);
     }
 
+    /** True while the holder's analysis runs. */
+    boolean isAnalyzing(UUID holderId) {
+        return analyzing.contains(holderId);
+    }
+
     /** Cycles the holder's manual target lock one step; see the facade docs. */
     void handleLeftClick(Player player) {
         long now = System.currentTimeMillis();
@@ -108,14 +122,20 @@ final class CompassLockService {
                 .getInt("settings.compass.left-click.max-targets", 5);
         if (CompassPick.orderedCandidates(opponents, sightings, maxTargets).size() <= 1) {
             locks.remove(player.getUniqueId());
-            refresher.accept(player);
+            sharedClicks.put(player.getUniqueId(), now);
             return;
         }
         if (signal.badSignalForScroll(player, opponents, sightings)) {
+            sharedClicks.put(player.getUniqueId(), now);
             refresher.accept(player);
             return;
         }
         applyScrollCycle(player, opponents, sightings, maxTargets);
+        if (analyzeEnabled(false)) {
+            startAnalysis(player, true);
+            return;
+        }
+        sharedClicks.put(player.getUniqueId(), now);
         refresher.accept(player);
     }
 
@@ -131,9 +151,15 @@ final class CompassLockService {
         if (analyzing.contains(player.getUniqueId())) {
             return Optional.empty();
         }
+        long clickMs = (long) (plugin.configService()
+                .getDouble("settings.compass.click.click-cooldown", 3.0) * 1000);
+        // Shared pure helper lives on the facade.
+        if (!CompassManager.shouldRefresh(now,
+                sharedClicks.getOrDefault(player.getUniqueId(), 0L), clickMs)) {
+            return Optional.empty();
+        }
         long cooldownMs = (long) (Math.max(0.0, plugin.configService()
                 .getDouble("settings.compass.left-click.scroll-cooldown", 0.5)) * 1000);
-        // Shared pure helper lives on the facade.
         if (!CompassManager.shouldRefresh(now, lastScroll.getOrDefault(player.getUniqueId(), 0L),
                 cooldownMs)) {
             return Optional.empty();
@@ -167,24 +193,30 @@ final class CompassLockService {
     /**
      * Purposeful analysis lag before a refresh resolves: shows
      * "Analyzing...", ticks the analysis sound on the configured interval,
-     * waits out the configured delay, then refreshes. No second analysis
-     * starts while one runs. The caller stamps the universal refresh clock
-     * at analysis start, so cooldowns run from the click (or auto fire),
-     * not from resolution. Click-initiated runs close with the refresh
-     * click sound; automatic runs stay silent at the end.
+     * waits out the jittered delay, then refreshes. No second analysis
+     * starts while one runs. Click-initiated runs stamp the shared click
+     * cooldown at resolution, so the full cooldown runs after the refresh;
+     * they close with the refresh click sound while automatic runs stay
+     * silent at the end.
      */
     void startAnalysis(Player holder, boolean fromClick) {
         UUID id = holder.getUniqueId();
         if (!analyzing.add(id)) {
             return;
         }
-        runAnalysisDebuffs(holder);
+        long generation = generations.merge(id, 1L, Long::sum);
+        double effectiveDelay = jitteredDelay(
+                plugin.configService().getDouble("settings.compass.analyze.delay-seconds", 1.0),
+                plugin.configService()
+                        .getDouble("settings.compass.analyze.delay-deviation-seconds", 0.0),
+                ThreadLocalRandom.current().nextDouble());
+        runAnalysisDebuffs(holder, effectiveDelay);
         actionbars.put(id, messages.component("compass.analyzing-actionbar"));
         sounds.playSound(holder, "compass.analysis");
-        long intervalTicks = analysisTickInterval(plugin.configService()
-                .getDouble("settings.compass.analyze.sound-interval-seconds", 0.5));
+        long intervalTicks = analysisTickInterval(clampedSoundInterval(plugin.configService()
+                .getDouble("settings.compass.analyze.sound-interval-seconds", 0.5)));
         Bukkit.getScheduler().runTaskTimer(plugin, task -> {
-            if (!analyzing.contains(id)) {
+            if (!analyzing.contains(id) || generations.getOrDefault(id, 0L) != generation) {
                 task.cancel();
                 return;
             }
@@ -192,10 +224,12 @@ final class CompassLockService {
                 sounds.playSound(holder, "compass.analysis");
             }
         }, intervalTicks, intervalTicks);
-        long delayTicks = analyzeDelayTicks(
-                plugin.configService().getDouble("settings.compass.analyze.delay-seconds", 1.0));
+        long delayTicks = analyzeDelayTicks(effectiveDelay);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             analyzing.remove(id);
+            if (fromClick) {
+                sharedClicks.put(id, System.currentTimeMillis());
+            }
             refresher.accept(holder);
             if (fromClick && holder.isOnline()) {
                 sounds.playSound(holder, "compass.right-click");
@@ -205,6 +239,33 @@ final class CompassLockService {
                 actionbars.remove(id);
             }
         }, delayTicks);
+    }
+
+    /**
+     * Jittered analysis delay: the deviation is clamped to the delay,
+     * then a uniform sample in delay +- deviation, never negative.
+     * Pure for tests; roll is a [0, 1) sample.
+     */
+    static double jitteredDelay(double delaySeconds, double deviationSeconds, double roll) {
+        double delay = Math.max(0.0, delaySeconds);
+        double deviation = Math.min(Math.max(0.0, deviationSeconds), delay);
+        return Math.max(0.0, delay + (roll * 2.0 - 1.0) * deviation);
+    }
+
+    /** Sound interval clamped to its registry bounds, for stale files. */
+    static double clampedSoundInterval(double value) {
+        SettingDescriptor descriptor =
+                SettingRegistry.byPath("settings.compass.analyze.sound-interval-seconds");
+        if (descriptor == null) {
+            return value;
+        }
+        if (descriptor.min() != null) {
+            value = Math.max(descriptor.min(), value);
+        }
+        if (descriptor.max() != null) {
+            value = Math.min(descriptor.max(), value);
+        }
+        return value;
     }
 
     /** Analysis delay in ticks, at least one. Pure for tests. */
@@ -225,7 +286,7 @@ final class CompassLockService {
      * holder: the shared player list plus their own role list, resolved
      * modifier-style and dispatched as console.
      */
-    private void runAnalysisDebuffs(Player holder) {
+    private void runAnalysisDebuffs(Player holder, double effectiveDelaySeconds) {
         if (!plugin.configService().getBoolean("settings.compass.analyze.debuffs.enabled", false)) {
             return;
         }
@@ -233,8 +294,7 @@ final class CompassLockService {
         if (!holderRole.isParticipant()) {
             return;
         }
-        double delaySeconds = plugin.configService()
-                .getDouble("settings.compass.analyze.delay-seconds", 1.0);
+        double delaySeconds = effectiveDelaySeconds;
         List<String> commands = new ArrayList<>(plugin.configService()
                 .getStringList("settings.compass.analyze.debuffs.commands.player"));
         commands.addAll(plugin.configService().getStringList(

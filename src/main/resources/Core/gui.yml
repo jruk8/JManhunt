@@ -47,6 +47,7 @@ categories:
   compass/speedrunner/max-distance: SPECTRAL_ARROW
   compass/speedrunner/min-distance: STRING
   compass/drop-on-death: HOPPER
+  compass/click: TARGET
   compass/left-click: STONE_BUTTON
   compass/must-be-inventory: ENDER_CHEST
   compass/right-click: OAK_BUTTON
@@ -67,6 +68,7 @@ categories:
   players/announce-roles/title: OAK_HANGING_SIGN
   server: BELL
   server/status: MAP
+  server/advanced: ANVIL
   server/anti-spawn-camp: IRON_BARS
 descriptions:
   "settings.match": "Match flow: autostart, headstarts, leaving, and victory."
@@ -134,6 +136,8 @@ descriptions:
   "settings.players.roles.reset-on-leave": "Clear roles when players leave."
   "settings.players.roles.turn-nones-spectator": "Park roleless players in spectator."
   "settings.server": "Broadcasts, spawn-camp guard, and status output."
+  "settings.server.advanced": "Advanced server interop toggles."
+  "settings.server.advanced.disable-worldedit-navwand": "Block WorldEdit compass teleports."
   "settings.server.anti-spawn-camp": "Punish farming kills on one victim."
   "settings.server.status": "Pick which lines status commands show."
   "settings.match.autostart.enabled": "Start matches automatically once minimums are met."
@@ -180,7 +184,8 @@ descriptions:
   "settings.compass.drop-on-death.enabled": "Compass survives death as a dropped item."
   "settings.compass.refresh-interval": "Seconds between retargets; -1 disables."
   "settings.compass.right-click.refresh-on-right-click": "Right-click refreshes the compass target."
-  "settings.compass.right-click.right-click-cooldown": "Seconds between right-click refreshes."
+  "settings.compass.click": "Cooldown shared by compass clicks."
+  "settings.compass.click.click-cooldown": "Seconds between accepted compass clicks."
   "settings.compass.left-click.enabled": "Left-click cycles locked compass targets."
   "settings.compass.left-click.max-targets": "Most targets the lock can cycle through."
   "settings.compass.left-click.scroll-cooldown": "Seconds between lock scrolls."
@@ -195,6 +200,7 @@ descriptions:
   "settings.compass.analyze.right-click": "Analysis lag applies to right-click refreshes."
   "settings.compass.analyze.auto": "Analysis lag applies to interval refreshes."
   "settings.compass.analyze.delay-seconds": "Seconds the analysis takes to complete."
+  "settings.compass.analyze.delay-deviation-seconds": "Random jitter on the analysis delay."
   "settings.compass.analyze.sound-interval-seconds": "Seconds between analysis tick sounds."
   "settings.compass.analyze.debuffs.enabled": "Run commands when an analysis starts."
   "settings.compass.analyze.debuffs.commands.player": "Commands run for every analyzing holder."
@@ -204,6 +210,7 @@ descriptions:
   "settings.compass.signal-interference.two-way": "Target location needs a good signal too."
   "settings.compass.signal-interference.required-to-fail": "Failed checks needed to jam tracking."
   "settings.compass.signal-interference.chance-to-bypass": "Chance to ignore interference."
+  "settings.compass.signal-interference.show-reason-in-actionbar": "Name the cause of a bad signal."
   "settings.compass.signal-interference.altitude.enabled": "Altitude can interfere with tracking."
   "settings.compass.signal-interference.altitude.min-y": "Lowest clean altitude."
   "settings.compass.signal-interference.altitude.max-y": "Highest clean altitude."

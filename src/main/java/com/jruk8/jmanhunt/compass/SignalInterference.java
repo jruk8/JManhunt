@@ -1,7 +1,10 @@
 package com.jruk8.jmanhunt.compass;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -143,37 +146,69 @@ public final class SignalInterference {
         return badSignal(holder, target, config, roll, null);
     }
 
+    /**
+     * Display reason for a bad signal: the most recently found failing
+     * option id, or empty when the signal is good. The holder side wins
+     * ties, matching the verdict short-circuit. Pure.
+     */
+    public static Optional<String> lastReason(Snapshot holder, Snapshot target,
+            Config config, double roll, Boolean hasLineOfSight) {
+        int enabled = enabledCount(config);
+        if (enabled == 0) {
+            return Optional.empty();
+        }
+        int required = Math.min(enabled, Math.max(1, config.requiredToFail()));
+        List<String> holderReasons =
+                interferingReasons(holder, config, hasLineOfSight);
+        List<String> targetReasons = config.twoWay() && target != null
+                ? interferingReasons(target, config, hasLineOfSight)
+                : List.of();
+        boolean bad = holderReasons.size() >= required || targetReasons.size() >= required;
+        if (!bad || roll < config.chanceToBypass()) {
+            return Optional.empty();
+        }
+        List<String> guilty =
+                holderReasons.size() >= required ? holderReasons : targetReasons;
+        return Optional.of(guilty.get(guilty.size() - 1));
+    }
+
     /** Enabled sub-options reporting interference at one spot. Pure. */
     static int interferingCount(Snapshot snapshot, Config config, Boolean hasLineOfSight) {
-        int count = 0;
+        return interferingReasons(snapshot, config, hasLineOfSight).size();
+    }
+
+    /** Ids of the enabled sub-options interfering at one spot, in check order. Pure. */
+    static List<String> interferingReasons(Snapshot snapshot, Config config,
+            Boolean hasLineOfSight) {
+        List<String> reasons = new ArrayList<>();
         if (config.lightEnabled()
                 && lightInterferes(snapshot, config.minSkyLight(),
                         config.minBlockLight(), config.interfereWhen())) {
-            count++;
+            reasons.add("light-level");
         }
         if (config.undergroundEnabled()
                 && undergroundInterferes(snapshot.solidBlocksAbove(), config.maxBlocksAbove())) {
-            count++;
+            reasons.add("underground");
         }
         if (config.underwaterEnabled()
                 && underwaterInterferes(snapshot.fluidBlocksAbove(), config.maxFluidAbove())) {
-            count++;
+            reasons.add("underwater");
         }
         if (config.altitudeEnabled()
                 && altitudeInterferes(snapshot.blockY(), config.minY(), config.maxY())) {
-            count++;
+            reasons.add("altitude");
         }
         if (config.weatherEnabled() && weatherInterferes(snapshot.weather(), config.interfereDuring())) {
-            count++;
+            reasons.add("weather");
         }
         if (config.biomeEnabled() && biomeInterferes(snapshot.biomeKey(), config.interfereIn())) {
-            count++;
+            reasons.add("biome");
         }
         if (config.losEnabled() && hasLineOfSight != null
                 && losInterferes(hasLineOfSight, config.losWhen())) {
-            count++;
+            reasons.add("line-of-sight");
         }
-        return count;
+        return reasons;
     }
 
     private static int enabledCount(Config config) {

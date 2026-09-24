@@ -3,7 +3,9 @@ package com.jruk8.jmanhunt.message;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.CustomKey;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Tracking compass names, lore, and actionbars. */
 @SuppressWarnings("FieldMayBeFinal")
@@ -56,4 +58,17 @@ public class CompassMessages extends OkaeriConfig {
 
     @CustomKey("bad-signal-actionbar")
     private String badSignalActionbar = "<gray>☹ Bad signal";
+
+    @CustomKey("bad-signal-reason-actionbar")
+    private String badSignalReasonActionbar = "<gray>:( Bad signal (<white>{reason}</white>)";
+
+    @CustomKey("signal-reason")
+    private Map<String, String> signalReason = new LinkedHashMap<>(Map.of(
+            "light-level", "low light",
+            "underground", "underground",
+            "underwater", "underwater",
+            "altitude", "altitude",
+            "weather", "weather",
+            "biome", "biome",
+            "line-of-sight", "line of sight"));
 }
