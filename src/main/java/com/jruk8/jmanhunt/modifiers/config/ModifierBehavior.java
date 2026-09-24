@@ -18,13 +18,7 @@ public class ModifierBehavior extends OkaeriConfig {
     @CustomKey("on-start")
     private ModifierOnStart onStart;
 
-    @CustomKey("interval-settings")
-    private ModifierInterval intervalSettings;
-
-    @CustomKey("success-chance")
-    private ModifierChance successChance;
-
-    private Long delay;
+    private ModifierOptions options;
 
     private ModifierCommands commands;
 
@@ -44,28 +38,12 @@ public class ModifierBehavior extends OkaeriConfig {
         this.onStart = onStart;
     }
 
-    public ModifierInterval getIntervalSettings() {
-        return intervalSettings;
+    public ModifierOptions getOptions() {
+        return options;
     }
 
-    public void setIntervalSettings(ModifierInterval intervalSettings) {
-        this.intervalSettings = intervalSettings;
-    }
-
-    public ModifierChance getSuccessChance() {
-        return successChance;
-    }
-
-    public void setSuccessChance(ModifierChance successChance) {
-        this.successChance = successChance;
-    }
-
-    public Long getDelay() {
-        return delay;
-    }
-
-    public void setDelay(Long delay) {
-        this.delay = delay;
+    public void setOptions(ModifierOptions options) {
+        this.options = options;
     }
 
     public ModifierCommands getCommands() {

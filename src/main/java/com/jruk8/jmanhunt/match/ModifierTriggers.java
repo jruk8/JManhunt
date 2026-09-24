@@ -15,7 +15,7 @@ final class ModifierTriggers {
         PER_INVOKE, PER_EXECUTOR
     }
 
-    /** Command selection mode for {@code commands.execution.selection}. */
+    /** Command selection mode for {@code options.execution.selection}. */
     enum Selection {
         IN_ORDER, PICK_RANDOM
     }
@@ -52,7 +52,7 @@ final class ModifierTriggers {
         return TriggerScope.PER_INVOKE;
     }
 
-    /** Parses a {@code commands.execution.selection} key. */
+    /** Parses a {@code options.execution.selection} key. */
     static Selection parseSelection(String raw) {
         if (raw != null && raw.trim().equalsIgnoreCase("PICK_RANDOM")) {
             return Selection.PICK_RANDOM;
@@ -70,7 +70,7 @@ final class ModifierTriggers {
     }
 
     /**
-     * Clamps a {@code success-chance.chance} value to the 0.0-1.0 decimal
+     * Clamps a {@code options.success-chance.chance} value to the 0.0-1.0 decimal
      * fraction range. Unset or unreadable values fall back to 1.0 upstream.
      */
     static double clampChance(double chance) {
@@ -85,7 +85,7 @@ final class ModifierTriggers {
         return roll < clampedChance;
     }
 
-    /** Clamps {@code interval-settings.deviation} to {@code [0, interval]}. */
+    /** Clamps {@code options.interval-settings.deviation} to {@code [0, interval]}. */
     static double clampDeviation(double deviation, double intervalSeconds) {
         if (Double.isNaN(deviation) || deviation <= 0.0) {
             return 0.0;

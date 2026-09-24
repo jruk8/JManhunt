@@ -41,20 +41,21 @@ class ModifierStoreTest {
                 behavior:
                   runs-on:
                     - ON_START
-                  interval-settings:
-                    interval: 90
-                    deviation: 5
-                    behavior: PER_EXECUTOR
-                  success-chance:
-                    chance: 0.5
-                    behavior: PER_EXECUTOR
-                  delay: 100
-                  commands:
+                  options:
+                    interval-settings:
+                      interval: 90
+                      deviation: 5
+                      behavior: PER_EXECUTOR
+                    success-chance:
+                      chance: 0.5
+                      behavior: PER_EXECUTOR
                     execution:
                       selection: PICK_RANDOM
                       pick-random:
                         count: 2
                         behavior: PER_EXECUTOR
+                    delay: 100
+                  commands:
                     player:
                       - "give <p> beef 8"
                     custom-list:
@@ -247,14 +248,12 @@ class ModifierStoreTest {
         var thin = reread.getConfigurationSection("modifiers.thin.behavior");
         assertTrue(thin.contains("commands"));
         assertFalse(thin.contains("runs-on"));
-        assertFalse(thin.contains("interval-settings"));
-        assertFalse(thin.contains("success-chance"));
-        assertFalse(thin.contains("delay"));
+        assertFalse(thin.contains("options"));
         assertFalse(thin.contains("on-start"));
     }
 
     @Test
-    void saveKeepsCustomListsAndExecution() throws Exception {
+    void saveKeepsCustomListsAndOptions() throws Exception {
         assertTrue(store.setEnabled("bare", true));
 
         ModifierStore reread = new ModifierStore(load(file), Logger.getAnonymousLogger());

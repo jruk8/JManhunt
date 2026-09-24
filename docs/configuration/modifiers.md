@@ -116,19 +116,20 @@ there is no pre-start window, so both settings run at match start.
 
 ## Success Chance
 
-Under `modifiers.<name>.success-chance`, you can make the modifier run
-only sometimes:
+Under `modifiers.<name>.options.success-chance`, you can make the modifier
+run only sometimes:
 
 ```yaml
 modifiers:
   gear-dice:
-    success-chance:
-      # Chance to run, from 0.0 (never) to 1.0 (always). This is a fraction,
-      # not a percent: use 0.5 for 50%. Defaults to 1.0.
-      chance: 0.5
-      # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls the console
-      # and each player separately. Defaults to PER_INVOKE.
-      behavior: PER_EXECUTOR
+    options:
+      success-chance:
+        # Chance to run, from 0.0 (never) to 1.0 (always). This is a fraction,
+        # not a percent: use 0.5 for 50%. Defaults to 1.0.
+        chance: 0.5
+        # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls the console
+        # and each player separately. Defaults to PER_INVOKE.
+        behavior: PER_EXECUTOR
 ```
 
 Without this section the modifier always runs. The roll happens on every
@@ -137,13 +138,13 @@ never rolled.
 
 ## Command Execution
 
-Under `modifiers.<name>.commands.execution`, you can run a random line
+Under `modifiers.<name>.options.execution`, you can run a random line
 from a command list instead of every line:
 
 ```yaml
 modifiers:
   gear-dice:
-    commands:
+    options:
       execution:
         # IN_ORDER runs every line. PICK_RANDOM runs a random few instead.
         # Defaults to IN_ORDER.
@@ -162,9 +163,9 @@ changes are reliably undone.
 
 ## Interval Settings
 
-Under `modifiers.<name>.interval-settings`, you can configure how often
-an `INTERVAL` modifier repeats. It only applies when `runs-on` contains
-`INTERVAL`:
+Under `modifiers.<name>.options.interval-settings`, you can configure how
+often an `INTERVAL` modifier repeats. It only applies when `runs-on`
+contains `INTERVAL`:
 
 ```yaml
 modifiers:
@@ -172,15 +173,16 @@ modifiers:
     enabled: false
     runs-on:
       - INTERVAL
-    interval-settings:
-      # Interval duration in seconds.
-      interval: 60
-      # Random spread in seconds. 60 and 15 means every 45 to 75 seconds.
-      # Cannot go above interval. Defaults to 0.
-      deviation: 15
-      # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
-      # console their own timer. Defaults to PER_INVOKE.
-      behavior: PER_INVOKE
+    options:
+      interval-settings:
+        # Interval duration in seconds.
+        interval: 60
+        # Random spread in seconds. 60 and 15 means every 45 to 75 seconds.
+        # Cannot go above interval. Defaults to 0.
+        deviation: 15
+        # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
+        # console their own timer. Defaults to PER_INVOKE.
+        behavior: PER_INVOKE
 ```
 
 Interval modifiers start counting when the game actually begins (when a
@@ -195,13 +197,14 @@ tick = 0.05 seconds). Values between `0` and `0.05` execute every tick. Set to
 
 ## Command Delay
 
-Under `modifiers.<name>.delay`, you can delay the modifier's commands
-by a number of ticks after they trigger:
+Under `modifiers.<name>.options.delay`, you can delay the modifier's
+commands by a number of ticks after they trigger:
 
 ```yaml
 modifiers:
   everyone-gets-beef:
-    delay: 5
+    options:
+      delay: 5
 ```
 
 The delay applies to start, interval, and event triggers, but never to
@@ -265,8 +268,9 @@ modifiers:
     enabled: false
     runs-on:
       - INTERVAL
-    interval-settings:
-      interval: 30
+    options:
+      interval-settings:
+        interval: 30
     commands:
       console:
         - "effect give <all-players:HUNTER> minecraft:darkness 5 0"

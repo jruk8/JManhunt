@@ -141,7 +141,7 @@ public final class GameStateCommandManager {
      * begins (via {@link GameManager#beginGame()}). Modifiers whose
      * {@code runs-on} list contains INTERVAL are scheduled on a repeating task.
      * Supports decimal intervals: 0-0.05 seconds executes every tick, rounds to
-     * the nearest tick. When {@code interval-settings.deviation} is above zero
+     * the nearest tick. When {@code options.interval-settings.deviation} is above zero
      * the delay is re-rolled every firing within {@code interval ± deviation};
      * {@code PER_EXECUTOR} deviation fans out to one chain per player plus one
      * console chain instead of a single shared chain.
@@ -459,7 +459,7 @@ public final class GameStateCommandManager {
     }
 
     /**
-     * Resolves one command list under the modifier's {@code commands.execution}
+     * Resolves one command list under the modifier's {@code options.execution}
      * settings. {@code IN_ORDER} (the default) returns every line; {@code
      * PICK_RANDOM} returns {@code pick-random.count} randomly drawn lines.
      */

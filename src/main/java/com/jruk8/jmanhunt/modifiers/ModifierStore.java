@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierCommands;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierExecution;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
+import com.jruk8.jmanhunt.modifiers.config.ModifierOptions;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import org.bukkit.Material;
@@ -77,40 +78,40 @@ public final class ModifierStore {
 
     /** Interval seconds; 60 when unset. */
     public double intervalSeconds(String name) {
-        ModifierBehavior behavior = behavior(name);
-        Double interval = behavior == null || behavior.getIntervalSettings() == null
-                ? null : behavior.getIntervalSettings().getInterval();
+        ModifierOptions options = options(name);
+        Double interval = options == null || options.getIntervalSettings() == null
+                ? null : options.getIntervalSettings().getInterval();
         return interval == null ? 60.0 : interval;
     }
 
     /** Interval deviation seconds; 0 when unset. */
     public double intervalDeviation(String name) {
-        ModifierBehavior behavior = behavior(name);
-        Double deviation = behavior == null || behavior.getIntervalSettings() == null
-                ? null : behavior.getIntervalSettings().getDeviation();
+        ModifierOptions options = options(name);
+        Double deviation = options == null || options.getIntervalSettings() == null
+                ? null : options.getIntervalSettings().getDeviation();
         return deviation == null ? 0.0 : deviation;
     }
 
     /** Raw interval behavior key, or null when unset. */
     public String intervalBehavior(String name) {
-        ModifierBehavior behavior = behavior(name);
-        return behavior == null || behavior.getIntervalSettings() == null
-                ? null : behavior.getIntervalSettings().getBehavior();
+        ModifierOptions options = options(name);
+        return options == null || options.getIntervalSettings() == null
+                ? null : options.getIntervalSettings().getBehavior();
     }
 
     /** Success chance fraction; 1 when unset. */
     public double chance(String name) {
-        ModifierBehavior behavior = behavior(name);
-        Double chance = behavior == null || behavior.getSuccessChance() == null
-                ? null : behavior.getSuccessChance().getChance();
+        ModifierOptions options = options(name);
+        Double chance = options == null || options.getSuccessChance() == null
+                ? null : options.getSuccessChance().getChance();
         return chance == null ? 1.0 : chance;
     }
 
     /** Raw success-chance behavior key, or null when unset. */
     public String chanceBehavior(String name) {
-        ModifierBehavior behavior = behavior(name);
-        return behavior == null || behavior.getSuccessChance() == null
-                ? null : behavior.getSuccessChance().getBehavior();
+        ModifierOptions options = options(name);
+        return options == null || options.getSuccessChance() == null
+                ? null : options.getSuccessChance().getBehavior();
     }
 
     /** Raw pick-random behavior key, or null when unset. */
@@ -122,8 +123,8 @@ public final class ModifierStore {
 
     /** Ticks to wait after triggering; 0 when unset. */
     public long delayTicks(String name) {
-        ModifierBehavior behavior = behavior(name);
-        Long delay = behavior == null ? null : behavior.getDelay();
+        ModifierOptions options = options(name);
+        Long delay = options == null ? null : options.getDelay();
         return delay == null ? 0L : delay;
     }
 
@@ -235,9 +236,14 @@ public final class ModifierStore {
         return behavior == null ? null : behavior.getCommands();
     }
 
+    private ModifierOptions options(String name) {
+        ModifierBehavior behavior = behavior(name);
+        return behavior == null ? null : behavior.getOptions();
+    }
+
     private ModifierExecution execution(String name) {
-        ModifierCommands commands = commands(name);
-        return commands == null ? null : commands.getExecution();
+        ModifierOptions options = options(name);
+        return options == null ? null : options.getExecution();
     }
 
     private Material resolveItem(String raw, String label) {

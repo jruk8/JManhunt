@@ -169,12 +169,13 @@ modifiers:
     behavior:
       runs-on:
         - INTERVAL
-      # Only applicable when "runs-on" contains INTERVAL.
-      interval-settings:
-        # Interval duration in seconds.
-        interval: 90
-        deviation: 5
-        behavior: PER_EXECUTOR
+      options:
+        # Only applicable when "runs-on" contains INTERVAL.
+        interval-settings:
+          # Interval duration in seconds.
+          interval: 90
+          deviation: 5
+          behavior: PER_EXECUTOR
       commands:
         player:
           # <random-mob> is replaced with a random spawnable living entity type.
@@ -191,10 +192,11 @@ modifiers:
     behavior:
       runs-on:
         - INTERVAL
-      interval-settings:
-        interval: 30
-        deviation: 5
-        behavior: PER_EXECUTOR
+      options:
+        interval-settings:
+          interval: 30
+          deviation: 5
+          behavior: PER_EXECUTOR
       commands:
         player:
           # <random-item> is replaced with a random item type.
@@ -227,24 +229,24 @@ modifiers:
     behavior:
       runs-on:
         - INTERVAL
-      # Only applicable when "runs-on" contains INTERVAL.
-      interval-settings:
-        # Interval duration in seconds.
-        interval: 15
-        # Random spread in seconds. 20 and 10 means every 10 to 30 seconds.
-        # Cannot go above interval. Defaults to 0.
-        deviation: 5
-        # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
-        # console their own timer. Defaults to PER_INVOKE.
-        behavior: PER_EXECUTOR
-      # Success chance for running the commands.
-      # Must be between 0 and 1.0 where 1.0 means 100% chance.
-      # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls for each player.
-      # Ignored by cleanup commands.
-      success-chance:
-        chance: 0.5
-        behavior: PER_EXECUTOR
-      commands:
+      options:
+        # Only applicable when "runs-on" contains INTERVAL.
+        interval-settings:
+          # Interval duration in seconds.
+          interval: 15
+          # Random spread in seconds. 20 and 10 means every 10 to 30 seconds.
+          # Cannot go above interval. Defaults to 0.
+          deviation: 5
+          # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
+          # console their own timer. Defaults to PER_INVOKE.
+          behavior: PER_EXECUTOR
+        # Success chance for running the commands.
+        # Must be between 0 and 1.0 where 1.0 means 100% chance.
+        # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls for each player.
+        # Ignored by cleanup commands.
+        success-chance:
+          chance: 0.5
+          behavior: PER_EXECUTOR
         # IN_ORDER runs every line sequentially.
         # PICK_RANDOM runs a random few instead.
         # Defaults to IN_ORDER.
@@ -256,6 +258,7 @@ modifiers:
             # PER_INVOKE picks once for everyone; PER_EXECUTOR picks separately
             # for the console and each player. Defaults to PER_INVOKE.
             behavior: PER_EXECUTOR
+      commands:
         player:
           - "give <p> minecraft:golden_apple 1"
           - "give <p> minecraft:golden_apple 2"
@@ -316,10 +319,11 @@ modifiers:
     behavior:
       runs-on:
         - ON_FIRST_END_ENTER
-      # Ticks to wait after triggering before this modifier's commands run.
-      # Applies to start, interval, and event triggers, but not to cleanup.
-      # Delay in case the speedrunner lags when loading into The End.
-      delay: 100
+      options:
+        # Ticks to wait after triggering before this modifier's commands run.
+        # Applies to start, interval, and event triggers, but not to cleanup.
+        # Delay in case the speedrunner lags when loading into The End.
+        delay: 100
       commands:
         speedrunner:
           # <all-players> covers only this match (raw @a is converted to it).
