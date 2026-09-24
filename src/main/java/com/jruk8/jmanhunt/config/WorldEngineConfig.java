@@ -80,7 +80,8 @@ public class WorldEngineConfig extends OkaeriConfig {
     @CustomKey("spawnpoint-algorithm")
     @Comment({
             "Spawnpoint algorithm: validated per-player spawns that bypass tree",
-            "leaves and require an air gap at the feet and head blocks. It also",
+            "leaves, require an air gap at the feet and head blocks, never",
+            "land in fluids, and level heights around the group median. It also",
             "skips ocean and lava cells when fetching. This can sometimes cause",
             "server lag when many checks are required."
     })
@@ -326,12 +327,19 @@ public class WorldEngineConfig extends OkaeriConfig {
 
         @CustomKey("max-retries")
         @Comment({
-                "Extra attempts with fresh random offsets when a spawn fails",
-                "validation. Minimum 0 (try once). Falls back to the plain spread",
-                "when attempts run out.",
-                "Default: 5"
+                "Re-rolls per player whose first spawn misses the median height",
+                "band. Minimum 0 (keep the first spawn).",
+                "Default: 8"
         })
-        private int maxRetries = 5;
+        private int maxRetries = 8;
+
+        @CustomKey("y-tolerance")
+        @Comment({
+                "Plus-or-minus blocks around the median spawn height that",
+                "count as level. Outliers are re-rolled.",
+                "Default: 7"
+        })
+        private int yTolerance = 7;
 
         public boolean isEnabled() {
             return enabled;
@@ -347,6 +355,14 @@ public class WorldEngineConfig extends OkaeriConfig {
 
         public void setMaxRetries(int maxRetries) {
             this.maxRetries = maxRetries;
+        }
+
+        public int getYTolerance() {
+            return yTolerance;
+        }
+
+        public void setYTolerance(int yTolerance) {
+            this.yTolerance = yTolerance;
         }
     }
 

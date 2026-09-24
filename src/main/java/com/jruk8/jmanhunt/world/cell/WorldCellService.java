@@ -131,12 +131,11 @@ public final class WorldCellService {
         Location cellRoot = new Location(world, originX + 0.5,
                 world.getHighestBlockYAt(originX, originZ, HeightMap.MOTION_BLOCKING) + 1,
                 originZ + 0.5);
-        for (Player player : joiners) {
-            Location spawn = MatchTeleportService.spreadSpawnForConfig(world, originX, originZ,
-                    config.tpSpreadRadius(), player.getLocation().getYaw(), player.getLocation().getPitch(),
-                    config);
-            player.teleport(spawn);
-            player.setRespawnLocation(cellRoot, true);
+        List<Location> spawns = MatchTeleportService.spreadSpawnsForConfig(world, originX, originZ,
+                config.tpSpreadRadius(), joiners, config);
+        for (int index = 0; index < joiners.size(); index++) {
+            joiners.get(index).teleport(spawns.get(index));
+            joiners.get(index).setRespawnLocation(cellRoot, true);
         }
     }
 
@@ -310,12 +309,11 @@ public final class WorldCellService {
         Location cellRoot = new Location(world, origin.x() + 0.5,
                 world.getHighestBlockYAt(origin.x(), origin.z(), HeightMap.MOTION_BLOCKING) + 1,
                 origin.z() + 0.5);
-        for (Player player : participants) {
-            Location spawn = MatchTeleportService.spreadSpawnForConfig(world, origin.x(), origin.z(),
-                    config.tpSpreadRadius(), player.getLocation().getYaw(), player.getLocation().getPitch(),
-                    config);
-            player.teleport(spawn);
-            player.setRespawnLocation(cellRoot, true);
+        List<Location> spawns = MatchTeleportService.spreadSpawnsForConfig(world, origin.x(), origin.z(),
+                config.tpSpreadRadius(), participants, config);
+        for (int index = 0; index < participants.size(); index++) {
+            participants.get(index).teleport(spawns.get(index));
+            participants.get(index).setRespawnLocation(cellRoot, true);
         }
 
         endCells.ensureEndCell(config, origin.index(), matchId);

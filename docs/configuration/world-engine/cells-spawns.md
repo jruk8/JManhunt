@@ -12,7 +12,8 @@ world-engine:
   tp-spread-radius: 5
   spawnpoint-algorithm:
     enabled: true
-    max-retries: 5
+    max-retries: 8
+    y-tolerance: 7
 ```
 
 When `enabled`, teleports participants to a fresh cell when a match
@@ -58,11 +59,16 @@ in its size calculation.
 `spawnpoint-algorithm`, when enabled, validates every player spawn: it
 lands below tree leaves and requires an air gap at the feet and head
 blocks. Transparent, non-solid blocks like grass and torches count as
-air; pressure plates do not. Ocean and lava cells are skipped when
-fetching. Invalid spawns retry with fresh random offsets up to
-`max-retries` times (minimum 0), then fall back to the plain spread.
-This fixes bad spawns, but may cause server lag if many checks are
-required. Turn the algorithm off for plain highest-block spawns.
+air; pressure plates do not. Water, lava, and powder snow are never
+picked. Ocean and lava cells are skipped when fetching.
+
+Spawns are also height-leveled: everyone rolls once, the median height
+becomes the target, and anyone outside `y-tolerance` blocks of it
+re-rolls up to `max-retries` times (minimum 0). Without a fitting roll
+the closest candidate wins; with no valid roll at all, the center is
+the fallback. This fixes bad spawns, but may cause server lag if many
+checks are required. Turn the algorithm off for plain highest-block
+spawns.
 
 ## Lobby Teleports & Bounds
 

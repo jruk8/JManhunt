@@ -20,11 +20,12 @@ class WorldEngineConfigTest {
     }
 
     @Test
-    void spawnpointAlgorithmDefaultsToEnabledWithFiveRetries() {
+    void spawnpointAlgorithmDefaultsToEnabledWithEightRetries() {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(service(new JManhuntConfig()));
 
         assertTrue(config.spawnpointAlgorithmEnabled());
-        assertEquals(5, config.spawnpointMaxRetries());
+        assertEquals(8, config.spawnpointMaxRetries());
+        assertEquals(7, config.spawnpointYTolerance());
     }
 
     @Test
@@ -45,6 +46,16 @@ class WorldEngineConfigTest {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
 
         assertEquals(0, config.spawnpointMaxRetries());
+    }
+
+    @Test
+    void spawnpointYToleranceReadsAndClamps() {
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.y-tolerance", 12);
+        assertEquals(12, WorldEngineConfig.fromConfig(service(root)).spawnpointYTolerance());
+
+        ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.y-tolerance", -4);
+        assertEquals(0, WorldEngineConfig.fromConfig(service(root)).spawnpointYTolerance());
     }
 
 

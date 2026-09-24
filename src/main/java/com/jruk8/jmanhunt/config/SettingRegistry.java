@@ -616,7 +616,8 @@ public final class SettingRegistry {
         entries.add(intDynamic("world-engine.tp-spread-radius", 5, 0,
                 SettingDescriptor.DynamicBound.CELL_HALF));
         entries.add(bool("world-engine.spawnpoint-algorithm.enabled", true));
-        entries.add(intVal("world-engine.spawnpoint-algorithm.max-retries", 5, 0, null));
+        entries.add(intVal("world-engine.spawnpoint-algorithm.max-retries", 8, 0, null));
+        entries.add(intVal("world-engine.spawnpoint-algorithm.y-tolerance", 7, 0, null));
         entries.add(intVal("world-engine.preloading.cell-buffer.stored-cells-buffer", 1, 1, null));
         entries.add(option("world-engine.preloading.cell-buffer.increment-when", "ALWAYS",
                 "ALWAYS", "NO_MATCH_RUNNING"));

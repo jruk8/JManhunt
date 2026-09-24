@@ -4,11 +4,14 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
@@ -101,40 +104,148 @@ public final class MatchTeleportService implements LobbyTeleporter {
     }
 
     /**
-     * Spread spawn honoring the spawnpoint-algorithm config: validated
-     * when enabled, plain otherwise.
+     * One spread spawn per player, in order, honoring the
+     * spawnpoint-algorithm config: height-leveled when enabled, plain
+     * otherwise. Yaw and pitch come from each player's current view.
      */
-    public static Location spreadSpawnForConfig(World world, int centerX, int centerZ, int radius,
-            float yaw, float pitch, WorldEngineConfig config) {
-        if (config.spawnpointAlgorithmEnabled()) {
-            return spreadSpawnValidated(world, centerX, centerZ, radius, yaw, pitch,
-                    config.spawnpointMaxRetries());
+    public static List<Location> spreadSpawnsForConfig(World world, int centerX, int centerZ,
+            int radius, List<Player> players, WorldEngineConfig config) {
+        List<Location> spawns = new ArrayList<>(players.size());
+        for (Player player : players) {
+            spawns.add(spreadSpawn(world, centerX, centerZ, radius,
+                    player.getLocation().getYaw(), player.getLocation().getPitch()));
         }
-        return spreadSpawn(world, centerX, centerZ, radius, yaw, pitch);
+        if (!config.spawnpointAlgorithmEnabled() || players.isEmpty()) {
+            return spawns;
+        }
+        return levelSpawns(world, centerX, centerZ, radius, players, config);
     }
 
     /**
-     * Validated spread spawn: lands below tree leaves and requires an air
-     * gap at the feet and head blocks. Retries with fresh random offsets
-     * up to {@code maxRetries} times after the first attempt, then falls
-     * back to the plain spread. Shared by cell spawns and the engine-off
-     * surround.
+     * Height-leveled spawns: one validated roll per player, then the
+     * median height becomes the target band. Outliers re-roll up to
+     * max-retries times; without a fitting roll the closest candidate
+     * (original included) wins. Fluid or invalid rolls are discarded;
+     * with zero candidates the center is the absolute fallback.
      */
-    public static Location spreadSpawnValidated(World world, int centerX, int centerZ, int radius,
-            float yaw, float pitch, int maxRetries) {
-        int attempts = 1 + Math.max(0, maxRetries);
+    private static List<Location> levelSpawns(World world, int centerX, int centerZ, int radius,
+            List<Player> players, WorldEngineConfig config) {
         int top = world.getMaxHeight() - 2;
-        for (int attempt = 0; attempt < attempts; attempt++) {
-            int offsetX = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
-            int offsetZ = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
-            int x = centerX + offsetX;
-            int z = centerZ + offsetZ;
-            int y = Math.min(world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES) + 1, top);
-            if (isAirLike(world.getBlockAt(x, y, z)) && isAirLike(world.getBlockAt(x, y + 1, z))) {
-                return new Location(world, x + 0.5, y, z + 0.5, yaw, pitch);
+        List<Location> first = new ArrayList<>(players.size());
+        List<Integer> firstHeights = new ArrayList<>(players.size());
+        for (Player player : players) {
+            Location roll = rollSpot(world, centerX, centerZ, radius,
+                    player.getLocation().getYaw(), player.getLocation().getPitch(), top);
+            first.add(roll);
+            firstHeights.add(roll.getBlockY());
+        }
+        int median = medianY(firstHeights);
+        List<Location> spawns = new ArrayList<>(players.size());
+        for (int index = 0; index < players.size(); index++) {
+            Player player = players.get(index);
+            spawns.add(levelOne(world, centerX, centerZ, radius, first.get(index), median,
+                    player.getLocation().getYaw(), player.getLocation().getPitch(), top, config));
+        }
+        return spawns;
+    }
+
+    /** Leveled spawn for one player against the group median height. */
+    private static Location levelOne(World world, int centerX, int centerZ, int radius,
+            Location first, int median, float yaw, float pitch, int top, WorldEngineConfig config) {
+        List<Location> candidates = new ArrayList<>();
+        List<Integer> heights = new ArrayList<>();
+        if (validSpot(world, first.getBlockX(), first.getBlockY(), first.getBlockZ())) {
+            candidates.add(first);
+            heights.add(first.getBlockY());
+        }
+        if (candidates.isEmpty() || !fitsY(first.getBlockY(), median, config.spawnpointYTolerance())) {
+            for (int attempt = 0; attempt < config.spawnpointMaxRetries(); attempt++) {
+                Location roll = rollSpot(world, centerX, centerZ, radius, yaw, pitch, top);
+                if (!validSpot(world, roll.getBlockX(), roll.getBlockY(), roll.getBlockZ())) {
+                    continue;
+                }
+                candidates.add(roll);
+                heights.add(roll.getBlockY());
+                if (fitsY(roll.getBlockY(), median, config.spawnpointYTolerance())) {
+                    break;
+                }
             }
         }
-        return spreadSpawn(world, centerX, centerZ, radius, yaw, pitch);
+        if (candidates.isEmpty()) {
+            return cellCenterSpawn(world, centerX, centerZ, yaw, pitch, top);
+        }
+        return candidates.get(selectCandidate(heights, median, config.spawnpointYTolerance()));
+    }
+
+    /** One random roll below tree leaves, unvalidated. */
+    private static Location rollSpot(World world, int centerX, int centerZ, int radius,
+            float yaw, float pitch, int top) {
+        int offsetX = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
+        int offsetZ = ThreadLocalRandom.current().nextInt(-radius, radius + 1);
+        int x = centerX + offsetX;
+        int z = centerZ + offsetZ;
+        int y = Math.min(world.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES) + 1, top);
+        return new Location(world, x + 0.5, y, z + 0.5, yaw, pitch);
+    }
+
+    /** Absolute fallback: the center at a safe height, checks skipped. */
+    private static Location cellCenterSpawn(World world, int centerX, int centerZ,
+            float yaw, float pitch, int top) {
+        int y = Math.min(world.getHighestBlockYAt(centerX, centerZ,
+                HeightMap.MOTION_BLOCKING_NO_LEAVES) + 1, top);
+        return new Location(world, centerX + 0.5, y, centerZ + 0.5, yaw, pitch);
+    }
+
+    /** True when both blocks are air-like and neither is a fluid spawn. */
+    private static boolean validSpot(World world, int x, int y, int z) {
+        Block feet = world.getBlockAt(x, y, z);
+        Block head = world.getBlockAt(x, y + 1, z);
+        return isAirLike(feet) && isAirLike(head)
+                && !isFluid(feet.getType()) && !isFluid(head.getType());
+    }
+
+    /** True for fluids spawns must never land in. Pure for tests. */
+    static boolean isFluid(Material type) {
+        return type == Material.WATER
+                || type == Material.LAVA
+                || type == Material.POWDER_SNOW;
+    }
+
+    /** Median of non-empty heights; even counts take the higher middle. Pure for tests. */
+    static int medianY(List<Integer> heights) {
+        List<Integer> sorted = new ArrayList<>(heights);
+        Collections.sort(sorted);
+        return sorted.get(sorted.size() / 2);
+    }
+
+    /** True when a height sits inside the median band. Pure for tests. */
+    static boolean fitsY(int y, int median, int tolerance) {
+        return Math.abs(y - median) <= Math.max(0, tolerance);
+    }
+
+    /** Closest height index; first-seen wins ties. Pure for tests. */
+    static int closestIndex(List<Integer> heights, int median) {
+        int best = 0;
+        for (int index = 1; index < heights.size(); index++) {
+            if (Math.abs(heights.get(index) - median) < Math.abs(heights.get(best) - median)) {
+                best = index;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Winning candidate index: the first fitting roll, else the closest.
+     * Candidates arrive in roll order with the original first. Pure for
+     * tests.
+     */
+    static int selectCandidate(List<Integer> heights, int median, int tolerance) {
+        for (int index = 0; index < heights.size(); index++) {
+            if (fitsY(heights.get(index), median, tolerance)) {
+                return index;
+            }
+        }
+        return closestIndex(heights, median);
     }
 
     /**

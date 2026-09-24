@@ -9,6 +9,7 @@ public record WorldEngineConfig(
         int tpSpreadRadius,
         boolean spawnpointAlgorithmEnabled,
         int spawnpointMaxRetries,
+        int spawnpointYTolerance,
         boolean worldBorderEnabled,
         double damageBuffer,
         double damageAmount,
@@ -33,7 +34,8 @@ public record WorldEngineConfig(
         }
         String spawnpointBase = base + "spawnpoint-algorithm.";
         boolean spawnpointAlgorithmEnabled = config.getBoolean(spawnpointBase + "enabled", true);
-        int spawnpointMaxRetries = Math.max(0, config.getInt(spawnpointBase + "max-retries", 5));
+        int spawnpointMaxRetries = Math.max(0, config.getInt(spawnpointBase + "max-retries", 8));
+        int spawnpointYTolerance = Math.max(0, config.getInt(spawnpointBase + "y-tolerance", 7));
         String borderBase = base + "world-border.";
         boolean worldBorderEnabled = config.getBoolean(borderBase + "enabled", false);
         double damageBuffer = Math.max(0, config.getDouble(borderBase + "damage.buffer", DEFAULT_DAMAGE_BUFFER));
@@ -49,6 +51,7 @@ public record WorldEngineConfig(
                 spreadRadius,
                 spawnpointAlgorithmEnabled,
                 spawnpointMaxRetries,
+                spawnpointYTolerance,
                 worldBorderEnabled,
                 damageBuffer,
                 damageAmount,
