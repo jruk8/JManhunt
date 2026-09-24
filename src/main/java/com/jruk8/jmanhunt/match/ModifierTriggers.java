@@ -9,7 +9,28 @@ import java.util.Random;
  * Pure trigger evaluation for modifiers: trigger names, scopes, chances,
  * delays, and line picks. No Bukkit types, so unit tests cover it directly.
  */
-final class ModifierTriggers {
+public final class ModifierTriggers {
+    /**
+     * Every dispatched trigger in docs order: the closed set the Run
+     * Event dialog toggles. Stored values outside this set pass through
+     * unmatched and are preserved, never dropped.
+     */
+    public static final List<String> KNOWN = List.of(
+            "ON_START",
+            "INTERVAL",
+            "ON_EVERY_KILL",
+            "ON_PLAYER_KILL",
+            "ON_HUNTER_KILL",
+            "ON_SPEEDRUNNER_KILL",
+            "ON_NETHER_ENTER",
+            "ON_END_ENTER",
+            "ON_FIRST_NETHER_ENTER",
+            "ON_FIRST_END_ENTER",
+            "ON_EVERY_ADVANCEMENT",
+            "ON_RESPAWN",
+            "ON_SPEEDRUNNER_RESPAWN",
+            "ON_HUNTER_RESPAWN");
+
     /** Per-activation versus per-executor random behavior. */
     enum TriggerScope {
         PER_INVOKE, PER_EXECUTOR

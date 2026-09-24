@@ -79,4 +79,48 @@ public class ModifiersMessages extends OkaeriConfig {
 
     @CustomKey("import-failed")
     private String importFailed = "{prefix}<red>That import string is invalid or corrupted.";
+
+    @CustomKey("create-usage")
+    private String createUsage = "{prefix}<yellow>Usage: /manhunt modifiers create <modifier|preset> " +
+            "<name> [flags...]\n{prefix}<gray>Modifier flags: --desc --item --author --trigger --on-start " +
+            "--interval --deviation --interval-scope --chance --chance-scope --selection --pick-count " +
+            "--pick-scope --delay --console --player --hunter --speedrunner --console-cleanup " +
+            "--player-cleanup\n{prefix}<gray>Preset flags: --desc --item --member";
+
+    @CustomKey("create-unknown-flag")
+    private String createUnknownFlag = "{prefix}<red>Unknown flag <white>{flag}</white>.";
+
+    @CustomKey("create-missing-value")
+    private String createMissingValue = "{prefix}<red>Flag <white>{flag}</white> needs a value.";
+
+    @CustomKey("create-bad-number")
+    private String createBadNumber = "{prefix}<red>Flag <white>{flag}</white> got a bad number: " +
+            "<white>{value}</white>.";
+
+    @CustomKey("create-bad-enum")
+    private String createBadEnum = "{prefix}<red>Flag <white>{flag}</white> wants {valid}, got " +
+            "<white>{value}</white>.";
+
+    @CustomKey("create-unknown-trigger")
+    private String createUnknownTrigger = "{prefix}<red>Unknown trigger <white>{value}</white>. Valid: " +
+            "<gray>{valid}</gray>.";
+
+    @CustomKey("create-unknown-member")
+    private String createUnknownMember = "{prefix}<red>Unknown modifier <white>{value}</white>.";
+
+    @CustomKey("create-bad-item")
+    private String createBadItem = "{prefix}<red>Unknown item <white>{value}</white>.";
+
+    @CustomKey("create-bad-command")
+    private String createBadCommand = "{prefix}<red>Bad command in <white>{list}</white>: {error}";
+
+    @CustomKey("create-deviation-range")
+    private String createDeviationRange = "{prefix}<red>Deviation ({value}) needs --interval and " +
+            "must not exceed it.";
+
+    @CustomKey("create-success")
+    private String createSuccess = "{prefix}<green>Created {type} <white>{name}<green>.";
+
+    @CustomKey("create-command-warning")
+    private String createCommandWarning = "{prefix}<yellow>Warning: {warning}";
 }

@@ -8,6 +8,8 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierOptions;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import java.util.ArrayList;
+import java.util.function.Consumer;
 import org.bukkit.Material;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -49,6 +51,198 @@ public final class ModifierStore {
     /** Raw preset, or null when unknown. */
     public ModifierPreset presetEntry(String id) {
         return config.getPresets().get(id);
+    }
+
+    /**
+     * Creates a disabled modifier with placeholder display data, saving
+     * immediately. The name gets " {n}" numbering when taken. Returns
+     * the final id.
+     */
+    public String createModifier(String displayName, String author) {
+        ModifierEntry entry = new ModifierEntry();
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName(displayName);
+        meta.setDescription(DEFAULT_DESCRIPTION);
+        meta.setItem(Material.STONE.name());
+        meta.setAuthor(author);
+        entry.setMeta(meta);
+        String slug = ModifierNames.kebab(displayName);
+        return addModifier(slug.isEmpty() ? "modifier" : slug, entry);
+    }
+
+    /**
+     * Creates a preset with placeholder display data, saving
+     * immediately. The name gets " {n}" numbering when taken. Returns
+     * the final id.
+     */
+    public String createPreset(String displayName) {
+        ModifierPreset preset = new ModifierPreset();
+        preset.setName(displayName);
+        preset.setDescription(DEFAULT_DESCRIPTION);
+        preset.setItem(Material.STONE.name());
+        preset.setModifiers(new ArrayList<>());
+        String slug = ModifierNames.kebab(displayName);
+        return addPreset(slug.isEmpty() ? "preset" : slug, preset);
+    }
+
+    /** Removes a modifier, saving immediately. False when unknown. */
+    public boolean removeModifier(String id) {
+        if (config.getModifiers().remove(id) == null) {
+            return false;
+        }
+        save();
+        return true;
+    }
+
+    /** Removes a preset, saving immediately. False when unknown. */
+    public boolean removePreset(String id) {
+        if (config.getPresets().remove(id) == null) {
+            return false;
+        }
+        save();
+        return true;
+    }
+
+    /**
+     * Renames a modifier id, saving immediately. Member lists in
+     * presets are left untouched, so callers must warn that presets
+     * may break. False when the old id is unknown or the new id is
+     * taken.
+     */
+    public boolean renameModifier(String oldId, String newId) {
+        if (oldId.equals(newId)) {
+            return config.getModifiers().containsKey(oldId);
+        }
+        ModifierEntry entry = config.getModifiers().get(oldId);
+        if (entry == null || config.getModifiers().containsKey(newId)) {
+            return false;
+        }
+        config.getModifiers().remove(oldId);
+        config.getModifiers().put(newId, entry);
+        save();
+        return true;
+    }
+
+    /**
+     * Renames a preset id, saving immediately. False when the old id
+     * is unknown or the new id is taken.
+     */
+    public boolean renamePreset(String oldId, String newId) {
+        if (oldId.equals(newId)) {
+            return config.getPresets().containsKey(oldId);
+        }
+        ModifierPreset preset = config.getPresets().get(oldId);
+        if (preset == null || config.getPresets().containsKey(newId)) {
+            return false;
+        }
+        config.getPresets().remove(oldId);
+        config.getPresets().put(newId, preset);
+        save();
+        return true;
+    }
+
+    /**
+     * Patches a modifier, saving immediately. False when unknown.
+     * Runs-on, options, and commands blocks are created by the
+     * ensure helpers when the patch needs them.
+     */
+    public boolean updateModifier(String id, Consumer<ModifierEntry> patch) {
+        ModifierEntry entry = config.getModifiers().get(id);
+        if (entry == null) {
+            return false;
+        }
+        patch.accept(entry);
+        save();
+        return true;
+    }
+
+    /** Patches a preset, saving immediately. False when unknown. */
+    public boolean updatePreset(String id, Consumer<ModifierPreset> patch) {
+        ModifierPreset preset = config.getPresets().get(id);
+        if (preset == null) {
+            return false;
+        }
+        patch.accept(preset);
+        save();
+        return true;
+    }
+
+    /**
+     * Adds a modifier to a preset, saving immediately. True when the
+     * preset changed; false when the preset is unknown or the member
+     * was already listed.
+     */
+    public boolean memberAdd(String presetId, String modifierId) {
+        ModifierPreset preset = config.getPresets().get(presetId);
+        if (preset == null) {
+            return false;
+        }
+        if (preset.getModifiers() == null) {
+            preset.setModifiers(new ArrayList<>());
+        }
+        if (preset.getModifiers().contains(modifierId)) {
+            return false;
+        }
+        preset.getModifiers().add(modifierId);
+        save();
+        return true;
+    }
+
+    /**
+     * Removes a modifier from a preset, saving immediately. True when
+     * the preset changed; false when the preset is unknown or the
+     * member was not listed.
+     */
+    public boolean memberRemove(String presetId, String modifierId) {
+        ModifierPreset preset = config.getPresets().get(presetId);
+        if (preset == null || preset.getModifiers() == null) {
+            return false;
+        }
+        if (!preset.getModifiers().remove(modifierId)) {
+            return false;
+        }
+        save();
+        return true;
+    }
+
+    /** Behavior block, creating it when missing. */
+    public static ModifierBehavior ensureBehavior(ModifierEntry entry) {
+        if (entry.getBehavior() == null) {
+            entry.setBehavior(new ModifierBehavior());
+        }
+        return entry.getBehavior();
+    }
+
+    /** Meta block, creating it when missing. */
+    public static ModifierMeta ensureMeta(ModifierEntry entry) {
+        if (entry.getMeta() == null) {
+            entry.setMeta(new ModifierMeta());
+        }
+        return entry.getMeta();
+    }
+
+    /** Options block, creating it when missing. */
+    public static ModifierOptions ensureOptions(ModifierBehavior behavior) {
+        if (behavior.getOptions() == null) {
+            behavior.setOptions(new ModifierOptions());
+        }
+        return behavior.getOptions();
+    }
+
+    /** Commands block, creating it when missing. */
+    public static ModifierCommands ensureCommands(ModifierBehavior behavior) {
+        if (behavior.getCommands() == null) {
+            behavior.setCommands(new ModifierCommands());
+        }
+        return behavior.getCommands();
+    }
+
+    /** Execution block, creating it when missing. */
+    public static ModifierExecution ensureExecution(ModifierOptions options) {
+        if (options.getExecution() == null) {
+            options.setExecution(new ModifierExecution());
+        }
+        return options.getExecution();
     }
 
     /**
@@ -346,7 +540,7 @@ public final class ModifierStore {
     }
 
     /** Lenient material parse: trims, strips minecraft: prefix, ignores case. */
-    static Material parseMaterial(String raw) {
+    public static Material parseMaterial(String raw) {
         String normalized = raw.trim().toUpperCase(Locale.ROOT).replace(' ', '_');
         if (normalized.startsWith("MINECRAFT:")) {
             normalized = normalized.substring("MINECRAFT:".length());

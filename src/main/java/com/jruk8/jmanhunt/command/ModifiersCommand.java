@@ -7,6 +7,7 @@ import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierCodec;
+import com.jruk8.jmanhunt.modifiers.ModifierNames;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import java.util.Optional;
@@ -15,6 +16,7 @@ import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -64,6 +66,7 @@ public final class ModifiersCommand {
             case "setpreset" -> setPreset(sender, args);
             case "export" -> exportCommand(sender, args);
             case "import" -> importCommand(sender, args);
+            case "create" -> createCommand(sender, args);
             default -> {
                 messages.message(sender, "modifiers.usage");
                 yield true;
@@ -350,6 +353,39 @@ public final class ModifiersCommand {
                 ? config.modifiers().presetName(finalId)
                 : config.modifiers().metaName(finalId);
         messages.message(sender, "modifiers.imported", Map.of("name", name));
+        if (sender instanceof Player player) {
+            sounds.playNeutralSound(player);
+        }
+        return true;
+    }
+
+    private boolean createCommand(CommandSender sender, String[] args) {
+        if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
+            messages.message(sender, "command.no-permission");
+            return true;
+        }
+        String[] rest = Arrays.copyOfRange(args, 1, args.length);
+        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(rest, config.modifierNames());
+        if (!result.success()) {
+            messages.message(sender, result.messageKey(), result.params());
+            return true;
+        }
+        ModifierCreateArgs.Plan plan = result.plan();
+        String slug = ModifierNames.kebab(plan.name());
+        String finalId;
+        if (plan.preset()) {
+            finalId = config.modifiers().addPreset(slug.isEmpty() ? "preset" : slug, plan.toPreset());
+        } else {
+            finalId = config.modifiers().addModifier(slug.isEmpty() ? "modifier" : slug, plan.toEntry());
+        }
+        String display = plan.preset()
+                ? config.modifiers().presetName(finalId)
+                : config.modifiers().metaName(finalId);
+        messages.message(sender, "modifiers.create-success",
+                Map.of("type", plan.preset() ? "preset" : "modifier", "name", display));
+        for (String warning : result.warnings()) {
+            messages.message(sender, "modifiers.create-command-warning", Map.of("warning", warning));
+        }
         if (sender instanceof Player player) {
             sounds.playNeutralSound(player);
         }

@@ -325,6 +325,18 @@ modifiers:
   exported: "{prefix}<green><underlined>Click to copy <white>{type} {name}</white> to clipboard</underlined>"
   imported: "{prefix}<green>Imported <white>{name}<green>."
   import-failed: "{prefix}<red>That import string is invalid or corrupted."
+  create-usage: "{prefix}<yellow>Usage: /manhunt modifiers create <modifier|preset> <name> [flags...]\n{prefix}<gray>Modifier flags: --desc --item --author --trigger --on-start --interval --deviation --interval-scope --chance --chance-scope --selection --pick-count --pick-scope --delay --console --player --hunter --speedrunner --console-cleanup --player-cleanup\n{prefix}<gray>Preset flags: --desc --item --member"
+  create-unknown-flag: "{prefix}<red>Unknown flag <white>{flag}</white>."
+  create-missing-value: "{prefix}<red>Flag <white>{flag}</white> needs a value."
+  create-bad-number: "{prefix}<red>Flag <white>{flag}</white> got a bad number: <white>{value}</white>."
+  create-bad-enum: "{prefix}<red>Flag <white>{flag}</white> wants {valid}, got <white>{value}</white>."
+  create-unknown-trigger: "{prefix}<red>Unknown trigger <white>{value}</white>. Valid: <gray>{valid}</gray>."
+  create-unknown-member: "{prefix}<red>Unknown modifier <white>{value}</white>."
+  create-bad-item: "{prefix}<red>Unknown item <white>{value}</white>."
+  create-bad-command: "{prefix}<red>Bad command in <white>{list}</white>: {error}"
+  create-deviation-range: "{prefix}<red>Deviation ({value}) needs --interval and must not exceed it."
+  create-success: "{prefix}<green>Created {type} <white>{name}<green>."
+  create-command-warning: "{prefix}<yellow>Warning: {warning}"
 
 # Modifiers GUI text. Names render white, lore gray; user tags override.
 # {enabled} and {total} count enabled entries. Never add {prefix} here.

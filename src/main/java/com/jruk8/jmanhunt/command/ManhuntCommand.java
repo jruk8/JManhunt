@@ -19,6 +19,7 @@ import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.match.ModifierTriggers;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -2043,7 +2044,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     /** Tab completion for modifiers toggles. Null when inapplicable. */
     private List<String> completeModifiersTab(String[] args) {
         if (args.length == 2 && args[0].equalsIgnoreCase("modifiers")) {
-            return partial(args[1], List.of("setmod", "setpreset", "export", "import"));
+            return partial(args[1], List.of("setmod", "setpreset", "export", "import", "create"));
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {
             if (args[1].equalsIgnoreCase("setmod")) {
@@ -2052,10 +2053,15 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             if (args[1].equalsIgnoreCase("setpreset")) {
                 return partial(args[2], modifiersCmd.presetIdOptions());
             }
-            if (args[1].equalsIgnoreCase("export") || args[1].equalsIgnoreCase("import")) {
+            if (args[1].equalsIgnoreCase("export") || args[1].equalsIgnoreCase("import")
+                    || args[1].equalsIgnoreCase("create")) {
                 return partial(args[2], List.of("modifier", "preset"));
             }
             return null;
+        }
+        if (args.length >= 4 && args[0].equalsIgnoreCase("modifiers")
+                && args[1].equalsIgnoreCase("create")) {
+            return completeCreateTab(args);
         }
         if (args.length == 4 && args[0].equalsIgnoreCase("modifiers")
                 && (args[1].equalsIgnoreCase("setmod") || args[1].equalsIgnoreCase("setpreset"))) {
@@ -2069,6 +2075,24 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[3], modifiersCmd.modifierNameOptions());
         }
         return null;
+    }
+
+    /** Flag and flag-value completion for modifiers create. */
+    private List<String> completeCreateTab(String[] args) {
+        boolean preset = args[2].equalsIgnoreCase("preset");
+        String current = args[args.length - 1];
+        if (current.startsWith("--")) {
+            return partial(current, ModifierCreateArgs.flagsFor(preset));
+        }
+        String previous = args[args.length - 2].toLowerCase(Locale.ROOT);
+        return switch (previous) {
+            case "--trigger" -> partial(current, ModifierTriggers.KNOWN);
+            case "--member" -> partial(current, modifiersCmd.modifierNameOptions());
+            case "--on-start", "--selection" -> partial(current, List.of("IN_ORDER", "PICK_RANDOM"));
+            case "--interval-scope", "--chance-scope", "--pick-scope" ->
+                    partial(current, List.of("PER_INVOKE", "PER_EXECUTOR"));
+            default -> null;
+        };
     }
 
     /** Tab completion for status, start, and end. Null when inapplicable. */
