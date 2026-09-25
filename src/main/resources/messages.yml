@@ -249,8 +249,7 @@ compass:
     line-of-sight: "line of sight"
 
 # One color tag per role. Used directly in templates as {role-color-<role>}
-# and by code that builds colored role names. Legacy-format servers can set
-# &-codes here instead of the default MiniMessage hex tags.
+# and by code that builds colored role names.
 role-colors:
   speedrunner: "<#74de66>"
   hunter: "<#de666e>"
@@ -468,5 +467,5 @@ manhunt-gui:
   setup-first-title: "First-Time Setup"
   setup-first-line1: "JManhunt is not set up yet."
   setup-first-line2: "Start the interactive setup guide?"
-  setup-first-confirm: "Start setup"
-  setup-first-cancel: "Skip forever"
+  setup-first-confirm: "<green>Start setup"
+  setup-first-cancel: "<red>Skip forever (not recommended)"
