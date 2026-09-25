@@ -360,6 +360,22 @@ class ModifierStoreTest {
         assertEquals("Chaos 2", store.presetName("chaos-2"));
     }
 
+    @Test
+    void renameModifierFollowsPresetMembers() {
+        assertTrue(store.renameModifier("beef", "steak"));
+        assertTrue(store.modifierNames().contains("steak"));
+        assertFalse(store.modifierNames().contains("beef"));
+        assertEquals(List.of("steak", "bare"), store.presetMembers("mixed"));
+    }
+
+    @Test
+    void renameModifierRefusesTakenAndUnknown() {
+        assertFalse(store.renameModifier("beef", "bare"));
+        assertFalse(store.renameModifier("missing", "fresh"));
+        assertTrue(store.renameModifier("beef", "beef"));
+        assertEquals(List.of("beef", "bare"), store.presetMembers("mixed"));
+    }
+
     private static ModifiersConfig load(File source) throws Exception {
         ModifiersConfig loaded = ConfigManager.create(ModifiersConfig.class, it -> {
             // No SerdesBukkit: it probes Bukkit classes whose static init needs

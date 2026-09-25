@@ -393,7 +393,7 @@ public final class ModifierEditorMenus {
 
     private String submitInterval(String id, String raw) {
         if (raw == null) {
-            intervalPatch(id, null, deviationOf(id));
+            intervalPatch(id, null, null);
             return null;
         }
         ModifierFieldEdits.Parsed<Double> parsed =

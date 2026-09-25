@@ -370,7 +370,9 @@ public final class ModifierCreateArgs {
         private static Result checkEnum(String flag, String value, Set<String> valid) {
             if (!valid.contains(value.trim().toUpperCase(Locale.ROOT))) {
                 return Result.fail("modifiers.create-bad-enum",
-                        Map.of("flag", flag, "value", value, "valid", String.join("/", valid)));
+                        Map.of("flag", flag, "value", value, "valid",
+                                valid.stream().sorted().collect(
+                                        java.util.stream.Collectors.joining("/"))));
             }
             return null;
         }

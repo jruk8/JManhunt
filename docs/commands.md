@@ -236,8 +236,27 @@ The example modifier in the default config gives players food and applies
 different commands to hunters and speedrunners. `perma-night` is another
 example.
 
-When creating a modifier, copy the structure of an existing one. Currently
-only manual YAML file editing is supported for creation.
+Create new entries without touching YAML, from chat or the console.
+Values run until the next flag, so names and commands keep their
+spaces with no quoting needed:
+
+```text
+/manhunt modifiers create modifier Beef Party --trigger ON_START --player give <p> cooked_beef 8
+/manhunt modifiers create preset Chaos --member beef-party --member gear-dice
+```
+
+Modifier flags: `--desc`, `--item`, `--author`, repeatable
+`--trigger`, `--on-start`, `--interval`, `--deviation`,
+`--interval-scope`, `--chance`, `--chance-scope`, `--selection`,
+`--pick-count`, `--pick-scope`, `--delay`, and one repeatable flag per
+command list (`--console`, `--player`, `--hunter`, `--speedrunner`,
+`--console-cleanup`, `--player-cleanup`). Presets take `--desc`,
+`--item`, and repeatable `--member`. Scopes accept `PER_INVOKE` or
+`PER_EXECUTOR`; orders accept `IN_ORDER` or `PICK_RANDOM`. Invalid
+values are refused with an error, while unknown command tags only
+warn. The same creator lives in the GUI: a create button sits at the
+top-right of each list, and right-clicking any entry edits it (see
+[Creating Modifiers and Presets](configuration/modifiers.md#creating-modifiers-and-presets)).
 
 ### Full Reference
 

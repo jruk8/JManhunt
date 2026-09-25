@@ -333,6 +333,32 @@ The default `config.yml` ships more examples to copy from: `full-iron-kit`,
 weakness I on every hunter at match start), and `hunter-post-start-speed`
 (speed for hunters once the game actually begins).
 
+# Creating Modifiers and Presets
+
+Build entries in the GUI or inline from chat; both write the same
+`modifiers.yml` blocks that manual editing produces, and manual
+editing keeps working as before. Everything created this way starts
+disabled.
+
+In the GUI, a create button sits at the top-right of the modifiers
+and presets lists. It prompts for a display name (you become the
+author) and opens the new entry in its editor. Right-clicking any
+existing entry opens the same editor.
+
+The modifier editor covers every field: name, description, icon,
+author, the enabled toggle, trigger toggles, pre-start order, all
+timing and chance options, and every command list. The preset editor
+covers name, description, icon, and membership toggles. Both editors
+also export, rename the id, and delete after a confirm panel.
+Buttons that prompt for optional values treat a blank answer as
+clearing the field back to its default.
+
+Commands validate when you save them: unbalanced angle brackets,
+empty commands, and malformed `<random-num:>` or `<random-pick:>`
+arguments are refused with an error, while unknown tags and skipped
+pick items only warn. The command-line creator enforces the same
+rules; see [Modifiers](../commands.md#modifiers) for its flags.
+
 # Sharing Modifiers and Presets
 
 Export any modifier or preset to a share string: a click-to-copy chat
@@ -347,4 +373,5 @@ their checksum or schema check are refused without touching anything.
 ```
 
 The modifiers and presets menus carry an import loom in the
-bottom-left corner that prompts for the string.
+bottom-left corner that prompts for the string, and every editor has
+an export button that copies its own share string.

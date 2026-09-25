@@ -37,6 +37,18 @@ default. Buttons glow when the value differs from the default.
   to edit, right-click to delete after a confirm panel. Right-click
   the list entry itself to reset the whole list to defaults.
 
+## Modifier Creator
+
+The modifiers and presets lists carry a create button at the
+top-right. It prompts for a display name and opens the new entry in
+its editor; right-clicking any existing entry opens the same editor.
+Every field prompts or cycles in place: text and numbers through
+dialogs, triggers and members through toggle menus, command lines
+through an add/edit/delete list. Blank answers clear optional
+fields. Invalid commands and values are refused with a chat error
+and the fail sound; unknown command tags only warn. See
+[Creating Modifiers and Presets](configuration/modifiers.md#creating-modifiers-and-presets).
+
 ## Sounds
 
 Menu navigation clicks and write feedback come from `sounds.yml`

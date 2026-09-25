@@ -104,10 +104,9 @@ public final class ModifierStore {
     }
 
     /**
-     * Renames a modifier id, saving immediately. Member lists in
-     * presets are left untouched, so callers must warn that presets
-     * may break. False when the old id is unknown or the new id is
-     * taken.
+     * Renames a modifier id, saving immediately. Preset member lists
+     * follow the rename so presets keep pointing at the same entry.
+     * False when the old id is unknown or the new id is taken.
      */
     public boolean renameModifier(String oldId, String newId) {
         if (oldId.equals(newId)) {
@@ -119,6 +118,17 @@ public final class ModifierStore {
         }
         config.getModifiers().remove(oldId);
         config.getModifiers().put(newId, entry);
+        for (ModifierPreset preset : config.getPresets().values()) {
+            List<String> members = preset.getModifiers();
+            if (members == null) {
+                continue;
+            }
+            for (int index = 0; index < members.size(); index++) {
+                if (members.get(index).equals(oldId)) {
+                    members.set(index, newId);
+                }
+            }
+        }
         save();
         return true;
     }
