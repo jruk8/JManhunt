@@ -26,13 +26,15 @@ public final class CommandSyntax {
     }
 
     /**
-     * Engine tags in cheatsheet order. The single tag table: validation
-     * and the dialog cheatsheet both read from here, so a new tag can
-     * never validate but stay undocumented.
+     * Modifier engine tags in cheatsheet order. The single tag table:
+     * validation and the dialog cheatsheet both read from here, so a
+     * new tag can never validate but stay undocumented. Duration is
+     * compass-only (substituted by withDuration on that path alone),
+     * so it stays out and warns as unknown on modifiers.
      */
     public static List<String> knownTags() {
         return List.of("p", "random-mob", "random-item", "random-num",
-                "random-pick", "random-player", "all-players", "duration");
+                "random-pick", "random-player", "all-players");
     }
 
     /**

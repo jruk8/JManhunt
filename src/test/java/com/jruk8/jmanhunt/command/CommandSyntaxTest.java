@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.command;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -32,7 +33,14 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("give <p> <random-item>").isEmpty());
         assertTrue(CommandSyntax.error("summon <random-mob> ~ ~1 ~").isEmpty());
         assertTrue(CommandSyntax.error("tp <all-players:HUNTER> <p>").isEmpty());
-        assertTrue(CommandSyntax.error("effect give <p> speed <duration> 1").isEmpty());
+    }
+
+    @Test
+    void durationTagIsCompassOnly() {
+        String command = "effect give <p> speed <duration> 1";
+        assertTrue(CommandSyntax.error(command).isEmpty());
+        assertEquals(List.of("Unknown tag '<duration>', left untouched at runtime."),
+                CommandSyntax.warnings(command));
     }
 
     @Test

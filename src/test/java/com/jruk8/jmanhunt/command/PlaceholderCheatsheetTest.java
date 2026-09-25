@@ -27,4 +27,11 @@ class PlaceholderCheatsheetTest {
             assertTrue(line.contains("»"), line);
         }
     }
+
+    @Test
+    void omitsCompassOnlyDurationTag() {
+        for (String line : PlaceholderCheatsheet.lines()) {
+            assertTrue(!line.contains("duration"), line);
+        }
+    }
 }

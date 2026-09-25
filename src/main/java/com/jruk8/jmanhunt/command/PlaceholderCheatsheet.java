@@ -21,8 +21,7 @@ public final class PlaceholderCheatsheet {
             "random-pick", new String[]{"<random-pick:a,b>", "random entry from the list"},
             "random-player", new String[]{"<random-player>", "random participating player"},
             "all-players", new String[]{"<all-players>",
-                    "once per participating player (:ROLE filters)"},
-            "duration", new String[]{"<duration>", "delay in seconds"});
+                    "once per participating player (:ROLE filters)"});
 
     private PlaceholderCheatsheet() {
     }
