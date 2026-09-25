@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.MenuLayout;
+import com.jruk8.jmanhunt.gui.TwinPanel;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -70,28 +71,17 @@ public final class ModifierMenus {
      * gains a back button so Back returns to the embedding menu.
      */
     public Menu mainMenu(Supplier<Menu> parent) {
-        final Menu[] self = new Menu[1];
-        self[0] = new Menu(GuiTexts.title(messages, text("title-main", "Modifiers")),
-                MenuLayout.parse("#########", "###m#p###", "#########"),
-                () -> mainStatic(self[0], parent), List::of, parent);
-        return self[0];
-    }
-
-    private Map<Integer, MenuButton> mainStatic(Menu self, Supplier<Menu> parent) {
-        Map<Integer, MenuButton> fixed = new HashMap<>();
-        fixed.put(12, linkButton(Material.DIAMOND, "to-modifiers", "to-modifiers-lore",
-                "Modifiers", enabledModifiers(), store.modifierNames().size(),
-                () -> modifiersMenu(parent)));
-        fixed.put(14, linkButton(Material.FILLED_MAP, "to-presets", "to-presets-lore",
-                "Presets", enabledPresets(), store.presetNames().size(),
-                () -> presetsMenu(parent)));
-        if (parent != null) {
-            fixed.put(13, new MenuButton(Material.PAPER,
-                    GuiTexts.name(messages, text("back", "Back"), "Back"),
-                    null, false, false,
-                    player -> gui.back(player, self)));
-        }
-        return fixed;
+        return TwinPanel.menu(GuiTexts.title(messages, text("title-main", "Modifiers")),
+                linkButton(Material.DIAMOND, "to-modifiers", "to-modifiers-lore",
+                        "Modifiers", enabledModifiers(), store.modifierNames().size(),
+                        () -> modifiersMenu(parent)),
+                linkButton(Material.FILLED_MAP, "to-presets", "to-presets-lore",
+                        "Presets", enabledPresets(), store.presetNames().size(),
+                        () -> presetsMenu(parent)),
+                gui,
+                parent == null ? null
+                        : GuiTexts.name(messages, text("back", "Back"), "Back"),
+                parent);
     }
 
     /** 45-slot modifiers scroll list. */

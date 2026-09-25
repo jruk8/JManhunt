@@ -70,11 +70,39 @@ class PresetEditorMenusTest {
     }
 
     @Test
-    void editorLaysOutEveryField() {
+    void editorIsAQuadRoot() {
         Menu menu = editor.editor("pair", null);
 
         assertEquals(27, menu.layout().size());
         assertEquals(title("Edit Preset"), menu.title());
+
+        MenuButton meta = menu.buttonAt(10);
+        assertEquals(Material.NAME_TAG, meta.material());
+        assertEquals("Meta", textOf(meta.name()));
+        assertNotNull(meta.action());
+
+        MenuButton modifiers = menu.buttonAt(12);
+        assertEquals(Material.FILLED_MAP, modifiers.material());
+        assertEquals("Modifiers", textOf(modifiers.name()));
+        assertNotNull(modifiers.action());
+
+        MenuButton export = menu.buttonAt(14);
+        assertEquals(Material.LOOM, export.material());
+        assertNotNull(export.action());
+
+        MenuButton delete = menu.buttonAt(16);
+        assertEquals(Material.TNT, delete.material());
+        assertEquals("Delete Preset", textOf(delete.name()));
+        assertNotNull(delete.action());
+
+        assertEquals(Material.PAPER, menu.buttonAt(22).material());
+    }
+
+    @Test
+    void legacyEditorKeepsEveryField() {
+        Menu menu = editor.legacyEditor("pair", null);
+
+        assertEquals(27, menu.layout().size());
 
         MenuButton name = menu.buttonAt(1);
         assertEquals(Material.NAME_TAG, name.material());

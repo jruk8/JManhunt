@@ -10,6 +10,7 @@ import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.MenuLayout;
+import com.jruk8.jmanhunt.gui.QuadPanel;
 import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.gui.ScrollList;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
@@ -76,11 +77,9 @@ public final class ManhuntMenus {
 
     /** Settings menu with an explicit parent. */
     private Menu settingsMenu(Supplier<Menu> parent) {
-        final Menu[] self = new Menu[1];
-        self[0] = new Menu(title("title-settings", "Settings"),
-                MenuLayout.parse("#m#c#p#s#", "#########", "####b####"),
-                () -> settingsStatic(self), List::of, parent);
-        return self[0];
+        return QuadPanel.menu(title("title-settings", "Settings"),
+                categorySpecs(), gui,
+                GuiTexts.name(messages, text("back", "Back"), "Back"), parent);
     }
 
     /** Drill level for one settings section. */
@@ -350,21 +349,17 @@ public final class ManhuntMenus {
         return fixed;
     }
 
-    private Map<Integer, MenuButton> settingsStatic(Menu[] self) {
-        Map<Integer, MenuButton> fixed = new HashMap<>();
-        String[] categories = {"match", "compass", "players", "server"};
-        int[] slots = {1, 3, 5, 7};
-        for (int slot = 0; slot < categories.length; slot++) {
-            String category = categories[slot];
+    private List<MenuButton> categorySpecs() {
+        List<MenuButton> specs = new ArrayList<>();
+        for (String category : new String[]{"match", "compass", "players", "server"}) {
             String path = "settings." + category;
-            fixed.put(slots[slot], new MenuButton(guiData.categoryItem(category),
+            specs.add(new MenuButton(guiData.categoryItem(category),
                     GuiTexts.name(messages, SettingButtons.prettify(category),
                             SettingButtons.prettify(category)),
                     GuiTexts.lore(messages, sectionLines(path)),
                     false, false, open(() -> sectionMenu(path, this::settingsMenu))));
         }
-        fixed.put(22, backButton(self));
-        return fixed;
+        return specs;
     }
 
     /**

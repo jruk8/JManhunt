@@ -7,6 +7,7 @@ import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.MenuLayout;
+import com.jruk8.jmanhunt.gui.QuadPanel;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -95,8 +96,62 @@ public final class ModifierEditorMenus {
                 () -> gui.navigate(player, listMenu.get()));
     }
 
-    /** 45-slot editor for one modifier. */
+    /** Quad root for one modifier: Meta, Behavior, Export, Delete. */
     public Menu editor(String id, Supplier<Menu> parent) {
+        final Menu[] self = new Menu[1];
+        self[0] = QuadPanel.menu(
+                GuiTexts.title(messages, text("editor-title-modifier", "Edit Modifier")),
+                List.of(
+                        EditorButtons.actionButton(messages, Material.NAME_TAG,
+                                text("meta-title", "Meta"),
+                                List.of(text("meta-lore", "Name, description, icon, author"),
+                                        text("editor-click-open", "Click to open")),
+                                player -> {
+                                    if (denied(player)) {
+                                        return;
+                                    }
+                                    gui.navigate(player, legacyEditor(id, parent));
+                                }),
+                        EditorButtons.actionButton(messages, Material.SCULK_SENSOR,
+                                text("behavior-title", "Behavior"),
+                                List.of(text("behavior-lore", "Triggers, options, commands"),
+                                        text("editor-click-open", "Click to open")),
+                                player -> {
+                                    if (denied(player)) {
+                                        return;
+                                    }
+                                    gui.navigate(player, detail.triggersMenu(id,
+                                            () -> self[0]));
+                                }),
+                        EditorButtons.actionButton(messages, Material.LOOM,
+                                text("editor-export", "Export"),
+                                List.of(text("editor-export-lore", "Copy a share string"),
+                                        text("editor-click-copy", "Click to copy")),
+                                player -> commands.exportEntry(player, "modifier", id)).silent(),
+                        EditorButtons.actionButton(messages, Material.TNT,
+                                text("editor-delete-modifier", "Delete Modifier"),
+                                List.of(text("editor-delete-lore",
+                                                "Removes this modifier forever"),
+                                        text("editor-click-delete", "Click to delete")),
+                                player -> {
+                                    if (denied(player)) {
+                                        return;
+                                    }
+                                    deleteConfirm(player, id, parent);
+                                })),
+                gui,
+                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                parent);
+        return self[0];
+    }
+
+    /**
+     * Phase 3 placeholder: the previous 45-slot editor, kept as the Meta
+     * target until Phases 4 and 5 build the Meta quad and Behavior twin.
+     * Back and delete return to the passed parent (the modifier list),
+     * like the old editor did.
+     */
+    Menu legacyEditor(String id, Supplier<Menu> parent) {
         MenuLayout layout = MenuLayout.parse(
                 "#########", "#########", "#########", "#########", "#########");
         final Menu[] self = new Menu[1];
@@ -176,7 +231,7 @@ public final class ModifierEditorMenus {
                     if (denied(player)) {
                         return;
                     }
-                    gui.navigate(player, detail.triggersMenu(id, () -> editor(id, self.parent())));
+                    gui.navigate(player, detail.triggersMenu(id, () -> legacyEditor(id, self.parent())));
                 }));
         fixed.put(16, fieldButton(Material.HOPPER, "Pre-start order",
                 orDefault(store.preStartOrder(id), "IN_ORDER"),
@@ -278,7 +333,7 @@ public final class ModifierEditorMenus {
                     if (denied(player)) {
                         return;
                     }
-                    gui.navigate(player, detail.commandsMenu(id, () -> editor(id, self.parent())));
+                    gui.navigate(player, detail.commandsMenu(id, () -> legacyEditor(id, self.parent())));
                 }));
         fixed.put(38, EditorButtons.actionButton(messages, Material.LOOM,
                 text("editor-export", "Export"),
@@ -324,7 +379,7 @@ public final class ModifierEditorMenus {
                     messages.message(player, "modifiers.edit-renamed",
                             Map.of("name", store.metaName(parsed.value())));
                     sounds.playNeutralSound(player);
-                    gui.navigate(player, editor(parsed.value(), self.parent()));
+                    gui.navigate(player, legacyEditor(parsed.value(), self.parent()));
                 },
                 () -> gui.navigate(player, self));
     }

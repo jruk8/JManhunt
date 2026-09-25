@@ -7,6 +7,7 @@ import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.MenuLayout;
+import com.jruk8.jmanhunt.gui.QuadPanel;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -80,8 +81,62 @@ public final class PresetEditorMenus {
                 () -> gui.navigate(player, listMenu.get()));
     }
 
-    /** 27-slot editor for one preset. */
+    /** Quad root for one preset: Meta, Modifiers, Export, Delete. */
     public Menu editor(String id, Supplier<Menu> parent) {
+        final Menu[] self = new Menu[1];
+        self[0] = QuadPanel.menu(
+                GuiTexts.title(messages, text("editor-title-preset", "Edit Preset")),
+                List.of(
+                        EditorButtons.actionButton(messages, Material.NAME_TAG,
+                                text("meta-title", "Meta"),
+                                List.of(text("meta-lore", "Name, description, icon, author"),
+                                        text("editor-click-open", "Click to open")),
+                                player -> {
+                                    if (denied(player)) {
+                                        return;
+                                    }
+                                    gui.navigate(player, legacyEditor(id, parent));
+                                }),
+                        EditorButtons.actionButton(messages, Material.FILLED_MAP,
+                                text("modifiers-title", "Modifiers"),
+                                List.of(text("members-lore", "{total} members").replace("{total}",
+                                                String.valueOf(store.presetMembers(id).size())),
+                                        text("editor-click-open", "Click to open")),
+                                player -> {
+                                    if (denied(player)) {
+                                        return;
+                                    }
+                                    gui.navigate(player,
+                                            membersMenu(id, () -> self[0]));
+                                }),
+                        EditorButtons.actionButton(messages, Material.LOOM,
+                                text("editor-export", "Export"),
+                                List.of(text("editor-export-lore", "Copy a share string"),
+                                        text("editor-click-copy", "Click to copy")),
+                                player -> commands.exportEntry(player, "preset", id)).silent(),
+                        EditorButtons.actionButton(messages, Material.TNT,
+                                text("editor-delete-preset", "Delete Preset"),
+                                List.of(text("editor-delete-preset-lore",
+                                                "Removes this preset forever"),
+                                        text("editor-click-delete", "Click to delete")),
+                                player -> {
+                                    if (denied(player)) {
+                                        return;
+                                    }
+                                    deleteConfirm(player, id, parent);
+                                })),
+                gui,
+                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                parent);
+        return self[0];
+    }
+
+    /**
+     * Phase 3 placeholder: the previous full editor, kept as the Meta
+     * target until Phase 4 builds the Meta quad. Back and delete return
+     * to the passed parent (the preset list), like the old editor did.
+     */
+    Menu legacyEditor(String id, Supplier<Menu> parent) {
         MenuLayout layout = MenuLayout.parse("#########", "#########", "#########");
         final Menu[] self = new Menu[1];
         self[0] = new Menu(GuiTexts.title(messages, text("editor-title-preset", "Edit Preset")),
@@ -142,7 +197,7 @@ public final class PresetEditorMenus {
                     if (denied(player)) {
                         return;
                     }
-                    gui.navigate(player, membersMenu(id, () -> editor(id, self.parent())));
+                    gui.navigate(player, membersMenu(id, () -> legacyEditor(id, self.parent())));
                 }));
     }
 
@@ -243,7 +298,7 @@ public final class PresetEditorMenus {
                     messages.message(player, "modifiers.edit-renamed",
                             Map.of("name", store.presetName(parsed.value())));
                     sounds.playNeutralSound(player);
-                    gui.navigate(player, editor(parsed.value(), self.parent()));
+                    gui.navigate(player, legacyEditor(parsed.value(), self.parent()));
                 },
                 () -> gui.navigate(player, self));
     }

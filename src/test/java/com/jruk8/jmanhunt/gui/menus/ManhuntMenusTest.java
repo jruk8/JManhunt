@@ -105,10 +105,10 @@ class ManhuntMenusTest {
     void settingsMenuHasFourCategoriesAndBack() {
         Menu settings = menus.settingsMenu();
 
-        assertLink(settings, 1, Material.CLOCK);
-        assertLink(settings, 3, Material.CLOCK);
-        assertLink(settings, 5, Material.CLOCK);
-        assertLink(settings, 7, Material.CLOCK);
+        assertLink(settings, 10, Material.CLOCK);
+        assertLink(settings, 12, Material.CLOCK);
+        assertLink(settings, 14, Material.CLOCK);
+        assertLink(settings, 16, Material.CLOCK);
         assertLink(settings, 22, Material.PAPER);
         assertNotNull(settings.parent());
     }

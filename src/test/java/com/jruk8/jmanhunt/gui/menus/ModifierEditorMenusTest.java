@@ -93,11 +93,40 @@ class ModifierEditorMenusTest {
     }
 
     @Test
-    void editorLaysOutEveryField() {
+    void editorIsAQuadRoot() {
         Menu menu = editor.editor("zebra", null);
 
-        assertEquals(45, menu.layout().size());
+        assertEquals(27, menu.layout().size());
         assertEquals(title("Edit Modifier"), menu.title());
+
+        MenuButton meta = menu.buttonAt(10);
+        assertEquals(Material.NAME_TAG, meta.material());
+        assertEquals("Meta", textOf(meta.name()));
+        assertNotNull(meta.action());
+
+        MenuButton behavior = menu.buttonAt(12);
+        assertEquals(Material.SCULK_SENSOR, behavior.material());
+        assertEquals("Behavior", textOf(behavior.name()));
+        assertNotNull(behavior.action());
+
+        MenuButton export = menu.buttonAt(14);
+        assertEquals(Material.LOOM, export.material());
+        assertNotNull(export.action());
+
+        MenuButton delete = menu.buttonAt(16);
+        assertEquals(Material.TNT, delete.material());
+        assertNotNull(delete.action());
+
+        assertEquals(Material.PAPER, menu.buttonAt(22).material());
+        assertNull(menu.buttonAt(0));
+        assertNull(menu.buttonAt(9));
+    }
+
+    @Test
+    void legacyEditorKeepsEveryField() {
+        Menu menu = editor.legacyEditor("zebra", null);
+
+        assertEquals(45, menu.layout().size());
 
         MenuButton name = menu.buttonAt(1);
         assertEquals(Material.NAME_TAG, name.material());
@@ -133,7 +162,7 @@ class ModifierEditorMenusTest {
 
     @Test
     void editorToleratesUnknownIdsAsUnset() {
-        Menu menu = editor.editor("ghost", null);
+        Menu menu = editor.legacyEditor("ghost", null);
 
         assertEquals(plain("Current: Not set", NamedTextColor.GRAY),
                 menu.buttonAt(20).lore().get(0));
