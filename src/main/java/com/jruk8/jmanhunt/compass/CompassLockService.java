@@ -3,7 +3,10 @@ package com.jruk8.jmanhunt.compass;
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
+import com.jruk8.jmanhunt.command.PlaceholderResolver;
 import com.jruk8.jmanhunt.command.StatValues;
+import com.jruk8.jmanhunt.command.TagBackends;
+import com.jruk8.jmanhunt.core.PlaceholderPass;
 import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
@@ -299,10 +302,7 @@ final class CompassLockService {
             return;
         }
         double delaySeconds = effectiveDelaySeconds;
-        List<String> commands = new ArrayList<>(plugin.configService()
-                .getStringList("settings.compass.analyze.debuffs.commands.player"));
-        commands.addAll(plugin.configService().getStringList(
-                "settings.compass.analyze.debuffs.commands." + holderRole.name().toLowerCase(Locale.ROOT)));
+        List<String> commands = debuffCommands(holderRole);
         Location location = holder.getLocation();
         TagContext context = debuffContext(holder);
         for (String command : commands) {
@@ -317,6 +317,7 @@ final class CompassLockService {
                 String parsed = CommandPlaceholders.replace(
                         CommandPlaceholders.withDuration(command, delaySeconds),
                         holder.getName(), location.getX(), location.getY(), location.getZ(), context);
+                parsed = context.placeholders().resolve(parsed, holder.getName());
                 if (TagExpressions.isExit(parsed)) {
                     return;
                 }
@@ -336,6 +337,15 @@ final class CompassLockService {
         }
     }
 
+    /** Shared player debuffs plus the holder's own role list. */
+    private List<String> debuffCommands(Role holderRole) {
+        List<String> commands = new ArrayList<>(plugin.configService()
+                .getStringList("settings.compass.analyze.debuffs.commands.player"));
+        commands.addAll(plugin.configService().getStringList(
+                "settings.compass.analyze.debuffs.commands." + holderRole.name().toLowerCase(Locale.ROOT)));
+        return commands;
+    }
+
     /** Tag context for one debuff run: {@code <id>} is {@code debuffs}. */
     private TagContext debuffContext(Player holder) {
         ModifierTagScope scope = ModifierTagScope.executor(holder.getName(), plugin.logger()::warning);
@@ -344,6 +354,10 @@ final class CompassLockService {
                         .orElse(TagContext.NO_MATCH);
         StatValues stats = game == null ? StatValues.inert() : game.matchStatValues(matchId);
         FlagStore flags = game == null ? new FlagStore() : game.flagStore();
+        PlaceholderResolver placeholderPass = plugin.placeholderValues() == null
+                ? PlaceholderResolver.inert()
+                : new PlaceholderPass(plugin.placeholderValues());
+        TagBackends backends = new TagBackends(stats, flags, placeholderPass);
         return TagContext.run(scope, "debuffs",
                 text -> messages.broadcastText(formatEngineMessage(text)),
                 text -> messages.sendText(holder, formatEngineMessage(text)),
@@ -355,7 +369,7 @@ final class CompassLockService {
                     }
                     sounds.playCustomSound(holder, soundId, pitch, volume);
                 },
-                matchId, stats, flags);
+                matchId, backends);
     }
 
     private String formatEngineMessage(String text) {

@@ -177,6 +177,9 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <gflag:phase,one> done").isEmpty());
         assertTrue(CommandSyntax.error("say <pflag:\"cooldown\",732> done").isEmpty());
         assertTrue(CommandSyntax.error("say <lflag:x> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <placeholder:jmanhunt_game_kills_this_session> done")
+                .isEmpty());
+        assertTrue(CommandSyntax.error("say <placeholder:\"some_key\"> done").isEmpty());
     }
 
     @Test
@@ -190,6 +193,8 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <gflag:> done").isPresent());
         assertTrue(CommandSyntax.error("say <gflag:a,b,c> done").isPresent());
         assertTrue(CommandSyntax.error("say <pflag:\"  \",1> done").isPresent());
+        assertTrue(CommandSyntax.error("say <placeholder:a,b> done").isPresent());
+        assertTrue(CommandSyntax.error("say <placeholder:> done").isPresent());
     }
 
     @Test

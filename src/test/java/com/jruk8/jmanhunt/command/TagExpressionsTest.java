@@ -101,6 +101,13 @@ class TagExpressionsTest {
     }
 
     @Test
+    void spacedEqualsSurvivesLaterClosingBracket() {
+        assertTrue(TagExpressions.hasComparison(
+                "<pstat:<p>,health> <= 7 and <gstat:duration>-<pflag:x> ?? 999999 > 300"));
+        assertTrue(TagExpressions.hasComparison("7 <= 5 or a > b"));
+    }
+
+    @Test
     void ifCoalesceExampleFromGappleShape() {
         Fixture fixture = new Fixture();
         assertEquals("n", replace(fixture,

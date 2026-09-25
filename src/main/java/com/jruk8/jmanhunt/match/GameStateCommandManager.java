@@ -2,8 +2,10 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
+import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.command.TagExpressions;
+import com.jruk8.jmanhunt.core.PlaceholderPass;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -489,7 +491,8 @@ public final class GameStateCommandManager {
                         scope.warn("Tag <psound> needs an executor player: skipped in '" + name + "'.");
                     }
                 },
-                matchId, game.matchStatValues(matchId), game.flagStore());
+                matchId, new TagBackends(game.matchStatValues(matchId), game.flagStore(),
+                        new PlaceholderPass(plugin.placeholderValues())));
     }
 
     private String formatEngineMessage(String text) {
@@ -659,6 +662,9 @@ public final class GameStateCommandManager {
                 double z = player != null ? player.getLocation().getZ() : 0.0;
                 for (String expanded : CommandPlaceholders.expandAllPlayers(command, context.scope())) {
                     String parsed = CommandPlaceholders.replace(expanded, playerName, x, y, z, context);
+                    if (playerName != null) {
+                        parsed = context.placeholders().resolve(parsed, playerName);
+                    }
                     if (TagExpressions.isExit(parsed)) {
                         return;
                     }

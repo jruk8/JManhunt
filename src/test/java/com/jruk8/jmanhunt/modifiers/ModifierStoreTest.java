@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.modifiers;
 
+import com.jruk8.jmanhunt.command.CommandSyntax;
 import com.jruk8.jmanhunt.modifiers.config.ModifierCommandsPack;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
@@ -279,7 +280,7 @@ class ModifierStoreTest {
         }
 
         var modifiers = bundled.getConfigurationSection("modifiers");
-        assertEquals(17, modifiers.getKeys(false).size());
+        assertEquals(19, modifiers.getKeys(false).size());
         for (String name : modifiers.getKeys(false)) {
             var section = modifiers.getConfigurationSection(name);
             assertTrue(section.contains("enabled"), name);
@@ -313,7 +314,7 @@ class ModifierStoreTest {
         }
         ModifierStore bundled = new ModifierStore(load(bundledFile), Logger.getAnonymousLogger());
 
-        assertEquals(17, bundled.modifierNames().size());
+        assertEquals(19, bundled.modifierNames().size());
         assertEquals(3, bundled.presetNames().size());
         assertEquals("PICK_RANDOM", bundled.selection("gear-dice"));
         assertEquals(15.0, bundled.intervalSeconds("gear-dice"));
@@ -323,6 +324,36 @@ class ModifierStoreTest {
         assertEquals("AFTER", bundled.preStartOrder("hunter-start-debuffs"));
         assertEquals(3, bundled.presetMembers("chaos-mode").size());
         assertEquals(Material.TNT, bundled.presetItem("chaos-mode"));
+    }
+
+    @Test
+    void bundledCommandsPassSyntaxValidation() throws Exception {
+        YamlConfiguration bundled;
+        try (InputStream stream = Objects.requireNonNull(
+                getClass().getClassLoader().getResourceAsStream("modifiers.yml"),
+                "missing test resource: modifiers.yml")) {
+            bundled = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8));
+        }
+
+        var modifiers = bundled.getConfigurationSection("modifiers");
+        int checked = 0;
+        for (String name : modifiers.getKeys(false)) {
+            var commands = modifiers.getConfigurationSection(name)
+                    .getConfigurationSection("behavior").getConfigurationSection("commands");
+            if (commands == null) {
+                continue;
+            }
+            for (String list : commands.getKeys(false)) {
+                for (String line : commands.getStringList(list)) {
+                    assertTrue(CommandSyntax.error(line).isEmpty(),
+                            name + "/" + list + ": " + line + " -> "
+                                    + CommandSyntax.error(line).orElse(""));
+                    checked++;
+                }
+            }
+        }
+        assertTrue(checked > 20, "expected bundled command lines, found none");
     }
 
     @Test

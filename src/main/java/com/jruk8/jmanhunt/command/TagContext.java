@@ -27,14 +27,13 @@ public final class TagContext {
     private final SoundSink globalSound;
     private final SoundSink playerSound;
     private final long matchId;
-    private final StatValues statValues;
-    private final FlagStore flagStore;
+    private final TagBackends backends;
     private final Map<String, String> localFlags;
 
     private TagContext(ModifierTagScope scope, String containerId,
             Consumer<String> globalMessage, Consumer<String> playerMessage,
             SoundSink globalSound, SoundSink playerSound,
-            long matchId, StatValues statValues, FlagStore flagStore,
+            long matchId, TagBackends backends,
             Map<String, String> localFlags) {
         this.scope = scope;
         this.containerId = containerId;
@@ -43,22 +42,21 @@ public final class TagContext {
         this.globalSound = globalSound;
         this.playerSound = playerSound;
         this.matchId = matchId;
-        this.statValues = statValues;
-        this.flagStore = flagStore;
+        this.backends = backends;
         this.localFlags = localFlags;
     }
 
     /**
      * Full run context for one modifier or debuff dispatch: match id
-     * (or {@link #NO_MATCH}), shared stat and flag backends, and a
-     * fresh {@code <lflag>} map that dies with the run.
+     * (or {@link #NO_MATCH}), shared backends, and a fresh
+     * {@code <lflag>} map that dies with the run.
      */
     public static TagContext run(ModifierTagScope scope, String containerId,
             Consumer<String> globalMessage, Consumer<String> playerMessage,
             SoundSink globalSound, SoundSink playerSound,
-            long matchId, StatValues statValues, FlagStore flagStore) {
+            long matchId, TagBackends backends) {
         return new TagContext(scope, containerId, globalMessage, playerMessage,
-                globalSound, playerSound, matchId, statValues, flagStore, new HashMap<>());
+                globalSound, playerSound, matchId, backends, new HashMap<>());
     }
 
     /** Full context for one modifier or debuff dispatch. */
@@ -66,15 +64,14 @@ public final class TagContext {
             Consumer<String> globalMessage, Consumer<String> playerMessage,
             SoundSink globalSound, SoundSink playerSound) {
         return new TagContext(scope, containerId, globalMessage, playerMessage,
-                globalSound, playerSound, NO_MATCH, StatValues.inert(), new FlagStore(),
-                new HashMap<>());
+                globalSound, playerSound, NO_MATCH, TagBackends.inert(), new HashMap<>());
     }
 
     /** Inert context for scope-only callers: empty id, silent sinks. */
     public static TagContext inert(ModifierTagScope scope) {
         return new TagContext(scope, "", text -> { }, text -> { },
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                NO_MATCH, StatValues.inert(), new FlagStore(), new HashMap<>());
+                NO_MATCH, TagBackends.inert(), new HashMap<>());
     }
 
     public ModifierTagScope scope() {
@@ -92,12 +89,17 @@ public final class TagContext {
 
     /** Stat values behind {@code <pstat>} and {@code <gstat>}. */
     public StatValues statValues() {
-        return statValues;
+        return backends.stats();
     }
 
     /** Shared store behind {@code <gflag>} and {@code <pflag>}. */
     public FlagStore flagStore() {
-        return flagStore;
+        return backends.flags();
+    }
+
+    /** Placeholder expansion behind raw spans and {@code <placeholder>}. */
+    public PlaceholderResolver placeholders() {
+        return backends.placeholders();
     }
 
     /** This run's {@code <lflag>} map, discarded after dispatch. */

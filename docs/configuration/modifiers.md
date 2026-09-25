@@ -264,6 +264,7 @@ creator editor validates them as you type:
 | `<pmessage:yo>` | Sends `yo` to the executing player only. |
 | `<gsound:block.stone.break>` | Plays the sound for every participant. |
 | `<psound:block.stone.break,0.5,2>` | Plays the sound for the executing player, with pitch `0.5` and volume `2` (both default to `1`). |
+| `<placeholder:jmanhunt_game_kills_this_session>` | Same placeholder as a tag, so math and conditions can use it. |
 
 `<min>`, `<max>`, and `<clamp>` accept math in their arguments
 (`<min:8+5,10>` is `10`) and yield `0` with a console warning when an
@@ -332,6 +333,20 @@ Flags are modifier-agnostic on purpose: any modifier can read what
 another wrote. For a strictly private flag, namespace the name with
 `<id>`: `lastuse-<id>` can only collide with itself. Flags live in
 memory: a reload or restart wipes them.
+
+### Placeholders
+
+After tags and math resolve, raw `%...%` spans expand through
+PlaceholderAPI when it is installed (any expansion works, including
+`%jmanhunt_game_kills_this_session%`), or in-house for `%jmanhunt_*%`
+spans when it is not. `<placeholder:key>` is the same lookup as a
+tag, which matters inside math: `<clamp:<placeholder:x>-1, 0, 9>`
+computes on the number, while a raw span would only expand after
+math ran.
+
+Placeholders need an executor player, so console lists skip the raw
+pass silently; the tag form warns without an executor instead.
+Unknown keys stay verbatim.
 
 ### Stopping a list
 
@@ -424,8 +439,33 @@ The default `config.yml` ships more examples to copy from: `full-iron-kit`,
 `speedrunner-health-advantage`, `random-mob-spawner`, `random-item-giver`,
 `random-start-resources`, `gear-dice`, `regen-on-kill`, `diamond-on-advancement`,
 `fireres-on-nether-enter`, `hunter-start-debuffs` (slowness II plus
-weakness I on every hunter at match start), and `hunter-post-start-speed`
-(speed for hunters once the game actually begins).
+weakness I on every hunter at match start), `hunter-post-start-speed`
+(speed for hunters once the game actually begins), `get-stronger-on-kill`,
+and `speedrunner-gapple-on-low-hp`.
+
+### Get Stronger On Kill
+
+Runs on every kill and every respawn. Each kill raises the killer's
+session kill counter first, so the player list reads a fresh number:
+
+1. `<lflag:amplifier, <clamp:<placeholder:jmanhunt_game_kills_this_session>-1, 0, 9>>`
+   stashes session kills minus one (first kill is amplifier 0) for the run.
+2. `health_boost` with that amplifier grants two extra hearts per level,
+   permanently until cleanup.
+3. `instant_health` with the same amplifier heals on the spot.
+4. `saturation` with a hunger-based amplifier feeds as well.
+
+Death wipes effects, so the respawn trigger re-applies the same stack
+from the still-current session counter. The player cleanup clears all
+three effects at match end.
+
+### Gapple On Low HP
+
+Runs every 3 seconds for speedrunners. The first line gives a golden
+apple when health is at most 7 and more than 300 seconds passed since
+the last give; otherwise it exits, which skips the second line while
+cooling down. The second line stamps the give time into a per-player
+flag. Runners who never got one are treated as due.
 
 # Creating Modifiers and Presets
 

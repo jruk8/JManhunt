@@ -39,7 +39,7 @@ class TagStatsFlagsTest {
                     warnings::add);
             return TagContext.run(scope, "gear-dice", warnings::add, warnings::add,
                     (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    matchId, backend, flags);
+                    matchId, new TagBackends(backend, flags, (text, name) -> text));
         }
 
         String replace(String command, String executor, long matchId) {
@@ -170,6 +170,28 @@ class TagStatsFlagsTest {
         assertEquals("", fixture.replace("<gflag:x,<min:8,3>>"));
         assertEquals("3", fixture.replace("<gflag:x>"));
         assertEquals("null", fixture.replace("<gflag:y>"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void gappleCooldownShapeGivesOnlyAfterFiveMinutes() {
+        Fixture fixture = new Fixture();
+        fixture.playerValues.put("Steve|health", "5");
+        fixture.globalValues.put("duration", "732");
+        String check = "<if:\"<pstat:<p>,health> <= 7"
+                + " and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 > 300\","
+                + "\"give <p> golden_apple\",\"exit\">";
+        assertEquals("give Steve golden_apple", fixture.replace(check));
+
+        assertEquals("", fixture.replace("<pflag:lastuse-<id>,<gstat:duration>>"));
+        fixture.globalValues.put("duration", "735");
+        assertEquals("exit", fixture.replace(check));
+
+        fixture.globalValues.put("duration", "1033");
+        assertEquals("give Steve golden_apple", fixture.replace(check));
+
+        fixture.playerValues.put("Steve|health", "8");
+        assertEquals("exit", fixture.replace(check));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }
 

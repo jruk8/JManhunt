@@ -41,7 +41,9 @@ public final class PlaceholderCheatsheet {
             Map.entry("pflag",
                     new String[]{"<pflag:name,value>", "executor flag, get when no value"}),
             Map.entry("lflag",
-                    new String[]{"<lflag:name,value>", "run-local flag, get when no value"}));
+                    new String[]{"<lflag:name,value>", "run-local flag, get when no value"}),
+            Map.entry("placeholder",
+                    new String[]{"<placeholder:key>", "placeholder alias, same as %key%"}));
 
     private PlaceholderCheatsheet() {
     }

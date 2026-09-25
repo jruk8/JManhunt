@@ -36,7 +36,7 @@ public final class CommandSyntax {
         return List.of("p", "random-mob", "random-item", "random-num",
                 "random-pick", "random-player", "all-players", "id", "min",
                 "max", "clamp", "if", "gmessage", "pmessage", "gsound", "psound",
-                "pstat", "gstat", "gflag", "pflag", "lflag");
+                "pstat", "gstat", "gflag", "pflag", "lflag", "placeholder");
     }
 
     /**
@@ -221,6 +221,7 @@ public final class CommandSyntax {
             case "pstat" -> statError(name, args, 1, TagStats.PSTAT_KEYS);
             case "gstat" -> statError(name, args, 0, TagStats.GSTAT_KEYS);
             case "gflag", "pflag", "lflag" -> flagError(name, args);
+            case "placeholder" -> arityError(name, args, 1, "one key");
             default -> Optional.empty();
         };
     }

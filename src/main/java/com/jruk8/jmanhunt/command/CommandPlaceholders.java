@@ -400,6 +400,7 @@ public final class CommandPlaceholders {
             case "gflag" -> TagFlags.global(tag, args, context);
             case "pflag" -> TagFlags.player(tag, args, context);
             case "lflag" -> TagFlags.local(tag, args, context);
+            case "placeholder" -> TagPlaceholders.resolve(tag, args, context);
             case "min", "max", "clamp" -> TagExpressions.minMaxClamp(tag, name, args, context);
             case "if" -> TagExpressions.ifEval(tag, args, context);
             case "gmessage", "pmessage" -> TagExpressions.message(tag, name, args, context);

@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.compass.CompassProtectionListener;
 import com.jruk8.jmanhunt.core.BukkitDebugSink;
 import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.core.JManhuntExpansion;
+import com.jruk8.jmanhunt.core.JManhuntPlaceholders;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.core.MetricsBootstrap;
 import com.jruk8.jmanhunt.core.StartupBanner;
@@ -73,7 +74,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int MODIFIERS_VERSION = 1;
+    private static final int MODIFIERS_VERSION = 2;
     private MessageService messages;
     private MessagesRegistrar messageConfigs;
     private SoundService sounds;
@@ -84,6 +85,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private StatisticsRepository statistics;
     private EngineStateRepository engineState;
     private JManhuntExpansion expansion;
+    private JManhuntPlaceholders placeholderValues;
     private ConfigRegistrar configRegistrar;
     private ConfigService configService;
     private ModifierStore modifierStore;
@@ -255,6 +257,8 @@ public final class JManhuntPlugin extends JavaPlugin {
     }
 
     private void setupPlaceholderApi() {
+        placeholderValues = new JManhuntPlaceholders(stats, messages, game, playerStates,
+                winConditionEngine, placeholderConfigs.getPlaceholderConfig(), configService);
         if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
             expansion = new JManhuntExpansion(this, stats, messages, game, playerStates,
                     winConditionEngine, placeholderConfigs.getPlaceholderConfig());
@@ -424,6 +428,11 @@ public final class JManhuntPlugin extends JavaPlugin {
     /** Match and lifetime statistics. */
     public StatsManager stats() {
         return stats;
+    }
+
+    /** In-house `%jmanhunt_*%` values, with or without PlaceholderAPI. */
+    public JManhuntPlaceholders placeholderValues() {
+        return placeholderValues;
     }
 
     /** Internal GUI data: category items plus setting descriptions. */

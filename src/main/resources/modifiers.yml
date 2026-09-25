@@ -6,7 +6,7 @@
 # All commands run when the match starts (or on interval if configured),
 # except console-cleanup and player-cleanup which run when the match ends.
 # Need help writing commands? Generate up-to-date ones at https://mcstacker.net/
-modifiers-version: 1
+modifiers-version: 2
 modifiers:
   # Gives every participating player eight steaks when the match starts.
   everyone-gets-beef:
@@ -341,6 +341,51 @@ modifiers:
         player:
           - "give <p> sponge 24"
           - "give <p> golden_hoe 1"
+  # Two new permanent hearts on every kill (plus a heal and a feed),
+  # stacking up to ten extra hearts. Cleanup removes the effects.
+  get-stronger-on-kill:
+    enabled: false
+    meta:
+      name: "Get Stronger On Kill"
+      description: "Gain two new permanent hearts on every kill."
+      item: NETHERITE_SWORD
+      author: JManhunt
+    behavior:
+      runs-on:
+        - ON_EVERY_KILL
+        - ON_RESPAWN
+      commands:
+        player:
+          # Session kills so far, minus one, clamped to 0-9: the effect
+          # amplifier for this kill. Needs an executor, like all placeholders.
+          - "<lflag:amplifier, <clamp:<placeholder:jmanhunt_game_kills_this_session>-1, 0, 9>>"
+          - "effect give <p> minecraft:health_boost infinite <lflag:amplifier> true"
+          - "effect give <p> minecraft:instant_health 1 <lflag:amplifier> true"
+          # Saturation amplifier follows hunger minus one, clamped to 0-19.
+          - "effect give <p> minecraft:saturation 1 <clamp:<pstat:<p>,hunger>-1, 0, 19> true"
+        player-cleanup:
+          - "effect clear <p> minecraft:health_boost"
+          - "effect clear <p> minecraft:instant_health"
+          - "effect clear <p> minecraft:saturation"
+  # A golden apple for weak speedrunners, at most every five minutes.
+  # The flag stamps the last give; exit skips the rest while cooling down.
+  speedrunner-gapple-on-low-hp:
+    enabled: false
+    meta:
+      name: "Gapple On Low HP"
+      description: "A golden apple at low health, at most every 5 minutes"
+      item: GOLDEN_APPLE
+      author: JManhunt
+    behavior:
+      runs-on:
+        - INTERVAL
+      options:
+        interval-settings:
+          interval: 3
+      commands:
+        speedrunner:
+          - '<if:"<pstat:<p>,health> <= 7 and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 > 300","give <p> golden_apple","exit">'
+          - "<pflag:lastuse-<id>,<gstat:duration>>"
 
 # Named groups of modifiers. A preset has no state of its own: it reads
 # as on when every modifier inside is enabled, and toggling it flips

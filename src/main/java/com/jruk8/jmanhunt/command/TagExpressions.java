@@ -156,16 +156,32 @@ public final class TagExpressions {
 
     /**
      * Closing {@code >} of the nested tag opening at {@code index},
-     * or null when the bracket is a comparison (spaced or
-     * unbalanced). Tag names start at once; a space after
-     * {@code <} always means a comparison.
+     * or null when the bracket is a comparison. A space after
+     * {@code <} always means a comparison, as does a spaced
+     * {@code <=} (checked before the balance scan so a later
+     * {@code >} cannot swallow the operator); anything else must
+     * start with a tag-name letter to qualify for the skip.
      */
     private static Integer nestedTagClose(String part, int index) {
         if (part.charAt(index) != '<' || index + 1 >= part.length()
                 || Character.isWhitespace(part.charAt(index + 1))) {
             return null;
         }
+        if (isSpacedEquals(part, index) || !Character.isLetter(part.charAt(index + 1))) {
+            return null;
+        }
         return spanEnd(part, index);
+    }
+
+    /** True for {@code <=} with a space (or edge) on both sides. */
+    private static boolean isSpacedEquals(String part, int index) {
+        if (part.charAt(index + 1) != '=') {
+            return false;
+        }
+        char before = index > 0 ? part.charAt(index - 1) : ' ';
+        int after = index + 2;
+        char afterChar = after < part.length() ? part.charAt(after) : ' ';
+        return Character.isWhitespace(before) && Character.isWhitespace(afterChar);
     }
 
     /**
