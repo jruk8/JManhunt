@@ -71,8 +71,8 @@ public class ModifiersMessages extends OkaeriConfig {
     private String importUsage = "{prefix}<yellow>Usage: /manhunt modifiers import <modifier|preset> <payload>";
 
     @CustomKey("exported")
-    private String exported = "{prefix}<green><underlined>Click to copy <white>{type} {name}</white> " +
-            "to clipboard</underlined>";
+    private String exported = "{prefix}<green>Click to copy {type} <underlined><white>{name}</white></underlined> " +
+            "to clipboard";
 
     @CustomKey("imported")
     private String imported = "{prefix}<green>Imported <white>{name}<green>.";
