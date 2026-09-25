@@ -16,6 +16,9 @@ public class GameMessages extends OkaeriConfig {
     @CustomKey("hunter-death")
     private String hunterDeath = "{prefix}<yellow>A hunter has died!";
 
+    @CustomKey("roles-swapped")
+    private String rolesSwapped = "{prefix}<yellow>Roles swapped: hunters and speedrunners trade places!";
+
     @CustomKey("hunter-respawn-scheduled")
     private String hunterRespawnScheduled = "{prefix}<yellow>{player} will respawn in <white>{seconds}s</white>.";
 

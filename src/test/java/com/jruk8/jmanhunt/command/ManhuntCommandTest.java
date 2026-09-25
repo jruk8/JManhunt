@@ -59,7 +59,7 @@ class ManhuntCommandTest {
     void subcommandOptionsAreReversedForDisplay() {
         assertEquals(List.of("challenges", "help", "reload", "worldengine", "config",
                 "modifiers", "debug", "lobby", "qs", "quickstart", "game", "end", "start",
-                "setplayer", "setup", "status"), ManhuntCommand.subcommandOptions());
+                "setplayer", "setup", "status", "swaproles"), ManhuntCommand.subcommandOptions());
     }
 
     @Test

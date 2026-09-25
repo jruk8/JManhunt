@@ -355,6 +355,26 @@ checked after tags expand, so `<if:"1 == 2","exit","say hi">` skips
 the rest only when the branch hits. `exit` with anything else on its
 line is skipped with a warning.
 
+### Showcase
+
+Larger compositions from the primitives above. Every snippet below
+runs verbatim in the engine tests, so copy-paste is safe.
+
+Live countdown to a one-hour mark (player list, one line):
+
+```yaml
+- 'say <if:"3600-<gstat:duration> > 0","Border shrinks in <clamp:3600-<gstat:duration>, 0, 3600>s","The border is shrinking!">'
+```
+
+Dice race to 100 (player list, two lines). The first line rolls and
+banks the score; the unset flag reads `null`, so `?? 0` starts the
+total. The second line announces the milestone and exits otherwise:
+
+```yaml
+- "<pflag:score,<clamp:(<pflag:score> ?? 0)+<random-num:1,6>, 0, 100>>"
+- '<if:"<pflag:score> >= 100","say <p> hit 100!","exit">'
+```
+
 ## Relative Coordinates
 
 In player and role commands (`player`, `hunter`, `speedrunner`), tildes (`~`)
@@ -441,7 +461,7 @@ The default `config.yml` ships more examples to copy from: `full-iron-kit`,
 `fireres-on-nether-enter`, `hunter-start-debuffs` (slowness II plus
 weakness I on every hunter at match start), `hunter-post-start-speed`
 (speed for hunters once the game actually begins), `get-stronger-on-kill`,
-and `speedrunner-gapple-on-low-hp`.
+`speedrunner-gapple-on-low-hp`, and `opposite-team-swap`.
 
 ### Get Stronger On Kill
 
@@ -466,6 +486,15 @@ apple when health is at most 7 and more than 300 seconds passed since
 the last give; otherwise it exits, which skips the second line while
 cooling down. The second line stamps the give time into a per-player
 flag. Runners who never got one are treated as due.
+
+### Opposite Team Swap
+
+Runs every 5 minutes on the console list with a single line:
+`manhunt swaproles`. Every active hunter becomes a speedrunner and
+vice versa; teams resync and compasses reissue for the new roles,
+while lives and stats stay with the players. Without an id the
+command swaps your own match as a player, or the single live match
+from the console; with several matches running it needs an id.
 
 # Creating Modifiers and Presets
 

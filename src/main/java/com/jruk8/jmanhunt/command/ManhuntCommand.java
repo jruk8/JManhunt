@@ -152,6 +152,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "setplayer" -> setPlayer(sender, args);
             case "start" -> start(sender, args);
             case "end" -> end(sender, args);
+            case "swaproles" -> swapRoles(sender, args);
             case "game" -> game(sender, args);
             case "config" -> configCommand(sender, args);
             case "modifiers" -> modifiers(sender, args);
@@ -174,6 +175,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt lobby join <selector> <lobby-id> [role] [-notp]", "move players to a lobby"},
                 {"/manhunt lobby leave [selector]", "remove players from their lobby"},
                 {"/manhunt start [lobby-id]", "start a match"}, {"/manhunt end [id] [-i|-immediate]", "cancel a match"},
+                {"/manhunt swaproles [id]", "swap hunters and speedrunners"},
                 {"/manhunt game join <id> [role] [selector]", "add players to a running match"},
                 {"/manhunt game leave [id] [selector]", "remove players from a running match"},
                 {"/manhunt status [id|all]", "show match status"},
@@ -1082,6 +1084,40 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return message(sender, "manhunt.console-requires-id");
         }
         game.cancel(instance, parsed.immediate());
+        return true;
+    }
+
+    /**
+     * Swaps hunters and speedrunners. An id picks the match;
+     * otherwise players default to their own match and everyone
+     * else needs exactly one live match.
+     */
+    private boolean swapRoles(CommandSender sender, String[] args) {
+        if (args.length > 2) {
+            return message(sender, "manhunt.swaproles-usage");
+        }
+        Optional<GameInstance> resolved;
+        if (args.length == 2) {
+            resolved = game.resolveInstance(args[1]);
+            if (resolved.isEmpty()) {
+                return message(sender, "manhunt.invalid-instance-id");
+            }
+        } else if (sender instanceof Player player
+                && game.instanceOf(player.getUniqueId()).isPresent()) {
+            resolved = game.instanceOf(player.getUniqueId());
+        } else {
+            List<GameInstance> live = game.liveInstances();
+            if (live.size() != 1) {
+                return message(sender,
+                        live.isEmpty() ? "manhunt.not-active" : "manhunt.swaproles-ambiguous");
+            }
+            resolved = Optional.of(live.get(0));
+        }
+        GameInstance instance = resolved.get();
+        int swapped = game.swapRoles(instance);
+        game.sendToInstance(instance, "game.roles-swapped", Map.of());
+        message(sender, "manhunt.swapped-roles",
+                Map.of("count", String.valueOf(swapped), "id", String.valueOf(instance.matchId())));
         return true;
     }
 
@@ -2117,6 +2153,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             options.addAll(instanceIdOptions());
             return partial(args[1], options);
         }
+        if (args.length == 2 && args[0].equalsIgnoreCase("swaproles")) {
+            return partial(args[1], instanceIdOptions());
+        }
         if (args.length == 3 && args[0].equalsIgnoreCase("end")) {
             if (isImmediateFlag(args[1])) {
                 return partial(args[2], instanceIdOptions());
@@ -2396,7 +2435,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     static List<String> subcommandOptions() {
         return new ArrayList<>(List.of("challenges", "help", "reload", "worldengine", "config",
                 "modifiers", "debug", "lobby", "qs", "quickstart", "game", "end", "start",
-                "setplayer", "setup", "status"));
+                "setplayer", "setup", "status", "swaproles"));
     }
 
     /** Instance id completion: live match ids, oldest first. */

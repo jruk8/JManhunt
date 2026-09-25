@@ -196,6 +196,35 @@ class TagStatsFlagsTest {
     }
 
     @Test
+    void showcaseCountdownAnnouncesRemaining() {
+        Fixture fixture = new Fixture();
+        String line = "say <if:\"3600-<gstat:duration> > 0\","
+                + "\"Border shrinks in <clamp:3600-<gstat:duration>, 0, 3600>s\","
+                + "\"The border is shrinking!\">";
+        fixture.globalValues.put("duration", "500");
+        assertEquals("say Border shrinks in 3100s", fixture.replace(line));
+        fixture.globalValues.put("duration", "3700");
+        assertEquals("say The border is shrinking!", fixture.replace(line));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void showcaseDiceRaceScoresToAHundred() {
+        Fixture fixture = new Fixture();
+        String roll = "<pflag:score,<clamp:(<pflag:score> ?? 0)+<random-num:1,6>, 0, 100>>";
+        String milestone = "<if:\"<pflag:score> >= 100\",\"say <p> hit 100!\",\"exit\">";
+        assertEquals("", fixture.replace(roll));
+        int first = Integer.parseInt(fixture.replace("<pflag:score>"));
+        assertTrue(first >= 1 && first <= 6, "first roll out of range: " + first);
+        assertEquals("exit", fixture.replace(milestone));
+        assertEquals("", fixture.replace("<pflag:score,99>"));
+        assertEquals("", fixture.replace(roll));
+        assertEquals("100", fixture.replace("<pflag:score>"));
+        assertEquals("say Steve hit 100!", fixture.replace(milestone));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
     void flagShapesRejectBadArityAndBlankNames() {
         Fixture fixture = new Fixture();
         assertEquals("", fixture.replace("<gflag:>"));

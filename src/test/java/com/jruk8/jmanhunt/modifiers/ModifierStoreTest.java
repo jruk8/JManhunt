@@ -280,7 +280,7 @@ class ModifierStoreTest {
         }
 
         var modifiers = bundled.getConfigurationSection("modifiers");
-        assertEquals(19, modifiers.getKeys(false).size());
+        assertEquals(20, modifiers.getKeys(false).size());
         for (String name : modifiers.getKeys(false)) {
             var section = modifiers.getConfigurationSection(name);
             assertTrue(section.contains("enabled"), name);
@@ -314,7 +314,7 @@ class ModifierStoreTest {
         }
         ModifierStore bundled = new ModifierStore(load(bundledFile), Logger.getAnonymousLogger());
 
-        assertEquals(19, bundled.modifierNames().size());
+        assertEquals(20, bundled.modifierNames().size());
         assertEquals(3, bundled.presetNames().size());
         assertEquals("PICK_RANDOM", bundled.selection("gear-dice"));
         assertEquals(15.0, bundled.intervalSeconds("gear-dice"));
@@ -324,6 +324,19 @@ class ModifierStoreTest {
         assertEquals("AFTER", bundled.preStartOrder("hunter-start-debuffs"));
         assertEquals(3, bundled.presetMembers("chaos-mode").size());
         assertEquals(Material.TNT, bundled.presetItem("chaos-mode"));
+    }
+
+    @Test
+    void bundledSwapModifierRunsConsoleBodyOnFiveMinutes() throws Exception {
+        File bundledFile = new File("src/main/resources/modifiers.yml");
+        ModifierStore bundled = new ModifierStore(load(bundledFile), Logger.getAnonymousLogger());
+
+        assertEquals(List.of("INTERVAL"), bundled.runsOn("opposite-team-swap"));
+        assertEquals(300.0, bundled.intervalSeconds("opposite-team-swap"));
+        assertEquals(List.of("manhunt swaproles"),
+                bundled.commandList("opposite-team-swap", "console"));
+        assertTrue(bundled.commandList("opposite-team-swap", "player").isEmpty());
+        assertFalse(bundled.isEnabled("opposite-team-swap"));
     }
 
     @Test

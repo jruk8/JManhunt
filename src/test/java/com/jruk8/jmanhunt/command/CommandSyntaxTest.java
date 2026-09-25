@@ -180,6 +180,13 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <placeholder:jmanhunt_game_kills_this_session> done")
                 .isEmpty());
         assertTrue(CommandSyntax.error("say <placeholder:\"some_key\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <if:\"3600-<gstat:duration> > 0\","
+                + "\"Border shrinks in <clamp:3600-<gstat:duration>, 0, 3600>s\","
+                + "\"The border is shrinking!\">").isEmpty());
+        assertTrue(CommandSyntax.error(
+                "<pflag:score,<clamp:(<pflag:score> ?? 0)+<random-num:1,6>, 0, 100>>")
+                .isEmpty());
+        assertTrue(CommandSyntax.error("manhunt swaproles").isEmpty());
     }
 
     @Test

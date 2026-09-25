@@ -55,6 +55,7 @@ public final class GameManager implements MatchControl {
     private final MatchStartService matchStart;
     private final FlagStore flagStore;
     private final StatsManager stats;
+    private final CompassManager compass;
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
                        PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
@@ -72,6 +73,7 @@ public final class GameManager implements MatchControl {
         this.store = new MatchStore(playerStates);
         this.flagStore = new FlagStore();
         this.stats = stats;
+        this.compass = compass;
         this.messaging = new MatchMessaging(messages, sounds, configService, store, lobbies);
         this.timeLimits = new TimeLimitService(plugin, winConditionEngine, store, messaging, this);
         this.prestart = new PrestartService(plugin, configService, messages, playerStates,
@@ -110,6 +112,31 @@ public final class GameManager implements MatchControl {
     public Optional<GameInstance> instance(long matchId) { return store.instance(matchId); }
     /** Shared flag store behind command tags; cleared per match on teardown. */
     public FlagStore flagStore() { return flagStore; }
+
+    /**
+     * Swaps every active hunter and speedrunner of one match: roles
+     * flip, teams resync, compasses reissue for the new roles. Lives
+     * and stats stay with the players. Returns the swapped count.
+     */
+    public int swapRoles(GameInstance instance) {
+        int swapped = 0;
+        for (Player player : store.onlineActivePlayers(instance)) {
+            Role flipped = switch (playerStates.role(player.getUniqueId())) {
+                case HUNTER -> Role.SPEEDRUNNER;
+                case SPEEDRUNNER -> Role.HUNTER;
+                default -> null;
+            };
+            if (flipped == null) {
+                continue;
+            }
+            playerStates.setRole(player.getUniqueId(), flipped);
+            plugin.roleTeams().sync(player);
+            compass.giveCompass(player);
+            compass.refreshCompass(player);
+            swapped++;
+        }
+        return swapped;
+    }
     /** Stat values bound to one match for one tag run. */
     public StatValues matchStatValues(long matchId) {
         return new MatchStatValues(stats, store, matchId);

@@ -357,6 +357,15 @@ public class ManhuntMessages extends OkaeriConfig {
     @CustomKey("end-usage")
     private String endUsage = "{prefix}<yellow>Usage: /manhunt end [id] [-i|-immediate]";
 
+    @CustomKey("swaproles-usage")
+    private String swaprolesUsage = "{prefix}<yellow>Usage: /manhunt swaproles [id]";
+
+    @CustomKey("swaproles-ambiguous")
+    private String swaprolesAmbiguous = "{prefix}<red>Multiple matches running; specify an id.";
+
+    @CustomKey("swapped-roles")
+    private String swappedRoles = "{prefix}<green>Swapped <white>{count}<green> players in match <white>{id}<green>.";
+
     @CustomKey("game-usage")
     private String gameUsage = "{prefix}<yellow>Usage: /manhunt game <join|leave> ...";
 
