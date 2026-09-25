@@ -159,8 +159,8 @@ public class ManhuntGuiMessages extends OkaeriConfig {
     private String setupFirstLine2 = "Start the interactive setup guide?";
 
     @CustomKey("setup-first-confirm")
-    private String setupFirstConfirm = "Start setup";
+    private String setupFirstConfirm = "<green>Start setup";
 
     @CustomKey("setup-first-cancel")
-    private String setupFirstCancel = "Skip forever";
+    private String setupFirstCancel = "<red>Skip forever (not recommended)";
 }

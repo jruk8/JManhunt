@@ -133,10 +133,11 @@ public final class ManhuntMenus {
                         text("setup-first-line1", "JManhunt is not set up yet."),
                         text("setup-first-line2", "Start the interactive setup guide?"))),
                 GuiTexts.name(messages,
-                        text("setup-first-cancel", "Skip forever"), "Skip forever"),
+                        text("setup-first-cancel", "<red>Skip forever (not recommended)"),
+                        "Skip forever"),
                 onCancel,
                 GuiTexts.name(messages,
-                        text("setup-first-confirm", "Start setup"), "Start setup"),
+                        text("setup-first-confirm", "<green>Start setup"), "Start setup"),
                 onConfirm,
                 null);
     }

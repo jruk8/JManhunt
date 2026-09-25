@@ -93,7 +93,10 @@ class ModifierCreateArgsTest {
         assertEquals("PER_EXECUTOR", plan.pickBehavior());
         assertEquals(100L, plan.delay());
 
-        ModifierEntry entry = plan.toEntry();
+        assertEntryMatchesPlan(plan.toEntry());
+    }
+
+    private static void assertEntryMatchesPlan(ModifierEntry entry) {
         assertNotNull(entry.getBehavior());
         assertEquals(java.util.List.of("ON_START", "INTERVAL"), entry.getBehavior().getRunsOn());
         assertEquals("PICK_RANDOM", entry.getBehavior().getOnStart().getPreStartOrder());
@@ -109,7 +112,8 @@ class ModifierCreateArgsTest {
         assertEquals("PER_EXECUTOR",
                 entry.getBehavior().getOptions().getExecution().getPickRandom().getBehavior());
         assertEquals(100L, entry.getBehavior().getOptions().getDelay());
-        assertEquals(java.util.List.of("say hi <p>"), entry.getBehavior().getCommands().getLists().get("console"));
+        assertEquals(java.util.List.of("say hi <p>"),
+                entry.getBehavior().getCommands().getLists().get("console"));
         assertEquals(java.util.List.of("give <p> apple"),
                 entry.getBehavior().getCommands().getLists().get("player"));
     }
