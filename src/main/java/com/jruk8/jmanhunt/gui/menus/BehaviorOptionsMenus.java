@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.command.ModifiersCommand;
+import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
@@ -14,6 +15,7 @@ import com.jruk8.jmanhunt.match.ModifierTriggers;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierFieldEdits;
+import com.jruk8.jmanhunt.modifiers.ModifierOptionDescriptors;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierBehavior;
 import com.jruk8.jmanhunt.modifiers.config.ModifierChance;
@@ -24,7 +26,9 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierOnStart;
 import com.jruk8.jmanhunt.modifiers.config.ModifierOptions;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPickRandom;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -34,8 +38,9 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 /**
- * Behavior Options scaling menu for one modifier: Enabled, Runs On,
- * Interval Settings, Execution, Delay, and Success Chance.
+ * Behavior Options scaling menu for one modifier: Runs On, Interval
+ * Settings, Execution, Delay, and Success Chance. Leaf rows share the
+ * settings lore schema; submenu rows stay navigation buttons.
  *
  * <p>Runs On opens the trigger checkbox dialog; Interval Settings stays
  * gated until runs-on includes INTERVAL; Execution and Success Chance
@@ -84,13 +89,9 @@ public final class BehaviorOptionsMenus {
     private List<MenuButton> optionButtons(String id, Supplier<Menu> self) {
         List<MenuButton> buttons = new ArrayList<>();
         List<String> triggers = store.runsOn(id);
-        buttons.add(EditorButtons.actionButton(messages, Material.LEVER,
-                text("runs-on-title", "Runs On"),
-                List.of(text("runs-on-lore", "Events that trigger this modifier"),
-                        triggers.isEmpty() ? orUnset(null)
-                                : text("runs-on-count", "{total} selected")
-                                        .replace("{total}", String.valueOf(triggers.size())),
-                        text("editor-click-open", "Click to open")),
+        buttons.add(leafRow(id, self, "runs-on",
+                text("runs-on-title", "Runs On"), runsOnValue(triggers),
+                ModifierTriggers.KNOWN, runsOnMarked(triggers),
                 ModifiedGlow.behaviorRunsOn(store, id),
                 player -> {
                     if (denied(player)) {
@@ -99,7 +100,8 @@ public final class BehaviorOptionsMenus {
                     modifierDialogs.openRunsOn(player, triggers,
                             checked -> applyRunsOn(player, id, triggers, checked, self.get()),
                             () -> gui.navigate(player, self.get()));
-                }).silent());
+                },
+                () -> patch(id, entry -> ModifierStore.ensureBehavior(entry).setRunsOn(null))));
         buttons.add(EditorButtons.actionButton(messages, Material.REPEATER,
                 text("interval-settings-title", "Interval Settings"),
                 List.of(text("interval-settings-lore", "Cadence, jitter, and scope"),
@@ -117,12 +119,11 @@ public final class BehaviorOptionsMenus {
                     }
                     gui.navigate(player, executionMenu(id, self::get));
                 }));
-        buttons.add(EditorButtons.valueButton(messages, Material.WHITE_WOOL,
-                "Delay", delayText(id),
-                text("editor-click-edit", "Click to edit"),
-                ModifiedGlow.behaviorDelay(store, id),
+        buttons.add(leafRow(id, self, "delay", null, delayText(id),
+                null, null, ModifiedGlow.behaviorDelay(store, id),
                 player -> fieldPrompt(player, self.get(), "Delay", delayRaw(id), true,
-                        raw -> submitDelay(id, raw))));
+                        raw -> submitDelay(id, raw)),
+                () -> delayPatch(id, null)));
         buttons.add(EditorButtons.actionButton(messages, Material.HOPPER,
                 text("chance-title", "Success Chance"),
                 List.of(text("chance-lore", "Roll chance and scope"),
@@ -152,21 +153,18 @@ public final class BehaviorOptionsMenus {
 
     private List<MenuButton> intervalButtons(String id, Supplier<Menu> self) {
         List<MenuButton> buttons = new ArrayList<>();
-        buttons.add(EditorButtons.valueButton(messages, Material.CLOCK,
-                "Interval", intervalText(id),
-                text("editor-click-edit", "Click to edit"),
-                ModifiedGlow.behaviorInterval(store, id),
+        buttons.add(leafRow(id, self, "interval", null, intervalText(id),
+                null, null, ModifiedGlow.behaviorInterval(store, id),
                 player -> fieldPrompt(player, self.get(), "Interval", intervalRaw(id), true,
-                        raw -> submitInterval(id, raw))));
-        buttons.add(EditorButtons.valueButton(messages, Material.COMPASS,
-                "Deviation", deviationText(id),
-                text("editor-click-edit", "Click to edit"),
-                ModifiedGlow.behaviorDeviation(store, id),
+                        raw -> submitInterval(id, raw)),
+                () -> intervalPatch(id, null, deviationOf(id))));
+        buttons.add(leafRow(id, self, "deviation", null, deviationText(id),
+                null, null, ModifiedGlow.behaviorDeviation(store, id),
                 player -> fieldPrompt(player, self.get(), "Deviation", deviationRaw(id), true,
-                        raw -> submitDeviation(id, raw))));
-        buttons.add(EditorButtons.valueButton(messages, Material.REPEATER,
-                "Interval scope", orDefault(store.intervalBehavior(id), "PER_INVOKE"),
-                text("editor-click-cycle", "Click to change"),
+                        raw -> submitDeviation(id, raw)),
+                () -> intervalPatch(id, intervalOf(id), null)));
+        buttons.add(choiceRow(id, self, "interval-scope",
+                store.intervalBehavior(id), "PER_INVOKE",
                 ModifiedGlow.behaviorIntervalScope(store, id),
                 player -> {
                     if (denied(player)) {
@@ -175,7 +173,8 @@ public final class BehaviorOptionsMenus {
                     patch(id, entry -> ensureInterval(entry).setBehavior(cycle(
                             store.intervalBehavior(id), "PER_INVOKE", "PER_EXECUTOR")));
                     sounds.playNeutralSound(player);
-                }));
+                },
+                () -> patch(id, entry -> ensureInterval(entry).setBehavior(null))));
         return buttons;
     }
 
@@ -194,29 +193,24 @@ public final class BehaviorOptionsMenus {
 
     private List<MenuButton> executionButtons(String id, Supplier<Menu> self) {
         List<MenuButton> buttons = new ArrayList<>();
-        buttons.add(EditorButtons.valueButton(messages, Material.DISPENSER,
-                "Selection", orDefault(store.selection(id), "IN_ORDER"),
-                text("editor-click-cycle", "Click to change"),
+        buttons.add(choiceRow(id, self, "selection",
+                store.selection(id), "IN_ORDER",
                 ModifiedGlow.behaviorSelection(store, id),
                 player -> {
                     if (denied(player)) {
                         return;
                     }
-                    patch(id, entry -> ModifierStore
-                            .ensureExecution(ModifierStore.ensureOptions(
-                                    ModifierStore.ensureBehavior(entry)))
-                            .setSelection(cycle(store.selection(id), "IN_ORDER", "PICK_RANDOM")));
+                    selectionPatch(id, cycle(store.selection(id), "IN_ORDER", "PICK_RANDOM"));
                     sounds.playNeutralSound(player);
-                }));
-        buttons.add(EditorButtons.valueButton(messages, Material.DROPPER,
-                "Pick count", pickCountText(id),
-                text("editor-click-edit", "Click to edit"),
-                ModifiedGlow.behaviorPickCount(store, id),
+                },
+                () -> selectionPatch(id, null)));
+        buttons.add(leafRow(id, self, "pick-count", null, pickCountText(id),
+                null, null, ModifiedGlow.behaviorPickCount(store, id),
                 player -> fieldPrompt(player, self.get(), "Pick count", pickCountRaw(id), true,
-                        raw -> submitPickCount(id, raw))));
-        buttons.add(EditorButtons.valueButton(messages, Material.OBSERVER,
-                "Pick scope", orDefault(store.pickBehavior(id), "PER_INVOKE"),
-                text("editor-click-cycle", "Click to change"),
+                        raw -> submitPickCount(id, raw)),
+                () -> pickCountPatch(id, null)));
+        buttons.add(choiceRow(id, self, "pick-scope",
+                store.pickBehavior(id), "PER_INVOKE",
                 ModifiedGlow.behaviorPickScope(store, id),
                 player -> {
                     if (denied(player)) {
@@ -225,12 +219,18 @@ public final class BehaviorOptionsMenus {
                     patch(id, entry -> ensurePickRandom(entry).setBehavior(cycle(
                             store.pickBehavior(id), "PER_INVOKE", "PER_EXECUTOR")));
                     sounds.playNeutralSound(player);
-                }));
-        buttons.add(EditorButtons.valueButton(messages, Material.HOPPER,
-                "Pre-start order", orDefault(store.preStartOrder(id), "IN_ORDER"),
-                text("editor-click-cycle", "Click to change"),
+                },
+                () -> patch(id, entry -> ensurePickRandom(entry).setBehavior(null))));
+        buttons.add(choiceRow(id, self, "pre-start",
+                store.preStartOrder(id), "IN_ORDER",
                 ModifiedGlow.behaviorPreStart(store, id),
-                player -> cyclePreStart(player, id)));
+                player -> cyclePreStart(player, id),
+                () -> patch(id, entry -> {
+                    ModifierBehavior behavior = ModifierStore.ensureBehavior(entry);
+                    if (behavior.getOnStart() != null) {
+                        behavior.getOnStart().setPreStartOrder(null);
+                    }
+                })));
         return buttons;
     }
 
@@ -249,15 +249,13 @@ public final class BehaviorOptionsMenus {
 
     private List<MenuButton> chanceButtons(String id, Supplier<Menu> self) {
         List<MenuButton> buttons = new ArrayList<>();
-        buttons.add(EditorButtons.valueButton(messages, Material.EXPERIENCE_BOTTLE,
-                "Chance", chanceText(id),
-                text("editor-click-edit", "Click to edit"),
-                ModifiedGlow.behaviorChance(store, id),
+        buttons.add(leafRow(id, self, "chance", null, chanceText(id),
+                null, null, ModifiedGlow.behaviorChance(store, id),
                 player -> fieldPrompt(player, self.get(), "Chance", chanceRaw(id), true,
-                        raw -> submitChance(id, raw))));
-        buttons.add(EditorButtons.valueButton(messages, Material.DAYLIGHT_DETECTOR,
-                "Chance scope", orDefault(store.chanceBehavior(id), "PER_INVOKE"),
-                text("editor-click-cycle", "Click to change"),
+                        raw -> submitChance(id, raw)),
+                () -> chancePatch(id, null)));
+        buttons.add(choiceRow(id, self, "chance-scope",
+                store.chanceBehavior(id), "PER_INVOKE",
                 ModifiedGlow.behaviorChanceScope(store, id),
                 player -> {
                     if (denied(player)) {
@@ -266,8 +264,137 @@ public final class BehaviorOptionsMenus {
                     patch(id, entry -> ensureChance(entry).setBehavior(cycle(
                             store.chanceBehavior(id), "PER_INVOKE", "PER_EXECUTOR")));
                     sounds.playNeutralSound(player);
-                }));
+                },
+                () -> patch(id, entry -> ensureChance(entry).setBehavior(null))));
         return buttons;
+    }
+
+    /**
+     * One option leaf in the shared settings schema. A null label
+     * keeps the descriptor label; the Runs On row overrides it with
+     * its configured title.
+     */
+    private MenuButton leafRow(String id, Supplier<Menu> self, String optionKey, String label,
+            String value, List<String> options, Set<String> marked, boolean glow,
+            Consumer<Player> click, Runnable clear) {
+        ModifierOptionDescriptors.Descriptor descriptor =
+                ModifierOptionDescriptors.byKey(optionKey);
+        FieldLore.Field field = new FieldLore.Field(
+                descriptor.description(), value,
+                "modifiers." + id + "." + descriptor.pathSuffix(),
+                ModifierOptionDescriptors.typeName(descriptor.kind()),
+                descriptor.allowed(), options, marked,
+                descriptor.defaultText(), hintFor(descriptor.kind()));
+        return FieldButtons.field(messages, descriptor.icon(),
+                label == null ? descriptor.label() : label,
+                FieldLore.lines(messages, field), glow,
+                click, player -> resetLeaf(player, id, self, optionKey, value, clear));
+    }
+
+    /** Choice leaf: bullets from the descriptor, effective option marked. */
+    private MenuButton choiceRow(String id, Supplier<Menu> self, String optionKey,
+            String raw, String fallback, boolean glow,
+            Consumer<Player> click, Runnable clear) {
+        ModifierOptionDescriptors.Descriptor descriptor =
+                ModifierOptionDescriptors.byKey(optionKey);
+        String effective = effectiveOption(raw, descriptor.options(), fallback);
+        return leafRow(id, self, optionKey, null,
+                raw == null ? "Default (" + fallback + ")" : raw,
+                descriptor.options(), Set.of(effective), glow, click, clear);
+    }
+
+    private String hintFor(ModifierOptionDescriptors.Kind kind) {
+        return switch (kind) {
+            case NUMBER, INTEGER ->
+                    messages.string("manhunt-gui.setting-hint-edit", "Click to edit");
+            case CHOICE ->
+                    messages.string("manhunt-gui.setting-hint-cycle", "Click to cycle");
+            case TRIGGERS -> text("editor-click-open", "Click to open");
+        };
+    }
+
+    /**
+     * Right-click reset behind a confirm panel, mirroring the settings
+     * flow: already-default rows refuse in chat instead of opening
+     * a panel for nothing.
+     */
+    private void resetLeaf(Player player, String id, Supplier<Menu> self, String optionKey,
+            String value, Runnable clear) {
+        if (denied(player)) {
+            return;
+        }
+        if (!leafModified(id, optionKey)) {
+            messages.message(player, "modifiers-gui.editor-already-default");
+            return;
+        }
+        ModifierOptionDescriptors.Descriptor descriptor =
+                ModifierOptionDescriptors.byKey(optionKey);
+        Menu confirm = ConfirmMenu.create(
+                GuiTexts.title(messages, text("editor-reset-title", "Reset {name}?")
+                        .replace("{name}", descriptor.label())),
+                Material.PAPER, null,
+                GuiTexts.lore(messages, List.of(value + " -> " + descriptor.defaultText())),
+                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                back -> gui.navigate(back, self.get()),
+                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                done -> {
+                    clear.run();
+                    if (sounds != null) {
+                        sounds.playNeutralSound(done);
+                    }
+                    gui.navigate(done, self.get());
+                },
+                self);
+        gui.navigate(player, confirm);
+        if (sounds != null) {
+            sounds.playSound(player, "compass.left-click");
+        }
+    }
+
+    private boolean leafModified(String id, String optionKey) {
+        return switch (optionKey) {
+            case "delay" -> ModifiedGlow.behaviorDelay(store, id);
+            case "interval" -> ModifiedGlow.behaviorInterval(store, id);
+            case "deviation" -> ModifiedGlow.behaviorDeviation(store, id);
+            case "interval-scope" -> ModifiedGlow.behaviorIntervalScope(store, id);
+            case "selection" -> ModifiedGlow.behaviorSelection(store, id);
+            case "pick-count" -> ModifiedGlow.behaviorPickCount(store, id);
+            case "pick-scope" -> ModifiedGlow.behaviorPickScope(store, id);
+            case "pre-start" -> ModifiedGlow.behaviorPreStart(store, id);
+            case "chance" -> ModifiedGlow.behaviorChance(store, id);
+            case "chance-scope" -> ModifiedGlow.behaviorChanceScope(store, id);
+            case "runs-on" -> ModifiedGlow.behaviorRunsOn(store, id);
+            default -> false;
+        };
+    }
+
+    /** Stored option matched case-blindly, or the fallback default. */
+    private static String effectiveOption(String raw, List<String> options, String fallback) {
+        if (raw != null) {
+            for (String option : options) {
+                if (option.equalsIgnoreCase(raw)) {
+                    return option;
+                }
+            }
+        }
+        return fallback;
+    }
+
+    private String runsOnValue(List<String> triggers) {
+        if (triggers.isEmpty()) {
+            return "Default (ON_START)";
+        }
+        return text("runs-on-count", "{total} selected")
+                .replace("{total}", String.valueOf(triggers.size()));
+    }
+
+    /** Stored triggers uppercased for bullet marking. */
+    private static Set<String> runsOnMarked(List<String> triggers) {
+        Set<String> marked = new HashSet<>();
+        for (String trigger : triggers) {
+            marked.add(trigger.toUpperCase(Locale.ROOT));
+        }
+        return marked;
     }
 
     private void openInterval(Player player, String id, Menu self) {
@@ -424,6 +551,12 @@ public final class BehaviorOptionsMenus {
         patch(id, entry -> ensurePickRandom(entry).setCount(count));
     }
 
+    private void selectionPatch(String id, String selection) {
+        patch(id, entry -> ModifierStore
+                .ensureExecution(ModifierStore.ensureOptions(
+                        ModifierStore.ensureBehavior(entry))).setSelection(selection));
+    }
+
     private void delayPatch(String id, Long delay) {
         patch(id, entry -> ModifierStore
                 .ensureOptions(ModifierStore.ensureBehavior(entry)).setDelay(delay));
@@ -476,10 +609,6 @@ public final class BehaviorOptionsMenus {
     private String orUnset(String value) {
         return value == null || value.isBlank()
                 ? text("editor-unset", "Not set") : value;
-    }
-
-    private String orDefault(String value, String fallback) {
-        return value == null ? "Default (" + fallback + ")" : value;
     }
 
     private Double intervalOf(String id) {

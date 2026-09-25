@@ -54,10 +54,13 @@ prompts or cycles in place, and blank answers clear optional
 fields. Setting the icon chats a confirmation naming the material.
 
 Behavior is a twin panel over Behavior Options and Command Lists.
-Behavior Options holds the enabled toggle, Runs On trigger
-checkboxes, Interval Settings (blocked until INTERVAL is
-selected), Execution, Delay, and Success Chance. Rows glow when
-they differ from the engine default.
+Behavior Options holds Runs On trigger checkboxes, Interval
+Settings (blocked until INTERVAL is selected), Execution, Delay,
+and Success Chance; the enabled toggle lives on the modifier list
+row instead. Every option row follows the settings schema:
+description, value, path, type, allowed values or choice bullets,
+and default. Rows glow when they differ from the engine default.
+Right-click any row to reset it after a confirm panel.
 
 Command Lists shows the six lists (player, speedrunner, hunter,
 console, and the two cleanups) with live line counts; non-empty
@@ -86,7 +89,8 @@ double-fire.
 
 1. Open both editor roots and confirm the four quad buttons plus Back.
 2. In Behavior Options, deselect INTERVAL and confirm Interval Settings
-   blocks with an error; reselect it and change the interval.
+   blocks with an error; reselect it, change the interval, then
+   right-click the row and confirm the reset.
 3. In Command Lists, save `asd asd` and confirm refusal, then save
    `give <p> cooked_beef 8` and confirm the ordinal chat line.
 4. Toggle `validate-modifier-editor-commands` off, save `asd asd`,

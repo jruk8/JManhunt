@@ -431,6 +431,8 @@ modifiers-gui:
   chance-title: "Success Chance"
   chance-lore: "Roll chance and scope"
   commands-lore: "Runner commands and cleanup"
+  editor-already-default: "{prefix}<yellow>That option is already the default."
+  editor-reset-title: "Reset {name}?"
   cancel: "Cancel"
   confirm: "Confirm"
 

@@ -14,9 +14,9 @@ import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.kyori.adventure.text.Component;
@@ -115,44 +115,23 @@ public final class SettingButtons {
     }
 
     private List<Component> lore(SettingDescriptor descriptor) {
-        List<String> lines = new ArrayList<>();
-        String description = guiData.description(descriptor.path());
-        if (!description.isBlank()) {
-            lines.add(description);
-            lines.add("");
-        }
-        lines.add(template("manhunt-gui.setting-value", "Value: {value}",
-                displayCurrent(descriptor)));
-        lines.add(template("manhunt-gui.setting-path", "Path: {path}",
-                descriptor.path().replaceFirst("^settings\\.", "")));
-        lines.add(template("manhunt-gui.setting-type", "Type: {type}",
-                typeName(descriptor.type())));
+        String allowed = null;
         if (descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT) {
-            lines.add(template("manhunt-gui.dialog-bounds", "Allowed: {bounds}",
-                    SettingRegistry.boundsText(descriptor, config::getValue)));
+            allowed = SettingRegistry.boundsText(descriptor, config::getValue);
         }
+        List<String> options = null;
         if (descriptor.type() == SettingType.OPTION) {
-            lines.addAll(optionBullets(descriptor));
+            options = descriptor.options();
         }
-        lines.add(template("manhunt-gui.setting-default", "Default: {value}",
-                displayDefault(descriptor)));
-        lines.add("");
-        lines.add(hint(descriptor.type()));
-        lines.add(template("manhunt-gui.setting-hint-reset", "Right-click to reset", null));
-        return GuiTexts.lore(messages, lines);
-    }
-
-    private List<String> optionBullets(SettingDescriptor descriptor) {
-        String current = displayCurrent(descriptor);
-        List<String> bullets = new ArrayList<>();
-        for (String option : descriptor.options()) {
-            if (option.equals(current)) {
-                bullets.add("<green>» " + option + "</green>");
-            } else {
-                bullets.add("» " + option);
-            }
-        }
-        return bullets;
+        FieldLore.Field field = new FieldLore.Field(
+                guiData.description(descriptor.path()),
+                displayCurrent(descriptor),
+                descriptor.path().replaceFirst("^settings\\.", ""),
+                typeName(descriptor.type()),
+                allowed, options, Set.of(displayCurrent(descriptor)),
+                displayDefault(descriptor),
+                hint(descriptor.type()));
+        return GuiTexts.lore(messages, FieldLore.lines(messages, field));
     }
 
     private String displayCurrent(SettingDescriptor descriptor) {

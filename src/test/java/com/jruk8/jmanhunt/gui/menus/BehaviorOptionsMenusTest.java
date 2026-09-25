@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.command.ModifiersCommand;
+import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
@@ -19,8 +20,10 @@ import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
@@ -34,8 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -69,9 +74,10 @@ class BehaviorOptionsMenusTest {
         options = new BehaviorOptionsMenus(store, messages, null, null, null, null);
     }
 
-    /** Expected Current line: gray prefix with a white value. */
-    private Component currentLine(String value) {
-        return messages.nonItalic(messages.parse("<gray>Current: <white>" + value));
+    private static List<String> loreLines(MenuButton button) {
+        return button.lore().stream()
+                .map(PlainTextComponentSerializer.plainText()::serialize)
+                .toList();
     }
 
     private static ModifierEntry behaviorEntry() {
@@ -112,9 +118,74 @@ class BehaviorOptionsMenusTest {
             assertNotNull(button.action());
         }
         assertEquals("Runs On", textOf(menu.buttonAt(0).name()));
-        assertEquals("2 selected", textOf(menu.buttonAt(0).lore().get(1)));
-        assertEquals(currentLine("100 ticks"), menu.buttonAt(3).lore().get(0));
+        assertRunsOnLore(menu);
+        assertDelayLore(menu, "zebra", "100 ticks");
         assertEquals(Material.PAPER, menu.buttonAt(8).material());
+    }
+
+    private static void assertRunsOnLore(Menu menu) {
+        assertEquals(List.of(
+                "Events that trigger this modifier.",
+                "",
+                "Value: 2 selected",
+                "Path: modifiers.zebra.behavior.runs-on",
+                "Type: Choice",
+                "» ON_START",
+                "» INTERVAL",
+                "» ON_EVERY_KILL",
+                "» ON_PLAYER_KILL",
+                "» ON_HUNTER_KILL",
+                "» ON_SPEEDRUNNER_KILL",
+                "» ON_NETHER_ENTER",
+                "» ON_END_ENTER",
+                "» ON_FIRST_NETHER_ENTER",
+                "» ON_FIRST_END_ENTER",
+                "» ON_EVERY_ADVANCEMENT",
+                "» ON_RESPAWN",
+                "» ON_SPEEDRUNNER_RESPAWN",
+                "» ON_HUNTER_RESPAWN",
+                "Default: ON_START",
+                "",
+                "Click to open",
+                "Right-click to reset"), loreLines(menu.buttonAt(0)));
+    }
+
+    private static void assertDelayLore(Menu menu, String id, String value) {
+        assertEquals(List.of(
+                "Ticks to wait after the trigger before commands run.",
+                "",
+                "Value: " + value,
+                "Path: modifiers." + id + ".behavior.options.delay",
+                "Type: Integer",
+                "Allowed: 0 or more",
+                "Default: Not set",
+                "",
+                "Click to edit",
+                "Right-click to reset"), loreLines(menu.buttonAt(3)));
+    }
+
+    @Test
+    void runsOnMarksSelectedTriggers() {
+        Menu menu = options.optionsMenu("zebra", null);
+
+        Component marked = menu.buttonAt(0).lore().get(5);
+        Component unmarked = menu.buttonAt(0).lore().get(7);
+        assertEquals("» ON_START", textOf(marked));
+        assertEquals("» ON_EVERY_KILL", textOf(unmarked));
+        assertTrue(hasGreen(marked));
+        assertFalse(hasGreen(unmarked));
+    }
+
+    private static boolean hasGreen(Component component) {
+        if (component.color() == NamedTextColor.GREEN) {
+            return true;
+        }
+        for (Component child : component.children()) {
+            if (hasGreen(child)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Test
@@ -124,8 +195,8 @@ class BehaviorOptionsMenusTest {
         for (int slot = 0; slot < 5; slot++) {
             assertFalse(menu.buttonAt(slot).glow(), "slot " + slot + " should not glow");
         }
-        assertEquals(currentLine("Not set"), menu.buttonAt(3).lore().get(0));
-        assertEquals("Not set", textOf(menu.buttonAt(0).lore().get(1)));
+        assertDelayLore(menu, "ghost", "Not set");
+        assertEquals("Value: Default (ON_START)", textOf(menu.buttonAt(0).lore().get(2)));
     }
 
     @Test
@@ -202,11 +273,42 @@ class BehaviorOptionsMenusTest {
 
         assertEquals(title("Interval Settings"), menu.title());
         assertEquals(Material.CLOCK, menu.buttonAt(0).material());
-        assertEquals(currentLine("30.0s"), menu.buttonAt(0).lore().get(0));
+        assertEquals(List.of(
+                "Seconds between runs while INTERVAL is selected.",
+                "",
+                "Value: 30.0s",
+                "Path: modifiers.zebra.behavior.options.interval-settings.interval",
+                "Type: Number",
+                "Allowed: 0 or more",
+                "Default: Not set",
+                "",
+                "Click to edit",
+                "Right-click to reset"), loreLines(menu.buttonAt(0)));
         assertEquals(Material.COMPASS, menu.buttonAt(1).material());
-        assertEquals(currentLine("5.0s"), menu.buttonAt(1).lore().get(0));
+        assertEquals(List.of(
+                "Random jitter added to each interval, never above it.",
+                "",
+                "Value: 5.0s",
+                "Path: modifiers.zebra.behavior.options.interval-settings.deviation",
+                "Type: Number",
+                "Allowed: 0 up to interval",
+                "Default: Not set",
+                "",
+                "Click to edit",
+                "Right-click to reset"), loreLines(menu.buttonAt(1)));
         assertEquals(Material.REPEATER, menu.buttonAt(2).material());
-        assertEquals(currentLine("PER_EXECUTOR"), menu.buttonAt(2).lore().get(0));
+        assertEquals(List.of(
+                "Whether the interval clock is shared or runs per player.",
+                "",
+                "Value: PER_EXECUTOR",
+                "Path: modifiers.zebra.behavior.options.interval-settings.behavior",
+                "Type: Choice",
+                "» PER_INVOKE",
+                "» PER_EXECUTOR",
+                "Default: PER_INVOKE",
+                "",
+                "Click to cycle",
+                "Right-click to reset"), loreLines(menu.buttonAt(2)));
     }
 
     @Test
@@ -215,10 +317,42 @@ class BehaviorOptionsMenusTest {
 
         assertEquals(title("Execution"), menu.title());
         assertEquals(Material.DISPENSER, menu.buttonAt(0).material());
-        assertEquals(currentLine("PICK_RANDOM"), menu.buttonAt(0).lore().get(0));
+        assertEquals(List.of(
+                "How command lines are picked on each run.",
+                "",
+                "Value: PICK_RANDOM",
+                "Path: modifiers.zebra.behavior.options.execution.selection",
+                "Type: Choice",
+                "» IN_ORDER",
+                "» PICK_RANDOM",
+                "Default: IN_ORDER",
+                "",
+                "Click to cycle",
+                "Right-click to reset"), loreLines(menu.buttonAt(0)));
         assertEquals(Material.DROPPER, menu.buttonAt(1).material());
-        assertEquals(currentLine("Default (1)"), menu.buttonAt(1).lore().get(0));
-        assertEquals(currentLine("Default (IN_ORDER)"), menu.buttonAt(3).lore().get(0));
+        assertEquals(List.of(
+                "How many lines each PICK_RANDOM draw takes.",
+                "",
+                "Value: Default (1)",
+                "Path: modifiers.zebra.behavior.options.execution.pick-random.count",
+                "Type: Integer",
+                "Allowed: 1 or more",
+                "Default: 1",
+                "",
+                "Click to edit",
+                "Right-click to reset"), loreLines(menu.buttonAt(1)));
+        assertEquals(List.of(
+                "Whether ON_START fires before or after the pre-start window.",
+                "",
+                "Value: Default (IN_ORDER)",
+                "Path: modifiers.zebra.behavior.on-start.pre-start-order",
+                "Type: Choice",
+                "» IN_ORDER",
+                "» AFTER",
+                "Default: IN_ORDER",
+                "",
+                "Click to cycle",
+                "Right-click to reset"), loreLines(menu.buttonAt(3)));
     }
 
     @Test
@@ -227,7 +361,17 @@ class BehaviorOptionsMenusTest {
 
         assertEquals(title("Success Chance"), menu.title());
         assertEquals(Material.EXPERIENCE_BOTTLE, menu.buttonAt(0).material());
-        assertEquals(currentLine("50%"), menu.buttonAt(0).lore().get(0));
+        assertEquals(List.of(
+                "Probability the modifier runs at all, from 0 to 1.",
+                "",
+                "Value: 50%",
+                "Path: modifiers.zebra.behavior.options.success-chance.chance",
+                "Type: Number",
+                "Allowed: 0 to 1",
+                "Default: 100%",
+                "",
+                "Click to edit",
+                "Right-click to reset"), loreLines(menu.buttonAt(0)));
         assertEquals(Material.DAYLIGHT_DETECTOR, menu.buttonAt(1).material());
     }
 
@@ -247,5 +391,42 @@ class BehaviorOptionsMenusTest {
         menus.executionMenu("zebra", null).buttonAt(3).action().accept(player);
         assertEquals("AFTER", store.preStartOrder("zebra"));
         assertTrue(ModifiedGlow.behaviorPreStart(store, "zebra"));
+    }
+
+    @Test
+    void rightClickResetClearsThroughConfirm() {
+        SoundService sounds = mock(SoundService.class);
+        GuiService gui = mock(GuiService.class);
+        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store, messages, sounds,
+                gui, null, null);
+        Player player = mock(Player.class);
+        when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+        AtomicReference<Menu> shown = new AtomicReference<>();
+        doAnswer(invocation -> {
+            shown.set(invocation.getArgument(1));
+            return null;
+        }).when(gui).navigate(eq(player), any(Menu.class));
+
+        menus.optionsMenu("zebra", null).buttonAt(3).rightAction().accept(player);
+
+        assertEquals("Reset Delay?", textOf(shown.get().title()));
+        shown.get().buttonAt(ConfirmMenu.CONFIRM_SLOT).action().accept(player);
+        assertEquals(0L, store.delayTicks("zebra"));
+        verify(sounds).playNeutralSound(player);
+        verify(gui, times(2)).navigate(eq(player), any(Menu.class));
+    }
+
+    @Test
+    void rightClickResetRefusesWhenAlreadyDefault() {
+        GuiService gui = mock(GuiService.class);
+        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store, messages,
+                mock(SoundService.class), gui, null, null);
+        Player player = mock(Player.class);
+        when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+
+        menus.optionsMenu("ghost", null).buttonAt(3).rightAction().accept(player);
+
+        verify(gui, never()).navigate(any(Player.class), any(Menu.class));
+        verify(player).sendMessage(any(Component.class));
     }
 }

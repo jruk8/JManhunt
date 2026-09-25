@@ -267,6 +267,12 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     @CustomKey("commands-lore")
     private String commandsLore = "Runner commands and cleanup";
 
+    @CustomKey("editor-already-default")
+    private String editorAlreadyDefault = "{prefix}<yellow>That option is already the default.";
+
+    @CustomKey("editor-reset-title")
+    private String editorResetTitle = "Reset {name}?";
+
     @CustomKey("cancel")
     private String cancel = "Cancel";
 
