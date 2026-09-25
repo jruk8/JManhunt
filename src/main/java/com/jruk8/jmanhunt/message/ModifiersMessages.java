@@ -7,6 +7,9 @@ import eu.okaeri.configs.annotation.CustomKey;
 @SuppressWarnings("FieldMayBeFinal")
 public class ModifiersMessages extends OkaeriConfig {
 
+    @CustomKey("message-format")
+    private String messageFormat = "{prefix}{message}";
+
     @CustomKey("usage")
     private String usage = "{prefix}<yellow>Usage: <white>/manhunt modifiers [setmod <name> " +
             "<true|false>|setpreset <id> <true|false>]<yellow>.";

@@ -43,6 +43,8 @@ public final class CommandPlaceholders {
     private static final Pattern TEAM_ARGUMENT = Pattern.compile("(?i)(?:^|[,\\[])\\s*team\\s*=\\s*([^,\\]]+)");
     /** Fan-out token, with an optional :TEAM filter. */
     private static final Pattern ALL_PLAYERS_TOKEN = Pattern.compile("<all-players(?::([A-Za-z]+))?>");
+    /** Maximal no-space runs for the bare math pass. */
+    private static final Pattern MATH_TOKEN = Pattern.compile("\\S+");
     /** Safety cap for the inside-out evaluation loop. */
     private static final int MAX_TAG_PASSES = 25;
     /** Random-pick draws at most ten candidates (indexes 0-9). */
@@ -67,24 +69,80 @@ public final class CommandPlaceholders {
      * @return the parsed command ready for console dispatch
      */
     public static String replace(String command, String playerName, double x, double y, double z) {
-        return replace(command, playerName, x, y, z,
-                ModifierTagScope.executor(playerName, message -> { }));
+        return replace(command, playerName, x, y, z, TagContext.inert(
+                ModifierTagScope.executor(playerName, message -> { })));
     }
 
     /**
-     * Same, with a match scope for {@code <all-players>} and
-     * {@code <random-player>} plus warning delivery. Call
-     * {@link #expandAllPlayers} first when a command may fan out to the
-     * whole match; any surviving token here falls back to the executor.
+     * Same, with a tag context for match tags, extended expressions,
+     * and warning delivery. Call {@link #expandAllPlayers} first when
+     * a command may fan out to the whole match; any surviving token
+     * here falls back to the executor. Bare no-space math evaluates
+     * after tags; anything else stays verbatim.
      */
     public static String replace(String command, String playerName, double x, double y, double z,
-            ModifierTagScope scope) {
+            TagContext context) {
         String parsed = convertSelectors(command);
-        parsed = evaluateTags(parsed, playerName, scope);
+        parsed = evaluateTags(parsed, playerName, context);
+        parsed = applyMath(parsed, context);
         if (playerName != null) {
             parsed = resolveTildes(parsed, x, y, z);
         }
         return parsed;
+    }
+
+    /**
+     * Evaluates bare math tokens: maximal no-space runs that fully
+     * parse. Fully quoted tokens and tokens with no operator
+     * character skip the attempt; anything unparseable stays verbatim.
+     */
+    private static String applyMath(String command, TagContext context) {
+        Matcher matcher = MATH_TOKEN.matcher(command);
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) {
+            String token = matcher.group();
+            matcher.appendReplacement(result,
+                    Matcher.quoteReplacement(mathToken(token, context)));
+        }
+        matcher.appendTail(result);
+        return result.toString();
+    }
+
+    private static String mathToken(String token, TagContext context) {
+        if (isQuotedToken(token)) {
+            return token;
+        }
+        boolean candidate = false;
+        for (int index = 0; index < token.length(); index++) {
+            char letter = token.charAt(index);
+            if (letter == '+' || letter == '-' || letter == '*' || letter == '/'
+                    || letter == '%' || letter == '?') {
+                candidate = true;
+                break;
+            }
+        }
+        if (!candidate) {
+            return token;
+        }
+        try {
+            Double value = TagMath.evaluate(token);
+            return value == null ? token : TagMath.formatNumber(value);
+        } catch (TagMath.SyntaxException syntax) {
+            return token;
+        } catch (TagMath.EvalException failed) {
+            context.scope().warn("Math '" + token + "' " + failed.getMessage() + ", using 0");
+            return "0";
+        }
+    }
+
+    /** Fully quoted tokens are prose, never math: quotes protect them. */
+    private static boolean isQuotedToken(String token) {
+        if (token.length() < 2) {
+            return false;
+        }
+        char first = token.charAt(0);
+        return (first == '"' || first == '\'')
+                && token.charAt(token.length() - 1) == first;
     }
 
     /**
@@ -255,38 +313,67 @@ public final class CommandPlaceholders {
         return "random-mob".equals(name) || "random-item".equals(name);
     }
 
-    /** Inside-out tag evaluation; unknown tags survive untouched. */
-    private static String evaluateTags(String command, String playerName, ModifierTagScope scope) {
+    /**
+     * Inside-out tag evaluation; unknown tags survive untouched. If-tags
+     * resolve first each pass because their conditions may hold bare
+     * {@code < > <= >=} that the plain innermost scan cannot see.
+     */
+    private static String evaluateTags(String command, String playerName, TagContext context) {
         String current = command;
         for (int pass = 0; pass < MAX_TAG_PASSES; pass++) {
+            String stepped = resolveIfSpans(current, playerName, context);
+            boolean changed = !stepped.equals(current);
+            current = stepped;
             Matcher matcher = INNER_TAG.matcher(current);
-            if (!matcher.find()) {
-                return current;
+            if (matcher.find()) {
+                StringBuffer result = new StringBuffer();
+                do {
+                    String resolved = resolveTag(matcher.group(1), playerName, context);
+                    if (!resolved.equals(matcher.group(0))) {
+                        changed = true;
+                    }
+                    matcher.appendReplacement(result, Matcher.quoteReplacement(resolved));
+                } while (matcher.find());
+                matcher.appendTail(result);
+                current = result.toString();
             }
-            StringBuffer result = new StringBuffer();
-            boolean changed = false;
-            do {
-                String resolved = resolveTag(matcher.group(1), playerName, scope);
-                if (!resolved.equals(matcher.group(0))) {
-                    changed = true;
-                }
-                matcher.appendReplacement(result, Matcher.quoteReplacement(resolved));
-            } while (matcher.find());
-            matcher.appendTail(result);
-            current = result.toString();
             if (!changed) {
                 return current;
             }
         }
-        scope.warn("Stopped evaluating nested tags after " + MAX_TAG_PASSES + " passes: " + command);
+        context.scope().warn(
+                "Stopped evaluating nested tags after " + MAX_TAG_PASSES + " passes: " + command);
         return current;
     }
 
-    private static String resolveTag(String body, String playerName, ModifierTagScope scope) {
+    /** Resolves if-spans without nested ifs, right to left. */
+    private static String resolveIfSpans(String command, String playerName, TagContext context) {
+        List<TagExpressions.IfSpan> ready = new ArrayList<>();
+        for (TagExpressions.IfSpan span : TagExpressions.findIfSpans(command)) {
+            if (!TagExpressions.hasNestedIf(span.args())) {
+                ready.add(span);
+            }
+        }
+        if (ready.isEmpty()) {
+            return command;
+        }
+        ready.sort((first, second) -> Integer.compare(second.start(), first.start()));
+        StringBuilder result = new StringBuilder(command);
+        for (TagExpressions.IfSpan span : ready) {
+            String args = evaluateTags(span.args(), playerName, context);
+            String resolved = TagExpressions.ifEval(command.substring(span.start(), span.end()),
+                    args, context);
+            result.replace(span.start(), span.end(), resolved);
+        }
+        return result.toString();
+    }
+
+    private static String resolveTag(String body, String playerName, TagContext context) {
+        ModifierTagScope scope = context.scope();
         String tag = "<" + body + ">";
         int separator = body.indexOf(':');
         String name = (separator < 0 ? body : body.substring(0, separator)).trim().toLowerCase(Locale.ROOT);
-        String args = separator < 0 ? null : body.substring(separator + 1);
+        String args = separator < 0 ? "" : body.substring(separator + 1);
         return switch (name) {
             case "p" -> playerName != null ? playerName : tag;
             case "random-mob" -> randomMob();
@@ -307,6 +394,11 @@ public final class CommandPlaceholders {
             }
             // Handled separately by withDuration before evaluation.
             case "duration" -> tag;
+            case "id" -> context.containerId();
+            case "min", "max", "clamp" -> TagExpressions.minMaxClamp(tag, name, args, context);
+            case "if" -> TagExpressions.ifEval(tag, args, context);
+            case "gmessage", "pmessage" -> TagExpressions.message(tag, name, args, context);
+            case "gsound", "psound" -> TagExpressions.sound(tag, name, args, context);
             default -> tag;
         };
     }

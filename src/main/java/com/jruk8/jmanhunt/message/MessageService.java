@@ -220,6 +220,16 @@ public final class MessageService {
             Bukkit.broadcast(component(key));
         }
     }
+
+    /** Broadcasts raw text (already formatted) from engine tags. */
+    public void broadcastText(String text) {
+        Bukkit.broadcast(parse(text));
+    }
+
+    /** Sends raw text (already formatted) to one player from engine tags. */
+    public void sendText(Player player, String text) {
+        player.sendMessage(parse(text));
+    }
     public void broadcast(String key, Map<String, String> values) {
         if (!isDisabled(key)) {
             Bukkit.broadcast(component(key, values));

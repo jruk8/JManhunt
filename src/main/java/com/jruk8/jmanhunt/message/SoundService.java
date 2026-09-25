@@ -81,11 +81,8 @@ public class SoundService {
     /** Plays a sound with explicit parameters, e.g. from lucky-blocks.yml feedback. */
     public void playCustomSound(Player player, String sound, float pitch, float volume) {
         try {
-            NamespacedKey soundKey = NamespacedKey.fromString(sound.toLowerCase(Locale.ROOT));
+            NamespacedKey soundKey = validSoundKey(sound);
             if (soundKey == null) {
-                soundKey = NamespacedKey.minecraft(sound.toLowerCase(Locale.ROOT));
-            }
-            if (Registry.SOUNDS.get(soundKey) == null) {
                 plugin.logger().warning("Sound '" + sound + "' is invalid. Using default sound.");
                 soundKey = NamespacedKey.fromString(FALLBACK_SOUND);
             }
@@ -93,6 +90,26 @@ public class SoundService {
         } catch (IllegalArgumentException exception) {
             plugin.logger().warning("Could not play sound '" + sound + "': " + exception.getMessage());
         }
+    }
+
+    /** True when the id resolves to a real sound, with or without namespace. */
+    public boolean isValidSound(String sound) {
+        try {
+            return validSoundKey(sound) != null;
+        } catch (IllegalArgumentException invalid) {
+            return false;
+        }
+    }
+
+    private static NamespacedKey validSoundKey(String sound) {
+        if (sound == null) {
+            return null;
+        }
+        NamespacedKey soundKey = NamespacedKey.fromString(sound.toLowerCase(Locale.ROOT));
+        if (soundKey == null) {
+            soundKey = NamespacedKey.minecraft(sound.toLowerCase(Locale.ROOT));
+        }
+        return Registry.SOUNDS.get(soundKey) == null ? null : soundKey;
     }
 
     private SoundSettings getSoundSettings(String configKey) {

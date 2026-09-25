@@ -303,6 +303,7 @@ dev:
 
 # Modifier toggles (/manhunt modifiers ...). {state} is on or off.
 modifiers:
+  message-format: "{prefix}{message}"
   usage: "{prefix}<yellow>Usage: <white>/manhunt modifiers [setmod <name> <true|false>|setpreset <id> <true|false>]<yellow>."
   setmod-usage: "{prefix}<yellow>Usage: <white>/manhunt modifiers setmod <name> <true|false><yellow>."
   setpreset-usage: "{prefix}<yellow>Usage: <white>/manhunt modifiers setpreset <id> <true|false><yellow>."

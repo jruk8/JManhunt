@@ -34,21 +34,26 @@ public final class CommandSyntax {
      */
     public static List<String> knownTags() {
         return List.of("p", "random-mob", "random-item", "random-num",
-                "random-pick", "random-player", "all-players");
+                "random-pick", "random-player", "all-players", "id", "min",
+                "max", "clamp", "if", "gmessage", "pmessage", "gsound", "psound");
     }
 
     /**
-     * First fatal problem with a typed command: blank input, unbalanced
-     * angle brackets, or malformed random-num/random-pick args. Empty
+     * First fatal problem with a typed command: blank input, a stray
+     * exit, unbalanced angle brackets, or malformed tag args. Empty
      * means the command is safe to save.
      */
     public static Optional<String> error(String command) {
         if (command == null || command.isBlank()) {
             return Optional.of("Command must not be empty.");
         }
+        if (TagExpressions.isExitMisuse(command)) {
+            return Optional.of("'exit' must stand alone on its line.");
+        }
         int depth = 0;
-        for (int index = 0; index < command.length(); index++) {
-            char letter = command.charAt(index);
+        String balanced = withoutIfSpans(command);
+        for (int index = 0; index < balanced.length(); index++) {
+            char letter = balanced.charAt(index);
             if (letter == '<') {
                 depth++;
             } else if (letter == '>') {
@@ -72,13 +77,20 @@ public final class CommandSyntax {
 
     /**
      * Tag bodies inside-out, innermost spans first, so a nested tag no
-     * longer hides its outer tag from validation. Pass cap mirrors
-     * dispatch; anything deeper stays for runtime to report.
+     * longer hides its outer tag from validation. If-spans collapse
+     * first (mirroring dispatch) since their conditions may hold bare
+     * {@code < > <= >=}. Pass cap mirrors dispatch; anything deeper
+     * stays for runtime to report.
      */
     private static List<String> tagBodies(String command) {
         List<String> bodies = new ArrayList<>();
         String current = command;
         for (int pass = 0; pass < 25; pass++) {
+            String collapsed = collapseIfSpans(current, bodies);
+            if (!collapsed.equals(current)) {
+                current = collapsed;
+                continue;
+            }
             Matcher matcher = INNER_TAG.matcher(current);
             if (!matcher.find()) {
                 return bodies;
@@ -92,6 +104,88 @@ public final class CommandSyntax {
             current = stripped.toString();
         }
         return bodies;
+    }
+
+    /**
+     * If-spans blanked for the bracket check: their quoted conditions
+     * may hold {@code < > <= >=} that are content, not structure.
+     * Loops to a fixpoint so nested ifs collapse inside out. The
+     * check itself stays quote-blind to mirror dispatch.
+     */
+    private static String withoutIfSpans(String command) {
+        String current = command;
+        for (int pass = 0; pass < 25; pass++) {
+            String collapsed = collapseIfSpans(current, new ArrayList<>());
+            if (collapsed.equals(current)) {
+                return current;
+            }
+            current = collapsed;
+        }
+        return current;
+    }
+
+    /** Collects nested bodies plus one collapsed body per ready if-span. */
+    private static String collapseIfSpans(String current, List<String> bodies) {
+        List<TagExpressions.IfSpan> ready = new ArrayList<>();
+        for (TagExpressions.IfSpan span : TagExpressions.findIfSpans(current)) {
+            if (!TagExpressions.hasNestedIf(span.args())) {
+                ready.add(span);
+            }
+        }
+        if (ready.isEmpty()) {
+            return current;
+        }
+        ready.sort((first, second) -> Integer.compare(second.start(), first.start()));
+        StringBuilder result = new StringBuilder(current);
+        for (TagExpressions.IfSpan span : ready) {
+            bodies.addAll(tagBodies(span.args()));
+            result.replace(span.start(), span.end(), "?");
+            bodies.add("if:" + collapseTags(span.args()));
+        }
+        return result.toString();
+    }
+
+    /**
+     * Blanks unquoted innermost tags with {@code ?}, leaving quoted
+     * comparisons (and quoted nested tags) intact for the if checks.
+     */
+    private static String collapseTags(String text) {
+        StringBuilder out = new StringBuilder();
+        int index = 0;
+        while (index < text.length()) {
+            int open = nextUnquoted(text, index, '<');
+            if (open < 0) {
+                out.append(text.substring(index));
+                return out.toString();
+            }
+            int close = nextUnquoted(text, open + 1, '>');
+            int nested = nextUnquoted(text, open + 1, '<');
+            if (close < 0 || (nested >= 0 && nested < close)) {
+                out.append(text, index, open + 1);
+                index = open + 1;
+            } else {
+                out.append(text, index, open).append('?');
+                index = close + 1;
+            }
+        }
+        return out.toString();
+    }
+
+    private static int nextUnquoted(String text, int from, char target) {
+        char quote = 0;
+        for (int index = from; index < text.length(); index++) {
+            char letter = text.charAt(index);
+            if (quote != 0) {
+                if (letter == quote) {
+                    quote = 0;
+                }
+            } else if (letter == '"' || letter == '\'') {
+                quote = letter;
+            } else if (letter == target) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -117,6 +211,12 @@ public final class CommandSyntax {
         return switch (name) {
             case "random-num" -> randomNumberError(args);
             case "random-pick" -> randomPickError(args);
+            case "id" -> idError(args);
+            case "min", "max" -> arityError(name, args, 2, "two numbers");
+            case "clamp" -> arityError(name, args, 3, "a value plus low and high");
+            case "gmessage", "pmessage" -> arityError(name, args, 1, "one text");
+            case "gsound", "psound" -> soundError(name, args);
+            case "if" -> ifError(args);
             default -> Optional.empty();
         };
     }
@@ -179,6 +279,67 @@ public final class CommandSyntax {
         return Optional.of("Tag <random-pick:" + args.trim() + "> has no valid item.");
     }
 
+    private static Optional<String> idError(String args) {
+        if (args != null && !args.isBlank()) {
+            return Optional.of("Tag <id> takes no arguments.");
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<String> arityError(String name, String args, int arity, String what) {
+        if (args == null || args.isBlank()
+                || CommandPlaceholders.splitPickArgs(args).size() != arity) {
+            return Optional.of("Tag <" + name + "> needs " + what + ".");
+        }
+        for (String part : CommandPlaceholders.splitPickArgs(args)) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
+                return Optional.of("Tag <" + name + "> mixes quotes.");
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<String> soundError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs a sound id.");
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        if (parts.size() < 1 || parts.size() > 3) {
+            return Optional.of("Tag <" + name + "> needs an id plus pitch and volume.");
+        }
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
+                return Optional.of("Tag <" + name + "> mixes quotes.");
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<String> ifError(String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <if> needs a condition plus one or two branches.");
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        if (parts.size() < 2 || parts.size() > 3) {
+            return Optional.of("Tag <if> needs a condition plus one or two branches.");
+        }
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
+                return Optional.of("Tag <if> mixes quotes.");
+            }
+        }
+        String condition = CommandPlaceholders.parsePickItem(parts.get(0)).orElse("").strip();
+        try {
+            TagExpressions.validateConditionSpacing(condition);
+        } catch (TagExpressions.ExprException spacing) {
+            return Optional.of("Tag <if> " + spacing.getMessage() + ".");
+        }
+        if (!TagExpressions.hasComparison(condition)) {
+            return Optional.of("Tag <if> condition needs a comparison (==, !=, >, <, >=, <=).");
+        }
+        return Optional.empty();
+    }
+
     /**
      * First-token check against injected known roots: strips leading
      * slashes and namespace prefixes, lowercases like dispatch, and
@@ -186,6 +347,9 @@ public final class CommandSyntax {
      * resolve at runtime, so they always pass. Pure for tests.
      */
     public static Optional<String> unknownRoot(String command, Set<String> knownRoots) {
+        if (TagExpressions.isExit(command)) {
+            return Optional.empty();
+        }
         String token = firstToken(command);
         if (token.contains("<") || token.contains(">")) {
             return Optional.empty();

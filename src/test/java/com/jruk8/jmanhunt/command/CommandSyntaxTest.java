@@ -148,4 +148,46 @@ class CommandSyntaxTest {
         assertEquals(Optional.of("Unknown item 'zzzqqq'."),
                 CommandSyntax.giveItemCheck("give <p> zzzqqq", known, names));
     }
+
+    @Test
+    void extendedTagArityPasses() {
+        assertTrue(CommandSyntax.error("say <id>").isEmpty());
+        assertTrue(CommandSyntax.error("give <p> apple <min:8,10>").isEmpty());
+        assertTrue(CommandSyntax.error("give <p> apple <max:8,10>").isEmpty());
+        assertTrue(CommandSyntax.error("give <p> apple <clamp:8,1,10>").isEmpty());
+        assertTrue(CommandSyntax.error("say <gmessage:\"hi\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <pmessage:yo> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <gsound:block.stone.break> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <psound:block.stone.break,0.5,2> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <if:\"1 == 1\",\"y\",\"n\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <if:\"7 <= 5\",\"y\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <if:\"<random-num:1,6> == 5\",\"y\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <if:\"<flag:a> == <flag:a>\",\"y\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <if:\"<if:1==1,y,n> == y\",\"Y\"> done").isEmpty());
+    }
+
+    @Test
+    void extendedTagArityFails() {
+        assertTrue(CommandSyntax.error("say <id:x>").isPresent());
+        assertTrue(CommandSyntax.error("give <p> apple <min:8>").isPresent());
+        assertTrue(CommandSyntax.error("give <p> apple <clamp:8,1>").isPresent());
+        assertTrue(CommandSyntax.error("say <gmessage> done").isPresent());
+        assertTrue(CommandSyntax.error("say <gsound> done").isPresent());
+        assertTrue(CommandSyntax.error("say <psound:a,b,c,d> done").isPresent());
+        assertTrue(CommandSyntax.error("say <if:\"1 == 1\"> done").isPresent());
+        assertTrue(CommandSyntax.error("say <if:\"abc\",\"y\"> done").isPresent());
+        assertTrue(CommandSyntax.error("say <if:\"7<=7\",\"y\"> done").isPresent());
+        assertTrue(CommandSyntax.error("say <if:\"7 <=7\",\"y\"> done").isPresent());
+        assertTrue(CommandSyntax.error("say <if:\"<flag:a>\",\"y\"> done").isPresent());
+        assertTrue(CommandSyntax.error("say <if:\"<papi:x==y>\",\"y\"> done").isPresent());
+        assertTrue(CommandSyntax.error("say <if:\"7 <= 5\" done").isPresent());
+    }
+
+    @Test
+    void loneExitPassesButMisuseFails() {
+        assertTrue(CommandSyntax.error("exit").isEmpty());
+        assertTrue(CommandSyntax.error("  exit  ").isEmpty());
+        assertTrue(CommandSyntax.error("exit give <p> apple").isPresent());
+        assertTrue(CommandSyntax.unknownRoot("exit", Set.of("give")).isEmpty());
+    }
 }

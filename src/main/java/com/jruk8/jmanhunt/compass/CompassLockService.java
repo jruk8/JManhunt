@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
+import com.jruk8.jmanhunt.command.TagContext;
+import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.JManhuntPlugin;
@@ -300,15 +302,26 @@ final class CompassLockService {
         commands.addAll(plugin.configService().getStringList(
                 "settings.compass.analyze.debuffs.commands." + holderRole.name().toLowerCase(Locale.ROOT)));
         Location location = holder.getLocation();
+        TagContext context = debuffContext(holder);
         for (String command : commands) {
             if (command.isBlank()) {
                 continue;
             }
+            if (TagExpressions.isExitMisuse(command)) {
+                context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
+                continue;
+            }
             try {
-                ModifierTagScope scope = ModifierTagScope.executor(holder.getName(), plugin.logger()::warning);
                 String parsed = CommandPlaceholders.replace(
                         CommandPlaceholders.withDuration(command, delaySeconds),
-                        holder.getName(), location.getX(), location.getY(), location.getZ(), scope);
+                        holder.getName(), location.getX(), location.getY(), location.getZ(), context);
+                if (TagExpressions.isExit(parsed)) {
+                    return;
+                }
+                if (TagExpressions.isExitMisuse(parsed)) {
+                    context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
+                    continue;
+                }
                 if (parsed.startsWith("/")) {
                     parsed = parsed.substring(1);
                 }
@@ -319,6 +332,43 @@ final class CompassLockService {
                 exception.printStackTrace();
             }
         }
+    }
+
+    /** Tag context for one debuff run: {@code <id>} is {@code debuffs}. */
+    private TagContext debuffContext(Player holder) {
+        ModifierTagScope scope = ModifierTagScope.executor(holder.getName(), plugin.logger()::warning);
+        return TagContext.of(scope, "debuffs",
+                text -> messages.broadcastText(formatEngineMessage(text)),
+                text -> messages.sendText(holder, formatEngineMessage(text)),
+                (soundId, pitch, volume) -> playGlobalSound(soundId, pitch, volume),
+                (soundId, pitch, volume) -> {
+                    if (!sounds.isValidSound(soundId)) {
+                        warnInvalidSound(soundId);
+                        return;
+                    }
+                    sounds.playCustomSound(holder, soundId, pitch, volume);
+                });
+    }
+
+    private String formatEngineMessage(String text) {
+        String format = messages.string("modifiers.message-format", "{prefix}{message}");
+        return format.replace("{prefix}", messages.string("prefix", ""))
+                .replace("{message}", text);
+    }
+
+    private void playGlobalSound(String soundId, float pitch, float volume) {
+        if (!sounds.isValidSound(soundId)) {
+            warnInvalidSound(soundId);
+            return;
+        }
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            sounds.playCustomSound(online, soundId, pitch, volume);
+        }
+    }
+
+    private void warnInvalidSound(String soundId) {
+        plugin.logger().warning("modifier \"debuffs\" tried playing invalid sound \""
+                + soundId + "\"");
     }
 
     boolean analyzeEnabled(boolean auto) {

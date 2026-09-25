@@ -99,6 +99,14 @@ class CommandPlaceholdersTest {
                 new Random(42), warnings::add);
     }
 
+    private TagContext matchContext(List<String> warnings) {
+        return TagContext.of(matchScope(warnings), "test",
+                text -> warnings.add("global:" + text),
+                text -> warnings.add("player:" + text),
+                (id, pitch, volume) -> warnings.add("gsound:" + id),
+                (id, pitch, volume) -> warnings.add("psound:" + id));
+    }
+
     @Test
     void convertSelectorsBareAt() {
         assertEquals("tp <all-players> Steve", CommandPlaceholders.convertSelectors("tp @a Steve"));
@@ -146,7 +154,7 @@ class CommandPlaceholdersTest {
     void randomNumberFixedRange() {
         List<String> warnings = new ArrayList<>();
         String result = CommandPlaceholders.replace("give <p> coal <random-num:5,5>",
-                "Steve", 0, 0, 0, matchScope(warnings));
+                "Steve", 0, 0, 0, matchContext(warnings));
         assertEquals("give Steve coal 5", result);
         assertTrue(warnings.isEmpty());
     }
@@ -156,7 +164,7 @@ class CommandPlaceholdersTest {
         List<String> warnings = new ArrayList<>();
         for (int attempt = 0; attempt < 25; attempt++) {
             String result = CommandPlaceholders.replace("give <p> coal <random-num:12,4>",
-                    "Steve", 0, 0, 0, matchScope(warnings));
+                    "Steve", 0, 0, 0, matchContext(warnings));
             int rolled = Integer.parseInt(result.replace("give Steve coal ", ""));
             assertTrue(rolled >= 4 && rolled <= 12, "out of range: " + result);
         }
@@ -167,9 +175,9 @@ class CommandPlaceholdersTest {
     void randomNumberInvalidWarnsAndYieldsZero() {
         List<String> warnings = new ArrayList<>();
         assertEquals("give Steve coal 0", CommandPlaceholders.replace("give <p> coal <random-num:4>",
-                "Steve", 0, 0, 0, matchScope(warnings)));
+                "Steve", 0, 0, 0, matchContext(warnings)));
         assertEquals("give Steve coal 0", CommandPlaceholders.replace("give <p> coal <random-num:a,b>",
-                "Steve", 0, 0, 0, matchScope(warnings)));
+                "Steve", 0, 0, 0, matchContext(warnings)));
         assertEquals(2, warnings.size());
     }
 
@@ -201,7 +209,7 @@ class CommandPlaceholdersTest {
     void randomPickSingleItem() {
         List<String> warnings = new ArrayList<>();
         assertEquals("give Steve only", CommandPlaceholders.replace("give <p> <random-pick:only>",
-                "Steve", 0, 0, 0, matchScope(warnings)));
+                "Steve", 0, 0, 0, matchContext(warnings)));
         assertTrue(warnings.isEmpty());
     }
 
@@ -209,7 +217,7 @@ class CommandPlaceholdersTest {
     void randomPickRetriesPastIllegalItems() {
         List<String> warnings = new ArrayList<>();
         String result = CommandPlaceholders.replace("give <p> <random-pick:'bad 'item'', ok>",
-                "Steve", 0, 0, 0, matchScope(warnings));
+                "Steve", 0, 0, 0, matchContext(warnings));
         assertEquals("give Steve ok", result);
         assertTrue(warnings.size() <= 1);
         for (String warning : warnings) {
@@ -222,7 +230,7 @@ class CommandPlaceholdersTest {
     void randomPickAllIllegalYieldsEmpty() {
         List<String> warnings = new ArrayList<>();
         String result = CommandPlaceholders.replace("give <p> <random-pick:'bad 'one'', 'bad 'two''>",
-                "Steve", 0, 0, 0, matchScope(warnings));
+                "Steve", 0, 0, 0, matchContext(warnings));
         assertEquals("give Steve ", result);
         assertEquals(3, warnings.size());
     }
@@ -231,7 +239,7 @@ class CommandPlaceholdersTest {
     void nestedTagsEvaluateInsideOut() {
         List<String> warnings = new ArrayList<>();
         assertEquals("give Steve coal 1", CommandPlaceholders.replace(
-                "give <p> <random-pick:coal <random-num:1,1>>", "Steve", 0, 0, 0, matchScope(warnings)));
+                "give <p> <random-pick:coal <random-num:1,1>>", "Steve", 0, 0, 0, matchContext(warnings)));
         assertTrue(warnings.isEmpty());
     }
 
@@ -239,10 +247,10 @@ class CommandPlaceholdersTest {
     void unknownTagsSurviveUntouched() {
         List<String> warnings = new ArrayList<>();
         assertEquals("say <hello> Steve", CommandPlaceholders.replace(
-                "say <hello> <p>", "Steve", 0, 0, 0, matchScope(warnings)));
+                "say <hello> <p>", "Steve", 0, 0, 0, matchContext(warnings)));
         assertEquals("effect give Steve slow <duration> 1",
                 CommandPlaceholders.replace("effect give <p> slow <duration> 1",
-                        "Steve", 0, 0, 0, matchScope(warnings)));
+                        "Steve", 0, 0, 0, matchContext(warnings)));
     }
 
     @Test
@@ -283,7 +291,7 @@ class CommandPlaceholdersTest {
     void randomPlayerDrawsFromScope() {
         List<String> warnings = new ArrayList<>();
         String result = CommandPlaceholders.replace("give <random-player> apple",
-                "Steve", 0, 0, 0, matchScope(warnings));
+                "Steve", 0, 0, 0, matchContext(warnings));
         assertTrue(result.equals("give Alice apple") || result.equals("give Bob apple"), result);
         assertTrue(warnings.isEmpty());
     }
@@ -330,5 +338,61 @@ class CommandPlaceholdersTest {
         List<String> lines = List.of("say hi <p>", "give <p> <random-num:1|5>");
 
         assertSame(lines, CommandPlaceholders.preresolveSharedRandoms(lines, new HashMap<>(), tag -> "x"));
+    }
+
+    @Test
+    void bareMathEvaluatesAfterTags() {
+        assertEquals("give Steve cooked_beef 13",
+                CommandPlaceholders.replace("give <p> cooked_beef 8+5", "Steve", 0, 0, 0));
+        assertEquals("give Steve beef 20",
+                CommandPlaceholders.replace("give <p> beef (2+3)*4", "Steve", 0, 0, 0));
+        assertEquals("give Steve beef 2",
+                CommandPlaceholders.replace("give <p> beef <random-num:3,3>-1", "Steve", 0, 0, 0));
+    }
+
+    @Test
+    void bareMathLeavesProseVerbatim() {
+        assertEquals("say what is 2 + 2?",
+                CommandPlaceholders.replace("say what is 2 + 2?", "Steve", 0, 0, 0));
+        assertEquals("say it's 2+2!",
+                CommandPlaceholders.replace("say it's 2+2!", "Steve", 0, 0, 0));
+        assertEquals("say // ** * +",
+                CommandPlaceholders.replace("say // ** * +", "Steve", 0, 0, 0));
+        assertEquals("say (5) beef",
+                CommandPlaceholders.replace("say (5) beef", "Steve", 0, 0, 0));
+        assertEquals("say cooldown-5",
+                CommandPlaceholders.replace("say cooldown-5", "Steve", 0, 0, 0));
+    }
+
+    @Test
+    void bareMathIsAggressiveOnHyphenatedNumbers() {
+        // Documented edge: any no-space token that fully parses is math.
+        // Quote the token to protect it.
+        assertEquals("say 1991",
+                CommandPlaceholders.replace("say 2026-09-26", "Steve", 0, 0, 0));
+        assertEquals("say \"2026-09-26\"",
+                CommandPlaceholders.replace("say \"2026-09-26\"", "Steve", 0, 0, 0));
+        assertEquals("say '2026-09-26'",
+                CommandPlaceholders.replace("say '2026-09-26'", "Steve", 0, 0, 0));
+    }
+
+    @Test
+    void bareMathDivisionByZeroWarnsAndYieldsZero() {
+        List<String> warnings = new ArrayList<>();
+        assertEquals("give Steve beef 0", CommandPlaceholders.replace("give <p> beef 8/0",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertEquals(1, warnings.size());
+    }
+
+    @Test
+    void extendedTagsResolveThroughReplace() {
+        List<String> warnings = new ArrayList<>();
+        assertEquals("say yes", CommandPlaceholders.replace("<if:\"1+1 == 2\",\"say yes\",\"say no\">",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertEquals("give Steve apple 10", CommandPlaceholders.replace("give <p> apple <min:8+5,10>",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertEquals("say test", CommandPlaceholders.replace("say <id>",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertTrue(warnings.isEmpty(), warnings.toString());
     }
 }

@@ -2,7 +2,11 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
+import com.jruk8.jmanhunt.command.TagContext;
+import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -29,6 +33,8 @@ public final class GameStateCommandManager {
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
     private final ConfigService configService;
+    private final MessageService messages;
+    private final SoundService sounds;
     private final LobbyTeleporter lobbyTeleporter;
     private final GameManager game;
     /** One interval engine per live match, keyed by match id. */
@@ -50,11 +56,14 @@ public final class GameStateCommandManager {
     }
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
-                                   ConfigService configService, LobbyTeleporter lobbyTeleporter,
+                                   ConfigService configService, MessageService messages,
+                                   SoundService sounds, LobbyTeleporter lobbyTeleporter,
                                    GameManager game) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.configService = configService;
+        this.messages = messages;
+        this.sounds = sounds;
         this.lobbyTeleporter = lobbyTeleporter;
         this.game = game;
     }
@@ -106,9 +115,10 @@ public final class GameStateCommandManager {
     }
 
     public void runConsoleCleanup() {
-        ModifierTagScope scope = ModifierTagScope.executor(null, plugin.logger()::warning);
         for (String name : enabledModifiers()) {
-            runCommandList(configService.commandList(name, "console-cleanup"), null, scope);
+            ModifierTagScope scope = ModifierTagScope.executor(null, plugin.logger()::warning);
+            runCommandList(configService.commandList(name, "console-cleanup"), null,
+                    tagContext(name, null, scope));
         }
     }
 
@@ -116,7 +126,7 @@ public final class GameStateCommandManager {
         for (String name : enabledModifiers()) {
             for (Player player : participants) {
                 runCommandList(configService.commandList(name, "player-cleanup"), player,
-                        matchScope(player, participants));
+                        tagContext(name, player, matchScope(player, participants)));
             }
         }
     }
@@ -424,17 +434,18 @@ public final class GameStateCommandManager {
                         CommandPlaceholders::rollSharedRandom));
             }
         }
-        ModifierTagScope consoleScope = matchScope(null, match);
+        TagContext consoleContext = tagContext(name, null, matchScope(null, match));
         if (chanceScope == ModifierTriggers.TriggerScope.PER_EXECUTOR) {
             if (ModifierTriggers.rollChance(chance, random.nextDouble())) {
                 runCommandList(sharedPicks ? shared.get("console") : resolveCommandList(name, "console"), null,
-                        consoleScope);
+                        consoleContext);
             }
             for (Player target : targets) {
                 if (!ModifierTriggers.rollChance(chance, random.nextDouble())) {
                     continue;
                 }
-                runExecutorPlayerLists(name, target, shared, sharedPicks, matchScope(target, match));
+                runExecutorPlayerLists(name, target, shared, sharedPicks,
+                        tagContext(name, target, matchScope(target, match)));
             }
             return;
         }
@@ -444,18 +455,66 @@ public final class GameStateCommandManager {
         // The shared map only exists for PER_INVOKE picks; per-executor
         // picks resolve their lists here instead of reading nulls.
         runCommandList(sharedPicks ? shared.get("console") : resolveCommandList(name, "console"), null,
-                consoleScope);
+                consoleContext);
         for (Player target : targets) {
-            runExecutorPlayerLists(name, target, shared, sharedPicks, matchScope(target, match));
+            runExecutorPlayerLists(name, target, shared, sharedPicks,
+                    tagContext(name, target, matchScope(target, match)));
         }
     }
 
     private void runExecutorPlayerLists(String name, Player target, Map<String, List<String>> shared,
-                                        boolean useShared, ModifierTagScope scope) {
-        runCommandList(useShared ? shared.get("player") : resolveCommandList(name, "player"), target, scope);
+                                        boolean useShared, TagContext context) {
+        runCommandList(useShared ? shared.get("player") : resolveCommandList(name, "player"), target, context);
         String roleCommands = playerStates.role(target) == Role.HUNTER ? "hunter" : "speedrunner";
         runCommandList(useShared ? shared.get(roleCommands) : resolveCommandList(name, roleCommands), target,
-                scope);
+                context);
+    }
+
+    /** Tag context for one modifier dispatch: id plus message/sound sinks. */
+    private TagContext tagContext(String name, Player executor, ModifierTagScope scope) {
+        return TagContext.of(scope, name,
+                text -> messages.broadcastText(formatEngineMessage(text)),
+                text -> {
+                    if (executor != null) {
+                        messages.sendText(executor, formatEngineMessage(text));
+                    } else {
+                        scope.warn("Tag <pmessage> needs an executor player: skipped in '" + name + "'.");
+                    }
+                },
+                (soundId, pitch, volume) -> playEngineSound(name, null, soundId, pitch, volume),
+                (soundId, pitch, volume) -> {
+                    if (executor != null) {
+                        playEngineSound(name, executor, soundId, pitch, volume);
+                    } else {
+                        scope.warn("Tag <psound> needs an executor player: skipped in '" + name + "'.");
+                    }
+                });
+    }
+
+    private String formatEngineMessage(String text) {
+        String format = messages.string("modifiers.message-format", "{prefix}{message}");
+        return format.replace("{prefix}", messages.string("prefix", ""))
+                .replace("{message}", text);
+    }
+
+    /**
+     * Plays one engine sound for every online player (global) or one
+     * executor. Unknown ids skip with the modifier named in the log.
+     */
+    private void playEngineSound(String containerId, Player target, String soundId,
+            float pitch, float volume) {
+        if (!sounds.isValidSound(soundId)) {
+            plugin.logger().warning("modifier \"" + containerId
+                    + "\" tried playing invalid sound \"" + soundId + "\"");
+            return;
+        }
+        if (target != null) {
+            sounds.playCustomSound(target, soundId, pitch, volume);
+            return;
+        }
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            sounds.playCustomSound(online, soundId, pitch, volume);
+        }
     }
 
     /**
@@ -583,9 +642,13 @@ public final class GameStateCommandManager {
         }
     }
 
-    private void runCommandList(List<String> commands, Player player, ModifierTagScope scope) {
+    private void runCommandList(List<String> commands, Player player, TagContext context) {
         for (String command : commands) {
             if (command.isBlank()) {
+                continue;
+            }
+            if (TagExpressions.isExitMisuse(command)) {
+                context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
                 continue;
             }
             try {
@@ -593,8 +656,15 @@ public final class GameStateCommandManager {
                 double x = player != null ? player.getLocation().getX() : 0.0;
                 double y = player != null ? player.getLocation().getY() : 0.0;
                 double z = player != null ? player.getLocation().getZ() : 0.0;
-                for (String expanded : CommandPlaceholders.expandAllPlayers(command, scope)) {
-                    String parsed = CommandPlaceholders.replace(expanded, playerName, x, y, z, scope);
+                for (String expanded : CommandPlaceholders.expandAllPlayers(command, context.scope())) {
+                    String parsed = CommandPlaceholders.replace(expanded, playerName, x, y, z, context);
+                    if (TagExpressions.isExit(parsed)) {
+                        return;
+                    }
+                    if (TagExpressions.isExitMisuse(parsed)) {
+                        context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
+                        continue;
+                    }
                     if (parsed.startsWith("/")) {
                         parsed = parsed.substring(1);
                     }

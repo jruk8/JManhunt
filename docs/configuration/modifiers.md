@@ -247,6 +247,60 @@ Raw `@a` and `@r` selectors are converted to `<all-players>` and
 selector arguments are dropped. `@p` and `@s` convert to `<p>` the
 same way, resolving to the executing player.
 
+## Extended Tags
+
+Besides the placeholders above, commands understand a few computing
+tags. They nest inside each other and inside the basic tags, and the
+creator editor validates them as you type:
+
+| Tag | Meaning |
+| --- | --- |
+| `<if:"7 <= 5","yes","no">` | `yes` when the condition holds, else `no` (the else branch may be omitted). |
+| `<min:8,3>` | The smaller number: `3`. |
+| `<max:8,3>` | The larger number: `8`. |
+| `<clamp:8,1,5>` | `8` clamped into `1..5`: `5`. |
+| `<id>` | The name of the modifier (or trigger) running the commands. |
+| `<gmessage:"hi">` | Sends `hi` to every participant; the tag itself leaves nothing behind. |
+| `<pmessage:yo>` | Sends `yo` to the executing player only. |
+| `<gsound:block.stone.break>` | Plays the sound for every participant. |
+| `<psound:block.stone.break,0.5,2>` | Plays the sound for the executing player, with pitch `0.5` and volume `2` (both default to `1`). |
+
+`<min>`, `<max>`, and `<clamp>` accept math in their arguments
+(`<min:8+5,10>` is `10`) and yield `0` with a console warning when an
+argument is not a number.
+
+### Conditions
+
+`<if>` compares with `==`, `!=`, `>`, `<`, `>=`, `<=` and joins parts
+with `and` / `or` (`and` binds tighter, case does not matter):
+
+```yaml
+- 'say <if:"1 == 1 and 2 < 3 or 4 == 5","y","n">'
+```
+
+Ordering needs whole numbers with a space on each side of the bracket:
+`7 <= 5` works, `7<=5` warns and yields nothing. Each side compares as
+a number when it parses as math, otherwise as text.
+
+Quote the condition when it holds `<`, `>`, or commas. An unquoted
+`<if:7 <= 5,...>` never resolves: the tag finder cannot tell a bare
+`<` from a nested tag. `==` and `!=` need no quotes.
+
+### Bare math
+
+Any no-space token that fully parses as math evaluates: `give <p> egg
+1+1` hands out 2 eggs. Parentheses, `**`, `//`, `%`, and `??` (null
+coalescing) work; division by zero warns and yields 0. Quote a token
+to protect it: `say "2026-09-26"` stays a date, while a bare
+`2026-09-26` computes to 1991.
+
+### Stopping a list
+
+A lone `exit` line stops the command list: later lines never run. It is
+checked after tags expand, so `<if:"1 == 2","exit","say hi">` skips
+the rest only when the branch hits. `exit` with anything else on its
+line is skipped with a warning.
+
 ## Relative Coordinates
 
 In player and role commands (`player`, `hunter`, `speedrunner`), tildes (`~`)

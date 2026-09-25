@@ -64,7 +64,7 @@ public final class GameManager implements MatchControl {
         this.winConditionEngine = winConditionEngine;
         this.lobbies = lobbyService;
         this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService,
-                worldEngine.teleportService(), this);
+                messages, sounds, worldEngine.teleportService(), this);
         this.store = new MatchStore(playerStates);
         this.messaging = new MatchMessaging(messages, sounds, configService, store, lobbies);
         this.timeLimits = new TimeLimitService(plugin, winConditionEngine, store, messaging, this);
