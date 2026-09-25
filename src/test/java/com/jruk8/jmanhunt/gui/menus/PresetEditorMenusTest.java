@@ -99,39 +99,16 @@ class PresetEditorMenusTest {
     }
 
     @Test
-    void legacyEditorKeepsEveryField() {
-        Menu menu = editor.legacyEditor("pair", null);
-
-        assertEquals(27, menu.layout().size());
-
-        MenuButton name = menu.buttonAt(1);
-        assertEquals(Material.NAME_TAG, name.material());
-        assertEquals(plain("Current: Pair", NamedTextColor.GRAY), name.lore().get(0));
-
-        MenuButton members = menu.buttonAt(13);
-        assertEquals(Material.FILLED_MAP, members.material());
-        assertEquals(plain("1 members", NamedTextColor.GRAY), members.lore().get(0));
-
-        assertEquals(Material.LOOM, menu.buttonAt(10).material());
-        assertEquals(Material.ANVIL, menu.buttonAt(12).material());
-        MenuButton rename = menu.buttonAt(12);
-        assertEquals(1, rename.lore().size());
-        assertEquals(plain("Current id: pair", NamedTextColor.GRAY), rename.lore().get(0));
-        assertEquals(Material.TNT, menu.buttonAt(14).material());
-        assertEquals(Material.PAPER, menu.buttonAt(16).material());
-    }
-
-    @Test
-    void membersMenuTogglesMembershipWithGlow() {
+    void membersMenuOrdersMembersFirstWithGlow() {
         Menu menu = editor.membersMenu("pair", null);
 
-        assertEquals(title("Members"), menu.title());
-        MenuButton apple = menu.buttonAt(2);
-        MenuButton zebra = menu.buttonAt(3);
-        assertEquals("Apple", textOf(apple.name()));
+        assertEquals(title("Modifiers"), menu.title());
+        MenuButton zebra = menu.buttonAt(2);
+        MenuButton apple = menu.buttonAt(3);
         assertEquals("Zulu", textOf(zebra.name()));
-        assertFalse(apple.glow());
+        assertEquals("Apple", textOf(apple.name()));
         assertTrue(zebra.glow());
+        assertFalse(apple.glow());
         assertNotNull(apple.action());
         assertEquals(Material.PAPER, menu.buttonAt(18).material());
     }

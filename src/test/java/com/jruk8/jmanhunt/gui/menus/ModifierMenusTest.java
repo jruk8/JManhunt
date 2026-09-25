@@ -51,8 +51,8 @@ class ModifierMenusTest {
         addModifier(config, "zebra", true, "Zulu", "Stripes", "COOKED_BEEF", "JManhunt");
         addModifier(config, "mike", false, "<red>Mike</red>", "", null, null);
         addModifier(config, "apple", false, "&aApple", "Fruit\nCrisp", "BOGUS_ITEM", " ");
-        addPreset(config, "pair", "Pair", "CHEST", List.of("zebra", "apple"));
-        addPreset(config, "solo", "Solo", null, List.of("zebra"));
+        addPreset(config, "pair", "Pair", "CHEST", "JManhunt", List.of("zebra", "apple"));
+        addPreset(config, "solo", "Solo", null, null, List.of("zebra"));
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         MessageService messages = new MessageService();
@@ -75,10 +75,11 @@ class ModifierMenusTest {
     }
 
     private static void addPreset(ModifiersConfig config, String id, String name,
-            String item, List<String> members) {
+            String item, String author, List<String> members) {
         ModifierPreset preset = new ModifierPreset();
         preset.setName(name);
         preset.setItem(item);
+        preset.setAuthor(author);
         preset.setModifiers(members);
         config.getPresets().put(id, preset);
     }
@@ -200,10 +201,11 @@ class ModifierMenusTest {
 
         MenuButton pair = menu.buttonAt(11);
         assertEquals(Material.CHEST, pair.material());
-        assertEquals(6, pair.lore().size());
+        assertEquals(8, pair.lore().size());
         assertEquals("» Zulu", textOf(pair.lore().get(0)));
         assertEquals("» Apple", textOf(pair.lore().get(1)));
         assertEquals(plain("Disabled", NamedTextColor.RED), pair.lore().get(3));
+        assertEquals(plain("by JManhunt", NamedTextColor.GRAY), pair.lore().get(5));
 
         assertEquals("Modifiers", textOf(menu.parent().get().title()));
     }
@@ -243,7 +245,7 @@ class ModifierMenusTest {
             members.add(id);
             addModifier(config, id, true, "M" + index, "", null, null);
         }
-        addPreset(config, "big", "Big", null, members);
+        addPreset(config, "big", "Big", null, null, members);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         MessageService fresh = new MessageService();

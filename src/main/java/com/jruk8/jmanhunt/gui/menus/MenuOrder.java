@@ -2,6 +2,9 @@ package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -29,6 +32,16 @@ public final class MenuOrder {
     public static Comparator<String> presets(Function<String, String> displayName,
             Predicate<String> allOn, Function<String, Integer> order) {
         return byState(displayName, allOn, order);
+    }
+
+    /** File position index for one id set, in iteration order. */
+    public static Map<String, Integer> fileOrder(Set<String> ids) {
+        Map<String, Integer> order = new HashMap<>();
+        int index = 0;
+        for (String id : ids) {
+            order.put(id, index++);
+        }
+        return order;
     }
 
     private static Comparator<String> byState(Function<String, String> displayName,

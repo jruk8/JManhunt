@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -244,7 +243,7 @@ public final class ModifierMenus {
     }
 
     private List<MenuButton> modifierButtons(int columns, Supplier<Menu> listParent) {
-        Map<String, Integer> order = fileOrder(store.modifierNames());
+        Map<String, Integer> order = MenuOrder.fileOrder(store.modifierNames());
         List<String> ids = new ArrayList<>(store.modifierNames());
         ids.sort(MenuOrder.modifiers(store::metaName, store::isEnabled, order::get));
         int enabled = 0;
@@ -287,15 +286,6 @@ public final class ModifierMenus {
         }
     }
 
-    private static Map<String, Integer> fileOrder(Set<String> ids) {
-        Map<String, Integer> order = new HashMap<>();
-        int index = 0;
-        for (String id : ids) {
-            order.put(id, index++);
-        }
-        return order;
-    }
-
     private List<Component> modifierLore(String id, boolean enabled) {
         List<Component> lore = new ArrayList<>(GuiTexts.lore(messages, store.metaDescription(id)));
         if (!lore.isEmpty()) {
@@ -313,7 +303,7 @@ public final class ModifierMenus {
     }
 
     private List<MenuButton> presetButtons(int columns, Supplier<Menu> listParent) {
-        Map<String, Integer> order = fileOrder(store.presetNames());
+        Map<String, Integer> order = MenuOrder.fileOrder(store.presetNames());
         List<String> ids = new ArrayList<>(store.presetNames());
         ids.sort(MenuOrder.presets(store::presetName, store::presetEnabled, order::get));
         int allOn = 0;
@@ -363,6 +353,11 @@ public final class ModifierMenus {
             lore.add(Component.text(" "));
         }
         lore.addAll(GuiTexts.lore(messages, text(stateKey(allOn), allOn ? "Enabled" : "Disabled")));
+        String author = store.presetAuthor(id);
+        if (author != null) {
+            lore.add(Component.text(" "));
+            lore.addAll(GuiTexts.lore(messages, "by " + author));
+        }
         lore.add(Component.text(" "));
         lore.addAll(GuiTexts.lore(messages, text("edit-hint", "Right-click to edit")));
         return lore;

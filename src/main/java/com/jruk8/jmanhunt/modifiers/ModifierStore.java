@@ -501,6 +501,13 @@ public final class ModifierStore {
         return resolveItem(preset == null ? null : preset.getItem(), "Preset '" + id + "'");
     }
 
+    /** Preset author line, or null when the preset defines none. */
+    public String presetAuthor(String id) {
+        ModifierPreset preset = config.getPresets().get(id);
+        String author = preset == null ? null : preset.getAuthor();
+        return author == null || author.isBlank() ? null : author;
+    }
+
     private ModifierBehavior behavior(String name) {
         ModifierEntry entry = config.getModifiers().get(name);
         return entry == null ? null : entry.getBehavior();

@@ -10,6 +10,7 @@ public class ModifierPreset extends OkaeriConfig {
     private String name;
     private String description;
     private String item;
+    private String author;
     private List<String> modifiers;
 
     public String getName() {
@@ -34,6 +35,14 @@ public class ModifierPreset extends OkaeriConfig {
 
     public void setItem(String item) {
         this.item = item;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
     }
 
     public List<String> getModifiers() {

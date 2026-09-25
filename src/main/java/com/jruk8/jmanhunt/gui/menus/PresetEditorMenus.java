@@ -19,7 +19,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -38,6 +37,7 @@ public final class PresetEditorMenus {
     private final GuiService gui;
     private final ModifiersCommand commands;
     private final SettingDialogs dialogs;
+    private final MetaQuad meta;
 
     /**
      * @param store preset reads and patches; sounds, gui, commands, and
@@ -52,6 +52,73 @@ public final class PresetEditorMenus {
         this.gui = gui;
         this.commands = commands;
         this.dialogs = dialogs;
+        this.meta = new MetaQuad(messages, sounds, gui, dialogs);
+    }
+
+    private MetaTarget presetTarget(String id) {
+        return new MetaTarget() {
+            @Override
+            public String id() {
+                return id;
+            }
+
+            @Override
+            public String name() {
+                return store.presetName(id);
+            }
+
+            @Override
+            public String description() {
+                return store.presetDescription(id);
+            }
+
+            @Override
+            public Material item() {
+                return store.presetItem(id);
+            }
+
+            @Override
+            public String author() {
+                return store.presetAuthor(id);
+            }
+
+            @Override
+            public void patchName(String name) {
+                store.updatePreset(id, preset -> preset.setName(name));
+            }
+
+            @Override
+            public void patchDescription(String description) {
+                store.updatePreset(id, preset -> preset.setDescription(description));
+            }
+
+            @Override
+            public void patchItem(Material item) {
+                store.updatePreset(id, preset -> preset.setItem(item.name()));
+            }
+
+            @Override
+            public void patchAuthor(String author) {
+                store.updatePreset(id, preset -> preset.setAuthor(author));
+            }
+
+            @Override
+            public Set<String> takenIds() {
+                Set<String> taken = new HashSet<>(store.presetNames());
+                taken.remove(id);
+                return taken;
+            }
+
+            @Override
+            public void rename(String newId) {
+                store.renamePreset(id, newId);
+            }
+
+            @Override
+            public String displayName(String renamedId) {
+                return store.presetName(renamedId);
+            }
+        };
     }
 
     /**
@@ -95,7 +162,9 @@ public final class PresetEditorMenus {
                                     if (denied(player)) {
                                         return;
                                     }
-                                    gui.navigate(player, legacyEditor(id, parent));
+                                    gui.navigate(player, meta.menu(presetTarget(id),
+                                            () -> self[0],
+                                            renamed -> editor(renamed, parent)));
                                 }),
                         EditorButtons.actionButton(messages, Material.FILLED_MAP,
                                 text("modifiers-title", "Modifiers"),
@@ -131,109 +200,12 @@ public final class PresetEditorMenus {
         return self[0];
     }
 
-    /**
-     * Phase 3 placeholder: the previous full editor, kept as the Meta
-     * target until Phase 4 builds the Meta quad. Back and delete return
-     * to the passed parent (the preset list), like the old editor did.
-     */
-    Menu legacyEditor(String id, Supplier<Menu> parent) {
-        MenuLayout layout = MenuLayout.parse("#########", "#########", "#########");
-        final Menu[] self = new Menu[1];
-        self[0] = new Menu(GuiTexts.title(messages, text("editor-title-preset", "Edit Preset")),
-                layout, () -> editorStatic(id, parent, self[0]), List::of, parent);
-        return self[0];
-    }
-
-    private Map<Integer, MenuButton> editorStatic(String id, Supplier<Menu> parent, Menu self) {
-        Map<Integer, MenuButton> fixed = new HashMap<>();
-        metaRow(fixed, id, self);
-        membersRow(fixed, id, self);
-        actionRow(fixed, id, parent, self);
-        return fixed;
-    }
-
-    private void metaRow(Map<Integer, MenuButton> fixed, String id, Menu self) {
-        fixed.put(1, fieldButton(Material.NAME_TAG, "Name", store.presetName(id),
-                player -> fieldPrompt(player, self, "Name", store.presetName(id), id, false,
-                        (target, raw) -> {
-                            ModifierFieldEdits.Parsed<String> name =
-                                    ModifierFieldEdits.name(raw);
-                            if (!name.ok()) {
-                                return name.error();
-                            }
-                            store.updatePreset(target,
-                                    preset -> preset.setName(name.value()));
-                            return null;
-                        })));
-        fixed.put(3, fieldButton(Material.BOOK, "Description",
-                orUnset(store.presetDescription(id)),
-                player -> fieldPrompt(player, self, "Description", store.presetDescription(id),
-                        id, true, (target, raw) -> {
-                            store.updatePreset(target, preset -> preset.setDescription(raw));
-                            return null;
-                        })));
-        fixed.put(5, fieldButton(store.presetItem(id), "Icon", store.presetItem(id).name(),
-                player -> fieldPrompt(player, self, "Icon", store.presetItem(id).name(), id, false,
-                        (target, raw) -> {
-                            ModifierFieldEdits.Parsed<Material> item =
-                                    ModifierFieldEdits.item(raw);
-                            if (!item.ok()) {
-                                return item.error();
-                            }
-                            store.updatePreset(target,
-                                    preset -> preset.setItem(item.value().name()));
-                            return null;
-                        })));
-    }
-
-    private void membersRow(Map<Integer, MenuButton> fixed, String id, Menu self) {
-        int members = store.presetMembers(id).size();
-        fixed.put(13, EditorButtons.actionButton(messages, Material.FILLED_MAP,
-                text("members-title", "Members"),
-                List.of(text("members-lore", "{total} members")
-                                .replace("{total}", String.valueOf(members)),
-                        text("editor-click-open", "Click to open")),
-                player -> {
-                    if (denied(player)) {
-                        return;
-                    }
-                    gui.navigate(player, membersMenu(id, () -> legacyEditor(id, self.parent())));
-                }));
-    }
-
-    private void actionRow(Map<Integer, MenuButton> fixed, String id, Supplier<Menu> parent,
-            Menu self) {
-        fixed.put(10, EditorButtons.actionButton(messages, Material.LOOM,
-                text("editor-export", "Export"),
-                List.of(text("editor-export-lore", "Copy a share string"),
-                        text("editor-click-copy", "Click to copy")),
-                player -> commands.exportEntry(player, "preset", id)).silent());
-        fixed.put(12, EditorButtons.actionButton(messages, Material.ANVIL,
-                text("editor-rename", "Rename Id"),
-                List.of(text("editor-rename-lore", "Current id: {value}").replace("{value}", id)),
-                player -> renamePrompt(player, id, self)).silent());
-        fixed.put(14, EditorButtons.actionButton(messages, Material.TNT,
-                text("editor-delete", "Delete"),
-                List.of(text("editor-delete-preset-lore", "Removes this preset forever"),
-                        text("editor-click-delete", "Click to delete")),
-                player -> {
-                    if (denied(player)) {
-                        return;
-                    }
-                    deleteConfirm(player, id, parent);
-                }));
-        fixed.put(16, new MenuButton(Material.PAPER,
-                GuiTexts.name(messages, text("back", "Back"), "Back"),
-                null, false, false,
-                player -> gui.back(player, self)));
-    }
-
-    /** Scrollable membership toggles over every modifier. */
+    /** Scrollable modifier toggles over every modifier. */
     public Menu membersMenu(String id, Supplier<Menu> parent) {
         MenuLayout layout = MenuLayout.parse(
                 "##xxxxxx#", "u#xxxxxx#", "b#xxxxxxt", "d#xxxxxx#", "##xxxxxx#");
         final Menu[] self = new Menu[1];
-        self[0] = new Menu(GuiTexts.title(messages, text("members-title", "Members")),
+        self[0] = new Menu(GuiTexts.title(messages, text("modifiers-title", "Modifiers")),
                 layout, () -> membersStatic(self),
                 () -> memberButtons(id), parent);
         return self[0];
@@ -252,8 +224,9 @@ public final class PresetEditorMenus {
 
     private List<MenuButton> memberButtons(String id) {
         Set<String> members = new HashSet<>(store.presetMembers(id));
+        Map<String, Integer> order = MenuOrder.fileOrder(store.modifierNames());
         List<String> ids = new ArrayList<>(store.modifierNames());
-        ids.sort(String.CASE_INSENSITIVE_ORDER);
+        ids.sort(MenuOrder.modifiers(store::metaName, members::contains, order::get));
         List<MenuButton> buttons = new ArrayList<>();
         for (String member : ids) {
             boolean on = members.contains(member);
@@ -279,30 +252,6 @@ public final class PresetEditorMenus {
         sounds.playNeutralSound(player);
     }
 
-    private void renamePrompt(Player player, String id, Menu self) {
-        if (denied(player)) {
-            return;
-        }
-        dialogs.prompt(player, text("editor-rename-title", "Rename Id"), id,
-                List.of(text("editor-rename-prompt", "Type the new id.")),
-                raw -> {
-                    Set<String> taken = new HashSet<>(store.presetNames());
-                    taken.remove(id);
-                    ModifierFieldEdits.Parsed<String> parsed = ModifierFieldEdits.id(raw, taken);
-                    if (!parsed.ok()) {
-                        invalid(player, parsed.error());
-                        gui.navigate(player, self);
-                        return;
-                    }
-                    store.renamePreset(id, parsed.value());
-                    messages.message(player, "modifiers.edit-renamed",
-                            Map.of("name", store.presetName(parsed.value())));
-                    sounds.playNeutralSound(player);
-                    gui.navigate(player, legacyEditor(parsed.value(), self.parent()));
-                },
-                () -> gui.navigate(player, self));
-    }
-
     private void deleteConfirm(Player player, String id, Supplier<Menu> parent) {
         String name = store.presetName(id);
         Menu confirm = ConfirmMenu.create(
@@ -324,55 +273,11 @@ public final class PresetEditorMenus {
         gui.navigate(player, confirm);
     }
 
-    private void fieldPrompt(Player player, Menu self, String label, String current, String id,
-            boolean clearable, PresetSubmit submit) {
-        String shown = current == null ? text("editor-unset", "Not set") : current;
-        dialogs.prompt(player,
-                text("editor-prompt-title", "Edit {label}").replace("{label}", label),
-                SettingDialogs.safeInitial(current),
-                List.of(text("editor-prompt-current", "Current value: {value}")
-                        .replace("{value}", shown)),
-                raw -> {
-                    String error = clearable && raw.isBlank()
-                            ? submit.submit(id, null)
-                            : submit.submit(id, raw);
-                    if (error != null) {
-                        invalid(player, error);
-                    } else {
-                        sounds.playNeutralSound(player);
-                    }
-                    gui.navigate(player, self);
-                },
-                () -> gui.navigate(player, self));
-    }
-
-    /** Preset field submitter: patches the preset, returning an error or null. */
-    private interface PresetSubmit {
-        String submit(String id, String raw);
-    }
-
-    private MenuButton fieldButton(Material material, String label, String value,
-            Consumer<Player> action) {
-        return fieldButton(material, label, value,
-                "editor-click-edit", "Click to edit", action);
-    }
-
-    private MenuButton fieldButton(Material material, String label, String value,
-            String hintKey, String hintFallback, Consumer<Player> action) {
-        return EditorButtons.valueButton(messages, material, label, value,
-                text(hintKey, hintFallback), action);
-    }
-
     private MenuButton scrollButton(String nameKey, String fallback, Menu[] self, int delta) {
         return new MenuButton(Material.ARROW,
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 null, false, false,
                 player -> self[0].window().scrollLine(delta));
-    }
-
-    private String orUnset(String value) {
-        return value == null || value.isBlank()
-                ? text("editor-unset", "Not set") : value;
     }
 
     private boolean denied(Player player) {

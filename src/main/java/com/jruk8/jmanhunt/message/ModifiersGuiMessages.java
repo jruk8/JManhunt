@@ -210,6 +210,30 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     @CustomKey("members-lore")
     private String membersLore = "{total} members";
 
+    @CustomKey("meta-title")
+    private String metaTitle = "Meta";
+
+    @CustomKey("meta-lore")
+    private String metaLore = "Name, description, icon, author";
+
+    @CustomKey("behavior-title")
+    private String behaviorTitle = "Behavior";
+
+    @CustomKey("behavior-lore")
+    private String behaviorLore = "Triggers, options, commands";
+
+    @CustomKey("modifiers-title")
+    private String modifiersTitle = "Modifiers";
+
+    @CustomKey("editor-delete-preset")
+    private String editorDeletePreset = "Delete Preset";
+
+    @CustomKey("editor-delete-modifier")
+    private String editorDeleteModifier = "Delete Modifier";
+
+    @CustomKey("editor-rename-hint")
+    private String editorRenameHint = "Right-click to rename id";
+
     @CustomKey("cancel")
     private String cancel = "Cancel";
 

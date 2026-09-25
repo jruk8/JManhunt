@@ -91,6 +91,7 @@ class ModifierCodecTest {
         ModifierPreset preset = new ModifierPreset();
         preset.setName("Chaos");
         preset.setDescription("Everything on");
+        preset.setAuthor("JManhunt");
         preset.setItem("TNT");
         preset.setModifiers(List.of("gear-dice", "beef"));
 
@@ -101,6 +102,7 @@ class ModifierCodecTest {
         assertEquals(ModifierCodec.Kind.PRESET, decoded.get().kind());
         assertEquals("chaos", decoded.get().id());
         assertEquals("Chaos", decoded.get().preset().getName());
+        assertEquals("JManhunt", decoded.get().preset().getAuthor());
         assertEquals(List.of("gear-dice", "beef"), decoded.get().preset().getModifiers());
         assertEquals(payload, ModifierCodec.exportPreset(decoded.get().id(), decoded.get().preset()));
     }

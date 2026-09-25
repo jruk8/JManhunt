@@ -241,6 +241,9 @@ public final class ModifierCodec {
         if (preset.getDescription() != null) {
             data.addProperty("description", preset.getDescription());
         }
+        if (preset.getAuthor() != null) {
+            data.addProperty("author", preset.getAuthor());
+        }
         data.addProperty("item",
                 preset.getItem() == null || preset.getItem().isBlank()
                         ? Material.STONE.name() : preset.getItem());
@@ -412,6 +415,7 @@ public final class ModifierCodec {
         ModifierPreset preset = new ModifierPreset();
         preset.setName(name);
         preset.setDescription(optionalString(data, "description", ""));
+        preset.setAuthor(optionalString(data, "author", ""));
         preset.setItem(item);
         JsonArray members = optionalArray(data, "modifiers");
         if (members != null) {
