@@ -83,6 +83,34 @@ class MenuDispatchTest {
     }
 
     @Test
+    void confirmCommitsSilentlyAndCancelClicks() {
+        Menu confirm = ConfirmMenu.create(Component.text("Delete?"), Material.PAPER, null, null,
+                Component.text("Cancel"), player -> {}, Component.text("Confirm"), player -> {},
+                null);
+
+        assertEquals(MenuButton.SoundPolicy.CLICK,
+                confirm.buttonAt(ConfirmMenu.CANCEL_SLOT).soundPolicy());
+        assertEquals(MenuButton.SoundPolicy.SILENT,
+                confirm.buttonAt(ConfirmMenu.CONFIRM_SLOT).soundPolicy());
+    }
+
+    @Test
+    void buttonsClickByDefaultAndSilentCopiesKeepTheirFields() {
+        MenuButton button = button("main", new ArrayList<>());
+
+        assertEquals(MenuButton.SoundPolicy.CLICK, button.soundPolicy());
+
+        MenuButton silent = button.silent();
+
+        assertEquals(MenuButton.SoundPolicy.SILENT, silent.soundPolicy());
+        assertEquals(button.material(), silent.material());
+        assertEquals(button.name(), silent.name());
+        assertEquals(button.glow(), silent.glow());
+        assertSame(button.action(), silent.action());
+        assertSame(silent, silent.silent());
+    }
+
+    @Test
     void refreshRebuildsContentAndClampsOffset() {
         List<MenuButton> content = new ArrayList<>();
         for (int index = 0; index < 14; index++) {

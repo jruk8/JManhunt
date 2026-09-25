@@ -232,7 +232,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                     skipped -> {
                         plugin.markSetupDone();
                         plugin.guiService().navigate(skipped, menus.rootMenu());
-                        sounds.playNeutralSound(skipped);
                     }));
             return true;
         }

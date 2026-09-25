@@ -170,16 +170,15 @@ public final class ModifierEditorMenus {
                     commands.execute(player,
                             new String[]{"setmod", id, String.valueOf(!store.isEnabled(id))});
                     sounds.playNeutralSound(player);
-                }));
+                }).silent());
         List<String> triggers = store.runsOn(id);
-        fixed.put(13, fieldButton(Material.COMPARATOR, "Run on",
+        fixed.put(13, navButton(Material.COMPARATOR, "Run on",
                 triggers.isEmpty() ? orUnset(null) : triggers.size() + " selected",
                 "editor-click-open", "Click to open", player -> {
                     if (denied(player)) {
                         return;
                     }
                     gui.navigate(player, detail.triggersMenu(id, () -> editor(id, self.parent())));
-                    sounds.playNeutralSound(player);
                 }));
         fixed.put(16, fieldButton(Material.HOPPER, "Pre-start order",
                 orDefault(store.preStartOrder(id), "IN_ORDER"),
@@ -272,7 +271,7 @@ public final class ModifierEditorMenus {
         for (String list : ModifierDetailMenus.COMMAND_LISTS) {
             lines += store.commandList(id, list).size();
         }
-        fixed.put(36, fieldButton(Material.COMMAND_BLOCK,
+        fixed.put(36, navButton(Material.COMMAND_BLOCK,
                 text("editor-commands", "Commands"),
                 text("editor-commands-lore", "{total} lines")
                         .replace("{total}", String.valueOf(lines)),
@@ -281,7 +280,6 @@ public final class ModifierEditorMenus {
                         return;
                     }
                     gui.navigate(player, detail.commandsMenu(id, () -> editor(id, self.parent())));
-                    sounds.playNeutralSound(player);
                 }));
         fixed.put(38, fieldButton(Material.LOOM,
                 text("editor-export", "Export"),
@@ -292,7 +290,7 @@ public final class ModifierEditorMenus {
                 text("editor-rename", "Rename Id"),
                 text("editor-rename-lore", "Current id: {value}").replace("{value}", id),
                 player -> renamePrompt(player, id, self)));
-        fixed.put(42, fieldButton(Material.TNT,
+        fixed.put(42, navButton(Material.TNT,
                 text("editor-delete", "Delete"),
                 text("editor-delete-lore", "Removes this modifier forever"),
                 "editor-click-delete", "Click to delete", player -> {
@@ -304,10 +302,7 @@ public final class ModifierEditorMenus {
         fixed.put(44, new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 null, false, false,
-                player -> {
-                    gui.back(player, self);
-                    sounds.playNeutralSound(player);
-                }));
+                player -> gui.back(player, self)));
     }
 
     private void renamePrompt(Player player, String id, Menu self) {
@@ -545,6 +540,15 @@ public final class ModifierEditorMenus {
 
     private MenuButton fieldButton(Material material, String label, String value,
             String hintKey, String hintFallback, Consumer<Player> action) {
+        return navButton(material, label, value, hintKey, hintFallback, action).silent();
+    }
+
+    /**
+     * Same lore shape as {@link #fieldButton} but with the central click:
+     * for submenu openers, which navigate instead of committing a value.
+     */
+    private MenuButton navButton(Material material, String label, String value,
+            String hintKey, String hintFallback, Consumer<Player> action) {
         return new MenuButton(material,
                 GuiTexts.name(messages, label, label),
                 GuiTexts.lore(messages, List.of(
@@ -557,11 +561,7 @@ public final class ModifierEditorMenus {
         return new MenuButton(Material.ARROW,
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 null, false, false,
-                player -> {
-                    if (self[0].window().scrollLine(delta)) {
-                        sounds.playSound(player, "compass.left-click");
-                    }
-                });
+                player -> self[0].window().scrollLine(delta));
     }
 
     private String currentLine(String value) {

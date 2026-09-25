@@ -215,7 +215,7 @@ class ManhuntMenusTest {
                 "settings.compass.signal-interference.weather.interfere-during",
                 menus::settingsMenu), player);
         assertBackResolves(ScrollList.menu(Component.text("Keys"), List::of,
-                menus::settingsMenu, gui, messages, mock(SoundService.class)), player);
+                menus::settingsMenu, gui, messages), player);
     }
 
     private void assertBackResolves(Menu menu, Player player) {

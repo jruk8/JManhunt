@@ -58,7 +58,8 @@ public final class ManhuntMenus {
         this.feedback = feedback;
         this.stats = stats;
         this.modifiers = modifiers;
-        this.buttons = new SettingButtons(config, guiData, messages, dialogs, gui, feedback);
+        this.buttons = new SettingButtons(config, guiData, messages, dialogs, gui, feedback,
+                sounds);
     }
 
     /** 27-slot root with settings, history, and modifiers links. */
@@ -158,7 +159,7 @@ public final class ManhuntMenus {
         final Menu[] self = new Menu[1];
         Supplier<List<MenuButton>> content = () -> drillButtons(effective, () -> self[0]);
         if (drillSize(effective) > ScalingLayout.capacity(ScalingLayout.MAX_ROWS)) {
-            return ScrollList.menu(effectiveTitle, content, parent, gui, messages, sounds);
+            return ScrollList.menu(effectiveTitle, content, parent, gui, messages);
         }
         self[0] = scalingMenu(effectiveTitle, content, parent);
         return self[0];
@@ -284,7 +285,7 @@ public final class ManhuntMenus {
                         List.of(text("list-add-lore", "Click to append"))),
                 false, false,
                 player -> dialogs.openListAppend(player, listPath,
-                        GuiTexts.title(messages, addTitle()), caller)));
+                        GuiTexts.title(messages, addTitle()), caller)).silent());
         return buttons;
     }
 
@@ -299,7 +300,7 @@ public final class ManhuntMenus {
                 GuiTexts.lore(messages, lore), false, false,
                 player -> dialogs.openListEntry(player, listPath, index,
                         GuiTexts.title(messages, editTitle(index)), caller),
-                player -> deleteConfirm(player, listPath, index, value, caller));
+                player -> deleteConfirm(player, listPath, index, value, caller)).silent();
     }
 
     private void deleteConfirm(Player player, String listPath, int index,
@@ -324,6 +325,7 @@ public final class ManhuntMenus {
                 },
                 caller);
         gui.navigate(player, confirm);
+        sounds.playSound(player, "compass.left-click");
     }
 
     private Map<Integer, MenuButton> rootStatic() {
@@ -375,17 +377,11 @@ public final class ManhuntMenus {
         return new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 null, false, false,
-                player -> {
-                    gui.back(player, self[0]);
-                    sounds.playNeutralSound(player);
-                });
+                player -> gui.back(player, self[0]));
     }
 
     private Consumer<Player> open(Supplier<Menu> menu) {
-        return player -> {
-            gui.navigate(player, menu.get());
-            sounds.playSound(player, "compass.left-click");
-        };
+        return player -> gui.navigate(player, menu.get());
     }
 
     private String historyLine(String key, String value) {

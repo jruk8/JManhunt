@@ -15,8 +15,22 @@ import org.bukkit.inventory.meta.ItemMeta;
  * <p>A button carries its rendered text plus the action to run when clicked.
  * A null action means the button is display-only; filler buttons use
  * {@link #filler()} and never appear in click routing.
+ *
+ * <p>Sound convention: {@link GuiService} plays the compass click after
+ * every executed action unless the button is {@link SoundPolicy#SILENT}.
+ * Silent buttons are explicitly constrained (toggles, dialog openers,
+ * confirm commits) and their actions play exactly the sound the commit
+ * needs, usually neutral on success and angry on failure.
  */
 public final class MenuButton {
+
+    /** Central click sound policy for one button. */
+    public enum SoundPolicy {
+        /** GuiService plays the compass click after the action. */
+        CLICK,
+        /** No central sound; the action plays its own sounds. */
+        SILENT
+    }
 
     private final Material material;
     private final Component name;
@@ -25,6 +39,7 @@ public final class MenuButton {
     private final boolean hideTooltip;
     private final Consumer<Player> action;
     private final Consumer<Player> rightAction;
+    private final SoundPolicy soundPolicy;
 
     /**
      * @param material icon material, never air
@@ -51,6 +66,23 @@ public final class MenuButton {
     public MenuButton(Material material, Component name, List<Component> lore,
             boolean glow, boolean hideTooltip, Consumer<Player> action,
             Consumer<Player> rightAction) {
+        this(material, name, lore, glow, hideTooltip, action, rightAction,
+                SoundPolicy.CLICK);
+    }
+
+    /**
+     * @param material icon material, never air
+     * @param name display name, may be null for no custom name
+     * @param lore lore lines, null means none
+     * @param glow true to force the enchantment glint
+     * @param hideTooltip true to hide the hover tooltip
+     * @param action click action, null for display-only buttons
+     * @param rightAction right-click action, null to reuse the main action
+     * @param soundPolicy central click sound policy, never null
+     */
+    public MenuButton(Material material, Component name, List<Component> lore,
+            boolean glow, boolean hideTooltip, Consumer<Player> action,
+            Consumer<Player> rightAction, SoundPolicy soundPolicy) {
         this.material = material;
         this.name = name;
         this.lore = lore == null ? List.of() : List.copyOf(lore);
@@ -58,12 +90,22 @@ public final class MenuButton {
         this.hideTooltip = hideTooltip;
         this.action = action;
         this.rightAction = rightAction;
+        this.soundPolicy = soundPolicy;
     }
 
     /** Blank, tooltip-less filler pane with no action. */
     public static MenuButton filler() {
         return new MenuButton(Material.GRAY_STAINED_GLASS_PANE,
                 Component.text(" "), null, false, true, null);
+    }
+
+    /** Copy of this button with the central click suppressed. */
+    public MenuButton silent() {
+        if (soundPolicy == SoundPolicy.SILENT) {
+            return this;
+        }
+        return new MenuButton(material, name, lore, glow, hideTooltip,
+                action, rightAction, SoundPolicy.SILENT);
     }
 
     /** Builds the displayed item. */
@@ -116,5 +158,9 @@ public final class MenuButton {
 
     public Consumer<Player> rightAction() {
         return rightAction;
+    }
+
+    public SoundPolicy soundPolicy() {
+        return soundPolicy;
     }
 }

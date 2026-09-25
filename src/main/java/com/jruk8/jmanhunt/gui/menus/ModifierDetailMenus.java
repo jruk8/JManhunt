@@ -81,15 +81,12 @@ public final class ModifierDetailMenus {
                                     : text("state-off", "Disabled")),
                             text("editor-click-toggle", "Click to toggle"))),
                     on, false,
-                    player -> toggleTrigger(player, id, trigger)));
+                    player -> toggleTrigger(player, id, trigger)).silent());
         }
         fixed.put(22, new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 null, false, false,
-                player -> {
-                    gui.back(player, self);
-                    sounds.playNeutralSound(player);
-                }));
+                player -> gui.back(player, self)));
         return fixed;
     }
 
@@ -126,7 +123,7 @@ public final class ModifierDetailMenus {
         for (int index = 0; index < COMMAND_LISTS.size(); index++) {
             String list = COMMAND_LISTS.get(index);
             int count = store.commandList(id, list).size();
-            fixed.put(slots[index], fieldButton(Material.COMMAND_BLOCK, list,
+            fixed.put(slots[index], navButton(Material.COMMAND_BLOCK, list,
                     text("editor-commands-lore", "{total} lines")
                             .replace("{total}", String.valueOf(count)),
                     "editor-click-open", "Click to open", player -> {
@@ -135,16 +132,12 @@ public final class ModifierDetailMenus {
                         }
                         gui.navigate(player,
                                 linesMenu(id, list, () -> commandsMenu(id, self.parent())));
-                        sounds.playNeutralSound(player);
                     }));
         }
         fixed.put(22, new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 null, false, false,
-                player -> {
-                    gui.back(player, self);
-                    sounds.playNeutralSound(player);
-                }));
+                player -> gui.back(player, self)));
         return fixed;
     }
 
@@ -166,10 +159,7 @@ public final class ModifierDetailMenus {
         fixed.put(18, new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 null, false, false,
-                player -> {
-                    gui.back(player, self[0]);
-                    sounds.playNeutralSound(player);
-                }));
+                player -> gui.back(player, self[0])));
         fixed.put(27, scrollButton("scroll-down", "Scroll down", self, 1));
         fixed.put(ADD_SLOT, new MenuButton(Material.LIME_DYE,
                 GuiTexts.name(messages, text("lines-add", "Add Line"), "Add Line"),
@@ -181,7 +171,7 @@ public final class ModifierDetailMenus {
                     }
                     linePrompt(player, self[0], text("lines-add-title", "Add Command"), "",
                             id, list, -1);
-                }));
+                }).silent());
         return fixed;
     }
 
@@ -208,7 +198,7 @@ public final class ModifierDetailMenus {
                             return;
                         }
                         deleteLineConfirm(player, self, id, list, lineIndex);
-                    }));
+                    }).silent());
         }
         return buttons;
     }
@@ -277,15 +267,11 @@ public final class ModifierDetailMenus {
                 },
                 () -> self);
         gui.navigate(player, confirm);
+        sounds.playSound(player, "compass.left-click");
     }
 
-    private MenuButton fieldButton(Material material, String label, String value,
-            Consumer<Player> action) {
-        return fieldButton(material, label, value,
-                "editor-click-edit", "Click to edit", action);
-    }
-
-    private MenuButton fieldButton(Material material, String label, String value,
+    /** Submenu opener with the central click. */
+    private MenuButton navButton(Material material, String label, String value,
             String hintKey, String hintFallback, Consumer<Player> action) {
         return new MenuButton(material,
                 GuiTexts.name(messages, label, label),
@@ -299,11 +285,7 @@ public final class ModifierDetailMenus {
         return new MenuButton(Material.ARROW,
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 null, false, false,
-                player -> {
-                    if (self[0].window().scrollLine(delta)) {
-                        sounds.playSound(player, "compass.left-click");
-                    }
-                });
+                player -> self[0].window().scrollLine(delta));
     }
 
     private String currentLine(String value) {

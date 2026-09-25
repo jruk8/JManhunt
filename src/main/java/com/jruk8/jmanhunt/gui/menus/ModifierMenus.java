@@ -89,10 +89,7 @@ public final class ModifierMenus {
             fixed.put(13, new MenuButton(Material.PAPER,
                     GuiTexts.name(messages, text("back", "Back"), "Back"),
                     null, false, false,
-                    player -> {
-                        gui.back(player, self);
-                        sounds.playNeutralSound(player);
-                    }));
+                    player -> gui.back(player, self)));
         }
         return fixed;
     }
@@ -154,10 +151,7 @@ public final class ModifierMenus {
         fixed.put(18, new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 null, false, false,
-                player -> {
-                    gui.back(player, self[0]);
-                    sounds.playNeutralSound(player);
-                }));
+                player -> gui.back(player, self[0])));
         fixed.put(26, toggleAll.get());
         fixed.put(27, scrollButton(Material.ARROW, "scroll-down", "Scroll down", self, 1));
         fixed.put(36, importButton.apply(self));
@@ -172,24 +166,27 @@ public final class ModifierMenus {
                         text(nameKey, type.equals("preset") ? "Import Preset" : "Import Modifier"),
                         "Import"),
                 GuiTexts.lore(messages, text(loreKey, "Paste an exported string.")),
-                false, false,
-                player -> {
-                    if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
-                        messages.message(player, "command.no-permission");
-                        return;
-                    }
-                    dialogs.prompt(player,
-                            text(titleKey,
-                                    type.equals("preset") ? "Import Preset" : "Import Modifier"),
-                            List.of(text("import-prompt", "Paste an exported string.")),
-                            payload -> {
-                                if (!toggles.importEntry(player, type, payload)) {
-                                    sounds.playAngrySound(player);
-                                }
-                                gui.navigate(player, self[0]);
-                            },
-                            () -> gui.navigate(player, self[0]));
-                });
+                false, false, importAction(self, type, titleKey)).silent();
+    }
+
+    private Consumer<Player> importAction(Menu[] self, String type, String titleKey) {
+        return player -> {
+            if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
+                messages.message(player, "command.no-permission");
+                return;
+            }
+            dialogs.prompt(player,
+                    text(titleKey,
+                            type.equals("preset") ? "Import Preset" : "Import Modifier"),
+                    List.of(text("import-prompt", "Paste an exported string.")),
+                    payload -> {
+                        if (!toggles.importEntry(player, type, payload)) {
+                            sounds.playAngrySound(player);
+                        }
+                        gui.navigate(player, self[0]);
+                    },
+                    () -> gui.navigate(player, self[0]));
+        };
     }
 
     /** Top-right create button opening the creator flow. */
@@ -198,7 +195,7 @@ public final class ModifierMenus {
         return new MenuButton(material,
                 GuiTexts.name(messages, text(nameKey, nameFallback), nameFallback),
                 GuiTexts.lore(messages, text(loreKey, loreFallback)),
-                false, false, action);
+                false, false, action).silent();
     }
 
     private MenuButton toggleAllModifiersButton() {
@@ -216,7 +213,7 @@ public final class ModifierMenus {
                     toggles.toggleAllModifiers(player,
                             new ArrayList<>(store.modifierNames()), !allModifiersOn());
                     sounds.playNeutralSound(player);
-                });
+                }).silent();
     }
 
     private MenuButton toggleAllPresetsButton() {
@@ -234,7 +231,7 @@ public final class ModifierMenus {
                     toggles.toggleAllPresets(player,
                             new ArrayList<>(store.presetNames()), !allPresetsOn());
                     sounds.playNeutralSound(player);
-                });
+                }).silent();
     }
 
     private MenuButton linkButton(Material material, String nameKey, String loreKey,
@@ -245,10 +242,7 @@ public final class ModifierMenus {
         return new MenuButton(material,
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 GuiTexts.lore(messages, loreText), false, false,
-                player -> {
-                    gui.navigate(player, target.get());
-                    sounds.playNeutralSound(player);
-                });
+                player -> gui.navigate(player, target.get()));
     }
 
     private MenuButton scrollButton(Material material, String nameKey, String fallback,
@@ -256,11 +250,7 @@ public final class ModifierMenus {
         return new MenuButton(material,
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 null, false, false,
-                player -> {
-                    if (self[0].window().scrollLine(delta)) {
-                        sounds.playSound(player, "compass.left-click");
-                    }
-                });
+                player -> self[0].window().scrollLine(delta));
     }
 
     private List<MenuButton> modifierButtons(int columns, Supplier<Menu> listParent) {
@@ -292,8 +282,8 @@ public final class ModifierMenus {
                         return;
                     }
                     gui.navigate(player, modifierEditor.editor(id, listParent));
-                    sounds.playNeutralSound(player);
-                });
+                    sounds.playSound(player, "compass.left-click");
+                }).silent();
     }
 
     /**
@@ -361,8 +351,8 @@ public final class ModifierMenus {
                         return;
                     }
                     gui.navigate(player, presetEditor.editor(id, listParent));
-                    sounds.playNeutralSound(player);
-                });
+                    sounds.playSound(player, "compass.left-click");
+                }).silent();
     }
 
     private List<Component> presetLore(String id, boolean allOn) {

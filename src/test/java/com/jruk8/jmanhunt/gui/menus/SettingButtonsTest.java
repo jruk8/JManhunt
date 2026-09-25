@@ -62,7 +62,7 @@ class SettingButtonsTest {
         guiData.setDescriptions(Map.of(
                 "settings.match.autostart.enabled", "Start matches automatically.",
                 "settings.match.autostart.countdown-seconds", "Wait before auto-starting."));
-        buttons = new SettingButtons(config, guiData, messages, null, null, null);
+        buttons = new SettingButtons(config, guiData, messages, null, null, null, null);
     }
 
     @Test
@@ -156,7 +156,7 @@ class SettingButtonsTest {
                 "settings.match.autostart.enabled", false));
         GuiService gui = mock(GuiService.class);
         SettingButtons withGui = new SettingButtons(config, guiData, messages,
-                null, gui, null);
+                null, gui, null, null);
         MenuButton button = withGui.settingButton(
                 "settings.match.autostart.enabled", () -> null);
         Player player = mock(Player.class);

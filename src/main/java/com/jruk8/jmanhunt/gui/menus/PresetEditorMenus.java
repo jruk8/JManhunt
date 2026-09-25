@@ -133,7 +133,7 @@ public final class PresetEditorMenus {
 
     private void membersRow(Map<Integer, MenuButton> fixed, String id, Menu self) {
         int members = store.presetMembers(id).size();
-        fixed.put(13, fieldButton(Material.FILLED_MAP,
+        fixed.put(13, navButton(Material.FILLED_MAP,
                 text("members-title", "Members"),
                 text("members-lore", "{total} members").replace("{total}", String.valueOf(members)),
                 "editor-click-open", "Click to open", player -> {
@@ -141,7 +141,6 @@ public final class PresetEditorMenus {
                         return;
                     }
                     gui.navigate(player, membersMenu(id, () -> editor(id, self.parent())));
-                    sounds.playNeutralSound(player);
                 }));
     }
 
@@ -156,7 +155,7 @@ public final class PresetEditorMenus {
                 text("editor-rename", "Rename Id"),
                 text("editor-rename-lore", "Current id: {value}").replace("{value}", id),
                 player -> renamePrompt(player, id, self)));
-        fixed.put(14, fieldButton(Material.TNT,
+        fixed.put(14, navButton(Material.TNT,
                 text("editor-delete", "Delete"),
                 text("editor-delete-preset-lore", "Removes this preset forever"),
                 "editor-click-delete", "Click to delete", player -> {
@@ -168,10 +167,7 @@ public final class PresetEditorMenus {
         fixed.put(16, new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 null, false, false,
-                player -> {
-                    gui.back(player, self);
-                    sounds.playNeutralSound(player);
-                }));
+                player -> gui.back(player, self)));
     }
 
     /** Scrollable membership toggles over every modifier. */
@@ -191,10 +187,7 @@ public final class PresetEditorMenus {
         fixed.put(18, new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 null, false, false,
-                player -> {
-                    gui.back(player, self[0]);
-                    sounds.playNeutralSound(player);
-                }));
+                player -> gui.back(player, self[0])));
         fixed.put(27, scrollButton("scroll-down", "Scroll down", self, 1));
         return fixed;
     }
@@ -213,7 +206,7 @@ public final class PresetEditorMenus {
                                     : text("state-off", "Disabled")),
                             text("editor-click-toggle", "Click to toggle"))),
                     on, false,
-                    player -> toggleMember(player, id, member, on)));
+                    player -> toggleMember(player, id, member, on)).silent());
         }
         return buttons;
     }
@@ -310,6 +303,15 @@ public final class PresetEditorMenus {
 
     private MenuButton fieldButton(Material material, String label, String value,
             String hintKey, String hintFallback, Consumer<Player> action) {
+        return navButton(material, label, value, hintKey, hintFallback, action).silent();
+    }
+
+    /**
+     * Same lore shape as {@link #fieldButton} but with the central click:
+     * for submenu openers, which navigate instead of committing a value.
+     */
+    private MenuButton navButton(Material material, String label, String value,
+            String hintKey, String hintFallback, Consumer<Player> action) {
         return new MenuButton(material,
                 GuiTexts.name(messages, label, label),
                 GuiTexts.lore(messages, List.of(
@@ -322,11 +324,7 @@ public final class PresetEditorMenus {
         return new MenuButton(Material.ARROW,
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 null, false, false,
-                player -> {
-                    if (self[0].window().scrollLine(delta)) {
-                        sounds.playSound(player, "compass.left-click");
-                    }
-                });
+                player -> self[0].window().scrollLine(delta));
     }
 
     private String currentLine(String value) {

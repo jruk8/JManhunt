@@ -41,7 +41,8 @@ import org.bukkit.plugin.Plugin;
  * caller, invalid input keeps the original value, reports the validation
  * error with its boundaries, plays the fail sound, and reopens the caller.
  * Cancel reopens silently. Reopens run one tick later so the dialog close
- * never swallows the returning menu.
+ * never swallows the returning menu. Every opened dialog plays the neutral
+ * sound on enter; overlong input refuses the open with the fail sound.
  */
 public final class SettingDialogs implements SettingDialog {
 
@@ -97,6 +98,7 @@ public final class SettingDialogs implements SettingDialog {
                         confirmButton(submitAction(player, descriptor, reopen, ranged), true),
                         confirmButton(clickAction((response, audience) ->
                                 reopenLater(player, reopen)), false))));
+        sounds.playNeutralSound(player);
         player.showDialog(dialog);
     }
 
@@ -168,6 +170,7 @@ public final class SettingDialogs implements SettingDialog {
                                 onSubmit.accept(response.getText(VALUE_KEY))), true),
                         confirmButton(clickAction((response, audience) ->
                                 onCancel.run()), false))));
+        sounds.playNeutralSound(player);
         player.showDialog(dialog);
     }
 

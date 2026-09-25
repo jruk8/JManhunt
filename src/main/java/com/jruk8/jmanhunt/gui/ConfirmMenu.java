@@ -14,6 +14,8 @@ import org.bukkit.entity.Player;
  * <p>Cancel sits at slot 2, the described icon at slot 4, and Confirm at
  * slot 6; every other slot is filler. Callers supply the labels, the
  * description, and both click actions; the panel only fixes positions.
+ * Cancel clicks centrally while Confirm stays silent: the confirm action
+ * is a commit and plays its own neutral or angry sound.
  */
 public final class ConfirmMenu {
 
@@ -50,7 +52,7 @@ public final class ConfirmMenu {
                         cancelLabel, null, false, false, onCancel),
                 ICON_SLOT, new MenuButton(icon, iconName, description, false, false, null),
                 CONFIRM_SLOT, new MenuButton(Material.LIME_STAINED_GLASS_PANE,
-                        confirmLabel, null, false, false, onConfirm));
+                        confirmLabel, null, false, false, onConfirm).silent());
         return new Menu(title, layout, () -> fixed, List::of, parent);
     }
 }

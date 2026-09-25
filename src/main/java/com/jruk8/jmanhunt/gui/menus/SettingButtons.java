@@ -13,6 +13,7 @@ import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SoundService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -37,15 +38,23 @@ public final class SettingButtons {
     private final SettingDialog dialogs;
     private final GuiService gui;
     private final SettingFeedback feedback;
+    private final SoundService sounds;
 
+    /**
+     * @param sounds failure blips for toggle and cycle writes; success
+     *        sounds come from the shared feedback, null only in unit
+     *        tests that never invoke actions
+     */
     public SettingButtons(ConfigService config, GuiConfig guiData, MessageService messages,
-            SettingDialog dialogs, GuiService gui, SettingFeedback feedback) {
+            SettingDialog dialogs, GuiService gui, SettingFeedback feedback,
+            SoundService sounds) {
         this.config = config;
         this.guiData = guiData;
         this.messages = messages;
         this.dialogs = dialogs;
         this.gui = gui;
         this.feedback = feedback;
+        this.sounds = sounds;
     }
 
     /** Leaf segment to title words: countdown-seconds becomes Countdown Seconds. */
@@ -80,7 +89,9 @@ public final class SettingButtons {
     }
 
     /**
-     * Full setting button with click and right-click actions.
+     * Full setting button with click and right-click actions. Silent: bool
+     * and option commits play neutral through the shared feedback and
+     * numbers and text open the dialog, which plays neutral on enter.
      *
      * @param path full setting path
      * @param caller rebuilds the menu buttons return to
@@ -91,7 +102,7 @@ public final class SettingButtons {
         Component name = GuiTexts.name(messages, prettify(leaf(path)), prettify(leaf(path)));
         return new MenuButton(icon, name, lore(descriptor), modified(descriptor),
                 false, clickAction(descriptor, caller),
-                player -> resetConfirm(player, descriptor, caller));
+                player -> resetConfirm(player, descriptor, caller)).silent();
     }
 
     private Consumer<Player> clickAction(SettingDescriptor descriptor, Supplier<Menu> caller) {
@@ -174,6 +185,7 @@ public final class SettingButtons {
                 toggledValue(config.getValue(descriptor.path())));
         if (!outcome.ok()) {
             feedback.failed(player, outcome);
+            angry(player);
         } else {
             feedback.scalarUpdated(player, descriptor.path(), outcome);
         }
@@ -185,8 +197,15 @@ public final class SettingButtons {
                 config.setValue(descriptor.path(), nextOption(descriptor, current));
         if (!outcome.ok()) {
             feedback.failed(player, outcome);
+            angry(player);
         } else {
             feedback.scalarUpdated(player, descriptor.path(), outcome);
+        }
+    }
+
+    private void angry(Player player) {
+        if (sounds != null) {
+            sounds.playAngrySound(player);
         }
     }
 
@@ -211,6 +230,7 @@ public final class SettingButtons {
                             config.setValue(descriptor.path(), descriptor.defaultValue());
                     if (!outcome.ok()) {
                         feedback.failed(done, outcome);
+                        angry(done);
                     } else {
                         feedback.scalarUpdated(done, descriptor.path(), outcome);
                     }
@@ -218,6 +238,9 @@ public final class SettingButtons {
                 },
                 caller);
         gui.navigate(player, confirm);
+        if (sounds != null) {
+            sounds.playSound(player, "compass.left-click");
+        }
     }
 
     private String template(String key, String fallback, String value) {

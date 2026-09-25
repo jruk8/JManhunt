@@ -60,6 +60,15 @@ class GuiClickRoutingTest {
     }
 
     @Test
+    void doubleClickNeverReachesAnAction() {
+        Consumer<Player> action = player -> {};
+        Consumer<Player> right = player -> {};
+
+        assertNull(GuiService.clickAction(button(action, right), ClickType.DOUBLE_CLICK));
+        assertNull(GuiService.clickAction(button(action, null), ClickType.DOUBLE_CLICK));
+    }
+
+    @Test
     void legacyButtonsKeepSingleAction() {
         AtomicReference<String> fired = new AtomicReference<>();
         MenuButton button = new MenuButton(Material.PAPER, null, null,
