@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.match.lifecycle;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.api.events.JMatchCancelEvent;
 import com.jruk8.jmanhunt.api.events.JMatchEndEvent;
+import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.LeaveDestination;
@@ -59,13 +60,14 @@ public final class MatchFinishService {
     private final TimeLimitService timeLimits;
     private final PrestartService prestart;
     private final AutostartService autostart;
+    private final FlagStore flagStore;
     private final List<Consumer<GameInstance>> gameEndListeners = new ArrayList<>();
 
     public MatchFinishService(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
             CompassManager compass, StatsManager stats, GameStateCommandManager stateCommands,
             ConfigService configService, WorldEngineService worldEngine, MatchStore store,
             MatchMessaging messaging, TimeLimitService timeLimits, PrestartService prestart,
-            AutostartService autostart) {
+            AutostartService autostart, FlagStore flagStore) {
         this.plugin = plugin;
         this.messages = messages;
         this.playerStates = playerStates;
@@ -79,6 +81,7 @@ public final class MatchFinishService {
         this.timeLimits = timeLimits;
         this.prestart = prestart;
         this.autostart = autostart;
+        this.flagStore = flagStore;
         // Pseudo-border guard for concurrent matches; idle unless at least two
         // matches run with the engine border on.
         Bukkit.getScheduler().runTaskTimer(plugin, this::enforcePseudoBorders, 20L, 20L);
@@ -193,6 +196,7 @@ public final class MatchFinishService {
         playerStates.setSpeedrunnerAlive(playerId, false);
         instance.deactivate(playerId);
         playerStates.clearMatchFor(List.of(playerId));
+        flagStore.removePlayer(instance.matchId(), player.getName());
         compass.removeCompasses(player);
         applyLeaveDestination(instance, player, dropGear, destination);
         plugin.roleTeams().sync(player);
@@ -362,8 +366,8 @@ public final class MatchFinishService {
         // cancel interval modifiers early so they don't fire during the end delay
         stateCommands.cancelIntervalModifiers(instance.matchId());
         // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
-        stateCommands.runConsoleCleanup();
-        stateCommands.runPlayerCleanup(store.onlineActivePlayers(instance));
+        stateCommands.runConsoleCleanup(instance.matchId());
+        stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
 
         long delay = immediate
                 ? 0L
@@ -413,6 +417,7 @@ public final class MatchFinishService {
         instance.setActive(false);
         playerStates.clearMatchFor(instance.assignedPlayerIds());
         stats.clearMatch(teardownId);
+        flagStore.clearMatch(teardownId);
         store.removeInstance(teardownId);
         plugin.logger().debug("debug.match-end", Map.of("index", GameManager.cellString(instance)));
         worldEngine.prepareNextCell();
@@ -466,8 +471,8 @@ public final class MatchFinishService {
         prestart.cancelHeadstarts(instance);
         timeLimits.cancelTimeLimit(instance);
         stateCommands.cancelIntervalModifiers(instance.matchId());
-        stateCommands.runConsoleCleanup();
-        stateCommands.runPlayerCleanup(store.onlineActivePlayers(instance));
+        stateCommands.runConsoleCleanup(instance.matchId());
+        stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
         teardownNow(instance);
     }
 
@@ -522,8 +527,8 @@ public final class MatchFinishService {
         // cancel interval modifiers early so they don't fire during the end delay
         stateCommands.cancelIntervalModifiers(instance.matchId());
         // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
-        stateCommands.runConsoleCleanup();
-        stateCommands.runPlayerCleanup(store.onlineActivePlayers(instance));
+        stateCommands.runConsoleCleanup(instance.matchId());
+        stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
 
         long delay = immediate
                 ? 0L

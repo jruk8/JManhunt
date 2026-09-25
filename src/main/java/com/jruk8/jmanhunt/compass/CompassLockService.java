@@ -1,7 +1,9 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
+import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
+import com.jruk8.jmanhunt.command.StatValues;
 import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
@@ -337,7 +339,12 @@ final class CompassLockService {
     /** Tag context for one debuff run: {@code <id>} is {@code debuffs}. */
     private TagContext debuffContext(Player holder) {
         ModifierTagScope scope = ModifierTagScope.executor(holder.getName(), plugin.logger()::warning);
-        return TagContext.of(scope, "debuffs",
+        long matchId = game == null ? TagContext.NO_MATCH
+                : game.instanceOf(holder.getUniqueId()).map(GameInstance::matchId)
+                        .orElse(TagContext.NO_MATCH);
+        StatValues stats = game == null ? StatValues.inert() : game.matchStatValues(matchId);
+        FlagStore flags = game == null ? new FlagStore() : game.flagStore();
+        return TagContext.run(scope, "debuffs",
                 text -> messages.broadcastText(formatEngineMessage(text)),
                 text -> messages.sendText(holder, formatEngineMessage(text)),
                 (soundId, pitch, volume) -> playGlobalSound(soundId, pitch, volume),
@@ -347,7 +354,8 @@ final class CompassLockService {
                         return;
                     }
                     sounds.playCustomSound(holder, soundId, pitch, volume);
-                });
+                },
+                matchId, stats, flags);
     }
 
     private String formatEngineMessage(String text) {

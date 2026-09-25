@@ -114,19 +114,19 @@ public final class GameStateCommandManager {
         engine.delayed.clear();
     }
 
-    public void runConsoleCleanup() {
+    public void runConsoleCleanup(long matchId) {
         for (String name : enabledModifiers()) {
             ModifierTagScope scope = ModifierTagScope.executor(null, plugin.logger()::warning);
             runCommandList(configService.commandList(name, "console-cleanup"), null,
-                    tagContext(name, null, scope));
+                    tagContext(name, null, scope, matchId));
         }
     }
 
-    public void runPlayerCleanup(List<Player> participants) {
+    public void runPlayerCleanup(long matchId, List<Player> participants) {
         for (String name : enabledModifiers()) {
             for (Player player : participants) {
                 runCommandList(configService.commandList(name, "player-cleanup"), player,
-                        tagContext(name, player, matchScope(player, participants)));
+                        tagContext(name, player, matchScope(player, participants), matchId));
             }
         }
     }
@@ -434,7 +434,7 @@ public final class GameStateCommandManager {
                         CommandPlaceholders::rollSharedRandom));
             }
         }
-        TagContext consoleContext = tagContext(name, null, matchScope(null, match));
+        TagContext consoleContext = tagContext(name, null, matchScope(null, match), matchId);
         if (chanceScope == ModifierTriggers.TriggerScope.PER_EXECUTOR) {
             if (ModifierTriggers.rollChance(chance, random.nextDouble())) {
                 runCommandList(sharedPicks ? shared.get("console") : resolveCommandList(name, "console"), null,
@@ -445,7 +445,7 @@ public final class GameStateCommandManager {
                     continue;
                 }
                 runExecutorPlayerLists(name, target, shared, sharedPicks,
-                        tagContext(name, target, matchScope(target, match)));
+                        tagContext(name, target, matchScope(target, match), matchId));
             }
             return;
         }
@@ -458,7 +458,7 @@ public final class GameStateCommandManager {
                 consoleContext);
         for (Player target : targets) {
             runExecutorPlayerLists(name, target, shared, sharedPicks,
-                    tagContext(name, target, matchScope(target, match)));
+                    tagContext(name, target, matchScope(target, match), matchId));
         }
     }
 
@@ -470,9 +470,9 @@ public final class GameStateCommandManager {
                 context);
     }
 
-    /** Tag context for one modifier dispatch: id plus message/sound sinks. */
-    private TagContext tagContext(String name, Player executor, ModifierTagScope scope) {
-        return TagContext.of(scope, name,
+    /** Tag context for one modifier dispatch run: id, sinks, stats, flags. */
+    private TagContext tagContext(String name, Player executor, ModifierTagScope scope, long matchId) {
+        return TagContext.run(scope, name,
                 text -> messages.broadcastText(formatEngineMessage(text)),
                 text -> {
                     if (executor != null) {
@@ -488,7 +488,8 @@ public final class GameStateCommandManager {
                     } else {
                         scope.warn("Tag <psound> needs an executor player: skipped in '" + name + "'.");
                     }
-                });
+                },
+                matchId, game.matchStatValues(matchId), game.flagStore());
     }
 
     private String formatEngineMessage(String text) {

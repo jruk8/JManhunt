@@ -114,11 +114,33 @@ public final class PlayerCombatListener implements Listener {
         handleUnlimitedRunnerDeath(player, instance, quiet, matchId, delaySeconds);
     }
 
+    /** Eliminates a hunter out of lives, mirroring the speedrunner path. */
+    private void eliminateHunterOutOfLives(Player player, GameInstance instance, boolean quiet,
+            long matchId) {
+        // A speedrunner finishing the hunter earns the final kill,
+        // mirroring the speedrunner elimination.
+        creditHunterFinalKill(matchId, player);
+        if (!quiet) {
+            game.sendToInstance(instance, "game.hunter-out-of-lives", Map.of());
+        }
+        playerStates.setRole(player.getUniqueId(), Role.NONE);
+        plugin.roleTeams().sync(player);
+        instance.deactivate(player.getUniqueId());
+        game.flagStore().removePlayer(matchId, player.getName());
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            player.setGameMode(GameMode.SPECTATOR);
+            compass.removeCompasses(player);
+        });
+        checkHuntersRemaining(instance);
+        game.playInstanceSound(instance, "game.hunter-death");
+    }
+
     /** Eliminates a speedrunner out of lives and finishes when none remain. */
     private void eliminateSpeedrunner(Player player, GameInstance instance, boolean quiet, long matchId) {
         // Out of lives: eliminate permanently. Only an opposite-role
         // killer earns the final kill: same-role finishes never count.
         instance.deactivate(player.getUniqueId());
+        game.flagStore().removePlayer(matchId, player.getName());
         Player finalKiller = player.getKiller();
         if (finalKiller != null && playerStates.role(finalKiller.getUniqueId()) == Role.HUNTER) {
             stats.getOrCreate(matchId, finalKiller.getUniqueId()).finalKills++;
@@ -179,22 +201,7 @@ public final class PlayerCombatListener implements Listener {
         if (lives != -1) {
             playerStates.decrementLives(player.getUniqueId());
             if (playerStates.getLives(player.getUniqueId()) <= 0) {
-                // Out of lives: eliminate permanently. A speedrunner
-                // finishing the hunter earns the final kill, mirroring
-                // the speedrunner elimination above.
-                creditHunterFinalKill(matchId, player);
-                if (!quiet) {
-                    game.sendToInstance(instance, "game.hunter-out-of-lives", Map.of());
-                }
-                playerStates.setRole(player.getUniqueId(), Role.NONE);
-                plugin.roleTeams().sync(player);
-                instance.deactivate(player.getUniqueId());
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.setGameMode(GameMode.SPECTATOR);
-                    compass.removeCompasses(player);
-                });
-                checkHuntersRemaining(instance);
-                game.playInstanceSound(instance, "game.hunter-death");
+                eliminateHunterOutOfLives(player, instance, quiet, matchId);
                 return;
             }
         }
@@ -376,6 +383,7 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         if (!(event.getEntity() instanceof Player)) {
+            stats.recordMobKill(match.get().matchId(), killer.getUniqueId());
             // Mob kills only matter for the kill-mob win conditions.
             Role killerRole = playerStates.role(killer);
             if (killerRole == Role.SPEEDRUNNER
@@ -441,6 +449,7 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         long matchId = match.get().matchId();
+        stats.recordAdvancement(matchId, player.getUniqueId());
         game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId);
         if (playerStates.role(player) == Role.SPEEDRUNNER
                 && winConditionEngine.hasReachAdvancement(player, Role.SPEEDRUNNER)) {

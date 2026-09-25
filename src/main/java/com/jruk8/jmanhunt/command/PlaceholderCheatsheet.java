@@ -33,7 +33,15 @@ public final class PlaceholderCheatsheet {
             Map.entry("gsound",
                     new String[]{"<gsound:id,pitch,volume>", "sound for all, returns empty"}),
             Map.entry("psound",
-                    new String[]{"<psound:id,pitch,volume>", "sound for executor, returns empty"}));
+                    new String[]{"<psound:id,pitch,volume>", "sound for executor, returns empty"}),
+            Map.entry("pstat",
+                    new String[]{"<pstat:player,key>", "health, hunger, mobs-killed, achievements"}),
+            Map.entry("gstat", new String[]{"<gstat:key>", "duration seconds, daytime ticks"}),
+            Map.entry("gflag", new String[]{"<gflag:name,value>", "match flag, get when no value"}),
+            Map.entry("pflag",
+                    new String[]{"<pflag:name,value>", "executor flag, get when no value"}),
+            Map.entry("lflag",
+                    new String[]{"<lflag:name,value>", "run-local flag, get when no value"}));
 
     private PlaceholderCheatsheet() {
     }

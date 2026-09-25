@@ -17,6 +17,10 @@ public final class Stats {
     public int speedrunnerKills;
     public int deaths;
     public int finalKills;
+    /** Non-player entities credited to this player this match. */
+    public int mobsKilled;
+    /** Non-recipe advancements earned this match. */
+    public int achievementsGained;
     public int progression;
     public String progressionKey;
     public long matchStartedAt = System.currentTimeMillis();

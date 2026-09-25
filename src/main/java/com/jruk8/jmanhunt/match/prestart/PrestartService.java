@@ -253,8 +253,8 @@ public final class PrestartService {
         // do not save stats
         stats.clearMatch(instance.matchId());
         stateCommands.cancelIntervalModifiers(instance.matchId());
-        stateCommands.runConsoleCleanup();
-        stateCommands.runPlayerCleanup(store.onlineActivePlayers(instance));
+        stateCommands.runConsoleCleanup(instance.matchId());
+        stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
         List<Player> assigned = store.onlineAssignedPlayers(instance);
         control.teardownNow(instance);
         if (configService.getBoolean("settings.players.invulnerability.on-game-end.enabled", true)) {

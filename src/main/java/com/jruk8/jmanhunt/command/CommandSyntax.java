@@ -35,7 +35,8 @@ public final class CommandSyntax {
     public static List<String> knownTags() {
         return List.of("p", "random-mob", "random-item", "random-num",
                 "random-pick", "random-player", "all-players", "id", "min",
-                "max", "clamp", "if", "gmessage", "pmessage", "gsound", "psound");
+                "max", "clamp", "if", "gmessage", "pmessage", "gsound", "psound",
+                "pstat", "gstat", "gflag", "pflag", "lflag");
     }
 
     /**
@@ -217,6 +218,9 @@ public final class CommandSyntax {
             case "gmessage", "pmessage" -> arityError(name, args, 1, "one text");
             case "gsound", "psound" -> soundError(name, args);
             case "if" -> ifError(args);
+            case "pstat" -> statError(name, args, 1, TagStats.PSTAT_KEYS);
+            case "gstat" -> statError(name, args, 0, TagStats.GSTAT_KEYS);
+            case "gflag", "pflag", "lflag" -> flagError(name, args);
             default -> Optional.empty();
         };
     }
@@ -295,6 +299,53 @@ public final class CommandSyntax {
             if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
                 return Optional.of("Tag <" + name + "> mixes quotes.");
             }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Stat tag shape: arity, quote hygiene, plus the key. Keys must be
+     * literal here like {@code <random-num>} bounds; nested tags
+     * resolve at runtime but the editor cannot see through them.
+     */
+    private static Optional<String> statError(String name, String args, int keyIndex,
+            List<String> validKeys) {
+        int arity = keyIndex + 1;
+        String what = arity == 1 ? "one key" : "a player plus a key";
+        if (args == null || args.isBlank()
+                || CommandPlaceholders.splitPickArgs(args).size() != arity) {
+            return Optional.of("Tag <" + name + "> needs " + what + ".");
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
+                return Optional.of("Tag <" + name + "> mixes quotes.");
+            }
+        }
+        String key = CommandPlaceholders.parsePickItem(parts.get(keyIndex)).orElse("");
+        if (!validKeys.contains(TagStats.normalizeKey(key))) {
+            return Optional.of("Unknown <" + name + "> key '" + key.strip() + "'. Valid keys: "
+                    + String.join(", ", validKeys) + ".");
+        }
+        return Optional.empty();
+    }
+
+    /** Flag tag shape: a name plus an optional value, quotes parsed. */
+    private static Optional<String> flagError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs a name plus an optional value.");
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        if (parts.size() < 1 || parts.size() > 2) {
+            return Optional.of("Tag <" + name + "> needs a name plus an optional value.");
+        }
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
+                return Optional.of("Tag <" + name + "> mixes quotes.");
+            }
+        }
+        if (FlagStore.parseName(parts.get(0)).isEmpty()) {
+            return Optional.of("Tag <" + name + "> needs a name.");
         }
         return Optional.empty();
     }

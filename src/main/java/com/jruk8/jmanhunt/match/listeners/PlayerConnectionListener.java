@@ -180,6 +180,10 @@ public final class PlayerConnectionListener implements Listener {
         }
         playerStates.setRole(playerId, Role.NONE);
         instance.deactivate(playerId);
+        String playerName = Bukkit.getOfflinePlayer(playerId).getName();
+        if (playerName != null) {
+            game.flagStore().removePlayer(matchId, playerName);
+        }
 
         // Disconnect removal always lands on NONE; the toggle decides the
         // gamemode. AFK players are never tracked, so they keep theirs.
@@ -191,6 +195,11 @@ public final class PlayerConnectionListener implements Listener {
             plugin.roleTeams().sync(onlinePlayer);
         }
 
+        announceDisconnectRemoval(instance, role);
+    }
+
+    /** Announces a disconnect removal and finishes when its bucket emptied. */
+    private void announceDisconnectRemoval(GameInstance instance, Role role) {
         String roleKey = role == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
         game.sendToInstance(instance, "game." + roleKey + "-disconnect-removed", Map.of());
 

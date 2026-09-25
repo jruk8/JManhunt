@@ -294,6 +294,45 @@ coalescing) work; division by zero warns and yields 0. Quote a token
 to protect it: `say "2026-09-26"` stays a date, while a bare
 `2026-09-26` computes to 1991.
 
+### Stats
+
+`<pstat:player,key>` reads one player's numbers; `<gstat:key>` reads
+match- or world-wide ones. Keys match case-blindly:
+
+| Tag | Meaning |
+| --- | --- |
+| `<pstat:"<p>",health>` | The player's health, normally 0-20. |
+| `<pstat:Steve,hunger>` | The player's hunger, 0-20. |
+| `<pstat:Steve,mobs-killed>` | Mobs the player killed this match. |
+| `<pstat:Steve,achievements-gained>` | Non-recipe advancements earned this match. |
+| `<gstat:duration>` | Whole seconds since the match began. |
+| `<gstat:daytime>` | The main world clock in ticks. |
+
+Unknown keys warn and yield nothing, listing the valid keys. Reading a
+stat of an offline player warns and yields nothing. `duration` outside
+a live match warns and yields 0.
+
+### Flags
+
+Flags are variables commands can share. Omit the value to read, pass
+one to write; writes return nothing, and reads of unset flags yield
+`null`, which pairs with `??` for defaults. Names match exactly and
+may hold spaces inside quotes.
+
+| Tag | Scope | Lifetime |
+| --- | --- | --- |
+| `<gflag:name,value>` | Whole match | Dies with the match. |
+| `<pflag:name,value>` | Executing player (`-CONSOLE` for console lists) | Flushed when the player leaves, is eliminated, or disconnects for good; dies with the match. |
+| `<lflag:name,value>` | This run only | Set in an early line, read in a later line, discarded after. |
+
+`<pflag:"cooldown",<gstat:"duration">>` stamps a cooldown;
+`<pflag:"cooldown">` reads it back.
+
+Flags are modifier-agnostic on purpose: any modifier can read what
+another wrote. For a strictly private flag, namespace the name with
+`<id>`: `lastuse-<id>` can only collide with itself. Flags live in
+memory: a reload or restart wipes them.
+
 ### Stopping a list
 
 A lone `exit` line stops the command list: later lines never run. It is

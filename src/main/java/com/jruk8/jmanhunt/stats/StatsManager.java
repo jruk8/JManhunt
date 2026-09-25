@@ -123,6 +123,23 @@ public final class StatsManager {
         }
     }
 
+    /**
+     * Credits one mob kill to the killer's match slice. Match-only:
+     * career totals never see it. Pure apart from the slice lookup,
+     * so unit tests cover it directly.
+     */
+    public void recordMobKill(long matchId, UUID killerId) {
+        getOrCreate(matchId, killerId).mobsKilled++;
+    }
+
+    /**
+     * Credits one advancement to the player's match slice. Callers
+     * filter recipe unlocks out; match-only like mob kills.
+     */
+    public void recordAdvancement(long matchId, UUID playerId) {
+        getOrCreate(matchId, playerId).achievementsGained++;
+    }
+
     /** Records a career death for the given player (persisted with the next match save). */
     public void recordDeath(UUID id) {
         CareerStats total = career(id);

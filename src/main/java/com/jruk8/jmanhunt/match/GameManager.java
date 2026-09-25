@@ -30,6 +30,8 @@ import com.jruk8.jmanhunt.match.lifecycle.MatchControl;
 import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStartService;
+import com.jruk8.jmanhunt.command.FlagStore;
+import com.jruk8.jmanhunt.command.StatValues;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
 import com.jruk8.jmanhunt.match.lifecycle.TimeLimitService;
@@ -51,6 +53,8 @@ public final class GameManager implements MatchControl {
     private final AutostartService autostart;
     private final MatchFinishService matchFinish;
     private final MatchStartService matchStart;
+    private final FlagStore flagStore;
+    private final StatsManager stats;
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
                        PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
@@ -66,6 +70,8 @@ public final class GameManager implements MatchControl {
         this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService,
                 messages, sounds, worldEngine.teleportService(), this);
         this.store = new MatchStore(playerStates);
+        this.flagStore = new FlagStore();
+        this.stats = stats;
         this.messaging = new MatchMessaging(messages, sounds, configService, store, lobbies);
         this.timeLimits = new TimeLimitService(plugin, winConditionEngine, store, messaging, this);
         this.prestart = new PrestartService(plugin, configService, messages, playerStates,
@@ -74,7 +80,7 @@ public final class GameManager implements MatchControl {
                 worldEngine, store, messaging, this);
         this.matchFinish = new MatchFinishService(plugin, messages, playerStates, compass, stats,
                 stateCommands, configService, worldEngine, store, messaging, timeLimits, prestart,
-                autostart);
+                autostart, flagStore);
         this.matchStart = new MatchStartService(plugin, messages, sounds, playerStates, compass, stats,
                 stateCommands, configService, worldEngine, lobbies, store, messaging, timeLimits,
                 prestart, autostart, matchFinish);
@@ -102,6 +108,12 @@ public final class GameManager implements MatchControl {
     public Map<Long, GameInstance> instances() { return store.instances(); }
     /** Looks up a live instance by match id. */
     public Optional<GameInstance> instance(long matchId) { return store.instance(matchId); }
+    /** Shared flag store behind command tags; cleared per match on teardown. */
+    public FlagStore flagStore() { return flagStore; }
+    /** Stat values bound to one match for one tag run. */
+    public StatValues matchStatValues(long matchId) {
+        return new MatchStatValues(stats, store, matchId);
+    }
 
     /** Live instances oldest first. */
     public List<GameInstance> liveInstances() { return store.liveInstances(); }

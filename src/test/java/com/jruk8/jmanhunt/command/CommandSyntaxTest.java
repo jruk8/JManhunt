@@ -167,6 +167,32 @@ class CommandSyntaxTest {
     }
 
     @Test
+    void statAndFlagTagsPass() {
+        assertTrue(CommandSyntax.error("say <pstat:\"<p>\",\"health\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <pstat:Steve,HUNGER> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <pstat:Steve,mobs-killed> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <gstat:duration> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <gstat:\"daytime\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <gflag:phase> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <gflag:phase,one> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <pflag:\"cooldown\",732> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <lflag:x> done").isEmpty());
+    }
+
+    @Test
+    void statAndFlagTagsFail() {
+        assertTrue(CommandSyntax.error("say <pstat:Steve> done").isPresent());
+        assertTrue(CommandSyntax.error("say <pstat:Steve,heath> done").isPresent());
+        assertTrue(CommandSyntax.error("say <gstat:> done").isPresent());
+        assertTrue(CommandSyntax.error("say <gstat:uptime> done").isPresent());
+        assertTrue(CommandSyntax.error("say <gstat:duration,daytime> done").isPresent());
+        assertTrue(CommandSyntax.error("say <gstat:<random-pick:duration,daytime>> done").isPresent());
+        assertTrue(CommandSyntax.error("say <gflag:> done").isPresent());
+        assertTrue(CommandSyntax.error("say <gflag:a,b,c> done").isPresent());
+        assertTrue(CommandSyntax.error("say <pflag:\"  \",1> done").isPresent());
+    }
+
+    @Test
     void extendedTagArityFails() {
         assertTrue(CommandSyntax.error("say <id:x>").isPresent());
         assertTrue(CommandSyntax.error("give <p> apple <min:8>").isPresent());
