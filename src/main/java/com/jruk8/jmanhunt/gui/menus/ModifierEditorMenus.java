@@ -156,13 +156,10 @@ public final class ModifierEditorMenus {
 
     private void triggerRow(Map<Integer, MenuButton> fixed, String id, Menu self) {
         boolean enabled = store.isEnabled(id);
-        fixed.put(10, new MenuButton(Material.LEVER,
-                GuiTexts.name(messages, "Enabled", "Enabled"),
-                GuiTexts.lore(messages, List.of(
-                        currentLine(store.isEnabled(id)
-                                ? text("state-on", "Enabled") : text("state-off", "Disabled")),
-                        text("editor-click-toggle", "Click to toggle"))),
-                enabled, false,
+        fixed.put(10, EditorButtons.valueButton(messages, Material.LEVER, "Enabled",
+                store.isEnabled(id)
+                        ? text("state-on", "Enabled") : text("state-off", "Disabled"),
+                text("editor-click-toggle", "Click to toggle"), enabled,
                 player -> {
                     if (denied(player)) {
                         return;
@@ -170,11 +167,12 @@ public final class ModifierEditorMenus {
                     commands.execute(player,
                             new String[]{"setmod", id, String.valueOf(!store.isEnabled(id))});
                     sounds.playNeutralSound(player);
-                }).silent());
+                }));
         List<String> triggers = store.runsOn(id);
-        fixed.put(13, navButton(Material.COMPARATOR, "Run on",
-                triggers.isEmpty() ? orUnset(null) : triggers.size() + " selected",
-                "editor-click-open", "Click to open", player -> {
+        fixed.put(13, EditorButtons.actionButton(messages, Material.COMPARATOR, "Run on",
+                List.of(triggers.isEmpty() ? orUnset(null) : triggers.size() + " selected",
+                        text("editor-click-open", "Click to open")),
+                player -> {
                     if (denied(player)) {
                         return;
                     }
@@ -271,29 +269,31 @@ public final class ModifierEditorMenus {
         for (String list : ModifierDetailMenus.COMMAND_LISTS) {
             lines += store.commandList(id, list).size();
         }
-        fixed.put(36, navButton(Material.COMMAND_BLOCK,
+        fixed.put(36, EditorButtons.actionButton(messages, Material.COMMAND_BLOCK,
                 text("editor-commands", "Commands"),
-                text("editor-commands-lore", "{total} lines")
-                        .replace("{total}", String.valueOf(lines)),
-                "editor-click-open", "Click to open", player -> {
+                List.of(text("editor-commands-lore", "{total} lines")
+                                .replace("{total}", String.valueOf(lines)),
+                        text("editor-click-open", "Click to open")),
+                player -> {
                     if (denied(player)) {
                         return;
                     }
                     gui.navigate(player, detail.commandsMenu(id, () -> editor(id, self.parent())));
                 }));
-        fixed.put(38, fieldButton(Material.LOOM,
+        fixed.put(38, EditorButtons.actionButton(messages, Material.LOOM,
                 text("editor-export", "Export"),
-                text("editor-export-lore", "Copy a share string"),
-                "editor-click-copy", "Click to copy",
-                player -> commands.exportEntry(player, "modifier", id)));
-        fixed.put(40, fieldButton(Material.ANVIL,
+                List.of(text("editor-export-lore", "Copy a share string"),
+                        text("editor-click-copy", "Click to copy")),
+                player -> commands.exportEntry(player, "modifier", id)).silent());
+        fixed.put(40, EditorButtons.actionButton(messages, Material.ANVIL,
                 text("editor-rename", "Rename Id"),
-                text("editor-rename-lore", "Current id: {value}").replace("{value}", id),
-                player -> renamePrompt(player, id, self)));
-        fixed.put(42, navButton(Material.TNT,
+                List.of(text("editor-rename-lore", "Current id: {value}").replace("{value}", id)),
+                player -> renamePrompt(player, id, self)).silent());
+        fixed.put(42, EditorButtons.actionButton(messages, Material.TNT,
                 text("editor-delete", "Delete"),
-                text("editor-delete-lore", "Removes this modifier forever"),
-                "editor-click-delete", "Click to delete", player -> {
+                List.of(text("editor-delete-lore", "Removes this modifier forever"),
+                        text("editor-click-delete", "Click to delete")),
+                player -> {
                     if (denied(player)) {
                         return;
                     }
@@ -360,7 +360,7 @@ public final class ModifierEditorMenus {
         String shown = current == null ? text("editor-unset", "Not set") : current;
         dialogs.prompt(player,
                 text("editor-prompt-title", "Edit {label}").replace("{label}", label),
-                "",
+                SettingDialogs.safeInitial(current),
                 List.of(text("editor-prompt-current", "Current value: {value}")
                         .replace("{value}", shown)),
                 raw -> finishField(player, self,
@@ -540,21 +540,8 @@ public final class ModifierEditorMenus {
 
     private MenuButton fieldButton(Material material, String label, String value,
             String hintKey, String hintFallback, Consumer<Player> action) {
-        return navButton(material, label, value, hintKey, hintFallback, action).silent();
-    }
-
-    /**
-     * Same lore shape as {@link #fieldButton} but with the central click:
-     * for submenu openers, which navigate instead of committing a value.
-     */
-    private MenuButton navButton(Material material, String label, String value,
-            String hintKey, String hintFallback, Consumer<Player> action) {
-        return new MenuButton(material,
-                GuiTexts.name(messages, label, label),
-                GuiTexts.lore(messages, List.of(
-                        currentLine(value),
-                        text(hintKey, hintFallback))),
-                false, false, action);
+        return EditorButtons.valueButton(messages, material, label, value,
+                text(hintKey, hintFallback), action);
     }
 
     private MenuButton scrollButton(String nameKey, String fallback, Menu[] self, int delta) {
@@ -562,10 +549,6 @@ public final class ModifierEditorMenus {
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 null, false, false,
                 player -> self[0].window().scrollLine(delta));
-    }
-
-    private String currentLine(String value) {
-        return text("editor-current", "Current: {value}").replace("{value}", value);
     }
 
     private String orUnset(String value) {

@@ -46,4 +46,39 @@ class DialogInputsTest {
                 SettingRegistry.byPath("settings.compass.signal-interference.chance-to-bypass"),
                 null));
     }
+
+    @Test
+    void sliderResponsesClampIntoBounds() {
+        assertEquals("1.0", DialogInputs.submitText(
+                SettingRegistry.byPath("settings.compass.signal-interference.chance-to-bypass"),
+                9.5f));
+        assertEquals("0.0", DialogInputs.submitText(
+                SettingRegistry.byPath("settings.compass.signal-interference.chance-to-bypass"),
+                -2.0f));
+    }
+
+    @Test
+    void clampPinsAndTamesNonFiniteValues() {
+        assertEquals(0.5f, DialogInputs.clamp(0.5f, 0.0f, 1.0f));
+        assertEquals(0.0f, DialogInputs.clamp(-3.0f, 0.0f, 1.0f));
+        assertEquals(1.0f, DialogInputs.clamp(42.0f, 0.0f, 1.0f));
+        assertEquals(0.0f, DialogInputs.clamp(Float.NaN, 0.0f, 1.0f));
+        assertEquals(1.0f, DialogInputs.clamp(Float.POSITIVE_INFINITY, 0.0f, 1.0f));
+        assertEquals(0.0f, DialogInputs.clamp(Float.NEGATIVE_INFINITY, 0.0f, 1.0f));
+    }
+
+    @Test
+    void floatsFormatToThreeDecimals() {
+        assertEquals("0.500", DialogInputs.formatFloat(0.5f));
+        assertEquals("1.000", DialogInputs.formatFloat(1.0f));
+        assertEquals("0.333", DialogInputs.formatFloat(1.0f / 3.0f));
+    }
+
+    @Test
+    void safeInitialPrefillsAndFallsBackWhenOverlong() {
+        assertEquals("Speedy", DialogInputs.safeInitial("Speedy"));
+        assertEquals("", DialogInputs.safeInitial(null));
+        assertEquals("", DialogInputs.safeInitial("x".repeat(DialogInputs.TEXT_MAX_LENGTH + 1)));
+        assertEquals("ok", DialogInputs.safeInitial("ok"));
+    }
 }

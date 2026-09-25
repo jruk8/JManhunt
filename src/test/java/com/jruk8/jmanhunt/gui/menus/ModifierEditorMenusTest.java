@@ -114,7 +114,7 @@ class ModifierEditorMenusTest {
         assertEquals(plain("Current: 100 ticks", NamedTextColor.GRAY), delay.lore().get(0));
 
         MenuButton triggers = menu.buttonAt(13);
-        assertEquals(plain("Current: 2 selected", NamedTextColor.GRAY), triggers.lore().get(0));
+        assertEquals(plain("2 selected", NamedTextColor.GRAY), triggers.lore().get(0));
 
         MenuButton prestart = menu.buttonAt(16);
         assertEquals(plain("Current: Default (IN_ORDER)", NamedTextColor.GRAY),
@@ -123,6 +123,9 @@ class ModifierEditorMenusTest {
         assertEquals(Material.COMMAND_BLOCK, menu.buttonAt(36).material());
         assertEquals(Material.LOOM, menu.buttonAt(38).material());
         assertEquals(Material.ANVIL, menu.buttonAt(40).material());
+        MenuButton rename = menu.buttonAt(40);
+        assertEquals(1, rename.lore().size());
+        assertEquals(plain("Current id: zebra", NamedTextColor.GRAY), rename.lore().get(0));
         assertEquals(Material.TNT, menu.buttonAt(42).material());
         assertEquals(Material.PAPER, menu.buttonAt(44).material());
         assertNull(menu.buttonAt(0));
@@ -163,9 +166,9 @@ class ModifierEditorMenusTest {
         Menu menu = detail.commandsMenu("zebra", null);
 
         assertEquals(title("Command Lists"), menu.title());
-        assertEquals(plain("Current: 0 lines", NamedTextColor.GRAY),
+        assertEquals(plain("0 lines", NamedTextColor.GRAY),
                 menu.buttonAt(10).lore().get(0));
-        assertEquals(plain("Current: 1 lines", NamedTextColor.GRAY),
+        assertEquals(plain("1 lines", NamedTextColor.GRAY),
                 menu.buttonAt(11).lore().get(0));
         assertEquals(Material.COMMAND_BLOCK, menu.buttonAt(16).material());
         assertEquals(Material.PAPER, menu.buttonAt(22).material());

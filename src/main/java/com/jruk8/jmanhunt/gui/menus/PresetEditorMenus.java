@@ -133,10 +133,12 @@ public final class PresetEditorMenus {
 
     private void membersRow(Map<Integer, MenuButton> fixed, String id, Menu self) {
         int members = store.presetMembers(id).size();
-        fixed.put(13, navButton(Material.FILLED_MAP,
+        fixed.put(13, EditorButtons.actionButton(messages, Material.FILLED_MAP,
                 text("members-title", "Members"),
-                text("members-lore", "{total} members").replace("{total}", String.valueOf(members)),
-                "editor-click-open", "Click to open", player -> {
+                List.of(text("members-lore", "{total} members")
+                                .replace("{total}", String.valueOf(members)),
+                        text("editor-click-open", "Click to open")),
+                player -> {
                     if (denied(player)) {
                         return;
                     }
@@ -146,19 +148,20 @@ public final class PresetEditorMenus {
 
     private void actionRow(Map<Integer, MenuButton> fixed, String id, Supplier<Menu> parent,
             Menu self) {
-        fixed.put(10, fieldButton(Material.LOOM,
+        fixed.put(10, EditorButtons.actionButton(messages, Material.LOOM,
                 text("editor-export", "Export"),
-                text("editor-export-lore", "Copy a share string"),
-                "editor-click-copy", "Click to copy",
-                player -> commands.exportEntry(player, "preset", id)));
-        fixed.put(12, fieldButton(Material.ANVIL,
+                List.of(text("editor-export-lore", "Copy a share string"),
+                        text("editor-click-copy", "Click to copy")),
+                player -> commands.exportEntry(player, "preset", id)).silent());
+        fixed.put(12, EditorButtons.actionButton(messages, Material.ANVIL,
                 text("editor-rename", "Rename Id"),
-                text("editor-rename-lore", "Current id: {value}").replace("{value}", id),
-                player -> renamePrompt(player, id, self)));
-        fixed.put(14, navButton(Material.TNT,
+                List.of(text("editor-rename-lore", "Current id: {value}").replace("{value}", id)),
+                player -> renamePrompt(player, id, self)).silent());
+        fixed.put(14, EditorButtons.actionButton(messages, Material.TNT,
                 text("editor-delete", "Delete"),
-                text("editor-delete-preset-lore", "Removes this preset forever"),
-                "editor-click-delete", "Click to delete", player -> {
+                List.of(text("editor-delete-preset-lore", "Removes this preset forever"),
+                        text("editor-click-delete", "Click to delete")),
+                player -> {
                     if (denied(player)) {
                         return;
                     }
@@ -199,13 +202,11 @@ public final class PresetEditorMenus {
         List<MenuButton> buttons = new ArrayList<>();
         for (String member : ids) {
             boolean on = members.contains(member);
-            buttons.add(new MenuButton(store.metaItem(member),
-                    GuiTexts.name(messages, store.metaName(member), ModifierStore.DEFAULT_NAME),
-                    GuiTexts.lore(messages, List.of(
-                            currentLine(on ? text("state-on", "Enabled")
-                                    : text("state-off", "Disabled")),
-                            text("editor-click-toggle", "Click to toggle"))),
-                    on, false,
+            buttons.add(EditorButtons.actionButton(messages, store.metaItem(member),
+                    store.metaName(member),
+                    List.of(on ? text("state-on", "Enabled") : text("state-off", "Disabled"),
+                            text("editor-click-toggle", "Click to toggle")),
+                    on,
                     player -> toggleMember(player, id, member, on)).silent());
         }
         return buttons;
@@ -273,7 +274,7 @@ public final class PresetEditorMenus {
         String shown = current == null ? text("editor-unset", "Not set") : current;
         dialogs.prompt(player,
                 text("editor-prompt-title", "Edit {label}").replace("{label}", label),
-                "",
+                SettingDialogs.safeInitial(current),
                 List.of(text("editor-prompt-current", "Current value: {value}")
                         .replace("{value}", shown)),
                 raw -> {
@@ -303,21 +304,8 @@ public final class PresetEditorMenus {
 
     private MenuButton fieldButton(Material material, String label, String value,
             String hintKey, String hintFallback, Consumer<Player> action) {
-        return navButton(material, label, value, hintKey, hintFallback, action).silent();
-    }
-
-    /**
-     * Same lore shape as {@link #fieldButton} but with the central click:
-     * for submenu openers, which navigate instead of committing a value.
-     */
-    private MenuButton navButton(Material material, String label, String value,
-            String hintKey, String hintFallback, Consumer<Player> action) {
-        return new MenuButton(material,
-                GuiTexts.name(messages, label, label),
-                GuiTexts.lore(messages, List.of(
-                        currentLine(value),
-                        text(hintKey, hintFallback))),
-                false, false, action);
+        return EditorButtons.valueButton(messages, material, label, value,
+                text(hintKey, hintFallback), action);
     }
 
     private MenuButton scrollButton(String nameKey, String fallback, Menu[] self, int delta) {
@@ -325,10 +313,6 @@ public final class PresetEditorMenus {
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 null, false, false,
                 player -> self[0].window().scrollLine(delta));
-    }
-
-    private String currentLine(String value) {
-        return text("editor-current", "Current: {value}").replace("{value}", value);
     }
 
     private String orUnset(String value) {

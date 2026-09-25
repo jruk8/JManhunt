@@ -82,10 +82,13 @@ class PresetEditorMenusTest {
 
         MenuButton members = menu.buttonAt(13);
         assertEquals(Material.FILLED_MAP, members.material());
-        assertEquals(plain("Current: 1 members", NamedTextColor.GRAY), members.lore().get(0));
+        assertEquals(plain("1 members", NamedTextColor.GRAY), members.lore().get(0));
 
         assertEquals(Material.LOOM, menu.buttonAt(10).material());
         assertEquals(Material.ANVIL, menu.buttonAt(12).material());
+        MenuButton rename = menu.buttonAt(12);
+        assertEquals(1, rename.lore().size());
+        assertEquals(plain("Current id: pair", NamedTextColor.GRAY), rename.lore().get(0));
         assertEquals(Material.TNT, menu.buttonAt(14).material());
         assertEquals(Material.PAPER, menu.buttonAt(16).material());
     }

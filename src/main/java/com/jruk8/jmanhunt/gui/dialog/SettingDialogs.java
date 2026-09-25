@@ -47,8 +47,8 @@ import org.bukkit.plugin.Plugin;
 public final class SettingDialogs implements SettingDialog {
 
     private static final String VALUE_KEY = "value";
-    /** Text input ceiling: the classic full-string cap, far above any sane value. */
-    static final int TEXT_MAX_LENGTH = 32767;
+    /** Text input ceiling, shared with the headless input helpers. */
+    static final int TEXT_MAX_LENGTH = DialogInputs.TEXT_MAX_LENGTH;
 
     private final ConfigService config;
     private final MessageService messages;
@@ -202,15 +202,41 @@ public final class SettingDialogs implements SettingDialog {
         float min = descriptor.min().floatValue();
         float max = descriptor.max().floatValue();
         var builder = DialogInput.numberRange(VALUE_KEY, title, min, max)
-                .initial(currentNumber(descriptor, min));
+                .initial(DialogInputs.clamp(currentNumber(descriptor, min), min, max));
         if (descriptor.type() == SettingType.INT) {
             builder.step(1.0f);
+        } else {
+            // No decimal-places control exists: labelFormat takes a
+            // translation key, not a number pattern (verified against the
+            // Paper 26.2 API). A 0.001 step snaps values to three decimals
+            // and the body line below renders them exactly.
+            builder.step(0.001f);
         }
         return builder.build();
     }
 
     private String currentText(SettingDescriptor descriptor) {
         return ConfigService.displayValue(config.getValue(descriptor.path()));
+    }
+
+    /** Current value, with floats rendered to three decimals. */
+    private String displayCurrent(SettingDescriptor descriptor) {
+        if (descriptor.type() == SettingType.FLOAT) {
+            Object value = config.getValue(descriptor.path());
+            if (value instanceof Number number) {
+                return DialogInputs.formatFloat(number.floatValue());
+            }
+        }
+        return currentText(descriptor);
+    }
+
+    /**
+     * Dialog initial text from a live value: null becomes blank and
+     * overlong values fall back to blank so a huge current value never
+     * refuses the open; callers echo the full value in the body instead.
+     */
+    public static String safeInitial(String current) {
+        return DialogInputs.safeInitial(current);
     }
 
     private float currentNumber(SettingDescriptor descriptor, float fallback) {
@@ -225,7 +251,7 @@ public final class SettingDialogs implements SettingDialog {
         List<DialogBody> lines = new ArrayList<>();
         lines.add(DialogBody.plainMessage(messages.parse(messages
                 .string("manhunt-gui.dialog-current", "Current value: {value}")
-                .replace("{value}", escape(currentText(descriptor))))));
+                .replace("{value}", escape(displayCurrent(descriptor))))));
         if (descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT) {
             lines.add(DialogBody.plainMessage(messages.parse(messages
                     .string("manhunt-gui.dialog-bounds", "Allowed: {bounds}")

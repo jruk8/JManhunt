@@ -74,13 +74,11 @@ public final class ModifierDetailMenus {
         for (int index = 0; index < known.size(); index++) {
             String trigger = known.get(index);
             boolean on = triggers.stream().anyMatch(trigger::equalsIgnoreCase);
-            fixed.put(index, new MenuButton(on ? Material.LIME_DYE : Material.GRAY_DYE,
-                    GuiTexts.name(messages, trigger, trigger),
-                    GuiTexts.lore(messages, List.of(
-                            currentLine(on ? text("state-on", "Enabled")
-                                    : text("state-off", "Disabled")),
-                            text("editor-click-toggle", "Click to toggle"))),
-                    on, false,
+            fixed.put(index, EditorButtons.actionButton(messages,
+                    on ? Material.LIME_DYE : Material.GRAY_DYE, trigger,
+                    List.of(on ? text("state-on", "Enabled") : text("state-off", "Disabled"),
+                            text("editor-click-toggle", "Click to toggle")),
+                    on,
                     player -> toggleTrigger(player, id, trigger)).silent());
         }
         fixed.put(22, new MenuButton(Material.PAPER,
@@ -123,10 +121,12 @@ public final class ModifierDetailMenus {
         for (int index = 0; index < COMMAND_LISTS.size(); index++) {
             String list = COMMAND_LISTS.get(index);
             int count = store.commandList(id, list).size();
-            fixed.put(slots[index], navButton(Material.COMMAND_BLOCK, list,
-                    text("editor-commands-lore", "{total} lines")
-                            .replace("{total}", String.valueOf(count)),
-                    "editor-click-open", "Click to open", player -> {
+            fixed.put(slots[index], EditorButtons.actionButton(messages,
+                    Material.COMMAND_BLOCK, list,
+                    List.of(text("editor-commands-lore", "{total} lines")
+                                    .replace("{total}", String.valueOf(count)),
+                            text("editor-click-open", "Click to open")),
+                    player -> {
                         if (denied(player)) {
                             return;
                         }
@@ -270,26 +270,11 @@ public final class ModifierDetailMenus {
         sounds.playSound(player, "compass.left-click");
     }
 
-    /** Submenu opener with the central click. */
-    private MenuButton navButton(Material material, String label, String value,
-            String hintKey, String hintFallback, Consumer<Player> action) {
-        return new MenuButton(material,
-                GuiTexts.name(messages, label, label),
-                GuiTexts.lore(messages, List.of(
-                        currentLine(value),
-                        text(hintKey, hintFallback))),
-                false, false, action);
-    }
-
     private MenuButton scrollButton(String nameKey, String fallback, Menu[] self, int delta) {
         return new MenuButton(Material.ARROW,
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 null, false, false,
                 player -> self[0].window().scrollLine(delta));
-    }
-
-    private String currentLine(String value) {
-        return text("editor-current", "Current: {value}").replace("{value}", value);
     }
 
     private void patch(String id, Consumer<ModifierEntry> patch) {
