@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
@@ -41,17 +40,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Behavior Options: six glowing entries, gated Interval Settings,
+ * Behavior Options: five glowing entries, gated Interval Settings,
  * and Execution/Delay/Chance submenus with live values.
  */
 class BehaviorOptionsMenusTest {
 
     private ModifierStore store;
     private BehaviorOptionsMenus options;
-
-    private static Component plain(String text, NamedTextColor color) {
-        return Component.text(text, color).decoration(TextDecoration.ITALIC, false);
-    }
+    private MessageService messages;
 
     private static Component title(String text) {
         return Component.text(text).decoration(TextDecoration.ITALIC, false);
@@ -67,10 +63,15 @@ class BehaviorOptionsMenusTest {
         config.getModifiers().put("zebra", behaviorEntry());
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
-        MessageService messages = new MessageService();
+        messages = new MessageService();
         messages.reload(new MessagesConfig());
         store = new ModifierStore(config, log);
-        options = new BehaviorOptionsMenus(store, messages, null, null, null, null, null);
+        options = new BehaviorOptionsMenus(store, messages, null, null, null, null);
+    }
+
+    /** Expected Current line: gray prefix with a white value. */
+    private Component currentLine(String value) {
+        return messages.nonItalic(messages.parse("<gray>Current: <white>" + value));
     }
 
     private static ModifierEntry behaviorEntry() {
@@ -97,11 +98,11 @@ class BehaviorOptionsMenusTest {
     }
 
     @Test
-    void optionsMenuListsSixGlowingEntries() {
+    void optionsMenuListsFiveGlowingEntries() {
         Menu menu = options.optionsMenu("zebra", null);
 
         assertEquals(title("Behavior Options"), menu.title());
-        Material[] materials = {Material.REDSTONE_TORCH, Material.LEVER, Material.REPEATER,
+        Material[] materials = {Material.LEVER, Material.REPEATER,
                 Material.BELL, Material.WHITE_WOOL, Material.HOPPER};
         for (int slot = 0; slot < materials.length; slot++) {
             MenuButton button = menu.buttonAt(slot);
@@ -110,10 +111,9 @@ class BehaviorOptionsMenusTest {
             assertTrue(button.glow(), "entry at " + slot + " should glow");
             assertNotNull(button.action());
         }
-        assertEquals("Runs On", textOf(menu.buttonAt(1).name()));
-        assertEquals("2 selected", textOf(menu.buttonAt(1).lore().get(1)));
-        assertEquals(plain("Current: 100 ticks", NamedTextColor.GRAY),
-                menu.buttonAt(4).lore().get(0));
+        assertEquals("Runs On", textOf(menu.buttonAt(0).name()));
+        assertEquals("2 selected", textOf(menu.buttonAt(0).lore().get(1)));
+        assertEquals(currentLine("100 ticks"), menu.buttonAt(3).lore().get(0));
         assertEquals(Material.PAPER, menu.buttonAt(8).material());
     }
 
@@ -121,12 +121,11 @@ class BehaviorOptionsMenusTest {
     void unknownIdsShowDefaultsWithoutGlow() {
         Menu menu = options.optionsMenu("ghost", null);
 
-        for (int slot = 0; slot < 6; slot++) {
+        for (int slot = 0; slot < 5; slot++) {
             assertFalse(menu.buttonAt(slot).glow(), "slot " + slot + " should not glow");
         }
-        assertEquals(plain("Current: Not set", NamedTextColor.GRAY),
-                menu.buttonAt(4).lore().get(0));
-        assertEquals("Not set", textOf(menu.buttonAt(1).lore().get(1)));
+        assertEquals(currentLine("Not set"), menu.buttonAt(3).lore().get(0));
+        assertEquals("Not set", textOf(menu.buttonAt(0).lore().get(1)));
     }
 
     @Test
@@ -141,11 +140,11 @@ class BehaviorOptionsMenusTest {
         when(messages.nonItalic(any(Component.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         BehaviorOptionsMenus gated = new BehaviorOptionsMenus(store, messages, sounds, gui,
-                null, null, null);
+                null, null);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
-        gated.optionsMenu("ghost", null).buttonAt(2).action().accept(player);
+        gated.optionsMenu("ghost", null).buttonAt(1).action().accept(player);
 
         verify(sounds).playAngrySound(player);
         verify(messages).message(eq(player), eq("modifiers.edit-invalid"), any(Map.class));
@@ -164,11 +163,11 @@ class BehaviorOptionsMenusTest {
         when(messages.nonItalic(any(Component.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         BehaviorOptionsMenus gated = new BehaviorOptionsMenus(store, messages, sounds, gui,
-                null, null, null);
+                null, null);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
-        gated.optionsMenu("zebra", null).buttonAt(2).action().accept(player);
+        gated.optionsMenu("zebra", null).buttonAt(1).action().accept(player);
 
         verify(gui).navigate(eq(player), any(Menu.class));
         verify(sounds).playSound(player, "compass.left-click");
@@ -187,11 +186,11 @@ class BehaviorOptionsMenusTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
         BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store, messages,
                 mock(SoundService.class), mock(GuiService.class),
-                null, null, dialogs);
+                null, dialogs);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
-        menus.optionsMenu("zebra", null).buttonAt(1).action().accept(player);
+        menus.optionsMenu("zebra", null).buttonAt(0).action().accept(player);
 
         verify(dialogs).openRunsOn(eq(player), eq(List.of("ON_START", "INTERVAL")),
                 any(), any());
@@ -203,14 +202,11 @@ class BehaviorOptionsMenusTest {
 
         assertEquals(title("Interval Settings"), menu.title());
         assertEquals(Material.CLOCK, menu.buttonAt(0).material());
-        assertEquals(plain("Current: 30.0s", NamedTextColor.GRAY),
-                menu.buttonAt(0).lore().get(0));
+        assertEquals(currentLine("30.0s"), menu.buttonAt(0).lore().get(0));
         assertEquals(Material.COMPASS, menu.buttonAt(1).material());
-        assertEquals(plain("Current: 5.0s", NamedTextColor.GRAY),
-                menu.buttonAt(1).lore().get(0));
+        assertEquals(currentLine("5.0s"), menu.buttonAt(1).lore().get(0));
         assertEquals(Material.REPEATER, menu.buttonAt(2).material());
-        assertEquals(plain("Current: PER_EXECUTOR", NamedTextColor.GRAY),
-                menu.buttonAt(2).lore().get(0));
+        assertEquals(currentLine("PER_EXECUTOR"), menu.buttonAt(2).lore().get(0));
     }
 
     @Test
@@ -219,13 +215,10 @@ class BehaviorOptionsMenusTest {
 
         assertEquals(title("Execution"), menu.title());
         assertEquals(Material.DISPENSER, menu.buttonAt(0).material());
-        assertEquals(plain("Current: PICK_RANDOM", NamedTextColor.GRAY),
-                menu.buttonAt(0).lore().get(0));
+        assertEquals(currentLine("PICK_RANDOM"), menu.buttonAt(0).lore().get(0));
         assertEquals(Material.DROPPER, menu.buttonAt(1).material());
-        assertEquals(plain("Current: Default (1)", NamedTextColor.GRAY),
-                menu.buttonAt(1).lore().get(0));
-        assertEquals(plain("Current: Default (IN_ORDER)", NamedTextColor.GRAY),
-                menu.buttonAt(3).lore().get(0));
+        assertEquals(currentLine("Default (1)"), menu.buttonAt(1).lore().get(0));
+        assertEquals(currentLine("Default (IN_ORDER)"), menu.buttonAt(3).lore().get(0));
     }
 
     @Test
@@ -234,8 +227,7 @@ class BehaviorOptionsMenusTest {
 
         assertEquals(title("Success Chance"), menu.title());
         assertEquals(Material.EXPERIENCE_BOTTLE, menu.buttonAt(0).material());
-        assertEquals(plain("Current: 50%", NamedTextColor.GRAY),
-                menu.buttonAt(0).lore().get(0));
+        assertEquals(currentLine("50%"), menu.buttonAt(0).lore().get(0));
         assertEquals(Material.DAYLIGHT_DETECTOR, menu.buttonAt(1).material());
     }
 
@@ -245,7 +237,7 @@ class BehaviorOptionsMenusTest {
         MessageService messages = new MessageService();
         messages.reload(new MessagesConfig());
         BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store, messages, sounds,
-                mock(GuiService.class), null, null, null);
+                mock(GuiService.class), null, null);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 

@@ -7,6 +7,8 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -40,7 +42,7 @@ class RolePadServiceTest {
     }
 
     @Test
-    void spectatorsNeverTriggerPads() {
+    void spectatorGamemodeNeverTriggersPads() {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         ConfigService config = mock(ConfigService.class);
         when(plugin.configService()).thenReturn(config);
@@ -50,6 +52,33 @@ class RolePadServiceTest {
         when(world.getName()).thenReturn("jmh-lobby");
         Player player = mock(Player.class);
         when(player.getWorld()).thenReturn(world);
+        when(player.getGameMode()).thenReturn(GameMode.SPECTATOR);
+        when(playerStates.role(player)).thenReturn(Role.HUNTER);
+        PlayerMoveEvent event = mock(PlayerMoveEvent.class);
+        when(event.getPlayer()).thenReturn(player);
+        RolePadService pads = new RolePadService(plugin, mock(LobbyService.class),
+                playerStates, mock(GameManager.class), mock(MessageService.class),
+                mock(SoundService.class), () -> "jmh-lobby");
+
+        pads.onMove(event);
+
+        verify(playerStates, never()).setRole(any(Player.class), any(Role.class));
+        verify(playerStates, never()).setRole(any(UUID.class), any(Role.class));
+    }
+
+    @Test
+    void spectatorRoleInSurvivalPassesThePadGate() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        ConfigService config = mock(ConfigService.class);
+        when(plugin.configService()).thenReturn(config);
+        when(config.getBoolean("world-engine.role-pads.enabled", true)).thenReturn(true);
+        PlayerStateStore playerStates = mock(PlayerStateStore.class);
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("jmh-lobby");
+        Player player = mock(Player.class);
+        when(player.getWorld()).thenReturn(world);
+        when(player.getGameMode()).thenReturn(GameMode.SURVIVAL);
+        when(player.getLocation()).thenReturn(mock(Location.class));
         when(playerStates.role(player)).thenReturn(Role.SPECTATOR);
         PlayerMoveEvent event = mock(PlayerMoveEvent.class);
         when(event.getPlayer()).thenReturn(player);
@@ -59,6 +88,9 @@ class RolePadServiceTest {
 
         pads.onMove(event);
 
+        // Reaching the location read proves the gamemode gate passed;
+        // no pads are configured, so nothing assigns.
+        verify(player).getLocation();
         verify(playerStates, never()).setRole(any(Player.class), any(Role.class));
         verify(playerStates, never()).setRole(any(UUID.class), any(Role.class));
     }

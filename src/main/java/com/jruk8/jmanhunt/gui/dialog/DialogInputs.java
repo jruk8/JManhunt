@@ -88,9 +88,13 @@ final class DialogInputs {
         return String.format(Locale.ROOT, "%.3f", value);
     }
 
-    /** Runs On input key for one trigger row. */
+    /**
+     * Runs On input key for one trigger row. Letters, digits, and
+     * underscores only: Paper rejects anything else because input keys
+     * must satisfy StringTemplate.isValidVariableName.
+     */
     static String triggerKey(int index) {
-        return "trigger-" + index;
+        return "trigger_" + index;
     }
 
     /**

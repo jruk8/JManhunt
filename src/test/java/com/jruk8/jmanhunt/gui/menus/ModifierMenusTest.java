@@ -78,9 +78,11 @@ class ModifierMenusTest {
     private static void addPreset(ModifiersConfig config, String id, String name,
             String item, String author, List<String> members) {
         ModifierPreset preset = new ModifierPreset();
-        preset.setName(name);
-        preset.setItem(item);
-        preset.setAuthor(author);
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName(name);
+        meta.setItem(item);
+        meta.setAuthor(author);
+        preset.setMeta(meta);
         preset.setModifiers(members);
         config.getPresets().put(id, preset);
     }

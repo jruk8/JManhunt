@@ -250,7 +250,7 @@ public final class SettingDialogs implements SettingDialog {
     private List<DialogBody> bodyLines(SettingDescriptor descriptor) {
         List<DialogBody> lines = new ArrayList<>();
         lines.add(DialogBody.plainMessage(messages.parse(messages
-                .string("manhunt-gui.dialog-current", "Current value: {value}")
+                .string("manhunt-gui.dialog-current", "Current value: <white>{value}")
                 .replace("{value}", escape(displayCurrent(descriptor))))));
         if (descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT) {
             lines.add(DialogBody.plainMessage(messages.parse(messages

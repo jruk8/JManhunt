@@ -11,7 +11,7 @@ import org.bukkit.entity.Player;
 /**
  * Modifier and preset editor buttons in two lore shapes.
  *
- * <p>Value buttons show one {@code Current: {value}} line plus a hint and
+ * <p>Value buttons show one {@code Current: <white>{value}} line plus a hint and
  * stay silent: they open a value dialog or flip a toggle, both of which
  * play their own sounds. Action buttons show plain descriptive lore and
  * click centrally: they navigate or run a command. Callers needing a
@@ -67,7 +67,7 @@ public final class EditorButtons {
 
     /** Single Current line; the only place the prefix is built. */
     static String currentLine(MessageService messages, String value) {
-        return messages.string("modifiers-gui.editor-current", "Current: {value}")
+        return messages.string("modifiers-gui.editor-current", "Current: <white>{value}")
                 .replace("{value}", value);
     }
 }

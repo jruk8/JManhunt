@@ -38,6 +38,15 @@ class EditorButtonsTest {
     }
 
     @Test
+    void currentLineUsesGrayPrefixWithWhiteValue() {
+        MenuButton button = EditorButtons.valueButton(messages, Material.NAME_TAG,
+                "Name", "Speedy", "Click to edit", player -> {});
+
+        assertEquals(messages.nonItalic(messages.parse("<gray>Current: <white>Speedy")),
+                button.lore().get(0));
+    }
+
+    @Test
     void valueButtonHonorsGlow() {
         MenuButton button = EditorButtons.valueButton(messages, Material.LEVER,
                 "Enabled", "Enabled", "Click to toggle", true, player -> {});

@@ -25,9 +25,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class MetaQuadTest {
 
     private MetaQuad meta;
+    private MessageService messages;
 
     private static Component plain(String text, NamedTextColor color) {
         return Component.text(text, color).decoration(TextDecoration.ITALIC, false);
+    }
+
+    /** Expected Current line: gray prefix with a white value. */
+    private Component currentLine(String value) {
+        return messages.nonItalic(messages.parse("<gray>Current: <white>" + value));
     }
 
     private static String textOf(Component component) {
@@ -95,7 +101,7 @@ class MetaQuadTest {
 
     @BeforeEach
     void setup() {
-        MessageService messages = new MessageService();
+        messages = new MessageService();
         messages.reload(new MessagesConfig());
         meta = new MetaQuad(messages, null, null, null);
     }
@@ -108,7 +114,7 @@ class MetaQuadTest {
 
         MenuButton name = menu.buttonAt(10);
         assertEquals(Material.NAME_TAG, name.material());
-        assertEquals(List.of(plain("Current: Pack", NamedTextColor.GRAY),
+        assertEquals(List.of(currentLine("Pack"),
                 plain("Click to edit", NamedTextColor.GRAY),
                 plain("Right-click to rename id", NamedTextColor.GRAY)), name.lore());
         assertNotNull(name.action());

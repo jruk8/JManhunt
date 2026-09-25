@@ -136,9 +136,11 @@ public final class ModifierCreateArgs {
         /** Builds a preset with the flagged display data and members. */
         public ModifierPreset toPreset() {
             ModifierPreset preset = new ModifierPreset();
-            preset.setName(name);
-            preset.setDescription(description);
-            preset.setItem(item);
+            ModifierMeta meta = new ModifierMeta();
+            meta.setName(name);
+            meta.setDescription(description);
+            meta.setItem(item);
+            preset.setMeta(meta);
             preset.setModifiers(new ArrayList<>(members));
             return preset;
         }

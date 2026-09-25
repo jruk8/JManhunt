@@ -42,7 +42,7 @@ public final class FieldPrompts {
         dialogs.prompt(player, title,
                 SettingDialogs.safeInitial(current),
                 List.of(messages
-                        .string("modifiers-gui.editor-prompt-current", "Current value: {value}")
+                        .string("modifiers-gui.editor-prompt-current", "Current value: <white>{value}")
                         .replace("{value}", shown)),
                 raw -> {
                     String error = clearable && raw.isBlank()

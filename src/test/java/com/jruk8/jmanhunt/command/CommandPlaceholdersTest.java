@@ -117,6 +117,29 @@ class CommandPlaceholdersTest {
     void convertSelectorsLeavesOtherTextAlone() {
         assertEquals("tell @admin hi", CommandPlaceholders.convertSelectors("tell @admin hi"));
         assertEquals("kill @e[type=zombie]", CommandPlaceholders.convertSelectors("kill @e[type=zombie]"));
+        assertEquals("tell foo@server hi", CommandPlaceholders.convertSelectors("tell foo@server hi"));
+    }
+
+    @Test
+    void convertSelectorsSelfBecomesExecutorTag() {
+        assertEquals("give <p> apple", CommandPlaceholders.convertSelectors("give @p apple"));
+        assertEquals("give <p> apple", CommandPlaceholders.convertSelectors("give @s apple"));
+        assertEquals("give <p> apple", CommandPlaceholders.convertSelectors("give @p[distance=..5] apple"));
+        assertEquals("give <p> apple", CommandPlaceholders.convertSelectors("give @s[distance=..5] apple"));
+    }
+
+    @Test
+    void replaceResolvesSelfSelectorsToExecutor() {
+        assertEquals("give Steve apple",
+                CommandPlaceholders.replace("give @s apple", "Steve", 0, 0, 0));
+        assertEquals("give Steve apple",
+                CommandPlaceholders.replace("give @p apple", "Steve", 0, 0, 0));
+    }
+
+    @Test
+    void replaceSelfSelectorSurvivesForConsoleAsExecutorTag() {
+        assertEquals("give <p> apple",
+                CommandPlaceholders.replace("give @p apple", null, 0, 0, 0));
     }
 
     @Test

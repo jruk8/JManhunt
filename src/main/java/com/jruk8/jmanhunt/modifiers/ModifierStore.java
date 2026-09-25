@@ -77,9 +77,11 @@ public final class ModifierStore {
      */
     public String createPreset(String displayName) {
         ModifierPreset preset = new ModifierPreset();
-        preset.setName(displayName);
-        preset.setDescription(DEFAULT_DESCRIPTION);
-        preset.setItem(Material.STONE.name());
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName(displayName);
+        meta.setDescription(DEFAULT_DESCRIPTION);
+        meta.setItem(Material.STONE.name());
+        preset.setMeta(meta);
         preset.setModifiers(new ArrayList<>());
         String slug = ModifierNames.kebab(displayName);
         return addPreset(slug.isEmpty() ? "preset" : slug, preset);
@@ -166,11 +168,18 @@ public final class ModifierStore {
         return true;
     }
 
-    /** Patches a preset, saving immediately. False when unknown. */
+    /**
+     * Patches a preset, saving immediately. False when unknown. The
+     * meta block is created when missing so display patches never
+     * meet a null parent.
+     */
     public boolean updatePreset(String id, Consumer<ModifierPreset> patch) {
         ModifierPreset preset = config.getPresets().get(id);
         if (preset == null) {
             return false;
+        }
+        if (preset.getMeta() == null) {
+            preset.setMeta(new ModifierMeta());
         }
         patch.accept(preset);
         save();
@@ -298,10 +307,10 @@ public final class ModifierStore {
         String finalId = id;
         if (config.getPresets().containsKey(finalId)) {
             Set<String> takenNames = new HashSet<>();
-            for (ModifierPreset existing : config.getPresets().values()) {
-                takenNames.add(orDefault(existing.getName(), DEFAULT_PRESET_NAME));
+            for (String key : config.getPresets().keySet()) {
+                takenNames.add(presetName(key));
             }
-            String base = orDefault(preset.getName(), DEFAULT_PRESET_NAME);
+            String base = presetNameOf(preset);
             String name = base;
             String slug;
             do {
@@ -312,7 +321,10 @@ public final class ModifierStore {
                     slug = "preset";
                 }
             } while (config.getPresets().containsKey(slug));
-            preset.setName(name);
+            if (preset.getMeta() == null) {
+                preset.setMeta(new ModifierMeta());
+            }
+            preset.getMeta().setName(name);
             finalId = slug;
         }
         config.getPresets().put(finalId, preset);
@@ -486,26 +498,31 @@ public final class ModifierStore {
     }
 
     public String presetName(String id) {
-        ModifierPreset preset = config.getPresets().get(id);
-        return orDefault(preset == null ? null : preset.getName(), DEFAULT_NAME);
+        ModifierMeta meta = presetMeta(id);
+        return orDefault(meta == null ? null : meta.getName(), DEFAULT_NAME);
     }
 
     public String presetDescription(String id) {
-        ModifierPreset preset = config.getPresets().get(id);
-        return orDefault(preset == null ? null : preset.getDescription(), DEFAULT_DESCRIPTION);
+        ModifierMeta meta = presetMeta(id);
+        return orDefault(meta == null ? null : meta.getDescription(), DEFAULT_DESCRIPTION);
     }
 
     /** Preset menu icon, with the same fallbacks as modifier icons. */
     public Material presetItem(String id) {
-        ModifierPreset preset = config.getPresets().get(id);
-        return resolveItem(preset == null ? null : preset.getItem(), "Preset '" + id + "'");
+        ModifierMeta meta = presetMeta(id);
+        return resolveItem(meta == null ? null : meta.getItem(), "Preset '" + id + "'");
     }
 
     /** Preset author line, or null when the preset defines none. */
     public String presetAuthor(String id) {
-        ModifierPreset preset = config.getPresets().get(id);
-        String author = preset == null ? null : preset.getAuthor();
+        ModifierMeta meta = presetMeta(id);
+        String author = meta == null ? null : meta.getAuthor();
         return author == null || author.isBlank() ? null : author;
+    }
+
+    private ModifierMeta presetMeta(String id) {
+        ModifierPreset preset = config.getPresets().get(id);
+        return preset == null ? null : preset.getMeta();
     }
 
     private ModifierBehavior behavior(String name) {
@@ -554,6 +571,11 @@ public final class ModifierStore {
     private static String metaNameOf(ModifierEntry entry) {
         return entry.getMeta() == null
                 ? DEFAULT_NAME : orDefault(entry.getMeta().getName(), DEFAULT_NAME);
+    }
+
+    private static String presetNameOf(ModifierPreset preset) {
+        return preset.getMeta() == null
+                ? DEFAULT_PRESET_NAME : orDefault(preset.getMeta().getName(), DEFAULT_PRESET_NAME);
     }
 
     /** Lenient material parse: trims, strips minecraft: prefix, ignores case. */

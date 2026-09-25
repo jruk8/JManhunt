@@ -34,4 +34,13 @@ class PlaceholderCheatsheetTest {
             assertTrue(!line.contains("duration"), line);
         }
     }
+
+    @Test
+    void signaturesRenderWhiteWithGreenMarkerAndGrayNote() {
+        for (String line : PlaceholderCheatsheet.lines()) {
+            assertTrue(line.startsWith("<green>»</green> <white>"), line);
+            assertTrue(line.contains("</white> <gray>"), line);
+            assertTrue(line.endsWith("</gray>"), line);
+        }
+    }
 }

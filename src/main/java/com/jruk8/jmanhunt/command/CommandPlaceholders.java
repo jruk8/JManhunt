@@ -27,7 +27,8 @@ import java.util.regex.Pattern;
  * the match-scoped {@code <all-players>} and {@code <random-player>} tags so
  * a modifier can never leak into another running match. A {@code team=}
  * argument on {@code @a[...]} survives as a role filter; every other vanilla
- * selector argument is dropped.
+ * selector argument is dropped. {@code @p} and {@code @s} become the
+ * executor tag {@code <p>} for the same reason.
  */
 public final class CommandPlaceholders {
     private static final Pattern TILDE_PATTERN = Pattern.compile("~([+-]?\\d+(?:\\.\\d+)?)?");
@@ -36,6 +37,8 @@ public final class CommandPlaceholders {
     /** Bare @a/@r plus optional vanilla [...] args, never @admin-style words. */
     private static final Pattern SELECTOR_ALL = Pattern.compile("@a(?![A-Za-z0-9_])(\\[[^\\]]*\\])?");
     private static final Pattern SELECTOR_RANDOM = Pattern.compile("@r(?![A-Za-z0-9_])(\\[[^\\]]*\\])?");
+    /** Bare @p/@s plus optional vanilla [...] args, never @server-style words. */
+    private static final Pattern SELECTOR_SELF = Pattern.compile("@[ps](?![A-Za-z0-9_])(\\[[^\\]]*\\])?");
     /** team=HUNTER inside vanilla selector args. */
     private static final Pattern TEAM_ARGUMENT = Pattern.compile("(?i)(?:^|[,\\[])\\s*team\\s*=\\s*([^,\\]]+)");
     /** Fan-out token, with an optional :TEAM filter. */
@@ -100,11 +103,23 @@ public final class CommandPlaceholders {
      * Converts vanilla selectors to match-scoped tags: {@code @a} becomes
      * {@code <all-players>} and {@code @r} becomes {@code <random-player>}.
      * A {@code team=} argument becomes a role filter ({@code <all-players:HUNTER>});
-     * other vanilla arguments are dropped. Pure for tests.
+     * other vanilla arguments are dropped. {@code @p} and {@code @s} become
+     * the executor tag {@code <p>}; their arguments are dropped. Pure for tests.
      */
     static String convertSelectors(String command) {
         String converted = replaceSelector(command, SELECTOR_ALL, true);
-        return replaceSelector(converted, SELECTOR_RANDOM, false);
+        converted = replaceSelector(converted, SELECTOR_RANDOM, false);
+        return replaceSelfSelector(converted);
+    }
+
+    private static String replaceSelfSelector(String command) {
+        Matcher matcher = SELECTOR_SELF.matcher(command);
+        StringBuffer result = new StringBuffer();
+        while (matcher.find()) {
+            matcher.appendReplacement(result, Matcher.quoteReplacement("<p>"));
+        }
+        matcher.appendTail(result);
+        return result.toString();
     }
 
     private static String replaceSelector(String command, Pattern pattern, boolean keepTeam) {

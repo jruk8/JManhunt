@@ -84,22 +84,22 @@ public final class PresetEditorMenus {
 
             @Override
             public void patchName(String name) {
-                store.updatePreset(id, preset -> preset.setName(name));
+                store.updatePreset(id, preset -> preset.getMeta().setName(name));
             }
 
             @Override
             public void patchDescription(String description) {
-                store.updatePreset(id, preset -> preset.setDescription(description));
+                store.updatePreset(id, preset -> preset.getMeta().setDescription(description));
             }
 
             @Override
             public void patchItem(Material item) {
-                store.updatePreset(id, preset -> preset.setItem(item.name()));
+                store.updatePreset(id, preset -> preset.getMeta().setItem(item.name()));
             }
 
             @Override
             public void patchAuthor(String author) {
-                store.updatePreset(id, preset -> preset.setAuthor(author));
+                store.updatePreset(id, preset -> preset.getMeta().setAuthor(author));
             }
 
             @Override

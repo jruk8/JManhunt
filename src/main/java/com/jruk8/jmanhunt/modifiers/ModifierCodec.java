@@ -235,18 +235,21 @@ public final class ModifierCodec {
 
     private static JsonObject presetData(ModifierPreset preset) {
         JsonObject data = new JsonObject();
-        data.addProperty("name",
-                preset.getName() == null || preset.getName().isBlank()
-                        ? ModifierStore.DEFAULT_PRESET_NAME : preset.getName());
-        if (preset.getDescription() != null) {
-            data.addProperty("description", preset.getDescription());
+        ModifierMeta meta = preset.getMeta();
+        JsonObject written = new JsonObject();
+        written.addProperty("name",
+                meta == null || meta.getName() == null || meta.getName().isBlank()
+                        ? ModifierStore.DEFAULT_PRESET_NAME : meta.getName());
+        if (meta != null && meta.getDescription() != null) {
+            written.addProperty("description", meta.getDescription());
         }
-        if (preset.getAuthor() != null) {
-            data.addProperty("author", preset.getAuthor());
+        written.addProperty("item",
+                meta == null || meta.getItem() == null || meta.getItem().isBlank()
+                        ? Material.STONE.name() : meta.getItem());
+        if (meta != null && meta.getAuthor() != null) {
+            written.addProperty("author", meta.getAuthor());
         }
-        data.addProperty("item",
-                preset.getItem() == null || preset.getItem().isBlank()
-                        ? Material.STONE.name() : preset.getItem());
+        data.add("meta", written);
         if (preset.getModifiers() != null) {
             JsonArray members = new JsonArray();
             for (String member : preset.getModifiers()) {
@@ -403,20 +406,26 @@ public final class ModifierCodec {
     }
 
     private static ModifierPreset readPreset(JsonObject data) {
-        String name = requiredString(data, "name");
+        JsonObject meta = optionalObject(data, "meta");
+        if (meta == null) {
+            throw new Invalid();
+        }
+        String name = requiredString(meta, "name");
         if (name.isBlank()) {
             throw new Invalid();
         }
-        String item = optionalString(data, "item", Material.STONE.name());
+        String item = optionalString(meta, "item", Material.STONE.name());
         Material material = ModifierStore.parseMaterial(item);
         if (material == null || material == Material.AIR) {
             throw new Invalid();
         }
         ModifierPreset preset = new ModifierPreset();
-        preset.setName(name);
-        preset.setDescription(optionalString(data, "description", ""));
-        preset.setAuthor(optionalString(data, "author", ""));
-        preset.setItem(item);
+        ModifierMeta written = new ModifierMeta();
+        written.setName(name);
+        written.setDescription(optionalString(meta, "description", ""));
+        written.setItem(item);
+        written.setAuthor(optionalString(meta, "author", ""));
+        preset.setMeta(written);
         JsonArray members = optionalArray(data, "modifiers");
         if (members != null) {
             List<String> ids = new ArrayList<>();

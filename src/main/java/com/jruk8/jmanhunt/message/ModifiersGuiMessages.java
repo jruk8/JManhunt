@@ -106,7 +106,7 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     private String editorTitlePreset = "Edit Preset";
 
     @CustomKey("editor-current")
-    private String editorCurrent = "Current: {value}";
+    private String editorCurrent = "Current: <white>{value}";
 
     @CustomKey("editor-unset")
     private String editorUnset = "Not set";
@@ -133,7 +133,7 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     private String editorPromptTitle = "Edit {label}";
 
     @CustomKey("editor-prompt-current")
-    private String editorPromptCurrent = "Current value: {value}";
+    private String editorPromptCurrent = "Current value: <white>{value}";
 
     @CustomKey("editor-commands")
     private String editorCommands = "Commands";

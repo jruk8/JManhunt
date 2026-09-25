@@ -73,9 +73,10 @@ class ModifierStoreTest {
                       - "say thin"
             presets:
               mixed:
-                name: "Mixed"
-                description: "Beef plus nothing"
-                item: TNT
+                meta:
+                  name: "Mixed"
+                  description: "Beef plus nothing"
+                  item: TNT
                 modifiers:
                   - beef
                   - bare
@@ -350,11 +351,11 @@ class ModifierStoreTest {
         log.setUseParentHandlers(false);
         ModifierStore store = new ModifierStore(new ModifiersConfig(), log);
         ModifierPreset first = new ModifierPreset();
-        first.setName("Chaos");
+        first.setMeta(namedMeta("Chaos"));
         assertEquals("chaos", store.addPreset("chaos", first));
 
         ModifierPreset second = new ModifierPreset();
-        second.setName("Chaos");
+        second.setMeta(namedMeta("Chaos"));
 
         assertEquals("chaos-2", store.addPreset("chaos", second));
         assertEquals("Chaos 2", store.presetName("chaos-2"));
@@ -374,6 +375,12 @@ class ModifierStoreTest {
         assertFalse(store.renameModifier("missing", "fresh"));
         assertTrue(store.renameModifier("beef", "beef"));
         assertEquals(List.of("beef", "bare"), store.presetMembers("mixed"));
+    }
+
+    private static ModifierMeta namedMeta(String name) {
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName(name);
+        return meta;
     }
 
     private static ModifiersConfig load(File source) throws Exception {

@@ -57,7 +57,7 @@ public final class ModifierEditorMenus {
         this.dialogs = dialogs;
         this.detail = new ModifierDetailMenus(store, messages, sounds, gui, dialogs,
                 commandValidation);
-        this.options = new BehaviorOptionsMenus(store, messages, sounds, gui, commands,
+        this.options = new BehaviorOptionsMenus(store, messages, sounds, gui,
                 dialogs, modifierDialogs);
         this.meta = new MetaQuad(messages, sounds, gui, dialogs);
     }

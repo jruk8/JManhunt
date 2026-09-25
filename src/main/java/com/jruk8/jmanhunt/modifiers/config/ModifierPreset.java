@@ -3,46 +3,19 @@ package com.jruk8.jmanhunt.modifiers.config;
 import eu.okaeri.configs.OkaeriConfig;
 import java.util.List;
 
-/** One named preset: display data plus member modifier ids. */
+/** One named preset: display metadata plus member modifier ids. */
 @SuppressWarnings("FieldMayBeFinal")
 public class ModifierPreset extends OkaeriConfig {
 
-    private String name;
-    private String description;
-    private String item;
-    private String author;
+    private ModifierMeta meta;
     private List<String> modifiers;
 
-    public String getName() {
-        return name;
+    public ModifierMeta getMeta() {
+        return meta;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getItem() {
-        return item;
-    }
-
-    public void setItem(String item) {
-        this.item = item;
-    }
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public void setAuthor(String author) {
-        this.author = author;
+    public void setMeta(ModifierMeta meta) {
+        this.meta = meta;
     }
 
     public List<String> getModifiers() {

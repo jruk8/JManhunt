@@ -42,15 +42,15 @@ class ModifierCodecTest {
 
     @Test
     void rawEnvelopeDecodes() {
-        String json = "{\"type\":\"preset\",\"id\":\"pack\",\"data\":{\"name\":\"Pack\","
-                + "\"item\":\"CHEST\",\"modifiers\":[\"a\"]}}";
+        String json = "{\"type\":\"preset\",\"id\":\"pack\",\"data\":{\"meta\":{\"name\":\"Pack\","
+                + "\"item\":\"CHEST\"},\"modifiers\":[\"a\"]}}";
 
         Optional<ModifierCodec.Imported> decoded = ModifierCodec.decode(envelope(json));
 
         assertTrue(decoded.isPresent());
         assertEquals(ModifierCodec.Kind.PRESET, decoded.get().kind());
         assertEquals("pack", decoded.get().id());
-        assertEquals("Pack", decoded.get().preset().getName());
+        assertEquals("Pack", decoded.get().preset().getMeta().getName());
     }
 
     @Test
@@ -89,10 +89,12 @@ class ModifierCodecTest {
     @Test
     void presetRoundTripsExactly() {
         ModifierPreset preset = new ModifierPreset();
-        preset.setName("Chaos");
-        preset.setDescription("Everything on");
-        preset.setAuthor("JManhunt");
-        preset.setItem("TNT");
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName("Chaos");
+        meta.setDescription("Everything on");
+        meta.setAuthor("JManhunt");
+        meta.setItem("TNT");
+        preset.setMeta(meta);
         preset.setModifiers(List.of("gear-dice", "beef"));
 
         String payload = ModifierCodec.exportPreset("chaos", preset);
@@ -101,8 +103,8 @@ class ModifierCodecTest {
         assertTrue(decoded.isPresent());
         assertEquals(ModifierCodec.Kind.PRESET, decoded.get().kind());
         assertEquals("chaos", decoded.get().id());
-        assertEquals("Chaos", decoded.get().preset().getName());
-        assertEquals("JManhunt", decoded.get().preset().getAuthor());
+        assertEquals("Chaos", decoded.get().preset().getMeta().getName());
+        assertEquals("JManhunt", decoded.get().preset().getMeta().getAuthor());
         assertEquals(List.of("gear-dice", "beef"), decoded.get().preset().getModifiers());
         assertEquals(payload, ModifierCodec.exportPreset(decoded.get().id(), decoded.get().preset()));
     }

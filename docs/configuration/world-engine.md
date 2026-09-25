@@ -79,8 +79,9 @@ inside a pad block's XZ space, at most 4 blocks above it, and you take
 its role with `setplayer` semantics (queue caps and the mid-match
 policy apply; AFK needs no confirmation since standing is consent).
 Pads only work in the lobby world, stay silent when caps block them,
-and do nothing when your role already matches. Spectators never trigger
-pads: standing on one leaves them watching. Defaults under
+and do nothing when your role already matches. Only the spectator
+gamemode blocks pads: anyone flying around as a spectator stays
+untouched, while your JManhunt role never matters. Defaults under
 `world-engine.role-pads`:
 
 | Block | Role |

@@ -147,8 +147,10 @@ class ModifiersCommandTest {
 
     private static ModifierPreset preset(String name) {
         ModifierPreset preset = new ModifierPreset();
-        preset.setName(name);
-        preset.setItem("CHEST");
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName(name);
+        meta.setItem("CHEST");
+        preset.setMeta(meta);
         return preset;
     }
 }

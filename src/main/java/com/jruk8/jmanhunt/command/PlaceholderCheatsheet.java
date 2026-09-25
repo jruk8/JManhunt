@@ -33,7 +33,7 @@ public final class PlaceholderCheatsheet {
             String[] entry = ENTRIES.get(tag);
             String signature = entry == null ? "<" + tag + ">" : entry[0];
             String note = entry == null ? "engine tag" : entry[1];
-            lines.add("<green>»</green> <aqua>" + signature + "</aqua> <gray>" + note + "</gray>");
+            lines.add("<green>»</green> <white>" + signature + "</white> <gray>" + note + "</gray>");
         }
         return lines;
     }

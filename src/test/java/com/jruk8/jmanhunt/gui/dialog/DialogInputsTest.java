@@ -88,9 +88,9 @@ class DialogInputsTest {
     @Test
     void checkedBoxesMapToTriggersInKnownOrder() {
         Map<String, Boolean> answers = Map.of(
-                "trigger-1", true,
-                "trigger-0", true,
-                "trigger-3", false);
+                "trigger_1", true,
+                "trigger_0", true,
+                "trigger_3", false);
 
         Set<String> checked = DialogInputs.checkedTriggers(answers::get,
                 com.jruk8.jmanhunt.match.ModifierTriggers.KNOWN);
@@ -107,8 +107,18 @@ class DialogInputsTest {
 
     @Test
     void triggerKeysAreIndexed() {
-        assertEquals("trigger-0", DialogInputs.triggerKey(0));
-        assertEquals("trigger-13", DialogInputs.triggerKey(13));
+        assertEquals("trigger_0", DialogInputs.triggerKey(0));
+        assertEquals("trigger_13", DialogInputs.triggerKey(13));
         assertEquals(14, com.jruk8.jmanhunt.match.ModifierTriggers.KNOWN.size());
+    }
+
+    @Test
+    void triggerKeysFitPaperInputNameGrammar() {
+        // Paper rejects dialog input keys outside
+        // StringTemplate.isValidVariableName (letters, digits, underscore).
+        for (int index = 0; index < com.jruk8.jmanhunt.match.ModifierTriggers.KNOWN.size(); index++) {
+            assertTrue(DialogInputs.triggerKey(index).matches("[A-Za-z0-9_]+"),
+                    DialogInputs.triggerKey(index));
+        }
     }
 }

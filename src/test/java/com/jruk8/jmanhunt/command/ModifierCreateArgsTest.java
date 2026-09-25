@@ -161,8 +161,8 @@ class ModifierCreateArgsTest {
         assertTrue(result.success());
         assertTrue(result.plan().preset());
         ModifierPreset preset = result.plan().toPreset();
-        assertEquals("Pack", preset.getName());
-        assertEquals("Both", preset.getDescription());
+        assertEquals("Pack", preset.getMeta().getName());
+        assertEquals("Both", preset.getMeta().getDescription());
         assertEquals(java.util.List.of("beef", "swords"), preset.getModifiers());
     }
 

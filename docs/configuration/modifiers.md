@@ -244,7 +244,8 @@ one item), it is skipped with a console warning and another item is tried.
 Raw `@a` and `@r` selectors are converted to `<all-players>` and
 `<random-player>` automatically, so old commands stay match-safe. A
 `team=` argument on `@a[...]` survives as a role filter; other vanilla
-selector arguments are dropped.
+selector arguments are dropped. `@p` and `@s` convert to `<p>` the
+same way, resolving to the executing player.
 
 ## Relative Coordinates
 
@@ -362,6 +363,25 @@ Set `settings.server.advanced.validate-modifier-editor-commands`
 to false to skip the root and item checks; placeholder checks
 always run. The command-line creator enforces the same rules; see
 [Modifiers](../commands.md#modifiers) for its flags.
+
+Presets keep their display data under `meta:`, exactly like
+modifiers, with the member list beside it:
+
+```yaml
+presets:
+  chaos-mode:
+    meta:
+      name: "Chaos Mode"
+      description: "Random mobs, random items, gear dice"
+      item: TNT
+    modifiers:
+      - random-mob-spawner
+      - random-item-giver
+```
+
+Presets written in the old flat shape (name and friends next to
+`modifiers:`) no longer load: re-indent the four display keys under
+`meta:`. Old preset share strings need a fresh export too.
 
 # Sharing Modifiers and Presets
 

@@ -48,9 +48,11 @@ class PresetEditorMenusTest {
         addModifier(config, "zebra", "Zulu");
         addModifier(config, "apple", "Apple");
         ModifierPreset preset = new ModifierPreset();
-        preset.setName("Pair");
-        preset.setDescription("Two up");
-        preset.setItem("CHEST");
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName("Pair");
+        meta.setDescription("Two up");
+        meta.setItem("CHEST");
+        preset.setMeta(meta);
         preset.setModifiers(new ArrayList<>(List.of("zebra")));
         config.getPresets().put("pair", preset);
         Logger log = Logger.getAnonymousLogger();

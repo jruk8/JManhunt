@@ -49,28 +49,26 @@ public final class BehaviorOptionsMenus {
     private final MessageService messages;
     private final SoundService sounds;
     private final GuiService gui;
-    private final ModifiersCommand commands;
     private final SettingDialogs dialogs;
     private final ModifierDialog modifierDialogs;
 
     /**
-     * @param store behavior reads and patches; sounds, gui, commands,
-     *        and dialogs are only touched inside click actions, so
+     * @param store behavior reads and patches; sounds, gui, and
+     *        dialogs are only touched inside click actions, so
      *        builders tolerate them as null
      */
     public BehaviorOptionsMenus(ModifierStore store, MessageService messages,
-            SoundService sounds, GuiService gui, ModifiersCommand commands,
+            SoundService sounds, GuiService gui,
             SettingDialogs dialogs, ModifierDialog modifierDialogs) {
         this.store = store;
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
-        this.commands = commands;
         this.dialogs = dialogs;
         this.modifierDialogs = modifierDialogs;
     }
 
-    /** Six-entry options menu for one modifier. */
+    /** Five-entry options menu for one modifier. */
     public Menu optionsMenu(String id, Supplier<Menu> parent) {
         final Menu[] self = new Menu[1];
         Supplier<List<MenuButton>> content = () -> optionButtons(id, () -> self[0]);
@@ -85,19 +83,6 @@ public final class BehaviorOptionsMenus {
 
     private List<MenuButton> optionButtons(String id, Supplier<Menu> self) {
         List<MenuButton> buttons = new ArrayList<>();
-        buttons.add(EditorButtons.valueButton(messages, Material.REDSTONE_TORCH, "Enabled",
-                store.isEnabled(id)
-                        ? text("state-on", "Enabled") : text("state-off", "Disabled"),
-                text("editor-click-toggle", "Click to toggle"),
-                ModifiedGlow.behaviorEnabled(store, id),
-                player -> {
-                    if (denied(player)) {
-                        return;
-                    }
-                    commands.execute(player,
-                            new String[]{"setmod", id, String.valueOf(!store.isEnabled(id))});
-                    sounds.playNeutralSound(player);
-                }));
         List<String> triggers = store.runsOn(id);
         buttons.add(EditorButtons.actionButton(messages, Material.LEVER,
                 text("runs-on-title", "Runs On"),

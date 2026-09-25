@@ -347,25 +347,28 @@ modifiers:
 # everything inside at once. Lists hold modifier ids from above.
 presets:
   vanilla-plus:
-    name: "Vanilla+"
-    description: "Light extras that can help balance Manhunts"
-    item: GRASS_BLOCK
+    meta:
+      name: "Vanilla+"
+      description: "Light extras that can help balance Manhunts"
+      item: GRASS_BLOCK
     modifiers:
       - everyone-gets-beef
       - regen-on-kill
       - fireres-on-nether-enter
   speedrunner-buffs:
-    name: "Speedrunner Buffs"
-    description: "Buffs for speedrunners, pressure on hunters"
-    item: SUGAR
+    meta:
+      name: "Speedrunner Buffs"
+      description: "Buffs for speedrunners, pressure on hunters"
+      item: SUGAR
     modifiers:
       - speedrunners-speed-potion
       - hunter-start-debuffs
       - speedrunner-health-advantage
   chaos-mode:
-    name: "Chaos Mode"
-    description: "Random mobs, random items, gear dice"
-    item: TNT
+    meta:
+      name: "Chaos Mode"
+      description: "Random mobs, random items, gear dice"
+      item: TNT
     modifiers:
       - random-mob-spawner
       - random-item-giver
