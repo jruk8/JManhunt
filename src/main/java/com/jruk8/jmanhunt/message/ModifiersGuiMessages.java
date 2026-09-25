@@ -234,6 +234,48 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     @CustomKey("editor-rename-hint")
     private String editorRenameHint = "Right-click to rename id";
 
+    @CustomKey("behavior-options-title")
+    private String behaviorOptionsTitle = "Behavior Options";
+
+    @CustomKey("behavior-options-lore")
+    private String behaviorOptionsLore = "Triggers, cadence, execution, chance";
+
+    @CustomKey("runs-on-title")
+    private String runsOnTitle = "Runs On";
+
+    @CustomKey("runs-on-lore")
+    private String runsOnLore = "Events that trigger this modifier";
+
+    @CustomKey("runs-on-count")
+    private String runsOnCount = "{total} selected";
+
+    @CustomKey("runs-on-hint")
+    private String runsOnHint = "Tick the events this modifier runs on.";
+
+    @CustomKey("interval-settings-title")
+    private String intervalSettingsTitle = "Interval Settings";
+
+    @CustomKey("interval-settings-lore")
+    private String intervalSettingsLore = "Cadence, jitter, and scope";
+
+    @CustomKey("interval-gated")
+    private String intervalGated = "Add the INTERVAL trigger in Runs On first.";
+
+    @CustomKey("execution-title")
+    private String executionTitle = "Execution";
+
+    @CustomKey("execution-lore")
+    private String executionLore = "Line selection and order";
+
+    @CustomKey("chance-title")
+    private String chanceTitle = "Success Chance";
+
+    @CustomKey("chance-lore")
+    private String chanceLore = "Roll chance and scope";
+
+    @CustomKey("commands-lore")
+    private String commandsLore = "Runner commands and cleanup";
+
     @CustomKey("cancel")
     private String cancel = "Cancel";
 

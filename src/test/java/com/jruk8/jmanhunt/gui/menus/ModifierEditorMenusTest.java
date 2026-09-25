@@ -1,14 +1,11 @@
 package com.jruk8.jmanhunt.gui.menus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
-import com.jruk8.jmanhunt.match.ModifierTriggers;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -88,7 +85,7 @@ class ModifierEditorMenusTest {
         MessageService messages = new MessageService();
         messages.reload(new MessagesConfig());
         store = new ModifierStore(config, log);
-        editor = new ModifierEditorMenus(store, messages, null, null, null, null);
+        editor = new ModifierEditorMenus(store, messages, null, null, null, null, null);
         detail = new ModifierDetailMenus(store, messages, null, null, null);
     }
 
@@ -123,71 +120,21 @@ class ModifierEditorMenusTest {
     }
 
     @Test
-    void legacyEditorKeepsEveryField() {
-        Menu menu = editor.legacyEditor("zebra", null);
-
-        assertEquals(45, menu.layout().size());
-
-        MenuButton name = menu.buttonAt(1);
-        assertEquals(Material.NAME_TAG, name.material());
-        assertEquals(plain("Name", NamedTextColor.WHITE), name.name());
-        assertEquals(plain("Current: Zulu", NamedTextColor.GRAY), name.lore().get(0));
-
-        MenuButton interval = menu.buttonAt(18);
-        assertEquals(plain("Current: 30.0s", NamedTextColor.GRAY), interval.lore().get(0));
-
-        MenuButton chance = menu.buttonAt(24);
-        assertEquals(plain("Current: 50%", NamedTextColor.GRAY), chance.lore().get(0));
-
-        MenuButton delay = menu.buttonAt(34);
-        assertEquals(plain("Current: 100 ticks", NamedTextColor.GRAY), delay.lore().get(0));
-
-        MenuButton triggers = menu.buttonAt(13);
-        assertEquals(plain("2 selected", NamedTextColor.GRAY), triggers.lore().get(0));
-
-        MenuButton prestart = menu.buttonAt(16);
-        assertEquals(plain("Current: Default (IN_ORDER)", NamedTextColor.GRAY),
-                prestart.lore().get(0));
-
-        assertEquals(Material.COMMAND_BLOCK, menu.buttonAt(36).material());
-        assertEquals(Material.LOOM, menu.buttonAt(38).material());
-        assertEquals(Material.ANVIL, menu.buttonAt(40).material());
-        MenuButton rename = menu.buttonAt(40);
-        assertEquals(1, rename.lore().size());
-        assertEquals(plain("Current id: zebra", NamedTextColor.GRAY), rename.lore().get(0));
-        assertEquals(Material.TNT, menu.buttonAt(42).material());
-        assertEquals(Material.PAPER, menu.buttonAt(44).material());
-        assertNull(menu.buttonAt(0));
-    }
-
-    @Test
-    void editorToleratesUnknownIdsAsUnset() {
-        Menu menu = editor.legacyEditor("ghost", null);
-
-        assertEquals(plain("Current: Not set", NamedTextColor.GRAY),
-                menu.buttonAt(20).lore().get(0));
-        assertEquals(plain("Current: Default (100%)", NamedTextColor.GRAY),
-                menu.buttonAt(24).lore().get(0));
-        assertNotNull(menu.buttonAt(42).action());
-    }
-
-    @Test
-    void triggersMenuTogglesEveryKnownTrigger() {
-        Menu menu = detail.triggersMenu("zebra", null);
+    void behaviorMenuIsATwin() {
+        Menu menu = editor.behaviorMenu("zebra", null);
 
         assertEquals(27, menu.layout().size());
-        assertEquals(title("Run On"), menu.title());
-        assertEquals(ModifierTriggers.KNOWN.size(), 14);
-        for (int index = 0; index < ModifierTriggers.KNOWN.size(); index++) {
-            MenuButton button = menu.buttonAt(index);
-            assertNotNull(button);
-            assertEquals(textOf(button.name()), ModifierTriggers.KNOWN.get(index));
-            assertNotNull(button.action());
-        }
-        assertTrue(menu.buttonAt(0).glow());
-        assertTrue(menu.buttonAt(1).glow());
-        assertFalse(menu.buttonAt(2).glow());
-        assertEquals(Material.PAPER, menu.buttonAt(22).material());
+        assertEquals(title("Behavior"), menu.title());
+
+        MenuButton options = menu.buttonAt(12);
+        assertEquals(Material.TRIPWIRE_HOOK, options.material());
+        assertNotNull(options.action());
+
+        assertEquals(Material.PAPER, menu.buttonAt(13).material());
+
+        MenuButton commands = menu.buttonAt(14);
+        assertEquals(Material.CHAIN_COMMAND_BLOCK, commands.material());
+        assertNotNull(commands.action());
     }
 
     @Test

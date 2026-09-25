@@ -172,12 +172,7 @@ public final class SettingButtons {
     }
 
     private boolean modified(SettingDescriptor descriptor) {
-        SettingRegistry.ValidationOutcome parsed = SettingRegistry.validate(
-                descriptor, descriptor.defaultValue(), config::getValue);
-        String canonical = parsed.ok()
-                ? ConfigService.displayValue(parsed.value())
-                : descriptor.defaultValue();
-        return !ConfigService.displayValue(config.getValue(descriptor.path())).equals(canonical);
+        return ModifiedGlow.leafSetting(config, descriptor.path());
     }
 
     private void toggle(Player player, SettingDescriptor descriptor) {

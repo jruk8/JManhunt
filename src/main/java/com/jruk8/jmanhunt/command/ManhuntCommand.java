@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SettingType;
 import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.core.DebugService;
+import com.jruk8.jmanhunt.gui.dialog.ModifierDialogs;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.gui.menus.ManhuntMenus;
 import com.jruk8.jmanhunt.gui.menus.ModifierMenus;
@@ -126,8 +127,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 plugin.guiService(), () -> modifierMenus.mainMenu(), sounds);
         SettingDialogs dialogs = new SettingDialogs(config, messages, sounds,
                 plugin.guiService(), feedback, plugin);
+        ModifierDialogs modifierDialogs = new ModifierDialogs(messages, sounds,
+                plugin.guiService(), plugin);
         this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,
-                plugin.guiService(), modifiersCmd, dialogs);
+                plugin.guiService(), modifiersCmd, dialogs, modifierDialogs);
         this.menus = new ManhuntMenus(config, plugin.guiConfig(), messages, sounds,
                 plugin.guiService(), dialogs, feedback, plugin.stats(), modifierMenus);
     }

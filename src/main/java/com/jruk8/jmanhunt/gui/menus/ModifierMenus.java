@@ -7,6 +7,7 @@ import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.MenuLayout;
 import com.jruk8.jmanhunt.gui.TwinPanel;
+import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -49,14 +50,16 @@ public final class ModifierMenus {
      *        touched inside click actions, so builders tolerate them as null
      */
     public ModifierMenus(ModifierStore store, MessageService messages, SoundService sounds,
-            GuiService gui, ModifiersCommand toggles, SettingDialogs dialogs) {
+            GuiService gui, ModifiersCommand toggles, SettingDialogs dialogs,
+            ModifierDialog modifierDialogs) {
         this.store = store;
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
         this.toggles = toggles;
         this.dialogs = dialogs;
-        this.modifierEditor = new ModifierEditorMenus(store, messages, sounds, gui, toggles, dialogs);
+        this.modifierEditor = new ModifierEditorMenus(store, messages, sounds, gui, toggles,
+                dialogs, modifierDialogs);
         this.presetEditor = new PresetEditorMenus(store, messages, sounds, gui, toggles, dialogs);
     }
 

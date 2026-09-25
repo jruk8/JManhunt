@@ -113,22 +113,11 @@ public final class MetaQuad {
                 player -> renamePrompt(player, self[0], target, reopenRoot)).silent();
     }
 
-    /**
-     * Prompts for one field. Blank input clears the field when
-     * clearable, otherwise the raw text goes to the submitter, which
-     * returns an error or null. Either way the caller rebuilds.
-     */
     private void fieldPrompt(Player player, Menu self, String label, String current,
-            boolean clearable, FieldSubmit submit) {
-        String shown = current == null ? text("editor-unset", "Not set") : current;
-        dialogs.prompt(player,
+            boolean clearable, FieldPrompts.Submit submit) {
+        FieldPrompts.prompt(dialogs, gui, messages, sounds, player, self,
                 text("editor-prompt-title", "Edit {label}").replace("{label}", label),
-                SettingDialogs.safeInitial(current),
-                List.of(text("editor-prompt-current", "Current value: {value}")
-                        .replace("{value}", shown)),
-                raw -> finishField(player, self,
-                        clearable && raw.isBlank() ? submit.submit(null) : submit.submit(raw)),
-                () -> gui.navigate(player, self));
+                current, clearable, submit);
     }
 
     private void renamePrompt(Player player, Menu self, MetaTarget target,
@@ -153,20 +142,6 @@ public final class MetaQuad {
                     gui.navigate(player, reopenRoot.apply(parsed.value()));
                 },
                 () -> gui.navigate(player, self));
-    }
-
-    private void finishField(Player player, Menu self, String error) {
-        if (error != null) {
-            invalid(player, error);
-        } else {
-            sounds.playNeutralSound(player);
-        }
-        gui.navigate(player, self);
-    }
-
-    /** Field submitter: patches the target, returning an error or null. */
-    private interface FieldSubmit {
-        String submit(String raw);
     }
 
     private String orUnset(String value) {

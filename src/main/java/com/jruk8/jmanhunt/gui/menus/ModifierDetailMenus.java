@@ -9,7 +9,6 @@ import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.MenuLayout;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
-import com.jruk8.jmanhunt.match.ModifierTriggers;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -56,54 +55,6 @@ public final class ModifierDetailMenus {
         this.sounds = sounds;
         this.gui = gui;
         this.dialogs = dialogs;
-    }
-
-    /** Trigger toggles over every known trigger. */
-    public Menu triggersMenu(String id, Supplier<Menu> parent) {
-        MenuLayout layout = MenuLayout.parse("#########", "#########", "#########");
-        final Menu[] self = new Menu[1];
-        self[0] = new Menu(GuiTexts.title(messages, text("triggers-title", "Run On")),
-                layout, () -> triggersStatic(id, self[0]), List::of, parent);
-        return self[0];
-    }
-
-    private Map<Integer, MenuButton> triggersStatic(String id, Menu self) {
-        Map<Integer, MenuButton> fixed = new HashMap<>();
-        List<String> triggers = store.runsOn(id);
-        List<String> known = ModifierTriggers.KNOWN;
-        for (int index = 0; index < known.size(); index++) {
-            String trigger = known.get(index);
-            boolean on = triggers.stream().anyMatch(trigger::equalsIgnoreCase);
-            fixed.put(index, EditorButtons.actionButton(messages,
-                    on ? Material.LIME_DYE : Material.GRAY_DYE, trigger,
-                    List.of(on ? text("state-on", "Enabled") : text("state-off", "Disabled"),
-                            text("editor-click-toggle", "Click to toggle")),
-                    on,
-                    player -> toggleTrigger(player, id, trigger)).silent());
-        }
-        fixed.put(22, new MenuButton(Material.PAPER,
-                GuiTexts.name(messages, text("back", "Back"), "Back"),
-                null, false, false,
-                player -> gui.back(player, self)));
-        return fixed;
-    }
-
-    private void toggleTrigger(Player player, String id, String trigger) {
-        if (denied(player)) {
-            return;
-        }
-        patch(id, entry -> {
-            ModifierBehavior behavior = ModifierStore.ensureBehavior(entry);
-            List<String> runsOn = behavior.getRunsOn();
-            if (runsOn == null) {
-                runsOn = new ArrayList<>();
-                behavior.setRunsOn(runsOn);
-            }
-            if (!runsOn.removeIf(trigger::equalsIgnoreCase)) {
-                runsOn.add(trigger);
-            }
-        });
-        sounds.playNeutralSound(player);
     }
 
     /** Command list picker with live line counts. */

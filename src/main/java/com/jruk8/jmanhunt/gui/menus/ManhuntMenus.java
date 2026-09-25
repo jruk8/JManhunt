@@ -215,7 +215,8 @@ public final class ManhuntMenus {
                 GuiTexts.name(messages, SettingButtons.prettify(leaf(path)),
                         SettingButtons.prettify(leaf(path))),
                 GuiTexts.lore(messages, sectionLines(path)),
-                false, false, open(() -> sectionMenu(path, caller)));
+                ModifiedGlow.section(config, path), false,
+                open(() -> sectionMenu(path, caller)));
     }
 
     /** Section button lore: description when present, then the entry count. */
@@ -357,7 +358,8 @@ public final class ManhuntMenus {
                     GuiTexts.name(messages, SettingButtons.prettify(category),
                             SettingButtons.prettify(category)),
                     GuiTexts.lore(messages, sectionLines(path)),
-                    false, false, open(() -> sectionMenu(path, this::settingsMenu))));
+                    ModifiedGlow.section(config, path), false,
+                    open(() -> sectionMenu(path, this::settingsMenu))));
         }
         return specs;
     }

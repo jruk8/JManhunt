@@ -1,6 +1,9 @@
 package com.jruk8.jmanhunt.gui.dialog;
 
 import com.jruk8.jmanhunt.config.SettingRegistry;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -80,5 +83,32 @@ class DialogInputsTest {
         assertEquals("", DialogInputs.safeInitial(null));
         assertEquals("", DialogInputs.safeInitial("x".repeat(DialogInputs.TEXT_MAX_LENGTH + 1)));
         assertEquals("ok", DialogInputs.safeInitial("ok"));
+    }
+
+    @Test
+    void checkedBoxesMapToTriggersInKnownOrder() {
+        Map<String, Boolean> answers = Map.of(
+                "trigger-1", true,
+                "trigger-0", true,
+                "trigger-3", false);
+
+        Set<String> checked = DialogInputs.checkedTriggers(answers::get,
+                com.jruk8.jmanhunt.match.ModifierTriggers.KNOWN);
+
+        assertEquals(Set.of("ON_START", "INTERVAL"), checked);
+        assertEquals(List.of("ON_START", "INTERVAL"), List.copyOf(checked));
+    }
+
+    @Test
+    void missingAnswersCountAsUnchecked() {
+        assertEquals(Set.of(), DialogInputs.checkedTriggers(key -> null,
+                com.jruk8.jmanhunt.match.ModifierTriggers.KNOWN));
+    }
+
+    @Test
+    void triggerKeysAreIndexed() {
+        assertEquals("trigger-0", DialogInputs.triggerKey(0));
+        assertEquals("trigger-13", DialogInputs.triggerKey(13));
+        assertEquals(14, com.jruk8.jmanhunt.match.ModifierTriggers.KNOWN.size());
     }
 }

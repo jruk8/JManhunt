@@ -2,7 +2,11 @@ package com.jruk8.jmanhunt.gui.dialog;
 
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.config.SettingType;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Headless dialog input choice, shared by the Paper implementation and
@@ -82,5 +86,26 @@ final class DialogInputs {
     /** Float display with three decimals for dialog body lines. */
     static String formatFloat(float value) {
         return String.format(Locale.ROOT, "%.3f", value);
+    }
+
+    /** Runs On input key for one trigger row. */
+    static String triggerKey(int index) {
+        return "trigger-" + index;
+    }
+
+    /**
+     * Checked triggers in known order. Missing or unreadable answers
+     * count as unchecked, so a partial response never enables extras.
+     * Takes the answer lookup instead of the response view so headless
+     * tests never link the client dialog classes.
+     */
+    static Set<String> checkedTriggers(Function<String, Boolean> answer, List<String> known) {
+        Set<String> checked = new LinkedHashSet<>();
+        for (int index = 0; index < known.size(); index++) {
+            if (Boolean.TRUE.equals(answer.apply(triggerKey(index)))) {
+                checked.add(known.get(index));
+            }
+        }
+        return checked;
     }
 }
