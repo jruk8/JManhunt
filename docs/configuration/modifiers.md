@@ -354,10 +354,14 @@ Buttons that prompt for optional values treat a blank answer as
 clearing the field back to its default.
 
 Commands validate when you save them: unbalanced angle brackets,
-empty commands, and malformed `<random-num:>` or `<random-pick:>`
-arguments are refused with an error, while unknown tags and skipped
-pick items only warn. The command-line creator enforces the same
-rules; see [Modifiers](../commands.md#modifiers) for its flags.
+empty commands, malformed `<random-num:>` or `<random-pick:>`
+arguments, unknown root commands, and unknown `give` items are
+refused with an error, while unknown tags and skipped pick items
+only warn. `<duration>` is compass-only and warns on modifiers.
+Set `settings.server.advanced.validate-modifier-editor-commands`
+to false to skip the root and item checks; placeholder checks
+always run. The command-line creator enforces the same rules; see
+[Modifiers](../commands.md#modifiers) for its flags.
 
 # Sharing Modifiers and Presets
 
@@ -373,5 +377,13 @@ their checksum or schema check are refused without touching anything.
 ```
 
 The modifiers and presets menus carry an import loom in the
-bottom-left corner that prompts for the string, and every editor has
+bottom-right corner that prompts for the string, and every editor has
 an export button that copies its own share string.
+
+# QA Checklist
+
+1. Create a modifier in the GUI and confirm it starts disabled.
+2. Save a line with an unknown root and confirm refusal with an error.
+3. Save a line with an unknown tag and confirm it saves with a warning.
+4. Export a modifier, import the string back, and confirm the copy works.
+5. Hover a preset with 9 members and confirm the `..and 1 more` line.

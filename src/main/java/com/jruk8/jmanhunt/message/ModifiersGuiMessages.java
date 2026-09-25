@@ -46,9 +46,6 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     @CustomKey("toggle-all-presets-lore")
     private String toggleAllPresetsLore = "{total} presets";
 
-    @CustomKey("preset-more")
-    private String presetMore = "and {count} more";
-
     @CustomKey("state-on")
     private String stateOn = "<green>Enabled";
 

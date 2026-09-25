@@ -32,6 +32,7 @@ class ModifierMenusTest {
 
     private ModifierStore store;
     private ModifierMenus menus;
+    private ModifierMenus bigMenus;
 
     private static Component plain(String text, TextColor color) {
         return Component.text(text, color).decoration(TextDecoration.ITALIC, false);
@@ -109,8 +110,10 @@ class ModifierMenusTest {
 
     @Test
     void listMenusCarryImportLooms() {
-        MenuButton modifierImport = menus.modifiersMenu().buttonAt(36);
-        MenuButton presetImport = menus.presetsMenu().buttonAt(36);
+        Menu modifiers = menus.modifiersMenu();
+        Menu presets = menus.presetsMenu();
+        MenuButton modifierImport = modifiers.buttonAt(44);
+        MenuButton presetImport = presets.buttonAt(44);
 
         assertEquals(Material.LOOM, modifierImport.material());
         assertEquals("Import Modifier", textOf(modifierImport.name()));
@@ -118,6 +121,8 @@ class ModifierMenusTest {
         assertEquals(Material.LOOM, presetImport.material());
         assertEquals("Import Preset", textOf(presetImport.name()));
         assertNotNull(presetImport.action());
+        assertNull(modifiers.buttonAt(36));
+        assertNull(presets.buttonAt(36));
     }
 
     @Test
@@ -238,30 +243,72 @@ class ModifierMenusTest {
 
     @Test
     void presetLoreCollapsesBeyondEightMembers() {
+        MessageService fresh = buildMenusWith(10, 0);
+
+        MenuButton button = bigMenus.presetsMenu().buttonAt(2);
+
+        assertEquals(plain("Big", NamedTextColor.WHITE), button.name());
+        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 5, button.lore().size());
+        assertEquals("» M0", textOf(button.lore().get(0)));
+        assertEquals("» M7", textOf(button.lore().get(7)));
+        assertEquals("..and 2 more", textOf(button.lore().get(8)));
+        assertEquals(fresh.nonItalic(fresh.parse("<gray>..and <gray>2</gray> more")),
+                button.lore().get(8));
+        assertEquals(Component.text(" "), button.lore().get(9));
+        assertEquals(plain("Enabled", NamedTextColor.GREEN), button.lore().get(10));
+    }
+
+    @Test
+    void presetLoreOverflowUsesRedWrapperWhenDisabled() {
+        MessageService fresh = buildMenusWith(10, 1);
+
+        MenuButton button = bigMenus.presetsMenu().buttonAt(2);
+
+        assertEquals("..and 2 more", textOf(button.lore().get(8)));
+        assertEquals(fresh.nonItalic(fresh.parse("<gray><red>..and <gray>2</gray> more")),
+                button.lore().get(8));
+        assertEquals(plain("Disabled", NamedTextColor.RED), button.lore().get(10));
+    }
+
+    @Test
+    void presetLoreAtLimitShowsNoOverflow() {
+        buildMenusWith(8, 0);
+
+        MenuButton button = bigMenus.presetsMenu().buttonAt(2);
+
+        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 4, button.lore().size());
+        for (Component line : button.lore()) {
+            assertFalse(textOf(line).contains("..and"));
+        }
+    }
+
+    @Test
+    void emptyPresetLoreShowsNoOverflow() {
+        buildMenusWith(0, 0);
+
+        MenuButton button = bigMenus.presetsMenu().buttonAt(2);
+
+        assertEquals(plain("Disabled", NamedTextColor.RED), button.lore().get(0));
+        for (Component line : button.lore()) {
+            assertFalse(textOf(line).contains("..and"));
+        }
+    }
+
+    private MessageService buildMenusWith(int total, int disabled) {
         ModifiersConfig config = new ModifiersConfig();
         List<String> members = new ArrayList<>();
-        for (int index = 0; index < 10; index++) {
+        for (int index = 0; index < total; index++) {
             String id = "m" + index;
             members.add(id);
-            addModifier(config, id, true, "M" + index, "", null, null);
+            addModifier(config, id, index >= disabled, "M" + index, "", null, null);
         }
         addPreset(config, "big", "Big", null, null, members);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         MessageService fresh = new MessageService();
         fresh.reload(new MessagesConfig());
-        ModifierMenus big =
-                new ModifierMenus(new ModifierStore(config, log), fresh, null, null, null, null, null,
-                        null);
-
-        MenuButton button = big.presetsMenu().buttonAt(2);
-
-        assertEquals(plain("Big", NamedTextColor.WHITE), button.name());
-        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 5, button.lore().size());
-        assertEquals("» M0", textOf(button.lore().get(0)));
-        assertEquals("» M7", textOf(button.lore().get(7)));
-        assertEquals("and 2 more", textOf(button.lore().get(8)));
-        assertEquals(Component.text(" "), button.lore().get(9));
-        assertEquals(plain("Enabled", NamedTextColor.GREEN), button.lore().get(10));
+        bigMenus = new ModifierMenus(new ModifierStore(config, log), fresh,
+                null, null, null, null, null, null);
+        return fresh;
     }
 }

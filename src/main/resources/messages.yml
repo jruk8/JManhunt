@@ -358,7 +358,6 @@ modifiers-gui:
   toggle-all: "Toggle all"
   toggle-all-modifiers-lore: "{total} modifiers"
   toggle-all-presets-lore: "{total} presets"
-  preset-more: "and {count} more"
   state-on: "<green>Enabled"
   state-off: "<red>Disabled"
   import-modifier: "Import Modifier"

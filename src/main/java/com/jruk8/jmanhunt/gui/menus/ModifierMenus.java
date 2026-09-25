@@ -148,11 +148,11 @@ public final class ModifierMenus {
                 player -> gui.back(player, self[0])));
         fixed.put(26, toggleAll.get());
         fixed.put(27, scrollButton(Material.ARROW, "scroll-down", "Scroll down", self, 1));
-        fixed.put(36, importButton.apply(self));
+        fixed.put(44, importButton.apply(self));
         return fixed;
     }
 
-    /** Bottom-left import loom: prompts for a share string, then refreshes. */
+    /** Bottom-right import loom: prompts for a share string, then refreshes. */
     private MenuButton importButton(Menu[] self, String type, String nameKey,
             String loreKey, String titleKey) {
         return new MenuButton(Material.LOOM,
@@ -350,9 +350,9 @@ public final class ModifierMenus {
             lore.addAll(GuiTexts.lore(messages, color + "» " + store.metaName(member)));
         }
         if (members.size() > shown) {
-            String more = text("preset-more", "and {count} more")
-                    .replace("{count}", String.valueOf(members.size() - shown));
-            lore.addAll(GuiTexts.lore(messages, more));
+            String wrapper = allOn ? "" : "<red>";
+            lore.addAll(GuiTexts.lore(messages, wrapper + "..and <gray>"
+                    + (members.size() - shown) + "</gray> more"));
         }
         if (!lore.isEmpty()) {
             lore.add(Component.text(" "));
