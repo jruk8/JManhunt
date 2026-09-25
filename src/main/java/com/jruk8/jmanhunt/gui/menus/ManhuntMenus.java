@@ -279,13 +279,11 @@ public final class ManhuntMenus {
         for (int index = 0; index < entries.size() && index < room; index++) {
             buttons.add(indexButton(listPath, index, entries.get(index), caller));
         }
-        buttons.add(new MenuButton(Material.STICK,
-                GuiTexts.name(messages, text("list-add-name", "Add entry"), "Add entry"),
-                GuiTexts.lore(messages,
-                        List.of(text("list-add-lore", "Click to append"))),
-                false, false,
+        buttons.add(AddStick.button(messages,
+                text("list-add-name", "Add entry"),
+                List.of(text("list-add-lore", "Click to append")),
                 player -> dialogs.openListAppend(player, listPath,
-                        GuiTexts.title(messages, addTitle()), caller)).silent());
+                        GuiTexts.title(messages, addTitle()), caller)));
         return buttons;
     }
 

@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -46,12 +47,13 @@ public final class ModifierMenus {
 
     /**
      * @param store modifier and preset reads
-     * @param messages GUI text; sounds, gui, toggles, and dialogs are only
-     *        touched inside click actions, so builders tolerate them as null
+     * @param messages GUI text; sounds, gui, toggles, dialogs, and
+     *        commandValidation are only touched inside click actions, so
+     *        builders tolerate them as null
      */
     public ModifierMenus(ModifierStore store, MessageService messages, SoundService sounds,
             GuiService gui, ModifiersCommand toggles, SettingDialogs dialogs,
-            ModifierDialog modifierDialogs) {
+            ModifierDialog modifierDialogs, BooleanSupplier commandValidation) {
         this.store = store;
         this.messages = messages;
         this.sounds = sounds;
@@ -59,7 +61,7 @@ public final class ModifierMenus {
         this.toggles = toggles;
         this.dialogs = dialogs;
         this.modifierEditor = new ModifierEditorMenus(store, messages, sounds, gui, toggles,
-                dialogs, modifierDialogs);
+                dialogs, modifierDialogs, commandValidation);
         this.presetEditor = new PresetEditorMenus(store, messages, sounds, gui, toggles, dialogs);
     }
 

@@ -103,6 +103,23 @@ public class ServerSettings extends OkaeriConfig {
         public void setDisableWorldeditNavwand(boolean disableWorldeditNavwand) {
             this.disableWorldeditNavwand = disableWorldeditNavwand;
         }
+
+        @CustomKey("validate-modifier-editor-commands")
+        @Comment({
+                "When true, the modifier editor rejects command lines with",
+                "unknown root commands or unknown give items. Placeholder",
+                "checks always run either way.",
+                "Default: true"
+        })
+        private boolean validateModifierEditorCommands = true;
+
+        public boolean isValidateModifierEditorCommands() {
+            return validateModifierEditorCommands;
+        }
+
+        public void setValidateModifierEditorCommands(boolean validateModifierEditorCommands) {
+            this.validateModifierEditorCommands = validateModifierEditorCommands;
+        }
     }
 
     /** Anti-spawn-camp guard. */

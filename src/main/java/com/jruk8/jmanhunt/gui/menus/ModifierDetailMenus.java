@@ -1,7 +1,10 @@
 package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.command.CommandSyntax;
+import com.jruk8.jmanhunt.command.CommandValidation;
 import com.jruk8.jmanhunt.command.ModifiersCommand;
+import com.jruk8.jmanhunt.command.Ordinal;
+import com.jruk8.jmanhunt.command.PlaceholderCheatsheet;
 import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
@@ -19,8 +22,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
@@ -35,26 +40,34 @@ public final class ModifierDetailMenus {
     /** Command lists in runner order. */
     public static final List<String> COMMAND_LISTS = List.of("console", "player", "hunter",
             "speedrunner", "console-cleanup", "player-cleanup");
-    private static final int ADD_SLOT = 36;
+    /** Command lists in picker display order, separate from runner order. */
+    static final List<String> DISPLAY_ORDER = List.of("player", "speedrunner", "hunter",
+            "console", "player-cleanup", "console-cleanup");
+    private static final int[] DISPLAY_SLOTS = {10, 11, 12, 13, 15, 16};
+    private static final Material[] DISPLAY_MATERIALS = {Material.LIGHT_GRAY_CONCRETE,
+            Material.LIME_CONCRETE, Material.RED_CONCRETE, Material.BLACK_CONCRETE,
+            Material.LIGHT_GRAY_SHULKER_BOX, Material.BLACK_SHULKER_BOX};
 
     private final ModifierStore store;
     private final MessageService messages;
     private final SoundService sounds;
     private final GuiService gui;
     private final SettingDialogs dialogs;
+    private final BooleanSupplier commandValidation;
 
     /**
-     * @param store modifier reads and patches; sounds, gui, and dialogs
-     *        are only touched inside click actions, so builders tolerate
-     *        them as null
+     * @param store modifier reads and patches; sounds, gui, dialogs, and
+     *        commandValidation are only touched inside click actions, so
+     *        builders tolerate them as null (null validation means on)
      */
     public ModifierDetailMenus(ModifierStore store, MessageService messages, SoundService sounds,
-            GuiService gui, SettingDialogs dialogs) {
+            GuiService gui, SettingDialogs dialogs, BooleanSupplier commandValidation) {
         this.store = store;
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
         this.dialogs = dialogs;
+        this.commandValidation = commandValidation;
     }
 
     /** Command list picker with live line counts. */
@@ -68,15 +81,16 @@ public final class ModifierDetailMenus {
 
     private Map<Integer, MenuButton> commandsStatic(String id, Menu self) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
-        int[] slots = {10, 11, 12, 14, 15, 16};
-        for (int index = 0; index < COMMAND_LISTS.size(); index++) {
-            String list = COMMAND_LISTS.get(index);
+        for (int index = 0; index < DISPLAY_ORDER.size(); index++) {
+            String list = DISPLAY_ORDER.get(index);
             int count = store.commandList(id, list).size();
-            fixed.put(slots[index], EditorButtons.actionButton(messages,
-                    Material.COMMAND_BLOCK, list,
-                    List.of(text("editor-commands-lore", "{total} lines")
-                                    .replace("{total}", String.valueOf(count)),
-                            text("editor-click-open", "Click to open")),
+            List<String> lore = new ArrayList<>();
+            if (count > 0) {
+                lore.add("Lines: <white>" + count);
+            }
+            lore.add(text("editor-click-open", "Click to open"));
+            fixed.put(DISPLAY_SLOTS[index], EditorButtons.actionButton(messages,
+                    DISPLAY_MATERIALS[index], list, lore, count > 0,
                     player -> {
                         if (denied(player)) {
                             return;
@@ -112,17 +126,6 @@ public final class ModifierDetailMenus {
                 null, false, false,
                 player -> gui.back(player, self[0])));
         fixed.put(27, scrollButton("scroll-down", "Scroll down", self, 1));
-        fixed.put(ADD_SLOT, new MenuButton(Material.LIME_DYE,
-                GuiTexts.name(messages, text("lines-add", "Add Line"), "Add Line"),
-                GuiTexts.lore(messages, text("editor-click-edit", "Click to edit")),
-                false, false,
-                player -> {
-                    if (denied(player)) {
-                        return;
-                    }
-                    linePrompt(player, self[0], text("lines-add-title", "Add Command"), "",
-                            id, list, -1);
-                }).silent());
         return fixed;
     }
 
@@ -151,20 +154,32 @@ public final class ModifierDetailMenus {
                         deleteLineConfirm(player, self, id, list, lineIndex);
                     }).silent());
         }
+        buttons.add(AddStick.button(messages,
+                text("lines-add", "Add Line"),
+                List.of(text("editor-click-edit", "Click to edit")),
+                player -> {
+                    if (denied(player)) {
+                        return;
+                    }
+                    linePrompt(player, self, text("lines-add-title", "Add Command"), "",
+                            id, list, -1);
+                }));
         return buttons;
     }
 
     /**
      * Prompts for one command line; index -1 appends, otherwise the line
      * is replaced. Fatal syntax errors refuse the save, warnings pass
-     * through to chat.
+     * through to chat, and a submit chats ordinal feedback.
      */
     private void linePrompt(Player player, Menu self, String title, String initial,
             String id, String list, int index) {
-        dialogs.prompt(player, title, initial,
-                List.of(text("lines-prompt", "Tags like <p> and <random-num:1,6> resolve.")),
+        dialogs.prompt(player, title, initial, PlaceholderCheatsheet.lines(),
                 raw -> {
-                    Optional<String> problem = CommandSyntax.error(raw);
+                    Optional<String> problem = CommandValidation.validateLine(raw,
+                            validateCommands(), CommandValidation.knownRoots(),
+                            CommandValidation::isKnownMaterial,
+                            CommandValidation.materialNames());
                     if (problem.isPresent()) {
                         messages.message(player, "modifiers.create-bad-command",
                                 Map.of("list", list, "error", problem.get()));
@@ -186,10 +201,26 @@ public final class ModifierDetailMenus {
                         messages.message(player, "modifiers.create-command-warning",
                                 Map.of("warning", warning));
                     }
+                    List<String> fresh = store.commandList(id, list);
+                    int position = index < 0
+                            ? fresh.size() : Math.min(index + 1, Math.max(fresh.size(), 1));
+                    messages.message(player, "modifiers.edit-command-set",
+                            commandSetValues(list, position, raw));
                     sounds.playNeutralSound(player);
                     gui.navigate(player, self);
                 },
                 () -> gui.navigate(player, self));
+    }
+
+    private boolean validateCommands() {
+        return commandValidation == null || commandValidation.getAsBoolean();
+    }
+
+    /** Feedback params with the command escaped so tags print literally. */
+    static Map<String, String> commandSetValues(String list, int position, String command) {
+        return Map.of("ordinal", Ordinal.format(position),
+                "list", Ordinal.listName(list),
+                "command", MiniMessage.miniMessage().escapeTags(command));
     }
 
     private void deleteLineConfirm(Player player, Menu self, String id, String list, int index) {

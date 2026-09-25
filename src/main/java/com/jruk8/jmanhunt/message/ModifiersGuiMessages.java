@@ -141,9 +141,6 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     @CustomKey("editor-commands")
     private String editorCommands = "Commands";
 
-    @CustomKey("editor-commands-lore")
-    private String editorCommandsLore = "{total} lines";
-
     @CustomKey("editor-export")
     private String editorExport = "Export";
 
@@ -194,9 +191,6 @@ public class ModifiersGuiMessages extends OkaeriConfig {
 
     @CustomKey("lines-edit-title")
     private String linesEditTitle = "Edit Command";
-
-    @CustomKey("lines-prompt")
-    private String linesPrompt = "Tags like <p> and <random-num:1,6> resolve.";
 
     @CustomKey("lines-delete-hint")
     private String linesDeleteHint = "Right-click to delete";

@@ -1,5 +1,8 @@
 package com.jruk8.jmanhunt.command;
 
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -82,5 +85,59 @@ class CommandSyntaxTest {
     @Test
     void fatalErrorSuppressesWarnings() {
         assertTrue(CommandSyntax.warnings("give <bogus").isEmpty());
+    }
+
+    @Test
+    void unknownRootAcceptsKnownSlashAliasAndNamespace() {
+        Set<String> roots = Set.of("give", "effect", "mhelp");
+        assertTrue(CommandSyntax.unknownRoot("give <p> apple", roots).isEmpty());
+        assertTrue(CommandSyntax.unknownRoot("/give <p> apple", roots).isEmpty());
+        assertTrue(CommandSyntax.unknownRoot("//give <p> apple", roots).isEmpty());
+        assertTrue(CommandSyntax.unknownRoot("mhelp", roots).isEmpty());
+        assertTrue(CommandSyntax.unknownRoot("minecraft:give <p> apple", roots).isEmpty());
+        assertTrue(CommandSyntax.unknownRoot("Give <p> apple", roots).isEmpty());
+    }
+
+    @Test
+    void unknownRootRejectsUnknownNamingToken() {
+        assertEquals(Optional.of("Unknown command 'asd'."),
+                CommandSyntax.unknownRoot("asd asd asd asd", Set.of("give")));
+        assertEquals(Optional.of("Unknown command 'asd'."),
+                CommandSyntax.unknownRoot("/asd", Set.of("give")));
+    }
+
+    @Test
+    void unknownRootSkipsPlaceholderBuiltRoots() {
+        assertTrue(CommandSyntax
+                .unknownRoot("<random-pick:give,effect> <p> apple", Set.of("give")).isEmpty());
+    }
+
+    @Test
+    void giveItemCheckAcceptsKnownPlaceholderAndNonGive() {
+        Predicate<String> known = token -> token.equalsIgnoreCase("golden_apple")
+                || token.equalsIgnoreCase("minecraft:golden_apple");
+        Set<String> names = Set.of("golden_apple", "diamond_sword");
+        assertTrue(CommandSyntax.giveItemCheck("give <p> golden_apple", known, names).isEmpty());
+        assertTrue(CommandSyntax
+                .giveItemCheck("minecraft:give <p> golden_apple", known, names).isEmpty());
+        assertTrue(CommandSyntax.giveItemCheck("/give <p> golden_apple", known, names).isEmpty());
+        assertTrue(CommandSyntax.giveItemCheck("give <p> <random-item>", known, names).isEmpty());
+        assertTrue(CommandSyntax.giveItemCheck("effect give <p> slowness", known, names).isEmpty());
+    }
+
+    @Test
+    void giveItemTypoFailsWithHint() {
+        Predicate<String> known = token -> token.equalsIgnoreCase("golden_apple");
+        Set<String> names = Set.of("golden_apple", "diamond_sword");
+        assertEquals(Optional.of("Unknown item 'gulden_apple'. Did you mean 'golden_apple'?"),
+                CommandSyntax.giveItemCheck("give <p> gulden_apple", known, names));
+    }
+
+    @Test
+    void giveItemFarMissFailsWithoutHint() {
+        Predicate<String> known = token -> false;
+        Set<String> names = Set.of("golden_apple", "diamond_sword");
+        assertEquals(Optional.of("Unknown item 'zzzqqq'."),
+                CommandSyntax.giveItemCheck("give <p> zzzqqq", known, names));
     }
 }

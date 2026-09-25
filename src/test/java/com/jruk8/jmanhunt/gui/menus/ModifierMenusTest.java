@@ -58,7 +58,7 @@ class ModifierMenusTest {
         MessageService messages = new MessageService();
         messages.reload(new MessagesConfig());
         store = new ModifierStore(config, log);
-        menus = new ModifierMenus(store, messages, null, null, null, null, null);
+        menus = new ModifierMenus(store, messages, null, null, null, null, null, null);
     }
 
     private static void addModifier(ModifiersConfig config, String id, boolean enabled,
@@ -251,7 +251,8 @@ class ModifierMenusTest {
         MessageService fresh = new MessageService();
         fresh.reload(new MessagesConfig());
         ModifierMenus big =
-                new ModifierMenus(new ModifierStore(config, log), fresh, null, null, null, null, null);
+                new ModifierMenus(new ModifierStore(config, log), fresh, null, null, null, null, null,
+                        null);
 
         MenuButton button = big.presetsMenu().buttonAt(2);
 

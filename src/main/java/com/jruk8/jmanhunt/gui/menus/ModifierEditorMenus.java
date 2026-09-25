@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -41,20 +42,21 @@ public final class ModifierEditorMenus {
     private final MetaQuad meta;
 
     /**
-     * @param store modifier reads and patches; sounds, gui, commands, and
-     *        dialogs are only touched inside click actions, so builders
-     *        tolerate them as null
+     * @param store modifier reads and patches; sounds, gui, commands,
+     *        dialogs, and commandValidation are only touched inside click
+     *        actions, so builders tolerate them as null
      */
     public ModifierEditorMenus(ModifierStore store, MessageService messages, SoundService sounds,
             GuiService gui, ModifiersCommand commands, SettingDialogs dialogs,
-            ModifierDialog modifierDialogs) {
+            ModifierDialog modifierDialogs, BooleanSupplier commandValidation) {
         this.store = store;
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
         this.commands = commands;
         this.dialogs = dialogs;
-        this.detail = new ModifierDetailMenus(store, messages, sounds, gui, dialogs);
+        this.detail = new ModifierDetailMenus(store, messages, sounds, gui, dialogs,
+                commandValidation);
         this.options = new BehaviorOptionsMenus(store, messages, sounds, gui, commands,
                 dialogs, modifierDialogs);
         this.meta = new MetaQuad(messages, sounds, gui, dialogs);

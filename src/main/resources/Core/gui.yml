@@ -138,6 +138,7 @@ descriptions:
   "settings.server": "Broadcasts, spawn-camp guard, and status output."
   "settings.server.advanced": "Advanced server interop toggles."
   "settings.server.advanced.disable-worldedit-navwand": "Block WorldEdit compass teleports."
+  "settings.server.advanced.validate-modifier-editor-commands": "Reject bad roots and give items in the editor."
   "settings.server.anti-spawn-camp": "Punish farming kills on one victim."
   "settings.server.status": "Pick which lines status commands show."
   "settings.match.autostart.enabled": "Start matches automatically once minimums are met."

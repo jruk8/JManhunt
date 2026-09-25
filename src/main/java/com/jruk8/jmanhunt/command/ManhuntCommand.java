@@ -130,7 +130,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         ModifierDialogs modifierDialogs = new ModifierDialogs(messages, sounds,
                 plugin.guiService(), plugin);
         this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,
-                plugin.guiService(), modifiersCmd, dialogs, modifierDialogs);
+                plugin.guiService(), modifiersCmd, dialogs, modifierDialogs,
+                () -> config.getBoolean(
+                        "settings.server.advanced.validate-modifier-editor-commands", true));
         this.menus = new ManhuntMenus(config, plugin.guiConfig(), messages, sounds,
                 plugin.guiService(), dialogs, feedback, plugin.stats(), modifierMenus);
     }

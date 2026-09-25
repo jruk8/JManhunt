@@ -25,7 +25,7 @@
 #
 
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 6
+config-version: 7
 
 
 # Send anonymous statistics via bStats (open-source). We never collect personal data or IP addresses.
@@ -724,6 +724,11 @@ settings:
       # Performance impact: none
       # Default: true
       disable-worldedit-navwand: true
+      # When true, the modifier editor rejects command lines with
+      # unknown root commands or unknown give items. Placeholder
+      # checks always run either way.
+      # Default: true
+      validate-modifier-editor-commands: true
 
 # Grid-based single-world manhunt engine.
 # Uses persistent square-spiral cell indexing and teleports participants to

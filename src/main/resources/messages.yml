@@ -339,6 +339,8 @@ modifiers:
   edit-invalid: "{prefix}<red>Invalid value: {error}"
   edit-renamed: "{prefix}<green>Renamed to <white>{name}<green>."
   edit-deleted: "{prefix}<green>Deleted <white>{name}<green>."
+  edit-command-set: "{prefix}<green>{ordinal} command for {list} set to <white>{command}</white>"
+  edit-icon-set: "{prefix}<green>Icon set to <white>{material}<green>."
 
 # Modifiers GUI text. Names render white, lore gray; user tags override.
 # {enabled} and {total} count enabled entries. Never add {prefix} here.
@@ -387,7 +389,6 @@ modifiers-gui:
   editor-prompt-title: "Edit {label}"
   editor-prompt-current: "Current value: {value}"
   editor-commands: "Commands"
-  editor-commands-lore: "{total} lines"
   editor-export: "Export"
   editor-export-lore: "Copy a share string"
   editor-rename: "Rename Id"
@@ -405,7 +406,6 @@ modifiers-gui:
   lines-add: "Add Line"
   lines-add-title: "Add Command"
   lines-edit-title: "Edit Command"
-  lines-prompt: "Tags like <p> and <random-num:1,6> resolve."
   lines-delete-hint: "Right-click to delete"
   lines-delete-title: "Delete this line?"
   members-title: "Members"

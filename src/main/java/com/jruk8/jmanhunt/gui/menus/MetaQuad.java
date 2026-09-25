@@ -71,9 +71,8 @@ public final class MetaQuad {
                                                 return item.error();
                                             }
                                             target.patchItem(item.value());
-                                            // The icon-set chat confirmation
-                                            // lands with the command
-                                            // feedback work in Phase 6.
+                                            messages.message(player, "modifiers.edit-icon-set",
+                                                    Map.of("material", item.value().name()));
                                             return null;
                                         })),
                         EditorButtons.valueButton(messages, Material.PLAYER_HEAD,

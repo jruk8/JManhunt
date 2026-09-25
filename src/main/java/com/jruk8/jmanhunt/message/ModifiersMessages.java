@@ -132,4 +132,11 @@ public class ModifiersMessages extends OkaeriConfig {
 
     @CustomKey("edit-deleted")
     private String editDeleted = "{prefix}<green>Deleted <white>{name}<green>.";
+
+    @CustomKey("edit-command-set")
+    private String editCommandSet = "{prefix}<green>{ordinal} command for {list} set to "
+            + "<white>{command}</white>";
+
+    @CustomKey("edit-icon-set")
+    private String editIconSet = "{prefix}<green>Icon set to <white>{material}<green>.";
 }

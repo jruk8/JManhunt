@@ -594,6 +594,7 @@ public final class SettingRegistry {
         entries.add(bool("settings.server.status.show-modifiers", false));
         entries.add(bool("settings.server.status.show-ids", false));
         entries.add(bool("settings.server.advanced.disable-worldedit-navwand", true));
+        entries.add(bool("settings.server.advanced.validate-modifier-editor-commands", true));
     }
 
     private static void addWorldEngineEntries(List<SettingDescriptor> entries) {
