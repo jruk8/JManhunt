@@ -86,7 +86,12 @@ public class ServerSettings extends OkaeriConfig {
         @CustomKey("disable-worldedit-navwand")
         @Comment({
                 "When true, compass clicks never trigger WorldEdit's navwand",
-                "teleport, with no WorldEdit dependency needed.",
+                "teleport. The navwand is a conflicting feature with the compass",
+                "affecting OP'd users. This option fixes it.",
+                "Purely passive, requires no dependency. If no WorldEdit is installed,",
+                "feel free to leave off.",
+                "",
+                "Performance impact: none",
                 "Default: true"
         })
         private boolean disableWorldeditNavwand = true;

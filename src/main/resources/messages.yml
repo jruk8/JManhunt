@@ -321,7 +321,7 @@ modifiers:
   toggle-all-announced: "{prefix}<white>{player} <yellow>toggled all <gray>{count} {kind}</gray> to <white>{state}</white>.</yellow></white>"
   export-usage: "{prefix}<yellow>Usage: /manhunt modifiers export <modifier|preset> <id>"
   import-usage: "{prefix}<yellow>Usage: /manhunt modifiers import <modifier|preset> <payload>"
-  exported: "{prefix}<green><underlined>Click to copy <white>{type} {name}</white> to clipboard</underlined>"
+  exported: "{prefix}<green>Click to copy {type} <underlined><white>{name}</white></underlined> to clipboard"
   imported: "{prefix}<green>Imported <white>{name}<green>."
   import-failed: "{prefix}<red>That import string is invalid or corrupted."
   create-usage: "{prefix}<yellow>Usage: /manhunt modifiers create <modifier|preset> <name> [flags...]\n{prefix}<gray>Modifier flags: --desc --item --author --trigger --on-start --interval --deviation --interval-scope --chance --chance-scope --selection --pick-count --pick-scope --delay --console --player --hunter --speedrunner --console-cleanup --player-cleanup\n{prefix}<gray>Preset flags: --desc --item --member"
