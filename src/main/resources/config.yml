@@ -662,6 +662,25 @@ settings:
       none-players:
         enabled: true
 
+    # Spectator toolbar and lock-on follow.
+    spectator:
+      # Hotbar toolbar handed to spectators: layout plus lock-on follow.
+      toolbar:
+        # Hotbar layout, one character per slot 0 to 8. c is the
+        # match browser, p the player teleporter, b the back-to-lobby
+        # exit, # an empty slot; anything else is empty too.
+        # Must be exactly 9 characters.
+        # Default: "cp######b"
+        layout: "cp######b"
+        # Lock onto teleported-to players: the spectator is pulled
+        # back within tp-distance every 5 ticks until they move.
+        # Default: true
+        lock-on: true
+        # Locked-follow teleport distance in blocks. Must be at
+        # least 1.
+        # Default: 25
+        tp-distance: 25
+
     # Announces each participant's role when a match starts, in chat and/or as a
     # title. Both are toggled independently; when both are off, no announcement
     # (including sounds) plays.

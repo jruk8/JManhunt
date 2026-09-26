@@ -26,6 +26,9 @@ public class PlayerSettings extends OkaeriConfig {
     @Comment("Invulnerability settings.")
     private Invulnerability invulnerability = new Invulnerability();
 
+    @Comment("Spectator toolbar and lock-on follow.")
+    private Spectator spectator = new Spectator();
+
     @CustomKey("announce-roles")
     @Comment({
             "Announces each participant's role when a match starts, in chat and/or as a",
@@ -65,6 +68,14 @@ public class PlayerSettings extends OkaeriConfig {
 
     public void setInvulnerability(Invulnerability invulnerability) {
         this.invulnerability = invulnerability;
+    }
+
+    public Spectator getSpectator() {
+        return spectator;
+    }
+
+    public void setSpectator(Spectator spectator) {
+        this.spectator = spectator;
     }
 
     public AnnounceRoles getAnnounceRoles() {
@@ -317,6 +328,76 @@ public class PlayerSettings extends OkaeriConfig {
 
         public void setNonePlayers(Toggle nonePlayers) {
             this.nonePlayers = nonePlayers;
+        }
+    }
+
+    /** Spectator toolbar and lock-on follow. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Spectator extends OkaeriConfig {
+
+        @Comment("Hotbar toolbar handed to spectators: layout plus lock-on follow.")
+        private Toolbar toolbar = new Toolbar();
+
+        public Toolbar getToolbar() {
+            return toolbar;
+        }
+
+        public void setToolbar(Toolbar toolbar) {
+            this.toolbar = toolbar;
+        }
+
+        /** Spectator hotbar toolbar. */
+        @SuppressWarnings("FieldMayBeFinal")
+        public static class Toolbar extends OkaeriConfig {
+
+            @Comment({
+                    "Hotbar layout, one character per slot 0 to 8. c is the",
+                    "match browser, p the player teleporter, b the back-to-lobby",
+                    "exit, # an empty slot; anything else is empty too.",
+                    "Must be exactly 9 characters.",
+                    "Default: \"cp######b\""
+            })
+            private String layout = "cp######b";
+
+            @CustomKey("lock-on")
+            @Comment({
+                    "Lock onto teleported-to players: the spectator is pulled",
+                    "back within tp-distance every 5 ticks until they move.",
+                    "Default: true"
+            })
+            private boolean lockOn = true;
+
+            @CustomKey("tp-distance")
+            @Comment({
+                    "Locked-follow teleport distance in blocks. Must be at",
+                    "least 1.",
+                    "Default: 25"
+            })
+            private int tpDistance = 25;
+
+            public String getLayout() {
+                return layout;
+            }
+
+            public void setLayout(String layout) {
+                this.layout = layout;
+            }
+
+            public boolean isLockOn() {
+                return lockOn;
+            }
+
+            public void setLockOn(boolean lockOn) {
+                this.lockOn = lockOn;
+            }
+
+            public int getTpDistance() {
+                return tpDistance;
+            }
+
+            public void setTpDistance(int tpDistance) {
+                this.tpDistance = tpDistance;
+            }
         }
     }
 

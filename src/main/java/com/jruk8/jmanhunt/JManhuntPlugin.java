@@ -33,8 +33,11 @@ import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersRegistrar;
 import com.jruk8.jmanhunt.placeholders.PlaceholderConfigRegistrar;
+import com.jruk8.jmanhunt.gui.menus.SpectatorMenus;
 import com.jruk8.jmanhunt.player.FakeSpectatorListener;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import com.jruk8.jmanhunt.player.SpectatorToolbarListener;
+import com.jruk8.jmanhunt.player.SpectatorToolbarService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.player.SpawnCampService;
@@ -108,6 +111,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private UpdateCheckNotifier updateCheckNotifier;
     private RoleTeamService roleTeams;
     private FakeSpectatorService fakeSpectators;
+    private SpectatorToolbarService spectatorToolbar;
     private SpawnCampService spawnCamp;
     private GuiService guiService;
     private final List<SettingsListener> settings = new ArrayList<>();
@@ -324,6 +328,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 playerStates, game, winConditionEngine, worldEngine, fakeSpectators), this);
         getServer().getPluginManager().registerEvents(
                 new FakeSpectatorListener(fakeSpectators, playerStates, game), this);
+        setupSpectatorToolbar();
         getServer().getPluginManager().registerEvents(respawn, this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
         getServer().getPluginManager().registerEvents(new RolePadService(
@@ -342,6 +347,15 @@ public final class JManhuntPlugin extends JavaPlugin {
                 new UpdateCheckJoinListener(updateChecks, updateCheckNotifier), this);
     }
 
+    /** Creates the spectator toolbar and registers its listener. */
+    private void setupSpectatorToolbar() {
+        spectatorToolbar = new SpectatorToolbarService(overrideService, messages, playerStates,
+                fakeSpectators, game, lobbyService, new NamespacedKey(this, "spectator_toolbar"));
+        SpectatorMenus menus = new SpectatorMenus(messages, guiService, spectatorToolbar);
+        getServer().getPluginManager().registerEvents(
+                new SpectatorToolbarListener(spectatorToolbar, menus), this);
+    }
+
     private void setupScheduling() {
         double refreshInterval = configService.getDouble("settings.compass.refresh-interval", 10.0);
         if (refreshInterval != -1.0) {
@@ -352,6 +366,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         BukkitTask actionbars = Bukkit.getScheduler().runTaskTimer(this,
                 () -> compass.showHeldActionbars(game.isActive()), 1L, 20L);
         Bukkit.getScheduler().runTaskTimer(this, game::broadcastAutostartShortfalls, 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(this, spectatorToolbar::tickLocks, 5L, 5L);
         Bukkit.getScheduler().runTaskTimer(this, tutorialService::checkTimeouts, 100L, 100L);
         Bukkit.getScheduler().runTaskTimer(this, worldEngine::careTick, 20L, 20L);
         Bukkit.getScheduler().runTaskAsynchronously(this,

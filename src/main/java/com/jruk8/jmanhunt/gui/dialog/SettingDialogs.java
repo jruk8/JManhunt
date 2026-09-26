@@ -279,7 +279,7 @@ public final class SettingDialogs implements SettingDialog {
                 .string("manhunt-gui.dialog-current", "Current value: <white>{value}")
                 .replace("{value}", escape(displayCurrent(lobby, descriptor)));
         String bounds = null;
-        if (descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT) {
+        if (SettingRegistry.hasBounds(descriptor)) {
             bounds = messages.string("manhunt-gui.dialog-bounds", "Allowed: {bounds}")
                     .replace("{bounds}", escape(SettingRegistry.boundsText(
                             descriptor, path -> overrides.effectiveRaw(lobby, path))));

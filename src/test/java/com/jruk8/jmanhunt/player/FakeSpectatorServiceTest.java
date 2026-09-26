@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.player;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -94,6 +95,20 @@ class FakeSpectatorServiceTest {
 
         assertFalse(fixture.fakes().isFakeSpectator(fixture.watched()));
         verify(fixture.viewer()).showPlayer(fixture.plugin(), fixture.watched());
+    }
+
+    @Test
+    void modeListenersHearEnableAndDisable() {
+        Fixture fixture = fixture();
+        List<String> events = new ArrayList<>();
+        fixture.fakes().addModeListener((player, enabled) ->
+                events.add(player.getUniqueId() + "=" + enabled));
+
+        fixture.fakes().enable(fixture.watched());
+        fixture.fakes().disable(fixture.watched());
+
+        assertEquals(List.of(fixture.watched().getUniqueId() + "=true",
+                fixture.watched().getUniqueId() + "=false"), events);
     }
 
     @Test

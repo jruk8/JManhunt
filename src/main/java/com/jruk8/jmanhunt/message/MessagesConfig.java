@@ -80,4 +80,8 @@ public class MessagesConfig extends OkaeriConfig {
     })
     private ManhuntGuiMessages manhuntGui = new ManhuntGuiMessages();
 
+    @CustomKey("spectator")
+    @Comment("Spectator toolbar buttons, browser menus, and feedback.")
+    private SpectatorMessages spectator = new SpectatorMessages();
+
 }

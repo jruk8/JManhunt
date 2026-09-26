@@ -112,3 +112,6 @@ permissions:
   jmanhunt.spectator:
     description: Allows a player to become a spectator.
     default: true
+  jmanhunt.spectator.swaplobby:
+    description: Allows a spectator to switch to another lobby's match from the toolbar.
+    default: true

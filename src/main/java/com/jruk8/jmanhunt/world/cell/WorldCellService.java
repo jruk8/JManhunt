@@ -116,26 +116,43 @@ public final class WorldCellService {
         if (joiners.isEmpty()) {
             return;
         }
+        Optional<Location> center = cellCenter(cellIndex);
+        if (center.isEmpty()) {
+            return;
+        }
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
-        if (!config.enabled()) {
-            return;
-        }
-        World world = Bukkit.getWorld(config.worldName());
-        if (world == null) {
-            return;
-        }
+        World world = center.get().getWorld();
         CellCoordinate grid = SpiralCoordinateMapper.toCoordinate(cellIndex);
         int originX = MatchTeleportService.toBlockCoordinate(grid.x() * config.cellSize());
         int originZ = MatchTeleportService.toBlockCoordinate(grid.z() * config.cellSize());
-        Location cellRoot = new Location(world, originX + 0.5,
-                world.getHighestBlockYAt(originX, originZ, HeightMap.MOTION_BLOCKING) + 1,
-                originZ + 0.5);
         List<Location> spawns = MatchTeleportService.spreadSpawnsForConfig(world, originX, originZ,
                 config.tpSpreadRadius(), joiners, config);
         for (int index = 0; index < joiners.size(); index++) {
             joiners.get(index).teleport(spawns.get(index));
-            joiners.get(index).setRespawnLocation(cellRoot, true);
+            joiners.get(index).setRespawnLocation(center.get(), true);
         }
+    }
+
+    /**
+     * Center surface point of a match cell: the spawnpoint fallback when no
+     * teleport target qualifies. Empty when the engine is off or the world
+     * is missing.
+     */
+    public Optional<Location> cellCenter(long cellIndex) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        if (!config.enabled()) {
+            return Optional.empty();
+        }
+        World world = Bukkit.getWorld(config.worldName());
+        if (world == null) {
+            return Optional.empty();
+        }
+        CellCoordinate grid = SpiralCoordinateMapper.toCoordinate(cellIndex);
+        int originX = MatchTeleportService.toBlockCoordinate(grid.x() * config.cellSize());
+        int originZ = MatchTeleportService.toBlockCoordinate(grid.z() * config.cellSize());
+        return Optional.of(new Location(world, originX + 0.5,
+                world.getHighestBlockYAt(originX, originZ, HeightMap.MOTION_BLOCKING) + 1,
+                originZ + 0.5));
     }
 
     /** Buffered cell indexes, oldest first. */

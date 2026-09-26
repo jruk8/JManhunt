@@ -172,3 +172,24 @@ settings:
 spectators). This makes players who are not in a game immune to damage.
 Command kills (`/kill`) still go through; only the pre-start window blocks
 those, to avoid glitches.
+
+# Spectator Toolbar
+
+Under `settings.players.spectator.toolbar`, spectators get a hotbar
+toolbar while in fake spectator mode:
+
+```yaml
+settings:
+  players:
+    spectator:
+      toolbar:
+        layout: "cp######b"
+        lock-on: true
+        tp-distance: 25
+```
+
+`layout` maps hotbar slots 0 to 8 (`c` match browser, `p` player
+teleporter, `b` back to lobby, `#` empty) and must be exactly 9
+characters. `lock-on` follows teleported-to players, pulling the
+spectator back within `tp-distance` blocks every 5 ticks until they
+move. See [Spectating](../../spectating.md) for the full behavior.

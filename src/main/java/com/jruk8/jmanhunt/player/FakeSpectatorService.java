@@ -1,7 +1,9 @@
 package com.jruk8.jmanhunt.player;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -23,9 +25,15 @@ import org.bukkit.plugin.Plugin;
  * quit plus join handlers reset any dangling flight.
  */
 public final class FakeSpectatorService {
+    /** Notified after fake spectator mode turns on or off for a player. */
+    public interface ModeListener {
+        void onModeChange(Player player, boolean enabled);
+    }
+
     private final Plugin plugin;
     private final Supplier<Collection<? extends Player>> onlinePlayers;
     private final Set<UUID> actives = new HashSet<>();
+    private final List<ModeListener> modeListeners = new ArrayList<>();
 
     public FakeSpectatorService(Plugin plugin, PlayerStateStore playerStates) {
         this(plugin, playerStates, Bukkit::getOnlinePlayers);
@@ -36,6 +44,11 @@ public final class FakeSpectatorService {
         this.plugin = plugin;
         this.onlinePlayers = onlinePlayers;
         playerStates.addRoleListener(this::onRoleChange);
+    }
+
+    /** Subscribes to fake spectator mode changes. */
+    public void addModeListener(ModeListener listener) {
+        modeListeners.add(listener);
     }
 
     /** Enables fake spectator mode. Idempotent. */
@@ -51,6 +64,7 @@ public final class FakeSpectatorService {
                 viewer.hidePlayer(plugin, player);
             }
         }
+        notifyMode(player, true);
     }
 
     /**
@@ -69,6 +83,13 @@ public final class FakeSpectatorService {
             if (!viewer.getUniqueId().equals(id)) {
                 viewer.showPlayer(plugin, player);
             }
+        }
+        notifyMode(player, false);
+    }
+
+    private void notifyMode(Player player, boolean enabled) {
+        for (ModeListener listener : List.copyOf(modeListeners)) {
+            listener.onModeChange(player, enabled);
         }
     }
 

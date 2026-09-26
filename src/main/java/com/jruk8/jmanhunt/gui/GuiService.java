@@ -82,8 +82,16 @@ public final class GuiService {
         player.openInventory(inventory);
     }
 
-    /** Opens another menu; Bukkit closes the current one automatically. */
+    /**
+     * Opens another menu; Bukkit closes the current one automatically. A
+     * null menu closes the inventory instead, so every back and cancel
+     * with nothing to return to shuts the GUI rather than throwing.
+     */
     public void navigate(Player player, Menu menu) {
+        if (menu == null) {
+            player.closeInventory();
+            return;
+        }
         open(player, menu);
     }
 

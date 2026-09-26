@@ -531,3 +531,23 @@ manhunt-gui:
   setup-first-line2: "One click does the recommended path, or take the manual tour."
   setup-first-confirm: "<green>Quick setup (recommended)"
   setup-first-cancel: "<red>Manual setup guide"
+
+# Spectator toolbar buttons, browser menus, and feedback.
+spectator:
+  toolbar-back-name: "Back to Lobby"
+  toolbar-back-lore: "Return to your lobby\\nLeave spectator mode"
+  toolbar-lobbies-name: "Browse Matches"
+  toolbar-lobbies-lore: "Right-click to spectate\\nanother match"
+  toolbar-players-name: "Spectate Player"
+  toolbar-players-lore: "Teleport to a player\\nand follow them"
+  lobbies-title: "Running Matches"
+  lobbies-entry-name: "{label}"
+  lobbies-entry-lore: "{info}\\n{hint}"
+  lobbies-entry-info: "{runners} runners, {hunters} hunters"
+  lobbies-entry-hint: "Click to spectate"
+  lobbies-current-hint: "You are here"
+  players-title: "Spectate Player"
+  players-entry-hint: "Click to teleport and follow"
+  match-gone: "{prefix}<red>That match is no longer running."
+  no-matches: "{prefix}<yellow>No matches are running right now."
+  no-players: "{prefix}<yellow>No speedrunners or hunters to spectate right now."

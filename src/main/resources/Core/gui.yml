@@ -67,6 +67,8 @@ categories:
   players/announce-roles: JUKEBOX
   players/announce-roles/chat: PAPER
   players/announce-roles/title: OAK_HANGING_SIGN
+  players/spectator: ECHO_SHARD
+  players/spectator/toolbar: BLAZE_ROD
   server: BELL
   server/status: MAP
   server/advanced: ANVIL
@@ -138,6 +140,8 @@ descriptions:
   "settings.players.roles.reset-on-game-end": "Clear roles when a match ends."
   "settings.players.roles.reset-on-leave": "Clear roles when players leave."
   "settings.players.roles.turn-nones-spectator": "Park roleless players in spectator."
+  "settings.players.spectator": "Spectator toolbar and lock-on follow."
+  "settings.players.spectator.toolbar": "Hotbar buttons handed to spectators."
   "settings.server": "Broadcasts, spawn-camp guard, and status output."
   "settings.server.advanced": "Advanced server interop toggles."
   "settings.server.advanced.disable-worldedit-navwand": "Block WorldEdit compass teleports."
@@ -252,6 +256,9 @@ descriptions:
   "settings.players.announce-roles.title.fade-in-seconds": "Title fade-in time in seconds."
   "settings.players.announce-roles.title.stay-seconds": "Title stay time in seconds."
   "settings.players.announce-roles.title.fade-out-seconds": "Title fade-out time in seconds."
+  "settings.players.spectator.toolbar.layout": "Hotbar slots: c matches, p players, b lobby."
+  "settings.players.spectator.toolbar.lock-on": "Follow teleported-to players automatically."
+  "settings.players.spectator.toolbar.tp-distance": "Follow range in blocks before teleporting."
   "settings.server.announce-config-changes": "Broadcast config changes to admins."
   "settings.server.announce-role-changes": "Broadcast role changes."
   "settings.server.anti-spawn-camp.enabled": "Punish repeated kills on one victim."

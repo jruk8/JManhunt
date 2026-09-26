@@ -49,3 +49,52 @@ a crash can never leave a player stuck flying or invisible.
 - Spectators are hidden from each other as well as from players.
 - Use `/jmanhunt setplayer <name> spectator` to move someone into the
   spectator role, or the role pads and lobby flows that already do.
+
+## Spectator toolbar
+
+The `spectator` role also deploys a hotbar toolbar. The player's real
+inventory (contents, armor, and offhand) is snapshotted in memory and
+restored on exit, on quit, and after a crash; toolbar items left behind
+by a crash are discarded on the next join. Only the `spectator` role
+gets the toolbar: headstart holds, death watches, and `NONE` watchers
+keep their own inventories.
+
+### Layout
+
+`settings.players.spectator.toolbar.layout` maps hotbar slots 0 to 8,
+one character per slot, default `cp######b`:
+
+- `c`: match browser (compass).
+- `p`: player teleporter (blaze rod).
+- `b`: back to lobby (paper).
+- `#`: empty slot. Any other character is empty too.
+
+The layout must be exactly 9 characters; anything else falls back to
+the default.
+
+### Buttons
+
+- `b` returns the spectator to their current lobby's spawn and sets
+  their role to `none`, exiting spectator mode.
+- `c` (right-click) opens the match browser: every running match.
+  Sublobby matches glow and sort to the top. Clicking an entry moves
+  the spectator into that match and lands them on the teleport-priority
+  target: an alive, non-respawning speedrunner first, then an alive,
+  non-respawning hunter, else the match cell's center. Moving within
+  the same lobby (including into its sublobbies) is always allowed;
+  switching to another lobby's match needs the
+  `jmanhunt.spectator.swaplobby` permission.
+- `p` opens the player browser: heads of online speedrunners and
+  hunters in the spectator's match (or lobby, when outside matches),
+  each described by its role in that role's color. Clicking a head
+  teleports to that player and locks on. The locked player's head
+  glows.
+
+### Lock-on
+
+`settings.players.spectator.toolbar.lock-on` (default `true`) follows
+the teleported-to player: every 5 ticks, a locked spectator farther
+than `tp-distance` (default 25 blocks, minimum 1) is teleported back
+to the target. Any manual movement breaks the lock, as does the target
+going offline, dying into a respawn wait, changing role, or leaving
+the match. With lock-on disabled, teleports never follow.

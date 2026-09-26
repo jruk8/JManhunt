@@ -72,6 +72,27 @@ class SettingRegistryTest {
     }
 
     @Test
+    void toolbarLayoutRequiresNineCharacters() {
+        var ok = validate("settings.players.spectator.toolbar.layout", "cp######b");
+
+        assertTrue(ok.ok());
+        assertEquals("cp######b", ok.value());
+        var shortOutcome = validate("settings.players.spectator.toolbar.layout", "cp###b");
+        assertFalse(shortOutcome.ok());
+        assertEquals("manhunt.setting-out-of-range", shortOutcome.errorKey());
+        assertEquals("exactly 9 characters", shortOutcome.slots().get("bounds"));
+        assertFalse(validate(
+                "settings.players.spectator.toolbar.layout", "cp########b").ok());
+    }
+
+    @Test
+    void toolbarTpDistanceMinOne() {
+        assertEquals(1,
+                validate("settings.players.spectator.toolbar.tp-distance", "1").value());
+        assertFalse(validate("settings.players.spectator.toolbar.tp-distance", "0").ok());
+    }
+
+    @Test
     void optionMatchesCaseInsensitivelyToCanonical() {
         var outcome = validate("settings.match.start-on-speedrunner-damage.on-expire", "cancel");
 

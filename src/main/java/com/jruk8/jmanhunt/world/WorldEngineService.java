@@ -86,6 +86,14 @@ public final class WorldEngineService implements SettingsListener {
     }
 
     /**
+     * Center surface point of a match cell, or empty when the engine is
+     * off or the world is missing.
+     */
+    public Optional<Location> cellCenter(long cellIndex) {
+        return cells.cellCenter(cellIndex);
+    }
+
+    /**
      * Tops up the ready-cell buffer. Called when a match ends and when an
      * autostart countdown begins; a periodic task covers matches started
      * while others run.

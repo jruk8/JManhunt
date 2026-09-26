@@ -40,3 +40,4 @@
 | `jmanhunt.afk` | Allows a player to become afk. | Everyone |
 | `jmanhunt.none` | Allows a player to become unassigned (none). | Everyone |
 | `jmanhunt.spectator` | Allows a player to become a spectator. | Everyone |
+| `jmanhunt.spectator.swaplobby` | Allows a spectator to switch to another lobby's match from the toolbar match browser. | Everyone |

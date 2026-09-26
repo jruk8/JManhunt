@@ -639,6 +639,19 @@ public final class GameManager implements MatchControl {
     /** True when newcomers have a lobby to wait in. */
     public boolean hasLobbyLocation(int lobbyId) { return worldEngine.hasLobbyLocation(lobbyId); }
 
+    /** Teleports players to a lobby spawn, announcing the travel. */
+    public boolean teleportToLobby(List<Player> targets, int lobbyId) {
+        return worldEngine.teleportToLobby(targets, lobbyId);
+    }
+
+    /** Pins respawn locations to a lobby spawn without announcing. */
+    public boolean setSpawnToLobbyQuiet(List<Player> targets, int lobbyId) {
+        return worldEngine.setSpawnToLobbyQuiet(targets, lobbyId);
+    }
+
+    /** Center surface point of a match cell, or empty without the engine. */
+    public Optional<Location> cellCenter(long cellIndex) { return worldEngine.cellCenter(cellIndex); }
+
 
     /** True when the lobby world is loaded or has a folder waiting. */
     public boolean lobbyWorldExists() { return worldEngine.lobbyWorldExists(); }

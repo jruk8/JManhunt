@@ -182,7 +182,7 @@ public final class SettingRegistry {
             case BOOL -> validateBool(trimmed);
             case INT -> validateInt(descriptor, trimmed, lookup);
             case FLOAT -> validateFloat(descriptor, trimmed, lookup);
-            case STRING -> ValidationOutcome.ok(trimmed);
+            case STRING -> validateString(descriptor, trimmed);
             case OPTION -> validateOption(descriptor, trimmed);
         };
     }
@@ -227,6 +227,20 @@ public final class SettingRegistry {
         return ValidationOutcome.ok(value);
     }
 
+    private static ValidationOutcome validateString(SettingDescriptor descriptor, String trimmed) {
+        if (descriptor.min() == null && descriptor.max() == null) {
+            return ValidationOutcome.ok(trimmed);
+        }
+        int length = trimmed.length();
+        int min = descriptor.min() == null ? 0 : descriptor.min().intValue();
+        int max = descriptor.max() == null ? Integer.MAX_VALUE : descriptor.max().intValue();
+        if (length >= min && length <= max) {
+            return ValidationOutcome.ok(trimmed);
+        }
+        return ValidationOutcome.fail("manhunt.setting-out-of-range",
+                Map.of("bounds", boundsText(descriptor, descriptor.max())));
+    }
+
     private static ValidationOutcome validateOption(SettingDescriptor descriptor, String trimmed) {
         for (String option : descriptor.options()) {
             if (option.equalsIgnoreCase(trimmed)) {
@@ -256,10 +270,25 @@ public final class SettingRegistry {
                 Map.of("bounds", boundsText(descriptor, max)));
     }
 
+    /** True when the setting shows an allowed-bounds line: numbers always, strings when bounded. */
+    public static boolean hasBounds(SettingDescriptor descriptor) {
+        return descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT
+                || (descriptor.type() == SettingType.STRING
+                        && (descriptor.min() != null || descriptor.max() != null));
+    }
+
     /** Human bounds text, with dynamic maxima resolved. */
     public static String boundsText(SettingDescriptor descriptor, Double resolvedMax) {
         Double max = resolvedMax == null ? descriptor.max() : resolvedMax;
         Double min = descriptor.min();
+        if (descriptor.type() == SettingType.STRING && (min != null || max != null)) {
+            int low = min == null ? 0 : min.intValue();
+            int high = max == null ? Integer.MAX_VALUE : max.intValue();
+            if (low == high) {
+                return "exactly " + low + " characters";
+            }
+            return "between " + low + " and " + high + " characters";
+        }
         if (descriptor.minusOneOrMin() && min != null) {
             return "-1 or at least " + displayNumber(min);
         }
@@ -326,6 +355,12 @@ public final class SettingRegistry {
     private static SettingDescriptor string(String path, String def) {
         return new SettingDescriptor(path, SettingType.STRING, def,
                 null, null, List.of(), Map.of(), false,
+                SettingDescriptor.DynamicBound.NONE, false);
+    }
+
+    private static SettingDescriptor stringLength(String path, String def, int length) {
+        return new SettingDescriptor(path, SettingType.STRING, def,
+                (double) length, (double) length, List.of(), Map.of(), false,
                 SettingDescriptor.DynamicBound.NONE, false);
     }
 
@@ -575,6 +610,9 @@ public final class SettingRegistry {
         entries.add(bool("settings.players.friendly-fire.hunter", true));
         entries.add(bool("settings.players.invulnerability.on-game-end.enabled", true));
         entries.add(bool("settings.players.invulnerability.none-players.enabled", true));
+        entries.add(stringLength("settings.players.spectator.toolbar.layout", "cp######b", 9));
+        entries.add(bool("settings.players.spectator.toolbar.lock-on", true));
+        entries.add(intVal("settings.players.spectator.toolbar.tp-distance", 25, 1, null));
         entries.add(bool("settings.players.announce-roles.chat.enabled", true));
         entries.add(bool("settings.players.announce-roles.title.enabled", true));
         entries.add(floatVal("settings.players.announce-roles.title.fade-in-seconds", 0.5, 0.0, null));

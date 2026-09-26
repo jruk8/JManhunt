@@ -129,7 +129,7 @@ public final class SettingButtons {
 
     private List<Component> lore(SettingDescriptor descriptor, Integer lobby) {
         String allowed = null;
-        if (descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT) {
+        if (SettingRegistry.hasBounds(descriptor)) {
             allowed = SettingRegistry.boundsText(descriptor,
                     path -> overrides.effectiveRaw(lobby, path));
         }
