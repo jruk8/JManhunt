@@ -120,10 +120,14 @@ while in the lobby world joins that lobby with role `none`, the same as
 `/manhunt lobby join` with role `none` (no teleport, since they are
 already there). Players already in that lobby, and players in a running
 match, are left alone. Where boxes overlap, the box whose midpoint is
-nearest wins. Walking out of every box moves members to
-`lobbies.bounds.exit-lobby-id`, which leaves them lobby-less by default;
-this only fires for members whose lobby has complete bounds, and never
-for players in a live match. Record two opposite feet-block corners with
+nearest wins. Walking out of every box is governed by
+`lobbies.bounds.exit-behavior`: `KEEP_IN_LOBBY` (default) keeps the
+membership, so the walk-out is ignored; `EXIT_LOBBY` leaves the lobby,
+moving members to `lobbies.bounds.exit-lobby-id` (lobby-less by
+default), unless the destination lands straight inside another lobby's
+box, in which case they join that lobby instead. Either way this only
+fires for members whose lobby has complete bounds, and never for
+players in a live match. Record two opposite feet-block corners with
 `/manhunt worldengine lobbyconfig pos1|pos2`, then store them with
 `/manhunt worldengine lobbyconfig setbounds <lobby-id>` (tab completion
 suggests the next id without bounds; overwriting existing bounds needs

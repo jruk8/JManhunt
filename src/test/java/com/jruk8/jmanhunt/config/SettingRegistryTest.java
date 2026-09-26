@@ -86,6 +86,15 @@ class SettingRegistryTest {
     }
 
     @Test
+    void boundsExitBehaviorAcceptsBothModes() {
+        assertEquals("EXIT_LOBBY",
+                validate("lobbies.bounds.exit-behavior", "exit_lobby").value());
+        assertEquals("KEEP_IN_LOBBY",
+                validate("lobbies.bounds.exit-behavior", "keep_in_lobby").value());
+        assertFalse(validate("lobbies.bounds.exit-behavior", "block").ok());
+    }
+
+    @Test
     void toolbarTpDistanceMinOne() {
         assertEquals(1,
                 validate("settings.players.spectator.toolbar.tp-distance", "1").value());

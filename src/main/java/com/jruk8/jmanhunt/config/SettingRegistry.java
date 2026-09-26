@@ -481,6 +481,8 @@ public final class SettingRegistry {
         entries.add(bool("lobbies.join-teleports-to-lobby", true));
         entries.add(option("lobbies.announce-lobby-changes", "ALL", "ALL", "SELF", "MEMBERS", "NONE"));
         entries.add(intVal("lobbies.bounds.exit-lobby-id", -1, null, null));
+        entries.add(option("lobbies.bounds.exit-behavior", "KEEP_IN_LOBBY",
+                "KEEP_IN_LOBBY", "EXIT_LOBBY"));
         entries.add(option("lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS",
                 "HOLD", "JOIN_ANY", "JOIN_SPECTATORS", "SUBLOBBY", "SUBLOBBY_WITH_SPECTATORS"));
         entries.add(intMinusOne("lobbies.queue-caps.speedrunner", -1, 1));

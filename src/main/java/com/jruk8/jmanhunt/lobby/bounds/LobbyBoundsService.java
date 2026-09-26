@@ -177,9 +177,12 @@ public final class LobbyBoundsService implements Listener {
     }
 
     /**
-     * Moves a lobby member standing outside every box to the configured
-     * exit lobby. Only fires for members whose own lobby has complete
-     * bounds, and never for players in a live match.
+     * Handles a lobby member standing outside every box. Under
+     * KEEP_IN_LOBBY the exit is ignored and membership stays; under
+     * EXIT_LOBBY a destination inside another lobby's box transitions
+     * there instead, else the member leaves for the exit destination.
+     * Only fires for members whose own lobby has complete bounds, and
+     * never for players in a live match.
      */
     private void exitBounds(Player player, Map<Integer, LobbyBounds.Bound> bounds) {
         Optional<Lobby> current = lobbies.lobbyOf(player.getUniqueId());
@@ -190,18 +193,65 @@ public final class LobbyBoundsService implements Listener {
             return;
         }
         int lobbyId = current.get().id();
-        int target = plugin.configService().getInt("lobbies.bounds.exit-lobby-id", -1);
-        if (target == lobbyId) {
+        if (exitBehavior() == LobbyBoundsExitBehavior.KEEP_IN_LOBBY) {
             return;
         }
-        if (target < 0 || (!lobbies.multiLobbyAllowed() && target != 0)) {
+        Location at = player.getLocation();
+        OptionalInt transition = transitionTarget(bounds, lobbyId,
+                at.getX(), at.getY(), at.getZ());
+        if (transition.isPresent()) {
+            int target = transition.getAsInt();
+            lobbies.setLobby(player.getUniqueId(), target);
+            lobbies.announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.of(target));
+            game.updateAutostartState();
+            return;
+        }
+        int target = plugin.configService().getInt("lobbies.bounds.exit-lobby-id", -1);
+        int destination = exitDestination(lobbyId, target, lobbies.multiLobbyAllowed());
+        if (destination == lobbyId) {
+            return;
+        }
+        if (destination < 0) {
             lobbies.remove(player.getUniqueId());
             lobbies.announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.empty());
         } else {
-            lobbies.setLobby(player.getUniqueId(), target);
-            lobbies.announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.of(target));
+            lobbies.setLobby(player.getUniqueId(), destination);
+            lobbies.announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.of(destination));
         }
         game.updateAutostartState();
+    }
+
+    private LobbyBoundsExitBehavior exitBehavior() {
+        return LobbyBoundsExitBehavior.parse(
+                plugin.configService().getString("lobbies.bounds.exit-behavior", "KEEP_IN_LOBBY"));
+    }
+
+    /**
+     * Different lobby whose box contains the destination, if any. Pure
+     * for tests.
+     */
+    static OptionalInt transitionTarget(Map<Integer, LobbyBounds.Bound> bounds, int currentId,
+            double x, double y, double z) {
+        OptionalInt match = LobbyBounds.match(bounds, x, y, z);
+        if (match.isPresent() && match.getAsInt() != currentId) {
+            return match;
+        }
+        return OptionalInt.empty();
+    }
+
+    /**
+     * Exit destination under EXIT_LOBBY: the configured target lobby,
+     * -1 for lobby-less, or the current lobby when the exit changes
+     * nothing. Pure for tests.
+     */
+    static int exitDestination(int currentId, int target, boolean multiLobbyAllowed) {
+        if (target == currentId) {
+            return currentId;
+        }
+        if (target < 0 || (!multiLobbyAllowed && target != 0)) {
+            return -1;
+        }
+        return target;
     }
 
     private void drawPending(Player player, Location first, Location second) {

@@ -128,12 +128,30 @@ public class LobbiesConfig extends OkaeriConfig {
         @CustomKey("exit-lobby-id")
         private int exitLobbyId = -1;
 
+        @CustomKey("exit-behavior")
+        @Comment({
+                "What walking out of every bounds box does: KEEP_IN_LOBBY",
+                "keeps the lobby membership, EXIT_LOBBY leaves the lobby",
+                "for exit-lobby-id (unless the destination lands straight",
+                "inside another lobby's box).",
+                "Default: KEEP_IN_LOBBY"
+        })
+        private String exitBehavior = "KEEP_IN_LOBBY";
+
         public int getExitLobbyId() {
             return exitLobbyId;
         }
 
         public void setExitLobbyId(int exitLobbyId) {
             this.exitLobbyId = exitLobbyId;
+        }
+
+        public String getExitBehavior() {
+            return exitBehavior;
+        }
+
+        public void setExitBehavior(String exitBehavior) {
+            this.exitBehavior = exitBehavior;
         }
     }
 

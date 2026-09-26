@@ -151,10 +151,16 @@ lobbies:
   # Default: ALL
   announce-lobby-changes: ALL
   bounds:
+    # What walking out of every bounds box does: KEEP_IN_LOBBY
+    # keeps the lobby membership, EXIT_LOBBY leaves the lobby
+    # for exit-lobby-id (unless the destination lands straight
+    # inside another lobby's box).
+    # Default: KEEP_IN_LOBBY
+    exit-behavior: KEEP_IN_LOBBY
     # Where lobby members go when they leave their lobby's bounds box.
-    # Only fires for members whose lobby has complete bounds, and never
-    # for players in a live match. Use -1 (or any negative value) to
-    # leave them without a lobby.
+    # Only applies under EXIT_LOBBY. Only fires for members whose lobby
+    # has complete bounds, and never for players in a live match. Use -1
+    # (or any negative value) to leave them without a lobby.
     # Default: -1
     exit-lobby-id: -1
   # What /manhunt setplayer does when the target's lobby has a live match.
