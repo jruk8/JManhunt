@@ -97,6 +97,18 @@ public final class MatchStore {
                 .filter(instance -> instance.originLobbyId() == lobbyId).toList();
     }
 
+    /**
+     * Lowest-numbered live sublobby (the oldest running one); empty when
+     * none runs. Parent-hosted matches have no number and never win. Pure
+     * for tests.
+     */
+    public static Optional<GameInstance> oldestSubLobby(java.util.Collection<GameInstance> instances) {
+        return instances.stream()
+                .filter(instance -> instance.active() && !instance.ending()
+                        && instance.subLobby() != null)
+                .min(Comparator.comparingInt(instance -> instance.subLobby().subId()));
+    }
+
     /** True when the player actively participates in any live match. */
     public boolean isInLiveInstance(UUID playerId) {
         return instanceOf(playerId).isPresent();

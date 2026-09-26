@@ -165,9 +165,11 @@ lobbies:
   # - JOIN_SPECTATORS joins spectators and holds everyone else,
   # - SUBLOBBY queues roles for the next sublobby (theoretically infinite matches
   # on one lobby).
+  # - SUBLOBBY_WITH_SPECTATORS queues like SUBLOBBY, but spectators always
+  # join the oldest running sublobby.
   #
-  # Default: SUBLOBBY
-  mid-match-setplayer: SUBLOBBY
+  # Default: SUBLOBBY_WITH_SPECTATORS
+  mid-match-setplayer: SUBLOBBY_WITH_SPECTATORS
   # Per-role queue caps for each lobby. Only enforced on the queue before a
   # match starts, and bypassed with -force. Lowering a cap below the current
   # queue blocks new entries of that role but never kicks queued players.

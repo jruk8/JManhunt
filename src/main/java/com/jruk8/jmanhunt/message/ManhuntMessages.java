@@ -416,6 +416,14 @@ public class ManhuntMessages extends OkaeriConfig {
     private String setInMatch = "{prefix}<yellow>{player} is in a running match. Manage them with " +
             "<white>/manhunt game leave<yellow> and <white>/manhunt game join<yellow>.";
 
+    @CustomKey("setplayer-needs-force")
+    private String setplayerNeedsForce = "{prefix}<red>{player} is in an ongoing match. Re-run with " +
+            "<white>-f<red> to change their role.";
+
+    @CustomKey("setplayer-invalid-cancel")
+    private String setplayerInvalidCancel = "{prefix}<red>Match <white>{id}<red> no longer has both sides " +
+            "fielded ({reason}) and was cancelled.";
+
     @CustomKey("setplayer-held")
     private String setplayerHeld = "{prefix}<yellow>A match is in progress. You are queued as " +
             "<white>{role}<yellow> for the next game.";

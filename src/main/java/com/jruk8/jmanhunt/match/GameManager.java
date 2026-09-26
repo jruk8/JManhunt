@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -312,6 +313,14 @@ public final class GameManager implements MatchControl {
     }
 
     /**
+     * Mid-match setplayer to AFK or NONE: a full leave plus a lobby
+     * return under the given role. The role must be AFK or NONE.
+     */
+    public int leaveMatchToLobby(GameInstance instance, Player player, Role role) {
+        return matchFinish.leaveMatchToLobby(instance, player, role);
+    }
+
+    /**
      * Removes a begun-match participant standing outside their cell or in
      * the lobby world, with a reason notice. Returns true when the player
      * was removed.
@@ -563,6 +572,11 @@ public final class GameManager implements MatchControl {
         return MatchFinishService.canProgress(hunterCount, runnerCount);
     }
 
+    /** Why a match with these buckets cannot progress. Pure for tests. */
+    static String invalidReason(int hunterCount, int runnerCount) {
+        return MatchFinishService.invalidReason(hunterCount, runnerCount);
+    }
+
     /** Winner when a bucket is empty; empty when both sides stand. Pure for tests. */
     static Optional<Role> bucketWinner(int hunterCount, int runnerCount) {
         return MatchFinishService.bucketWinner(hunterCount, runnerCount);
@@ -571,6 +585,25 @@ public final class GameManager implements MatchControl {
     /** Newest live match (running the least time); empty when none runs. Pure for tests. */
     static Optional<GameInstance> leastTimeMatch(java.util.Collection<GameInstance> instances) {
         return MatchStartService.leastTimeMatch(instances);
+    }
+
+    /** Lowest-numbered live sublobby (the oldest running one). Pure for tests. */
+    static Optional<GameInstance> oldestSubLobby(java.util.Collection<GameInstance> instances) {
+        return MatchStore.oldestSubLobby(instances);
+    }
+
+    /**
+     * Mid-match join target for one role change: spectators under
+     * SUBLOBBY_WITH_SPECTATORS join the oldest running sublobby of
+     * their lobby, falling back to the lobby match when no sublobby
+     * runs; every other case keeps the lobby match.
+     */
+    public GameInstance midMatchJoinTarget(MidMatchPolicy policy, int lobbyId, GameInstance live,
+            Role role) {
+        if (policy == MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS && role == Role.SPECTATOR) {
+            return oldestSubLobby(store.instancesForLobby(lobbyId)).orElse(live);
+        }
+        return live;
     }
 
     /**

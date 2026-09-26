@@ -61,11 +61,17 @@ match. With a live match and the world engine on,
 [Mid-match Setplayer](multi-instance.md#mid-match-setplayer)); with the
 engine off the in-match block stays and `/manhunt game join` plus
 `/manhunt game leave` are the mid-match tools (`-force` never bypasses
-this). Assigning someone else away from `afk` needs the command run
-twice within 10 seconds; changing your own role never needs
-confirmation. `-s` (`-silent`) suppresses the role messages and sounds
-the targets would get (including any role-change announcement); the
-sender still sees the full summary.
+this). Players already in the running match need `-f` (`-force`) for
+any role change; without it the command names the player and tells
+you to re-run with `-f`. A forced change to `spectator` removes them
+from the match exactly like `/manhunt game leave`, while `afk` and
+`none` remove them and return them to the lobby, out of the game
+entirely. A forced change that leaves the match without hunters or
+without speedrunners cancels the match. Assigning someone else away
+from `afk` needs the command run twice within 10 seconds; changing
+your own role never needs confirmation. `-s` (`-silent`) suppresses
+the role messages and sounds the targets would get (including any
+role-change announcement); the sender still sees the full summary.
 
 ## Quick Start
 

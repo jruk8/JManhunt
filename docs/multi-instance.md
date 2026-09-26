@@ -86,19 +86,22 @@ on; otherwise the in-match block stays.
 - `JOIN_ANY` joins any role straight into the running match.
 - `JOIN_SPECTATORS` joins spectators mid-match and holds every other
   role.
-- `SUBLOBBY` (default) queues the role for the next sublobby; see
+- `SUBLOBBY` queues the role for the next sublobby; see
   [Sublobbies](#sublobbies).
+- `SUBLOBBY_WITH_SPECTATORS` (default) queues like `SUBLOBBY`, except
+  spectators always join the oldest running sublobby (lowest number).
 
 Held players count against queue caps; joined players ignore them, like
 `game join`.
 
 ## Sublobbies
 
-With the default `SUBLOBBY` policy, a lobby never hosts a match
-directly: it only orchestrates sublobbies, and every match (the first
-included) runs as one. Sublobbies are numbered per lobby from zero and
-shown as `L{lobby-id}-{sublobby-id}` (so the first match in lobby 2 is
-`L2-0`); ids are never reused within a run.
+With the sublobby policies (`SUBLOBBY`, `SUBLOBBY_WITH_SPECTATORS`
+by default), a lobby never hosts a match directly: it only
+orchestrates sublobbies, and every match (the first included) runs as
+one. Sublobbies are numbered per lobby from zero and shown as
+`L{lobby-id}-{sublobby-id}` (so the first match in lobby 2 is `L2-0`);
+ids are never reused within a run.
 
 Sublobbies run one live match per parent lobby, exactly like direct
 hosting: the queue keeps gathering in the parent while its sublobby
@@ -119,8 +122,8 @@ delay cannot be joined.
 and speedrunners confirm with a second run within 10 seconds, drop their
 gear, and land wherever `settings.game-leave.destination` points
 (`SPECTATOR` by default, `LOBBY` to return to the queue as `none`). If a
-role change ever leaves a side empty (a last leaver included), the other
-side wins immediately.
+leave ever empties a side, the other side wins immediately; a forced
+`setplayer` change that empties a side cancels the match instead.
 
 ## Match Area Enforcement
 

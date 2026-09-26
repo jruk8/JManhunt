@@ -59,10 +59,12 @@ public class LobbiesConfig extends OkaeriConfig {
             "- JOIN_SPECTATORS joins spectators and holds everyone else,",
             "- SUBLOBBY queues roles for the next sublobby (theoretically infinite matches",
             "on one lobby).",
+            "- SUBLOBBY_WITH_SPECTATORS queues like SUBLOBBY, but spectators always",
+            "join the oldest running sublobby.",
             "",
-            "Default: SUBLOBBY"
+            "Default: SUBLOBBY_WITH_SPECTATORS"
     })
-    private MidMatchPolicy midMatchSetplayer = MidMatchPolicy.SUBLOBBY;
+    private MidMatchPolicy midMatchSetplayer = MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS;
 
     @CustomKey("queue-caps")
     @Comment({

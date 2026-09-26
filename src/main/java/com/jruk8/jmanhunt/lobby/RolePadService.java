@@ -182,9 +182,12 @@ public final class RolePadService implements Listener {
                 return;
             }
             MidMatchPolicy policy = MidMatchPolicy.parse(
-                    plugin.configService().getString("lobbies.mid-match-setplayer", "SUBLOBBY"));
+                    plugin.configService().getString(
+                            "lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
+            GameInstance target = targetLobby.map(lobby ->
+                    game.midMatchJoinTarget(policy, lobby.id(), live.get(), role)).orElse(live.get());
             if (policy.joinsMidMatch(role)
-                    && game.joinPlayers(live.get(), List.of(player), role) == 1) {
+                    && game.joinPlayers(target, List.of(player), role) == 1) {
                 return;
             }
             boolean member = live.get().isActive(player.getUniqueId());

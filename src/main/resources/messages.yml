@@ -131,6 +131,8 @@ manhunt:
   status-usage: "{prefix}<yellow>Usage: /manhunt status [id|all]"
   setplayer-usage: "{prefix}<yellow>Usage: /manhunt setplayer <selector> <hunter|speedrunner|spectator|afk|none> [-f|-force] [-s|-silent]"
   set-in-match: "{prefix}<yellow>{player} is in a running match. Manage them with <white>/manhunt game leave<yellow> and <white>/manhunt game join<yellow>."
+  setplayer-needs-force: "{prefix}<red>{player} is in an ongoing match. Re-run with <white>-f<red> to change their role."
+  setplayer-invalid-cancel: "{prefix}<red>Match <white>{id}<red> no longer has both sides fielded ({reason}) and was cancelled."
   setplayer-held: "{prefix}<yellow>A match is in progress. You are queued as <white>{role}<yellow> for the next game."
   setplayer-held-summary: "{prefix}<yellow>{count} player(s) held for the next game (match in progress)."
   setplayer-joined: "{prefix}<green>Joined <white>{count}<green> player(s) to the running match as <white>{role}<green>."

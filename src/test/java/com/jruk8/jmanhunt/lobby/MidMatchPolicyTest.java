@@ -15,13 +15,15 @@ class MidMatchPolicyTest {
         assertEquals(MidMatchPolicy.JOIN_ANY, MidMatchPolicy.parse("Join_Any"));
         assertEquals(MidMatchPolicy.JOIN_SPECTATORS, MidMatchPolicy.parse("JOIN_SPECTATORS"));
         assertEquals(MidMatchPolicy.SUBLOBBY, MidMatchPolicy.parse("sublobby"));
+        assertEquals(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS,
+                MidMatchPolicy.parse("sublobby_with_spectators"));
     }
 
     @Test
-    void parseFallsBackToSublobby() {
-        assertEquals(MidMatchPolicy.SUBLOBBY, MidMatchPolicy.parse("bogus"));
-        assertEquals(MidMatchPolicy.SUBLOBBY, MidMatchPolicy.parse(null));
-        assertEquals(MidMatchPolicy.SUBLOBBY, MidMatchPolicy.parse(""));
+    void parseFallsBackToSublobbyWithSpectators() {
+        assertEquals(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS, MidMatchPolicy.parse("bogus"));
+        assertEquals(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS, MidMatchPolicy.parse(null));
+        assertEquals(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS, MidMatchPolicy.parse(""));
     }
 
     @Test
@@ -52,5 +54,23 @@ class MidMatchPolicyTest {
         for (Role role : Role.values()) {
             assertFalse(MidMatchPolicy.SUBLOBBY.joinsMidMatch(role), role.name());
         }
+    }
+
+    @Test
+    void sublobbyWithSpectatorsOnlyJoinsSpectators() {
+        assertTrue(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS.joinsMidMatch(Role.SPECTATOR));
+        assertFalse(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS.joinsMidMatch(Role.HUNTER));
+        assertFalse(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS.joinsMidMatch(Role.SPEEDRUNNER));
+        assertFalse(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS.joinsMidMatch(Role.AFK));
+        assertFalse(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS.joinsMidMatch(Role.NONE));
+    }
+
+    @Test
+    void sublobbyPoliciesUseSubLobbies() {
+        assertTrue(MidMatchPolicy.SUBLOBBY.usesSubLobbies());
+        assertTrue(MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS.usesSubLobbies());
+        assertFalse(MidMatchPolicy.HOLD.usesSubLobbies());
+        assertFalse(MidMatchPolicy.JOIN_ANY.usesSubLobbies());
+        assertFalse(MidMatchPolicy.JOIN_SPECTATORS.usesSubLobbies());
     }
 }

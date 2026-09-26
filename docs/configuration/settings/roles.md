@@ -5,8 +5,9 @@ Every player holds one role: `hunter` and `speedrunner` play the match,
 like everyone else), `afk` waits it out in the lobby untouched, and `none`
 means unassigned: left alone like `afk`, except Quick Start always
 includes them.
-If a role change ever empties the hunters or the speedrunners mid-match,
-the other side wins immediately.
+If a leave ever empties the hunters or the speedrunners mid-match,
+the other side wins immediately. A forced `setplayer` change that
+empties a side cancels the match instead.
 
 Under `settings.announce-role-changes` (default `false`), changes between
 a passive role (`none`, `afk`, `spectator`) and an active one (`hunter`,

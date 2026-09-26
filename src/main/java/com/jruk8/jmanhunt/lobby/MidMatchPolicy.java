@@ -11,9 +11,10 @@ public enum MidMatchPolicy {
     HOLD,
     JOIN_ANY,
     JOIN_SPECTATORS,
-    SUBLOBBY;
+    SUBLOBBY,
+    SUBLOBBY_WITH_SPECTATORS;
 
-    /** Parses leniently; unknown values fall back to SUBLOBBY. */
+    /** Parses leniently; unknown values fall back to SUBLOBBY_WITH_SPECTATORS. */
     public static MidMatchPolicy parse(String raw) {
         if (raw != null) {
             for (MidMatchPolicy policy : values()) {
@@ -22,19 +23,25 @@ public enum MidMatchPolicy {
                 }
             }
         }
-        return SUBLOBBY;
+        return SUBLOBBY_WITH_SPECTATORS;
     }
 
     /**
      * True when this policy joins the live match instead of holding the
      * player for the next game. SUBLOBBY holds for the next sublobby by
-     * design. Pure for tests.
+     * design; SUBLOBBY_WITH_SPECTATORS holds everyone except spectators.
+     * Pure for tests.
      */
     public boolean joinsMidMatch(Role role) {
         return switch (this) {
             case JOIN_ANY -> true;
-            case JOIN_SPECTATORS -> role == Role.SPECTATOR;
+            case JOIN_SPECTATORS, SUBLOBBY_WITH_SPECTATORS -> role == Role.SPECTATOR;
             case HOLD, SUBLOBBY -> false;
         };
+    }
+
+    /** True when new matches run as sub-lobbies of the parent lobby. Pure for tests. */
+    public boolean usesSubLobbies() {
+        return this == SUBLOBBY || this == SUBLOBBY_WITH_SPECTATORS;
     }
 }

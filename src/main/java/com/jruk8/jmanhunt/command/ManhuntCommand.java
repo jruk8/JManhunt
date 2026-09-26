@@ -21,6 +21,7 @@ import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.ModifierTriggers;
+import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -629,9 +630,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * Assigns queued roles. While the target's lobby has no running match
      * this assigns directly; with a live match and the world engine on,
      * lobbies.mid-match-setplayer decides between holding the player for
-     * the next game and joining them mid-match. With the engine off the
-     * in-match block stays, and -force never bypasses it. Waking someone
-     * else's AFK role needs a second run within 10 seconds.
+     * the next game and joining them mid-match. Players already in the
+     * match need -f for any role change. A forced change to spectator
+     * leaves the match like /manhunt game leave; to AFK or NONE it
+     * leaves the match and returns to the lobby. Any forced change that
+     * leaves the match without both sides cancels it. With the engine
+     * off the in-match block stays, and -force never bypasses it.
+     * Waking someone else's AFK role needs a second run within 10 seconds.
      */
     private boolean setPlayer(CommandSender sender, String[] args) {
         SetPlayerFlags flags = parseSetPlayerFlags(args);
@@ -673,8 +678,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** Trailing -force/-silent flags plus the remaining argument count. */
-    private SetPlayerFlags parseSetPlayerFlags(String[] args) {
+    /** Trailing -force/-silent flags plus the remaining argument count. Pure for tests. */
+    static SetPlayerFlags parseSetPlayerFlags(String[] args) {
         boolean force = false;
         boolean silent = false;
         int end = args.length;
@@ -719,25 +724,87 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             message(sender, "manhunt.set-in-match", Map.of("player", player.getName()));
             return;
         }
+        boolean member = live.isActive(player.getUniqueId());
+        if (member && !force) {
+            message(sender, "manhunt.setplayer-needs-force", Map.of("player", player.getName()));
+            return;
+        }
+        if (member && role == Role.SPECTATOR) {
+            leaveMatchForSetPlayer(player, silent, live, tally);
+            return;
+        }
+        if (member && (role == Role.AFK || role == Role.NONE)) {
+            leaveMatchToLobbyForSetPlayer(player, role, silent, live, tally);
+            return;
+        }
         MidMatchPolicy policy = MidMatchPolicy.parse(
-                config.getString("lobbies.mid-match-setplayer", "SUBLOBBY"));
+                config.getString("lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
+        GameInstance target = targetLobby.map(lobby ->
+                game.midMatchJoinTarget(policy, lobby.id(), live, role)).orElse(live);
         if (policy.joinsMidMatch(role)
-                && game.joinPlayers(live, List.of(player), role) == 1) {
+                && game.joinPlayers(target, List.of(player), role) == 1) {
             tally.joined++;
             tally.assigned.add(player.getUniqueId());
             return;
         }
-        boolean member = live.isActive(player.getUniqueId());
         if (!member && !capAllows(targetLobby, role, force, tally.cappedIn)) {
             return;
         }
         assignSetPlayerRole(sender, player, role, silent, tally);
-        if (!member) {
+        if (member) {
+            cancelMatchIfInvalid(sender, live);
+        } else {
             tally.held++;
             if (!silent && role != Role.AFK) {
                 message(player, "manhunt.setplayer-held", Map.of("role", messages.roleName(role)));
             }
         }
+    }
+
+    /** Mid-match setplayer to spectator: the same leave /manhunt game leave performs. */
+    private void leaveMatchForSetPlayer(Player player, boolean silent, GameInstance live,
+            SetPlayerTally tally) {
+        Role from = playerStates.role(player);
+        int removed = game.leaveMatch(live, List.of(player), live.begun());
+        if (removed == 0) {
+            return;
+        }
+        tally.changed++;
+        tally.assigned.add(player.getUniqueId());
+        Role after = playerStates.role(player);
+        if (!silent && after != from) {
+            game.announceRoleChange(player, from, after);
+        }
+    }
+
+    /** Mid-match setplayer to AFK or NONE: a full leave plus a lobby return. */
+    private void leaveMatchToLobbyForSetPlayer(Player player, Role role, boolean silent,
+            GameInstance live, SetPlayerTally tally) {
+        Role from = playerStates.role(player);
+        int removed = game.leaveMatchToLobby(live, player, role);
+        if (removed == 0) {
+            return;
+        }
+        tally.changed++;
+        tally.assigned.add(player.getUniqueId());
+        if (!silent) {
+            game.announceRoleChange(player, from, role);
+        }
+    }
+
+    /** Cancels a live match a forced role change left without both sides. */
+    private void cancelMatchIfInvalid(CommandSender sender, GameInstance live) {
+        int hunters = game.activeHunterCount(live);
+        int runners = game.activeRunnerCount(live);
+        if (MatchFinishService.canProgress(hunters, runners) || !live.active() || live.ending()) {
+            return;
+        }
+        String reason = MatchFinishService.invalidReason(hunters, runners);
+        message(sender, "manhunt.setplayer-invalid-cancel",
+                Map.of("id", live.lobbyTag(), "reason", reason));
+        plugin.getLogger().warning(
+                "Match " + live.lobbyTag() + " cancelled by setplayer: " + reason + ".");
+        game.cancel(live);
     }
 
     /** Sets one player's role with teams sync and announcements. */
@@ -787,7 +854,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /** Trailing flags parsed from a setplayer invocation. */
-    private record SetPlayerFlags(boolean force, boolean silent, int end) {
+    record SetPlayerFlags(boolean force, boolean silent, int end) {
     }
 
     /** Mutable counters for one setplayer run. */

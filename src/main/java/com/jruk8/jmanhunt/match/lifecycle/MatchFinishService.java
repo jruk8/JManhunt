@@ -123,6 +123,20 @@ public final class MatchFinishService {
         return hunterCount > 0 && runnerCount > 0;
     }
 
+    /**
+     * Why a match with these buckets cannot progress, for cancellation
+     * messages. Only meaningful when canProgress is false. Pure for tests.
+     */
+    public static String invalidReason(int hunterCount, int runnerCount) {
+        if (hunterCount <= 0 && runnerCount <= 0) {
+            return "neither side is fielded";
+        }
+        if (hunterCount <= 0) {
+            return "no hunters remain";
+        }
+        return "no speedrunners remain";
+    }
+
     /** Winner when a bucket is empty; empty when both sides stand. Pure for tests. */
     public static Optional<Role> bucketWinner(int hunterCount, int runnerCount) {
         if (hunterCount == 0 && runnerCount == 0) {
@@ -202,6 +216,26 @@ public final class MatchFinishService {
         plugin.roleTeams().sync(player);
         messages.message(player, "game.leave-success", Map.of());
         return before;
+    }
+
+    /**
+     * Mid-match setplayer to AFK or NONE: a full leave (gear, compass,
+     * announcements, bucket checks) plus a lobby return under the given
+     * role. The role must be AFK or NONE. Returns the number removed.
+     */
+    public int leaveMatchToLobby(GameInstance instance, Player player, Role role) {
+        int removed = leaveMatch(instance, List.of(player), instance.begun());
+        if (removed == 0) {
+            return 0;
+        }
+        playerStates.setRole(player, role);
+        worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
+        worldEngine.setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            player.setGameMode(GameMode.SURVIVAL);
+        }
+        plugin.roleTeams().sync(player);
+        return removed;
     }
 
     /** Moves a leaver to the lobby or the spectator box. */
