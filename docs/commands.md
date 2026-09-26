@@ -122,6 +122,20 @@ role is refused with a notice. Multiple lobbies need the world engine;
 with it off, everyone shares lobby 0. New to lobbies? Start with the
 [Lobby Quick Start](lobby-quick-start.md).
 
+## Team Chat
+
+Hunters and speedrunners in a match can talk privately by prefixing a
+line with `@team` or `@t`: the line goes to same-team members only
+instead of the public broadcast. A bare prefix chats a usage hint.
+Anything else (spectators, lobby idlers, players outside a match)
+sends raw with the prefix intact. Under
+`settings.server.team-chat`, `enabled` toggles the feature,
+`prefixes` lists the aliases, and `spectators-see` lets
+fake-spectator watchers read every team line. The
+`chat.team-chat-format` message supports `{role}`, `{rolecolor}`,
+`{player}`, and `{message}`; recipients hear the `chat.team-chat`
+sound from `sounds.yml`.
+
 ## Joining and Leaving a Running Match
 
 `/manhunt game join <id> [role] [selector]` adds players to a live match,

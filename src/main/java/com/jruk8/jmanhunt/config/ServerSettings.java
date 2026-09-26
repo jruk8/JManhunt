@@ -3,6 +3,8 @@ package com.jruk8.jmanhunt.config;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Server settings. */
 @SuppressWarnings("FieldMayBeFinal")
@@ -38,6 +40,10 @@ public class ServerSettings extends OkaeriConfig {
 
     @Comment("Advanced server interop toggles.")
     private Advanced advanced = new Advanced();
+
+    @CustomKey("team-chat")
+    @Comment("Team chat (@team ...) for match participants.")
+    private TeamChat teamChat = new TeamChat();
 
     public boolean isAnnounceConfigChanges() {
         return announceConfigChanges;
@@ -77,6 +83,67 @@ public class ServerSettings extends OkaeriConfig {
 
     public void setAdvanced(Advanced advanced) {
         this.advanced = advanced;
+    }
+
+    public TeamChat getTeamChat() {
+        return teamChat;
+    }
+
+    public void setTeamChat(TeamChat teamChat) {
+        this.teamChat = teamChat;
+    }
+
+    /** Team chat for match participants. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class TeamChat extends OkaeriConfig {
+
+        @CustomKey("enabled")
+        @Comment({
+                "When true, messages starting with a team-chat prefix go",
+                "to same-team match members instead of public chat.",
+                "Default: true"
+        })
+        private boolean enabled = true;
+
+        @CustomKey("prefixes")
+        @Comment({
+                "Prefix aliases that mark a line as team chat. Each must",
+                "end at a word boundary, so @teammate stays public.",
+                "Default: [@team, @t]"
+        })
+        private List<String> prefixes = new ArrayList<>(List.of("@team", "@t"));
+
+        @CustomKey("spectators-see")
+        @Comment({
+                "When true, spectators in fake-spectator mode see all team",
+                "chat. Lobby idlers never do.",
+                "Default: true"
+        })
+        private boolean spectatorsSee = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public List<String> getPrefixes() {
+            return prefixes;
+        }
+
+        public void setPrefixes(List<String> prefixes) {
+            this.prefixes = prefixes;
+        }
+
+        public boolean isSpectatorsSee() {
+            return spectatorsSee;
+        }
+
+        public void setSpectatorsSee(boolean spectatorsSee) {
+            this.spectatorsSee = spectatorsSee;
+        }
     }
 
     /** Advanced server interop toggles. */

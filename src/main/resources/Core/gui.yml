@@ -74,6 +74,7 @@ categories:
   server/status: MAP
   server/advanced: ANVIL
   server/anti-spawn-camp: IRON_BARS
+  server/team-chat: WRITABLE_BOOK
 descriptions:
   "settings.match": "Match flow: autostart, headstarts, leaving, and victory."
   "settings.match.autostart": "Begin matches automatically once queues fill up."
@@ -150,6 +151,10 @@ descriptions:
   "settings.server.advanced.validate-modifier-editor-commands": "Reject bad roots and give items in the editor."
   "settings.server.anti-spawn-camp": "Punish farming kills on one victim."
   "settings.server.status": "Pick which lines status commands show."
+  "settings.server.team-chat": "Prefixed chat for match teammates."
+  "settings.server.team-chat.enabled": "Route prefixed lines to the team."
+  "settings.server.team-chat.prefixes": "Aliases that mark team chat lines."
+  "settings.server.team-chat.spectators-see": "Let fake spectators read team chat."
   "settings.match.autostart.enabled": "Start matches automatically once minimums are met."
   "settings.match.autostart.countdown-seconds": "Wait before auto-starting; 0 starts at once."
   "settings.match.autostart.minimums.hunter": "Queued hunters needed before autostart can begin."

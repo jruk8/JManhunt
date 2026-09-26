@@ -64,8 +64,12 @@ public final class MessageService {
 
     /** Role display name prefixed with its configured color tag, without a reset. */
     public String roleName(Role role) {
-        return string("role-colors." + role.name().toLowerCase(Locale.ROOT), defaultRoleColor(role))
-                + role.displayName();
+        return roleColor(role) + role.displayName();
+    }
+
+    /** Configured color tag for one role, without any reset. */
+    public String roleColor(Role role) {
+        return string("role-colors." + role.name().toLowerCase(Locale.ROOT), defaultRoleColor(role));
     }
 
     private static String defaultRoleColor(Role role) {

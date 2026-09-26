@@ -63,3 +63,9 @@ Under `compass`, heard by the compass holder:
 - `failure`: when a compass click fails to track: target too near or
   too far, signal interference, no target, or a scroll with nothing
   to cycle to.
+
+## Chat Sounds
+
+Under `chat`:
+
+- `team-chat`: heard by team chat recipients on each message.

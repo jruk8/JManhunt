@@ -30,7 +30,8 @@ public final class SettingRegistry {
             "world-engine.preloading.commands",
             "world-engine.lobby-presets.EMPTY.commands",
             "world-engine.lobby-presets.DEFAULT.commands",
-            "world-engine.lobby-presets.ADVANCED.commands");
+            "world-engine.lobby-presets.ADVANCED.commands",
+            "settings.server.team-chat.prefixes");
 
     private SettingRegistry() {
     }
@@ -637,6 +638,8 @@ public final class SettingRegistry {
         entries.add(bool("settings.server.status.show-ids", false));
         entries.add(bool("settings.server.advanced.disable-worldedit-navwand", true));
         entries.add(bool("settings.server.advanced.validate-modifier-editor-commands", true));
+        entries.add(bool("settings.server.team-chat.enabled", true));
+        entries.add(bool("settings.server.team-chat.spectators-see", true));
     }
 
     private static void addWorldEngineEntries(List<SettingDescriptor> entries) {

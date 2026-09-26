@@ -271,6 +271,12 @@ compass:
     weather: "weather"
     biome: "biome"
     line-of-sight: "line of sight"
+chat:
+  # Team chat line. {role} is the colored role name, {rolecolor}
+  # the raw role color tag, {player} the sender, {message} the
+  # escaped text. No {prefix} on purpose: it stays readable.
+  team-chat-format: "<gray>[{role}<gray>] <white>{player}: {rolecolor}{message}"
+  team-chat-usage: "{prefix}<yellow>Usage: @team <message> to chat with your team."
 
 # One color tag per role. Used directly in templates as {role-color-<role>}
 # and by code that builds colored role names.

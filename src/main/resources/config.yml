@@ -774,6 +774,23 @@ settings:
       # Default: true
       validate-modifier-editor-commands: true
 
+    # Team chat (@team ...) for match participants.
+    team-chat:
+      # When true, messages starting with a team-chat prefix go
+      # to same-team match members instead of public chat.
+      # Default: true
+      enabled: true
+      # Prefix aliases that mark a line as team chat. Each must
+      # end at a word boundary, so @teammate stays public.
+      # Default: [@team, @t]
+      prefixes:
+      - "@team"
+      - "@t"
+      # When true, spectators in fake-spectator mode see all team
+      # chat. Lobby idlers never do.
+      # Default: true
+      spectators-see: true
+
 # Grid-based single-world manhunt engine.
 # Uses persistent square-spiral cell indexing and teleports participants to
 # randomized points near each cell center.

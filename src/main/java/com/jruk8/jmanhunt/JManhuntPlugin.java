@@ -22,10 +22,12 @@ import com.jruk8.jmanhunt.lobby.LobbyProtectionService;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.RolePadService;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.match.TeamChatService;
 import com.jruk8.jmanhunt.match.listeners.PlayerCombatListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerConnectionListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerMovementListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
+import com.jruk8.jmanhunt.match.listeners.TeamChatListener;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesRegistrar;
@@ -326,6 +328,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerCombatListener(
                 this, playerStates, game, configService, compass, stats, lobbyService,
                 worldEngine, winConditionEngine, respawn, disconnects, disconnectTasks), this);
+        setupChatListeners();
         getServer().getPluginManager().registerEvents(new PlayerMovementListener(
                 playerStates, game, winConditionEngine, worldEngine, fakeSpectators), this);
         getServer().getPluginManager().registerEvents(
@@ -344,10 +347,17 @@ public final class JManhuntPlugin extends JavaPlugin {
                 worldEngine::lobbyWorldName, debugService,
                 command::boundPos1View, command::boundPos2View,
                 command::devPos1View, command::devPos2View), this);
-        getServer().getPluginManager().registerEvents(new TutorialChatListener(this, tutorialService), this);
         getServer().getPluginManager().registerEvents(new GuiListener(guiService), this);
         getServer().getPluginManager().registerEvents(
                 new UpdateCheckJoinListener(updateChecks, updateCheckNotifier), this);
+    }
+
+    /** Registers chat listeners: team chat plus the setup tutorial. */
+    private void setupChatListeners() {
+        getServer().getPluginManager().registerEvents(new TeamChatListener(this,
+                new TeamChatService(game, playerStates, fakeSpectators, configService,
+                        messages, sounds)), this);
+        getServer().getPluginManager().registerEvents(new TutorialChatListener(this, tutorialService), this);
     }
 
     /** Creates the spectator toolbar and registers its listener. */

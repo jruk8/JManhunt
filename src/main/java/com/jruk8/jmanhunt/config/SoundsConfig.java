@@ -30,6 +30,7 @@ public class SoundsConfig extends OkaeriConfig {
     private Announce announce = new Announce();
     private Compass compass = new Compass();
     private Ui ui = new Ui();
+    private Chat chat = new Chat();
 
     public int getSoundsVersion() {
         return soundsVersion;
@@ -71,6 +72,14 @@ public class SoundsConfig extends OkaeriConfig {
         this.ui = ui;
     }
 
+    public Chat getChat() {
+        return chat;
+    }
+
+    public void setChat(Chat chat) {
+        this.chat = chat;
+    }
+
     /** One sound: toggle, namespaced key, pitch, and volume. */
     @Getter
     @SuppressWarnings("FieldMayBeFinal")
@@ -102,6 +111,23 @@ public class SoundsConfig extends OkaeriConfig {
 
         public void setVolume(double volume) {
             this.volume = volume;
+        }
+    }
+
+    /** Chat sounds. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Chat extends OkaeriConfig {
+
+        @CustomKey("team-chat")
+        @Comment("Heard by team chat recipients on each message.")
+        private SoundEntry teamChat = SoundEntry.of("block.calcite.place", 1.3, 0.8);
+
+        public SoundEntry getTeamChat() {
+            return teamChat;
+        }
+
+        public void setTeamChat(SoundEntry teamChat) {
+            this.teamChat = teamChat;
         }
     }
 

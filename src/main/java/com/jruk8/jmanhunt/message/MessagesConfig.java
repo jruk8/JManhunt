@@ -37,6 +37,9 @@ public class MessagesConfig extends OkaeriConfig {
     @CustomKey("compass")
     private CompassMessages compass = new CompassMessages();
 
+    @CustomKey("chat")
+    private ChatMessages chat = new ChatMessages();
+
     @CustomKey("role-colors")
     @Comment({
             "One color tag per role. Used directly in templates as",
