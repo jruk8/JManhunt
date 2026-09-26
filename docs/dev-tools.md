@@ -45,6 +45,9 @@ On load, the structure pastes first, then the bundled bounds and
 teleports are written into the lobby config at the paste corner,
 creating missing lobby entries and overwriting the bounds and
 teleports of existing ones (overrides and other fields are preserved).
+Overwritten lobby ids always warn in the console. Command loads that
+would overwrite ask first: rerun the same load within 10 seconds to
+confirm. Automated preset pastes during lobby generation never ask.
 Entries only build when the paste lands in the lobby world: loading
 anywhere else places blocks only, since lobby entries are
 lobby-world coordinates. With the world engine off, nonzero lobbies

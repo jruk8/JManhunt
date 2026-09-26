@@ -320,6 +320,7 @@ dev:
   pasted: "{prefix}<green>Pasted schematic <white>{name}<green>."
   load-missing: "{prefix}<red>No schematic named <white>{name}<red>."
   load-failed: "{prefix}<red>Could not paste schematic <white>{name}<red>."
+  load-overwrite-confirm: "{prefix}<yellow>Loading <white>{name}<yellow> overwrites stored lobbies: <white>{ids}<yellow>. Rerun within 10 seconds to confirm."
   list: "{prefix}<green>Schematics: <white>{value}"
   list-empty: "{prefix}<yellow>No schematics saved yet."
 

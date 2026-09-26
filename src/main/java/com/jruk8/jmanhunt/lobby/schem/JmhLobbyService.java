@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * .jmhlobby Bukkit wiring: save-time collection of the bounds and
@@ -160,16 +161,58 @@ public final class JmhLobbyService {
     }
 
     /**
+     * Lobby ids whose stored bounds or teleports the bundle would
+     * replace. Skipped ids (nonzero with the engine off) never count.
+     * Pure for tests.
+     */
+    public static Set<Integer> overwrittenIds(Map<String, LobbyConfig.LobbyEntry> lobbies,
+            JmhLobbyBundle bundle, boolean multiLobby) {
+        Set<Integer> overwritten = new HashSet<>();
+        for (BoundEntry entry : bundle.bounds()) {
+            if ((!multiLobby && entry.lobby() != 0) || overwritten.contains(entry.lobby())) {
+                continue;
+            }
+            LobbyConfig.LobbyEntry stored = lobbies.get(String.valueOf(entry.lobby()));
+            if (stored != null && stored.getBounds() != null
+                    && stored.getBounds().getPos1() != null
+                    && stored.getBounds().getPos2() != null) {
+                overwritten.add(entry.lobby());
+            }
+        }
+        for (TeleportEntry entry : bundle.teleports()) {
+            if ((!multiLobby && entry.lobby() != 0) || overwritten.contains(entry.lobby())) {
+                continue;
+            }
+            LobbyConfig.LobbyEntry stored = lobbies.get(String.valueOf(entry.lobby()));
+            if (stored != null && stored.getLobbytp() != null) {
+                overwritten.add(entry.lobby());
+            }
+        }
+        return overwritten;
+    }
+
+    /**
      * Builds bundled bounds and teleports into the live lobby config at
      * the paste corner, creating missing entries and overwriting the
      * bounds and teleports of existing ones (overrides and upkeep are
-     * preserved). Nonzero lobbies are skipped with a warning when the
-     * world engine is off, mirroring the lobbyconfig commands.
+     * preserved). Overwritten ids warn in the logger. Nonzero lobbies
+     * are skipped with a warning when the world engine is off, mirroring
+     * the lobbyconfig commands.
      */
     public BuiltCounts buildIntoLobbyConfig(JmhLobbyBundle bundle,
             int pasteX, int pasteY, int pasteZ) {
         LobbyConfig lobbyConfig = plugin.lobbyConfig();
         boolean multiLobby = plugin.configService().getBoolean("world-engine.enabled", false);
+        Set<Integer> overwritten = overwrittenIds(lobbyConfig.getLobbies(), bundle, multiLobby);
+        if (!overwritten.isEmpty()) {
+            plugin.logger().warning("Lobby bundle overwrites stored lobby "
+                    + (overwritten.size() == 1 ? "entry" : "entries") + " for "
+                    + "lobby id" + (overwritten.size() == 1 ? "" : "s") + ": "
+                    + overwritten.stream().sorted()
+                            .map(String::valueOf)
+                            .collect(Collectors.joining(", "))
+                    + ".");
+        }
         int bounds = 0;
         int teleports = 0;
         for (BoundEntry entry : bundle.bounds()) {

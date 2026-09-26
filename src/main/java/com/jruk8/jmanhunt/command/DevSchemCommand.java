@@ -28,20 +28,32 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Developer schematic tools ({@code /manhunt dev schem ...}). Corners are
  * the executing player's feet block when pos1/pos2 runs. Saved files land
  * in the lobby-schematics dir so devs can author default lobby presets;
  * loads paste centered on the executing player's feet. Not for production
- * use: it offers no safety rails beyond the lobby presets themselves.
+ * use: its only safety rail is the overwrite rerun on bundle loads.
  */
 public final class DevSchemCommand {
+    /** Rerun window for overwrite-confirming bundle loads. */
+    static final long CONFIRM_WINDOW_MILLIS = 10_000L;
+
+    /** One pending overwrite confirmation. */
+    record PendingLoad(String name, long at) {
+        boolean expired(long now) {
+            return now - at > CONFIRM_WINDOW_MILLIS;
+        }
+    }
+
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final LobbySchematicService schematics;
     private final Map<UUID, Location> pos1 = new HashMap<>();
     private final Map<UUID, Location> pos2 = new HashMap<>();
+    private final Map<UUID, PendingLoad> pendingLoads = new HashMap<>();
 
     public DevSchemCommand(JManhuntPlugin plugin, MessageService messages) {
         this.plugin = plugin;
@@ -216,13 +228,55 @@ public final class DevSchemCommand {
             messages.message(sender, "dev.load-missing", Map.of("name", name));
             return true;
         }
+        if (bundle.isFile() && confirmRequired(player, name, bundle)) {
+            return true;
+        }
         // World agnostic: pastes into whatever world the player stands in,
         // centered on their feet.
         if (schematics.pasteNbt(player.getWorld(), name, player.getLocation())) {
+            pendingLoads.remove(player.getUniqueId());
             messages.message(sender, "dev.pasted", Map.of("name", name));
         } else {
             messages.message(sender, "dev.load-failed", Map.of("name", name));
         }
+        return true;
+    }
+
+    /**
+     * True when the bundle load must wait for an explicit rerun: pasting
+     * in the lobby world over stored entries asks once, then proceeds
+     * when the same name reruns inside the window. Unreadable bundles
+     * skip the gate; the paste reports them.
+     */
+    private boolean confirmRequired(Player player, String name, File bundleFile) {
+        JmhLobbyService lobbies = new JmhLobbyService(plugin);
+        if (!player.getWorld().getName().equals(lobbies.lobbyWorldName())) {
+            return false;
+        }
+        JmhLobbyBundle bundle;
+        try {
+            bundle = lobbies.readBundle(bundleFile);
+        } catch (IOException unreadable) {
+            return false;
+        }
+        Set<Integer> overwritten = JmhLobbyService.overwrittenIds(
+                plugin.lobbyConfig().getLobbies(), bundle,
+                plugin.lobbyService().multiLobbyAllowed());
+        if (overwritten.isEmpty()) {
+            return false;
+        }
+        PendingLoad pending = pendingLoads.get(player.getUniqueId());
+        if (pending != null && pending.name().equals(name)
+                && !pending.expired(System.currentTimeMillis())) {
+            pendingLoads.remove(player.getUniqueId());
+            return false;
+        }
+        pendingLoads.put(player.getUniqueId(),
+                new PendingLoad(name, System.currentTimeMillis()));
+        messages.message(player, "dev.load-overwrite-confirm",
+                Map.of("name", name, "ids", overwritten.stream().sorted()
+                        .map(String::valueOf)
+                        .collect(Collectors.joining(", "))));
         return true;
     }
 

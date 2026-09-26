@@ -41,6 +41,10 @@ public class DevMessages extends OkaeriConfig {
     @CustomKey("load-failed")
     private String loadFailed = "{prefix}<red>Could not paste schematic <white>{name}<red>.";
 
+    @CustomKey("load-overwrite-confirm")
+    private String loadOverwriteConfirm = "{prefix}<yellow>Loading <white>{name}<yellow> overwrites "
+            + "stored lobbies: <white>{ids}<yellow>. Rerun within 10 seconds to confirm.";
+
     @CustomKey("list")
     private String list = "{prefix}<green>Schematics: <white>{value}";
 

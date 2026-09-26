@@ -62,6 +62,14 @@ class DevSchemCommandTest {
     }
 
     @Test
+    void pendingLoadExpiresAfterTenSeconds() {
+        DevSchemCommand.PendingLoad pending = new DevSchemCommand.PendingLoad("arena", 1_000L);
+
+        assertFalse(pending.expired(1_000L + DevSchemCommand.CONFIRM_WINDOW_MILLIS));
+        assertTrue(pending.expired(1_001L + DevSchemCommand.CONFIRM_WINDOW_MILLIS));
+    }
+
+    @Test
     void validNameRejectsSeparatorsAndParentRefs() {
         assertTrue(DevSchemCommand.validName("arena"));
         assertTrue(DevSchemCommand.validName("my-arena_2"));

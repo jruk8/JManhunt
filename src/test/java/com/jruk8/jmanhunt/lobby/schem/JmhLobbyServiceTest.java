@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentCaptor;
 
 /** Bundle collection, building, and orphan handling. */
 class JmhLobbyServiceTest {
@@ -140,6 +141,61 @@ class JmhLobbyServiceTest {
         assertEquals(45.0f, tp.getYaw());
         assertEquals(10.0f, tp.getPitch());
         verify(lobbyConfig).save();
+    }
+
+    @Test
+    void overwrittenIdsCoversStoredBoundsAndTeleports() {
+        Map<String, LobbyConfig.LobbyEntry> stored = new LinkedHashMap<>();
+        stored.put("0", entry(0, 64, 0, 9, 73, 9, null, null, null));
+        stored.put("1", entry(null, null, null, null, null, null, 5.5, 65.0, 5.5));
+        stored.put("2", new LobbyConfig.LobbyEntry());
+        JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),
+                List.of(new BoundEntry(0, new Offset(0, 0, 0), new Offset(9, 9, 9)),
+                        new BoundEntry(2, new Offset(0, 0, 0), new Offset(9, 9, 9)),
+                        new BoundEntry(3, new Offset(0, 0, 0), new Offset(9, 9, 9))),
+                List.of(new TeleportEntry(1, 5, 1, 5, 0.0f, 0.0f),
+                        new TeleportEntry(2, 5, 1, 5, 0.0f, 0.0f)));
+
+        assertEquals(Set.of(0, 1),
+                JmhLobbyService.overwrittenIds(stored, bundle, true));
+        assertEquals(Set.of(0),
+                JmhLobbyService.overwrittenIds(stored, bundle, false));
+    }
+
+    @Test
+    void overwrittenIdsSkipsEngineOffNonzero() {
+        Map<String, LobbyConfig.LobbyEntry> stored = new LinkedHashMap<>();
+        stored.put("2", entry(0, 64, 0, 9, 73, 9, null, null, null));
+        JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),
+                List.of(new BoundEntry(2, new Offset(0, 0, 0), new Offset(9, 9, 9))),
+                List.of());
+
+        assertEquals(Set.of(2), JmhLobbyService.overwrittenIds(stored, bundle, true));
+        assertEquals(Set.of(), JmhLobbyService.overwrittenIds(stored, bundle, false));
+    }
+
+    @Test
+    void buildWarnsOverwrittenIds() {
+        Map<String, LobbyConfig.LobbyEntry> stored = new LinkedHashMap<>();
+        stored.put("0", entry(0, 64, 0, 9, 73, 9, 5.5, 65.0, 5.5));
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        LobbyConfig lobbyConfig = mock(LobbyConfig.class);
+        when(lobbyConfig.getLobbies()).thenReturn(stored);
+        when(plugin.lobbyConfig()).thenReturn(lobbyConfig);
+        ConfigService config = mock(ConfigService.class);
+        when(config.getBoolean("world-engine.enabled", false)).thenReturn(true);
+        when(plugin.configService()).thenReturn(config);
+        JManhuntLogger logger = mock(JManhuntLogger.class);
+        when(plugin.logger()).thenReturn(logger);
+        JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),
+                List.of(new BoundEntry(0, new Offset(0, 0, 0), new Offset(9, 9, 9))),
+                List.of());
+
+        new JmhLobbyService(plugin).buildIntoLobbyConfig(bundle, 0, 64, 0);
+
+        var captor = ArgumentCaptor.forClass(String.class);
+        verify(logger).warning(captor.capture());
+        assertTrue(captor.getValue().contains("0"));
     }
 
     @Test
