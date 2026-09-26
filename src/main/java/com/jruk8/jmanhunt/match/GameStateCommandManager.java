@@ -433,18 +433,7 @@ public final class GameStateCommandManager {
         ModifierTriggers.TriggerScope pickScope = ModifierTriggers.parseScope(configService.pickBehavior(name));
         ThreadLocalRandom random = ThreadLocalRandom.current();
         boolean sharedPicks = pickScope == ModifierTriggers.TriggerScope.PER_INVOKE;
-        Map<String, List<String>> shared = new HashMap<>();
-        if (sharedPicks) {
-            // One mob and one item roll for the whole activation: the shared
-            // lists carry concrete values, so per-executor tag evaluation
-            // downstream finds nothing left to re-roll.
-            Map<String, String> sharedDraws = new HashMap<>();
-            for (String list : List.of("console", "player", "hunter", "speedrunner")) {
-                shared.put(list, CommandPlaceholders.preresolveSharedRandoms(
-                        resolveCommandList(name, list), sharedDraws,
-                        CommandPlaceholders::rollSharedRandom));
-            }
-        }
+        Map<String, List<String>> shared = sharedLists(name, sharedPicks);
         TagContext consoleContext = tagContext(name, null, matchScope(null, match), matchId);
         if (chanceScope == ModifierTriggers.TriggerScope.PER_EXECUTOR) {
             if (ModifierTriggers.rollChance(chance, random.nextDouble())) {
@@ -471,6 +460,22 @@ public final class GameStateCommandManager {
             runExecutorPlayerLists(name, target, shared, sharedPicks,
                     tagContext(name, target, matchScope(target, match), matchId));
         }
+    }
+
+    private Map<String, List<String>> sharedLists(String name, boolean sharedPicks) {
+        Map<String, List<String>> shared = new HashMap<>();
+        if (sharedPicks) {
+            // One mob and one item roll for the whole activation: the shared
+            // lists carry concrete values, so per-executor tag evaluation
+            // downstream finds nothing left to re-roll.
+            Map<String, String> sharedDraws = new HashMap<>();
+            for (String list : List.of("console", "player", "hunter", "speedrunner")) {
+                shared.put(list, CommandPlaceholders.preresolveSharedRandoms(
+                        resolveCommandList(name, list), sharedDraws,
+                        CommandPlaceholders::rollSharedRandom));
+            }
+        }
+        return shared;
     }
 
     private void runExecutorPlayerLists(String name, Player target, Map<String, List<String>> shared,

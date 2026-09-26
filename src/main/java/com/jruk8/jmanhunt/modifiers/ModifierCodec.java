@@ -210,27 +210,31 @@ public final class ModifierCodec {
         }
         ModifierExecution execution = options.getExecution();
         if (execution != null) {
-            JsonObject written = new JsonObject();
-            if (execution.getSelection() != null) {
-                written.addProperty("selection", execution.getSelection());
-            }
-            ModifierPickRandom pick = execution.getPickRandom();
-            if (pick != null) {
-                JsonObject pickWritten = new JsonObject();
-                if (pick.getCount() != null) {
-                    pickWritten.addProperty("count", pick.getCount());
-                }
-                if (pick.getBehavior() != null) {
-                    pickWritten.addProperty("behavior", pick.getBehavior());
-                }
-                written.add("pick-random", pickWritten);
-            }
-            data.add("execution", written);
+            data.add("execution", executionData(execution));
         }
         if (options.getDelay() != null) {
             data.addProperty("delay", options.getDelay());
         }
         return data;
+    }
+
+    private static JsonObject executionData(ModifierExecution execution) {
+        JsonObject written = new JsonObject();
+        if (execution.getSelection() != null) {
+            written.addProperty("selection", execution.getSelection());
+        }
+        ModifierPickRandom pick = execution.getPickRandom();
+        if (pick != null) {
+            JsonObject pickWritten = new JsonObject();
+            if (pick.getCount() != null) {
+                pickWritten.addProperty("count", pick.getCount());
+            }
+            if (pick.getBehavior() != null) {
+                pickWritten.addProperty("behavior", pick.getBehavior());
+            }
+            written.add("pick-random", pickWritten);
+        }
+        return written;
     }
 
     private static JsonObject presetData(ModifierPreset preset) {
@@ -293,15 +297,7 @@ public final class ModifierCodec {
         ModifierBehavior behavior = new ModifierBehavior();
         JsonArray runs = optionalArray(data, "runs-on");
         if (runs != null) {
-            List<String> triggers = new ArrayList<>();
-            for (JsonElement trigger : runs) {
-                if (!trigger.isJsonPrimitive() || !trigger.getAsJsonPrimitive().isString()
-                        || !TRIGGER_PATTERN.matcher(trigger.getAsString()).matches()) {
-                    throw new Invalid();
-                }
-                triggers.add(trigger.getAsString());
-            }
-            behavior.setRunsOn(triggers);
+            behavior.setRunsOn(readTriggers(runs));
         }
         JsonObject onStart = optionalObject(data, "on-start");
         if (onStart != null) {
@@ -342,67 +338,91 @@ public final class ModifierCodec {
         ModifierOptions options = new ModifierOptions();
         JsonObject interval = optionalObject(data, "interval-settings");
         if (interval != null) {
-            ModifierInterval written = new ModifierInterval();
-            Double seconds = optionalDouble(interval, "interval", null, null, null);
-            if (seconds != null) {
-                written.setInterval(seconds);
-            }
-            Double deviation = optionalDouble(interval, "deviation", 0.0, null, null);
-            if (deviation != null) {
-                written.setDeviation(deviation);
-            }
-            String behavior = optionalString(interval, "behavior", null);
-            if (behavior != null) {
-                requireExecutorBehavior(behavior);
-                written.setBehavior(behavior);
-            }
-            options.setIntervalSettings(written);
+            options.setIntervalSettings(readInterval(interval));
         }
         JsonObject chance = optionalObject(data, "success-chance");
         if (chance != null) {
-            ModifierChance written = new ModifierChance();
-            Double fraction = optionalDouble(chance, "chance", 0.0, 1.0, null);
-            if (fraction != null) {
-                written.setChance(fraction);
-            }
-            String behavior = optionalString(chance, "behavior", null);
-            if (behavior != null) {
-                requireExecutorBehavior(behavior);
-                written.setBehavior(behavior);
-            }
-            options.setSuccessChance(written);
+            options.setSuccessChance(readChance(chance));
         }
         JsonObject execution = optionalObject(data, "execution");
         if (execution != null) {
-            ModifierExecution written = new ModifierExecution();
-            String selection = optionalString(execution, "selection", null);
-            if (selection != null) {
-                if (!selection.equals("IN_ORDER") && !selection.equals("PICK_RANDOM")) {
-                    throw new Invalid();
-                }
-                written.setSelection(selection);
-            }
-            JsonObject pick = optionalObject(execution, "pick-random");
-            if (pick != null) {
-                ModifierPickRandom pickWritten = new ModifierPickRandom();
-                Integer count = optionalInteger(pick, "count", 1, null, null);
-                if (count != null) {
-                    pickWritten.setCount(count);
-                }
-                String behavior = optionalString(pick, "behavior", null);
-                if (behavior != null) {
-                    requireExecutorBehavior(behavior);
-                    pickWritten.setBehavior(behavior);
-                }
-                written.setPickRandom(pickWritten);
-            }
-            options.setExecution(written);
+            options.setExecution(readExecution(execution));
         }
         Long delay = optionalLong(data, "delay", 0L, null, null);
         if (delay != null) {
             options.setDelay(delay);
         }
         return options;
+    }
+
+    private static List<String> readTriggers(JsonArray runs) {
+        List<String> triggers = new ArrayList<>();
+        for (JsonElement trigger : runs) {
+            if (!trigger.isJsonPrimitive() || !trigger.getAsJsonPrimitive().isString()
+                    || !TRIGGER_PATTERN.matcher(trigger.getAsString()).matches()) {
+                throw new Invalid();
+            }
+            triggers.add(trigger.getAsString());
+        }
+        return triggers;
+    }
+
+    private static ModifierInterval readInterval(JsonObject interval) {
+        ModifierInterval written = new ModifierInterval();
+        Double seconds = optionalDouble(interval, "interval", null, null, null);
+        if (seconds != null) {
+            written.setInterval(seconds);
+        }
+        Double deviation = optionalDouble(interval, "deviation", 0.0, null, null);
+        if (deviation != null) {
+            written.setDeviation(deviation);
+        }
+        String behavior = optionalString(interval, "behavior", null);
+        if (behavior != null) {
+            requireExecutorBehavior(behavior);
+            written.setBehavior(behavior);
+        }
+        return written;
+    }
+
+    private static ModifierChance readChance(JsonObject chance) {
+        ModifierChance written = new ModifierChance();
+        Double fraction = optionalDouble(chance, "chance", 0.0, 1.0, null);
+        if (fraction != null) {
+            written.setChance(fraction);
+        }
+        String behavior = optionalString(chance, "behavior", null);
+        if (behavior != null) {
+            requireExecutorBehavior(behavior);
+            written.setBehavior(behavior);
+        }
+        return written;
+    }
+
+    private static ModifierExecution readExecution(JsonObject execution) {
+        ModifierExecution written = new ModifierExecution();
+        String selection = optionalString(execution, "selection", null);
+        if (selection != null) {
+            if (!selection.equals("IN_ORDER") && !selection.equals("PICK_RANDOM")) {
+                throw new Invalid();
+            }
+            written.setSelection(selection);
+        }
+        JsonObject pick = optionalObject(execution, "pick-random");
+        if (pick != null) {
+            ModifierPickRandom pickWritten = new ModifierPickRandom();
+            Integer count = optionalInteger(pick, "count", 1, null, null);
+            if (count != null) {
+                pickWritten.setCount(count);
+            }
+            String behavior = optionalString(pick, "behavior", null);
+            if (behavior != null) {
+                requireExecutorBehavior(behavior);
+                pickWritten.setBehavior(behavior);
+            }
+            written.setPickRandom(pickWritten);
+        }
+        return written;
     }
 
     private static ModifierPreset readPreset(JsonObject data) {

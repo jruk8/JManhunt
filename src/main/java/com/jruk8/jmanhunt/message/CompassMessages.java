@@ -60,7 +60,7 @@ public class CompassMessages extends OkaeriConfig {
     private String badSignalActionbar = "<gray>☹ Bad signal";
 
     @CustomKey("bad-signal-reason-actionbar")
-    private String badSignalReasonActionbar = "<gray>:( Bad signal (<white>{reason}</white>)";
+    private String badSignalReasonActionbar = "<gray>☹ Bad signal ({reason})";
 
     @CustomKey("signal-reason")
     private Map<String, String> signalReason = new LinkedHashMap<>(Map.of(

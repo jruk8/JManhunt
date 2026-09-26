@@ -383,19 +383,7 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         if (!(event.getEntity() instanceof Player)) {
-            stats.recordMobKill(match.get().matchId(), killer.getUniqueId());
-            // Mob kills only matter for the kill-mob win conditions.
-            Role killerRole = playerStates.role(killer);
-            Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
-            if (killerRole == Role.SPEEDRUNNER
-                    && winConditionEngine.mobMatches(lobby, event.getEntity().getType(),
-                            Role.SPEEDRUNNER)) {
-                game.finishLater(match.get(), Role.SPEEDRUNNER);
-            } else if (killerRole == Role.HUNTER
-                    && winConditionEngine.mobMatches(lobby, event.getEntity().getType(),
-                            Role.HUNTER)) {
-                game.finishLater(match.get(), Role.HUNTER);
-            }
+            handleMobKill(match.get(), killer, event.getEntity());
             return;
         }
         boolean victimIsPlayer = event.getEntity() instanceof Player;
@@ -419,6 +407,20 @@ public final class PlayerCombatListener implements Listener {
             } else if (victimRole == Role.SPEEDRUNNER) {
                 game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_KILL", killer, matchId);
             }
+        }
+    }
+
+    private void handleMobKill(GameInstance match, Player killer, Entity victim) {
+        stats.recordMobKill(match.matchId(), killer.getUniqueId());
+        // Mob kills only matter for the kill-mob win conditions.
+        Role killerRole = playerStates.role(killer);
+        Integer lobby = match.originLobbyId();
+        if (killerRole == Role.SPEEDRUNNER
+                && winConditionEngine.mobMatches(lobby, victim.getType(), Role.SPEEDRUNNER)) {
+            game.finishLater(match, Role.SPEEDRUNNER);
+        } else if (killerRole == Role.HUNTER
+                && winConditionEngine.mobMatches(lobby, victim.getType(), Role.HUNTER)) {
+            game.finishLater(match, Role.HUNTER);
         }
     }
 

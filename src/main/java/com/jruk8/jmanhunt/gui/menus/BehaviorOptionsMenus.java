@@ -88,20 +88,7 @@ public final class BehaviorOptionsMenus {
 
     private List<MenuButton> optionButtons(String id, Supplier<Menu> self) {
         List<MenuButton> buttons = new ArrayList<>();
-        List<String> triggers = store.runsOn(id);
-        buttons.add(leafRow(id, self, "runs-on",
-                text("runs-on-title", "Runs On"), runsOnValue(triggers),
-                ModifierTriggers.KNOWN, runsOnMarked(triggers),
-                ModifiedGlow.behaviorRunsOn(store, id),
-                player -> {
-                    if (denied(player)) {
-                        return;
-                    }
-                    modifierDialogs.openRunsOn(player, triggers,
-                            checked -> applyRunsOn(player, id, triggers, checked, self.get()),
-                            () -> gui.navigate(player, self.get()));
-                },
-                () -> patch(id, entry -> ModifierStore.ensureBehavior(entry).setRunsOn(null))));
+        buttons.add(runsOnRow(id, self));
         buttons.add(EditorButtons.actionButton(messages, Material.REPEATER,
                 text("interval-settings-title", "Interval Settings"),
                 List.of(text("interval-settings-lore", "Cadence, jitter, and scope"),
@@ -136,6 +123,23 @@ public final class BehaviorOptionsMenus {
                     gui.navigate(player, chanceMenu(id, self::get));
                 }));
         return buttons;
+    }
+
+    private MenuButton runsOnRow(String id, Supplier<Menu> self) {
+        List<String> triggers = store.runsOn(id);
+        return leafRow(id, self, "runs-on",
+                text("runs-on-title", "Runs On"), runsOnValue(triggers),
+                ModifierTriggers.KNOWN, runsOnMarked(triggers),
+                ModifiedGlow.behaviorRunsOn(store, id),
+                player -> {
+                    if (denied(player)) {
+                        return;
+                    }
+                    modifierDialogs.openRunsOn(player, triggers,
+                            checked -> applyRunsOn(player, id, triggers, checked, self.get()),
+                            () -> gui.navigate(player, self.get()));
+                },
+                () -> patch(id, entry -> ModifierStore.ensureBehavior(entry).setRunsOn(null)));
     }
 
     /** Interval submenu: cadence, jitter, and scope rows. */

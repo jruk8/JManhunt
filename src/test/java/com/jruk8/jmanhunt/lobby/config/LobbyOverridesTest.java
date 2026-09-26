@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt.lobby.config;
 
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -22,18 +24,23 @@ class LobbyOverridesTest {
     @TempDir
     Path temp;
 
-    private LobbyConfig load(Path file) {
-        return ConfigManager.create(LobbyConfig.class, it -> {
+    private LobbyConfig load(Path file) throws Exception {
+        LobbyConfig loaded = ConfigManager.create(LobbyConfig.class, it -> {
             it.withConfigurer(new YamlBukkitConfigurer());
             it.withBindFile(file.toFile());
             it.withRemoveOrphans(true);
-            it.saveDefaults();
-            it.load(true);
         });
+        loaded.saveDefaults();
+        // Okaeri never closes file loads, which locks the file on Windows;
+        // a self-managed stream keeps temp-dir cleanup working.
+        try (InputStream stream = Files.newInputStream(file)) {
+            loaded.load(stream);
+        }
+        return loaded;
     }
 
     @Test
-    void nestedOverridesRoundTrip() {
+    void nestedOverridesRoundTrip() throws Exception {
         Path file = temp.resolve("lobby-config.yml");
         LobbyConfig saved = load(file);
         assertTrue(saved.getLobbies().containsKey("0"));
@@ -73,7 +80,7 @@ class LobbyOverridesTest {
     }
 
     @Test
-    void emptyOverridesSaveAndLoad() {
+    void emptyOverridesSaveAndLoad() throws Exception {
         Path file = temp.resolve("lobby-config.yml");
         LobbyConfig saved = load(file);
         saved.save();

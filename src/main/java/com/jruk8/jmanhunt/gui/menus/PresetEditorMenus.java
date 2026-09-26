@@ -56,69 +56,80 @@ public final class PresetEditorMenus {
     }
 
     private MetaTarget presetTarget(String id) {
-        return new MetaTarget() {
-            @Override
-            public String id() {
-                return id;
-            }
+        return new PresetMetaTarget(store, id);
+    }
 
-            @Override
-            public String name() {
-                return store.presetName(id);
-            }
+    /** Store-backed target so the shared meta quad edits one preset. */
+    private static final class PresetMetaTarget implements MetaTarget {
+        private final ModifierStore store;
+        private final String id;
 
-            @Override
-            public String description() {
-                return store.presetDescription(id);
-            }
+        private PresetMetaTarget(ModifierStore store, String id) {
+            this.store = store;
+            this.id = id;
+        }
 
-            @Override
-            public Material item() {
-                return store.presetItem(id);
-            }
+        @Override
+        public String id() {
+            return id;
+        }
 
-            @Override
-            public String author() {
-                return store.presetAuthor(id);
-            }
+        @Override
+        public String name() {
+            return store.presetName(id);
+        }
 
-            @Override
-            public void patchName(String name) {
-                store.updatePreset(id, preset -> preset.getMeta().setName(name));
-            }
+        @Override
+        public String description() {
+            return store.presetDescription(id);
+        }
 
-            @Override
-            public void patchDescription(String description) {
-                store.updatePreset(id, preset -> preset.getMeta().setDescription(description));
-            }
+        @Override
+        public Material item() {
+            return store.presetItem(id);
+        }
 
-            @Override
-            public void patchItem(Material item) {
-                store.updatePreset(id, preset -> preset.getMeta().setItem(item.name()));
-            }
+        @Override
+        public String author() {
+            return store.presetAuthor(id);
+        }
 
-            @Override
-            public void patchAuthor(String author) {
-                store.updatePreset(id, preset -> preset.getMeta().setAuthor(author));
-            }
+        @Override
+        public void patchName(String name) {
+            store.updatePreset(id, preset -> preset.getMeta().setName(name));
+        }
 
-            @Override
-            public Set<String> takenIds() {
-                Set<String> taken = new HashSet<>(store.presetNames());
-                taken.remove(id);
-                return taken;
-            }
+        @Override
+        public void patchDescription(String description) {
+            store.updatePreset(id, preset -> preset.getMeta().setDescription(description));
+        }
 
-            @Override
-            public void rename(String newId) {
-                store.renamePreset(id, newId);
-            }
+        @Override
+        public void patchItem(Material item) {
+            store.updatePreset(id, preset -> preset.getMeta().setItem(item.name()));
+        }
 
-            @Override
-            public String displayName(String renamedId) {
-                return store.presetName(renamedId);
-            }
-        };
+        @Override
+        public void patchAuthor(String author) {
+            store.updatePreset(id, preset -> preset.getMeta().setAuthor(author));
+        }
+
+        @Override
+        public Set<String> takenIds() {
+            Set<String> taken = new HashSet<>(store.presetNames());
+            taken.remove(id);
+            return taken;
+        }
+
+        @Override
+        public void rename(String newId) {
+            store.renamePreset(id, newId);
+        }
+
+        @Override
+        public String displayName(String renamedId) {
+            return store.presetName(renamedId);
+        }
     }
 
     /**
@@ -183,21 +194,25 @@ public final class PresetEditorMenus {
                                 List.of(text("editor-export-lore", "Copy a share string"),
                                         text("editor-click-copy", "Click to copy")),
                                 player -> commands.exportEntry(player, "preset", id)).silent(),
-                        EditorButtons.actionButton(messages, Material.TNT,
-                                text("editor-delete-preset", "Delete Preset"),
-                                List.of(text("editor-delete-preset-lore",
-                                                "Removes this preset forever"),
-                                        text("editor-click-delete", "Click to delete")),
-                                player -> {
-                                    if (denied(player)) {
-                                        return;
-                                    }
-                                    deleteConfirm(player, id, parent);
-                                })),
+                        deleteButton(id, parent)),
                 gui,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 parent);
         return self[0];
+    }
+
+    private MenuButton deleteButton(String id, Supplier<Menu> parent) {
+        return EditorButtons.actionButton(messages, Material.TNT,
+                text("editor-delete-preset", "Delete Preset"),
+                List.of(text("editor-delete-preset-lore",
+                                "Removes this preset forever"),
+                        text("editor-click-delete", "Click to delete")),
+                player -> {
+                    if (denied(player)) {
+                        return;
+                    }
+                    deleteConfirm(player, id, parent);
+                });
     }
 
     /** Scrollable modifier toggles over every modifier. */

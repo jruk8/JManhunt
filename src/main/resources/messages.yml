@@ -258,7 +258,7 @@ compass:
   too-far-actionbar: "<yellow>{player} is out of tracking range."
   analyzing-actionbar: "<gray>Analyzing..."
   bad-signal-actionbar: "<gray>☹ Bad signal"
-  bad-signal-reason-actionbar: "<gray>:( Bad signal (<white>{reason}</white>)"
+  bad-signal-reason-actionbar: "<gray>☹ Bad signal ({reason})"
   signal-reason:
     light-level: "low light"
     underground: "underground"

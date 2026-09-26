@@ -98,32 +98,32 @@ modifiers:
         speedrunner:
           - "effect give <p> minecraft:speed 30 1 true"
           - "effect give <p> minecraft:strength 15 0 true"
-  # A semi-op kit for players to start with.
+  # A semi-op kit for speedrunners to start with.
   full-iron-kit:
     enabled: false
     meta:
-      name: "Full Iron Kit"
-      description: "Stone sword, iron tools and armor, food and shield"
-      item: IRON_CHESTPLATE
+      name: "Speedrunners Starter Kit"
+      description: "Full leather armor and a few other items"
+      item: LEATHER_HELMET
       author: JManhunt
     behavior:
       commands:
         player:
-          - "give <p> stone_sword 1"
+          - "give <p> wooden_sword 1"
           - "give <p> iron_pickaxe 1"
           - "give <p> cooked_chicken 8"
           - "give <p> lava_bucket 1"
           - "give <p> shield 1"
-          - "give <p> iron_boots 1"
-          - "give <p> iron_leggings 1"
-          - "give <p> iron_chestplate 1"
-          - "give <p> iron_helmet 1"
+          - "give <p> leather_boots 1"
+          - "give <p> leather_leggings 1"
+          - "give <p> leather_chestplate 1"
+          - "give <p> leather_helmet 1"
   # Speedrunners get a health advantage while hunters' health gets a debuff.
   speedrunner-health-advantage:
     enabled: false
     meta:
       name: "Speedrunner Health Advantage"
-      description: "Speedrunners 15 hearts, hunters 8, restored after"
+      description: "Speedrunners 15 hearts with hunters to 8 hearts"
       item: GOLDEN_APPLE
       author: JManhunt
     behavior:
@@ -146,7 +146,7 @@ modifiers:
     enabled: false
     meta:
       name: "Permanent Night"
-      description: "Locks the match to midnight until it ends"
+      description: "Locks the match to midnight"
       item: CLOCK
       author: JManhunt
     behavior:
@@ -163,7 +163,7 @@ modifiers:
     enabled: false
     meta:
       name: "Random Mob Spawner"
-      description: "Summons a random mob on every speedrunner, 90s"
+      description: "Summons a random mob on everyone on an interval"
       item: SPAWNER
       author: JManhunt
     behavior:

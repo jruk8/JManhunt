@@ -204,11 +204,9 @@ public final class MatchStartService {
                 .filter(p -> resolved.contains(p.getUniqueId())
                         && playerStates.role(p).isParticipant())
                 .map(p -> (Player) p).toList();
-        if (players.stream().noneMatch(p -> playerStates.role(p) == Role.HUNTER)
-                || players.stream().noneMatch(p -> playerStates.role(p) == Role.SPEEDRUNNER)) {
-            return Optional.empty();
-        }
-        return Optional.of(players);
+        boolean ready = players.stream().anyMatch(p -> playerStates.role(p) == Role.HUNTER)
+                && players.stream().anyMatch(p -> playerStates.role(p) == Role.SPEEDRUNNER);
+        return ready ? Optional.of(players) : Optional.empty();
     }
 
     /** Clears stale match state and seeds per-player stats. Returns the assignee ids. */
@@ -302,8 +300,9 @@ public final class MatchStartService {
         // start-on-speedrunner-damage is enabled, that happens only after
         // the speedrunner first damages a hunter.
         prestart.armHeadstarts(instance);
-        if (!plugin.overrides().getBoolean(lobby,
-                "settings.match.start-on-speedrunner-damage.enabled", false)) {
+        boolean gated = plugin.overrides().getBoolean(lobby,
+                "settings.match.start-on-speedrunner-damage.enabled", false);
+        if (!gated) {
             prestart.beginHeadstarts(instance);
         }
         // load waiting delay configuration (enforces a 5 second minimum;
@@ -311,8 +310,7 @@ public final class MatchStartService {
         instance.setWaitingDelayConfigured(WaitingReminder.clampDelay(
                 plugin.overrides().getInt(lobby,
                         "settings.match.start-on-speedrunner-damage.delay-seconds", 30)));
-        if (plugin.overrides().getBoolean(lobby,
-                "settings.match.start-on-speedrunner-damage.enabled", false)) {
+        if (gated) {
             prestart.scheduleWaitingReminder(instance);
         } else {
             beginGame(instance);
@@ -366,13 +364,7 @@ public final class MatchStartService {
         if (!instance.active() || instance.ending()) {
             return 0;
         }
-        int added = 0;
-        for (Player player : players) {
-            if (joinPlayer(instance, player, role)) {
-                added++;
-            }
-        }
-        return added;
+        return (int) players.stream().filter(player -> joinPlayer(instance, player, role)).count();
     }
 
     /** Joins one player to the instance. Returns false when already assigned. */
@@ -485,13 +477,11 @@ public final class MatchStartService {
 
     /** Configured starting lives for a role. -1 means unlimited. */
     private int livesFor(Integer lobby, Role role) {
-        if (role == Role.HUNTER) {
-            return plugin.overrides().getInt(lobby, "settings.players.respawn.hunter.lives", -1);
-        }
-        if (role == Role.SPEEDRUNNER) {
-            return plugin.overrides().getInt(lobby, "settings.players.respawn.speedrunner.lives", 1);
-        }
-        return -1;
+        return switch (role) {
+            case HUNTER -> plugin.overrides().getInt(lobby, "settings.players.respawn.hunter.lives", -1);
+            case SPEEDRUNNER -> plugin.overrides().getInt(lobby, "settings.players.respawn.speedrunner.lives", 1);
+            default -> -1;
+        };
     }
 
     /**
@@ -537,20 +527,24 @@ public final class MatchStartService {
             sounds.playSound(player, playerRole == Role.HUNTER ? "announce.hunter" : "announce.speedrunner");
         }
         for (Player spectator : spectators) {
-            if (playerStates.role(spectator) != Role.SPECTATOR) {
-                continue;
-            }
-            Map<String, String> values = Map.of("role", messages.roleName(Role.SPECTATOR));
-            if (chat) {
-                messages.message(spectator, "manhunt.role-announce-chat", values);
-            }
-            if (title) {
-                spectator.showTitle(Title.title(
-                        messages.component("manhunt.role-announce-title", values),
-                        messages.component("manhunt.role-announce-subtitle-spectator"), times));
-            }
-            sounds.playSound(spectator, "announce.spectator");
+            announceSpectator(spectator, chat, title, times);
         }
+    }
+
+    private void announceSpectator(Player spectator, boolean chat, boolean title, Title.Times times) {
+        if (playerStates.role(spectator) != Role.SPECTATOR) {
+            return;
+        }
+        Map<String, String> values = Map.of("role", messages.roleName(Role.SPECTATOR));
+        if (chat) {
+            messages.message(spectator, "manhunt.role-announce-chat", values);
+        }
+        if (title) {
+            spectator.showTitle(Title.title(
+                    messages.component("manhunt.role-announce-title", values),
+                    messages.component("manhunt.role-announce-subtitle-spectator"), times));
+        }
+        sounds.playSound(spectator, "announce.spectator");
     }
 
     private static long toMillis(double seconds) {
@@ -569,17 +563,15 @@ public final class MatchStartService {
     }
 
     private void sendRoleSection(Player receiver, List<Player> players, Role role, String headerKey) {
-        List<String> names = new ArrayList<>();
-        for (Player player : players) {
-            if (playerStates.role(player) == role) {
-                names.add(player.getName());
-            }
-        }
+        List<String> names = players.stream()
+                .filter(player -> playerStates.role(player) == role)
+                .map(Player::getName)
+                .sorted()
+                .toList();
         if (names.isEmpty()) {
             return;
         }
         messages.message(receiver, headerKey, Map.of());
-        names.sort(String::compareTo);
         for (String line : ListFormatter.chunk(names, 10)) {
             messages.message(receiver, "manhunt.status-player", Map.of("player", line));
         }
@@ -655,8 +647,8 @@ public final class MatchStartService {
         // existing hunters and speedrunners keep their roles unless
         // conversion is needed, and NONEs always join the pool.
         List<Player> pool = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> playerStates.role(p) != Role.AFK && playerStates.role(p) != Role.SPECTATOR)
-                .filter(p -> resolved.contains(p.getUniqueId()))
+                .filter(p -> resolved.contains(p.getUniqueId())
+                        && playerStates.role(p) != Role.AFK && playerStates.role(p) != Role.SPECTATOR)
                 .map(p -> (Player) p)
                 .toList();
         // Cancel any autostart countdown silently
@@ -684,14 +676,10 @@ public final class MatchStartService {
         int speedrunnerCount = quickStartSpeedrunnerCount(pool.size(), speedrunnerPercent);
         List<Player> shuffled = new ArrayList<>(pool);
         Collections.shuffle(shuffled);
-        int runners = 0;
-        for (Player player : shuffled) {
-            Role want = runners < speedrunnerCount ? Role.SPEEDRUNNER : Role.HUNTER;
-            playerStates.setRole(player, want);
-            plugin.roleTeams().sync(player);
-            if (want == Role.SPEEDRUNNER) {
-                runners++;
-            }
+        for (int index = 0; index < shuffled.size(); index++) {
+            Role want = index < speedrunnerCount ? Role.SPEEDRUNNER : Role.HUNTER;
+            playerStates.setRole(shuffled.get(index), want);
+            plugin.roleTeams().sync(shuffled.get(index));
         }
     }
 
@@ -752,9 +740,7 @@ public final class MatchStartService {
         List<Player> unassigned = candidates.stream()
                 .filter(p -> playerStates.role(p) == Role.NONE).toList();
         List<Player> preferred = unassigned.isEmpty() ? candidates : unassigned;
-        if (preferred.isEmpty()) {
-            return null;
-        }
-        return preferred.get(ThreadLocalRandom.current().nextInt(preferred.size()));
+        return preferred.isEmpty()
+                ? null : preferred.get(ThreadLocalRandom.current().nextInt(preferred.size()));
     }
 }

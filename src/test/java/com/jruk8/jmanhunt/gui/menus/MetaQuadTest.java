@@ -41,62 +41,65 @@ class MetaQuadTest {
     }
 
     private static MetaTarget target() {
-        return new MetaTarget() {
-            @Override
-            public String id() {
-                return "pack";
-            }
+        return new FakeTarget();
+    }
 
-            @Override
-            public String name() {
-                return "Pack";
-            }
+    /** Fixed-value target fake for the quad layout test. */
+    private static final class FakeTarget implements MetaTarget {
+        @Override
+        public String id() {
+            return "pack";
+        }
 
-            @Override
-            public String description() {
-                return "Everything on";
-            }
+        @Override
+        public String name() {
+            return "Pack";
+        }
 
-            @Override
-            public Material item() {
-                return Material.CHEST;
-            }
+        @Override
+        public String description() {
+            return "Everything on";
+        }
 
-            @Override
-            public String author() {
-                return null;
-            }
+        @Override
+        public Material item() {
+            return Material.CHEST;
+        }
 
-            @Override
-            public void patchName(String name) {
-            }
+        @Override
+        public String author() {
+            return null;
+        }
 
-            @Override
-            public void patchDescription(String description) {
-            }
+        @Override
+        public void patchName(String name) {
+        }
 
-            @Override
-            public void patchItem(Material item) {
-            }
+        @Override
+        public void patchDescription(String description) {
+        }
 
-            @Override
-            public void patchAuthor(String author) {
-            }
+        @Override
+        public void patchItem(Material item) {
+        }
 
-            @Override
-            public Set<String> takenIds() {
-                return new HashSet<>(Set.of("other"));
-            }
+        @Override
+        public void patchAuthor(String author) {
+        }
 
-            @Override
-            public void rename(String newId) {
-            }
+        @Override
+        public Set<String> takenIds() {
+            return new HashSet<>(Set.of("other"));
+        }
 
-            @Override
-            public String displayName(String renamedId) {
-                return "Pack";
-            }
-        };
+        @Override
+        public void rename(String newId) {
+        }
+
+        @Override
+        public String displayName(String renamedId) {
+            return "Pack";
+        }
     }
 
     @BeforeEach

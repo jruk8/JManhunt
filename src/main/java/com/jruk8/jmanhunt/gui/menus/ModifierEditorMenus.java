@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
+import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.QuadPanel;
 import com.jruk8.jmanhunt.gui.TwinPanel;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
@@ -123,21 +124,25 @@ public final class ModifierEditorMenus {
                                 List.of(text("editor-export-lore", "Copy a share string"),
                                         text("editor-click-copy", "Click to copy")),
                                 player -> commands.exportEntry(player, "modifier", id)).silent(),
-                        EditorButtons.actionButton(messages, Material.TNT,
-                                text("editor-delete-modifier", "Delete Modifier"),
-                                List.of(text("editor-delete-lore",
-                                                "Removes this modifier forever"),
-                                        text("editor-click-delete", "Click to delete")),
-                                player -> {
-                                    if (denied(player)) {
-                                        return;
-                                    }
-                                    deleteConfirm(player, id, parent);
-                                })),
+                        deleteButton(id, parent)),
                 gui,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 parent);
         return self[0];
+    }
+
+    private MenuButton deleteButton(String id, Supplier<Menu> parent) {
+        return EditorButtons.actionButton(messages, Material.TNT,
+                text("editor-delete-modifier", "Delete Modifier"),
+                List.of(text("editor-delete-lore",
+                                "Removes this modifier forever"),
+                        text("editor-click-delete", "Click to delete")),
+                player -> {
+                    if (denied(player)) {
+                        return;
+                    }
+                    deleteConfirm(player, id, parent);
+                });
     }
 
     /** Behavior twin: Options on the left, Commands on the right. */
@@ -174,73 +179,84 @@ public final class ModifierEditorMenus {
     }
 
     private MetaTarget modifierTarget(String id) {
-        return new MetaTarget() {
-            @Override
-            public String id() {
-                return id;
-            }
+        return new ModifierMetaTarget(store, id);
+    }
 
-            @Override
-            public String name() {
-                return store.metaName(id);
-            }
+    /** Store-backed target so the shared meta quad edits one modifier. */
+    private static final class ModifierMetaTarget implements MetaTarget {
+        private final ModifierStore store;
+        private final String id;
 
-            @Override
-            public String description() {
-                return store.metaDescription(id);
-            }
+        private ModifierMetaTarget(ModifierStore store, String id) {
+            this.store = store;
+            this.id = id;
+        }
 
-            @Override
-            public Material item() {
-                return store.metaItem(id);
-            }
+        @Override
+        public String id() {
+            return id;
+        }
 
-            @Override
-            public String author() {
-                return store.metaAuthor(id);
-            }
+        @Override
+        public String name() {
+            return store.metaName(id);
+        }
 
-            @Override
-            public void patchName(String name) {
-                store.updateModifier(id,
-                        entry -> ModifierStore.ensureMeta(entry).setName(name));
-            }
+        @Override
+        public String description() {
+            return store.metaDescription(id);
+        }
 
-            @Override
-            public void patchDescription(String description) {
-                store.updateModifier(id,
-                        entry -> ModifierStore.ensureMeta(entry).setDescription(description));
-            }
+        @Override
+        public Material item() {
+            return store.metaItem(id);
+        }
 
-            @Override
-            public void patchItem(Material item) {
-                store.updateModifier(id,
-                        entry -> ModifierStore.ensureMeta(entry).setItem(item.name()));
-            }
+        @Override
+        public String author() {
+            return store.metaAuthor(id);
+        }
 
-            @Override
-            public void patchAuthor(String author) {
-                store.updateModifier(id,
-                        entry -> ModifierStore.ensureMeta(entry).setAuthor(author));
-            }
+        @Override
+        public void patchName(String name) {
+            store.updateModifier(id,
+                    entry -> ModifierStore.ensureMeta(entry).setName(name));
+        }
 
-            @Override
-            public Set<String> takenIds() {
-                Set<String> taken = new HashSet<>(store.modifierNames());
-                taken.remove(id);
-                return taken;
-            }
+        @Override
+        public void patchDescription(String description) {
+            store.updateModifier(id,
+                    entry -> ModifierStore.ensureMeta(entry).setDescription(description));
+        }
 
-            @Override
-            public void rename(String newId) {
-                store.renameModifier(id, newId);
-            }
+        @Override
+        public void patchItem(Material item) {
+            store.updateModifier(id,
+                    entry -> ModifierStore.ensureMeta(entry).setItem(item.name()));
+        }
 
-            @Override
-            public String displayName(String renamedId) {
-                return store.metaName(renamedId);
-            }
-        };
+        @Override
+        public void patchAuthor(String author) {
+            store.updateModifier(id,
+                    entry -> ModifierStore.ensureMeta(entry).setAuthor(author));
+        }
+
+        @Override
+        public Set<String> takenIds() {
+            Set<String> taken = new HashSet<>(store.modifierNames());
+            taken.remove(id);
+            return taken;
+        }
+
+        @Override
+        public void rename(String newId) {
+            store.renameModifier(id, newId);
+        }
+
+        @Override
+        public String displayName(String renamedId) {
+            return store.metaName(renamedId);
+        }
     }
 
     private void deleteConfirm(Player player, String id, Supplier<Menu> parent) {
