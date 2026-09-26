@@ -292,7 +292,7 @@ public final class PresetEditorMenus {
                 done -> {
                     store.removePreset(id);
                     messages.message(done, "modifiers.edit-deleted", Map.of("name", name));
-                    sounds.playNeutralSound(done);
+                    sounds.playDestructiveSound(done);
                     gui.navigate(done, parent.get());
                 },
                 parent);

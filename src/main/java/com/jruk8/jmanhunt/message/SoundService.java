@@ -19,6 +19,7 @@ public class SoundService {
     private static final String FALLBACK_SOUND = "minecraft:entity.experience_orb.pickup";
     private static final String NEUTRAL_SOUND_KEY = "ui.neutral-sound";
     private static final String ANGRY_SOUND_KEY = "ui.angry-sound";
+    private static final String DESTRUCTIVE_SOUND_KEY = "ui.destructive-sound";
     private final JManhuntPlugin plugin;
     private final SoundsConfig sounds;
     private final Set<UUID> neutralSuppressed = new HashSet<>();
@@ -63,6 +64,11 @@ public class SoundService {
     /** Shared angry blip for validation errors and invalid input. */
     public void playAngrySound(Player player) {
         playSound(player, ANGRY_SOUND_KEY);
+    }
+
+    /** Shared destructive blip for confirmed deletes. */
+    public void playDestructiveSound(Player player) {
+        playSound(player, DESTRUCTIVE_SOUND_KEY);
     }
 
     /**

@@ -273,7 +273,7 @@ public final class ModifierEditorMenus {
                 done -> {
                     store.removeModifier(id);
                     messages.message(done, "modifiers.edit-deleted", Map.of("name", name));
-                    sounds.playNeutralSound(done);
+                    sounds.playDestructiveSound(done);
                     gui.navigate(done, parent.get());
                 },
                 parent);

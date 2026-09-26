@@ -61,6 +61,40 @@ class CompassLockServiceTest {
     }
 
     @Test
+    void singleTargetClickPlaysFailure() {
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)));
+
+        fixture.locks().handleLeftClick(fixture.player());
+
+        verify(fixture.sounds(), times(1)).playSound(fixture.player(), "compass.failure");
+    }
+
+    @Test
+    void badSignalScrollPlaysFailureOnce() {
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
+        when(fixture.signal().badSignalForScroll(any(), any(), any())).thenReturn(true);
+
+        fixture.locks().handleLeftClick(fixture.player());
+
+        verify(fixture.refresher(), times(1)).accept(fixture.player());
+        verify(fixture.sounds(), times(1)).playSound(fixture.player(), "compass.failure");
+    }
+
+    @Test
+    void successfulScrollPlaysNoFailure() {
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
+
+        fixture.locks().handleLeftClick(fixture.player());
+
+        verify(fixture.sounds(), never()).playSound(fixture.player(), "compass.failure");
+    }
+
+    @Test
     void jitteredDelaySamplesWithinDeviation() {
         assertEquals(3.0, CompassLockService.jitteredDelay(3.0, 0.0, 0.99));
         assertEquals(2.0, CompassLockService.jitteredDelay(3.0, 1.0, 0.0));
@@ -178,7 +212,7 @@ class CompassLockServiceTest {
     }
 
     private record Fixture(CompassLockService locks, Player player, Consumer<Player> refresher,
-            GameManager game) {
+            GameManager game, SoundService sounds, CompassSignalService signal) {
     }
 
     @SuppressWarnings("unchecked")
@@ -207,12 +241,14 @@ class CompassLockServiceTest {
         when(targets.collectOpponents(any(), any(), any())).thenReturn(opponents);
         when(targets.collectSightings(any(), any(), any())).thenReturn(List.of());
         Consumer<Player> refresher = mock(Consumer.class);
+        SoundService sounds = mock(SoundService.class);
+        CompassSignalService signal = mock(CompassSignalService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         CompassLockService locks = new CompassLockService(plugin, playerStates,
-                mock(SoundService.class), null, targets, mock(CompassSignalService.class),
-                new HashMap<>(), refresher, sharedClicks);
+                sounds, null, targets, signal,
+                new HashMap<>(), refresher, mock(Consumer.class), sharedClicks);
         locks.setGameManager(game);
-        return new Fixture(locks, player, refresher, game);
+        return new Fixture(locks, player, refresher, game, sounds, signal);
     }
 
     @SuppressWarnings("unchecked")
@@ -243,11 +279,13 @@ class CompassLockServiceTest {
         when(targets.collectOpponents(any(), any(), any())).thenReturn(opponents);
         when(targets.collectSightings(any(), any(), any())).thenReturn(List.of());
         Consumer<Player> refresher = mock(Consumer.class);
+        SoundService sounds = mock(SoundService.class);
+        CompassSignalService signal = mock(CompassSignalService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         CompassLockService locks = new CompassLockService(plugin, playerStates,
-                mock(SoundService.class), null, targets, mock(CompassSignalService.class),
-                new HashMap<>(), refresher, sharedClicks);
+                sounds, null, targets, signal,
+                new HashMap<>(), refresher, mock(Consumer.class), sharedClicks);
         locks.setGameManager(game);
-        return new Fixture(locks, player, refresher, game);
+        return new Fixture(locks, player, refresher, game, sounds, signal);
     }
 }

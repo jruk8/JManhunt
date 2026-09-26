@@ -48,7 +48,7 @@ public final class CompassManager {
         this.targets = new CompassTargetService(playerStates);
         this.signal = new CompassSignalService(plugin, playerStates);
         this.locks = new CompassLockService(plugin, playerStates, sounds, messages, targets, signal,
-                compassActionbars, this::refreshCompass, lastClick);
+                compassActionbars, this::refreshCompass, this::resolveClickRefresh, lastClick);
         this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
     }
 
@@ -116,13 +116,22 @@ public final class CompassManager {
     }
 
     public void refreshCompass(Player holder) {
+        refreshCompassOutcome(holder);
+    }
+
+    /**
+     * Refreshes the compass, reporting whether it now tracks a target.
+     * NEARBY, TOO_FAR, bad signal, and no-target outcomes all report
+     * false so click callers can play the failure sound instead.
+     */
+    boolean refreshCompassOutcome(Player holder) {
         Optional<RefreshSlot> slot = refreshSlot(holder);
         if (slot.isEmpty()) {
-            return;
+            return false;
         }
         Optional<RefreshMatch> match = refreshMatch(holder, slot.get());
         if (match.isEmpty()) {
-            return;
+            return false;
         }
         RefreshMatch target = match.get();
         List<CompassCandidate> opponents = targets.collectOpponents(holder, target.targetRole(),
@@ -133,7 +142,7 @@ public final class CompassManager {
                 opponents, sightings);
         CompassPick pick = resolveCompassPick(target.instance().originLobbyId(),
                 target.holderRole(), narrowed.opponents(), narrowed.sightings());
-        renderCompassPick(holder, slot.get().item(), slot.get().slot(), pick,
+        return renderCompassPick(holder, slot.get().item(), slot.get().slot(), pick,
                 target.targetRoleString(), narrowed.locked());
     }
 
@@ -198,40 +207,48 @@ public final class CompassManager {
                 trackingDistance);
     }
 
-    /** Renders a resolved pick onto the compass item and actionbar. */
-    private void renderCompassPick(Player holder, ItemStack item, int slot, CompassPick pick,
+    /**
+     * Renders a resolved pick onto the compass item and actionbar. True
+     * when the needle now tracks a live target or sighting.
+     */
+    private boolean renderCompassPick(Player holder, ItemStack item, int slot, CompassPick pick,
             String targetRoleString, boolean locked) {
         Optional<String> reason = pick.kind() == CompassPick.Kind.NONE
                 ? Optional.empty() : signal.reasonForPick(holder, pick);
         if (reason.isPresent()) {
             showBadSignal(holder, item, slot, reason.get());
-            return;
+            return false;
         }
-        switch (pick.kind()) {
+        return switch (pick.kind()) {
             case TRACK_PLAYER -> trackPlayer(holder, item, slot, pick, targetRoleString, locked);
+            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked);
             case NEARBY -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
                 compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
                         Map.of("player", pick.name())));
+                yield false;
             }
-            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked);
             case TOO_FAR -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
                 compassActionbars.put(holder.getUniqueId(), component("compass.too-far-actionbar",
                         Map.of("player", pick.name())));
+                yield false;
             }
-            case NONE -> showNoTarget(holder, item, slot, targetRoleString);
-        }
+            case NONE -> {
+                showNoTarget(holder, item, slot, targetRoleString);
+                yield false;
+            }
+        };
     }
 
-    private void trackPlayer(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
+    private boolean trackPlayer(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
             boolean locked) {
         Player target = Bukkit.getPlayer(pick.id());
         if (target == null) {
             showNoTarget(holder, item, slot, targetRoleString);
-            return;
+            return false;
         }
         setLodestone(item, target.getLocation());
         holder.getInventory().setItem(slot, item);
@@ -240,9 +257,10 @@ public final class CompassManager {
                 Map.of("player", target.getName(),
                         "distance",
                         String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
+        return true;
     }
 
-    private void trackSighting(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
+    private boolean trackSighting(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
             boolean locked) {
         Location location = playerStates.sightings().getOrDefault(pick.id(), Map.of())
                 .get(holder.getWorld().getUID());
@@ -250,7 +268,7 @@ public final class CompassManager {
         if (location == null || location.getWorld() == null
                 || skipLastSeen(seen != null, seen == null ? null : seen.getGameMode())) {
             showNoTarget(holder, item, slot, targetRoleString);
-            return;
+            return false;
         }
         setLodestone(item, location);
         holder.getInventory().setItem(slot, item);
@@ -261,6 +279,7 @@ public final class CompassManager {
                         "distance",
                         String.valueOf(Math.round(holder.getLocation().distance(location))),
                         "reason", reason)));
+        return true;
     }
 
     private void showNoTarget(Player holder, ItemStack item, int slot, String targetRoleString) {
@@ -386,8 +405,20 @@ public final class CompassManager {
             return;
         }
         lastClick.put(player.getUniqueId(), now);
-        sounds.playSound(player, "compass.right-click");
-        refreshCompass(player);
+        resolveClickRefresh(player);
+    }
+
+    /**
+     * Click-initiated refresh with exactly one outcome sound: the
+     * refresh click when the needle tracks, the failure sound when it
+     * lands on nearby, too far, bad signal, or no target.
+     */
+    void resolveClickRefresh(Player holder) {
+        if (refreshCompassOutcome(holder)) {
+            sounds.playSound(holder, "compass.right-click");
+        } else {
+            sounds.playSound(holder, "compass.failure");
+        }
     }
 
     /**

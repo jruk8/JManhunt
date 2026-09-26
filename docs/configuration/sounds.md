@@ -18,6 +18,11 @@ ui:
     sound: block.bamboo_wood.place
     pitch: 1.0
     volume: 1.0
+  destructive-sound:
+    enabled: true
+    sound: block.cherry_wood_hanging_sign.step
+    pitch: 0.8
+    volume: 1.0
 ```
 
 Each sound entry supports `enabled`, `sound`, `pitch`, and `volume`.
@@ -30,6 +35,8 @@ the setup tutorial:
 - `neutral-sound`: confirmations such as match start, hunter spawn after
   the start delay, and setting updates.
 - `angry-sound`: validation errors and invalid input.
+- `destructive-sound`: confirmed deletes, like removing a modifier or
+  preset.
 
 ## Game Sounds
 
@@ -49,7 +56,10 @@ Under `game`, each entry plays at a fixed moment in the match:
 Under `compass`, heard by the compass holder:
 
 - `left-click`: when left-click cycling changes the target lock.
-- `right-click`: on an accepted compass click refresh, and again when a
-  click-initiated analysis resolves.
+- `right-click`: on a compass click refresh that tracks a target, and
+  again when a click-initiated analysis resolves onto a target.
 - `analysis`: ticked while an analysis runs, every
   `settings.compass.analyze.sound-interval-seconds`.
+- `failure`: when a compass click fails to track: target too near or
+  too far, signal interference, no target, or a scroll with nothing
+  to cycle to.

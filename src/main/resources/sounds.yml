@@ -5,7 +5,7 @@
 # It's recommended to use a sound explorer like
 # https://mudkipdev.github.io/minecraft-sound-explorer/
 # Used for sounds updates, don't change unless you know what you're doing.
-sounds-version: 2
+sounds-version: 3
 ui:
   # Shared interface feedback: command and GUI confirmations.
   neutral-sound:
@@ -18,6 +18,12 @@ ui:
     enabled: true
     sound: block.bamboo_wood.place
     pitch: 1.0
+    volume: 1.0
+  # Heard when a delete is confirmed, like removing a modifier or preset.
+  destructive-sound:
+    enabled: true
+    sound: block.cherry_wood_hanging_sign.step
+    pitch: 0.8
     volume: 1.0
 
 game:
@@ -98,4 +104,10 @@ compass:
     enabled: true
     sound: block.note_block.hat
     pitch: 1.0
+    volume: 1.0
+  # Heard by the holder when a compass click fails to track a target.
+  failure:
+    enabled: true
+    sound: block.cherry_wood_hanging_sign.place
+    pitch: 0.8
     volume: 1.0

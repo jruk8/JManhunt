@@ -24,7 +24,7 @@ public class SoundsConfig extends OkaeriConfig {
 
     @CustomKey("sounds-version")
     @Comment("Used for sounds updates, don't change unless you know what you're doing.")
-    private int soundsVersion = 2;
+    private int soundsVersion = 3;
 
     private Game game = new Game();
     private Announce announce = new Announce();
@@ -249,6 +249,11 @@ public class SoundsConfig extends OkaeriConfig {
         @Comment("Ticked while a compass analysis runs, on the analyze sound interval.")
         private SoundEntry analysis = SoundEntry.of("block.note_block.hat", 1.0, 1.0);
 
+        @CustomKey("failure")
+        @Comment("Heard by the holder when a compass click fails to track a target.")
+        private SoundEntry failure =
+                SoundEntry.of("block.cherry_wood_hanging_sign.place", 0.8, 1.0);
+
         public SoundEntry getLeftClick() {
             return leftClick;
         }
@@ -272,6 +277,14 @@ public class SoundsConfig extends OkaeriConfig {
         public void setAnalysis(SoundEntry analysis) {
             this.analysis = analysis;
         }
+
+        public SoundEntry getFailure() {
+            return failure;
+        }
+
+        public void setFailure(SoundEntry failure) {
+            this.failure = failure;
+        }
     }
 
     /** Shared interface feedback for commands, GUIs, and the tutorial. */
@@ -288,6 +301,11 @@ public class SoundsConfig extends OkaeriConfig {
         private SoundEntry angrySound =
                 SoundEntry.of("block.bamboo_wood.place", 1.0, 1.0);
 
+        @CustomKey("destructive-sound")
+        @Comment("Heard when a delete is confirmed, like removing a modifier or preset.")
+        private SoundEntry destructiveSound =
+                SoundEntry.of("block.cherry_wood_hanging_sign.step", 0.8, 1.0);
+
         public SoundEntry getNeutralSound() {
             return neutralSound;
         }
@@ -302,6 +320,14 @@ public class SoundsConfig extends OkaeriConfig {
 
         public void setAngrySound(SoundEntry angrySound) {
             this.angrySound = angrySound;
+        }
+
+        public SoundEntry getDestructiveSound() {
+            return destructiveSound;
+        }
+
+        public void setDestructiveSound(SoundEntry destructiveSound) {
+            this.destructiveSound = destructiveSound;
         }
     }
 }

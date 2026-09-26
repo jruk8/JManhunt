@@ -49,6 +49,8 @@ final class CompassLockService {
     private final CompassSignalService signal;
     private final Map<UUID, Component> actionbars;
     private final Consumer<Player> refresher;
+    /** Click-initiated refresh: refreshes plus the outcome click sound. */
+    private final Consumer<Player> clickResolver;
     /** Manual left-click target locks: holder id -> locked target id. */
     private final Map<UUID, UUID> locks = new HashMap<>();
     /** Holders tracking teammates instead of enemies, toggled by shift-left. */
@@ -65,7 +67,7 @@ final class CompassLockService {
     CompassLockService(JManhuntPlugin plugin, PlayerStateStore playerStates, SoundService sounds,
             MessageService messages, CompassTargetService targets, CompassSignalService signal,
             Map<UUID, Component> actionbars, Consumer<Player> refresher,
-            Map<UUID, Long> sharedClicks) {
+            Consumer<Player> clickResolver, Map<UUID, Long> sharedClicks) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.sounds = sounds;
@@ -74,6 +76,7 @@ final class CompassLockService {
         this.signal = signal;
         this.actionbars = actionbars;
         this.refresher = refresher;
+        this.clickResolver = clickResolver;
         this.sharedClicks = sharedClicks;
     }
 
@@ -162,11 +165,13 @@ final class CompassLockService {
         if (CompassPick.orderedCandidates(opponents, sightings, maxTargets).size() <= 1) {
             locks.remove(player.getUniqueId());
             sharedClicks.put(player.getUniqueId(), now);
+            sounds.playSound(player, "compass.failure");
             return;
         }
         if (signal.badSignalForScroll(player, opponents, sightings)) {
             sharedClicks.put(player.getUniqueId(), now);
             refresher.accept(player);
+            sounds.playSound(player, "compass.failure");
             return;
         }
         applyScrollCycle(player, opponents, sightings, maxTargets);
@@ -281,8 +286,8 @@ final class CompassLockService {
      * waits out the jittered delay, then refreshes. No second analysis
      * starts while one runs. Click-initiated runs stamp the shared click
      * cooldown at resolution, so the full cooldown runs after the refresh;
-     * they close with the refresh click sound while automatic runs stay
-     * silent at the end.
+     * they close with the outcome click sound (refresh or failure) while
+     * automatic runs stay silent at the end.
      */
     void startAnalysis(Player holder, boolean fromClick) {
         UUID id = holder.getUniqueId();
@@ -316,9 +321,10 @@ final class CompassLockService {
             if (fromClick) {
                 sharedClicks.put(id, System.currentTimeMillis());
             }
-            refresher.accept(holder);
             if (fromClick && holder.isOnline()) {
-                sounds.playSound(holder, "compass.right-click");
+                clickResolver.accept(holder);
+            } else {
+                refresher.accept(holder);
             }
             boolean live = game != null && game.instanceOf(holder.getUniqueId()).isPresent();
             if (!live || !playerStates.role(holder).isParticipant()) {

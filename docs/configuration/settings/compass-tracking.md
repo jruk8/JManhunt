@@ -156,8 +156,9 @@ only consumes the shared cooldown and refreshes nothing. Scrolls are
 also refused while the signal is bad or while an analysis is running.
 
 Each successful scroll plays a short click. You can change it under
-`sounds.compass.left-click`, or turn it off there. No sound plays when
-there is nothing to scroll to.
+`sounds.compass.left-click`, or turn it off there. A scroll with
+nothing to cycle to, or one refused for bad signal, plays
+`sounds.compass.failure` instead.
 
 ## Teammate Tracking
 
