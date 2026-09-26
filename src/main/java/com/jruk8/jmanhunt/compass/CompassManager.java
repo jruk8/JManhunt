@@ -107,8 +107,7 @@ public final class CompassManager {
                         || items.isCompass(p.getInventory().getItemInOffHand()))
                 .forEach(p -> p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
                         component("compass.no-target-actionbar",
-                                Map.of("role", messages.roleName(role(p) == Role.HUNTER
-                                        ? Role.SPEEDRUNNER : Role.HUNTER))))));
+                                Map.of("role", messages.roleName(locks.targetRole(p)))))));
     }
 
     /** True when the holder actively participates in a live match. */
@@ -165,10 +164,10 @@ public final class CompassManager {
     private Optional<RefreshMatch> refreshMatch(Player holder, RefreshSlot slot) {
         Role holderRole = role(holder);
         if (!holderRole.isParticipant()) {
-            locks.clearLock(holder.getUniqueId());
+            locks.clearMatchState(holder.getUniqueId());
             return Optional.empty();
         }
-        Role targetRole = holderRole == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
+        Role targetRole = locks.targetRole(holder);
         String targetRoleString = messages.roleName(targetRole);
         if (holder.getGameMode() == GameMode.SPECTATOR) {
             showNoTarget(holder, slot.item(), slot.slot(), targetRoleString);
@@ -179,7 +178,7 @@ public final class CompassManager {
         }
         Optional<GameInstance> match = game.instanceOf(holder.getUniqueId());
         if (match.isEmpty()) {
-            locks.clearLock(holder.getUniqueId());
+            locks.clearMatchState(holder.getUniqueId());
             return Optional.empty();
         }
         return Optional.of(new RefreshMatch(match.get(), holderRole, targetRole, targetRoleString));
@@ -407,6 +406,14 @@ public final class CompassManager {
      */
     public void handleLeftClick(Player player) {
         locks.handleLeftClick(player);
+    }
+
+    /**
+     * Shift-left-click: toggles teammate tracking when enabled, else
+     * locks exactly like a left-click. See the lock service docs.
+     */
+    public void handleShiftLeft(Player player) {
+        locks.handleShiftLeft(player);
     }
 
     private Role role(Player player) {

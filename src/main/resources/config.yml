@@ -413,6 +413,13 @@ settings:
       # Set to 0 for no throttling.
       # Default: 0.5
       scroll-cooldown: 0.5
+    teammates:
+      # When true, shift-left-clicking the compass toggles teammate
+      # tracking instead of cycling a manual lock: teammates mode
+      # tracks same-role players, enemy mode tracks the other role.
+      # When false, shift-left-click locks exactly like left-click.
+      # Default: true
+      enabled: true
     # Purposeful lag before a compass refresh resolves, showing
     # "Analyzing..." while it runs. No second refresh starts mid-analysis,
     # and click cooldowns restart when the analysis ends.

@@ -51,6 +51,8 @@ final class CompassLockService {
     private final Consumer<Player> refresher;
     /** Manual left-click target locks: holder id -> locked target id. */
     private final Map<UUID, UUID> locks = new HashMap<>();
+    /** Holders tracking teammates instead of enemies, toggled by shift-left. */
+    private final Set<UUID> teammates = new HashSet<>();
     /** Last accepted left-click scroll per holder; throttles held clicks. */
     private final Map<UUID, Long> lastScroll = new HashMap<>();
     private final Set<UUID> analyzing = new HashSet<>();
@@ -113,6 +115,31 @@ final class CompassLockService {
         locks.remove(holderId);
     }
 
+    /** True while the holder tracks teammates instead of enemies. */
+    boolean teammateMode(UUID holderId) {
+        return teammates.contains(holderId);
+    }
+
+    /** Drops the holder's teammate tracking, if any. */
+    void clearTeammateMode(UUID holderId) {
+        teammates.remove(holderId);
+    }
+
+    /** Drops lock plus teammate mode: the per-holder match state. */
+    void clearMatchState(UUID holderId) {
+        locks.remove(holderId);
+        teammates.remove(holderId);
+    }
+
+    /**
+     * Effective target role: the holder's own role in teammate mode,
+     * else the enemy role.
+     */
+    Role targetRole(Player holder) {
+        Role holderRole = playerStates.role(holder);
+        return teammateMode(holder.getUniqueId()) ? holderRole : holderRole.opposite();
+    }
+
     /** True while the holder's analysis runs. */
     boolean isAnalyzing(UUID holderId) {
         return analyzing.contains(holderId);
@@ -127,7 +154,7 @@ final class CompassLockService {
         }
         lastScroll.put(player.getUniqueId(), now);
         GameInstance instance = match.get();
-        Role targetRole = playerStates.role(player) == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
+        Role targetRole = targetRole(player);
         List<CompassCandidate> opponents = targets.collectOpponents(player, targetRole, instance);
         List<CompassSighting> sightings = targets.collectSightings(player, targetRole, instance);
         int maxTargets = plugin.overrides()
@@ -182,10 +209,55 @@ final class CompassLockService {
         }
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
         if (match.isEmpty()) {
-            locks.remove(player.getUniqueId());
+            clearMatchState(player.getUniqueId());
             return Optional.empty();
         }
         return match;
+    }
+
+    /**
+     * Shift-left-click: with teammate tracking enabled, toggles the
+     * holder between enemies and teammates, drops the manual lock,
+     * and refreshes at once. With it disabled, behaves exactly like
+     * a normal left-click lock. Spectators, analyses, the shared
+     * click cooldown, and non-participants refuse the toggle.
+     */
+    void handleShiftLeft(Player player) {
+        Integer lobby = lobbyOf(player);
+        if (!plugin.overrides()
+                .getBoolean(lobby, "settings.compass.teammates.enabled", true)) {
+            handleLeftClick(player);
+            return;
+        }
+        if (player.getGameMode() == GameMode.SPECTATOR
+                || analyzing.contains(player.getUniqueId())) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long clickMs = (long) (plugin.overrides()
+                .getDouble(lobby, "settings.compass.click.click-cooldown", 3.0) * 1000);
+        // Shared pure helper lives on the facade.
+        if (!CompassManager.shouldRefresh(now,
+                sharedClicks.getOrDefault(player.getUniqueId(), 0L), clickMs)) {
+            return;
+        }
+        if (game == null || !playerStates.role(player).isParticipant()) {
+            return;
+        }
+        if (game.instanceOf(player.getUniqueId()).isEmpty()) {
+            clearMatchState(player.getUniqueId());
+            return;
+        }
+        UUID holderId = player.getUniqueId();
+        if (teammates.contains(holderId)) {
+            teammates.remove(holderId);
+        } else {
+            teammates.add(holderId);
+        }
+        locks.remove(holderId);
+        sounds.playSound(player, "compass.left-click");
+        sharedClicks.put(holderId, now);
+        refresher.accept(player);
     }
 
     /** Advances the manual lock to the next scroll target. */

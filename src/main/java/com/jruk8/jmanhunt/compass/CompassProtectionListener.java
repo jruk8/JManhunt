@@ -130,7 +130,13 @@ public final class CompassProtectionListener implements Listener {
             return;
         }
         switch (event.getAction()) {
-            case LEFT_CLICK_AIR, LEFT_CLICK_BLOCK -> compass.handleLeftClick(event.getPlayer());
+            case LEFT_CLICK_AIR, LEFT_CLICK_BLOCK -> {
+                if (event.getPlayer().isSneaking()) {
+                    compass.handleShiftLeft(event.getPlayer());
+                } else {
+                    compass.handleLeftClick(event.getPlayer());
+                }
+            }
             case RIGHT_CLICK_AIR, RIGHT_CLICK_BLOCK -> compass.handleRightClick(event.getPlayer());
             default -> { }
         }

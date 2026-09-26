@@ -68,6 +68,16 @@ public class CompassSettings extends OkaeriConfig {
     @CustomKey("left-click")
     private LeftClick leftClick = new LeftClick();
 
+    @CustomKey("teammates")
+    @Comment({
+            "When true, shift-left-clicking the compass toggles teammate",
+            "tracking instead of cycling a manual lock: teammates mode",
+            "tracks same-role players, enemy mode tracks the other role.",
+            "When false, shift-left-click locks exactly like left-click.",
+            "Default: true"
+    })
+    private Toggle teammates = new Toggle(true);
+
     @Comment({
             "Purposeful lag before a compass refresh resolves, showing",
             "\"Analyzing...\" while it runs. No second refresh starts mid-analysis,",
@@ -155,6 +165,14 @@ public class CompassSettings extends OkaeriConfig {
 
     public void setLeftClick(LeftClick leftClick) {
         this.leftClick = leftClick;
+    }
+
+    public Toggle getTeammates() {
+        return teammates;
+    }
+
+    public void setTeammates(Toggle teammates) {
+        this.teammates = teammates;
     }
 
     public Analyze getAnalyze() {

@@ -49,6 +49,7 @@ categories:
   compass/drop-on-death: HOPPER
   compass/click: TARGET
   compass/left-click: STONE_BUTTON
+  compass/teammates: SPYGLASS
   compass/must-be-inventory: ENDER_CHEST
   compass/right-click: OAK_BUTTON
   players: PLAYER_HEAD
@@ -118,6 +119,8 @@ descriptions:
   "settings.compass.signal-interference.underwater": "Jam tracking under too much water."
   "settings.compass.signal-interference.weather": "Weather that jams tracking."
   "settings.compass.speedrunner": "Range limits for speedrunner compasses."
+  "settings.compass.teammates": "Track teammates with shift-left-click."
+  "settings.compass.teammates.enabled": "Shift-left toggles teammate tracking."
   "settings.compass.speedrunner.max-distance": "Cap on speedrunner tracking range."
   "settings.compass.speedrunner.min-distance": "Hide targets too close to speedrunners."
   "settings.players": "Roles, respawns, damage rules, and announcements."

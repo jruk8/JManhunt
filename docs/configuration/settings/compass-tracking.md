@@ -159,6 +159,25 @@ Each successful scroll plays a short click. You can change it under
 `sounds.compass.left-click`, or turn it off there. No sound plays when
 there is nothing to scroll to.
 
+## Teammate Tracking
+
+Under `settings.compass.teammates`, shift-left-clicking the compass
+toggles between tracking enemies and tracking teammates instead of
+cycling a lock. Teammate mode tracks same-role players with the same
+distance limits and signal rules; toggling back returns to the other
+role. The toggle drops any manual lock and refreshes at once, and it
+passes through the shared `click-cooldown` like other clicks:
+
+```yaml
+teammates:
+  enabled: true
+```
+
+The mode is per holder and clears when their match ends, like manual
+locks. Spectators cannot toggle, and respawning players are never
+targets either way. Set `enabled` to false to make shift-left-click
+lock exactly like a normal left-click.
+
 ## Spinning
 
 When the compass has nothing to point at, its needle spins by aiming at
@@ -288,3 +307,15 @@ WorldEdit teleports players who click with a compass, which fights the
 tracking compass. `settings.server.advanced.disable-worldedit-navwand`
 (default on) blocks that teleport for compass clicks without needing
 WorldEdit installed. Turn it off if you rely on the navwand.
+
+## QA Checklist
+
+1. As a hunter, shift-left-click and confirm the compass tracks a
+   fellow hunter; shift-left-click again and confirm it tracks a
+   speedrunner.
+2. Lock a target with left-click, shift-left-click, and confirm the
+   lock is gone and the mode flipped.
+3. Set `teammates.enabled` to false and confirm shift-left-click
+   cycles locks exactly like left-click.
+4. End the match and confirm a new match starts in enemy mode.
+5. In spectator mode, shift-left-click and confirm nothing happens.
