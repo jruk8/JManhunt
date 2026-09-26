@@ -55,9 +55,10 @@ from zero to a queued lobby in five minutes.
 
 ## Lobby Presets
 
-Fresh lobby worlds are filled by `world-engine.lobby-preset`: `EMPTY`,
-`DEFAULT`, or `ADVANCED` (default). Nothing is built in code: each
-preset pastes its vanilla structure-block `.nbt` from
+Fresh lobby worlds are filled by the `tpto lobbyworld` preset argument:
+`EMPTY`, `DEFAULT`, or `ADVANCED`. Omit it and `DEFAULT` is used.
+Nothing is built in code: each preset pastes its vanilla
+structure-block `.nbt` from
 `JManhunt/settings/world-engine/lobby-schematics/` with the structure's
 midpoint at 0,64,0, then runs its console commands (meant for lobby
 teleports; `{world}` and `{preset}` are substituted) before the first
@@ -65,9 +66,9 @@ teleport lands. A missing schematic warns in the console and leaves
 void, with a bare spawn at y=65 as the fallback.
 
 To regenerate with another preset (or an updated `.nbt`): stop the
-server, delete the lobby world folder, set `lobby-preset`, start up,
-and run `tpto lobbyworld` twice. Presets only apply on fresh
-generation: existing worlds are never touched.
+server, delete the lobby world folder, start up,
+and run `tpto lobbyworld <selector> <preset>` twice. Presets only apply on
+fresh generation: existing worlds are never touched.
 
 Authors editing the presets themselves can build in-game and capture the
 result with the [developer schematic tools](../../dev-tools.md).
@@ -111,3 +112,15 @@ This section is split into focused pages:
 For running several matches at once, see
 [Concurrent Matches](../multi-instance.md): lobbies, per-match end
 dimensions, portal routing, and the ready-cell buffer.
+
+## QA Checklist
+
+1. Delete the lobby world folder, run `tpto lobbyworld` twice, and
+   confirm the world is named `jmh_lobby` with the `DEFAULT` preset.
+2. Delete the lobby world folder, run
+   `tpto lobbyworld @s EMPTY` twice, and confirm the `EMPTY`
+   schematic pasted instead.
+3. Run `tpto lobbyworld @s BOGUS` and confirm the invalid-preset
+   error names the valid presets.
+4. Confirm `world-engine.lobby-preset` no longer exists in
+   `/manhunt config` or `config.yml`.

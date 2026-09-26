@@ -134,8 +134,9 @@ twice to confirm. This only deletes the stored entry, never the live
 lobby or its players.
 
 The fastest way to get a lobby is `/manhunt worldengine tpto lobbyworld`,
-run twice: it generates the `jmh-lobby` void world (filled by your lobby
-preset) and points lobby 0 at the spawn automatically.
+run twice: it generates the `jmh_lobby` void world (filled by the
+`DEFAULT` preset, or the preset you name) and points lobby 0 at the
+spawn automatically.
 Set `world-engine.lobby-world-name` to use your own world instead.
 
 Players who fall into the void in the lobby world pop back at their lobby

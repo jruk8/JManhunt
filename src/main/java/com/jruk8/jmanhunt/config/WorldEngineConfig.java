@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.config;
 
-import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.world.cell.BufferRefillPolicy;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
@@ -23,19 +22,11 @@ public class WorldEngineConfig extends OkaeriConfig {
     @Comment({
             "Name of the lobby world used by /manhunt worldengine tpto lobbyworld.",
             "When no world with this name exists, the plugin generates a void world",
-            "filled by the configured lobby preset on confirmed request. Point this",
-            "at your own world to use it instead.",
-            "Default: jmh-lobby"
+            "filled by the tpto preset (DEFAULT unless the command names one).",
+            "Point this at your own world to use it instead.",
+            "Default: jmh_lobby"
     })
-    private String lobbyWorldName = "jmh-lobby";
-
-    @CustomKey("lobby-preset")
-    @Comment({
-            "Preset applied when the lobby world is generated. Delete the world",
-            "folder and run tpto twice to regenerate with another preset.",
-            "Default: DEFAULT"
-    })
-    private LobbyPreset lobbyPreset = LobbyPreset.DEFAULT;
+    private String lobbyWorldName = "jmh_lobby";
 
     @CustomKey("lobby-presets")
     @Comment({
@@ -119,14 +110,6 @@ public class WorldEngineConfig extends OkaeriConfig {
 
     public void setLobbyWorldName(String lobbyWorldName) {
         this.lobbyWorldName = lobbyWorldName;
-    }
-
-    public LobbyPreset getLobbyPreset() {
-        return lobbyPreset;
-    }
-
-    public void setLobbyPreset(LobbyPreset lobbyPreset) {
-        this.lobbyPreset = lobbyPreset;
     }
 
     public Map<String, LobbyPresetEntry> getLobbyPresets() {
@@ -411,9 +394,9 @@ public class WorldEngineConfig extends OkaeriConfig {
             @CustomKey("stored-cells-buffer")
             @Comment({
                     "How many pregenerated cells to keep ready. Minimum: 1.",
-                    "Default: 1"
+                    "Default: 3"
             })
-            private int storedCellsBuffer = 1;
+            private int storedCellsBuffer = 3;
 
             @CustomKey("increment-when")
             @Comment({

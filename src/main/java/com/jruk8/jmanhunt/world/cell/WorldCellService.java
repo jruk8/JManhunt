@@ -182,7 +182,7 @@ public final class WorldCellService {
     /** Ready cells to keep on hand. Minimum 1. */
     private int bufferTarget() {
         return Math.max(1, plugin.configService()
-                .getInt("world-engine.preloading.cell-buffer.stored-cells-buffer", 1));
+                .getInt("world-engine.preloading.cell-buffer.stored-cells-buffer", 3));
     }
 
     /** Allocates one valid cell, logging it for debug recipients. */

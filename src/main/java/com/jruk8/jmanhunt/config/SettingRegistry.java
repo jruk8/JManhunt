@@ -465,9 +465,9 @@ public final class SettingRegistry {
                 "CANCEL", "FORCE_START"));
         entries.add(bool("settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true));
         entries.add(bool("settings.match.headstarts.speedrunner.enabled", false));
-        entries.add(intVal("settings.match.headstarts.speedrunner.delay-seconds", 30, null, null));
+        entries.add(intVal("settings.match.headstarts.speedrunner.delay-seconds", 30, 0, null));
         entries.add(bool("settings.match.headstarts.hunter.enabled", false));
-        entries.add(intVal("settings.match.headstarts.hunter.delay-seconds", 30, null, null));
+        entries.add(intVal("settings.match.headstarts.hunter.delay-seconds", 30, 0, null));
         entries.add(option("settings.match.game-leave.destination", "SPECTATOR", "SPECTATOR", "LOBBY"));
     }
 
@@ -601,9 +601,8 @@ public final class SettingRegistry {
     private static void addWorldEngineEntries(List<SettingDescriptor> entries) {
         entries.add(restart(bool("world-engine.enabled", false)));
         entries.add(string("world-engine.world-name", "world"));
-        entries.add(string("world-engine.lobby-world-name", "jmh-lobby"));
+        entries.add(string("world-engine.lobby-world-name", "jmh_lobby"));
 
-        entries.add(option("world-engine.lobby-preset", "DEFAULT", "EMPTY", "DEFAULT", "ADVANCED"));
         entries.add(string("world-engine.lobby-presets.EMPTY.schematic", "empty-lobby"));
         entries.add(string("world-engine.lobby-presets.DEFAULT.schematic", "default-lobby"));
         entries.add(string("world-engine.lobby-presets.ADVANCED.schematic", "advanced-lobby"));
@@ -620,7 +619,7 @@ public final class SettingRegistry {
         entries.add(bool("world-engine.spawnpoint-algorithm.enabled", true));
         entries.add(intVal("world-engine.spawnpoint-algorithm.max-retries", 8, 0, null));
         entries.add(intVal("world-engine.spawnpoint-algorithm.y-tolerance", 7, 0, null));
-        entries.add(intVal("world-engine.preloading.cell-buffer.stored-cells-buffer", 1, 1, null));
+        entries.add(intVal("world-engine.preloading.cell-buffer.stored-cells-buffer", 3, 1, null));
         entries.add(option("world-engine.preloading.cell-buffer.increment-when", "ALWAYS",
                 "ALWAYS", "NO_MATCH_RUNNING"));
         entries.add(bool("world-engine.world-border.enabled", true));

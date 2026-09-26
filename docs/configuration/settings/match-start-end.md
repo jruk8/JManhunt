@@ -109,7 +109,8 @@ settings:
 ```
 
 Out of the box, speedrunners start with a 30-second head start while
-hunters wait; the hunter headstart is disabled.
+hunters wait; the hunter headstart is disabled. `delay-seconds` accepts
+0 and up: 0 releases the held side immediately.
 
 If [Start on Speedrunner Damage](#start-on-speedrunner-damage) is also
 enabled, the countdowns don't begin until the speedrunner lands that first
@@ -223,3 +224,10 @@ the hunt. If no hunters are left, the speedrunners win.
 `max-strikes` is how many disconnects a player can accumulate before the next
 one removes them instantly, without a grace period. Strikes carry over across
 reconnects within the match. Set to `1` to disable retries entirely.
+
+## QA Checklist
+
+1. Set either headstart `delay-seconds` to `-1` and confirm it is
+   refused (minimum `0`).
+2. Set it to `0`, start a match, and confirm the held side
+   releases immediately.

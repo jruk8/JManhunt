@@ -53,7 +53,7 @@ public final class LobbyWorldManager {
 
     /** Configured lobby world name, live-read so renames apply on reload. */
     public String lobbyWorldName() {
-        return plugin.configService().getString("world-engine.lobby-world-name", "jmh-lobby");
+        return plugin.configService().getString("world-engine.lobby-world-name", "jmh_lobby");
     }
 
     /** True when the lobby world name collides with the game world name. Pure for tests. */
@@ -96,7 +96,7 @@ public final class LobbyWorldManager {
 
     /**
      * Loads or generates the lobby world for any configured name. Fresh
-     * worlds get the void generator, the configured preset paste plus its
+     * worlds get the void generator, the preset paste plus its
      * commands, a safe spawn, and a lobby 0 location when none is
      * configured. Empty when creation fails.
      */
@@ -105,7 +105,7 @@ public final class LobbyWorldManager {
     }
 
     /**
-     * Same, but a present override replaces the configured preset for this
+     * Same, but a present override replaces DEFAULT for this
      * fresh generation only. Already generated worlds ignore it entirely.
      */
     public Optional<LobbyWorld> ensureLobbyWorld(Optional<LobbyPreset> presetOverride) {
@@ -137,8 +137,7 @@ public final class LobbyWorldManager {
             // Our leftover from before a restart: paste and spawn persist.
             return Optional.of(new LobbyWorld(world, false, false));
         }
-        LobbyPreset preset = presetOverride.orElseGet(() -> LobbyPreset.parse(
-                plugin.configService().getString("world-engine.lobby-preset", "DEFAULT")));
+        LobbyPreset preset = presetOverride.orElse(LobbyPreset.DEFAULT);
         new LobbySchematicService(plugin).applyPreset(world, preset);
         applyLobbyDefaults(world);
         Location spawn = safeSpawn(world);

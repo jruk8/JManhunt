@@ -96,6 +96,33 @@ class SettingRegistryTest {
     }
 
     @Test
+    void headstartDelaySecondsRejectBelowZero() {
+        for (String side : List.of("speedrunner", "hunter")) {
+            String path = "settings.match.headstarts." + side + ".delay-seconds";
+            var outcome = validate(path, "-1");
+
+            assertFalse(outcome.ok());
+            assertEquals("manhunt.setting-out-of-range", outcome.errorKey());
+            assertEquals("at least 0", outcome.slots().get("bounds"));
+            assertEquals(0, validate(path, "0").value());
+            assertEquals(30, validate(path, "30").value());
+        }
+    }
+
+    @Test
+    void lobbyPresetOptionRemoved() {
+        assertNull(SettingRegistry.byPath("world-engine.lobby-preset"));
+    }
+
+    @Test
+    void worldEngineDefaultsMatchBundledConfig() {
+        assertEquals("jmh_lobby",
+                SettingRegistry.byPath("world-engine.lobby-world-name").defaultValue());
+        assertEquals("3", SettingRegistry
+                .byPath("world-engine.preloading.cell-buffer.stored-cells-buffer").defaultValue());
+    }
+
+    @Test
     void intBoundsRejectOutsideWithBoundsText() {
         var outcome = validate(
                 "settings.compass.signal-interference.light-level.min-sky-light", "16");

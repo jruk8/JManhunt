@@ -16,7 +16,7 @@ world-engine:
   preloading:
     commands: []
     cell-buffer:
-      stored-cells-buffer: 1
+      stored-cells-buffer: 3
       increment-when: ALWAYS
 ```
 
@@ -52,10 +52,10 @@ The following placeholders are automatically populated at runtime:
 
 ## Cell Buffer
 
-`stored-cells-buffer` is how many pregenerated cells to keep ready. Minimum:
-`1`. Matches consume one buffered cell at start; if the buffer is empty, the
-match fetches a fresh cell on the spot instead. Inspect the buffer with
-`/manhunt worldengine cellindex buffer`.
+`stored-cells-buffer` is how many pregenerated cells to keep ready. Default:
+`3`, minimum: `1`. Matches consume one buffered cell at start; if the
+buffer is empty, the match fetches a fresh cell on the spot instead.
+Inspect the buffer with `/manhunt worldengine cellindex buffer`.
 
 `increment-when` decides when the buffer refills:
 
@@ -74,3 +74,11 @@ The buffer tops up on:
 
 These commands run in the background, once per fetched cell. If a fetch
 fails, it is retried once after 30 seconds.
+
+## QA Checklist
+
+1. On a fresh config, confirm `stored-cells-buffer` is `3`.
+2. Run `/manhunt worldengine cellindex buffer` and confirm up to
+   three ready cells are kept.
+3. Set `stored-cells-buffer` to `0` and confirm it is refused
+   (minimum `1`).

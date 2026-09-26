@@ -149,9 +149,9 @@ default).
 `/manhunt worldengine tpto lobbyworld [selector]` teleports to the lobby
 world. If it does not exist yet, the first run names the missing world and
 asks you to run it again within 10 seconds; the second run generates a void
-world, pastes the configured lobby preset, points lobby 0 at the spawn,
+world, pastes the `DEFAULT` lobby preset, points lobby 0 at the spawn,
 and teleports you there. Pass a preset (`EMPTY`, `DEFAULT`, `ADVANCED`) to
-generate with that preset instead of the configured one; the preset is
+generate with that preset instead of `DEFAULT`; the preset is
 ignored once the world exists, and it cannot be combined with `gameworld`.
 `/manhunt worldengine tpto gameworld [selector]` hops to the game world
 spawn and never generates anything. Without a selector, both target you

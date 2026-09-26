@@ -25,7 +25,7 @@
 #
 
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 7
+config-version: 8
 
 
 # Send anonymous statistics via bStats (open-source). We never collect personal data or IP addresses.
@@ -752,14 +752,10 @@ world-engine:
   world-name: world
   # Name of the lobby world used by /manhunt worldengine tpto lobbyworld.
   # When no world with this name exists, the plugin generates a void world
-  # filled by the configured lobby preset on confirmed request. Point this
-  # at your own world to use it instead.
-  # Default: jmh-lobby
-  lobby-world-name: "jmh-lobby"
-  # Preset applied when the lobby world is generated. Delete the world
-  # folder and run tpto twice to regenerate with another preset.
-  # Default: DEFAULT
-  lobby-preset: DEFAULT
+  # filled by the tpto preset (DEFAULT unless the command names one).
+  # Point this at your own world to use it instead.
+  # Default: jmh_lobby
+  lobby-world-name: "jmh_lobby"
   # Per-preset generation. schematic is a vanilla structure-block .nbt in
   # JManhunt/settings/world-engine/lobby-schematics/, pasted with its
   # midpoint at 0,64,0. commands run as console after the paste and before
@@ -840,8 +836,8 @@ world-engine:
     # Ready-cell buffer kept ahead of match starts.
     cell-buffer:
       # How many pregenerated cells to keep ready. Minimum: 1.
-      # Default: 1
-      stored-cells-buffer: 1
+      # Default: 3
+      stored-cells-buffer: 3
       # When the buffer refills: ALWAYS refills whenever a slot is free,
       # NO_MATCH_RUNNING only refills while no match is running.
       # Default: ALWAYS
