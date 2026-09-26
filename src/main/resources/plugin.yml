@@ -46,9 +46,6 @@ permissions:
   jmanhunt.command.end:
     description: End an active Manhunt match.
     default: op
-  jmanhunt.command.swaproles:
-    description: Swap hunters and speedrunners in a running match.
-    default: op
   jmanhunt.command.reload:
     description: Reload JManhunt configuration.
     default: op

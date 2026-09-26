@@ -6,7 +6,7 @@
 # All commands run when the match starts (or on interval if configured),
 # except console-cleanup and player-cleanup which run when the match ends.
 # Need help writing commands? Generate up-to-date ones at https://mcstacker.net/
-modifiers-version: 3
+modifiers-version: 2
 modifiers:
   # Gives every participating player eight steaks when the match starts.
   everyone-gets-beef:
@@ -386,28 +386,6 @@ modifiers:
         speedrunner:
           - '<if:"<pstat:<p>,health> <= 7 and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 > 300","give <p> golden_apple","exit">'
           - "<pflag:lastuse-<id>,<gstat:duration>>"
-  # Hunters and speedrunners trade places on a strict five-minute
-  # timer. The body runs on the console list: no executor, no picks,
-  # just the swap. With several matches running the command needs an
-  # id, so this stays a single-match modifier.
-  opposite-team-swap:
-    enabled: false
-    meta:
-      name: "Opposite Team Swap"
-      description: "Every 5 minutes, hunters and speedrunners swap roles: console-only swap body."
-      item: ARROW
-      author: JManhunt
-    behavior:
-      runs-on:
-        - INTERVAL
-      options:
-        # Only applicable when "runs-on" contains INTERVAL.
-        interval-settings:
-          # Interval duration in seconds.
-          interval: 300
-      commands:
-        console:
-          - "manhunt swaproles"
 
 # Named groups of modifiers. A preset has no state of its own: it reads
 # as on when every modifier inside is enabled, and toggling it flips

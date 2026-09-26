@@ -95,16 +95,6 @@ class SetPlayerPermissionsTest {
     }
 
     @Test
-    void subcommandGateCoversSwapRoles() {
-        CommandSender swap = senderWith("jmanhunt.command.swaproles");
-        CommandSender other = senderWith("jmanhunt.command.status");
-
-        assertTrue(ManhuntCommand.canUseSubcommand(swap, "swaproles"));
-        assertFalse(ManhuntCommand.canUseSubcommand(other, "swaproles"));
-        assertTrue(ManhuntCommand.subcommandOptions().contains("swaproles"));
-    }
-
-    @Test
     void subcommandGateAcceptsAliasesAndSelfNode() {
         CommandSender selfOnly = senderWith("jmanhunt.command.setplayer.self");
         CommandSender config = senderWith("jmanhunt.command.config");

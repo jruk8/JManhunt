@@ -75,7 +75,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int MODIFIERS_VERSION = 3;
+    private static final int MODIFIERS_VERSION = 2;
     private MessageService messages;
     private MessagesRegistrar messageConfigs;
     private SoundService sounds;

@@ -136,9 +136,6 @@ manhunt:
   set-afk-confirm: "{prefix}<yellow>Run again within <white>10 seconds<yellow> to assign roles to <white>{count}<yellow> AFK player(s)."
   start-usage: "{prefix}<yellow>Usage: /manhunt start [lobby-id]"
   end-usage: "{prefix}<yellow>Usage: /manhunt end [id] [-i|-immediate]"
-  swaproles-usage: "{prefix}<yellow>Usage: /manhunt swaproles [id]"
-  swaproles-ambiguous: "{prefix}<red>Multiple matches running; specify an id."
-  swapped-roles: "{prefix}<green>Swapped <white>{count}<green> players in match <white>{id}<green>."
   game-usage: "{prefix}<yellow>Usage: /manhunt game <join|leave> ..."
   game-join-usage: "{prefix}<yellow>Usage: /manhunt game join <id> [role] [selector]"
   game-leave-usage: "{prefix}<yellow>Usage: /manhunt game leave [id] [selector]"
@@ -180,7 +177,6 @@ manhunt:
 game:
   separator: "<strikethrough><gradient:#bababa:#dedede:#bababa>                                                    </gradient></strikethrough>"
   hunter-death: "{prefix}<yellow>A hunter has died!"
-  roles-swapped: "{prefix}<yellow>Roles swapped: hunters and speedrunners trade places!"
   hunter-respawn-scheduled: "{prefix}<yellow>{player} will respawn in <white>{seconds}s</white>."
   hunter-respawn-imminent: "{prefix}<green>{player} has respawned."
   speedrunner-respawn-scheduled: "{prefix}<yellow>{player} will respawn in <white>{seconds}s</white>."
