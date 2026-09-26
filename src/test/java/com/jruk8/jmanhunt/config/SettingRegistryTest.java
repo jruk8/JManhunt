@@ -156,6 +156,28 @@ class SettingRegistryTest {
     }
 
     @Test
+    void pseudoborderParticleDefaultsMatchBundledConfig() {
+        assertEquals("2", SettingRegistry
+                .byPath("world-engine.world-border.particles.particle-spacing").defaultValue());
+        assertEquals("#de7766", SettingRegistry
+                .byPath("world-engine.world-border.particles.color").defaultValue());
+        assertEquals("10.0", SettingRegistry
+                .byPath("world-engine.world-border.particles.render-radius").defaultValue());
+        assertEquals("INTERVAL", SettingRegistry
+                .byPath("world-engine.world-border.particles.pulse-mode").defaultValue());
+        assertEquals("0.5", SettingRegistry
+                .byPath("world-engine.world-border.particles.interval").defaultValue());
+        assertEquals("0.0", SettingRegistry
+                .byPath("world-engine.world-border.particles.wave-direction-angle").defaultValue());
+        assertEquals("8.0", SettingRegistry
+                .byPath("world-engine.world-border.particles.wave-length").defaultValue());
+        assertEquals("0.5", SettingRegistry
+                .byPath("world-engine.world-border.particles.wave-speed").defaultValue());
+        assertEquals("100", SettingRegistry
+                .byPath("world-engine.world-border.particles.max-particles-per-player").defaultValue());
+    }
+
+    @Test
     void intBoundsRejectOutsideWithBoundsText() {
         var outcome = validate(
                 "settings.compass.signal-interference.light-level.min-sky-light", "16");

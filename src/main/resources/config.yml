@@ -908,6 +908,46 @@ world-engine:
       # immediately.
       # Default: 5
       fadeout-time: 5
+    # Pseudoborder wall particles for concurrent matches.
+    particles:
+      # Blocks between adjacent grid vertices on each wall.
+      # 1 is the tightest grid (most detail, most expensive),
+      # 8 is the loosest. Minimum: 1. Maximum: 8.
+      # Default: 2
+      particle-spacing: 2
+      # Wall color as a hex value, with or without a leading #.
+      # Default: #de7766
+      color: "#de7766"
+      # Perpendicular blocks from a wall at which it starts
+      # rendering for a player. 0 disables the walls.
+      # Default: 10.0
+      render-radius: 10.0
+      # Pulse style: INTERVAL blinks every wall in sync,
+      # SINE_WAVE sweeps a traveling band across each wall.
+      # Default: INTERVAL
+      pulse-mode: INTERVAL
+      # Seconds between INTERVAL blinks. 0 shows every tick
+      # (not recommended, lag). Minimum: 0. Maximum: 3.
+      # Default: 0.5
+      interval: 0.5
+      # SINE_WAVE travel direction in degrees,
+      # counter-clockwise from the wall horizontal when facing
+      # the wall. 0 travels along the wall, 90 travels up.
+      # Minimum: 0. Maximum: 360.
+      # Default: 0.0
+      wave-direction-angle: 0.0
+      # SINE_WAVE spatial period in blocks. Minimum: 2.
+      # Maximum: 64.
+      # Default: 8.0
+      wave-length: 8.0
+      # SINE_WAVE temporal frequency in Hz. Minimum: 0.05.
+      # Maximum: 3.0.
+      # Default: 0.5
+      wave-speed: 0.5
+      # Hard ceiling on wall particles per player per tick;
+      # the nearest vertices win. Minimum: 1.
+      # Default: 100
+      max-particles-per-player: 100
   # Shared pool of reusable end dimensions.
   end:
     # Base name for pooled end dimensions. Pool members are

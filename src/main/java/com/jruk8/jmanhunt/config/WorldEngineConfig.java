@@ -462,6 +462,9 @@ public class WorldEngineConfig extends OkaeriConfig {
         })
         private StartBorder startBorder = new StartBorder();
 
+        @Comment("Pseudoborder wall particles for concurrent matches.")
+        private WorldEngineParticles particles = new WorldEngineParticles();
+
         public boolean isEnabled() {
             return enabled;
         }
@@ -484,6 +487,14 @@ public class WorldEngineConfig extends OkaeriConfig {
 
         public void setStartBorder(StartBorder startBorder) {
             this.startBorder = startBorder;
+        }
+
+        public WorldEngineParticles getParticles() {
+            return particles;
+        }
+
+        public void setParticles(WorldEngineParticles particles) {
+            this.particles = particles;
         }
 
         /** Border damage buffer and amount. */
@@ -572,6 +583,7 @@ public class WorldEngineConfig extends OkaeriConfig {
                 this.fadeoutTime = fadeoutTime;
             }
         }
+
     }
 
     /** Shared pool of reusable end dimensions. */

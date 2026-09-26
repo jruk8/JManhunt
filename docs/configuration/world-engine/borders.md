@@ -33,7 +33,9 @@ cell are pulled back in and take `damage.amount` past `damage.buffer`, with
 the start diameter applying until their match begins. Spectators bypass it
 like the vanilla border. When concurrency drops back to one match, the
 survivor gets the real border again. See
-[Concurrent Matches](../../multi-instance.md).
+[Concurrent Matches](../../multi-instance.md). The walls render as
+particle grids; see
+[Pseudoborder Particles](pseudoborder-particles.md).
 
 ## Damage
 

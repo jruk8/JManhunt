@@ -37,6 +37,7 @@ import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
 import com.jruk8.jmanhunt.match.lifecycle.TimeLimitService;
 import com.jruk8.jmanhunt.match.prestart.PrestartService;
+import com.jruk8.jmanhunt.world.border.PseudoborderParticleService;
 
 public final class GameManager implements MatchControl {
     private final JManhuntPlugin plugin;
@@ -54,6 +55,7 @@ public final class GameManager implements MatchControl {
     private final AutostartService autostart;
     private final MatchFinishService matchFinish;
     private final MatchStartService matchStart;
+    private final PseudoborderParticleService pseudoborderParticles;
     private final FlagStore flagStore;
     private final StatsManager stats;
 
@@ -85,6 +87,7 @@ public final class GameManager implements MatchControl {
         this.matchStart = new MatchStartService(plugin, messages, sounds, playerStates, compass, stats,
                 stateCommands, configService, worldEngine, lobbies, store, messaging, timeLimits,
                 prestart, autostart, matchFinish);
+        this.pseudoborderParticles = new PseudoborderParticleService(plugin, configService, store);
 
         // assign events
         configService.onChange("settings.match.autostart.enabled", (oldValue, newValue) -> updateAutostartState());

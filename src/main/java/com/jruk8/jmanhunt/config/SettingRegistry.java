@@ -668,6 +668,16 @@ public final class SettingRegistry {
         entries.add(bool("world-engine.world-border.start-border.enabled", true));
         entries.add(intVal("world-engine.world-border.start-border.radius", 10, null, null));
         entries.add(intVal("world-engine.world-border.start-border.fadeout-time", 5, -1, null));
+        entries.add(intVal("world-engine.world-border.particles.particle-spacing", 2, 1, 8));
+        entries.add(string("world-engine.world-border.particles.color", "#de7766"));
+        entries.add(floatVal("world-engine.world-border.particles.render-radius", 10.0, 0.0, null));
+        entries.add(option("world-engine.world-border.particles.pulse-mode", "INTERVAL",
+                "INTERVAL", "SINE_WAVE"));
+        entries.add(floatVal("world-engine.world-border.particles.interval", 0.5, 0.0, 3.0));
+        entries.add(floatVal("world-engine.world-border.particles.wave-direction-angle", 0.0, 0.0, 360.0));
+        entries.add(floatVal("world-engine.world-border.particles.wave-length", 8.0, 2.0, 64.0));
+        entries.add(floatVal("world-engine.world-border.particles.wave-speed", 0.5, 0.05, 3.0));
+        entries.add(intVal("world-engine.world-border.particles.max-particles-per-player", 100, 1, null));
         entries.add(string("world-engine.end.base-name", "jmh_end"));
         entries.add(intVal("world-engine.end.buffer", 3, 1, null));
     }

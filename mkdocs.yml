@@ -71,6 +71,7 @@ nav:
           - Pre-generating Cells: configuration/world-engine/pregenerating-cells.md
           - Borders: configuration/world-engine/borders.md
           - End Dimensions: configuration/world-engine/end-dimensions.md
+          - Pseudoborder Particles: configuration/world-engine/pseudoborder-particles.md
           - Troubleshooting: configuration/world-engine/troubleshooting.md
       - Modifiers: configuration/modifiers.md
       - Game Rules: configuration/game-rules.md

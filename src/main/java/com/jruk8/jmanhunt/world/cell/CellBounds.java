@@ -29,6 +29,21 @@ public final class CellBounds {
         return new CellBounds(centerX, centerZ, diameter / 2.0);
     }
 
+    /** Cell center X in overworld blocks. */
+    public double centerX() {
+        return centerX;
+    }
+
+    /** Cell center Z in overworld blocks. */
+    public double centerZ() {
+        return centerZ;
+    }
+
+    /** Half the confining diameter in overworld blocks. */
+    public double halfSize() {
+        return halfSize;
+    }
+
     public boolean contains(double x, double z) {
         return contains(x, z, false);
     }
