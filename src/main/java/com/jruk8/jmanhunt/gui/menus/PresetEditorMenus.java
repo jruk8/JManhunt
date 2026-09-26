@@ -150,7 +150,7 @@ public final class PresetEditorMenus {
                         gui.navigate(player, listMenu.get());
                         return;
                     }
-                    String id = store.createPreset(name.value());
+                    String id = store.createPreset(name.value(), player.getName());
                     messages.message(player, "modifiers.create-success",
                             Map.of("type", "preset", "name", store.presetName(id)));
                     sounds.playNeutralSound(player);

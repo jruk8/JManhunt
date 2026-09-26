@@ -35,9 +35,10 @@ class ModifierCreateArgsTest {
         assertTrue(result.success());
         assertEquals("Beef Party", result.plan().name());
         assertFalse(result.plan().preset());
-        ModifierEntry entry = result.plan().toEntry();
+        ModifierEntry entry = result.plan().toEntry("Bea");
         assertFalse(entry.isEnabled());
         assertEquals("Beef Party", entry.getMeta().getName());
+        assertEquals("Bea", entry.getMeta().getAuthor());
         assertNull(entry.getBehavior());
     }
 
@@ -93,7 +94,8 @@ class ModifierCreateArgsTest {
         assertEquals("PER_EXECUTOR", plan.pickBehavior());
         assertEquals(100L, plan.delay());
 
-        assertEntryMatchesPlan(plan.toEntry());
+        assertEntryMatchesPlan(plan.toEntry(plan.author()));
+        assertEquals("Me", plan.toEntry(plan.author()).getMeta().getAuthor());
     }
 
     private static void assertEntryMatchesPlan(ModifierEntry entry) {
@@ -160,10 +162,20 @@ class ModifierCreateArgsTest {
                 KNOWN);
         assertTrue(result.success());
         assertTrue(result.plan().preset());
-        ModifierPreset preset = result.plan().toPreset();
+        ModifierPreset preset = result.plan().toPreset("Bea");
         assertEquals("Pack", preset.getMeta().getName());
         assertEquals("Both", preset.getMeta().getDescription());
+        assertEquals("Bea", preset.getMeta().getAuthor());
         assertEquals(java.util.List.of("beef", "swords"), preset.getModifiers());
+    }
+
+    @Test
+    void presetAcceptsAuthorFlag() {
+        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(
+                new String[] {"preset", "Pack", "--author", "Bea", "--member", "beef"}, KNOWN);
+        assertTrue(result.success());
+        assertEquals("Bea", result.plan().author());
+        assertEquals("Bea", result.plan().toPreset(result.plan().author()).getMeta().getAuthor());
     }
 
     @Test

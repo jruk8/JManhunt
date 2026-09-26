@@ -100,20 +100,23 @@ class OverrideCommandTest {
     void settingsClearRemovesThenReportsNothing() {
         FakeSender sender = FakeSender.permitted();
         assertTrue(overrides.setSettingOverride(4, BOOL, "false").ok());
+        String[] clear = {"override", "4", "settings", "clear", "settings", "match",
+                "autostart", "enabled"};
 
-        assertTrue(command.execute(sender,
-                new String[]{"override", "4", "settings", "clear", "settings", "match",
-                        "autostart", "enabled"}));
+        assertTrue(command.execute(sender, clear));
+        assertTrue(overrides.hasSettingOverride(4, BOOL));
+        assertEquals(List.of(messages.component("manhunt.override-clear-confirm",
+                Map.of("lobby", "4", "what", "overrides under " + BOOL))), sender.received());
+
+        assertTrue(command.execute(sender, clear));
         assertFalse(overrides.hasSettingOverride(4, BOOL));
-        assertEquals(List.of(messages.component("manhunt.override-removed",
-                Map.of("lobby", "4", "setting", BOOL))), sender.received());
+        assertEquals(messages.component("manhunt.override-removed",
+                Map.of("lobby", "4", "setting", BOOL)), sender.received().get(1));
 
-        FakeSender again = FakeSender.permitted();
-        assertTrue(command.execute(again,
-                new String[]{"override", "4", "settings", "clear", "settings", "match",
-                        "autostart", "enabled"}));
-        assertEquals(List.of(messages.component("manhunt.override-nothing-to-clear",
-                Map.of("lobby", "4", "setting", BOOL))), again.received());
+        assertTrue(command.execute(sender, clear));
+        assertTrue(command.execute(sender, clear));
+        assertEquals(messages.component("manhunt.override-nothing-to-clear",
+                Map.of("lobby", "4", "setting", BOOL)), sender.received().get(3));
     }
 
     @Test
@@ -133,6 +136,10 @@ class OverrideCommandTest {
         assertEquals(List.of(messages.component("manhunt.override-modifier-shown",
                 Map.of("modifier", "gapple", "state", "on", "source", overrideSource()))),
                 reader.received());
+
+        assertTrue(command.execute(sender,
+                new String[]{"override", "1", "modifiers", "clear", "gapple"}));
+        assertTrue(overrides.hasModifierOverride(1, "gapple"));
 
         assertTrue(command.execute(sender,
                 new String[]{"override", "1", "modifiers", "clear", "gapple"}));
@@ -159,13 +166,18 @@ class OverrideCommandTest {
         assertTrue(overrides.setModifierOverride(6, "beef", false));
 
         assertTrue(command.execute(sender, new String[]{"override", "6", "clear"}));
-        assertEquals(List.of(messages.component("manhunt.override-lobby-cleared",
-                Map.of("lobby", "6", "count", "2"))), sender.received());
+        assertEquals(List.of(messages.component("manhunt.override-clear-confirm",
+                Map.of("lobby", "6", "what", "every override"))), sender.received());
 
         FakeSender again = FakeSender.permitted();
         assertTrue(command.execute(again, new String[]{"override", "6", "clear"}));
-        assertEquals(List.of(messages.component("manhunt.override-lobby-empty",
-                Map.of("lobby", "6"))), again.received());
+        assertEquals(List.of(messages.component("manhunt.override-lobby-cleared",
+                Map.of("lobby", "6", "count", "2"))), again.received());
+
+        assertTrue(command.execute(sender, new String[]{"override", "6", "clear"}));
+        assertTrue(command.execute(again, new String[]{"override", "6", "clear"}));
+        assertEquals(messages.component("manhunt.override-lobby-empty",
+                Map.of("lobby", "6")), again.received().get(1));
     }
 
     @Test

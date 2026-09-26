@@ -479,7 +479,9 @@ disabled.
 In the GUI, a create button sits at the top-right of the modifiers
 and presets lists. It prompts for a display name (you become the
 author) and opens the new entry in its editor. Right-clicking any
-existing entry opens the same editor.
+existing entry opens the same editor. The `create` command behaves
+the same: without `--author`, the sender becomes the author, and
+the console records `CONSOLE`.
 
 The modifier editor covers every field: name, description, icon,
 author, the enabled toggle, trigger toggles, pre-start order, all

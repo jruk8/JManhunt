@@ -38,7 +38,7 @@ public final class ModifierCreateArgs {
             "--chance", "--chance-scope", "--selection", "--pick-count", "--pick-scope",
             "--delay", "--console", "--player", "--hunter", "--speedrunner",
             "--console-cleanup", "--player-cleanup");
-    private static final Set<String> PRESET_FLAGS = Set.of("--desc", "--item", "--member");
+    private static final Set<String> PRESET_FLAGS = Set.of("--desc", "--item", "--author", "--member");
     private static final Set<String> SCOPES = Set.of("PER_INVOKE", "PER_EXECUTOR");
     private static final Set<String> ORDERS = Set.of("IN_ORDER", "PICK_RANDOM");
 
@@ -59,13 +59,13 @@ public final class ModifierCreateArgs {
             Integer pickCount, String pickBehavior, Long delay,
             Map<String, List<String>> commands, List<String> members) {
         /** Builds a disabled entry with only the flagged sections set. */
-        public ModifierEntry toEntry() {
+        public ModifierEntry toEntry(String resolvedAuthor) {
             ModifierEntry entry = new ModifierEntry();
             ModifierMeta meta = new ModifierMeta();
             meta.setName(name);
             meta.setDescription(description);
             meta.setItem(item);
-            meta.setAuthor(author);
+            meta.setAuthor(resolvedAuthor);
             entry.setMeta(meta);
             ModifierBehavior behavior = new ModifierBehavior();
             boolean touched = false;
@@ -134,12 +134,13 @@ public final class ModifierCreateArgs {
         }
 
         /** Builds a preset with the flagged display data and members. */
-        public ModifierPreset toPreset() {
+        public ModifierPreset toPreset(String resolvedAuthor) {
             ModifierPreset preset = new ModifierPreset();
             ModifierMeta meta = new ModifierMeta();
             meta.setName(name);
             meta.setDescription(description);
             meta.setItem(item);
+            meta.setAuthor(resolvedAuthor);
             preset.setMeta(meta);
             preset.setModifiers(new ArrayList<>(members));
             return preset;

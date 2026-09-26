@@ -91,7 +91,7 @@ public class ModifiersMessages extends OkaeriConfig {
             "<name> [flags...]\n{prefix}<gray>Modifier flags: --desc --item --author --trigger --on-start " +
             "--interval --deviation --interval-scope --chance --chance-scope --selection --pick-count " +
             "--pick-scope --delay --console --player --hunter --speedrunner --console-cleanup " +
-            "--player-cleanup\n{prefix}<gray>Preset flags: --desc --item --member";
+            "--player-cleanup\n{prefix}<gray>Preset flags: --desc --item --author --member";
 
     @CustomKey("create-unknown-flag")
     private String createUnknownFlag = "{prefix}<red>Unknown flag <white>{flag}</white>.";

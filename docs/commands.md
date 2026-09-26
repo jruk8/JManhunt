@@ -255,7 +255,9 @@ one list, or a whole subtree. `modifiers get` lists every modifier
 and preset with its effective state; `set` accepts a modifier or
 preset id (a preset forces every member) and `clear` without an id
 drops every modifier override. Bare `clear` drops the whole lobby's
-overrides; lobbies left with nothing stored are pruned.
+overrides; lobbies left with nothing stored are pruned. Every
+clear variant asks once and deletes on an identical rerun within
+10 seconds.
 
 ## Modifiers
 
@@ -293,7 +295,9 @@ Modifier flags: `--desc`, `--item`, `--author`, repeatable
 `--pick-count`, `--pick-scope`, `--delay`, and one repeatable flag per
 command list (`--console`, `--player`, `--hunter`, `--speedrunner`,
 `--console-cleanup`, `--player-cleanup`). Presets take `--desc`,
-`--item`, and repeatable `--member`. Scopes accept `PER_INVOKE` or
+`--item`, `--author`, and repeatable `--member`. Without
+`--author`, the creator becomes the author (the console records
+`CONSOLE`). Scopes accept `PER_INVOKE` or
 `PER_EXECUTOR`; orders accept `IN_ORDER` or `PICK_RANDOM`. Invalid
 values are refused with an error, while unknown command tags only
 warn. The same creator lives in the GUI: a create button sits at the

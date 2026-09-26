@@ -75,12 +75,13 @@ public final class ModifierStore {
      * immediately. The name gets " {n}" numbering when taken. Returns
      * the final id.
      */
-    public String createPreset(String displayName) {
+    public String createPreset(String displayName, String author) {
         ModifierPreset preset = new ModifierPreset();
         ModifierMeta meta = new ModifierMeta();
         meta.setName(displayName);
         meta.setDescription(DEFAULT_DESCRIPTION);
         meta.setItem(Material.STONE.name());
+        meta.setAuthor(author);
         preset.setMeta(meta);
         preset.setModifiers(new ArrayList<>());
         String slug = ModifierNames.kebab(displayName);

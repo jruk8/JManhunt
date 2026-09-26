@@ -30,6 +30,7 @@ public final class OverrideCommand {
     private final MessageService messages;
     private final SettingFeedback feedback;
     private final SoundService sounds;
+    private final PendingConfirmations confirms = new PendingConfirmations();
 
     /**
      * @param sounds get-path blips, null only in unit tests that never
@@ -150,6 +151,10 @@ public final class OverrideCommand {
         }
         if (!resolved.remainder().isEmpty()) {
             return usage(sender);
+        }
+        if (confirmRequired(sender, lobby, "settings|" + lobby + "|" + resolved.path(),
+                "overrides under " + resolved.path())) {
+            return true;
         }
         int removed = overrides.clearOverrides(lobby, resolved.path());
         feedback.overrideCleared(sender, lobby, resolved.path(), removed);
@@ -304,40 +309,84 @@ public final class OverrideCommand {
             return usage(sender);
         }
         if (rest.isEmpty()) {
-            int removed = 0;
-            for (String name : config.modifierNames()) {
-                if (overrides.clearModifierOverride(lobby, name)) {
-                    removed++;
-                }
-            }
-            feedback.overrideCleared(sender, lobby, "modifiers", removed);
-            return true;
+            return modifiersClearAll(sender, lobby);
         }
         String id = rest.get(0);
         if (config.modifierNames().contains(id)) {
-            if (overrides.clearModifierOverride(lobby, id)) {
-                feedback.overrideModifierCleared(sender, lobby, id);
-            } else {
-                feedback.overrideCleared(sender, lobby, "modifiers." + id, 0);
-            }
-            return true;
+            return modifiersClearOne(sender, lobby, id);
         }
         if (config.presetNames().contains(id)) {
-            int removed = 0;
-            for (String member : config.presetMembers(id)) {
-                if (overrides.clearModifierOverride(lobby, member)) {
-                    removed++;
-                }
-            }
-            feedback.overrideCleared(sender, lobby, "preset." + id, removed);
-            return true;
+            return modifiersClearPreset(sender, lobby, id);
         }
         return unknownModifier(sender, id);
     }
 
+    /** Clears every modifier override after the rerun confirm. */
+    private boolean modifiersClearAll(CommandSender sender, int lobby) {
+        if (confirmRequired(sender, lobby, "modifiers|" + lobby + "|all",
+                "all modifier overrides")) {
+            return true;
+        }
+        int removed = 0;
+        for (String name : config.modifierNames()) {
+            if (overrides.clearModifierOverride(lobby, name)) {
+                removed++;
+            }
+        }
+        feedback.overrideCleared(sender, lobby, "modifiers", removed);
+        return true;
+    }
+
+    /** Clears one modifier override after the rerun confirm. */
+    private boolean modifiersClearOne(CommandSender sender, int lobby, String id) {
+        if (confirmRequired(sender, lobby, "modifiers|" + lobby + "|" + id,
+                "the " + id + " modifier override")) {
+            return true;
+        }
+        if (overrides.clearModifierOverride(lobby, id)) {
+            feedback.overrideModifierCleared(sender, lobby, id);
+        } else {
+            feedback.overrideCleared(sender, lobby, "modifiers." + id, 0);
+        }
+        return true;
+    }
+
+    /** Clears one preset's member overrides after the rerun confirm. */
+    private boolean modifiersClearPreset(CommandSender sender, int lobby, String id) {
+        if (confirmRequired(sender, lobby, "preset|" + lobby + "|" + id,
+                "the " + id + " preset overrides")) {
+            return true;
+        }
+        int removed = 0;
+        for (String member : config.presetMembers(id)) {
+            if (overrides.clearModifierOverride(lobby, member)) {
+                removed++;
+            }
+        }
+        feedback.overrideCleared(sender, lobby, "preset." + id, removed);
+        return true;
+    }
+
     private boolean clearLobby(CommandSender sender, int lobby) {
+        if (confirmRequired(sender, lobby, "lobby|" + lobby, "every override")) {
+            return true;
+        }
         int removed = overrides.clearLobby(lobby);
         feedback.overrideLobbyCleared(sender, lobby, removed);
+        return true;
+    }
+
+    /**
+     * True when the clear must wait for an explicit rerun: the first
+     * run arms the action and asks, the identical rerun within 10
+     * seconds proceeds. Keyed by sender name so console works too.
+     */
+    private boolean confirmRequired(CommandSender sender, int lobby, String key, String what) {
+        if (confirms.confirm(sender.getName() + "|" + key)) {
+            return false;
+        }
+        messages.message(sender, "manhunt.override-clear-confirm",
+                Map.of("lobby", String.valueOf(lobby), "what", what));
         return true;
     }
 

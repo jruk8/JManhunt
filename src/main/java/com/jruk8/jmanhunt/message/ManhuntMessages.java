@@ -237,6 +237,10 @@ public class ManhuntMessages extends OkaeriConfig {
     private String overrideLobbyEmpty = "{prefix}<yellow>Lobby <white>{lobby}<yellow> " +
             "has no overrides.";
 
+    @CustomKey("override-clear-confirm")
+    private String overrideClearConfirm = "{prefix}<yellow>Run the command again within " +
+            "<white>10 seconds<yellow> to clear {what} for lobby <white>{lobby}<yellow>.";
+
     @CustomKey("override-setting-shown")
     private String overrideSettingShown = "{prefix}<white>{setting}<gray> = " +
             "<white>{value}</white> {source}";

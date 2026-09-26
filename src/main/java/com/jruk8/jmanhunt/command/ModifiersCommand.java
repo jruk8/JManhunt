@@ -372,12 +372,14 @@ public final class ModifiersCommand {
             return true;
         }
         ModifierCreateArgs.Plan plan = result.plan();
+        String author = plan.author() == null || plan.author().isBlank()
+                ? senderName(sender) : plan.author();
         String slug = ModifierNames.kebab(plan.name());
         String finalId;
         if (plan.preset()) {
-            finalId = config.modifiers().addPreset(slug.isEmpty() ? "preset" : slug, plan.toPreset());
+            finalId = config.modifiers().addPreset(slug.isEmpty() ? "preset" : slug, plan.toPreset(author));
         } else {
-            finalId = config.modifiers().addModifier(slug.isEmpty() ? "modifier" : slug, plan.toEntry());
+            finalId = config.modifiers().addModifier(slug.isEmpty() ? "modifier" : slug, plan.toEntry(author));
         }
         String display = plan.preset()
                 ? config.modifiers().presetName(finalId)
@@ -391,6 +393,11 @@ public final class ModifiersCommand {
             sounds.playNeutralSound(player);
         }
         return true;
+    }
+
+    /** Creator name for new entries: player name, or CONSOLE. */
+    private static String senderName(CommandSender sender) {
+        return sender instanceof Player player ? player.getName() : "CONSOLE";
     }
 
     private void announceBulkToggle(CommandSender sender, int count, String kind, boolean value) {
