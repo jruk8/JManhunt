@@ -174,7 +174,7 @@ public final class ModifierDetailMenus {
      */
     private void linePrompt(Player player, Menu self, String title, String initial,
             String id, String list, int index) {
-        dialogs.prompt(player, title, initial, PlaceholderCheatsheet.lines(),
+        dialogs.prompt(player, title, initial, PlaceholderCheatsheet.commandDialogLines(),
                 raw -> {
                     Optional<String> problem = CommandValidation.validateLine(raw,
                             validateCommands(), CommandValidation.knownRoots(),

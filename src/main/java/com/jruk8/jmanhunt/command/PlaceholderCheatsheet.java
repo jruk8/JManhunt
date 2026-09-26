@@ -59,4 +59,32 @@ public final class PlaceholderCheatsheet {
         }
         return lines;
     }
+
+    /**
+     * Command dialog body: plain-command guidance plus a curated tag
+     * shortlist and a docs pointer, then the full tag list below a
+     * separator so no reference content is lost.
+     */
+    public static List<String> commandDialogLines() {
+        List<String> lines = new ArrayList<>();
+        lines.add("<gray>Type standard MC commands like "
+                + "<white>give @p cooked_beef 8</white> normally. "
+                + "Scripting is for advanced modifiers.</gray>");
+        lines.add("<gray>Tags parse to text, then the full text runs as one command.</gray>");
+        lines.add("<green>»</green> <white><p></white> "
+                + "<gray>the executing player, safer than @p</gray>");
+        lines.add("<green>»</green> <white><pmessage:text></white> "
+                + "<gray>message the executor, parses to nothing</gray>");
+        lines.add("<green>»</green> <white><random-player></white> "
+                + "<gray>random participating player</gray>");
+        lines.add("<green>»</green> <white><random-num:min,max></white> "
+                + "<gray>random whole number</gray>");
+        lines.add("<green>»</green> <white><random-pick:a,b></white> "
+                + "<gray>random entry from the list</gray>");
+        lines.add("<gray>For statistics, if conditionals, and placeholders, "
+                + "read the Modifiers docs page.</gray>");
+        lines.add("<gray>--- all tags ---</gray>");
+        lines.addAll(lines());
+        return lines;
+    }
 }

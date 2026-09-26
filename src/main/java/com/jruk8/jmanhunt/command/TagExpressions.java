@@ -91,17 +91,28 @@ public final class TagExpressions {
 
     private static boolean evalComparison(String part, Consumer<String> warn, String where)
             throws ExprException {
-        validateConditionSpacing(part);
+        validateConditionBrackets(part);
         Comparison comparison = findComparison(part);
         if (comparison == null) {
-            throw new ExprException("condition needs a comparison (==, !=, >, <, >=, <=)");
+            throw new ExprException("condition needs a comparison (==, !=, lt, le, gt, ge)");
         }
         Value left = evalValue(comparison.left(), warn, where);
         Value right = evalValue(comparison.right(), warn, where);
         return switch (comparison.operator()) {
             case "==" -> equalsValue(left, right);
             case "!=" -> !equalsValue(left, right);
-            default -> orderValue(left, right, comparison.operator());
+            default -> orderValue(left, right, normalizeOperator(comparison.operator()));
+        };
+    }
+
+    /** Maps word operators to the symbols orderValue compares with. */
+    private static String normalizeOperator(String operator) {
+        return switch (operator) {
+            case "lt" -> "<";
+            case "le" -> "<=";
+            case "gt" -> ">";
+            case "ge" -> ">=";
+            default -> operator;
         };
     }
 
@@ -146,9 +157,32 @@ public final class TagExpressions {
     }
 
     private static String matchOperator(String part, int index) {
-        for (String operator : List.of("==", "!=", ">=", "<=", ">", "<")) {
+        for (String operator : List.of("==", "!=")) {
             if (part.startsWith(operator, index)) {
                 return operator;
+            }
+        }
+        return matchWordOperator(part, index);
+    }
+
+    /**
+     * Word comparison operator at {@code index} (case-blind), or null
+     * when absent. Both sides need a non-letter-or-digit boundary so
+     * words like {@code alt} or {@code glee} never split. Angle
+     * brackets are deliberately not operators: they would be
+     * ambiguous with tag brackets.
+     */
+    private static String matchWordOperator(String part, int index) {
+        for (String word : List.of("lt", "le", "gt", "ge")) {
+            int end = index + word.length();
+            if (end > part.length()
+                    || !part.regionMatches(true, index, word, 0, word.length())) {
+                continue;
+            }
+            char before = index > 0 ? part.charAt(index - 1) : ' ';
+            char after = end < part.length() ? part.charAt(end) : ' ';
+            if (!Character.isLetterOrDigit(before) && !Character.isLetterOrDigit(after)) {
+                return word;
             }
         }
         return null;
@@ -156,32 +190,19 @@ public final class TagExpressions {
 
     /**
      * Closing {@code >} of the nested tag opening at {@code index},
-     * or null when the bracket is a comparison. A space after
-     * {@code <} always means a comparison, as does a spaced
-     * {@code <=} (checked before the balance scan so a later
-     * {@code >} cannot swallow the operator); anything else must
-     * start with a tag-name letter to qualify for the skip.
+     * or null when the bracket opens no tag. Only a tag-name letter
+     * after {@code <} qualifies for the skip; anything else is a
+     * stray bracket that validation reports.
      */
     private static Integer nestedTagClose(String part, int index) {
         if (part.charAt(index) != '<' || index + 1 >= part.length()
                 || Character.isWhitespace(part.charAt(index + 1))) {
             return null;
         }
-        if (isSpacedEquals(part, index) || !Character.isLetter(part.charAt(index + 1))) {
+        if (!Character.isLetter(part.charAt(index + 1))) {
             return null;
         }
         return spanEnd(part, index);
-    }
-
-    /** True for {@code <=} with a space (or edge) on both sides. */
-    private static boolean isSpacedEquals(String part, int index) {
-        if (part.charAt(index + 1) != '=') {
-            return false;
-        }
-        char before = index > 0 ? part.charAt(index - 1) : ' ';
-        int after = index + 2;
-        char afterChar = after < part.length() ? part.charAt(after) : ' ';
-        return Character.isWhitespace(before) && Character.isWhitespace(afterChar);
     }
 
     /**
@@ -223,10 +244,11 @@ public final class TagExpressions {
     }
 
     /**
-     * Rejects top-level {@code < > <= >=} without whitespace on both
-     * sides. Shared by runtime evaluation and static validation.
+     * Rejects stray angle brackets outside quotes, groups, and nested
+     * tags: they are not comparisons anymore. Shared by runtime
+     * evaluation and static validation.
      */
-    static void validateConditionSpacing(String part) throws ExprException {
+    static void validateConditionBrackets(String part) throws ExprException {
         int depth = 0;
         char quote = 0;
         for (int index = 0; index < part.length(); index++) {
@@ -249,15 +271,9 @@ public final class TagExpressions {
                     index = tagClose;
                     continue;
                 }
-                String operator = matchOperator(part, index);
-                if (operator != null && (operator.contains("<") || operator.contains(">"))) {
-                    char before = index > 0 ? part.charAt(index - 1) : 0;
-                    int afterIndex = index + operator.length();
-                    char after = afterIndex < part.length() ? part.charAt(afterIndex) : 0;
-                    if (!Character.isWhitespace(before) || !Character.isWhitespace(after)) {
-                        throw new ExprException(
-                                "'" + operator + "' needs a space on both sides");
-                    }
+                if (letter == '<' || letter == '>') {
+                    throw new ExprException(
+                            "'" + letter + "' is not a comparison; use lt, le, gt, ge");
                 }
             }
         }
@@ -494,10 +510,10 @@ public final class TagExpressions {
     }
 
     /**
-     * Finds {@code <if>} spans, whose conditions may hold bare
-     * {@code < > <= >=} that the plain innermost-tag scan cannot see.
-     * Quotes nest by alternation and only unquoted brackets count
-     * toward depth. Spans that never balance are skipped.
+     * Finds {@code <if>} spans, whose conditions may hold nested tags
+     * that the plain innermost-tag scan cannot see. Quotes nest by
+     * alternation and only unquoted brackets count toward depth.
+     * Spans that never balance are skipped.
      */
     public static List<IfSpan> findIfSpans(String line) {
         List<IfSpan> spans = new ArrayList<>();

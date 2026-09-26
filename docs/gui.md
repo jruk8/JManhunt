@@ -108,8 +108,10 @@ lists glow. Each list menu shows one paper per line with a
 trailing stick to append: click a line to edit, right-click to
 delete after a confirm. Paper names clamp to 32 characters, and
 re-saving a line unchanged chats a notice instead of rewriting
-it. Add and edit dialogs list every available
-tag with a short note. Saving validates the line: unbalanced
+it. Add and edit dialogs open with plain-command guidance (normal
+commands like `give @p cooked_beef 8` need no scripting) plus a
+curated tag shortlist, then list every available tag with a short
+note. Saving validates the line: unbalanced
 brackets, empty commands, malformed random args, unknown root
 commands, and unknown `give` items are refused with a chat error,
 while unknown tags and skipped pick items only warn. Set

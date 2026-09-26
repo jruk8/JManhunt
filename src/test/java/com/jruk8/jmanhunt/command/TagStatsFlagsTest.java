@@ -178,8 +178,8 @@ class TagStatsFlagsTest {
         Fixture fixture = new Fixture();
         fixture.playerValues.put("Steve|health", "5");
         fixture.globalValues.put("duration", "732");
-        String check = "<if:\"<pstat:<p>,health> <= 7"
-                + " and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 > 300\","
+        String check = "<if:\"<pstat:<p>,health> le 7"
+                + " and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 gt 300\","
                 + "\"give <p> golden_apple\",\"exit\">";
         assertEquals("give Steve golden_apple", fixture.replace(check));
 

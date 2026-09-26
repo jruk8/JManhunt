@@ -160,7 +160,7 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <gsound:block.stone.break> done").isEmpty());
         assertTrue(CommandSyntax.error("say <psound:block.stone.break,0.5,2> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"1 == 1\",\"y\",\"n\"> done").isEmpty());
-        assertTrue(CommandSyntax.error("say <if:\"7 <= 5\",\"y\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <if:\"7 le 5\",\"y\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"<random-num:1,6> == 5\",\"y\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"<flag:a> == <flag:a>\",\"y\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"<if:1==1,y,n> == y\",\"Y\"> done").isEmpty());

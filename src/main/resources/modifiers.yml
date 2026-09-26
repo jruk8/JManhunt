@@ -385,7 +385,7 @@ modifiers:
           interval: 3
       commands:
         speedrunner:
-          - '<if:"<pstat:<p>,health> <= 7 and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 > 300","give <p> golden_apple","exit">'
+          - '<if:"<pstat:<p>,health> le 7 and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 gt 300","give <p> golden_apple","exit">'
           - "<pflag:lastuse-<id>,<gstat:duration>>"
 
 # Named groups of modifiers. A preset has no state of its own: it reads

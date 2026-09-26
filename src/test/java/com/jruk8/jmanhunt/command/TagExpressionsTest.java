@@ -46,15 +46,27 @@ class TagExpressionsTest {
     @Test
     void ifComparesOrdersStringsAndMath() {
         Fixture fixture = new Fixture();
-        assertEquals("y", replace(fixture, "<if:\"7 <= 7\",\"y\",\"n\">"));
-        assertEquals("y", replace(fixture, "<if:\"8 > 7\",\"y\",\"n\">"));
-        assertEquals("n", replace(fixture, "<if:\"8 < 7\",\"y\",\"n\">"));
-        assertEquals("y", replace(fixture, "<if:\"8 >= 9\",\"n\",\"y\">"));
+        assertEquals("y", replace(fixture, "<if:\"7 le 7\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"8 gt 7\",\"y\",\"n\">"));
+        assertEquals("n", replace(fixture, "<if:\"8 lt 7\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"8 ge 9\",\"n\",\"y\">"));
+        assertEquals("y", replace(fixture, "<if:\"7 LE 7\",\"y\",\"n\">"));
         assertEquals("y", replace(fixture, "<if:\"apple == apple\",\"y\",\"n\">"));
         assertEquals("y", replace(fixture, "<if:\"apple != orange\",\"y\",\"n\">"));
         assertEquals("y", replace(fixture, "<if:\"8+5 == 13\",\"y\",\"n\">"));
         assertEquals("y", replace(fixture, "<if:\"(2+3)*4 == 20\",\"y\",\"n\">"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void wordOperatorsNeedBoundaries() {
+        Fixture fixture = new Fixture();
+        assertEquals("y", replace(fixture, "<if:\"elegant == elegant\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"alt == alt\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"glee != gloom\",\"y\",\"n\">"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+        assertFalse(TagExpressions.hasComparison("elegant"));
+        assertFalse(TagExpressions.hasComparison("alt"));
     }
 
     @Test
@@ -79,7 +91,7 @@ class TagExpressionsTest {
         Fixture fixture = new Fixture();
         assertEquals("y", replace(fixture, "<if:\"<flag:a> == <flag:a>\",\"y\",\"n\">"));
         assertEquals("n", replace(fixture, "<if:\"<flag:a> == <flag:b>\",\"y\",\"n\">"));
-        assertEquals("", replace(fixture, "<if:\"<flag:a> > 1\",\"y\",\"n\">"));
+        assertEquals("", replace(fixture, "<if:\"<flag:a> gt 1\",\"y\",\"n\">"));
         assertEquals(1, fixture.warnings.size());
     }
 
@@ -94,27 +106,29 @@ class TagExpressionsTest {
     @Test
     void hasComparisonSkipsNestedTags() {
         assertTrue(TagExpressions.hasComparison("<flag:a> == 1"));
-        assertTrue(TagExpressions.hasComparison("7 <= 5"));
+        assertTrue(TagExpressions.hasComparison("7 le 5"));
         assertFalse(TagExpressions.hasComparison("<flag:a>"));
         assertFalse(TagExpressions.hasComparison("<papi:x==y>"));
-        assertFalse(TagExpressions.hasComparison("\"7 <= 5\""));
+        assertFalse(TagExpressions.hasComparison("\"7 le 5\""));
+        assertFalse(TagExpressions.hasComparison("7 <= 5"));
+        assertFalse(TagExpressions.hasComparison("a > b"));
     }
 
     @Test
-    void spacedEqualsSurvivesLaterClosingBracket() {
+    void wordOperatorsSurviveLaterClosingBracket() {
         assertTrue(TagExpressions.hasComparison(
-                "<pstat:<p>,health> <= 7 and <gstat:duration>-<pflag:x> ?? 999999 > 300"));
-        assertTrue(TagExpressions.hasComparison("7 <= 5 or a > b"));
+                "<pstat:<p>,health> le 7 and <gstat:duration>-<pflag:x> ?? 999999 gt 300"));
+        assertTrue(TagExpressions.hasComparison("7 le 5 or a gt b"));
     }
 
     @Test
     void ifCoalesceExampleFromGappleShape() {
         Fixture fixture = new Fixture();
         assertEquals("n", replace(fixture,
-                "<if:\"7 <= 7 and '100-500 ?? -1' > 300\",\"y\",\"n\">"));
+                "<if:\"7 le 7 and '100-500 ?? -1' gt 300\",\"y\",\"n\">"));
         assertEquals("y", replace(fixture,
-                "<if:\"7 <= 7 and '500-100 ?? -1' > 300\",\"y\",\"n\">"));
-        assertEquals("y", replace(fixture, "<if:\"null ?? 5 > 3\",\"y\",\"n\">"));
+                "<if:\"7 le 7 and '500-100 ?? -1' gt 300\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"null ?? 5 gt 3\",\"y\",\"n\">"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }
 
@@ -123,18 +137,22 @@ class TagExpressionsTest {
         Fixture fixture = new Fixture();
         assertEquals("", replace(fixture, "<if:\"1 == 1\">"));
         assertEquals("", replace(fixture, "<if:\"abc\",\"y\">"));
-        assertEquals("", replace(fixture, "<if:\"2.5 > 1\",\"y\",\"n\">"));
+        assertEquals("", replace(fixture, "<if:\"2.5 gt 1\",\"y\",\"n\">"));
         assertEquals("", replace(fixture, "<if:\"1 == 1\",\"a\",\"b\",\"c\">"));
         assertEquals(4, fixture.warnings.size());
     }
 
     @Test
-    void ifSpacelessAnglesAreSyntaxErrors() {
+    void anglesAreNotComparisons() {
         Fixture fixture = new Fixture();
         assertEquals("", replace(fixture, "<if:\"7<=7\",\"y\",\"n\">"));
         assertEquals("", replace(fixture, "<if:\"7 <=7\",\"y\",\"n\">"));
         assertEquals("", replace(fixture, "<if:\"7< 7\",\"y\",\"n\">"));
-        assertEquals(3, fixture.warnings.size());
+        assertEquals("", replace(fixture, "<if:\"8 > 7\",\"y\",\"n\">"));
+        assertEquals("", replace(fixture, "<if:\"7 <= 7\",\"y\",\"n\">"));
+        assertEquals(5, fixture.warnings.size());
+        assertTrue(fixture.warnings.get(0).contains("use lt, le, gt, ge"),
+                fixture.warnings.toString());
     }
 
     @Test

@@ -382,12 +382,12 @@ public final class CommandSyntax {
         }
         String condition = CommandPlaceholders.parsePickItem(parts.get(0)).orElse("").strip();
         try {
-            TagExpressions.validateConditionSpacing(condition);
+            TagExpressions.validateConditionBrackets(condition);
         } catch (TagExpressions.ExprException spacing) {
             return Optional.of("Tag <if> " + spacing.getMessage() + ".");
         }
         if (!TagExpressions.hasComparison(condition)) {
-            return Optional.of("Tag <if> condition needs a comparison (==, !=, >, <, >=, <=).");
+            return Optional.of("Tag <if> condition needs a comparison (==, !=, lt, le, gt, ge).");
         }
         return Optional.empty();
     }

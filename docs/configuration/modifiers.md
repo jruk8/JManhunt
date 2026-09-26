@@ -273,20 +273,25 @@ argument is not a number.
 
 ### Conditions
 
-`<if>` compares with `==`, `!=`, `>`, `<`, `>=`, `<=` and joins parts
-with `and` / `or` (`and` binds tighter, case does not matter):
+`<if>` compares with `==`, `!=`, `lt`, `le`, `gt`, `ge` and joins
+parts with `and` / `or` (`and` binds tighter, case does not matter):
 
 ```yaml
-- 'say <if:"1 == 1 and 2 < 3 or 4 == 5","y","n">'
+- 'say <if:"1 == 1 and 2 lt 3 or 4 == 5","y","n">'
 ```
 
-Ordering needs whole numbers with a space on each side of the bracket:
-`7 <= 5` works, `7<=5` warns and yields nothing. Each side compares as
-a number when it parses as math, otherwise as text.
+Ordering needs whole numbers. Each side compares as a number when it
+parses as math, otherwise as text. Word operators need a
+non-letter-or-digit boundary on each side (spaces work, so does the
+edge of the condition), which keeps them distinct from tag brackets:
 
-Quote the condition when it holds `<`, `>`, or commas. An unquoted
-`<if:7 <= 5,...>` never resolves: the tag finder cannot tell a bare
-`<` from a nested tag. `==` and `!=` need no quotes.
+```yaml
+- '<if:"<pstat:<p>,health> le 7 and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 gt 300","give <p> golden_apple","exit">'
+```
+
+Angle brackets are never comparisons: `<`, `>`, `<=`, and `>=` in a
+condition warn and yield nothing, naming the word operators to use
+instead. Quote the condition when it holds commas or nested tags.
 
 ### Bare math
 
