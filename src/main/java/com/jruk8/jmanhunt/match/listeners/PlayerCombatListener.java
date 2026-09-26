@@ -397,7 +397,6 @@ public final class PlayerCombatListener implements Listener {
         stats.recordPlayerKill(matchId, killer.getUniqueId(),
                 playerStates.role(killer.getUniqueId()),
                 playerStates.role(event.getEntity().getUniqueId()));
-        game.stateCommands().runEventModifiers("ON_EVERY_KILL", killer, matchId);
         plugin.spawnCamp().handleKill(matchId, killer, (Player) event.getEntity());
         if (victimIsPlayer) {
             game.stateCommands().runEventModifiers("ON_PLAYER_KILL", killer, matchId);
@@ -412,6 +411,7 @@ public final class PlayerCombatListener implements Listener {
 
     private void handleMobKill(GameInstance match, Player killer, Entity victim) {
         stats.recordMobKill(match.matchId(), killer.getUniqueId());
+        game.stateCommands().runEventModifiers("ON_MOB_KILL", killer, match.matchId());
         // Mob kills only matter for the kill-mob win conditions.
         Role killerRole = playerStates.role(killer);
         Integer lobby = match.originLobbyId();

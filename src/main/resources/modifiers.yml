@@ -6,7 +6,7 @@
 # All commands run when the match starts (or on interval if configured),
 # except console-cleanup and player-cleanup which run when the match ends.
 # Need help writing commands? Generate up-to-date ones at https://mcstacker.net/
-modifiers-version: 2
+modifiers-version: 3
 modifiers:
   # Gives every participating player eight steaks when the match starts.
   everyone-gets-beef:
@@ -20,8 +20,9 @@ modifiers:
       # When should commands other than cleanup be run? A list of any of:
       # ON_START - Once when the match starts (runs for all participants)
       # INTERVAL - On a fixed interval that starts counting when the game begins
-      # ON_EVERY_KILL - When any participating player kills any entity (mobs included)
+      # ON_MOB_KILL - When a participating player kills a mob or other non-player entity (never players)
       # ON_PLAYER_KILL - When a participating player kills another player
+      # Enable both ON_MOB_KILL and ON_PLAYER_KILL to count every kill
       # ON_HUNTER_KILL - When a hunter kills a player
       # ON_SPEEDRUNNER_KILL - When a speedrunner kills a player
       # ON_NETHER_ENTER - When a participating player enters the Nether (once per player per match)
@@ -352,7 +353,7 @@ modifiers:
       author: JManhunt
     behavior:
       runs-on:
-        - ON_EVERY_KILL
+        - ON_MOB_KILL
         - ON_RESPAWN
       commands:
         player:

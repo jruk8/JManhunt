@@ -132,7 +132,7 @@ class BehaviorOptionsMenusTest {
                 "Type: Choice",
                 "» ON_START",
                 "» INTERVAL",
-                "» ON_EVERY_KILL",
+                "» ON_MOB_KILL",
                 "» ON_PLAYER_KILL",
                 "» ON_HUNTER_KILL",
                 "» ON_SPEEDRUNNER_KILL",
@@ -171,7 +171,7 @@ class BehaviorOptionsMenusTest {
         Component marked = menu.buttonAt(0).lore().get(5);
         Component unmarked = menu.buttonAt(0).lore().get(7);
         assertEquals("» ON_START", textOf(marked));
-        assertEquals("» ON_EVERY_KILL", textOf(unmarked));
+        assertEquals("» ON_MOB_KILL", textOf(unmarked));
         assertTrue(hasGreen(marked));
         assertFalse(hasGreen(unmarked));
     }

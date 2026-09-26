@@ -358,7 +358,7 @@ public final class GameStateCommandManager {
      * {@code player}/{@code hunter}/{@code speedrunner} commands run, plus the
      * modifier's console commands.
      *
-     * @param event  the event name (e.g. ON_EVERY_KILL)
+     * @param event  the event name (e.g. ON_MOB_KILL)
      * @param player the player involved in the event
      * @param matchId the match the event belongs to
      */

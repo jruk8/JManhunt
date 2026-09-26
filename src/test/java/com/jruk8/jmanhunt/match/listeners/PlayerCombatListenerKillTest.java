@@ -1,0 +1,96 @@
+package com.jruk8.jmanhunt.match.listeners;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.compass.CompassManager;
+import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.match.GameStateCommandManager;
+import com.jruk8.jmanhunt.match.WinConditionEngine;
+import com.jruk8.jmanhunt.player.PlayerStateStore;
+import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
+import com.jruk8.jmanhunt.player.SpawnCampService;
+import com.jruk8.jmanhunt.stats.StatsManager;
+import com.jruk8.jmanhunt.world.WorldEngineService;
+import java.util.HashMap;
+import java.util.Optional;
+import java.util.UUID;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.junit.jupiter.api.Test;
+
+class PlayerCombatListenerKillTest {
+
+    private record Fixture(PlayerCombatListener listener, Player killer, PlayerStateStore players,
+            GameManager game, GameInstance instance, GameStateCommandManager commands) {
+    }
+
+    private static Fixture fixture() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.spawnCamp()).thenReturn(mock(SpawnCampService.class));
+        PlayerStateStore players = new PlayerStateStore();
+        GameManager game = mock(GameManager.class);
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        when(game.stateCommands()).thenReturn(commands);
+        GameInstance instance = mock(GameInstance.class);
+        when(instance.begun()).thenReturn(true);
+        when(instance.matchId()).thenReturn(7L);
+        Player killer = mock(Player.class);
+        UUID killerId = UUID.randomUUID();
+        when(killer.getUniqueId()).thenReturn(killerId);
+        players.setRole(killer, Role.HUNTER);
+        when(game.instanceOf(killerId)).thenReturn(Optional.of(instance));
+        PlayerCombatListener listener = new PlayerCombatListener(plugin, players, game,
+                mock(ConfigService.class), mock(CompassManager.class), mock(StatsManager.class),
+                mock(LobbyService.class), mock(WorldEngineService.class),
+                mock(WinConditionEngine.class), mock(PlayerRespawnListener.class),
+                mock(SpeedrunnerDisconnectTracker.class), new HashMap<>());
+        return new Fixture(listener, killer, players, game, instance, commands);
+    }
+
+    @Test
+    void mobKillDispatchesMobKillOnly() {
+        Fixture fixture = fixture();
+        LivingEntity victim = mock(LivingEntity.class);
+        when(victim.getKiller()).thenReturn(fixture.killer());
+        EntityDeathEvent event = mock(EntityDeathEvent.class);
+        when(event.getEntity()).thenReturn(victim);
+
+        fixture.listener().onEntityDeath(event);
+
+        verify(fixture.commands()).runEventModifiers(eq("ON_MOB_KILL"), eq(fixture.killer()), eq(7L));
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_PLAYER_KILL"), any(), anyLong());
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_EVERY_KILL"), any(), anyLong());
+    }
+
+    @Test
+    void playerKillDispatchesPlayerKillOnly() {
+        Fixture fixture = fixture();
+        Player victim = mock(Player.class);
+        UUID victimId = UUID.randomUUID();
+        when(victim.getUniqueId()).thenReturn(victimId);
+        when(victim.getKiller()).thenReturn(fixture.killer());
+        fixture.players().setRole(victim, Role.SPEEDRUNNER);
+        when(fixture.game().instanceOf(victimId)).thenReturn(Optional.of(fixture.instance()));
+        EntityDeathEvent event = mock(EntityDeathEvent.class);
+        when(event.getEntity()).thenReturn(victim);
+
+        fixture.listener().onEntityDeath(event);
+
+        verify(fixture.commands()).runEventModifiers(
+                eq("ON_PLAYER_KILL"), eq(fixture.killer()), eq(7L));
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_MOB_KILL"), any(), anyLong());
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_EVERY_KILL"), any(), anyLong());
+    }
+}

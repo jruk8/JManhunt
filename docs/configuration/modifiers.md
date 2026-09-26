@@ -77,7 +77,7 @@ Under `modifiers.<name>.runs-on`, you can configure when the commands
 | --- | --- |
 | `ON_START` | Once when the match starts (runs for all participants) |
 | `INTERVAL` | On a fixed interval that starts counting when the game begins |
-| `ON_EVERY_KILL` | When a participating player kills any entity (mobs included) |
+| `ON_MOB_KILL` | When a participating player kills a mob or other non-player entity (never players) |
 | `ON_PLAYER_KILL` | When a participating player kills another player |
 | `ON_HUNTER_KILL` | When a hunter kills a player |
 | `ON_SPEEDRUNNER_KILL` | When a speedrunner kills a player |
@@ -91,6 +91,7 @@ Under `modifiers.<name>.runs-on`, you can configure when the commands
 | `ON_HUNTER_RESPAWN` | When a hunter respawns (only the executing player) |
 
 If `runs-on` is omitted, the modifier defaults to `ON_START`.
+To count every kill, enable both `ON_MOB_KILL` and `ON_PLAYER_KILL`.
 
 Except for `ON_START`, every event trigger runs the `player`, `hunter`, and
 `speedrunner` commands only for the specific player involved in the event.
@@ -445,8 +446,9 @@ and `speedrunner-gapple-on-low-hp`.
 
 ### Get Stronger On Kill
 
-Runs on every kill and every respawn. Each kill raises the killer's
-session kill counter first, so the player list reads a fresh number:
+Runs on every mob kill and every respawn. Each kill raises the
+killer's session kill counter first, so the player list reads a
+fresh number:
 
 1. `<lflag:amplifier, <clamp:<placeholder:jmanhunt_game_kills_this_session>-1, 0, 9>>`
    stashes session kills minus one (first kill is amplifier 0) for the run.
