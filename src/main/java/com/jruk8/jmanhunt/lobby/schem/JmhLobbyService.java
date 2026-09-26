@@ -91,8 +91,17 @@ public final class JmhLobbyService {
     }
 
     /**
+     * Rounds to one decimal place, the teleport precision bundles keep.
+     * Pure for tests.
+     */
+    public static double round1(double value) {
+        return Math.round(value * 10.0) / 10.0;
+    }
+
+    /**
      * Collects the teleports standing inside the region. A teleport
-     * is a point, so inside means its block is contained; teleports
+     * is a point, so inside means its block is contained; coordinates
+     * keep one decimal place relative to the origin, and teleports
      * whose lobby id collected no boundary are reported as orphans
      * instead of kept. Pure for tests.
      */
@@ -118,8 +127,8 @@ public final class JmhLobbyService {
                 continue;
             }
             kept.add(new TeleportEntry(id.getAsInt(),
-                    (int) blockX - origin.x(), (int) blockY - origin.y(),
-                    (int) blockZ - origin.z(), tp.getYaw(), tp.getPitch()));
+                    round1(tp.getX() - origin.x()), round1(tp.getY() - origin.y()),
+                    round1(tp.getZ() - origin.z()), tp.getYaw(), tp.getPitch()));
         }
         return new CollectedTeleports(kept, dropped);
     }

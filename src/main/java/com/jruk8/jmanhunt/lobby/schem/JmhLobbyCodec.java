@@ -166,7 +166,7 @@ public final class JmhLobbyCodec {
     private static TeleportEntry parseTeleport(JsonElement element) throws IOException {
         JsonObject teleport = asObject(element, "teleports entry");
         return new TeleportEntry(parseInt(teleport, "lobby"),
-                parseInt(teleport, "x"), parseInt(teleport, "y"), parseInt(teleport, "z"),
+                parseDouble(teleport, "x"), parseDouble(teleport, "y"), parseDouble(teleport, "z"),
                 parseFloat(teleport, "yaw"), parseFloat(teleport, "pitch"));
     }
 
@@ -189,6 +189,18 @@ public final class JmhLobbyCodec {
         }
         try {
             return parent.get(key).getAsInt();
+        } catch (NumberFormatException | UnsupportedOperationException corrupt) {
+            throw new IOException("Malformed lobby.json: '" + key + "' must be a number.");
+        }
+    }
+
+    private static double parseDouble(JsonObject parent, String key) throws IOException {
+        if (!parent.has(key) || !parent.get(key).isJsonPrimitive()
+                || !parent.get(key).getAsJsonPrimitive().isNumber()) {
+            throw new IOException("Malformed lobby.json: '" + key + "' must be a number.");
+        }
+        try {
+            return parent.get(key).getAsDouble();
         } catch (NumberFormatException | UnsupportedOperationException corrupt) {
             throw new IOException("Malformed lobby.json: '" + key + "' must be a number.");
         }

@@ -5,8 +5,8 @@ import java.util.List;
 /**
  * One .jmhlobby bundle: raw structure bytes plus the lobby boxes and
  * teleports collected with them, all stored relative to the save-time
- * minimum corner. Block offsets are integers; teleport look direction
- * keeps its floats.
+ * minimum corner. Bound offsets are integers; teleports keep one
+ * decimal place, and look direction keeps its floats.
  */
 public record JmhLobbyBundle(byte[] nbt, Offset origin,
         List<BoundEntry> bounds, List<TeleportEntry> teleports) {
@@ -19,7 +19,7 @@ public record JmhLobbyBundle(byte[] nbt, Offset origin,
     public record BoundEntry(int lobby, Offset min, Offset max) {
     }
 
-    /** One lobby's teleport as a relative block plus look direction. */
-    public record TeleportEntry(int lobby, int x, int y, int z, float yaw, float pitch) {
+    /** One lobby's teleport as relative coords plus look direction. */
+    public record TeleportEntry(int lobby, double x, double y, double z, float yaw, float pitch) {
     }
 }

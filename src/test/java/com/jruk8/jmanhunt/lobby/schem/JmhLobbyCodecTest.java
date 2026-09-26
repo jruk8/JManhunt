@@ -24,7 +24,7 @@ class JmhLobbyCodecTest {
                 new Offset(100, 64, -200),
                 List.of(new BoundEntry(0, new Offset(0, 0, 0), new Offset(9, 9, 9)),
                         new BoundEntry(1, new Offset(-5, 0, 3), new Offset(4, 9, 12))),
-                List.of(new TeleportEntry(0, 5, 1, 5, 90.0f, 0.0f)));
+                List.of(new TeleportEntry(0, 5.5, 1.0, 5.5, 90.0f, 0.0f)));
     }
 
     @Test

@@ -67,16 +67,24 @@ class JmhLobbyServiceTest {
     }
 
     @Test
+    void round1KeepsOneDecimal() {
+        assertEquals(5.5, JmhLobbyService.round1(5.47), 1e-9);
+        assertEquals(5.4, JmhLobbyService.round1(5.44), 1e-9);
+        assertEquals(-5.5, JmhLobbyService.round1(-5.47), 1e-9);
+        assertEquals(5.0, JmhLobbyService.round1(5.04), 1e-9);
+    }
+
+    @Test
     void collectTeleportsKeepsInsidePointsAndReportsOrphans() {
         Map<String, LobbyConfig.LobbyEntry> lobbies = new LinkedHashMap<>();
-        lobbies.put("0", entry(null, null, null, null, null, null, 105.5, 65.0, 105.5));
+        lobbies.put("0", entry(null, null, null, null, null, null, 105.47, 65.04, 105.5));
         lobbies.put("1", entry(null, null, null, null, null, null, 106.5, 65.0, 106.5));
         lobbies.put("2", entry(null, null, null, null, null, null, 500.5, 65.0, 500.5));
 
         JmhLobbyService.CollectedTeleports collected = JmhLobbyService.collectTeleports(
                 lobbies, REGION, ORIGIN, Set.of(0));
 
-        assertEquals(List.of(new TeleportEntry(0, 5, 1, 5, 90.0f, 0.0f)),
+        assertEquals(List.of(new TeleportEntry(0, 5.5, 1.0, 5.5, 90.0f, 0.0f)),
                 collected.kept());
         assertEquals(1, collected.dropped().size());
         assertEquals(1, collected.dropped().get(0).lobby());
@@ -119,7 +127,7 @@ class JmhLobbyServiceTest {
         when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
         JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),
                 List.of(new BoundEntry(0, new Offset(0, 0, 0), new Offset(9, 9, 9))),
-                List.of(new TeleportEntry(1, 5, 1, 5, 45.0f, 10.0f)));
+                List.of(new TeleportEntry(1, 5.5, 1.0, 5.5, 45.0f, 10.0f)));
 
         JmhLobbyService.BuiltCounts built = new JmhLobbyService(plugin)
                 .buildIntoLobbyConfig(bundle, 200, 64, 300);
@@ -135,9 +143,9 @@ class JmhLobbyServiceTest {
         assertEquals(false, stored.get("0").getOverrides().getSettings()
                 .get("settings.match.autostart.enabled"));
         LobbyConfig.LobbyTp tp = stored.get("1").getLobbytp();
-        assertEquals(205.0, tp.getX());
+        assertEquals(205.5, tp.getX());
         assertEquals(65.0, tp.getY());
-        assertEquals(305.0, tp.getZ());
+        assertEquals(305.5, tp.getZ());
         assertEquals(45.0f, tp.getYaw());
         assertEquals(10.0f, tp.getPitch());
         verify(lobbyConfig).save();

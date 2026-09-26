@@ -82,9 +82,9 @@ last entry.
   "teleports": [
     {
       "lobby": 0,
-      "x": 5,
-      "y": 1,
-      "z": 5,
+      "x": 5.5,
+      "y": 1.0,
+      "z": 5.5,
       "yaw": 90.0,
       "pitch": 0.0
     }
@@ -93,9 +93,8 @@ last entry.
 ```
 
 `origin` is the save-time minimum corner. Bounds are relative min/max
-block corners per lobby id; teleports are relative blocks plus look
-direction. Sub-block teleport fractions are dropped: restored
-teleports land on integer coordinates.
+block corners per lobby id; teleports are relative coordinates rounded
+to one decimal place, plus look direction.
 
 Legacy `.nbt` files still load through the old blocks-only path. Where
 both exist for one name, the bundle wins; `list` shows both kinds.
