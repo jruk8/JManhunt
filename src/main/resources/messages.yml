@@ -14,6 +14,7 @@ command:
 manhunt:
   help-header: "\n{prefix}\n<#de7766>JManhunt commands:"
   help-line: "<white>» {command}<gray>: {description}</gray></white>"
+  setup-oneclick-done: "{prefix}<green>Setup complete: world engine on, lobby ready, <white>{count}</white> players teleported. Restart the server to fully apply."
   status-header: "\n{prefix}\n<#de7766>Manhunt status: <white>{status}"
   speedrunners-header: "\n{role-color-speedrunner}Speedrunners:"
   hunters-header: "\n{role-color-hunter}Hunters:"
@@ -521,6 +522,6 @@ manhunt-gui:
   history-line-playtime: "Total playtime: <white>{value}"
   setup-first-title: "First-Time Setup"
   setup-first-line1: "JManhunt is not set up yet."
-  setup-first-line2: "Start the interactive setup guide?"
-  setup-first-confirm: "<green>Start setup"
-  setup-first-cancel: "<red>Skip forever (not recommended)"
+  setup-first-line2: "One click does the recommended path, or take the manual tour."
+  setup-first-confirm: "<green>Quick setup (recommended)"
+  setup-first-cancel: "<red>Manual setup guide"

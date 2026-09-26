@@ -16,6 +16,7 @@
 | `jmanhunt.command.lobby` | Manage lobby queues. | OP |
 | `jmanhunt.command.game` | Join players to or remove them from a running match. | OP |
 | `jmanhunt.command.setup` | Use the interactive setup tutorial. | OP |
+| `jmanhunt.command.support` | Show support links. | Everyone |
 | `jmanhunt.command.debug` | Toggle JManhunt debug output. | OP |
 | `jmanhunt.command.dev.schem` | Use the developer schematic tools. | OP |
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |

@@ -229,6 +229,11 @@ public final class WorldEngineService implements SettingsListener {
         return lobbyWorlds.ensureLobbyWorld(presetOverride);
     }
 
+    /** Points lobby 0 at the spawn when none is configured. True when written. */
+    public boolean ensureLobbyZero(Location spawn) {
+        return lobbyWorlds.ensureLobbyZero(spawn);
+    }
+
     /**
      * True when void rescue applies in a world: the lobby world, never the
      * game world, even if an admin points both names at the same world.

@@ -6,9 +6,10 @@ exactly as before, and the console always gets status. Every GUI edit
 can also be made from chat or the console through
 [`/manhunt config`](commands.md#editing-settings-in-game).
 
-The first ever open shows a one-time setup nudge: confirm to start the
-interactive setup guide, or skip forever to dismiss it and open the
-panel. Starting setup or enabling the world engine dismisses it too.
+The first ever open shows a one-time setup panel instead: the green
+button runs the recommended setup in one click, the red button
+starts the step-by-step guide in chat. Either way the panel never
+reappears; see [Interactive Setup](getting-started.md#interactive-setup).
 
 ## Root Menu
 

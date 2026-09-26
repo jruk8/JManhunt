@@ -632,6 +632,11 @@ public final class GameManager implements MatchControl {
         return worldEngine.ensureLobbyWorld(presetOverride);
     }
 
+    /** Points lobby 0 at the spawn when none is configured. True when written. */
+    public boolean ensureLobbyZero(Location spawn) {
+        return worldEngine.ensureLobbyZero(spawn);
+    }
+
     /** Overwrites the world-engine cell index. Returns false when unavailable. */
     public boolean cellIndex(long value) { return worldEngine.cellIndex(value); }
 

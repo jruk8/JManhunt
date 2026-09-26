@@ -91,6 +91,9 @@ permissions:
   jmanhunt.command.setup:
     description: Use the interactive setup tutorial (/manhunt setup).
     default: op
+  jmanhunt.command.support:
+    description: Show support links (/manhunt support).
+    default: true
   jmanhunt.admin:
     description: Receive plugin update notices and other admin messages.
     default: op

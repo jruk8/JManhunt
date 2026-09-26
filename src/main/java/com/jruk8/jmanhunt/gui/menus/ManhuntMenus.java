@@ -127,9 +127,9 @@ public final class ManhuntMenus {
     }
 
     /**
-     * First-run nudge: confirm starts the setup guide, cancel skips
-     * forever. Both actions mark the global flag; the caller supplies
-     * what happens after.
+     * First-run panel: confirm runs the one-click recommended setup,
+     * cancel runs the step-by-step guide. The caller supplies both
+     * actions, including the setup-done marking.
      */
     public Menu setupFirstMenu(Consumer<Player> onConfirm, Consumer<Player> onCancel) {
         return ConfirmMenu.create(

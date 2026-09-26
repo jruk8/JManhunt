@@ -13,6 +13,11 @@ public class ManhuntMessages extends OkaeriConfig {
     @CustomKey("help-line")
     private String helpLine = "<white>» {command}<gray>: {description}</gray></white>";
 
+    @CustomKey("setup-oneclick-done")
+    private String setupOneclickDone = "{prefix}<green>Setup complete: world engine on, " +
+            "lobby ready, <white>{count}</white> players teleported. " +
+            "Restart the server to fully apply.";
+
     @CustomKey("status-header")
     private String statusHeader = "\n{prefix}\n<#de7766>Manhunt status: <white>{status}";
 

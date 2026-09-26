@@ -5,13 +5,21 @@
 
 ## Interactive Setup
 
-New here? Run `/mh setup` in-game. It walks you through first-time setup,
-modifiers, the compass, and the config command as a short chat dialogue:
-type the number of your answer, `b` to go back, or `q` to quit. Anything
-the guide runs (such as enabling the world engine) uses your own
-permissions. It times out after 5 idle minutes. The modifier path lets
-you switch on a few fun defaults one by one, and every path can point
-you to Discord for community modifiers and help.
+New here? Run `/mh` once and the setup panel offers two paths. The
+green button does the recommended setup in one click: it enables
+the world engine, generates the lobby world with lobby 0, and
+teleports everyone there. The red button starts the step-by-step
+tour in chat instead: it walks you through first-time setup,
+modifiers, the compass, and the config command as a short
+dialogue. Type the number of your answer, `b` to go back, or `q`
+to quit; anything the tour runs (such as enabling the world
+engine) uses your own permissions, and it times out after 5 idle
+minutes. You can restart the tour any time with `/mh setup`.
+
+Either path ends the same way: walk onto a basket (colored
+concrete) to pick Hunter or Speedrunner, then start with
+`/mh start` or wait for autostart. Restart the server after setup
+so the world engine fully applies.
 
 ## Your First Match
 

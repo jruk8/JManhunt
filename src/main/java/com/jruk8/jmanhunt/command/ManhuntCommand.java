@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.setup.SetupService;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
@@ -109,6 +110,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final SettingFeedback feedback;
     private final ModifiersCommand modifiersCmd;
     private final OverrideCommand overrideCmd;
+    private final SetupService setupService;
     private ModifierMenus modifierMenus;
     private final ManhuntMenus menus;
     /** Lobby-bounds corners per player, separate from the dev schem selection. */
@@ -129,6 +131,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 plugin.guiService(), viewer -> modifierMenus.mainMenu(viewer, null), sounds);
         this.overrideCmd = new OverrideCommand(plugin.overrides(), config, messages,
                 feedback, sounds);
+        this.setupService = new SetupService(plugin, game, messages, sounds, feedback);
         SettingDialogs dialogs = new SettingDialogs(config, plugin.overrides(), messages,
                 sounds, plugin.guiService(), feedback, plugin);
         ModifierDialogs modifierDialogs = new ModifierDialogs(messages, sounds,
@@ -168,10 +171,17 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "debug" -> debug(sender, args);
             case "lobby" -> lobby(sender, args);
             case "setup" -> setup(sender);
+            case "support" -> support(sender);
             case "dev" -> dev(sender, args);
             default -> message(sender, "command.invalid");
         };
     }
+
+    /** Community links shared by the help suffix and /mh support. */
+    private static final String DOCS_URL = "https://jruk8.github.io/JManhunt/";
+    private static final String DISCORD_URL = "https://discord.gg/hkWmCVmWDC";
+    private static final String GITHUB_URL = "https://github.com/jruk8/JManhunt";
+    private static final String KOFI_URL = "https://ko-fi.com/jruk";
 
     private boolean help(CommandSender sender) {
         message(sender, "manhunt.help-header");
@@ -199,12 +209,30 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         // Clickable links use hardcoded MiniMessage instead of living in
         // messages.yml.
         sender.sendMessage(messages.miniMessage(
-                "\n<green>Still need help? Check <#de7766><click:open_url:'https://jruk8.github.io/JManhunt/'>"
+                "\n<green>Still need help? Check <#de7766><click:open_url:'" + DOCS_URL + "'>"
                         + "<underlined>Docs</underlined></click></#de7766> or join our "
-                        + "<#de7766><click:open_url:'https://discord.gg/hkWmCVmWDC'>"
+                        + "<#de7766><click:open_url:'" + DISCORD_URL + "'>"
                         + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
         sender.sendMessage(messages.miniMessage(
-                "<green>Support our development on <#de7766><click:open_url:'https://ko-fi.com/jruk'>"
+                "<green>Support our development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
+                        + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
+        neutralSound(sender);
+        return true;
+    }
+
+    /**
+     * Support links: Discord invite, GitHub, Ko-fi. Hidden from tab
+     * completion on purpose; players and console alike.
+     */
+    private boolean support(CommandSender sender) {
+        sender.sendMessage(messages.miniMessage(
+                "\n<green>Need help? Join our <#de7766><click:open_url:'" + DISCORD_URL + "'>"
+                        + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
+        sender.sendMessage(messages.miniMessage(
+                "<green>Source code: <#de7766><click:open_url:'" + GITHUB_URL + "'>"
+                        + "<underlined>GitHub</underlined></click></#de7766>.</green>"));
+        sender.sendMessage(messages.miniMessage(
+                "<green>Support our development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
                         + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
         neutralSound(sender);
         return true;
@@ -230,22 +258,26 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Opens the root GUI, showing the Setup First nudge once when the
-     * global flag is unset. Confirm starts the setup guide, Cancel
-     * dismisses forever and opens the GUI.
+     * Opens the root GUI, showing the Setup First panel once when the
+     * global flag is unset. Confirm runs the one-click recommended
+     * setup; Cancel closes the GUI and runs /mh setup through the
+     * same permission and player-only checks as the command.
      */
     private boolean openGui(Player player) {
         plugin.guiService().clearOverrideLobby(player);
         if (!plugin.isSetupDone()) {
             plugin.guiService().open(player, menus.setupFirstMenu(
                     confirmed -> {
-                        plugin.markSetupDone();
                         confirmed.closeInventory();
-                        plugin.tutorial().start(confirmed);
+                        setupService.recommendedSetup(confirmed);
                     },
                     skipped -> {
-                        plugin.markSetupDone();
-                        plugin.guiService().navigate(skipped, menus.rootMenu(skipped));
+                        skipped.closeInventory();
+                        if (!canUseSubcommand(skipped, "setup")) {
+                            message(skipped, "command.no-permission");
+                            return;
+                        }
+                        setup(skipped);
                     }));
             return true;
         }
@@ -2694,7 +2726,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         lobbyConfig.save();
     }
 
-    private String formatLocation(Location location) {
+    /** Renders a teleport target for chat. Pure for tests. */
+    public static String formatLocation(Location location) {
         String worldName = location.getWorld() == null ? "null" : location.getWorld().getName();
         String xFormatted = String.format("%.2f", location.getX());
         String yFormatted = String.format("%.2f", location.getY());

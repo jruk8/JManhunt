@@ -143,7 +143,7 @@ public final class LobbyWorldManager {
         applyLobbyDefaults(world);
         Location spawn = safeSpawn(world);
         world.setSpawnLocation(spawn);
-        boolean lobbyZeroSet = autoSetLobbyZero(spawn);
+        boolean lobbyZeroSet = ensureLobbyZero(spawn);
         return Optional.of(new LobbyWorld(world, true, lobbyZeroSet));
     }
 
@@ -211,7 +211,11 @@ public final class LobbyWorldManager {
      * Points lobby 0 at freshly generated spawn, unless admins already set
      * it. Returns true when it wrote.
      */
-    private boolean autoSetLobbyZero(Location spawn) {
+    /**
+     * Points lobby 0 at the spawn when none is configured. True when
+     * written.
+     */
+    public boolean ensureLobbyZero(Location spawn) {
         LobbyConfig lobbyConfig = plugin.lobbyConfig();
         if (!missingLobbyZero(lobbyConfig)) {
             return false;

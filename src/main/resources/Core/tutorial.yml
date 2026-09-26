@@ -45,6 +45,7 @@ nodes:
   setup_root:
     question:
       - "Let's get started. What is your goal?"
+      - "<gray>In a hurry? The green button in the /mh panel runs the recommended answers in one click.</gray>"
     answers:
       - text: "Classic Manhunts with World Engine and a fully automated lobby. <gray>(3 minutes)</gray>"
         recommended: true
@@ -242,7 +243,7 @@ nodes:
         next: "EXIT"
   compass_detail:
     question:
-      - "Right-click refreshes the target, left-click cycles it. Tune min and max distance, lock behavior, and signal interference under <gray>settings.compass</gray>."
+      - "Right-click refreshes the target, left-click cycles it, shift-left-click flips between enemies and teammates. Tune min and max distance, lock behavior, and signal interference under <gray>settings.compass</gray>."
     answers:
       - text: "Learn about Modifiers."
         next: "mod_intro"

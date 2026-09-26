@@ -193,11 +193,11 @@ public class ManhuntGuiMessages extends OkaeriConfig {
     private String setupFirstLine1 = "JManhunt is not set up yet.";
 
     @CustomKey("setup-first-line2")
-    private String setupFirstLine2 = "Start the interactive setup guide?";
+    private String setupFirstLine2 = "One click does the recommended path, or take the manual tour.";
 
     @CustomKey("setup-first-confirm")
-    private String setupFirstConfirm = "<green>Start setup";
+    private String setupFirstConfirm = "<green>Quick setup (recommended)";
 
     @CustomKey("setup-first-cancel")
-    private String setupFirstCancel = "<red>Skip forever (not recommended)";
+    private String setupFirstCancel = "<red>Manual setup guide";
 }
