@@ -71,6 +71,43 @@ public class ManhuntGuiMessages extends OkaeriConfig {
     @CustomKey("setting-reset-title")
     private String settingResetTitle = "Reset {name}?";
 
+    @CustomKey("override-name")
+    private String overrideName = "Lobby Overrides";
+
+    @CustomKey("override-hint-set")
+    private String overrideHintSet = "Left-click to set lobby";
+
+    @CustomKey("override-hint-global")
+    private String overrideHintGlobal = "Right-click for global";
+
+    @CustomKey("override-current")
+    private String overrideCurrent = "Current: <white>{mode}";
+
+    @CustomKey("override-shift-clear")
+    private String overrideShiftClear = "Shift-left-click to remove the override";
+
+    @CustomKey("override-shift-clear-category")
+    private String overrideShiftClearCategory = "Shift-left-click to clear overrides below";
+
+    @CustomKey("override-for-lobby")
+    private String overrideForLobby = "<red>Overrides for Lobby {lobby}";
+
+    @CustomKey("override-set-title")
+    private String overrideSetTitle = "Set Override Lobby";
+
+    @CustomKey("override-set-prompt")
+    private String overrideSetPrompt = "Lobby id or GLOBAL";
+
+    @CustomKey("override-set-invalid")
+    private String overrideSetInvalid = "{prefix}<red>Invalid lobby <white>{input}<red>: " +
+            "expected a non-negative integer or GLOBAL.";
+
+    @CustomKey("override-clear-title")
+    private String overrideClearTitle = "Clear {count} Overrides?";
+
+    @CustomKey("override-no-override")
+    private String overrideNoOverride = "{prefix}<yellow>No override to remove.";
+
     @CustomKey("title-root")
     private String titleRoot = "JManhunt";
 

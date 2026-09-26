@@ -51,6 +51,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
@@ -107,6 +108,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final DevSchemCommand devSchem;
     private final SettingFeedback feedback;
     private final ModifiersCommand modifiersCmd;
+    private final OverrideCommand overrideCmd;
     private ModifierMenus modifierMenus;
     private final ManhuntMenus menus;
     /** Lobby-bounds corners per player, separate from the dev schem selection. */
@@ -124,17 +126,21 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.devSchem = new DevSchemCommand(plugin, messages);
         this.feedback = new SettingFeedback(messages, config, sounds);
         this.modifiersCmd = new ModifiersCommand(config, messages,
-                plugin.guiService(), () -> modifierMenus.mainMenu(), sounds);
-        SettingDialogs dialogs = new SettingDialogs(config, messages, sounds,
-                plugin.guiService(), feedback, plugin);
+                plugin.guiService(), viewer -> modifierMenus.mainMenu(viewer, null), sounds);
+        this.overrideCmd = new OverrideCommand(plugin.overrides(), config, messages,
+                feedback, sounds);
+        SettingDialogs dialogs = new SettingDialogs(config, plugin.overrides(), messages,
+                sounds, plugin.guiService(), feedback, plugin);
         ModifierDialogs modifierDialogs = new ModifierDialogs(messages, sounds,
                 plugin.guiService(), plugin);
         this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,
                 plugin.guiService(), modifiersCmd, dialogs, modifierDialogs,
                 () -> config.getBoolean(
-                        "settings.server.advanced.validate-modifier-editor-commands", true));
-        this.menus = new ManhuntMenus(config, plugin.guiConfig(), messages, sounds,
-                plugin.guiService(), dialogs, feedback, plugin.stats(), modifierMenus);
+                        "settings.server.advanced.validate-modifier-editor-commands", true),
+                plugin.overrides(), feedback);
+        this.menus = new ManhuntMenus(config, plugin.overrides(), plugin.guiConfig(),
+                messages, sounds, plugin.guiService(), dialogs, feedback, plugin.stats(),
+                modifierMenus);
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -156,6 +162,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             case "game" -> game(sender, args);
             case "config" -> configCommand(sender, args);
             case "modifiers" -> modifiers(sender, args);
+            case "override" -> overrideCmd.execute(sender, args);
             case "worldengine" -> worldEngine(sender, args);
             case "quickstart", "qs" -> quickStart(sender, args);
             case "reload" -> reload(sender);
@@ -182,6 +189,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
                 {"/manhunt config <category> <key...> <value>", "view or change a setting"},
                 {"/manhunt modifiers [setmod|setpreset]", "browse or toggle gameplay modifiers"},
+                {"/manhunt override <lobby> <settings|modifiers|clear> ...", "view or change per-lobby overrides"},
                 {"/manhunt worldengine", "manage lobbies or teleport players"},
                 {"/manhunt debug [on|off]", "toggle debug output"},
                 {"/manhunt challenges", "show Challenges addon info"},
@@ -229,6 +237,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * dismisses forever and opens the GUI.
      */
     private boolean openGui(Player player) {
+        plugin.guiService().clearOverrideLobby(player);
         if (!plugin.isSetupDone()) {
             plugin.guiService().open(player, menus.setupFirstMenu(
                     confirmed -> {
@@ -238,11 +247,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                     },
                     skipped -> {
                         plugin.markSetupDone();
-                        plugin.guiService().navigate(skipped, menus.rootMenu());
+                        plugin.guiService().navigate(skipped, menus.rootMenu(skipped));
                     }));
             return true;
         }
-        plugin.guiService().open(player, menus.rootMenu());
+        plugin.guiService().open(player, menus.rootMenu(player));
         sounds.playNeutralSound(player);
         return true;
     }
@@ -2078,6 +2087,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (completion == null) {
             completion = completeModifiersTab(args);
         }
+        if (completion == null) {
+            completion = completeOverrideTab(args);
+        }
         return completion == null ? List.of() : completion;
     }
 
@@ -2115,6 +2127,105 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[3], modifiersCmd.modifierNameOptions());
         }
         return null;
+    }
+
+    /** Tab completion for per-lobby overrides. Null when inapplicable. */
+    private List<String> completeOverrideTab(String[] args) {
+        if (!args[0].equalsIgnoreCase("override")) {
+            return null;
+        }
+        if (args.length == 2) {
+            return partial(args[1], overrideLobbyOptions());
+        }
+        if (args.length == 3) {
+            return partial(args[2], List.of("settings", "modifiers", "clear"));
+        }
+        if (args[2].equalsIgnoreCase("clear")) {
+            return List.of();
+        }
+        if (args.length == 4) {
+            if (args[2].equalsIgnoreCase("settings") || args[2].equalsIgnoreCase("modifiers")) {
+                return partial(args[3], List.of("get", "set", "clear"));
+            }
+            return List.of();
+        }
+        if (args[2].equalsIgnoreCase("modifiers")) {
+            return completeOverrideModifiersTab(args);
+        }
+        if (args[2].equalsIgnoreCase("settings")) {
+            return completeOverrideSettingsTab(args);
+        }
+        return List.of();
+    }
+
+    /** Id and state completion for override modifiers verbs. */
+    private List<String> completeOverrideModifiersTab(String[] args) {
+        String verb = args[3].toLowerCase(Locale.ROOT);
+        if (!verb.equals("get") && !verb.equals("set") && !verb.equals("clear")) {
+            return null;
+        }
+        if (args.length == 5) {
+            List<String> ids = new ArrayList<>(modifiersCmd.modifierNameOptions());
+            ids.addAll(modifiersCmd.presetIdOptions());
+            ids.sort(String.CASE_INSENSITIVE_ORDER);
+            return partial(args[4], ids);
+        }
+        if (args.length == 6 && verb.equals("set")) {
+            return partial(args[5], List.of("true", "false"));
+        }
+        return List.of();
+    }
+
+    /** Drill completion for override settings verbs, reusing the config drill. */
+    private List<String> completeOverrideSettingsTab(String[] args) {
+        String verb = args[3].toLowerCase(Locale.ROOT);
+        if (!verb.equals("get") && !verb.equals("set") && !verb.equals("clear")) {
+            return null;
+        }
+        List<String> segments = new ArrayList<>();
+        for (int index = 4; index < args.length - 1; index++) {
+            segments.add(args[index]);
+        }
+        String completing = args[args.length - 1];
+        if (verb.equals("get") || verb.equals("clear")) {
+            if (segments.isEmpty()) {
+                return partial(completing, SettingRegistry.topCategories());
+            }
+            return partial(completing, drillChildren(segments, config::getStringList));
+        }
+        String[] shifted = new String[segments.size() + 2];
+        shifted[0] = "config";
+        for (int index = 0; index < segments.size(); index++) {
+            shifted[index + 1] = segments.get(index);
+        }
+        shifted[shifted.length - 1] = completing;
+        List<String> options = completeDrill(shifted);
+        DrillResolve parent = segments.isEmpty() ? null
+                : resolveDrill(segments, config::getStringList);
+        if (parent != null && SettingRegistry.isListPath(parent.path())
+                && parent.remainder().isEmpty()) {
+            options = options.stream()
+                    .filter(option -> !option.equalsIgnoreCase("reset")).toList();
+        }
+        return options;
+    }
+
+    /** Lobby id completion: live ids plus override holders, sorted. */
+    private List<String> overrideLobbyOptions() {
+        Set<Integer> ids = new HashSet<>();
+        for (String raw : lobbyIdOptions()) {
+            try {
+                ids.add(Integer.parseInt(raw.trim()));
+            } catch (NumberFormatException expected) {
+                // Live ids are always numeric; ignore anything else.
+            }
+        }
+        if (plugin.overrides() != null) {
+            ids.addAll(plugin.overrides().overrideLobbyIds());
+        }
+        List<Integer> sorted = new ArrayList<>(ids);
+        sorted.sort(Integer::compareTo);
+        return sorted.stream().map(String::valueOf).toList();
     }
 
     /** Flag and flag-value completion for modifiers create. */
@@ -2434,8 +2545,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      */
     static List<String> subcommandOptions() {
         return new ArrayList<>(List.of("challenges", "help", "reload", "worldengine", "config",
-                "modifiers", "debug", "lobby", "qs", "quickstart", "game", "end", "start",
-                "setplayer", "setup", "status", "swaproles"));
+                "modifiers", "override", "debug", "lobby", "qs", "quickstart", "game", "end",
+                "start", "setplayer", "setup", "status", "swaproles"));
     }
 
     /** Instance id completion: live match ids, oldest first. */

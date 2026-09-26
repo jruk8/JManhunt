@@ -215,13 +215,14 @@ public final class MatchStartService {
     private List<UUID> prepareMatchPlayers(List<Player> players, long currentMatchId) {
         List<UUID> assignees = players.stream().map(Player::getUniqueId).toList();
         playerStates.clearMatchFor(assignees);
+        Integer lobby = store.lobbyOf(currentMatchId);
         for (Player player : players) {
             initMatchStats(currentMatchId, player);
             if (playerStates.role(player) == Role.SPEEDRUNNER) {
                 playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
             }
             playerStates.recordLastSeen(player, player.getLocation());
-            playerStates.setLives(player.getUniqueId(), livesFor(playerStates.role(player)));
+            playerStates.setLives(player.getUniqueId(), livesFor(lobby, playerStates.role(player)));
         }
         return assignees;
     }
@@ -245,7 +246,8 @@ public final class MatchStartService {
         for (Player spectator : spectators) {
             instance.activate(spectator.getUniqueId());
             initMatchStats(currentMatchId, spectator);
-            playerStates.setLives(spectator.getUniqueId(), livesFor(playerStates.role(spectator)));
+            playerStates.setLives(spectator.getUniqueId(),
+                    livesFor(lobbyId, playerStates.role(spectator)));
             if (playerStates.role(spectator) == Role.SPECTATOR) {
                 spectator.setGameMode(GameMode.SPECTATOR);
             }
@@ -270,8 +272,9 @@ public final class MatchStartService {
         // Set participants to adventure mode during the pre-start window if
         // configured, preventing block breaking while waiting for the first
         // speedrunner hit.
-        if (configService.getBoolean("settings.match.start-on-speedrunner-damage.enabled", false)
-                && configService.getBoolean(
+        if (plugin.overrides().getBoolean(lobbyId,
+                        "settings.match.start-on-speedrunner-damage.enabled", false)
+                && plugin.overrides().getBoolean(lobbyId,
                         "settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
             for (Player player : players) {
                 player.setGameMode(GameMode.ADVENTURE);
@@ -287,25 +290,29 @@ public final class MatchStartService {
         Bukkit.getPluginManager().callEvent(new JMatchStartEvent(instance.matchId(), lobbyId, matchCell));
         messaging.playInstanceNeutral(instance);
         showStatusToInstance(instance, players);
-        announceRoles(players, spectators);
+        announceRoles(lobbyId, players, spectators);
     }
 
     /** Arms headstarts, then begins play or waits for the first hit. */
     private void beginMatchPlay(GameInstance instance) {
+        Integer lobby = instance.originLobbyId();
         // A headstart configured for one side holds the other side in
         // spectator while the configured side plays. Held sides only move to
         // spectator when the opposite countdown actually begins; when
         // start-on-speedrunner-damage is enabled, that happens only after
         // the speedrunner first damages a hunter.
         prestart.armHeadstarts(instance);
-        if (!configService.getBoolean("settings.match.start-on-speedrunner-damage.enabled", false)) {
+        if (!plugin.overrides().getBoolean(lobby,
+                "settings.match.start-on-speedrunner-damage.enabled", false)) {
             prestart.beginHeadstarts(instance);
         }
         // load waiting delay configuration (enforces a 5 second minimum;
         // -1 waits indefinitely)
         instance.setWaitingDelayConfigured(WaitingReminder.clampDelay(
-                configService.getInt("settings.match.start-on-speedrunner-damage.delay-seconds", 30)));
-        if (configService.getBoolean("settings.match.start-on-speedrunner-damage.enabled", false)) {
+                plugin.overrides().getInt(lobby,
+                        "settings.match.start-on-speedrunner-damage.delay-seconds", 30)));
+        if (plugin.overrides().getBoolean(lobby,
+                "settings.match.start-on-speedrunner-damage.enabled", false)) {
             prestart.scheduleWaitingReminder(instance);
         } else {
             beginGame(instance);
@@ -382,7 +389,7 @@ public final class MatchStartService {
         if (role == Role.SPEEDRUNNER) {
             playerStates.setSpeedrunnerAlive(playerId, true);
         }
-        playerStates.setLives(playerId, livesFor(role));
+        playerStates.setLives(playerId, livesFor(instance.originLobbyId(), role));
         if (instance.cellIndex().isPresent()) {
             worldEngine.teleportJoinersToCell(List.of(player), instance.cellIndex().getAsLong());
         }
@@ -401,14 +408,16 @@ public final class MatchStartService {
 
     /** Applies the spectator, pre-start, and headstart-hold game modes for a joiner. */
     private void applyJoinGameMode(GameInstance instance, Player player, Role role) {
+        Integer lobby = instance.originLobbyId();
         if (!role.isParticipant() && (role == Role.SPECTATOR
                 // NONE joiners take spectator gamemode only with the toggle;
                 // AFK cannot join at all (rejected in gameJoin).
-                || configService.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false))) {
+                || plugin.overrides().getBoolean(lobby,
+                        "settings.players.roles.turn-nones-spectator.enabled", false))) {
             player.setGameMode(GameMode.SPECTATOR);
         }
         if (!instance.begun()
-                && configService.getBoolean(
+                && plugin.overrides().getBoolean(lobby,
                         "settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)
                 && role.isParticipant()
                 && !instance.headstart(role.opposite()).armed()) {
@@ -442,7 +451,8 @@ public final class MatchStartService {
         // Restore participants to survival when the game begins if they were
         // set to adventure mode during the pre-start window. Held headstart
         // sides stay out: their countdown moves them to spectator below.
-        if (configService.getBoolean("settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
+        if (plugin.overrides().getBoolean(instance.originLobbyId(),
+                "settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
             for (Player player : store.onlineActivePlayers(instance)) {
                 Role playerRole = playerStates.role(player);
                 if (playerRole.isParticipant() && !instance.headstart(playerRole.opposite()).armed()) {
@@ -474,12 +484,12 @@ public final class MatchStartService {
     }
 
     /** Configured starting lives for a role. -1 means unlimited. */
-    private int livesFor(Role role) {
+    private int livesFor(Integer lobby, Role role) {
         if (role == Role.HUNTER) {
-            return configService.getInt("settings.players.respawn.hunter.lives", -1);
+            return plugin.overrides().getInt(lobby, "settings.players.respawn.hunter.lives", -1);
         }
         if (role == Role.SPEEDRUNNER) {
-            return configService.getInt("settings.players.respawn.speedrunner.lives", 1);
+            return plugin.overrides().getInt(lobby, "settings.players.respawn.speedrunner.lives", 1);
         }
         return -1;
     }
@@ -492,15 +502,20 @@ public final class MatchStartService {
      * announcement: when both chat and title are disabled, nothing plays at
      * all.
      */
-    private void announceRoles(List<Player> players, List<Player> spectators) {
-        boolean chat = configService.getBoolean("settings.players.announce-roles.chat.enabled", true);
-        boolean title = configService.getBoolean("settings.players.announce-roles.title.enabled", true);
+    private void announceRoles(int lobbyId, List<Player> players, List<Player> spectators) {
+        boolean chat = plugin.overrides()
+                .getBoolean(lobbyId, "settings.players.announce-roles.chat.enabled", true);
+        boolean title = plugin.overrides()
+                .getBoolean(lobbyId, "settings.players.announce-roles.title.enabled", true);
         if (!chat && !title) {
             return;
         }
-        long fadeIn = toMillis(configService.getDouble("settings.players.announce-roles.title.fade-in-seconds", 0.5));
-        long stay = toMillis(configService.getDouble("settings.players.announce-roles.title.stay-seconds", 3.0));
-        long fadeOut = toMillis(configService.getDouble("settings.players.announce-roles.title.fade-out-seconds", 0.5));
+        long fadeIn = toMillis(plugin.overrides()
+                .getDouble(lobbyId, "settings.players.announce-roles.title.fade-in-seconds", 0.5));
+        long stay = toMillis(plugin.overrides()
+                .getDouble(lobbyId, "settings.players.announce-roles.title.stay-seconds", 3.0));
+        long fadeOut = toMillis(plugin.overrides().getDouble(lobbyId,
+                "settings.players.announce-roles.title.fade-out-seconds", 0.5));
         Title.Times times = Title.Times.times(
                 Duration.ofMillis(fadeIn), Duration.ofMillis(stay), Duration.ofMillis(fadeOut));
         for (Player player : players) {

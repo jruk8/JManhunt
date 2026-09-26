@@ -202,7 +202,8 @@ public final class PrestartService {
     private boolean scheduleIndefiniteWaitingReminders(GameInstance instance) {
         // Indefinite waiting (-1): use the configured reminder interval and
         // never schedule an expiry.
-        double interval = configService.getFloat("match.start-reminder-interval", 10.0f);
+        double interval = plugin.overrides()
+                .getFloat(instance.originLobbyId(), "match.start-reminder-interval", 10.0f);
         if (interval == -1.0) {
             return false;
         }
@@ -228,7 +229,7 @@ public final class PrestartService {
                     instance.waitingReminderTask().cancel();
                     instance.setWaitingReminderTask(null);
                 }
-                boolean forceStart = configService.getEnum(
+                boolean forceStart = plugin.overrides().getEnum(instance.originLobbyId(),
                         "settings.match.start-on-speedrunner-damage.on-expire",
                         OnExpire.class, OnExpire.FORCE_START) == OnExpire.FORCE_START;
                 if (forceStart) {
@@ -257,7 +258,8 @@ public final class PrestartService {
         stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
         List<Player> assigned = store.onlineAssignedPlayers(instance);
         control.teardownNow(instance);
-        if (configService.getBoolean("settings.players.invulnerability.on-game-end.enabled", true)) {
+        if (plugin.overrides().getBoolean(instance.originLobbyId(),
+                "settings.players.invulnerability.on-game-end.enabled", true)) {
             assigned.forEach(p -> p.setInvulnerable(true));
         }
     }

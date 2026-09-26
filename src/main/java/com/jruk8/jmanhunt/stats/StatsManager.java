@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.stats;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
@@ -311,7 +312,9 @@ public final class StatsManager {
     /** End-screen lines go to the match plus the console, never other matches. */
     public void showStats(long matchId, Collection<? extends Player> recipients) {
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
-        for (String statistic : plugin.configService().getStringList("match.end-statistics")) {
+        GameManager game = plugin.game();
+        Integer lobby = game == null ? null : game.lobbyOf(matchId);
+        for (String statistic : plugin.overrides().getStringList(lobby, "match.end-statistics")) {
             if (statistic.equalsIgnoreCase("PROGRESSION")) {
                 updateProgression(matchId);
             }

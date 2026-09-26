@@ -23,6 +23,8 @@ import org.bukkit.GameMode;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import java.util.logging.Logger;
@@ -86,6 +88,8 @@ class CompassLockServiceTest {
                 new ModifierStore(new ModifiersConfig(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.configService()).thenReturn(configService);
+        when(plugin.overrides()).thenReturn(
+                new OverrideService(configService, new LobbyConfig(), () -> { }));
         UUID holderId = UUID.randomUUID();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(holderId);

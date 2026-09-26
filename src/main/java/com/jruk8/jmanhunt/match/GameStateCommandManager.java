@@ -46,15 +46,21 @@ public final class GameStateCommandManager {
         return intervalEngines.computeIfAbsent(matchId, ignored -> new IntervalEngine());
     }
 
-    /** Names of all enabled modifiers. */
-    private List<String> enabledModifiers() {
+    /** Names of all modifiers effectively enabled for one match's lobby. */
+    private List<String> enabledModifiers(long matchId) {
+        Integer lobby = lobbyOf(matchId);
         List<String> enabled = new ArrayList<>();
         for (String name : configService.modifierNames()) {
-            if (configService.modifierEnabled(name)) {
+            if (plugin.overrides().modifierEnabled(lobby, name)) {
                 enabled.add(name);
             }
         }
         return enabled;
+    }
+
+    /** Origin lobby of a match for override resolution, or null when gone. */
+    private Integer lobbyOf(long matchId) {
+        return game.lobbyOf(matchId);
     }
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
@@ -85,7 +91,7 @@ public final class GameStateCommandManager {
      * deferred modifiers still fire immediately.
      */
     public void runPostStartModifiers(long matchId) {
-        for (String name : enabledModifiers()) {
+        for (String name : enabledModifiers(matchId)) {
             if (!runsOnContains(name, "ON_START")) {
                 continue;
             }
@@ -117,7 +123,7 @@ public final class GameStateCommandManager {
     }
 
     public void runConsoleCleanup(long matchId) {
-        for (String name : enabledModifiers()) {
+        for (String name : enabledModifiers(matchId)) {
             ModifierTagScope scope = ModifierTagScope.executor(null, plugin.logger()::warning);
             runCommandList(configService.commandList(name, "console-cleanup"), null,
                     tagContext(name, null, scope, matchId));
@@ -125,7 +131,7 @@ public final class GameStateCommandManager {
     }
 
     public void runPlayerCleanup(long matchId, List<Player> participants) {
-        for (String name : enabledModifiers()) {
+        for (String name : enabledModifiers(matchId)) {
             for (Player player : participants) {
                 runCommandList(configService.commandList(name, "player-cleanup"), player,
                         tagContext(name, player, matchScope(player, participants), matchId));
@@ -160,7 +166,7 @@ public final class GameStateCommandManager {
      */
     public void startIntervalModifiers(long matchId) {
         cancelIntervalModifiers(matchId);
-        for (String name : enabledModifiers()) {
+        for (String name : enabledModifiers(matchId)) {
             if (!runsOnContains(name, "INTERVAL")) {
                 continue;
             }
@@ -223,7 +229,8 @@ public final class GameStateCommandManager {
             long intervalTicks = ModifierTriggers.secondsToTicks(intervalSeconds);
             AtomicReference<BukkitTask> ref = new AtomicReference<>();
             ref.set(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-                if (generation != engine.generation || !configService.modifierEnabled(name)) {
+                if (generation != engine.generation
+                        || !plugin.overrides().modifierEnabled(lobbyOf(matchId), name)) {
                     BukkitTask task = ref.get();
                     if (task != null) {
                         task.cancel();
@@ -241,7 +248,8 @@ public final class GameStateCommandManager {
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
             engine.tasks.remove(ref.get());
-            if (generation != engine.generation || !configService.modifierEnabled(name)) {
+            if (generation != engine.generation
+                    || !plugin.overrides().modifierEnabled(lobbyOf(matchId), name)) {
                 return;
             }
             runModifierCommands(name, matchId);
@@ -274,7 +282,7 @@ public final class GameStateCommandManager {
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
             engine.tasks.remove(ref.get());
             if (generation != engine.generation || !engine.consoleChained.contains(name)
-                    || !configService.modifierEnabled(name)) {
+                    || !plugin.overrides().modifierEnabled(lobbyOf(matchId), name)) {
                 engine.consoleChained.remove(name);
                 return;
             }
@@ -297,7 +305,8 @@ public final class GameStateCommandManager {
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
         ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
             engine.tasks.remove(ref.get());
-            if (generation != engine.generation || !configService.modifierEnabled(name)) {
+            if (generation != engine.generation
+                    || !plugin.overrides().modifierEnabled(lobbyOf(matchId), name)) {
                 chainedPlayers(matchId, name).remove(playerId);
                 return;
             }
@@ -357,7 +366,7 @@ public final class GameStateCommandManager {
         if (player == null) {
             return;
         }
-        for (String name : enabledModifiers()) {
+        for (String name : enabledModifiers(matchId)) {
             if (!runsOnContains(name, event)) {
                 continue;
             }
@@ -546,42 +555,46 @@ public final class GameStateCommandManager {
 
     private void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
                             boolean lastMatch) {
-        if (!configService.getBoolean("match.game-rules.enabled", true)) {
+        if (!plugin.overrides().getBoolean(lobbyId, "match.game-rules.enabled", true)) {
             return;
         }
         String path = "match.game-rules.rules.";
-        if (configService.getBoolean(path + "reset-players-stats", false)) {
+        if (plugin.overrides().getBoolean(lobbyId, path + "reset-players-stats", false)) {
             participants.forEach(this::resetPlayer);
         }
-        if (configService.getBoolean(path + "auto-set-gamemode", false)) {
+        if (plugin.overrides().getBoolean(lobbyId, path + "auto-set-gamemode", false)) {
             applyDefaultGamemodes(phase, participants, lobbySpectators, lobbyId);
         }
         var worlds = Bukkit.getWorlds();
-        boolean disableLocatorBar = configService.getBoolean(path + "disable-locator-bar", false);
+        boolean disableLocatorBar =
+                plugin.overrides().getBoolean(lobbyId, path + "disable-locator-bar", false);
         worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, !disableLocatorBar));
         // Quiet command feedback while a match runs and restore it when
         // the last match ends. Unlike its siblings this toggle defaults
         // to off.
-        boolean disableFeedback = configService.getBoolean(path + "disable-command-feedback", false);
+        boolean disableFeedback =
+                plugin.overrides().getBoolean(lobbyId, path + "disable-command-feedback", false);
         worlds.forEach(world -> world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK,
                 gameruleRestored(phase, lastMatch, disableFeedback)));
         // Disable phantom spawning while a match runs and restore it when the
         // match ends. The gamerule is re-enabled on the end phase.
-        boolean disablePhantoms = configService.getBoolean(path + "disable-phantoms", false);
+        boolean disablePhantoms =
+                plugin.overrides().getBoolean(lobbyId, path + "disable-phantoms", false);
         worlds.forEach(world -> world.setGameRule(GameRules.SPAWN_PHANTOMS,
                 gameruleRestored(phase, lastMatch, disablePhantoms)));
         worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
-                configService.getBoolean(path + "set-respawn-immediate", false)));
+                plugin.overrides().getBoolean(lobbyId, path + "set-respawn-immediate", false)));
         // Prevent spectators from generating chunks while the match is active.
         // This is the native gamerule equivalent of the old spectator chunk
         // generation toggle and avoids lag from spectators exploring.
         worlds.forEach(world -> world.setGameRule(GameRules.SPECTATORS_GENERATE_CHUNKS, false));
         // Pillager patrols never spawn while a match runs; restored when the
         // last match ends.
-        boolean disablePatrols = configService.getBoolean(path + "disable-pillager-patrols", false);
+        boolean disablePatrols =
+                plugin.overrides().getBoolean(lobbyId, path + "disable-pillager-patrols", false);
         worlds.forEach(world -> world.setGameRule(GameRules.SPAWN_PATROLS,
                 gameruleRestored(phase, lastMatch, disablePatrols)));
-        if (configService.getBoolean(path + "set-daytime", false)) {
+        if (plugin.overrides().getBoolean(lobbyId, path + "set-daytime", false)) {
             Bukkit.getWorlds().forEach(this::setDaytime);
         }
     }
@@ -595,7 +608,7 @@ public final class GameStateCommandManager {
             List<Player> lobbySpectators, int lobbyId) {
         // AFK players are skipped above and always left alone; NONEs follow
         // the toggle, keeping their gamemode like AFK when it is off.
-        boolean setNoneSpectator = configService.getBoolean(
+        boolean setNoneSpectator = plugin.overrides().getBoolean(lobbyId,
                 "settings.players.roles.turn-nones-spectator.enabled", false);
         List<Player> nonePlayers = new ArrayList<>();
         for (Player player : participants) {
@@ -639,7 +652,7 @@ public final class GameStateCommandManager {
 
     /** Runs ON_START modifiers that do not wait out the pre-start window. */
     private void runModifierStarts(long matchId) {
-        for (String name : enabledModifiers()) {
+        for (String name : enabledModifiers(matchId)) {
             if (runsOnContains(name, "ON_START") && !afterPrestart(name)) {
                 runModifierCommands(name, matchId);
             }

@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.gui.GuiTexts;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SettingType;
 import com.jruk8.jmanhunt.gui.GuiService;
@@ -51,15 +52,17 @@ public final class SettingDialogs implements SettingDialog {
     static final int TEXT_MAX_LENGTH = DialogInputs.TEXT_MAX_LENGTH;
 
     private final ConfigService config;
+    private final OverrideService overrides;
     private final MessageService messages;
     private final SoundService sounds;
     private final GuiService gui;
     private final SettingFeedback feedback;
     private final Plugin plugin;
 
-    public SettingDialogs(ConfigService config, MessageService messages, SoundService sounds,
-            GuiService gui, SettingFeedback feedback, Plugin plugin) {
+    public SettingDialogs(ConfigService config, OverrideService overrides, MessageService messages,
+            SoundService sounds, GuiService gui, SettingFeedback feedback, Plugin plugin) {
         this.config = config;
+        this.overrides = overrides;
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
@@ -77,18 +80,20 @@ public final class SettingDialogs implements SettingDialog {
                     "Dialogs edit INT, FLOAT, and STRING only: " + descriptor.path());
         }
         boolean ranged = DialogInputs.useNumberRange(descriptor);
-        if (!ranged && tooLong(player, currentText(descriptor), () -> reopenLater(player, reopen))) {
+        Integer lobby = gui.overrideLobby(player);
+        String current = currentText(lobby, descriptor);
+        if (!ranged && tooLong(player, current, () -> reopenLater(player, reopen))) {
             return;
         }
         DialogInput input = ranged
-                ? rangeInput(descriptor, title)
+                ? rangeInput(lobby, descriptor, title)
                 : DialogInput.text(VALUE_KEY, title)
-                        .initial(currentText(descriptor))
+                        .initial(current)
                         .maxLength(TEXT_MAX_LENGTH)
                         .build();
         Dialog dialog = Dialog.create(factory -> factory.empty()
                 .base(DialogBase.builder(title)
-                        .body(bodyLines(descriptor))
+                        .body(bodyLines(lobby, descriptor))
                         .inputs(List.of(input))
                         .canCloseWithEscape(true)
                         .pause(false)
@@ -105,7 +110,7 @@ public final class SettingDialogs implements SettingDialog {
     @Override
     public void openListEntry(Player player, String listPath, int index,
             Component title, Supplier<Menu> reopen) {
-        List<String> entries = config.getStringList(listPath);
+        List<String> entries = overrides.getStringList(gui.overrideLobby(player), listPath);
         if (index < 0 || index >= entries.size()) {
             reopenLater(player, reopen);
             return;
@@ -127,6 +132,7 @@ public final class SettingDialogs implements SettingDialog {
      * Single free-text prompt with parsed body lines. Submit and cancel
      * run one tick later so callers may navigate safely.
      */
+    @Override
     public void prompt(Player player, String titleText, List<String> body,
             Consumer<String> onSubmit, Runnable onCancel) {
         prompt(player, titleText, "", body, onSubmit, onCancel);
@@ -136,6 +142,7 @@ public final class SettingDialogs implements SettingDialog {
      * Same, with a prefilled value for editing existing text. Overlong
      * initial values take the cancel path like any other text dialog.
      */
+    @Override
     public void prompt(Player player, String titleText, String initial, List<String> body,
             Consumer<String> onSubmit, Runnable onCancel) {
         List<DialogBody> lines = new ArrayList<>();
@@ -176,33 +183,43 @@ public final class SettingDialogs implements SettingDialog {
 
     private void submitListSet(Player player, String listPath, int index,
             Supplier<Menu> reopen, String raw) {
-        ConfigService.SetOutcome outcome = config.listSet(listPath, index, raw);
+        Integer lobby = gui.overrideLobby(player);
+        ConfigService.SetOutcome outcome = lobby == null
+                ? config.listSet(listPath, index, raw)
+                : overrides.listSetOverride(lobby, listPath, index, raw);
         if (!outcome.ok()) {
             feedback.failed(player, outcome);
             sounds.playAngrySound(player);
-        } else {
+        } else if (lobby == null) {
             feedback.scalarUpdated(player, listPath + "." + index, outcome);
+        } else {
+            feedback.overrideScalarUpdated(player, lobby, listPath + "." + index, outcome);
         }
         reopenLater(player, reopen);
     }
 
     private void submitListAdd(Player player, String listPath,
             Supplier<Menu> reopen, String raw) {
-        ConfigService.SetOutcome outcome = config.listAdd(listPath, raw);
+        Integer lobby = gui.overrideLobby(player);
+        ConfigService.SetOutcome outcome = lobby == null
+                ? config.listAdd(listPath, raw)
+                : overrides.listAddOverride(lobby, listPath, raw);
         if (!outcome.ok()) {
             feedback.failed(player, outcome);
             sounds.playAngrySound(player);
-        } else {
+        } else if (lobby == null) {
             feedback.listAdded(player, listPath, outcome);
+        } else {
+            feedback.overrideListAdded(player, lobby, listPath, outcome);
         }
         reopenLater(player, reopen);
     }
 
-    private DialogInput rangeInput(SettingDescriptor descriptor, Component title) {
+    private DialogInput rangeInput(Integer lobby, SettingDescriptor descriptor, Component title) {
         float min = descriptor.min().floatValue();
         float max = descriptor.max().floatValue();
         var builder = DialogInput.numberRange(VALUE_KEY, title, min, max)
-                .initial(DialogInputs.clamp(currentNumber(descriptor, min), min, max));
+                .initial(DialogInputs.clamp(currentNumber(lobby, descriptor, min), min, max));
         if (descriptor.type() == SettingType.INT) {
             builder.step(1.0f);
         } else {
@@ -215,19 +232,19 @@ public final class SettingDialogs implements SettingDialog {
         return builder.build();
     }
 
-    private String currentText(SettingDescriptor descriptor) {
-        return ConfigService.displayValue(config.getValue(descriptor.path()));
+    private String currentText(Integer lobby, SettingDescriptor descriptor) {
+        return ConfigService.displayValue(overrides.effectiveValue(lobby, descriptor.path()));
     }
 
     /** Current value, with floats rendered to three decimals. */
-    private String displayCurrent(SettingDescriptor descriptor) {
+    private String displayCurrent(Integer lobby, SettingDescriptor descriptor) {
         if (descriptor.type() == SettingType.FLOAT) {
-            Object value = config.getValue(descriptor.path());
+            Object value = overrides.effectiveValue(lobby, descriptor.path());
             if (value instanceof Number number) {
                 return DialogInputs.formatFloat(number.floatValue());
             }
         }
-        return currentText(descriptor);
+        return currentText(lobby, descriptor);
     }
 
     /**
@@ -239,24 +256,24 @@ public final class SettingDialogs implements SettingDialog {
         return DialogInputs.safeInitial(current);
     }
 
-    private float currentNumber(SettingDescriptor descriptor, float fallback) {
-        Object value = config.getValue(descriptor.path());
+    private float currentNumber(Integer lobby, SettingDescriptor descriptor, float fallback) {
+        Object value = overrides.effectiveValue(lobby, descriptor.path());
         if (value instanceof Number number) {
             return number.floatValue();
         }
         return fallback;
     }
 
-    private List<DialogBody> bodyLines(SettingDescriptor descriptor) {
+    private List<DialogBody> bodyLines(Integer lobby, SettingDescriptor descriptor) {
         List<DialogBody> lines = new ArrayList<>();
         lines.add(DialogBody.plainMessage(messages.parse(messages
                 .string("manhunt-gui.dialog-current", "Current value: <white>{value}")
-                .replace("{value}", escape(displayCurrent(descriptor))))));
+                .replace("{value}", escape(displayCurrent(lobby, descriptor))))));
         if (descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT) {
             lines.add(DialogBody.plainMessage(messages.parse(messages
                     .string("manhunt-gui.dialog-bounds", "Allowed: {bounds}")
                     .replace("{bounds}", escape(SettingRegistry.boundsText(
-                            descriptor, config::getValue))))));
+                            descriptor, path -> overrides.effectiveRaw(lobby, path)))))));
         }
         return lines;
     }
@@ -311,12 +328,17 @@ public final class SettingDialogs implements SettingDialog {
 
     private void submit(Player player, SettingDescriptor descriptor,
             Supplier<Menu> reopen, String raw) {
-        ConfigService.SetOutcome outcome = config.setValue(descriptor.path(), raw);
+        Integer lobby = gui.overrideLobby(player);
+        ConfigService.SetOutcome outcome = lobby == null
+                ? config.setValue(descriptor.path(), raw)
+                : overrides.setSettingOverride(lobby, descriptor.path(), raw);
         if (!outcome.ok()) {
             feedback.failed(player, outcome);
             sounds.playAngrySound(player);
-        } else {
+        } else if (lobby == null) {
             feedback.scalarUpdated(player, descriptor.path(), outcome);
+        } else {
+            feedback.overrideScalarUpdated(player, lobby, descriptor.path(), outcome);
         }
         reopenLater(player, reopen);
     }

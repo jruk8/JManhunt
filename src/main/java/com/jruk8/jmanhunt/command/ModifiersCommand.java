@@ -6,12 +6,12 @@ import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import java.util.function.Function;
 import com.jruk8.jmanhunt.modifiers.ModifierCodec;
 import com.jruk8.jmanhunt.modifiers.ModifierNames;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import java.util.Optional;
-import java.util.function.Supplier;
 import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -35,15 +35,15 @@ public final class ModifiersCommand {
     private final ConfigService config;
     private final MessageService messages;
     private final GuiService gui;
-    private final Supplier<Menu> mainMenu;
+    private final Function<Player, Menu> mainMenu;
     private final SoundService sounds;
 
     /**
-     * @param gui menu opener, main menu supplier, and sounds; all are only
+     * @param gui menu opener, main menu factory, and sounds; all are only
      *        touched on the bare-player path, so tests may pass nulls
      */
     public ModifiersCommand(ConfigService config, MessageService messages,
-            GuiService gui, Supplier<Menu> mainMenu, SoundService sounds) {
+            GuiService gui, Function<Player, Menu> mainMenu, SoundService sounds) {
         this.config = config;
         this.messages = messages;
         this.gui = gui;
@@ -55,7 +55,8 @@ public final class ModifiersCommand {
     public boolean execute(CommandSender sender, String[] args) {
         if (args.length == 0) {
             if (sender instanceof Player player) {
-                gui.open(player, mainMenu.get());
+                gui.clearOverrideLobby(player);
+                gui.open(player, mainMenu.apply(player));
                 sounds.playNeutralSound(player);
                 return true;
             }

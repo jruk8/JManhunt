@@ -386,11 +386,14 @@ public final class PlayerCombatListener implements Listener {
             stats.recordMobKill(match.get().matchId(), killer.getUniqueId());
             // Mob kills only matter for the kill-mob win conditions.
             Role killerRole = playerStates.role(killer);
+            Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
             if (killerRole == Role.SPEEDRUNNER
-                    && winConditionEngine.mobMatches(event.getEntity().getType(), Role.SPEEDRUNNER)) {
+                    && winConditionEngine.mobMatches(lobby, event.getEntity().getType(),
+                            Role.SPEEDRUNNER)) {
                 game.finishLater(match.get(), Role.SPEEDRUNNER);
             } else if (killerRole == Role.HUNTER
-                    && winConditionEngine.mobMatches(event.getEntity().getType(), Role.HUNTER)) {
+                    && winConditionEngine.mobMatches(lobby, event.getEntity().getType(),
+                            Role.HUNTER)) {
                 game.finishLater(match.get(), Role.HUNTER);
             }
             return;
@@ -430,8 +433,9 @@ public final class PlayerCombatListener implements Listener {
         // inventory, so check the picked stack itself for an instant win
         // and keep the inventory scan as a fallback for stacks already
         // held or picked up by other means.
-        if (winConditionEngine.materialWins(event.getItem().getItemStack().getType(), role)
-                || winConditionEngine.hasItem(player, role)) {
+        Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
+        if (winConditionEngine.materialWins(lobby, event.getItem().getItemStack().getType(), role)
+                || winConditionEngine.hasItem(lobby, player, role)) {
             game.finishLater(match.get(), role);
         }
     }
@@ -451,11 +455,12 @@ public final class PlayerCombatListener implements Listener {
         long matchId = match.get().matchId();
         stats.recordAdvancement(matchId, player.getUniqueId());
         game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId);
+        Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
         if (playerStates.role(player) == Role.SPEEDRUNNER
-                && winConditionEngine.hasReachAdvancement(player, Role.SPEEDRUNNER)) {
+                && winConditionEngine.hasReachAdvancement(lobby, player, Role.SPEEDRUNNER)) {
             game.finishLater(match.get(), Role.SPEEDRUNNER);
         } else if (playerStates.role(player) == Role.HUNTER
-                && winConditionEngine.hasReachAdvancement(player, Role.HUNTER)) {
+                && winConditionEngine.hasReachAdvancement(lobby, player, Role.HUNTER)) {
             game.finishLater(match.get(), Role.HUNTER);
         }
     }

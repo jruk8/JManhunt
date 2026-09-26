@@ -38,9 +38,14 @@ final class CompassItemService {
         this.game = game;
     }
 
-    boolean shouldReceiveCompass(Role role) {
-        return plugin.configService()
-                .getBoolean("settings.compass.given-to." + role.name().toLowerCase(Locale.ROOT),
+    /** Origin lobby of the holder's match, or null outside matches. */
+    private Integer lobbyOf(Player holder) {
+        return game == null ? null : game.lobbyOfPlayer(holder.getUniqueId());
+    }
+
+    boolean shouldReceiveCompass(Integer lobby, Role role) {
+        return plugin.overrides()
+                .getBoolean(lobby, "settings.compass.given-to." + role.name().toLowerCase(Locale.ROOT),
                         role == Role.HUNTER);
     }
 
@@ -104,11 +109,13 @@ final class CompassItemService {
     }
 
     void giveCompass(Player player) {
-        if (!shouldReceiveCompass(playerStates.role(player))) {
+        Integer lobby = lobbyOf(player);
+        if (!shouldReceiveCompass(lobby, playerStates.role(player))) {
             return;
         }
         removeCompasses(player);
-        String configured = plugin.configService().getString("settings.compass.item", "compass");
+        String configured =
+                plugin.overrides().getString(lobby, "settings.compass.item", "compass");
         Material material = resolveCompassMaterial(configured);
         if (material == null) {
             plugin.logger().warning("Unknown or placeable settings.compass.item '"
@@ -118,7 +125,7 @@ final class CompassItemService {
         ItemStack item = new ItemStack(material);
         applyCompassIdentity(item, playerStates.role(player));
         ItemMeta meta = item.getItemMeta();
-        if (plugin.configService().getBoolean("settings.compass.drop-on-death.enabled", false)) {
+        if (plugin.overrides().getBoolean(lobby, "settings.compass.drop-on-death.enabled", false)) {
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         } else {
             meta.addEnchant(Enchantment.VANISHING_CURSE, 1, true);
@@ -276,7 +283,8 @@ final class CompassItemService {
         return "compass.compass-lore";
     }
 
-    boolean mustBeInventory() {
-        return plugin.configService().getBoolean("settings.compass.must-be-inventory.enabled", true);
+    boolean mustBeInventory(Integer lobby) {
+        return plugin.overrides().getBoolean(lobby,
+                "settings.compass.must-be-inventory.enabled", true);
     }
 }

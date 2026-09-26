@@ -50,12 +50,13 @@ public final class TimeLimitService {
      * threshold once and ends (or cancels) the match at zero.
      */
     public void scheduleTimeLimit(GameInstance instance, long currentMatchId) {
-        Double runnerSecs = winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME)
-                ? winConditionEngine.time(Role.SPEEDRUNNER) : null;
-        Double hunterSecs = winConditionEngine.enabled(Role.HUNTER, WinCondition.TIME_LIMIT)
-                ? winConditionEngine.time(Role.HUNTER) : null;
-        Double cancelSecs = winConditionEngine.cancelSurviveEnabled()
-                ? winConditionEngine.cancelSurviveTime() : null;
+        Integer lobby = instance.originLobbyId();
+        Double runnerSecs = winConditionEngine.enabled(lobby, Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME)
+                ? winConditionEngine.time(lobby, Role.SPEEDRUNNER) : null;
+        Double hunterSecs = winConditionEngine.enabled(lobby, Role.HUNTER, WinCondition.TIME_LIMIT)
+                ? winConditionEngine.time(lobby, Role.HUNTER) : null;
+        Double cancelSecs = winConditionEngine.cancelSurviveEnabled(lobby)
+                ? winConditionEngine.cancelSurviveTime(lobby) : null;
         SurviveOutcome limit = resolveSurvive(runnerSecs, hunterSecs, cancelSecs);
         if (limit == null || limit.limitSecs() <= 0.0) {
             return;

@@ -20,6 +20,7 @@
 | `jmanhunt.command.dev.schem` | Use the developer schematic tools. | OP |
 | `jmanhunt.command.reload` | Reload JManhunt configuration. | OP |
 | `jmanhunt.command.config` | View or change configuration by category. | OP |
+| `jmanhunt.command.override` | View or change per-lobby setting and modifier overrides. | OP |
 | `jmanhunt.modifiers` | Browse and toggle gameplay modifiers. | OP |
 | `jmanhunt.gui` | Open the admin GUI with bare `/manhunt`. | OP |
 | `jmanhunt.admin` | Receive plugin update notices and other admin messages. | OP |

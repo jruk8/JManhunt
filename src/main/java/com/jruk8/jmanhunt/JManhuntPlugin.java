@@ -17,6 +17,7 @@ import com.jruk8.jmanhunt.config.YamlFileUpdater;
 import com.jruk8.jmanhunt.lobby.bounds.LobbyBoundsService;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfigRegistrar;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.lobby.LobbyProtectionService;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.RolePadService;
@@ -88,6 +89,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private JManhuntPlaceholders placeholderValues;
     private ConfigRegistrar configRegistrar;
     private ConfigService configService;
+    private OverrideService overrideService;
     private ModifierStore modifierStore;
     private ModifiersRegistrar modifierConfigs;
     private WorldEngineService worldEngine;
@@ -162,6 +164,8 @@ public final class JManhuntPlugin extends JavaPlugin {
     /** Creates player, stats, config, sound, tutorial, compass, and world services. */
     private void bootstrapServices() {
         configService = new ConfigService(configRegistrar.getRoot(), modifierStore);
+        overrideService = new OverrideService(configService, lobbyConfigs.getLobbyConfig(),
+                lobbyConfigs.getLobbyConfig()::save);
         sounds = new SoundService(this, configRegistrar.getSounds());
         playerStates = new PlayerStateStore();
         roleTeams = new RoleTeamService(playerStates);
@@ -211,7 +215,7 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     /** Creates the game manager and wires it to the compass, world engine, and listeners. */
     private void bootstrapGame() {
-        winConditionEngine = new WinConditionEngine(configService);
+        winConditionEngine = new WinConditionEngine(overrideService);
         game = new GameManager(
                 this, messages, sounds, playerStates, compass, stats,
                 configService, worldEngine, winConditionEngine, lobbyService);
@@ -423,6 +427,16 @@ public final class JManhuntPlugin extends JavaPlugin {
     /** Typed config and modifier service. */
     public ConfigService configService() {
         return configService;
+    }
+
+    /** Per-lobby overrides plus effective resolution. */
+    public OverrideService overrides() {
+        return overrideService;
+    }
+
+    /** Live match manager, null until bootstrap finishes. */
+    public GameManager game() {
+        return game;
     }
 
     /** Match and lifetime statistics. */

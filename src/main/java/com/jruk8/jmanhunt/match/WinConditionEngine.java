@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -17,15 +18,15 @@ import org.bukkit.inventory.ItemStack;
  * conditions is satisfied. One role-parameterized core serves both sides.
  */
 public final class WinConditionEngine {
-    private ConfigService config;
+    private final OverrideService overrides;
 
-    public WinConditionEngine(ConfigService config) {
-        this.config = config;
+    public WinConditionEngine(OverrideService overrides) {
+        this.overrides = overrides;
     }
 
     /** Updates the config reference after a reload. */
     public void reload(ConfigService config) {
-        this.config = config;
+        overrides.reload(config);
     }
 
     /**
@@ -34,6 +35,11 @@ public final class WinConditionEngine {
      * always disabled.
      */
     public boolean enabled(Role role, WinCondition condition) {
+        return enabled(null, role, condition);
+    }
+
+    /** Lobby-aware enabled flag: the lobby's override wins, else the global. */
+    public boolean enabled(Integer lobby, Role role, WinCondition condition) {
         if (!role.isParticipant()) {
             return false;
         }
@@ -51,7 +57,8 @@ public final class WinConditionEngine {
             case ACQUIRE_ITEM, KILL_MOB, REACH_ADVANCEMENT -> {
             }
         }
-        return config.getBoolean(base(role, condition) + "enabled", condition == WinCondition.EXIT_END);
+        return overrides.getBoolean(lobby, base(role, condition) + "enabled",
+                condition == WinCondition.EXIT_END);
     }
 
     /**
@@ -59,39 +66,73 @@ public final class WinConditionEngine {
      * expiry limit for hunters.
      */
     public double time(Role role) {
+        return time(null, role);
+    }
+
+    /** Lobby-aware clock; the lobby's override wins, else the global. */
+    public double time(Integer lobby, Role role) {
         if (role == Role.SPEEDRUNNER) {
-            return config.getDouble(base(role, WinCondition.SURVIVE_TIME) + "time", 3600.0);
+            return overrides.getDouble(lobby, base(role, WinCondition.SURVIVE_TIME) + "time", 3600.0);
         }
         if (role == Role.HUNTER) {
-            return config.getDouble(base(role, WinCondition.TIME_LIMIT) + "time", 3600.0);
+            return overrides.getDouble(lobby, base(role, WinCondition.TIME_LIMIT) + "time", 3600.0);
         }
         return 3600.0;
     }
 
     /** Configured item for the side's acquire-item condition. */
     public String item(Role role) {
-        return config.getString(base(role, WinCondition.ACQUIRE_ITEM) + "item", "minecraft:netherite_ingot");
+        return item(null, role);
+    }
+
+    /** Lobby-aware item; the lobby's override wins, else the global. */
+    public String item(Integer lobby, Role role) {
+        return overrides.getString(lobby, base(role, WinCondition.ACQUIRE_ITEM) + "item",
+                "minecraft:netherite_ingot");
     }
 
     /** Configured mob for the side's kill-mob condition. */
     public String mob(Role role) {
-        return config.getString(base(role, WinCondition.KILL_MOB) + "mob", "minecraft:ender_dragon");
+        return mob(null, role);
+    }
+
+    /** Lobby-aware mob; the lobby's override wins, else the global. */
+    public String mob(Integer lobby, Role role) {
+        return overrides.getString(lobby, base(role, WinCondition.KILL_MOB) + "mob",
+                "minecraft:ender_dragon");
     }
 
     /** Configured advancement for the side's reach-advancement condition. */
     public String advancement(Role role) {
-        return config.getString(base(role, WinCondition.REACH_ADVANCEMENT) + "advancement",
+        return advancement(null, role);
+    }
+
+    /** Lobby-aware advancement; the lobby's override wins, else the global. */
+    public String advancement(Integer lobby, Role role) {
+        return overrides.getString(lobby, base(role, WinCondition.REACH_ADVANCEMENT) + "advancement",
                 "minecraft:story/enter_the_nether");
     }
 
     /** True when the cancel survived-time condition is enabled. */
     public boolean cancelSurviveEnabled() {
-        return config.getBoolean("settings.match.win-conditions.cancel.survived-time.enabled", true);
+        return cancelSurviveEnabled(null);
+    }
+
+    /** Lobby-aware cancel flag; the lobby's override wins, else the global. */
+    public boolean cancelSurviveEnabled(Integer lobby) {
+        return overrides.getBoolean(lobby,
+                "settings.match.win-conditions.cancel.survived-time.enabled", true);
     }
 
     /** Cancel survived-time in seconds. */
     public double cancelSurviveTime() {
-        return config.getDouble("settings.match.win-conditions.cancel.survived-time.time", 28800.0);
+        return cancelSurviveTime(null);
+    }
+
+    /** Lobby-aware cancel time; the lobby's override wins, else the global. */
+    public double cancelSurviveTime(Integer lobby) {
+        return overrides.getDouble(lobby,
+                "settings.match.win-conditions.cancel.survived-time.time", 28800.0);
     }
 
     /**
@@ -99,10 +140,15 @@ public final class WinConditionEngine {
      * for their side's acquire-item win condition.
      */
     public boolean hasItem(Player player, Role role) {
-        if (!enabled(role, WinCondition.ACQUIRE_ITEM)) {
+        return hasItem(null, player, role);
+    }
+
+    /** Lobby-aware inventory check; the lobby's override wins, else the global. */
+    public boolean hasItem(Integer lobby, Player player, Role role) {
+        if (!enabled(lobby, role, WinCondition.ACQUIRE_ITEM)) {
             return false;
         }
-        return hasMaterial(player, item(role));
+        return hasMaterial(player, item(lobby, role));
     }
 
     /**
@@ -112,10 +158,15 @@ public final class WinConditionEngine {
      * material comparison needs the server registry.
      */
     public boolean materialWins(Material material, Role role) {
-        if (!enabled(role, WinCondition.ACQUIRE_ITEM)) {
+        return materialWins(null, material, role);
+    }
+
+    /** Lobby-aware pickup check; the lobby's override wins, else the global. */
+    public boolean materialWins(Integer lobby, Material material, Role role) {
+        if (!enabled(lobby, role, WinCondition.ACQUIRE_ITEM)) {
             return false;
         }
-        return material != null && material == materialFor(item(role));
+        return material != null && material == materialFor(item(lobby, role));
     }
 
     /**
@@ -123,10 +174,15 @@ public final class WinConditionEngine {
      * for their side's reach-advancement win condition.
      */
     public boolean hasReachAdvancement(Player player, Role role) {
-        if (!enabled(role, WinCondition.REACH_ADVANCEMENT)) {
+        return hasReachAdvancement(null, player, role);
+    }
+
+    /** Lobby-aware advancement check; the lobby's override wins, else the global. */
+    public boolean hasReachAdvancement(Integer lobby, Player player, Role role) {
+        if (!enabled(lobby, role, WinCondition.REACH_ADVANCEMENT)) {
             return false;
         }
-        NamespacedKey key = NamespacedKey.fromString(advancement(role));
+        NamespacedKey key = NamespacedKey.fromString(advancement(lobby, role));
         if (key == null) {
             return false;
         }
@@ -136,7 +192,12 @@ public final class WinConditionEngine {
 
     /** True when the killed mob satisfies the side's kill-mob condition. */
     public boolean mobMatches(EntityType type, Role role) {
-        return enabled(role, WinCondition.KILL_MOB) && matchesMob(mob(role), type);
+        return mobMatches(null, type, role);
+    }
+
+    /** Lobby-aware mob check; the lobby's override wins, else the global. */
+    public boolean mobMatches(Integer lobby, EntityType type, Role role) {
+        return enabled(lobby, role, WinCondition.KILL_MOB) && matchesMob(mob(lobby, role), type);
     }
 
     private String base(Role role, WinCondition condition) {

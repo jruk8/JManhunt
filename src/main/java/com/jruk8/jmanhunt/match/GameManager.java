@@ -110,6 +110,10 @@ public final class GameManager implements MatchControl {
     public Map<Long, GameInstance> instances() { return store.instances(); }
     /** Looks up a live instance by match id. */
     public Optional<GameInstance> instance(long matchId) { return store.instance(matchId); }
+    /** Origin lobby of one match for override resolution, or null when gone. */
+    public Integer lobbyOf(long matchId) { return store.lobbyOf(matchId); }
+    /** Origin lobby of a player's match for override resolution, or null outside matches. */
+    public Integer lobbyOfPlayer(UUID playerId) { return store.lobbyOfPlayer(playerId); }
     /** Shared flag store behind command tags; cleared per match on teardown. */
     public FlagStore flagStore() { return flagStore; }
 
@@ -322,7 +326,7 @@ public final class GameManager implements MatchControl {
 
     /** Configured leave destination, SPECTATOR by default. */
     public LeaveDestination leaveDestination() {
-        return matchFinish.leaveDestination();
+        return matchFinish.leaveDestination(null);
     }
 
     /**

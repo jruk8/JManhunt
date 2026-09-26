@@ -72,10 +72,6 @@ public final class AutostartService {
             Bukkit.getScheduler().runTask(plugin, () -> updateAutostartState());
             return;
         }
-        if (!plugin.configService().getBoolean("settings.match.autostart.enabled", false)) {
-            cancelAllAutostartCountdowns(true);
-            return;
-        }
         pruneAutostartCountdowns();
         for (int lobbyId : lobbies.lobbyIds()) {
             if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
@@ -101,10 +97,15 @@ public final class AutostartService {
             cancelAutostartCountdown(lobbyId, true);
             return;
         }
+        if (!plugin.overrides().getBoolean(lobbyId, "settings.match.autostart.enabled", false)) {
+            cancelAutostartCountdown(lobbyId, true);
+            return;
+        }
         if (autostartCountdowns.containsKey(lobbyId)) {
             return;
         }
-        int configured = Math.max(0, plugin.configService().getInt("settings.match.autostart.countdown-seconds", 60));
+        int configured = Math.max(0, plugin.overrides()
+                .getInt(lobbyId, "settings.match.autostart.countdown-seconds", 60));
         if (configured == 0) {
             control.start(lobbyId);
             return;
@@ -181,8 +182,10 @@ public final class AutostartService {
             }
         }
         return autostartShortfall(hunters, speedrunners,
-                plugin.configService().getInt("settings.match.autostart.minimums.hunter", 1),
-                plugin.configService().getInt("settings.match.autostart.minimums.speedrunner", 1));
+                plugin.overrides().getInt(lobby.id(),
+                        "settings.match.autostart.minimums.hunter", 1),
+                plugin.overrides().getInt(lobby.id(),
+                        "settings.match.autostart.minimums.speedrunner", 1));
     }
 
     /**
@@ -214,27 +217,28 @@ public final class AutostartService {
      * members.
      */
     public void broadcastAutostartShortfalls() {
-        if (!plugin.configService().getBoolean("settings.match.autostart.enabled", false)) {
-            return;
-        }
-        if (!plugin.configService().getBoolean("settings.match.autostart.broadcast-requirements.enabled", false)) {
-            return;
-        }
-        int intervalSeconds = Math.max(1, plugin.configService()
-                .getInt("settings.match.autostart.broadcast-requirements.interval-seconds", 60));
         long now = System.currentTimeMillis();
         for (int lobbyId : lobbies.lobbyIds()) {
-            broadcastLobbyShortfall(lobbyId, now, intervalSeconds);
+            broadcastLobbyShortfall(lobbyId, now);
         }
         lastShortfallBroadcast.keySet().removeIf(id -> lobbies.get(id).isEmpty());
         lastNagTeams.keySet().removeIf(id -> lobbies.get(id).isEmpty());
     }
 
     /** Nags one lobby about unmet autostart requirements when the interval is due. */
-    private void broadcastLobbyShortfall(int lobbyId, long now, int intervalSeconds) {
+    private void broadcastLobbyShortfall(int lobbyId, long now) {
         if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
             return;
         }
+        if (!plugin.overrides().getBoolean(lobbyId, "settings.match.autostart.enabled", false)) {
+            return;
+        }
+        if (!plugin.overrides().getBoolean(lobbyId,
+                "settings.match.autostart.broadcast-requirements.enabled", false)) {
+            return;
+        }
+        int intervalSeconds = Math.max(1, plugin.overrides().getInt(lobbyId,
+                "settings.match.autostart.broadcast-requirements.interval-seconds", 60));
         Optional<Lobby> lobby = lobbies.get(lobbyId);
         if (lobby.isEmpty() || store.instanceForLobby(lobbyId).isPresent()
                 || autostartCountdowns.containsKey(lobbyId)) {

@@ -76,6 +76,16 @@ public final class MatchStore {
         return instances.values().stream().filter(instance -> instance.isActive(playerId)).findFirst();
     }
 
+    /** Origin lobby of one match for override resolution, or null when gone. */
+    public Integer lobbyOf(long matchId) {
+        return instance(matchId).map(instance -> instance.originLobbyId()).orElse(null);
+    }
+
+    /** Origin lobby of a player's match for override resolution, or null outside matches. */
+    public Integer lobbyOfPlayer(UUID playerId) {
+        return instanceOf(playerId).map(instance -> instance.originLobbyId()).orElse(null);
+    }
+
     /** Live instance started from a lobby, if that lobby has one running. */
     public Optional<GameInstance> instanceForLobby(int lobbyId) {
         return instancesForLobby(lobbyId).stream().findFirst();

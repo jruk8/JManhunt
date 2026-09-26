@@ -4,6 +4,8 @@ import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import java.util.logging.Logger;
@@ -15,7 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class WinConditionEngineTest {
 
     private WinConditionEngine engine(ConfigService config) {
-        return new WinConditionEngine(config);
+        return new WinConditionEngine(
+                new OverrideService(config, new LobbyConfig(), () -> { }));
     }
 
     private static ConfigService service(JManhuntConfig root) {

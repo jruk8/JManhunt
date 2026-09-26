@@ -11,6 +11,7 @@ import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.gui.ScrollList;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.stats.HistoryPlaceholders;
@@ -50,6 +51,7 @@ class ManhuntMenusTest {
     private MessageService messages;
     private StatsManager stats;
     private ManhuntMenus menus;
+    private Player viewer;
 
     @BeforeEach
     void setUp() {
@@ -57,6 +59,8 @@ class ManhuntMenusTest {
         guiData = mock(GuiConfig.class);
         messages = mock(MessageService.class);
         gui = mock(GuiService.class);
+        viewer = mock(Player.class);
+        when(gui.overrideLobby(any())).thenReturn(null);
         when(guiData.categoryItem(anyString())).thenReturn(Material.CLOCK);
         when(guiData.sectionItem(anyString())).thenReturn(Material.CLOCK);
         when(guiData.description(anyString())).thenReturn("");
@@ -70,9 +74,16 @@ class ManhuntMenusTest {
         when(config.getValue(anyString())).thenAnswer(invocation ->
                 SettingRegistry.byPath(invocation.getArgument(0)).defaultValue());
         when(config.getStringList(anyString())).thenReturn(List.of());
+        OverrideService overrides = mock(OverrideService.class);
+        when(overrides.getStringList(any(), anyString()))
+                .thenAnswer(invocation -> config.getStringList(invocation.getArgument(1)));
+        when(overrides.effectiveValue(any(), anyString()))
+                .thenAnswer(invocation -> config.getValue(invocation.getArgument(1)));
+        when(overrides.effectiveRaw(any(), anyString()))
+                .thenAnswer(invocation -> config.getValue(invocation.getArgument(1)));
         stats = mock(StatsManager.class);
-        menus = new ManhuntMenus(config, guiData, messages, mock(SoundService.class),
-                gui, mock(SettingDialog.class),
+        menus = new ManhuntMenus(config, overrides, guiData, messages,
+                mock(SoundService.class), gui, mock(SettingDialog.class),
                 mock(SettingFeedback.class), stats,
                 mock(ModifierMenus.class));
     }
@@ -80,7 +91,8 @@ class ManhuntMenusTest {
     @Test
     void listMenuRebuildsEntriesOnRefresh() {
         when(config.getStringList(anyString())).thenReturn(List.of("a"));
-        Menu menu = menus.listMenu("settings.compass.analyze.debuffs.commands.player", () -> null);
+        Menu menu = menus.listMenu(viewer,
+                "settings.compass.analyze.debuffs.commands.player", () -> null);
 
         assertEquals(2, menu.window().visibleEntries().size());
 
@@ -92,7 +104,7 @@ class ManhuntMenusTest {
 
     @Test
     void rootHasThreeLinksAndNoParent() {
-        Menu root = menus.rootMenu();
+        Menu root = menus.rootMenu(viewer);
 
         assertEquals(27, root.layout().size());
         assertLink(root, 11, Material.CHEST);
@@ -102,8 +114,19 @@ class ManhuntMenusTest {
     }
 
     @Test
+    void rootOverrideButtonShowsSessionLobby() {
+        assertEquals(Material.GLASS, menus.rootMenu(viewer).buttonAt(8).material());
+
+        when(gui.overrideLobby(viewer)).thenReturn(3);
+        MenuButton session = menus.rootMenu(viewer).buttonAt(8);
+
+        assertEquals(Material.YELLOW_STAINED_GLASS, session.material());
+        assertNotNull(session.rightAction());
+    }
+
+    @Test
     void settingsMenuHasFourCategoriesAndBack() {
-        Menu settings = menus.settingsMenu();
+        Menu settings = menus.settingsMenu(viewer);
 
         assertLink(settings, 10, Material.CLOCK);
         assertLink(settings, 12, Material.CLOCK);
@@ -118,7 +141,7 @@ class ManhuntMenusTest {
         when(stats.lifetime()).thenReturn(new HistoryPlaceholders.Totals(
                 7, 42, 30, 12, 5, 2, 1234.56, 3_661_000L));
 
-        Menu root = menus.rootMenu();
+        Menu root = menus.rootMenu(viewer);
 
         MenuButton book = root.buttonAt(13);
         assertNotNull(book);
@@ -132,8 +155,8 @@ class ManhuntMenusTest {
         when(config.getStringList("settings.compass.signal-interference.weather.interfere-during"))
                 .thenReturn(List.of("a", "b"));
 
-        Menu list = menus.listMenu(
-                "settings.compass.signal-interference.weather.interfere-during", menus::rootMenu);
+        Menu list = menus.listMenu(viewer,
+                "settings.compass.signal-interference.weather.interfere-during", () -> menus.rootMenu(viewer));
 
         List<MenuButton> shown = shownButtons(list,
                 ScalingLayout.backSlot(list.layout().rowCount()));
@@ -148,7 +171,7 @@ class ManhuntMenusTest {
     void sectionMenuDrillsEveryRegistryChild() {
         SettingRegistry.DrillChildren children = SettingRegistry.children("settings.match");
 
-        Menu section = menus.sectionMenu("settings.match", menus::settingsMenu);
+        Menu section = menus.sectionMenu(viewer, "settings.match", () -> menus.settingsMenu(viewer));
 
         assertEquals(children.sections().size() + children.leaves().size(),
                 shownButtons(section,
@@ -162,8 +185,8 @@ class ManhuntMenusTest {
         assertEquals("settings.match",
                 ManhuntMenus.collapseSingles("settings.match"));
 
-        Menu collapsed = menus.sectionMenu(
-                "settings.match.win-conditions.cancel", menus::settingsMenu);
+        Menu collapsed = menus.sectionMenu(viewer,
+                "settings.match.win-conditions.cancel", () -> menus.settingsMenu(viewer));
 
         assertEquals("Survived Time", textOf(collapsed.title()));
         assertEquals(2, shownButtons(collapsed,
@@ -173,7 +196,7 @@ class ManhuntMenusTest {
 
     @Test
     void sectionButtonsResolveIconsByFullPath() {
-        menus.sectionMenu("settings.match", menus::settingsMenu);
+        menus.sectionMenu(viewer, "settings.match", () -> menus.settingsMenu(viewer));
 
         verify(guiData, atLeastOnce()).sectionItem("settings.match.win-conditions");
         verify(guiData, never()).sectionItem("settings.match");
@@ -184,7 +207,7 @@ class ManhuntMenusTest {
         when(guiData.description(anyString()))
                 .thenAnswer(invocation -> "Blurb for " + invocation.getArgument(0));
 
-        Menu section = menus.sectionMenu("settings.server", menus::settingsMenu);
+        Menu section = menus.sectionMenu(viewer, "settings.server", () -> menus.settingsMenu(viewer));
         MenuButton button = findButton(section, "Anti Spawn Camp");
 
         assertNotNull(button);
@@ -196,7 +219,7 @@ class ManhuntMenusTest {
 
     @Test
     void sectionButtonsOmitBlankDescriptions() {
-        Menu section = menus.sectionMenu("settings.server", menus::settingsMenu);
+        Menu section = menus.sectionMenu(viewer, "settings.server", () -> menus.settingsMenu(viewer));
         MenuButton button = findButton(section, "Anti Spawn Camp");
 
         assertNotNull(button);
@@ -209,13 +232,13 @@ class ManhuntMenusTest {
         when(config.getStringList("settings.compass.signal-interference.weather.interfere-during"))
                 .thenReturn(List.of("a", "b"));
 
-        assertBackResolves(menus.settingsMenu(), player);
-        assertBackResolves(menus.sectionMenu("settings.match", menus::settingsMenu), player);
-        assertBackResolves(menus.listMenu(
+        assertBackResolves(menus.settingsMenu(viewer), player);
+        assertBackResolves(menus.sectionMenu(viewer, "settings.match", () -> menus.settingsMenu(viewer)), player);
+        assertBackResolves(menus.listMenu(viewer,
                 "settings.compass.signal-interference.weather.interfere-during",
-                menus::settingsMenu), player);
+                () -> menus.settingsMenu(viewer)), player);
         assertBackResolves(ScrollList.menu(Component.text("Keys"), List::of,
-                menus::settingsMenu, gui, messages), player);
+                () -> menus.settingsMenu(viewer), gui, messages), player);
     }
 
     private void assertBackResolves(Menu menu, Player player) {

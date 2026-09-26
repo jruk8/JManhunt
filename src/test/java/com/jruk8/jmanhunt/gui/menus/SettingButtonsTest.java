@@ -12,6 +12,8 @@ import com.jruk8.jmanhunt.gui.GuiConfig;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -35,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Setting buttons: prettified names, lore lines in spec order, category
@@ -48,6 +51,9 @@ class SettingButtonsTest {
     private GuiConfig guiData;
     private MessageService messages;
     private SettingButtons buttons;
+    private GuiService gui;
+    private OverrideService overrides;
+    private Player viewer;
 
     @BeforeEach
     void setup() throws Exception {
@@ -62,7 +68,12 @@ class SettingButtonsTest {
         guiData.setDescriptions(Map.of(
                 "settings.match.autostart.enabled", "Start matches automatically.",
                 "settings.match.autostart.countdown-seconds", "Wait before auto-starting."));
-        buttons = new SettingButtons(config, guiData, messages, null, null, null, null);
+        gui = mock(GuiService.class);
+        when(gui.overrideLobby(any())).thenReturn(null);
+        overrides = new OverrideService(config, new LobbyConfig(), () -> {});
+        viewer = mock(Player.class);
+        buttons = new SettingButtons(config, overrides, guiData, messages,
+                null, gui, null, null);
     }
 
     @Test
@@ -94,7 +105,7 @@ class SettingButtonsTest {
 
     @Test
     void boolButtonLoreFollowsSpecOrder() {
-        MenuButton button = buttons.settingButton(
+        MenuButton button = buttons.settingButton(viewer,
                 "settings.match.autostart.enabled", () -> null);
 
         assertEquals(Material.CLOCK, button.material());
@@ -120,7 +131,7 @@ class SettingButtonsTest {
         assertTrue(ConfigPathMapper.set(root,
                 "settings.match.autostart.countdown-seconds", 60));
 
-        MenuButton button = buttons.settingButton(
+        MenuButton button = buttons.settingButton(viewer,
                 "settings.match.autostart.countdown-seconds", () -> null);
 
         assertTrue(button.glow());
@@ -129,7 +140,7 @@ class SettingButtonsTest {
 
     @Test
     void optionButtonBulletsMarkCurrent() {
-        MenuButton button = buttons.settingButton(
+        MenuButton button = buttons.settingButton(viewer,
                 "settings.match.game-leave.destination", () -> null);
 
         assertTrue(lore(button).contains("» SPECTATOR"));
@@ -139,7 +150,7 @@ class SettingButtonsTest {
 
     @Test
     void resetOnUnmodifiedSettingSendsNotice() {
-        MenuButton button = buttons.settingButton(
+        MenuButton button = buttons.settingButton(viewer,
                 "settings.match.autostart.enabled", () -> null);
         Player player = mock(Player.class);
 
@@ -154,10 +165,9 @@ class SettingButtonsTest {
     void resetOnModifiedSettingOpensConfirm() {
         assertTrue(ConfigPathMapper.set(root,
                 "settings.match.autostart.enabled", false));
-        GuiService gui = mock(GuiService.class);
-        SettingButtons withGui = new SettingButtons(config, guiData, messages,
-                null, gui, null, null);
-        MenuButton button = withGui.settingButton(
+        SettingButtons withGui = new SettingButtons(config, overrides, guiData,
+                messages, null, gui, null, null);
+        MenuButton button = withGui.settingButton(viewer,
                 "settings.match.autostart.enabled", () -> null);
         Player player = mock(Player.class);
 
@@ -165,6 +175,26 @@ class SettingButtonsTest {
 
         verify(player, never()).sendMessage(any(Component.class));
         verify(gui).navigate(any(Player.class), any(Menu.class));
+    }
+
+    @Test
+    void overrideSessionGlowsOnlyWhenOverridden() {
+        when(gui.overrideLobby(viewer)).thenReturn(2);
+
+        MenuButton plain = buttons.settingButton(viewer,
+                "settings.match.autostart.enabled", () -> null);
+
+        assertFalse(plain.glow());
+        assertNotNull(plain.shiftAction());
+        assertTrue(lore(plain).contains("Shift-left-click to remove the override"));
+
+        assertTrue(overrides.setSettingOverride(2,
+                "settings.match.autostart.enabled", "false").ok());
+        MenuButton glowing = buttons.settingButton(viewer,
+                "settings.match.autostart.enabled", () -> null);
+
+        assertTrue(glowing.glow());
+        assertTrue(lore(glowing).contains("Value: Disabled"));
     }
 
     private static String plain(Component component) {

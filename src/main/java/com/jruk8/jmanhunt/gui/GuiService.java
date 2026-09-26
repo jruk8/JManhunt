@@ -1,6 +1,9 @@
 package com.jruk8.jmanhunt.gui;
 
 import com.jruk8.jmanhunt.message.SoundService;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -31,6 +34,7 @@ public final class GuiService {
     private final MenuButton filler = MenuButton.filler();
     private final SoundService sounds;
     private final ClickGuard guard = new ClickGuard(System::currentTimeMillis);
+    private final Map<UUID, Integer> overrideSessions = new HashMap<>();
 
     /** Silent service for tests that never route live clicks. */
     public GuiService() {
@@ -43,6 +47,25 @@ public final class GuiService {
      */
     public GuiService(SoundService sounds) {
         this.sounds = sounds;
+    }
+
+    /**
+     * One viewer's override-session lobby, or null for global mode. Every
+     * new GUI session starts global: command entry points clear it before
+     * opening; in-menu navigation never touches it.
+     */
+    public Integer overrideLobby(Player player) {
+        return overrideSessions.get(player.getUniqueId());
+    }
+
+    /** Points one viewer's override session at a lobby. */
+    public void setOverrideLobby(Player player, int lobbyId) {
+        overrideSessions.put(player.getUniqueId(), lobbyId);
+    }
+
+    /** Returns one viewer's override session to global mode. */
+    public void clearOverrideLobby(Player player) {
+        overrideSessions.remove(player.getUniqueId());
     }
 
     /**
@@ -146,14 +169,17 @@ public final class GuiService {
     }
 
     /**
-     * Action for the click type: right clicks prefer the right action and
-     * fall back to the main action, every other click runs the main action.
-     * Double-clicks map to nothing: the two single clicks already ran and
-     * the double is only their echo.
+     * Action for the click type: shift-left prefers the shift action, right
+     * clicks prefer the right action, and everything else falls back to the
+     * main action. Double-clicks map to nothing: the two single clicks
+     * already ran and the double is only their echo.
      */
     static Consumer<Player> clickAction(MenuButton button, ClickType click) {
         if (button == null || click == ClickType.DOUBLE_CLICK) {
             return null;
+        }
+        if (click == ClickType.SHIFT_LEFT && button.shiftAction() != null) {
+            return button.shiftAction();
         }
         if (click.isRightClick() && button.rightAction() != null) {
             return button.rightAction();

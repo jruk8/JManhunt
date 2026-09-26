@@ -12,8 +12,10 @@ import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -33,6 +35,7 @@ import org.bukkit.entity.Player;
 public final class SettingButtons {
 
     private final ConfigService config;
+    private final OverrideService overrides;
     private final GuiConfig guiData;
     private final MessageService messages;
     private final SettingDialog dialogs;
@@ -45,10 +48,11 @@ public final class SettingButtons {
      *        sounds come from the shared feedback, null only in unit
      *        tests that never invoke actions
      */
-    public SettingButtons(ConfigService config, GuiConfig guiData, MessageService messages,
-            SettingDialog dialogs, GuiService gui, SettingFeedback feedback,
-            SoundService sounds) {
+    public SettingButtons(ConfigService config, OverrideService overrides, GuiConfig guiData,
+            MessageService messages, SettingDialog dialogs, GuiService gui,
+            SettingFeedback feedback, SoundService sounds) {
         this.config = config;
+        this.overrides = overrides;
         this.guiData = guiData;
         this.messages = messages;
         this.dialogs = dialogs;
@@ -91,18 +95,27 @@ public final class SettingButtons {
     /**
      * Full setting button with click and right-click actions. Silent: bool
      * and option commits play neutral through the shared feedback and
-     * numbers and text open the dialog, which plays neutral on enter.
+     * numbers and text open the dialog, which plays neutral on enter. In
+     * an override session the value reads effective, glow means overridden,
+     * writes land as overrides, and shift-left clears the override.
      *
+     * @param viewer menu viewer, for the override session
      * @param path full setting path
      * @param caller rebuilds the menu buttons return to
      */
-    public MenuButton settingButton(String path, Supplier<Menu> caller) {
+    public MenuButton settingButton(Player viewer, String path, Supplier<Menu> caller) {
         SettingDescriptor descriptor = SettingRegistry.byPath(path);
         Material icon = guiData.sectionItem(path);
         Component name = GuiTexts.name(messages, prettify(leaf(path)), prettify(leaf(path)));
-        return new MenuButton(icon, name, lore(descriptor), modified(descriptor),
+        Integer lobby = gui.overrideLobby(viewer);
+        MenuButton button = new MenuButton(icon, name, lore(descriptor, lobby),
+                modified(descriptor, lobby),
                 false, clickAction(descriptor, caller),
                 player -> resetConfirm(player, descriptor, caller)).silent();
+        if (lobby == null) {
+            return button;
+        }
+        return button.shiftAction(player -> clearOverride(player, descriptor));
     }
 
     private Consumer<Player> clickAction(SettingDescriptor descriptor, Supplier<Menu> caller) {
@@ -114,10 +127,11 @@ public final class SettingButtons {
         };
     }
 
-    private List<Component> lore(SettingDescriptor descriptor) {
+    private List<Component> lore(SettingDescriptor descriptor, Integer lobby) {
         String allowed = null;
         if (descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT) {
-            allowed = SettingRegistry.boundsText(descriptor, config::getValue);
+            allowed = SettingRegistry.boundsText(descriptor,
+                    path -> overrides.effectiveRaw(lobby, path));
         }
         List<String> options = null;
         if (descriptor.type() == SettingType.OPTION) {
@@ -125,17 +139,27 @@ public final class SettingButtons {
         }
         FieldLore.Field field = new FieldLore.Field(
                 guiData.description(descriptor.path()),
-                displayCurrent(descriptor),
+                displayCurrent(descriptor, lobby),
                 descriptor.path().replaceFirst("^settings\\.", ""),
                 typeName(descriptor.type()),
-                allowed, options, Set.of(displayCurrent(descriptor)),
+                allowed, options, Set.of(displayCurrent(descriptor, lobby)),
                 displayDefault(descriptor),
                 hint(descriptor.type()));
-        return GuiTexts.lore(messages, FieldLore.lines(messages, field));
+        List<String> lines = new ArrayList<>(FieldLore.lines(messages, field));
+        if (lobby != null) {
+            lines.add(template("manhunt-gui.override-shift-clear",
+                    "Shift-left-click to remove the override", null));
+            if (overrides.hasSettingOverride(lobby, descriptor.path())) {
+                lines.add(messages.string("manhunt-gui.override-for-lobby",
+                        "<red>Overrides for Lobby {lobby}")
+                        .replace("{lobby}", String.valueOf(lobby)));
+            }
+        }
+        return GuiTexts.lore(messages, lines);
     }
 
-    private String displayCurrent(SettingDescriptor descriptor) {
-        Object value = config.getValue(descriptor.path());
+    private String displayCurrent(SettingDescriptor descriptor, Integer lobby) {
+        Object value = overrides.effectiveValue(lobby, descriptor.path());
         if (descriptor.type() == SettingType.BOOL && value instanceof Boolean bool) {
             return bool ? "<green>Enabled</green>" : "<red>Disabled</red>";
         }
@@ -150,31 +174,55 @@ public final class SettingButtons {
         return raw;
     }
 
-    private boolean modified(SettingDescriptor descriptor) {
+    private boolean modified(SettingDescriptor descriptor, Integer lobby) {
+        if (lobby != null) {
+            return overrides.hasSettingOverride(lobby, descriptor.path());
+        }
         return ModifiedGlow.leafSetting(config, descriptor.path());
     }
 
     private void toggle(Player player, SettingDescriptor descriptor) {
-        ConfigService.SetOutcome outcome = config.setValue(descriptor.path(),
-                toggledValue(config.getValue(descriptor.path())));
+        Integer lobby = gui.overrideLobby(player);
+        String raw = toggledValue(overrides.effectiveValue(lobby, descriptor.path()));
+        ConfigService.SetOutcome outcome = lobby == null
+                ? config.setValue(descriptor.path(), raw)
+                : overrides.setSettingOverride(lobby, descriptor.path(), raw);
         if (!outcome.ok()) {
             feedback.failed(player, outcome);
             angry(player);
-        } else {
+        } else if (lobby == null) {
             feedback.scalarUpdated(player, descriptor.path(), outcome);
+        } else {
+            feedback.overrideScalarUpdated(player, lobby, descriptor.path(), outcome);
         }
     }
 
     private void cycle(Player player, SettingDescriptor descriptor) {
-        String current = ConfigService.displayValue(config.getValue(descriptor.path()));
-        ConfigService.SetOutcome outcome =
-                config.setValue(descriptor.path(), nextOption(descriptor, current));
+        Integer lobby = gui.overrideLobby(player);
+        String current =
+                ConfigService.displayValue(overrides.effectiveValue(lobby, descriptor.path()));
+        ConfigService.SetOutcome outcome = lobby == null
+                ? config.setValue(descriptor.path(), nextOption(descriptor, current))
+                : overrides.setSettingOverride(lobby, descriptor.path(),
+                        nextOption(descriptor, current));
         if (!outcome.ok()) {
             feedback.failed(player, outcome);
             angry(player);
-        } else {
+        } else if (lobby == null) {
             feedback.scalarUpdated(player, descriptor.path(), outcome);
+        } else {
+            feedback.overrideScalarUpdated(player, lobby, descriptor.path(), outcome);
         }
+    }
+
+    /** Shift-left (and right-click) in an override session: drop the override. */
+    private void clearOverride(Player player, SettingDescriptor descriptor) {
+        Integer lobby = gui.overrideLobby(player);
+        if (lobby == null) {
+            return;
+        }
+        int removed = overrides.clearOverrides(lobby, descriptor.path());
+        feedback.overrideCleared(player, lobby, descriptor.path(), removed);
     }
 
     private void angry(Player player) {
@@ -184,9 +232,14 @@ public final class SettingButtons {
     }
 
     private void resetConfirm(Player player, SettingDescriptor descriptor, Supplier<Menu> caller) {
+        Integer lobby = gui.overrideLobby(player);
+        if (lobby != null) {
+            clearOverride(player, descriptor);
+            return;
+        }
         // Already at default: resetting would be a no-op, so say so in
         // chat instead of opening a confirm panel for nothing.
-        if (!modified(descriptor)) {
+        if (!modified(descriptor, null)) {
             messages.message(player, "manhunt-gui.setting-already-default");
             return;
         }

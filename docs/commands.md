@@ -21,6 +21,9 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |
 | `/manhunt qs [percentage]`                        | Alias for `/manhunt quickstart`. | `jmanhunt.command.quickstart` |
 | `/manhunt config <category> <key...> [value]` | Lists, views, or changes settings by category. | `jmanhunt.command.config` |
+| `/manhunt override <lobby> settings <get\|set\|clear> <key...> [value]` | Views, changes, or removes one lobby's setting overrides. | `jmanhunt.command.override` |
+| `/manhunt override <lobby> modifiers <get\|set\|clear> [id] [true\|false]` | Views, changes, or removes one lobby's modifier overrides. | `jmanhunt.command.override` |
+| `/manhunt override <lobby> clear` | Removes every override of one lobby. | `jmanhunt.command.override` |
 | `/manhunt worldengine lobbyconfig pos1\|pos2`                    | Records a lobby-bounds corner at your feet block. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
 | `/manhunt worldengine lobbyconfig setbounds <lobby-id>`       | Stores the recorded corners as a lobby's bounds. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
 | `/manhunt worldengine lobbyconfig setlobbytp <lobby-id> [coords]` | Sets a lobby's teleport (your position, or `x y z yaw pitch`). | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.lobbyconfig`) |
@@ -215,6 +218,38 @@ config**.
 When `settings.server.announce-config-changes` is enabled, every
 successful change is announced to all online players except the one who
 made it (`manhunt.setting-change-announced`). It is disabled by default.
+
+## Per-Lobby Overrides
+
+`/manhunt override` stores per-lobby setting and modifier overrides in
+`lobby-config.yml`. Matches running from a lobby read the override
+first and fall back to the global config; anything not overridden
+behaves exactly as before. Validation matches the global drill, and
+writes announce like global changes when announcing is enabled. The
+same overrides can be edited through the
+[admin GUI](gui.md#lobby-overrides), which also marks each value with
+its source.
+
+```text
+/manhunt override 1 settings get settings match autostart enabled
+/manhunt override 1 settings set settings match autostart enabled false
+/manhunt override 1 settings clear settings match autostart
+/manhunt override 1 modifiers get
+/manhunt override 1 modifiers set gapple true
+/manhunt override 1 modifiers clear gapple
+/manhunt override 1 clear
+```
+
+`settings get` shows the effective value plus `(override)` or
+`(global)`; sections list their next level and lists show every entry
+by index. `settings set` takes scalars and list indices
+(`match end-statistics 0 <words>`), plus `add <words>` and
+`remove <index>` on whole lists. `settings clear` drops one leaf,
+one list, or a whole subtree. `modifiers get` lists every modifier
+and preset with its effective state; `set` accepts a modifier or
+preset id (a preset forces every member) and `clear` without an id
+drops every modifier override. Bare `clear` drops the whole lobby's
+overrides; lobbies left with nothing stored are pruned.
 
 ## Modifiers
 

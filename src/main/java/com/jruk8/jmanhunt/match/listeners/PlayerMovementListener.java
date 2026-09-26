@@ -48,7 +48,8 @@ public final class PlayerMovementListener implements Listener {
                 && player.getGameMode() != GameMode.SPECTATOR) {
             playerStates.recordLastSeen(player, event.getTo());
         }
-        boolean exitWin = winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END)
+        Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
+        boolean exitWin = winConditionEngine.enabled(lobby, Role.SPEEDRUNNER, WinCondition.EXIT_END)
                 && match.isPresent() && match.get().begun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
                 && event.getCause() == PlayerTeleportEvent.TeleportCause.END_PORTAL
@@ -67,7 +68,8 @@ public final class PlayerMovementListener implements Listener {
     @EventHandler public void onWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
-        boolean exitWin = winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END)
+        Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
+        boolean exitWin = winConditionEngine.enabled(lobby, Role.SPEEDRUNNER, WinCondition.EXIT_END)
                 && match.isPresent() && match.get().begun() && playerStates.role(player) == Role.SPEEDRUNNER
                 && playerStates.isActiveSpeedrunner(player.getUniqueId())
                 && event.getFrom().getEnvironment() == World.Environment.THE_END

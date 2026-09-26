@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt.gui.dialog;
 
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.gui.Menu;
+import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
@@ -46,4 +48,15 @@ public interface SettingDialog {
      */
     void openListAppend(Player player, String listPath,
             Component title, Supplier<Menu> reopen);
+
+    /**
+     * Single free-text prompt with body lines. Submit and cancel run one
+     * tick later so callers may navigate safely.
+     */
+    void prompt(Player player, String titleText, List<String> body,
+            Consumer<String> onSubmit, Runnable onCancel);
+
+    /** Same, with a prefilled value for editing existing text. */
+    void prompt(Player player, String titleText, String initial, List<String> body,
+            Consumer<String> onSubmit, Runnable onCancel);
 }

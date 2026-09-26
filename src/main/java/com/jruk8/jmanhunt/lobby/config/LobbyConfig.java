@@ -114,6 +114,16 @@ public class LobbyConfig extends OkaeriConfig {
         })
         private BoundsData bounds = new BoundsData();
 
+        @Comment({
+                "Per-lobby overrides: settings mirrors the config shape",
+                "(only the overridden leaves are stored) and modifiers",
+                "maps modifier ids to their forced enabled flag. Matches",
+                "running from this lobby read overrides first, then the",
+                "globals. Manage in-game with /manhunt override or the",
+                "admin GUI lobby session."
+        })
+        private OverridesData overrides = new OverridesData();
+
         public LobbyTp getLobbytp() {
             return lobbytp;
         }
@@ -128,6 +138,43 @@ public class LobbyConfig extends OkaeriConfig {
 
         public void setBounds(BoundsData bounds) {
             this.bounds = bounds;
+        }
+
+        public OverridesData getOverrides() {
+            return overrides;
+        }
+
+        public void setOverrides(OverridesData overrides) {
+            this.overrides = overrides;
+        }
+    }
+
+    /**
+     * One lobby's overrides: a nested settings map mirroring the config
+     * shape plus modifier id to enabled flags. Insertion order is kept
+     * so the file reads in write order. Absent entries mean no
+     * override: readers fall back to the globals.
+     */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class OverridesData extends OkaeriConfig {
+
+        private Map<String, Object> settings = new LinkedHashMap<>();
+        private Map<String, Boolean> modifiers = new LinkedHashMap<>();
+
+        public Map<String, Object> getSettings() {
+            return settings;
+        }
+
+        public void setSettings(Map<String, Object> settings) {
+            this.settings = settings;
+        }
+
+        public Map<String, Boolean> getModifiers() {
+            return modifiers;
+        }
+
+        public void setModifiers(Map<String, Boolean> modifiers) {
+            this.modifiers = modifiers;
         }
     }
 

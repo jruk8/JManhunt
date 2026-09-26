@@ -90,15 +90,51 @@ public final class ConfigService {
     }
 
     public boolean getBoolean(String setting, boolean defaultValue) {
-        Object value = rawValue(setting);
+        return booleanValue(rawValue(setting), defaultValue);
+    }
+
+    public String getString(String setting, String defaultValue) {
+        return stringValue(rawValue(setting), defaultValue);
+    }
+
+    public int getInt(String setting, int defaultValue) {
+        return intValue(rawValue(setting), defaultValue);
+    }
+
+    public double getDouble(String setting, double defaultValue) {
+        return doubleValue(rawValue(setting), defaultValue);
+    }
+
+    public float getFloat(String setting, float defaultValue) {
+        return (float) getDouble(setting, defaultValue);
+    }
+
+    public List<String> getStringList(String setting) {
+        return stringListValue(rawValue(setting));
+    }
+
+    /** Returns the config value for the given path, with enums as their names, or null if absent. */
+    public Object getValue(String setting) {
+        return normalizedValue(rawValue(setting));
+    }
+
+    /** Reads an enum-typed path leniently, falling back when missing or unknown. */
+    public <T extends Enum<T>> T getEnum(String setting, Class<T> type, T fallback) {
+        return enumValue(rawValue(setting), type, fallback);
+    }
+
+    /**
+     * Raw-value converters shared with override resolution, so lobby
+     * overrides coerce exactly like globals. Each mirrors its getter.
+     */
+    public static boolean booleanValue(Object value, boolean defaultValue) {
         if (value instanceof Boolean bool) {
             return bool;
         }
         return defaultValue;
     }
 
-    public String getString(String setting, String defaultValue) {
-        Object value = rawValue(setting);
+    public static String stringValue(Object value, String defaultValue) {
         if (value instanceof String text) {
             return text;
         }
@@ -108,28 +144,21 @@ public final class ConfigService {
         return defaultValue;
     }
 
-    public int getInt(String setting, int defaultValue) {
-        Object value = rawValue(setting);
+    public static int intValue(Object value, int defaultValue) {
         if (value instanceof Number number) {
             return number.intValue();
         }
         return defaultValue;
     }
 
-    public double getDouble(String setting, double defaultValue) {
-        Object value = rawValue(setting);
+    public static double doubleValue(Object value, double defaultValue) {
         if (value instanceof Number number) {
             return number.doubleValue();
         }
         return defaultValue;
     }
 
-    public float getFloat(String setting, float defaultValue) {
-        return (float) getDouble(setting, defaultValue);
-    }
-
-    public List<String> getStringList(String setting) {
-        Object value = rawValue(setting);
+    public static List<String> stringListValue(Object value) {
         if (value instanceof List<?> list) {
             List<String> strings = new ArrayList<>(list.size());
             for (Object entry : list) {
@@ -140,18 +169,16 @@ public final class ConfigService {
         return List.of();
     }
 
-    /** Returns the config value for the given path, with enums as their names, or null if absent. */
-    public Object getValue(String setting) {
-        Object value = rawValue(setting);
+    /** Enum names as-is, everything else verbatim. */
+    public static Object normalizedValue(Object value) {
         if (value instanceof Enum<?> option) {
             return option.name();
         }
         return value;
     }
 
-    /** Reads an enum-typed path leniently, falling back when missing or unknown. */
-    public <T extends Enum<T>> T getEnum(String setting, Class<T> type, T fallback) {
-        Object value = rawValue(setting);
+    /** Enum-typed value read leniently, falling back when missing or unknown. */
+    public static <T extends Enum<T>> T enumValue(Object value, Class<T> type, T fallback) {
         if (type.isInstance(value)) {
             return type.cast(value);
         }
@@ -367,11 +394,11 @@ public final class ConfigService {
     /** Typed write result: canonical values on success, message slots on failure. */
     public record SetOutcome(boolean ok, SettingDescriptor descriptor, Object oldValue,
             Object newValue, String errorKey, Map<String, String> slots) {
-        static SetOutcome ok(SettingDescriptor descriptor, Object oldValue, Object newValue) {
+        public static SetOutcome ok(SettingDescriptor descriptor, Object oldValue, Object newValue) {
             return new SetOutcome(true, descriptor, oldValue, newValue, null, Map.of());
         }
 
-        static SetOutcome fail(String errorKey, Map<String, String> slots) {
+        public static SetOutcome fail(String errorKey, Map<String, String> slots) {
             return new SetOutcome(false, null, null, null, errorKey, slots);
         }
     }

@@ -138,9 +138,9 @@ public final class MatchFinishService {
     }
 
     /** Configured leave destination, SPECTATOR by default. */
-    public LeaveDestination leaveDestination() {
-        return LeaveDestination.parse(
-                configService.getString("settings.match.game-leave.destination", "SPECTATOR"));
+    public LeaveDestination leaveDestination(Integer lobby) {
+        return LeaveDestination.parse(plugin.overrides()
+                .getString(lobby, "settings.match.game-leave.destination", "SPECTATOR"));
     }
 
     /**
@@ -156,7 +156,7 @@ public final class MatchFinishService {
         if (!instance.active()) {
             return 0;
         }
-        LeaveDestination destination = leaveDestination();
+        LeaveDestination destination = leaveDestination(instance.originLobbyId());
         int removed = 0;
         List<Role> leftRoles = new ArrayList<>();
         List<String> leftNames = new ArrayList<>();
@@ -359,7 +359,8 @@ public final class MatchFinishService {
         stats.completeMatch(instance.matchId(), winner);
 
         // Make all players invulnerable on game end if configured
-        if (configService.getBoolean("settings.players.invulnerability.on-game-end.enabled", true)) {
+        if (plugin.overrides().getBoolean(instance.originLobbyId(),
+                "settings.players.invulnerability.on-game-end.enabled", true)) {
             store.onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 
@@ -371,7 +372,8 @@ public final class MatchFinishService {
 
         long delay = immediate
                 ? 0L
-                : Math.max(0L, Math.round(configService.getDouble("match.end-delay", 10.0) * 20.0));
+                : Math.max(0L, Math.round(plugin.overrides()
+                        .getDouble(instance.originLobbyId(), "match.end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
     }
@@ -408,7 +410,8 @@ public final class MatchFinishService {
         stateCommands.runEnd(teardownId, participants, spectators, instance.originLobbyId(), lastMatch);
         scatterEngineOffEnd(instance, participants);
         worldEngine.onMatchEnd(participants, spectators, instance.originLobbyId(), teardownId);
-        if (configService.getBoolean("settings.players.roles.reset-on-game-end.enabled", true)) {
+        if (plugin.overrides().getBoolean(instance.originLobbyId(),
+                "settings.players.roles.reset-on-game-end.enabled", true)) {
             playerStates.resetRoles(instance.assignedPlayerIds());
         }
         // A finished match fields no sides, even when roles are kept.
@@ -520,7 +523,8 @@ public final class MatchFinishService {
         messaging.playInstanceSound(instance, "game.cancelled-sound");
 
         // Make all players invulnerable on cancel if configured
-        if (configService.getBoolean("settings.players.invulnerability.on-game-end.enabled", true)) {
+        if (plugin.overrides().getBoolean(instance.originLobbyId(),
+                "settings.players.invulnerability.on-game-end.enabled", true)) {
             store.onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 
@@ -532,7 +536,8 @@ public final class MatchFinishService {
 
         long delay = immediate
                 ? 0L
-                : Math.max(0L, Math.round(configService.getDouble("match.end-delay", 10.0) * 20.0));
+                : Math.max(0L, Math.round(plugin.overrides()
+                        .getDouble(instance.originLobbyId(), "match.end-delay", 10.0) * 20.0));
         Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
     }

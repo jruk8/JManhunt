@@ -17,6 +17,10 @@ panel. Starting setup or enabling the world engine dismisses it too.
   kills, wins, damage, and playtime. It is display-only and opens nothing.
 - **Modifiers** (book): a twin panel over the modifier and preset
   browsers with live enabled counts, with Back returning here.
+- **Lobby Overrides** (glass): points the session at one lobby so
+  every edit lands as an override; yellow while a session runs.
+  Left-click to set a lobby id (or `GLOBAL`), right-click to go
+  global. Opening the GUI always starts a fresh global session.
 
 ## Editing Settings
 
@@ -36,6 +40,23 @@ default. Buttons glow when the value differs from the default.
 - String lists show one paper per entry plus a stick to append; click
   to edit, right-click to delete after a confirm panel. Right-click
   the list entry itself to reset the whole list to defaults.
+
+## Lobby Overrides
+
+With an override session running, every settings and modifiers menu
+reads effective values for that lobby: overrides first, globals
+otherwise. Glow means overridden instead of modified, and overridden
+rows carry a red `Overrides for Lobby N` line. Clicks, toggles,
+cycles, dialogs, and list edits all write overrides with the same
+validation as globals.
+
+- Shift-left-click any setting, list, or category to remove the
+  override (categories confirm first, then clear everything below).
+- Right-click a setting or list to remove its override.
+- Shift-left-click a modifier to remove its override; presets drop
+  every member override at once.
+- The same overrides can be edited from chat or the console through
+  [`/manhunt override`](commands.md#per-lobby-overrides).
 
 ## Modifier Creator
 

@@ -7,8 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -25,12 +30,16 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ModifierMenusTest {
 
     private ModifierStore store;
+    private MessageService messages;
     private ModifierMenus menus;
     private ModifierMenus bigMenus;
 
@@ -56,10 +65,11 @@ class ModifierMenusTest {
         addPreset(config, "solo", "Solo", null, null, List.of("zebra"));
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
-        MessageService messages = new MessageService();
+        messages = new MessageService();
         messages.reload(new MessagesConfig());
         store = new ModifierStore(config, log);
-        menus = new ModifierMenus(store, messages, null, null, null, null, null, null);
+        menus = new ModifierMenus(store, messages, null, null, null, null, null, null,
+                null, null);
     }
 
     private static void addModifier(ModifiersConfig config, String id, boolean enabled,
@@ -296,6 +306,41 @@ class ModifierMenusTest {
         }
     }
 
+    @Test
+    void overrideSessionReadsEffectiveAndGlowsOverrides() {
+        GuiService gui = mock(GuiService.class);
+        Player viewer = mock(Player.class);
+        when(gui.overrideLobby(viewer)).thenReturn(0);
+        ConfigService config =
+                new ConfigService(new JManhuntConfig(), store);
+        OverrideService overrides = new OverrideService(config, new LobbyConfig(), () -> {});
+        assertTrue(overrides.setModifierOverride(0, "mike", true));
+        ModifierMenus session = new ModifierMenus(store, messages, null, gui,
+                null, null, null, null, overrides, null);
+
+        Menu menu = session.modifiersMenu(viewer, null);
+        MenuButton mike = findButton(menu, "Mike");
+        MenuButton zebra = findButton(menu, "Zulu");
+
+        assertNotNull(mike);
+        assertTrue(mike.glow());
+        assertNotNull(mike.shiftAction());
+        assertNotNull(zebra);
+        assertFalse(zebra.glow());
+        assertNotNull(zebra.shiftAction());
+    }
+
+    private static MenuButton findButton(Menu menu, String name) {
+        for (int slot = 0; slot < menu.layout().size(); slot++) {
+            MenuButton button = menu.buttonAt(slot);
+            if (button != null && button.name() != null
+                    && textOf(button.name()).equals(name)) {
+                return button;
+            }
+        }
+        return null;
+    }
+
     private MessageService buildMenusWith(int total, int disabled) {
         ModifiersConfig config = new ModifiersConfig();
         List<String> members = new ArrayList<>();
@@ -310,7 +355,7 @@ class ModifierMenusTest {
         MessageService fresh = new MessageService();
         fresh.reload(new MessagesConfig());
         bigMenus = new ModifierMenus(new ModifierStore(config, log), fresh,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
         return fresh;
     }
 }

@@ -39,6 +39,7 @@ public final class MenuButton {
     private final boolean hideTooltip;
     private final Consumer<Player> action;
     private final Consumer<Player> rightAction;
+    private final Consumer<Player> shiftAction;
     private final SoundPolicy soundPolicy;
 
     /**
@@ -83,6 +84,24 @@ public final class MenuButton {
     public MenuButton(Material material, Component name, List<Component> lore,
             boolean glow, boolean hideTooltip, Consumer<Player> action,
             Consumer<Player> rightAction, SoundPolicy soundPolicy) {
+        this(material, name, lore, glow, hideTooltip, action, rightAction, null, soundPolicy);
+    }
+
+    /**
+     * @param material icon material, never air
+     * @param name display name, may be null for no custom name
+     * @param lore lore lines, null means none
+     * @param glow true to force the enchantment glint
+     * @param hideTooltip true to hide the hover tooltip
+     * @param action click action, null for display-only buttons
+     * @param rightAction right-click action, null to reuse the main action
+     * @param shiftAction shift-left-click action, null to reuse the main action
+     * @param soundPolicy central click sound policy, never null
+     */
+    public MenuButton(Material material, Component name, List<Component> lore,
+            boolean glow, boolean hideTooltip, Consumer<Player> action,
+            Consumer<Player> rightAction, Consumer<Player> shiftAction,
+            SoundPolicy soundPolicy) {
         this.material = material;
         this.name = name;
         this.lore = lore == null ? List.of() : List.copyOf(lore);
@@ -90,6 +109,7 @@ public final class MenuButton {
         this.hideTooltip = hideTooltip;
         this.action = action;
         this.rightAction = rightAction;
+        this.shiftAction = shiftAction;
         this.soundPolicy = soundPolicy;
     }
 
@@ -105,7 +125,13 @@ public final class MenuButton {
             return this;
         }
         return new MenuButton(material, name, lore, glow, hideTooltip,
-                action, rightAction, SoundPolicy.SILENT);
+                action, rightAction, shiftAction, SoundPolicy.SILENT);
+    }
+
+    /** Copy of this button running the shift action on shift-left-click. */
+    public MenuButton shiftAction(Consumer<Player> shiftAction) {
+        return new MenuButton(material, name, lore, glow, hideTooltip,
+                action, rightAction, shiftAction, soundPolicy);
     }
 
     /** Builds the displayed item. */
@@ -158,6 +184,10 @@ public final class MenuButton {
 
     public Consumer<Player> rightAction() {
         return rightAction;
+    }
+
+    public Consumer<Player> shiftAction() {
+        return shiftAction;
     }
 
     public SoundPolicy soundPolicy() {

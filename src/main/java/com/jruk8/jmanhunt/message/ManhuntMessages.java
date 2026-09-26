@@ -179,6 +179,82 @@ public class ManhuntMessages extends OkaeriConfig {
     @CustomKey("setting-list-reset")
     private String settingListReset = "{prefix}<green>Reset <white>{setting}<green> to defaults.";
 
+    @CustomKey("override-usage")
+    private String overrideUsage = "{prefix}<yellow>Usage: /manhunt override <lobby> " +
+            "<settings <get|set|clear> <path> [value]|modifiers <get|set|clear> [id] [value]|clear>";
+
+    @CustomKey("override-invalid-lobby")
+    private String overrideInvalidLobby = "{prefix}<red>Invalid lobby <white>{lobby}<red>: " +
+            "expected a non-negative integer.";
+
+    @CustomKey("override-setting-updated")
+    private String overrideSettingUpdated = "{prefix}<green>Set lobby <white>{lobby}<green> " +
+            "override <white>{setting}<green> to <white>{value}<green>. " +
+            "<gray>(was <white>{old-value}</white>)</gray>";
+
+    @CustomKey("override-setting-unchanged")
+    private String overrideSettingUnchanged = "{prefix}<yellow>Nothing changed. Lobby " +
+            "<white>{lobby}<yellow> already reads <white>{setting}<yellow> as <white>{value}<yellow>.";
+
+    @CustomKey("override-list-added")
+    private String overrideListAdded = "{prefix}<green>Added to lobby <white>{lobby}<green> " +
+            "override <white>{setting}<green>: <white>{value}<green>.";
+
+    @CustomKey("override-list-removed")
+    private String overrideListRemoved = "{prefix}<green>Removed from lobby <white>{lobby}<green> " +
+            "override <white>{setting}<green>: <white>{value}<green>.";
+
+    @CustomKey("override-removed")
+    private String overrideRemoved = "{prefix}<green>Removed lobby <white>{lobby}<green> " +
+            "override for <white>{setting}<green>.";
+
+    @CustomKey("override-cleared")
+    private String overrideCleared = "{prefix}<green>Cleared <white>{count}<green> overrides " +
+            "under <white>{setting}<green> for lobby <white>{lobby}<green>.";
+
+    @CustomKey("override-nothing-to-clear")
+    private String overrideNothingToClear = "{prefix}<yellow>Lobby <white>{lobby}<yellow> " +
+            "has no override for <white>{setting}<yellow>.";
+
+    @CustomKey("override-modifier-set")
+    private String overrideModifierSet = "{prefix}<green>Lobby <white>{lobby}<green>: " +
+            "<white>{modifier}<green> is now <white>{state}<green>.";
+
+    @CustomKey("override-modifier-cleared")
+    private String overrideModifierCleared = "{prefix}<green>Lobby <white>{lobby}<green>: " +
+            "<white>{modifier}<green> override removed.";
+
+    @CustomKey("override-lobby-cleared")
+    private String overrideLobbyCleared = "{prefix}<green>Cleared <white>{count}<green> " +
+            "overrides for lobby <white>{lobby}<green>.";
+
+    @CustomKey("override-lobby-empty")
+    private String overrideLobbyEmpty = "{prefix}<yellow>Lobby <white>{lobby}<yellow> " +
+            "has no overrides.";
+
+    @CustomKey("override-setting-shown")
+    private String overrideSettingShown = "{prefix}<white>{setting}<gray> = " +
+            "<white>{value}</white> {source}";
+
+    @CustomKey("override-modifier-shown")
+    private String overrideModifierShown = "{prefix}<white>{modifier}<gray>: " +
+            "<white>{state}</white> {source}";
+
+    @CustomKey("override-source-override")
+    private String overrideSourceOverride = "<gray>(override)</gray>";
+
+    @CustomKey("override-source-global")
+    private String overrideSourceGlobal = "<gray>(global)</gray>";
+
+    @CustomKey("override-preset-set")
+    private String overridePresetSet = "{prefix}<green>Lobby <white>{lobby}<green>: preset " +
+            "<white>{preset}<green> is now <white>{state}<green> " +
+            "(<white>{count}</white> modifiers).";
+
+    @CustomKey("override-bulk-set")
+    private String overrideBulkSet = "{prefix}<green>Lobby <white>{lobby}<green>: set " +
+            "<white>{count}<green> {kind} <white>{state}<green>.";
+
     @CustomKey("setting-change-announced")
     private String settingChangeAnnounced = "{prefix}<white>{player} <yellow>set setting <gray>{key}</gray> to " +
             "<white>{value}</white>.</yellow></white>";

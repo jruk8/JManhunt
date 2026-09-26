@@ -55,6 +55,9 @@ permissions:
   jmanhunt.command.config:
     description: View or change configuration by category.
     default: op
+  jmanhunt.command.override:
+    description: View or change per-lobby setting and modifier overrides.
+    default: op
   jmanhunt.modifiers:
     description: View and toggle gameplay modifiers.
     default: op

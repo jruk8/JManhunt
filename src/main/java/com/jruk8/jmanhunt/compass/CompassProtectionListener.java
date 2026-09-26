@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
@@ -30,8 +31,16 @@ public final class CompassProtectionListener implements Listener {
         this.game = game;
     }
 
+    /** Origin lobby of an inventory actor, or null when it is not a matched player. */
+    private Integer lobbyOf(HumanEntity holder) {
+        if (!(holder instanceof Player player)) {
+            return null;
+        }
+        return game.lobbyOfPlayer(player.getUniqueId());
+    }
+
     @EventHandler public void onDrop(PlayerDropItemEvent event) {
-        if (!compass.mustBeInventory()) {
+        if (!compass.mustBeInventory(lobbyOf(event.getPlayer()))) {
             return;
         }
         if (compass.isCompass(event.getItemDrop().getItemStack())) {
@@ -40,7 +49,7 @@ public final class CompassProtectionListener implements Listener {
     }
 
     @EventHandler public void onClick(InventoryClickEvent event) {
-        if (!compass.mustBeInventory()) {
+        if (!compass.mustBeInventory(lobbyOf(event.getWhoClicked()))) {
             return;
         }
         boolean involvesCompass = compass.isCompass(event.getCurrentItem())
@@ -62,7 +71,7 @@ public final class CompassProtectionListener implements Listener {
     }
 
     @EventHandler public void onDrag(InventoryDragEvent event) {
-        if (!compass.mustBeInventory()) {
+        if (!compass.mustBeInventory(lobbyOf(event.getWhoClicked()))) {
             return;
         }
         if (!compass.isCompass(event.getOldCursor())
@@ -79,7 +88,7 @@ public final class CompassProtectionListener implements Listener {
     }
 
     @EventHandler public void onMove(InventoryMoveItemEvent event) {
-        if (!compass.mustBeInventory()) {
+        if (!compass.mustBeInventory(null)) {
             return;
         }
         if (compass.isCompass(event.getItem())) {
@@ -88,7 +97,7 @@ public final class CompassProtectionListener implements Listener {
     }
 
     @EventHandler public void onPickup(InventoryPickupItemEvent event) {
-        if (!compass.mustBeInventory()) {
+        if (!compass.mustBeInventory(null)) {
             return;
         }
         if (compass.isCompass(event.getItem().getItemStack())) {

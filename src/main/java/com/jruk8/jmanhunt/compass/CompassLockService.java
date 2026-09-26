@@ -80,6 +80,11 @@ final class CompassLockService {
         this.game = game;
     }
 
+    /** Origin lobby of the holder's match, or null outside matches. */
+    private Integer lobbyOf(Player holder) {
+        return game == null ? null : game.lobbyOfPlayer(holder.getUniqueId());
+    }
+
     /** Opponents and sightings narrowed to the holder's manual lock. */
     record LockedTargets(List<CompassCandidate> opponents, List<CompassSighting> sightings,
             boolean locked) {
@@ -125,8 +130,8 @@ final class CompassLockService {
         Role targetRole = playerStates.role(player) == Role.HUNTER ? Role.SPEEDRUNNER : Role.HUNTER;
         List<CompassCandidate> opponents = targets.collectOpponents(player, targetRole, instance);
         List<CompassSighting> sightings = targets.collectSightings(player, targetRole, instance);
-        int maxTargets = plugin.configService()
-                .getInt("settings.compass.left-click.max-targets", 5);
+        int maxTargets = plugin.overrides()
+                .getInt(lobbyOf(player), "settings.compass.left-click.max-targets", 5);
         if (CompassPick.orderedCandidates(opponents, sightings, maxTargets).size() <= 1) {
             locks.remove(player.getUniqueId());
             sharedClicks.put(player.getUniqueId(), now);
@@ -138,7 +143,7 @@ final class CompassLockService {
             return;
         }
         applyScrollCycle(player, opponents, sightings, maxTargets);
-        if (analyzeEnabled(false)) {
+        if (analyzeEnabled(lobbyOf(player), false)) {
             startAnalysis(player, true);
             return;
         }
@@ -148,8 +153,9 @@ final class CompassLockService {
 
     /** Resolves the scroll match, applying the enabled, cooldown, and membership gates. */
     private Optional<GameInstance> scrollMatch(Player player, long now) {
-        if (!plugin.configService()
-                .getBoolean("settings.compass.left-click.enabled", false)) {
+        Integer lobby = lobbyOf(player);
+        if (!plugin.overrides()
+                .getBoolean(lobby, "settings.compass.left-click.enabled", false)) {
             return Optional.empty();
         }
         if (player.getGameMode() == GameMode.SPECTATOR) {
@@ -158,15 +164,15 @@ final class CompassLockService {
         if (analyzing.contains(player.getUniqueId())) {
             return Optional.empty();
         }
-        long clickMs = (long) (plugin.configService()
-                .getDouble("settings.compass.click.click-cooldown", 3.0) * 1000);
+        long clickMs = (long) (plugin.overrides()
+                .getDouble(lobby, "settings.compass.click.click-cooldown", 3.0) * 1000);
         // Shared pure helper lives on the facade.
         if (!CompassManager.shouldRefresh(now,
                 sharedClicks.getOrDefault(player.getUniqueId(), 0L), clickMs)) {
             return Optional.empty();
         }
-        long cooldownMs = (long) (Math.max(0.0, plugin.configService()
-                .getDouble("settings.compass.left-click.scroll-cooldown", 0.5)) * 1000);
+        long cooldownMs = (long) (Math.max(0.0, plugin.overrides()
+                .getDouble(lobby, "settings.compass.left-click.scroll-cooldown", 0.5)) * 1000);
         if (!CompassManager.shouldRefresh(now, lastScroll.getOrDefault(player.getUniqueId(), 0L),
                 cooldownMs)) {
             return Optional.empty();
@@ -212,16 +218,17 @@ final class CompassLockService {
             return;
         }
         long generation = generations.merge(id, 1L, Long::sum);
+        Integer lobby = lobbyOf(holder);
         double effectiveDelay = jitteredDelay(
-                plugin.configService().getDouble("settings.compass.analyze.delay-seconds", 1.0),
-                plugin.configService()
-                        .getDouble("settings.compass.analyze.delay-deviation-seconds", 0.0),
+                plugin.overrides().getDouble(lobby, "settings.compass.analyze.delay-seconds", 1.0),
+                plugin.overrides()
+                        .getDouble(lobby, "settings.compass.analyze.delay-deviation-seconds", 0.0),
                 ThreadLocalRandom.current().nextDouble());
         runAnalysisDebuffs(holder, effectiveDelay);
         actionbars.put(id, messages.component("compass.analyzing-actionbar"));
         sounds.playSound(holder, "compass.analysis");
-        long intervalTicks = analysisTickInterval(clampedSoundInterval(plugin.configService()
-                .getDouble("settings.compass.analyze.sound-interval-seconds", 0.5)));
+        long intervalTicks = analysisTickInterval(clampedSoundInterval(plugin.overrides()
+                .getDouble(lobby, "settings.compass.analyze.sound-interval-seconds", 0.5)));
         Bukkit.getScheduler().runTaskTimer(plugin, task -> {
             if (!analyzing.contains(id) || generations.getOrDefault(id, 0L) != generation) {
                 task.cancel();
@@ -294,7 +301,9 @@ final class CompassLockService {
      * modifier-style and dispatched as console.
      */
     private void runAnalysisDebuffs(Player holder, double effectiveDelaySeconds) {
-        if (!plugin.configService().getBoolean("settings.compass.analyze.debuffs.enabled", false)) {
+        Integer lobby = lobbyOf(holder);
+        if (!plugin.overrides().getBoolean(lobby,
+                "settings.compass.analyze.debuffs.enabled", false)) {
             return;
         }
         Role holderRole = playerStates.role(holder);
@@ -302,7 +311,7 @@ final class CompassLockService {
             return;
         }
         double delaySeconds = effectiveDelaySeconds;
-        List<String> commands = debuffCommands(holderRole);
+        List<String> commands = debuffCommands(lobby, holderRole);
         Location location = holder.getLocation();
         TagContext context = debuffContext(holder);
         for (String command : commands) {
@@ -338,10 +347,10 @@ final class CompassLockService {
     }
 
     /** Shared player debuffs plus the holder's own role list. */
-    private List<String> debuffCommands(Role holderRole) {
-        List<String> commands = new ArrayList<>(plugin.configService()
-                .getStringList("settings.compass.analyze.debuffs.commands.player"));
-        commands.addAll(plugin.configService().getStringList(
+    private List<String> debuffCommands(Integer lobby, Role holderRole) {
+        List<String> commands = new ArrayList<>(plugin.overrides()
+                .getStringList(lobby, "settings.compass.analyze.debuffs.commands.player"));
+        commands.addAll(plugin.overrides().getStringList(lobby,
                 "settings.compass.analyze.debuffs.commands." + holderRole.name().toLowerCase(Locale.ROOT)));
         return commands;
     }
@@ -393,8 +402,8 @@ final class CompassLockService {
                 + soundId + "\"");
     }
 
-    boolean analyzeEnabled(boolean auto) {
-        return plugin.configService().getBoolean(auto
+    boolean analyzeEnabled(Integer lobby, boolean auto) {
+        return plugin.overrides().getBoolean(lobby, auto
                 ? "settings.compass.analyze.auto" : "settings.compass.analyze.right-click", false);
     }
 }
