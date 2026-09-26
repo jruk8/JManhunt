@@ -33,6 +33,8 @@ import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersRegistrar;
 import com.jruk8.jmanhunt.placeholders.PlaceholderConfigRegistrar;
+import com.jruk8.jmanhunt.player.FakeSpectatorListener;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.player.SpawnCampService;
@@ -105,6 +107,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private UpdateCheckService updateChecks;
     private UpdateCheckNotifier updateCheckNotifier;
     private RoleTeamService roleTeams;
+    private FakeSpectatorService fakeSpectators;
     private SpawnCampService spawnCamp;
     private GuiService guiService;
     private final List<SettingsListener> settings = new ArrayList<>();
@@ -169,6 +172,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         sounds = new SoundService(this, configRegistrar.getSounds());
         playerStates = new PlayerStateStore();
         roleTeams = new RoleTeamService(playerStates);
+        fakeSpectators = new FakeSpectatorService(this, playerStates);
         setupStatistics();
         setupEngineState();
         stats = new StatsManager(this, messages, statistics);
@@ -227,6 +231,11 @@ public final class JManhuntPlugin extends JavaPlugin {
     /** Scoreboard-team mirror of manhunt roles. */
     public RoleTeamService roleTeams() {
         return roleTeams;
+    }
+
+    /** Fake spectator mode: adventure plus flight plus hidden. */
+    public FakeSpectatorService fakeSpectators() {
+        return fakeSpectators;
     }
 
     /** Rolling anti-spawn-camp guard. */
@@ -312,7 +321,9 @@ public final class JManhuntPlugin extends JavaPlugin {
                 this, playerStates, game, configService, compass, stats, lobbyService,
                 worldEngine, winConditionEngine, respawn, disconnects, disconnectTasks), this);
         getServer().getPluginManager().registerEvents(new PlayerMovementListener(
-                playerStates, game, winConditionEngine, worldEngine), this);
+                playerStates, game, winConditionEngine, worldEngine, fakeSpectators), this);
+        getServer().getPluginManager().registerEvents(
+                new FakeSpectatorListener(fakeSpectators, playerStates, game), this);
         getServer().getPluginManager().registerEvents(respawn, this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
         getServer().getPluginManager().registerEvents(new RolePadService(

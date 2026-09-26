@@ -241,14 +241,15 @@ public final class MatchStartService {
         }
         // Watchers join the assignment too, so win titles, sounds, and
         // broadcasts reach them like everyone else. Only SPECTATOR-role
-        // watchers are forced into spectator mode; NONEs keep lobby rules.
+        // watchers are forced into fake spectator mode; NONEs keep lobby
+        // rules.
         for (Player spectator : spectators) {
             instance.activate(spectator.getUniqueId());
             initMatchStats(currentMatchId, spectator);
             playerStates.setLives(spectator.getUniqueId(),
                     livesFor(lobbyId, playerStates.role(spectator)));
             if (playerStates.role(spectator) == Role.SPECTATOR) {
-                spectator.setGameMode(GameMode.SPECTATOR);
+                plugin.fakeSpectators().enable(spectator);
             }
         }
         return instance;
@@ -399,15 +400,15 @@ public final class MatchStartService {
         return true;
     }
 
-    /** Applies the spectator, pre-start, and headstart-hold game modes for a joiner. */
+    /** Applies the fake spectator, pre-start, and headstart-hold modes for a joiner. */
     private void applyJoinGameMode(GameInstance instance, Player player, Role role) {
         Integer lobby = instance.originLobbyId();
-        if (!role.isParticipant() && (role == Role.SPECTATOR
-                // NONE joiners take spectator gamemode only with the toggle;
+        if (role == Role.SPECTATOR
+                // NONE joiners take fake spectator mode only with the toggle;
                 // AFK cannot join at all (rejected in gameJoin).
-                || plugin.overrides().getBoolean(lobby,
+                || (!role.isParticipant() && plugin.overrides().getBoolean(lobby,
                         "settings.players.roles.turn-nones-spectator.enabled", false))) {
-            player.setGameMode(GameMode.SPECTATOR);
+            plugin.fakeSpectators().enable(player);
         }
         if (!instance.begun()
                 && plugin.overrides().getBoolean(lobby,
@@ -421,7 +422,7 @@ public final class MatchStartService {
         HeadstartState headstart = instance.headstart(role.opposite());
         if (role.isParticipant() && headstart.task() != null) {
             headstart.returnPoints().put(player.getUniqueId(), player.getLocation());
-            player.setGameMode(GameMode.SPECTATOR);
+            plugin.fakeSpectators().enable(player);
         }
     }
 
@@ -443,13 +444,13 @@ public final class MatchStartService {
         prestart.cancelWaitingTasks(instance);
         // Restore participants to survival when the game begins if they were
         // set to adventure mode during the pre-start window. Held headstart
-        // sides stay out: their countdown moves them to spectator below.
+        // sides stay out: their countdown moves them to fake spectator below.
         if (plugin.overrides().getBoolean(instance.originLobbyId(),
                 "settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
             for (Player player : store.onlineActivePlayers(instance)) {
                 Role playerRole = playerStates.role(player);
                 if (playerRole.isParticipant() && !instance.headstart(playerRole.opposite()).armed()) {
-                    player.setGameMode(GameMode.SURVIVAL);
+                    plugin.fakeSpectators().disable(player);
                 }
             }
         }

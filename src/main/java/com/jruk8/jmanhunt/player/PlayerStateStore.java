@@ -2,14 +2,22 @@ package com.jruk8.jmanhunt.player;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /** Owns role and per-match player state, including dimension-aware sightings. */
 public final class PlayerStateStore {
+    /** Notified after a role change with the previous and new role. */
+    public interface RoleChangeListener {
+        void onRoleChange(UUID playerId, Role from, Role to);
+    }
+
     private final Map<UUID, Role> roles = new HashMap<>();
+    private final List<RoleChangeListener> roleListeners = new ArrayList<>();
     private final Map<UUID, Map<UUID, Location>> lastSeenByWorld = new HashMap<>();
     private final Map<UUID, String> playerNames = new HashMap<>();
     private final Map<UUID, Boolean> speedrunnerAlive = new HashMap<>();
@@ -23,12 +31,23 @@ public final class PlayerStateStore {
         return roles.getOrDefault(playerId, Role.NONE);
     }
 
+    /** Registers a role-change listener; listeners never fire without one. */
+    public void addRoleListener(RoleChangeListener listener) {
+        roleListeners.add(listener);
+    }
+
     public void setRole(Player player, Role role) {
-        roles.put(player.getUniqueId(), role);
+        setRole(player.getUniqueId(), role);
     }
 
     public void setRole(UUID playerId, Role role) {
+        Role from = roles.getOrDefault(playerId, Role.NONE);
         roles.put(playerId, role);
+        if (from != role) {
+            for (RoleChangeListener listener : List.copyOf(roleListeners)) {
+                listener.onRoleChange(playerId, from, role);
+            }
+        }
     }
 
     /**
@@ -42,7 +61,7 @@ public final class PlayerStateStore {
             if (role == null || role == Role.NONE || role == Role.AFK) {
                 continue;
             }
-            roles.put(playerId, Role.NONE);
+            setRole(playerId, Role.NONE);
             reset++;
         }
         return reset;
@@ -52,7 +71,7 @@ public final class PlayerStateStore {
         for (UUID playerId : scope) {
             boolean isOnline = onlinePlayers.stream().anyMatch(p -> p.getUniqueId().equals(playerId));
             if (!isOnline && roles.get(playerId) != Role.AFK) {
-                roles.put(playerId, Role.NONE);
+                setRole(playerId, Role.NONE);
             }
         }
     }

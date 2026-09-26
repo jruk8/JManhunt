@@ -11,7 +11,6 @@ import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -128,7 +127,7 @@ public final class PlayerCombatListener implements Listener {
         instance.deactivate(player.getUniqueId());
         game.flagStore().removePlayer(matchId, player.getName());
         Bukkit.getScheduler().runTask(plugin, () -> {
-            player.setGameMode(GameMode.SPECTATOR);
+            plugin.fakeSpectators().enable(player);
             compass.removeCompasses(player);
         });
         checkHuntersRemaining(instance);
@@ -145,7 +144,7 @@ public final class PlayerCombatListener implements Listener {
         if (finalKiller != null && playerStates.role(finalKiller.getUniqueId()) == Role.HUNTER) {
             stats.getOrCreate(matchId, finalKiller.getUniqueId()).finalKills++;
         }
-        Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
+        Bukkit.getScheduler().runTask(plugin, () -> plugin.fakeSpectators().enable(player));
         if (!quiet) {
             game.sendToInstance(instance, "game.speedrunner-out-of-lives", Map.of());
         }

@@ -55,6 +55,7 @@ nav:
   - Admin GUI: gui.md
   - Concurrent Matches: multi-instance.md
   - Lobby Quick Start: lobby-quick-start.md
+  - Spectating: spectating.md
   - Configuration:
       - Overview: configuration.md
       - Settings:

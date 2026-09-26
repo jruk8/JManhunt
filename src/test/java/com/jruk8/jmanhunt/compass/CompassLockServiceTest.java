@@ -11,6 +11,7 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.HashMap;
@@ -191,7 +192,7 @@ class CompassLockServiceTest {
     void spectatorShiftLeftRefusesToggle() {
         Fixture fixture = teammateFixture(List.of(
                 new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)), true, Role.HUNTER);
-        when(fixture.player().getGameMode()).thenReturn(GameMode.SPECTATOR);
+        when(fixture.fakes().isFakeSpectator(fixture.player())).thenReturn(true);
 
         fixture.locks().handleShiftLeft(fixture.player());
 
@@ -212,7 +213,8 @@ class CompassLockServiceTest {
     }
 
     private record Fixture(CompassLockService locks, Player player, Consumer<Player> refresher,
-            GameManager game, SoundService sounds, CompassSignalService signal) {
+            GameManager game, SoundService sounds, CompassSignalService signal,
+            FakeSpectatorService fakes) {
     }
 
     @SuppressWarnings("unchecked")
@@ -228,6 +230,8 @@ class CompassLockServiceTest {
         when(plugin.configService()).thenReturn(configService);
         when(plugin.overrides()).thenReturn(
                 new OverrideService(configService, new LobbyConfig(), () -> { }));
+        FakeSpectatorService fakes = mock(FakeSpectatorService.class);
+        when(plugin.fakeSpectators()).thenReturn(fakes);
         UUID holderId = UUID.randomUUID();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(holderId);
@@ -248,7 +252,7 @@ class CompassLockServiceTest {
                 sounds, null, targets, signal,
                 new HashMap<>(), refresher, mock(Consumer.class), sharedClicks);
         locks.setGameManager(game);
-        return new Fixture(locks, player, refresher, game, sounds, signal);
+        return new Fixture(locks, player, refresher, game, sounds, signal, fakes);
     }
 
     @SuppressWarnings("unchecked")
@@ -266,6 +270,8 @@ class CompassLockServiceTest {
         when(plugin.configService()).thenReturn(configService);
         when(plugin.overrides()).thenReturn(
                 new OverrideService(configService, new LobbyConfig(), () -> { }));
+        FakeSpectatorService fakes = mock(FakeSpectatorService.class);
+        when(plugin.fakeSpectators()).thenReturn(fakes);
         UUID holderId = UUID.randomUUID();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(holderId);
@@ -286,6 +292,6 @@ class CompassLockServiceTest {
                 sounds, null, targets, signal,
                 new HashMap<>(), refresher, mock(Consumer.class), sharedClicks);
         locks.setGameManager(game);
-        return new Fixture(locks, player, refresher, game, sounds, signal);
+        return new Fixture(locks, player, refresher, game, sounds, signal, fakes);
     }
 }

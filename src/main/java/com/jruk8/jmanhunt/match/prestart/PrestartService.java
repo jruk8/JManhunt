@@ -8,7 +8,6 @@ import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.stats.StatsManager;
 
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -88,7 +87,7 @@ public final class PrestartService {
         for (Player player : store.onlineActivePlayers(instance)) {
             if (playerStates.role(player) == held) {
                 state.returnPoints().put(player.getUniqueId(), player.getLocation());
-                player.setGameMode(GameMode.SPECTATOR);
+                plugin.fakeSpectators().enable(player);
             }
         }
         messaging.sendToInstance(instance, "manhunt.headstart-active",
@@ -126,7 +125,7 @@ public final class PrestartService {
                 if (returnPoint != null && returnPoint.getWorld() != null) {
                     player.teleport(returnPoint);
                 }
-                player.setGameMode(GameMode.SURVIVAL);
+                plugin.fakeSpectators().disable(player);
             }
         }
         state.returnPoints().clear();
@@ -136,7 +135,7 @@ public final class PrestartService {
 
     /**
      * Drops both headstart holds, restoring held players to survival so a
-     * match ending mid-headstart never strands them in spectator.
+     * match ending mid-headstart never strands them spectating.
      */
     public void cancelHeadstarts(GameInstance instance) {
         for (Role role : List.of(Role.HUNTER, Role.SPEEDRUNNER)) {
@@ -146,8 +145,9 @@ public final class PrestartService {
             state.returnPoints().clear();
             Role held = role.opposite();
             for (Player player : store.onlineActivePlayers(instance)) {
-                if (playerStates.role(player) == held && player.getGameMode() == GameMode.SPECTATOR) {
-                    player.setGameMode(GameMode.SURVIVAL);
+                if (playerStates.role(player) == held
+                        && plugin.fakeSpectators().isFakeSpectator(player)) {
+                    plugin.fakeSpectators().disable(player);
                 }
             }
         }

@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.compass;
 
-import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,11 +46,10 @@ class CompassItemTest {
 
     @Test
     void skipsOnlyRespawningSpectators() {
-        assertTrue(CompassManager.skipLastSeen(true, GameMode.SPECTATOR));
-        assertFalse(CompassManager.skipLastSeen(true, GameMode.SURVIVAL));
-        assertFalse(CompassManager.skipLastSeen(true, GameMode.ADVENTURE));
-        assertFalse(CompassManager.skipLastSeen(false, GameMode.SPECTATOR));
-        assertFalse(CompassManager.skipLastSeen(false, null));
+        assertTrue(CompassManager.skipLastSeen(true, true));
+        assertFalse(CompassManager.skipLastSeen(true, false));
+        assertFalse(CompassManager.skipLastSeen(false, true));
+        assertFalse(CompassManager.skipLastSeen(false, false));
     }
 
     @Test

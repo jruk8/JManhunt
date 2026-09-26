@@ -9,7 +9,6 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
@@ -45,7 +44,7 @@ public final class CompassManager {
         this.messages = messages;
         this.sounds = sounds;
         this.playerStates = playerStates;
-        this.targets = new CompassTargetService(playerStates);
+        this.targets = new CompassTargetService(playerStates, plugin.fakeSpectators());
         this.signal = new CompassSignalService(plugin, playerStates);
         this.locks = new CompassLockService(plugin, playerStates, sounds, messages, targets, signal,
                 compassActionbars, this::refreshCompass, this::resolveClickRefresh, lastClick);
@@ -178,7 +177,7 @@ public final class CompassManager {
         }
         Role targetRole = locks.targetRole(holder);
         String targetRoleString = messages.roleName(targetRole);
-        if (holder.getGameMode() == GameMode.SPECTATOR) {
+        if (plugin.fakeSpectators().isFakeSpectator(holder)) {
             showNoTarget(holder, slot.item(), slot.slot(), targetRoleString);
             return Optional.empty();
         }
@@ -266,7 +265,8 @@ public final class CompassManager {
                 .get(holder.getWorld().getUID());
         Player seen = Bukkit.getPlayer(pick.id());
         if (location == null || location.getWorld() == null
-                || skipLastSeen(seen != null, seen == null ? null : seen.getGameMode())) {
+                || skipLastSeen(seen != null,
+                        seen != null && plugin.fakeSpectators().isFakeSpectator(seen))) {
             showNoTarget(holder, item, slot, targetRoleString);
             return false;
         }
@@ -336,12 +336,12 @@ public final class CompassManager {
     }
 
     /**
-     * Online spectators are mid-respawn (or otherwise out of play): never a
-     * last-seen target. Offline players still report their log-out spot.
-     * Pure for tests.
+     * Online fake spectators are mid-respawn (or otherwise out of play):
+     * never a last-seen target. Offline players still report their log-out
+     * spot. Pure for tests.
      */
-    static boolean skipLastSeen(boolean online, GameMode mode) {
-        return online && mode == GameMode.SPECTATOR;
+    static boolean skipLastSeen(boolean online, boolean fakeSpectator) {
+        return online && fakeSpectator;
     }
 
     public boolean shouldReceiveCompass(Integer lobby, Role role) {
@@ -382,7 +382,7 @@ public final class CompassManager {
                 .getBoolean(lobby, "settings.compass.right-click.refresh-on-right-click", false)) {
             return;
         }
-        if (player.getGameMode() == GameMode.SPECTATOR) {
+        if (plugin.fakeSpectators().isFakeSpectator(player)) {
             return;
         }
         if (locks.isAnalyzing(player.getUniqueId())) {

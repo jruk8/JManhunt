@@ -21,7 +21,6 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.title.Title;
 
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -231,9 +230,7 @@ public final class MatchFinishService {
         playerStates.setRole(player, role);
         worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
         worldEngine.setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
-        if (player.getGameMode() == GameMode.SPECTATOR) {
-            player.setGameMode(GameMode.SURVIVAL);
-        }
+        plugin.fakeSpectators().disable(player);
         plugin.roleTeams().sync(player);
         return removed;
     }
@@ -245,12 +242,12 @@ public final class MatchFinishService {
             playerStates.setRole(player, Role.NONE);
             worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
             worldEngine.setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
-            if (player.getGameMode() == GameMode.SPECTATOR) {
-                player.setGameMode(GameMode.SURVIVAL);
+            if (plugin.fakeSpectators().isFakeSpectator(player)) {
+                plugin.fakeSpectators().disable(player);
             }
         } else {
             playerStates.setRole(player, Role.SPECTATOR);
-            player.setGameMode(GameMode.SPECTATOR);
+            plugin.fakeSpectators().enable(player);
             if (!dropGear && instance.cellIndex().isPresent()) {
                 // Auto-leave pulled them out of bounds: put the watcher
                 // back in the cell instead of stranding them outside it.
@@ -646,7 +643,7 @@ public final class MatchFinishService {
             CellBounds bounds = CellBounds.forCell(instance.cellIndex().getAsLong(),
                     config.cellSize(), config.startBorderDiameter(), !instance.begun());
             for (Player player : store.onlineActivePlayers(instance)) {
-                if (player.getGameMode() == GameMode.SPECTATOR) {
+                if (plugin.fakeSpectators().isFakeSpectator(player)) {
                     continue;
                 }
                 World.Environment environment = player.getWorld().getEnvironment();

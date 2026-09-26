@@ -9,7 +9,6 @@ import com.jruk8.jmanhunt.player.CapLimits;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -86,10 +85,10 @@ public final class RolePadService implements Listener {
         if (!player.getWorld().getName().equals(lobbyWorldName.get())) {
             return;
         }
-        // Spectator-gamemode players are watching: standing on a pad
-        // must never pull them back into a playing role. The JManhunt
-        // role is irrelevant here; only the gamemode gates pads.
-        if (player.getGameMode() == GameMode.SPECTATOR) {
+        // Fake spectators are watching: standing on a pad must never
+        // pull them back into a playing role. The JManhunt role is
+        // irrelevant here; only fake spectator mode gates pads.
+        if (plugin.fakeSpectators().isFakeSpectator(player)) {
             return;
         }
         Location location = player.getLocation();

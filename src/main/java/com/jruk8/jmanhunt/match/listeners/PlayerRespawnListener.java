@@ -5,7 +5,6 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -80,8 +79,8 @@ public final class PlayerRespawnListener implements Listener {
     }
 
     /**
-     * Puts the player in spectator mode, then revives them after the given
-     * delay (in seconds). A delay of 0 or less revives them immediately.
+     * Puts the player in fake spectator mode, then revives them after the
+     * given delay (in seconds). A delay of 0 or less revives immediately.
      */
     private void respawnParticipant(Player player, int delaySeconds, long matchId) {
         UUID playerId = player.getUniqueId();
@@ -89,7 +88,7 @@ public final class PlayerRespawnListener implements Listener {
         if (existing != null) {
             existing.cancel();
         }
-        Bukkit.getScheduler().runTask(plugin, () -> player.setGameMode(GameMode.SPECTATOR));
+        Bukkit.getScheduler().runTask(plugin, () -> plugin.fakeSpectators().enable(player));
         if (delaySeconds <= 0) {
             Bukkit.getScheduler().runTask(plugin, () -> revivePlayer(player, matchId, false));
             return;
@@ -113,7 +112,7 @@ public final class PlayerRespawnListener implements Listener {
         if (playerStates.role(player) == Role.SPEEDRUNNER) {
             playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
         }
-        player.setGameMode(GameMode.SURVIVAL);
+        plugin.fakeSpectators().disable(player);
         player.setHealth(player.getMaxHealth());
         player.setFoodLevel(20);
         Location respawn = player.getBedSpawnLocation();

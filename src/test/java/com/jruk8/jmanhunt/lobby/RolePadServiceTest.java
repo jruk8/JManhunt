@@ -5,9 +5,9 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -42,17 +42,19 @@ class RolePadServiceTest {
     }
 
     @Test
-    void spectatorGamemodeNeverTriggersPads() {
+    void fakeSpectatorNeverTriggersPads() {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         ConfigService config = mock(ConfigService.class);
         when(plugin.configService()).thenReturn(config);
         when(config.getBoolean("world-engine.role-pads.enabled", true)).thenReturn(true);
+        FakeSpectatorService fakes = mock(FakeSpectatorService.class);
+        when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore playerStates = mock(PlayerStateStore.class);
         World world = mock(World.class);
         when(world.getName()).thenReturn("jmh-lobby");
         Player player = mock(Player.class);
         when(player.getWorld()).thenReturn(world);
-        when(player.getGameMode()).thenReturn(GameMode.SPECTATOR);
+        when(fakes.isFakeSpectator(player)).thenReturn(true);
         when(playerStates.role(player)).thenReturn(Role.HUNTER);
         PlayerMoveEvent event = mock(PlayerMoveEvent.class);
         when(event.getPlayer()).thenReturn(player);
@@ -67,17 +69,19 @@ class RolePadServiceTest {
     }
 
     @Test
-    void spectatorRoleInSurvivalPassesThePadGate() {
+    void spectatorRoleWithoutFakeModePassesThePadGate() {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         ConfigService config = mock(ConfigService.class);
         when(plugin.configService()).thenReturn(config);
         when(config.getBoolean("world-engine.role-pads.enabled", true)).thenReturn(true);
+        FakeSpectatorService fakes = mock(FakeSpectatorService.class);
+        when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore playerStates = mock(PlayerStateStore.class);
         World world = mock(World.class);
         when(world.getName()).thenReturn("jmh-lobby");
         Player player = mock(Player.class);
         when(player.getWorld()).thenReturn(world);
-        when(player.getGameMode()).thenReturn(GameMode.SURVIVAL);
+        when(fakes.isFakeSpectator(player)).thenReturn(false);
         when(player.getLocation()).thenReturn(mock(Location.class));
         when(playerStates.role(player)).thenReturn(Role.SPECTATOR);
         PlayerMoveEvent event = mock(PlayerMoveEvent.class);
@@ -88,7 +92,7 @@ class RolePadServiceTest {
 
         pads.onMove(event);
 
-        // Reaching the location read proves the gamemode gate passed;
+        // Reaching the location read proves the fake-mode gate passed;
         // no pads are configured, so nothing assigns.
         verify(player).getLocation();
         verify(playerStates, never()).setRole(any(Player.class), any(Role.class));

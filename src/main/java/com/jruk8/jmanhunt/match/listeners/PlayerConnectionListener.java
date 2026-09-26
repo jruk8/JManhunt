@@ -12,7 +12,6 @@ import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -101,11 +100,11 @@ public final class PlayerConnectionListener implements Listener {
                 playerStates.setRole(player.getUniqueId(), Role.NONE);
                 plugin.roleTeams().sync(player);
             }
-            // Joining NONEs take spectator gamemode only with the toggle;
-            // AFK players keep their role and their gamemode.
+            // Joining NONEs take fake spectator mode only with the toggle;
+            // AFK players keep their role and their mode.
             if (playerStates.role(player) == Role.NONE
                     && config.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
-                player.setGameMode(GameMode.SPECTATOR);
+                plugin.fakeSpectators().enable(player);
             }
         }
     }
@@ -186,10 +185,10 @@ public final class PlayerConnectionListener implements Listener {
         }
 
         // Disconnect removal always lands on NONE; the toggle decides the
-        // gamemode. AFK players are never tracked, so they keep theirs.
+        // mode. AFK players are never tracked, so they keep theirs.
         Player onlinePlayer = Bukkit.getPlayer(playerId);
         if (onlinePlayer != null && config.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
-            onlinePlayer.setGameMode(GameMode.SPECTATOR);
+            plugin.fakeSpectators().enable(onlinePlayer);
         }
         if (onlinePlayer != null) {
             plugin.roleTeams().sync(onlinePlayer);

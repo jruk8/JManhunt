@@ -1,10 +1,10 @@
 package com.jruk8.jmanhunt.match.listeners;
 
 import com.jruk8.jmanhunt.player.DimensionEnterTracker;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.world.WorldEngineService;
-import org.bukkit.GameMode;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -25,14 +25,17 @@ public final class PlayerMovementListener implements Listener {
     private final GameManager game;
     private final WinConditionEngine winConditionEngine;
     private final WorldEngineService worldEngine;
+    private final FakeSpectatorService fakes;
     private final DimensionEnterTracker dimensionEnterTracker = new DimensionEnterTracker();
 
     public PlayerMovementListener(PlayerStateStore playerStates, GameManager game,
-            WinConditionEngine winConditionEngine, WorldEngineService worldEngine) {
+            WinConditionEngine winConditionEngine, WorldEngineService worldEngine,
+            FakeSpectatorService fakes) {
         this.playerStates = playerStates;
         this.game = game;
         this.winConditionEngine = winConditionEngine;
         this.worldEngine = worldEngine;
+        this.fakes = fakes;
         // Dimension-enter tracking is keyed by match, so each finished
         // match is dropped the same way.
         game.addGameEndListener(instance -> dimensionEnterTracker.dropMatch(instance.matchId()));
@@ -45,7 +48,7 @@ public final class PlayerMovementListener implements Listener {
         }
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
         if (match.isPresent() && playerStates.role(player).isParticipant()
-                && player.getGameMode() != GameMode.SPECTATOR) {
+                && !fakes.isFakeSpectator(player)) {
             playerStates.recordLastSeen(player, event.getTo());
         }
         Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
@@ -110,7 +113,7 @@ public final class PlayerMovementListener implements Listener {
     @EventHandler public void onMove(PlayerMoveEvent event) {
         if (game.instanceOf(event.getPlayer().getUniqueId()).isPresent()
                 && playerStates.role(event.getPlayer()).isParticipant()
-                && event.getPlayer().getGameMode() != GameMode.SPECTATOR) {
+                && !fakes.isFakeSpectator(event.getPlayer())) {
             playerStates.recordLastSeen(event.getPlayer(), event.getTo());
         }
         if (event.getTo() != null && event.getFrom().getBlockX() == event.getTo().getBlockX()

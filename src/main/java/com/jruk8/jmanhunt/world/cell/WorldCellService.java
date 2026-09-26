@@ -4,7 +4,6 @@ import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.world.end.EndCellManager;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -104,7 +103,7 @@ public final class WorldCellService {
         for (Player spectator : spectators) {
             spectator.teleport(cellRoot);
             spectator.setRespawnLocation(cellRoot, true);
-            spectator.setGameMode(GameMode.SPECTATOR);
+            plugin.fakeSpectators().enable(spectator);
         }
     }
 

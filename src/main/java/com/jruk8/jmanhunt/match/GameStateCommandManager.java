@@ -14,7 +14,6 @@ import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.GameRules;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
@@ -605,19 +604,19 @@ public final class GameStateCommandManager {
     }
 
     /**
-     * Default gamemodes for a phase: participants to survival, NONEs to
+     * Default modes for a phase: participants to survival, NONEs to fake
      * spectator on start (or back to survival on end) unless AFK, with
      * lobby travel for NONEs when the engine does not move them.
      */
     private void applyDefaultGamemodes(String phase, List<Player> participants,
             List<Player> lobbySpectators, int lobbyId) {
         // AFK players are skipped above and always left alone; NONEs follow
-        // the toggle, keeping their gamemode like AFK when it is off.
+        // the toggle, keeping their mode like AFK when it is off.
         boolean setNoneSpectator = plugin.overrides().getBoolean(lobbyId,
                 "settings.players.roles.turn-nones-spectator.enabled", false);
         List<Player> nonePlayers = new ArrayList<>();
         for (Player player : participants) {
-            player.setGameMode(GameMode.SURVIVAL);
+            plugin.fakeSpectators().disable(player);
         }
         for (Player player : lobbySpectators) {
             if (playerStates.role(player) == Role.AFK) {
@@ -625,11 +624,11 @@ public final class GameStateCommandManager {
             }
             if (phase.equals("start")) {
                 if (setNoneSpectator) {
-                    player.setGameMode(GameMode.SPECTATOR);
+                    plugin.fakeSpectators().enable(player);
                 }
                 nonePlayers.add(player);
             } else {
-                player.setGameMode(GameMode.SURVIVAL);
+                plugin.fakeSpectators().disable(player);
             }
         }
         // When the world engine is enabled, NONE spectators travel to the

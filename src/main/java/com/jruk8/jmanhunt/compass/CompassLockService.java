@@ -20,7 +20,6 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
@@ -190,7 +189,7 @@ final class CompassLockService {
                 .getBoolean(lobby, "settings.compass.left-click.enabled", false)) {
             return Optional.empty();
         }
-        if (player.getGameMode() == GameMode.SPECTATOR) {
+        if (plugin.fakeSpectators().isFakeSpectator(player)) {
             return Optional.empty();
         }
         if (analyzing.contains(player.getUniqueId())) {
@@ -234,7 +233,7 @@ final class CompassLockService {
             handleLeftClick(player);
             return;
         }
-        if (player.getGameMode() == GameMode.SPECTATOR
+        if (plugin.fakeSpectators().isFakeSpectator(player)
                 || analyzing.contains(player.getUniqueId())) {
             return;
         }
