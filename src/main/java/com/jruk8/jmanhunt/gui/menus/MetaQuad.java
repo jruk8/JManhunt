@@ -83,7 +83,8 @@ public final class MetaQuad {
                                         true, raw -> {
                                             target.patchAuthor(raw);
                                             return null;
-                                        }))),
+                                        })).withMeta(meta ->
+                                                AuthorHeads.applyTo(meta, target.author()))),
                 gui,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 parent);

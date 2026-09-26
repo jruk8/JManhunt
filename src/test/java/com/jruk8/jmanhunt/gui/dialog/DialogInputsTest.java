@@ -3,7 +3,9 @@ package com.jruk8.jmanhunt.gui.dialog;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import org.bukkit.Material;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -110,6 +112,30 @@ class DialogInputsTest {
         assertEquals("trigger_0", DialogInputs.triggerKey(0));
         assertEquals("trigger_13", DialogInputs.triggerKey(13));
         assertEquals(14, com.jruk8.jmanhunt.match.ModifierTriggers.KNOWN.size());
+    }
+
+    @Test
+    void bodyOrderPutsDescriptionFirst() {
+        assertEquals(List.of("What it does.", "Current: 3", "Allowed: 0+"),
+                DialogInputs.orderedBody("What it does.", "Current: 3", "Allowed: 0+"));
+        assertEquals(List.of("Current: 3"),
+                DialogInputs.orderedBody("", "Current: 3", null));
+        assertEquals(List.of("Current: 3", "Allowed: 0+"),
+                DialogInputs.orderedBody(null, "Current: 3", "Allowed: 0+"));
+    }
+
+    @Test
+    void iconSpriteResolvesMaterialsOnly() {
+        assertEquals(Optional.of(Material.GRASS_BLOCK), DialogInputs.iconSprite("GRASS_BLOCK"));
+        assertEquals(Optional.of(Material.LIME_CONCRETE),
+                DialogInputs.iconSprite("lime concrete"));
+        assertEquals(Optional.of(Material.COMPASS),
+                DialogInputs.iconSprite("minecraft:compass"));
+        assertEquals(Optional.empty(), DialogInputs.iconSprite("BOGUS_ITEM"));
+        assertEquals(Optional.empty(), DialogInputs.iconSprite("world"));
+        assertEquals(Optional.empty(), DialogInputs.iconSprite(""));
+        assertEquals(Optional.empty(), DialogInputs.iconSprite(null));
+        assertEquals(Optional.empty(), DialogInputs.iconSprite("WATER"));
     }
 
     @Test

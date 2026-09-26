@@ -2,11 +2,15 @@ package com.jruk8.jmanhunt.gui.dialog;
 
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.config.SettingType;
+import com.jruk8.jmanhunt.modifiers.ModifierStore;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import org.bukkit.Material;
 
 /**
  * Headless dialog input choice, shared by the Paper implementation and
@@ -86,6 +90,39 @@ final class DialogInputs {
     /** Float display with three decimals for dialog body lines. */
     static String formatFloat(float value) {
         return String.format(Locale.ROOT, "%.3f", value);
+    }
+
+    /**
+     * Setting dialog body order: the description first, then the current
+     * value, then the range line. Blank descriptions and null ranges are
+     * skipped without leaving gaps.
+     */
+    static List<String> orderedBody(String description, String current, String bounds) {
+        List<String> lines = new ArrayList<>();
+        if (description != null && !description.isBlank()) {
+            lines.add(description);
+        }
+        lines.add(current);
+        if (bounds != null) {
+            lines.add(bounds);
+        }
+        return lines;
+    }
+
+    /**
+     * Item sprite for a string setting value: the material fetched from
+     * the configured string, or empty when it names no item. Never
+     * throws and never substitutes a wrong item.
+     */
+    static Optional<Material> iconSprite(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        Material material = ModifierStore.parseMaterial(value);
+        if (material == null || !material.isItem()) {
+            return Optional.empty();
+        }
+        return Optional.of(material);
     }
 
     /**

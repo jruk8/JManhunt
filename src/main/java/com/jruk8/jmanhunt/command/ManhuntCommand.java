@@ -133,7 +133,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 feedback, sounds);
         this.setupService = new SetupService(plugin, game, messages, sounds, feedback);
         SettingDialogs dialogs = new SettingDialogs(config, plugin.overrides(), messages,
-                sounds, plugin.guiService(), feedback, plugin);
+                sounds, plugin.guiService(), feedback, plugin.guiConfig(), plugin);
         ModifierDialogs modifierDialogs = new ModifierDialogs(messages, sounds,
                 plugin.guiService(), plugin);
         this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,

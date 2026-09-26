@@ -138,6 +138,7 @@ class MetaQuadTest {
         assertEquals(Material.PLAYER_HEAD, author.material());
         assertEquals("Current: Not set", textOf(author.lore().get(0)));
         assertNotNull(author.action());
+        assertNotNull(author.metaTweak());
 
         assertEquals(Material.PAPER, menu.buttonAt(22).material());
     }

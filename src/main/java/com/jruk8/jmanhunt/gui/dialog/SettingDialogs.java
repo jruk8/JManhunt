@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.gui.dialog;
 import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
+import com.jruk8.jmanhunt.gui.GuiConfig;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.config.SettingRegistry;
@@ -31,6 +32,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.event.ClickCallback;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
 /**
@@ -57,16 +59,19 @@ public final class SettingDialogs implements SettingDialog {
     private final SoundService sounds;
     private final GuiService gui;
     private final SettingFeedback feedback;
+    private final GuiConfig guiData;
     private final Plugin plugin;
 
     public SettingDialogs(ConfigService config, OverrideService overrides, MessageService messages,
-            SoundService sounds, GuiService gui, SettingFeedback feedback, Plugin plugin) {
+            SoundService sounds, GuiService gui, SettingFeedback feedback, GuiConfig guiData,
+            Plugin plugin) {
         this.config = config;
         this.overrides = overrides;
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
         this.feedback = feedback;
+        this.guiData = guiData;
         this.plugin = plugin;
     }
 
@@ -266,14 +271,22 @@ public final class SettingDialogs implements SettingDialog {
 
     private List<DialogBody> bodyLines(Integer lobby, SettingDescriptor descriptor) {
         List<DialogBody> lines = new ArrayList<>();
-        lines.add(DialogBody.plainMessage(messages.parse(messages
+        if (descriptor.type() == SettingType.STRING) {
+            DialogInputs.iconSprite(currentText(lobby, descriptor)).ifPresent(material ->
+                    lines.add(DialogBody.item(new ItemStack(material)).build()));
+        }
+        String current = messages
                 .string("manhunt-gui.dialog-current", "Current value: <white>{value}")
-                .replace("{value}", escape(displayCurrent(lobby, descriptor))))));
+                .replace("{value}", escape(displayCurrent(lobby, descriptor)));
+        String bounds = null;
         if (descriptor.type() == SettingType.INT || descriptor.type() == SettingType.FLOAT) {
-            lines.add(DialogBody.plainMessage(messages.parse(messages
-                    .string("manhunt-gui.dialog-bounds", "Allowed: {bounds}")
+            bounds = messages.string("manhunt-gui.dialog-bounds", "Allowed: {bounds}")
                     .replace("{bounds}", escape(SettingRegistry.boundsText(
-                            descriptor, path -> overrides.effectiveRaw(lobby, path)))))));
+                            descriptor, path -> overrides.effectiveRaw(lobby, path))));
+        }
+        for (String line : DialogInputs.orderedBody(
+                guiData.description(descriptor.path()), current, bounds)) {
+            lines.add(DialogBody.plainMessage(messages.parse(line)));
         }
         return lines;
     }

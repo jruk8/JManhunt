@@ -41,6 +41,7 @@ public final class MenuButton {
     private final Consumer<Player> rightAction;
     private final Consumer<Player> shiftAction;
     private final SoundPolicy soundPolicy;
+    private final Consumer<ItemMeta> metaTweak;
 
     /**
      * @param material icon material, never air
@@ -102,6 +103,14 @@ public final class MenuButton {
             boolean glow, boolean hideTooltip, Consumer<Player> action,
             Consumer<Player> rightAction, Consumer<Player> shiftAction,
             SoundPolicy soundPolicy) {
+        this(material, name, lore, glow, hideTooltip, action, rightAction, shiftAction,
+                soundPolicy, null);
+    }
+
+    private MenuButton(Material material, Component name, List<Component> lore,
+            boolean glow, boolean hideTooltip, Consumer<Player> action,
+            Consumer<Player> rightAction, Consumer<Player> shiftAction,
+            SoundPolicy soundPolicy, Consumer<ItemMeta> metaTweak) {
         this.material = material;
         this.name = name;
         this.lore = lore == null ? List.of() : List.copyOf(lore);
@@ -111,6 +120,7 @@ public final class MenuButton {
         this.rightAction = rightAction;
         this.shiftAction = shiftAction;
         this.soundPolicy = soundPolicy;
+        this.metaTweak = metaTweak;
     }
 
     /** Blank, tooltip-less filler pane with no action. */
@@ -125,13 +135,22 @@ public final class MenuButton {
             return this;
         }
         return new MenuButton(material, name, lore, glow, hideTooltip,
-                action, rightAction, shiftAction, SoundPolicy.SILENT);
+                action, rightAction, shiftAction, SoundPolicy.SILENT, metaTweak);
     }
 
     /** Copy of this button running the shift action on shift-left-click. */
     public MenuButton shiftAction(Consumer<Player> shiftAction) {
         return new MenuButton(material, name, lore, glow, hideTooltip,
-                action, rightAction, shiftAction, soundPolicy);
+                action, rightAction, shiftAction, soundPolicy, metaTweak);
+    }
+
+    /**
+     * Copy of this button with an item-meta tweak applied at build time,
+     * for per-button meta such as skull profiles. Null clears the tweak.
+     */
+    public MenuButton withMeta(Consumer<ItemMeta> metaTweak) {
+        return new MenuButton(material, name, lore, glow, hideTooltip,
+                action, rightAction, shiftAction, soundPolicy, metaTweak);
     }
 
     /** Builds the displayed item. */
@@ -153,6 +172,9 @@ public final class MenuButton {
         }
         if (hideTooltip) {
             meta.setHideTooltip(true);
+        }
+        if (metaTweak != null) {
+            metaTweak.accept(meta);
         }
         stack.setItemMeta(meta);
         return stack;
@@ -192,5 +214,9 @@ public final class MenuButton {
 
     public SoundPolicy soundPolicy() {
         return soundPolicy;
+    }
+
+    public Consumer<ItemMeta> metaTweak() {
+        return metaTweak;
     }
 }

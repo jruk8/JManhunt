@@ -36,8 +36,12 @@ default. Buttons glow when the value differs from the default.
 
 - Toggles flip on click; choices cycle to the next option.
 - Numbers and text open a dialog: bounded numbers get a slider,
-  everything else gets a text field. Invalid input is rejected with an
-  error naming the allowed values, and the old value is kept.
+  everything else gets a text field. The dialog shows the
+  description first, then the current value and allowed range.
+  Invalid input is rejected with an error naming the allowed
+  values, and the old value is kept.
+- Text settings holding an item name (like a concrete color)
+  preview that item's sprite at the top of the dialog.
 - Right-click any setting to reset it to the default after a confirm
   panel showing old versus default.
 - String lists show one paper per entry plus a stick to append; click
@@ -78,6 +82,8 @@ Export, and Delete Preset. Meta edits name, description, icon, and
 author; right-clicking the name renames the id instead. Every field
 prompts or cycles in place, and blank answers clear optional
 fields. Setting the icon chats a confirmation naming the material.
+The Author button wears the author's player head when the author is
+`JManhunt`, and the default head otherwise.
 The preset Modifiers screen lists member modifiers first with a glow,
 then the rest on a fresh row; the Modifiers button count stays live
 after toggling.
