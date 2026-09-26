@@ -288,8 +288,25 @@ public final class WorldCellService {
         }
     }
 
+    /** Arms the close-to-structure fetch when both gates are on. */
+    private CloseToStructureFetch armCloseToStructure(WorldEngineConfig config) {
+        if (!config.spawnpointAlgorithmEnabled() || !config.spawnCloseToStructureEnabled()) {
+            return CloseToStructureFetch.inactive();
+        }
+        return CloseToStructureFetch.armed(config, plugin);
+    }
+
+    /** Last raw pass when the raw loop exhausts, else empty. */
+    private Optional<CellOrigin> closeToFallback(CloseToStructureFetch closeTo) {
+        if (closeTo.active() && closeTo.lastRawPass() != null) {
+            return Optional.of(closeTo.lastRawPass());
+        }
+        return Optional.empty();
+    }
+
     private Optional<CellOrigin> findValidOrigin(World world, WorldEngineConfig config) {
         enforceCellIndexCap(config);
+        CloseToStructureFetch closeTo = armCloseToStructure(config);
         for (int iter = 0; iter < MAX_CELL_ALLOCATE_ATTEMPTS; iter++) {
             OptionalLong startIndex = cellAllocator.reserveStartIndex(1);
             if (startIndex.isEmpty()) {
@@ -304,21 +321,32 @@ public final class WorldCellService {
             if (config.spawnpointAlgorithmEnabled()) {
                 Block centerBlock = world.getHighestBlockAt(originX, originZ);
                 Material type = centerBlock.getType();
+                boolean bad = type == Material.WATER || type == Material.LAVA
+                        || !centerBlock.isSolid();
                 boolean isLastAttempt = (iter == MAX_CELL_ALLOCATE_ATTEMPTS - 1);
 
-                if ((type == Material.WATER || type == Material.LAVA || !centerBlock.isSolid()) && !isLastAttempt) {
+                if (bad && !isLastAttempt) {
                     continue; // Bad terrain, try again
                 }
 
-                if (isLastAttempt && (type == Material.WATER || type == Material.LAVA || !centerBlock.isSolid())) {
+                if (isLastAttempt && bad) {
                     plugin.logger().warning("Could not find a valid spawn cell after "
                             + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Using last attempted cell.");
+                }
+
+                if (closeTo.active() && !bad) {
+                    CellOrigin origin = new CellOrigin(originX, originZ, baseIndex);
+                    CellOrigin decided = closeTo.consider(world, origin, centerBlock.getY());
+                    if (decided != null) {
+                        return Optional.of(decided);
+                    }
+                    continue;
                 }
             }
 
             return Optional.of(new CellOrigin(originX, originZ, baseIndex));
         }
-        return Optional.empty();
+        return closeToFallback(closeTo);
     }
 
     private Location teleportToGame(List<Player> participants, World world, WorldEngineConfig config,

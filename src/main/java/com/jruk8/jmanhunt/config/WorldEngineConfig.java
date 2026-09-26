@@ -335,6 +335,17 @@ public class WorldEngineConfig extends OkaeriConfig {
         })
         private int yTolerance = 7;
 
+        @CustomKey("spawn-close-to-structure")
+        @Comment({
+                "Spawns near a listed structure when one is within",
+                "max-distance of a raw-passing cell. Checked after the",
+                "raw terrain checks on each cell fetch, with a medium",
+                "performance cost per lookup.",
+                "Highly recommended: enable overworld structure boosts",
+                "alongside this setting."
+        })
+        private SpawnCloseToStructure spawnCloseToStructure = new SpawnCloseToStructure();
+
         public boolean isEnabled() {
             return enabled;
         }
@@ -357,6 +368,86 @@ public class WorldEngineConfig extends OkaeriConfig {
 
         public void setYTolerance(int yTolerance) {
             this.yTolerance = yTolerance;
+        }
+
+        public SpawnCloseToStructure getSpawnCloseToStructure() {
+            return spawnCloseToStructure;
+        }
+
+        public void setSpawnCloseToStructure(SpawnCloseToStructure spawnCloseToStructure) {
+            this.spawnCloseToStructure = spawnCloseToStructure;
+        }
+
+        /** Spawn cells near a listed structure. */
+        @SuppressWarnings("FieldMayBeFinal")
+        public static class SpawnCloseToStructure extends OkaeriConfig {
+
+            @Comment({
+                    "When true, raw-passing cells are kept only when a",
+                    "listed structure is near, up to attempts lookups per",
+                    "fetch. On exhaustion the last raw-passing spawn wins.",
+                    "Default: false"
+            })
+            private boolean enabled = false;
+
+            @Comment({
+                    "Structure words to look for. Allowed: VILLAGE (any",
+                    "village type), TEMPLE (desert or jungle pyramid),",
+                    "SHIPWRECK, RUINED_PORTAL, BURIED_TREASURE, MINESHAFT",
+                    "(regular and mesa), OCEAN_MONUMENT, MANSION,",
+                    "PILLAGER_OUTPOST. Unknown words are skipped. The more",
+                    "entries, the higher the chance of a hit.",
+                    "Default: [VILLAGE, TEMPLE, SHIPWRECK, RUINED_PORTAL]"
+            })
+            private List<String> structures = new ArrayList<>(
+                    List.of("VILLAGE", "TEMPLE", "SHIPWRECK", "RUINED_PORTAL"));
+
+            @Comment({
+                    "Structure lookups per fetch before falling back to the",
+                    "last raw-passing spawn. Minimum 1, maximum 5.",
+                    "Default: 3"
+            })
+            private int attempts = 3;
+
+            @CustomKey("max-distance")
+            @Comment({
+                    "How close a structure must be, in blocks. Minimum 50,",
+                    "maximum 200.",
+                    "Default: 125"
+            })
+            private int maxDistance = 125;
+
+            public boolean isEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(boolean enabled) {
+                this.enabled = enabled;
+            }
+
+            public List<String> getStructures() {
+                return structures;
+            }
+
+            public void setStructures(List<String> structures) {
+                this.structures = structures;
+            }
+
+            public int getAttempts() {
+                return attempts;
+            }
+
+            public void setAttempts(int attempts) {
+                this.attempts = attempts;
+            }
+
+            public int getMaxDistance() {
+                return maxDistance;
+            }
+
+            public void setMaxDistance(int maxDistance) {
+                this.maxDistance = maxDistance;
+            }
         }
     }
 

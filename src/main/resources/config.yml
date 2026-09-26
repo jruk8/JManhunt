@@ -873,6 +873,38 @@ world-engine:
     # count as level. Outliers are re-rolled.
     # Default: 7
     y-tolerance: 7
+    # Spawns near a listed structure when one is within
+    # max-distance of a raw-passing cell. Checked after the
+    # raw terrain checks on each cell fetch, with a medium
+    # performance cost per lookup.
+    # Highly recommended: enable overworld structure boosts
+    # alongside this setting.
+    spawn-close-to-structure:
+      # When true, raw-passing cells are kept only when a
+      # listed structure is near, up to attempts lookups per
+      # fetch. On exhaustion the last raw-passing spawn wins.
+      # Default: false
+      enabled: false
+      # Structure words to look for. Allowed: VILLAGE (any
+      # village type), TEMPLE (desert or jungle pyramid),
+      # SHIPWRECK, RUINED_PORTAL, BURIED_TREASURE, MINESHAFT
+      # (regular and mesa), OCEAN_MONUMENT, MANSION,
+      # PILLAGER_OUTPOST. Unknown words are skipped. The more
+      # entries, the higher the chance of a hit.
+      # Default: [VILLAGE, TEMPLE, SHIPWRECK, RUINED_PORTAL]
+      structures:
+      - "VILLAGE"
+      - "TEMPLE"
+      - "SHIPWRECK"
+      - "RUINED_PORTAL"
+      # Structure lookups per fetch before falling back to the
+      # last raw-passing spawn. Minimum 1, maximum 5.
+      # Default: 3
+      attempts: 3
+      # How close a structure must be, in blocks. Minimum 50,
+      # maximum 200.
+      # Default: 125
+      max-distance: 125
   # Cell preloading. Console commands run whenever new cells are fetched, and
   # a buffer of ready cells is kept so matches start without lag.
   preloading:

@@ -31,7 +31,8 @@ public final class SettingRegistry {
             "world-engine.lobby-presets.EMPTY.commands",
             "world-engine.lobby-presets.DEFAULT.commands",
             "world-engine.lobby-presets.ADVANCED.commands",
-            "settings.server.team-chat.prefixes");
+            "settings.server.team-chat.prefixes",
+            "world-engine.spawnpoint-algorithm.spawn-close-to-structure.structures");
 
     private SettingRegistry() {
     }
@@ -660,9 +661,7 @@ public final class SettingRegistry {
         entries.add(intVal("world-engine.cell-size", 10000, 1, 50000));
         entries.add(intDynamic("world-engine.tp-spread-radius", 5, 0,
                 SettingDescriptor.DynamicBound.CELL_HALF));
-        entries.add(bool("world-engine.spawnpoint-algorithm.enabled", true));
-        entries.add(intVal("world-engine.spawnpoint-algorithm.max-retries", 8, 0, null));
-        entries.add(intVal("world-engine.spawnpoint-algorithm.y-tolerance", 7, 0, null));
+        addSpawnpointEntries(entries);
         entries.add(intVal("world-engine.preloading.cell-buffer.stored-cells-buffer", 3, 1, null));
         entries.add(option("world-engine.preloading.cell-buffer.increment-when", "ALWAYS",
                 "ALWAYS", "NO_MATCH_RUNNING"));
@@ -684,5 +683,15 @@ public final class SettingRegistry {
         entries.add(intVal("world-engine.world-border.particles.max-particles-per-player", 100, 1, null));
         entries.add(string("world-engine.end.base-name", "jmh_end"));
         entries.add(intVal("world-engine.end.buffer", 3, 1, null));
+    }
+
+    private static void addSpawnpointEntries(List<SettingDescriptor> entries) {
+        entries.add(bool("world-engine.spawnpoint-algorithm.enabled", true));
+        entries.add(intVal("world-engine.spawnpoint-algorithm.max-retries", 8, 0, null));
+        entries.add(intVal("world-engine.spawnpoint-algorithm.y-tolerance", 7, 0, null));
+        entries.add(bool("world-engine.spawnpoint-algorithm.spawn-close-to-structure.enabled", false));
+        entries.add(intVal("world-engine.spawnpoint-algorithm.spawn-close-to-structure.attempts", 3, 1, 5));
+        entries.add(intVal("world-engine.spawnpoint-algorithm.spawn-close-to-structure.max-distance",
+                125, 50, 200));
     }
 }

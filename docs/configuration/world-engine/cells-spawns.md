@@ -14,6 +14,11 @@ world-engine:
     enabled: true
     max-retries: 8
     y-tolerance: 7
+    spawn-close-to-structure:
+      enabled: false
+      structures: [VILLAGE, TEMPLE, SHIPWRECK, RUINED_PORTAL]
+      attempts: 3
+      max-distance: 125
 ```
 
 When `enabled`, teleports participants to a fresh cell when a match
@@ -69,6 +74,32 @@ the closest candidate wins; with no valid roll at all, the center is
 the fallback. This fixes bad spawns, but may cause server lag if many
 checks are required. Turn the algorithm off for plain highest-block
 spawns.
+
+### Spawn Close to Structure
+
+`spawn-close-to-structure`, when enabled, keeps a raw-passing cell
+only when a listed structure sits within `max-distance` blocks of it.
+Each cell fetch after the raw terrain checks runs up to `attempts`
+structure lookups (1 to 5, default 3): the first hit wins at once,
+and on exhaustion the last raw-passing spawn is kept so later fetches
+never revisit the skipped cells. `max-distance` accepts 50 to 200
+(default 125). Allowed words:
+
+- `VILLAGE`: any village type
+- `TEMPLE`: desert pyramid or jungle pyramid
+- `SHIPWRECK`: ocean or beached
+- `RUINED_PORTAL`: any ruined portal variant
+- `BURIED_TREASURE`
+- `MINESHAFT`: regular and mesa
+- `OCEAN_MONUMENT`
+- `MANSION`
+- `PILLAGER_OUTPOST`
+
+Unknown words are skipped with a warning. The more entries, the higher
+the chance of a hit. Each lookup carries a medium performance cost on
+cell fetch, so keep the list focused. Highly recommended: enable the
+[overworld structure boosts](../settings/game-boosts.md) alongside
+this setting.
 
 ## Lobby Teleports & Bounds
 
