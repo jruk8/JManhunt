@@ -1,6 +1,9 @@
 package com.jruk8.jmanhunt.command;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.bounds.LobbyBounds;
+import com.jruk8.jmanhunt.lobby.schem.JmhLobbyBundle;
+import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
 import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -14,12 +17,16 @@ import org.bukkit.util.BlockVector;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -83,31 +90,28 @@ public final class DevSchemCommand {
             messages.message(sender, name == null ? "dev.usage" : "dev.invalid-name");
             return true;
         }
-        Location first = pos1.get(player.getUniqueId());
-        Location second = pos2.get(player.getUniqueId());
-        if (first == null || second == null) {
-            messages.message(sender, "dev.need-selection");
+        List<Location> selection = selection(sender, player);
+        if (selection == null) {
             return true;
         }
-        World world = first.getWorld();
-        if (world == null || !world.equals(second.getWorld())) {
-            messages.message(sender, "dev.world-mismatch");
+        World world = selection.get(0).getWorld();
+        List<BlockVector> corners =
+                normalized(blockVector(selection.get(0)), blockVector(selection.get(1)));
+        Structure structure = fillSelection(sender, name, world, corners);
+        if (structure == null) {
             return true;
         }
-        List<BlockVector> corners = normalized(blockVector(first), blockVector(second));
-        Location from = corners.get(0).toLocation(world);
-        Location to = corners.get(1).toLocation(world);
-        Structure structure = Bukkit.getStructureManager().createStructure();
+        byte[] nbt;
         try {
-            structure.fill(from, to, true);
-        } catch (RuntimeException failed) {
-            plugin.logger().warning("Dev schem fill failed: " + failed.getMessage());
+            nbt = captureNbt(structure);
+        } catch (IOException failed) {
+            plugin.logger().warning("Dev schem save failed: " + failed.getMessage());
             messages.message(sender, "dev.save-failed", Map.of("name", name));
             return true;
         }
+        JmhLobbyService.SavedCounts counts;
         try {
-            Bukkit.getStructureManager().saveStructure(new File(schematics.schematicDir(), name + ".nbt"),
-                    structure);
+            counts = bundleLobby(name, nbt, corners);
         } catch (IOException failed) {
             plugin.logger().warning("Dev schem save failed: " + failed.getMessage());
             messages.message(sender, "dev.save-failed", Map.of("name", name));
@@ -115,8 +119,87 @@ public final class DevSchemCommand {
         }
         BlockVector size = structure.getSize();
         messages.message(sender, "dev.saved", Map.of("name", name, "size",
-                size.getBlockX() + "x" + size.getBlockY() + "x" + size.getBlockZ()));
+                size.getBlockX() + "x" + size.getBlockY() + "x" + size.getBlockZ(),
+                "lobbies", lobbySummary(counts)));
         return true;
+    }
+
+    /** Validated pos1/pos2 in one world, or null after messaging the sender. */
+    private List<Location> selection(CommandSender sender, Player player) {
+        Location first = pos1.get(player.getUniqueId());
+        Location second = pos2.get(player.getUniqueId());
+        if (first == null || second == null) {
+            messages.message(sender, "dev.need-selection");
+            return null;
+        }
+        if (first.getWorld() == null || !first.getWorld().equals(second.getWorld())) {
+            messages.message(sender, "dev.world-mismatch");
+            return null;
+        }
+        return List.of(first, second);
+    }
+
+    /** Fills a fresh structure from the selection, or null after messaging on failure. */
+    private Structure fillSelection(
+            CommandSender sender, String name, World world, List<BlockVector> corners) {
+        Structure structure = Bukkit.getStructureManager().createStructure();
+        try {
+            structure.fill(corners.get(0).toLocation(world), corners.get(1).toLocation(world), true);
+        } catch (RuntimeException failed) {
+            plugin.logger().warning("Dev schem fill failed: " + failed.getMessage());
+            messages.message(sender, "dev.save-failed", Map.of("name", name));
+            return null;
+        }
+        return structure;
+    }
+
+    /** Serializes a filled structure to NBT bytes via a cleaned-up temp file. */
+    private static byte[] captureNbt(Structure structure) throws IOException {
+        Path staging = null;
+        try {
+            staging = Files.createTempFile("jmh-schem-save", ".nbt");
+            Bukkit.getStructureManager().saveStructure(staging.toFile(), structure);
+            return Files.readAllBytes(staging);
+        } finally {
+            deleteQuietly(staging);
+        }
+    }
+
+    /** Bundles NBT bytes with the region's lobby boxes and teleports. */
+    private JmhLobbyService.SavedCounts bundleLobby(
+            String name, byte[] nbt, List<BlockVector> corners) throws IOException {
+        BlockVector min = corners.get(0);
+        BlockVector max = corners.get(1);
+        return new JmhLobbyService(plugin).saveBundle(
+                new File(schematics.schematicDir(), name + JmhLobbyService.BUNDLE_SUFFIX),
+                nbt, plugin.lobbyConfig().getLobbies(),
+                new LobbyBounds.Bound(min.getBlockX(), min.getBlockY(), min.getBlockZ(),
+                        max.getBlockX(), max.getBlockY(), max.getBlockZ()),
+                new JmhLobbyBundle.Offset(min.getBlockX(), min.getBlockY(), min.getBlockZ()));
+    }
+
+    /** Saved-counts phrase for the confirmation: pluralized, or the empty note. Pure for tests. */
+    static String lobbySummary(JmhLobbyService.SavedCounts counts) {
+        if (counts.bounds() == 0 && counts.teleports() == 0) {
+            return "no bounds or teleports";
+        }
+        return counts.bounds() + plural(counts.bounds(), " bound")
+                + ", " + counts.teleports() + plural(counts.teleports(), " teleport");
+    }
+
+    private static String plural(int count, String singular) {
+        return count == 1 ? singular : singular + "s";
+    }
+
+    private static void deleteQuietly(Path file) {
+        if (file == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(file);
+        } catch (IOException ignored) {
+            // System temp cleans strays on its own.
+        }
     }
 
     private boolean load(CommandSender sender, String name) {
@@ -127,7 +210,9 @@ public final class DevSchemCommand {
             messages.message(sender, "dev.usage");
             return true;
         }
-        if (!new File(schematics.schematicDir(), name + ".nbt").isFile()) {
+        File bundle = new File(schematics.schematicDir(), name + JmhLobbyService.BUNDLE_SUFFIX);
+        File legacy = new File(schematics.schematicDir(), name + ".nbt");
+        if (!bundle.isFile() && !legacy.isFile()) {
             messages.message(sender, "dev.load-missing", Map.of("name", name));
             return true;
         }
@@ -156,17 +241,27 @@ public final class DevSchemCommand {
         return true;
     }
 
-    /** Saved schematic names without the .nbt suffix, alphabetically. */
+    /** Saved schematic names without suffix, bundles and legacy .nbt alike, alphabetically. */
     public List<String> schematicNames() {
-        String[] files = schematics.schematicDir().list((dir, file) -> file.endsWith(".nbt"));
-        List<String> names = new ArrayList<>();
+        String[] files = schematics.schematicDir().list((dir, file) ->
+                file.endsWith(JmhLobbyService.BUNDLE_SUFFIX) || file.endsWith(".nbt"));
+        Set<String> names = new HashSet<>();
         if (files != null) {
             for (String file : files) {
-                names.add(file.substring(0, file.length() - ".nbt".length()));
+                if (file.endsWith(JmhLobbyService.BUNDLE_SUFFIX)) {
+                    names.add(stripSuffix(file, JmhLobbyService.BUNDLE_SUFFIX));
+                } else {
+                    names.add(stripSuffix(file, ".nbt"));
+                }
             }
         }
-        names.sort(String.CASE_INSENSITIVE_ORDER);
-        return names;
+        List<String> sorted = new ArrayList<>(names);
+        sorted.sort(String.CASE_INSENSITIVE_ORDER);
+        return sorted;
+    }
+
+    private static String stripSuffix(String file, String suffix) {
+        return file.substring(0, file.length() - suffix.length());
     }
 
     private static String blockCoords(Location corner) {

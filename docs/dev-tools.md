@@ -6,7 +6,7 @@
 
 ## Schematic Tools
 
-`/manhunt dev schem` saves and loads vanilla `.nbt` structure files in
+`/manhunt dev schem` saves and loads lobby schematics in
 `JManhunt/settings/world-engine/lobby-schematics/`, the same directory
 the [lobby presets](configuration/world-engine.md#lobby-presets) read
 from. Requires `jmanhunt.command.dev.schem` (default: op).
@@ -21,9 +21,80 @@ from. Requires `jmanhunt.command.dev.schem` (default: op).
 
 `pos1` and `pos2` record the corners of a region: your feet block at the
 moment each runs. `save <name>` captures everything between the corners
-(including entities) to `<name>.nbt`, overwriting without asking. `load
-<name>` pastes the file into your current world centered on your feet
-block. Only `list` works from the console; the rest need a
+(including entities) to `<name>.jmhlobby`, overwriting without asking.
+`load <name>` pastes the file into your current world centered on your
+feet block. Only `list` works from the console; the rest need a
 player position and refuse console senders.
+
+## The .jmhlobby Format
+
+A `.jmhlobby` file is a zip containing exactly two entries: `schem.nbt`
+(the vanilla structure bytes) and `lobby.json` (the lobby boxes and
+teleports collected with them). Saving collects every lobby bounds box
+at least partly inside the region, plus every lobby teleport whose
+block sits inside it. Coordinates in the manifest are relative to the
+region's minimum corner, so pasting anywhere rebuilds the entries at
+the right offsets.
+
+A teleport whose lobby collected no boundary is an orphan: it is
+dropped from the bundle with a console warning naming the lobby and
+the teleport. A region with no bounds or teleports inside still saves
+a valid bundle with empty lists.
+
+On load, the structure pastes first, then the bundled bounds and
+teleports are written into the lobby config at the paste corner,
+creating missing lobby entries and overwriting the bounds and
+teleports of existing ones (overrides and other fields are preserved).
+Entries only build when the paste lands in the lobby world: loading
+anywhere else places blocks only, since lobby entries are
+lobby-world coordinates. With the world engine off, nonzero lobbies
+are skipped. Hand-written bundles listing one lobby twice apply the
+last entry.
+
+`lobby.json` looks like this:
+
+```json
+{
+  "format": 1,
+  "origin": {
+    "x": 100,
+    "y": 64,
+    "z": 100
+  },
+  "bounds": [
+    {
+      "lobby": 0,
+      "min": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "max": {
+        "x": 9,
+        "y": 9,
+        "z": 9
+      }
+    }
+  ],
+  "teleports": [
+    {
+      "lobby": 0,
+      "x": 5,
+      "y": 1,
+      "z": 5,
+      "yaw": 90.0,
+      "pitch": 0.0
+    }
+  ]
+}
+```
+
+`origin` is the save-time minimum corner. Bounds are relative min/max
+block corners per lobby id; teleports are relative blocks plus look
+direction. Sub-block teleport fractions are dropped: restored
+teleports land on integer coordinates.
+
+Legacy `.nbt` files still load through the old blocks-only path. Where
+both exist for one name, the bundle wins; `list` shows both kinds.
 
 `dev` is deliberately hidden from `/manhunt <tab>` completion.

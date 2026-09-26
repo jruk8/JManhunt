@@ -27,7 +27,7 @@ public class DevMessages extends OkaeriConfig {
     private String invalidName = "{prefix}<red>Invalid schematic name.";
 
     @CustomKey("saved")
-    private String saved = "{prefix}<green>Saved schematic <white>{name}<green> ({size}).";
+    private String saved = "{prefix}<green>Saved schematic <white>{name}<green> ({size}; {lobbies}).";
 
     @CustomKey("save-failed")
     private String saveFailed = "{prefix}<red>Could not save schematic <white>{name}<red>.";

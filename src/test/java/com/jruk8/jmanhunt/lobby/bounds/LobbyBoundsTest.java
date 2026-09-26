@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.lobby.bounds;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
@@ -91,6 +92,26 @@ class LobbyBoundsTest {
                 LobbyBounds.duplicateOf(entries, 1, 7, 66, 7, 5, 64, 5));
         assertEquals(OptionalInt.of(5), LobbyBounds.duplicateOf(entries, 3, 5, 64, 5, 7, 66, 7));
         assertTrue(LobbyBounds.duplicateOf(entries, 1, 0, 64, 0, 9, 66, 9).isEmpty());
+    }
+
+    @Test
+    void intersectsFullAndPartialOverlap() {
+        LobbyBounds.Bound region = bound(0, 64, 0, 9, 73, 9);
+
+        assertTrue(LobbyBounds.intersects(region, bound(2, 65, 2, 4, 66, 4)));
+        assertTrue(LobbyBounds.intersects(region, bound(-5, 60, -5, 20, 80, 20)));
+        assertTrue(LobbyBounds.intersects(region, bound(5, 65, 5, 15, 66, 15)));
+        assertTrue(LobbyBounds.intersects(region, bound(0, 64, 0, 9, 73, 9)));
+    }
+
+    @Test
+    void intersectsIgnoresTouchingAndOutside() {
+        LobbyBounds.Bound region = bound(0, 64, 0, 9, 73, 9);
+
+        assertFalse(LobbyBounds.intersects(region, bound(10, 64, 0, 19, 73, 9)));
+        assertFalse(LobbyBounds.intersects(region, bound(0, 64, -9, 9, 73, -1)));
+        assertFalse(LobbyBounds.intersects(region, bound(50, 64, 50, 59, 73, 59)));
+        assertFalse(LobbyBounds.intersects(region, bound(-9, 64, -9, -1, 73, -1)));
     }
 
     private static LobbyConfig.LobbyEntry entryWithBounds(

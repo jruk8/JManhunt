@@ -315,6 +315,7 @@ alongside JManhunt and toggle with `/jmhchallenges toggle <challenge>`.
 ## Developer Tools
 
 `/manhunt dev schem <pos1|pos2|save|load|list>` (permission
-`jmanhunt.command.dev.schem`) saves and loads vanilla `.nbt` structure
-files for authoring lobby presets. See [Developer Tools](dev-tools.md);
-only `list` works from the console.
+`jmanhunt.command.dev.schem`) saves and loads `.jmhlobby` bundles
+(structure plus lobby bounds and teleports) for authoring lobby
+presets. See [Developer Tools](dev-tools.md); only `list` works from
+the console.

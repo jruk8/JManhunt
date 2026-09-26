@@ -315,7 +315,7 @@ dev:
   need-selection: "{prefix}<red>Set both corners first with <white>pos1<red> and <white>pos2<red>."
   world-mismatch: "{prefix}<red>Both corners must be in the same world."
   invalid-name: "{prefix}<red>Invalid schematic name."
-  saved: "{prefix}<green>Saved schematic <white>{name}<green> ({size})."
+  saved: "{prefix}<green>Saved schematic <white>{name}<green> ({size}; {lobbies})."
   save-failed: "{prefix}<red>Could not save schematic <white>{name}<red>."
   pasted: "{prefix}<green>Pasted schematic <white>{name}<green>."
   load-missing: "{prefix}<red>No schematic named <white>{name}<red>."

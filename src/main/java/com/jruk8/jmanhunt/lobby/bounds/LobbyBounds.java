@@ -56,6 +56,21 @@ public final class LobbyBounds {
     }
 
     /**
+     * True when the boxes share at least one block: partial and full
+     * containment count, merely touching faces do not. Pure for tests.
+     */
+    public static boolean intersects(Bound first, Bound second) {
+        return overlaps(first.x1(), first.x2(), second.x1(), second.x2())
+                && overlaps(first.y1(), first.y2(), second.y1(), second.y2())
+                && overlaps(first.z1(), first.z2(), second.z1(), second.z2());
+    }
+
+    private static boolean overlaps(double a1, double a2, double b1, double b2) {
+        return Math.max(Math.min(a1, a2), Math.min(b1, b2))
+                <= Math.min(Math.max(a1, a2), Math.max(b1, b2));
+    }
+
+    /**
      * Lowest id of another lobby whose box exactly equals the given
      * corners (normalized, so corner order does not matter), if any.
      * Partial entries and negative ids never count. Pure for tests.

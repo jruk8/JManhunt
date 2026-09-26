@@ -57,15 +57,17 @@ from zero to a queued lobby in five minutes.
 
 Fresh lobby worlds are filled by the `tpto lobbyworld` preset argument:
 `EMPTY`, `DEFAULT`, or `ADVANCED`. Omit it and `DEFAULT` is used.
-Nothing is built in code: each preset pastes its vanilla
-structure-block `.nbt` from
+Nothing is built in code: each preset pastes its schematic from
 `JManhunt/settings/world-engine/lobby-schematics/` with the structure's
 midpoint at 0,64,0, then runs its console commands (meant for lobby
 teleports; `{world}` and `{preset}` are substituted) before the first
 teleport lands. A missing schematic warns in the console and leaves
-void, with a bare spawn at y=65 as the fallback.
+void, with a bare spawn at y=65 as the fallback. Where a preset name
+has a `.jmhlobby` bundle, it wins over the legacy `.nbt`, and its
+bundled bounds and teleports build into the lobby config at the paste
+corner.
 
-To regenerate with another preset (or an updated `.nbt`): stop the
+To regenerate with another preset (or an updated schematic): stop the
 server, delete the lobby world folder, start up,
 and run `tpto lobbyworld <selector> <preset>` twice. Presets only apply on
 fresh generation: existing worlds are never touched.
