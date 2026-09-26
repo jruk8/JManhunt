@@ -90,6 +90,9 @@ public class ServerSettings extends OkaeriConfig {
                 "affecting OP'd users. This option fixes it.",
                 "Purely passive, requires no dependency. If no WorldEdit is installed,",
                 "feel free to leave off.",
+                "Note: this also blocks breaking blocks with a compass in hand.",
+                "To avoid that, configure the WorldEdit plugin navwand item to",
+                "something other than the compass and turn this setting off.",
                 "",
                 "Performance impact: none",
                 "Default: true"

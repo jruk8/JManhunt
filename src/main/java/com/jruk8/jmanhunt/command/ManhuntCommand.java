@@ -227,7 +227,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 "\n<green>Need help? Join our <#de7766><click:open_url:'" + DISCORD_URL + "'>"
                         + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
         sender.sendMessage(messages.miniMessage(
-                "<green>Source code: <#de7766><click:open_url:'" + GITHUB_URL + "'>"
+                "<green>Star us on <#de7766><click:open_url:'" + GITHUB_URL + "'>"
                         + "<underlined>GitHub</underlined></click></#de7766>.</green>"));
         sender.sendMessage(messages.miniMessage(
                 "<green>Support our development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
@@ -381,7 +381,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         List<String> enabled = new ArrayList<>();
         for (String name : config.modifierNames()) {
             if (config.modifierEnabled(name)) {
-                enabled.add(name);
+                String display = config.modifiers().metaName(name);
+                enabled.add(display == null || display.isBlank() ? name : display);
             }
         }
         if (enabled.isEmpty()) {

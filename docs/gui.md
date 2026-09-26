@@ -23,7 +23,8 @@ reappears; see [Interactive Setup](getting-started.md#interactive-setup).
 - **Lobby Overrides** (glass): points the session at one lobby so
   every edit lands as an override; yellow while a session runs.
   Left-click to set a lobby id (or `GLOBAL`), right-click to go
-  global. Opening the GUI always starts a fresh global session.
+  global with a confirmation click. Opening the GUI always starts a
+  fresh global session.
 
 ## Editing Settings
 

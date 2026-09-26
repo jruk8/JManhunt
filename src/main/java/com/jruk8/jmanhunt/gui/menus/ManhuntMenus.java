@@ -465,6 +465,7 @@ public final class ManhuntMenus {
                 player -> openLobbySetter(player),
                 player -> {
                     gui.clearOverrideLobby(player);
+                    sounds.playNeutralSound(player);
                     gui.navigate(player, rootMenu(player));
                 }).silent();
     }
@@ -484,6 +485,7 @@ public final class ManhuntMenus {
     private void submitLobby(Player player, String raw) {
         if (raw.equalsIgnoreCase("global")) {
             gui.clearOverrideLobby(player);
+            sounds.playNeutralSound(player);
             gui.navigate(player, rootMenu(player));
             return;
         }

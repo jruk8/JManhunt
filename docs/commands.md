@@ -147,8 +147,8 @@ running match first and then every lobby holding at least one player with
 its player count. Four extras can be toggled under `settings.status`: the
 per-side win conditions (`show-win-conditions`), the running time
 (`show-elapsed-time`), the enabled modifiers (`show-modifiers`, hidden when
-none are enabled), and a gray `L{lobby}|G{game}` tag (`show-ids`, on by
-default).
+none are enabled, listed by configured display name), and a gray
+`L{lobby}|G{game}` tag (`show-ids`, on by default).
 
 ## Lobby and Game Worlds
 
