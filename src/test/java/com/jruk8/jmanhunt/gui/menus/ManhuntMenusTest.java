@@ -103,14 +103,29 @@ class ManhuntMenusTest {
     }
 
     @Test
-    void rootHasThreeLinksAndNoParent() {
+    void rootHasSupportAndThreeLinksAndNoParent() {
         Menu root = menus.rootMenu(viewer);
 
         assertEquals(27, root.layout().size());
         assertLink(root, 11, Material.CHEST);
         assertLink(root, 15, Material.BOOK);
-        assertNull(root.buttonAt(0));
         assertNull(root.parent());
+    }
+
+    @Test
+    void rootSupportButtonRunsSupportCommandAndCloses() {
+        MenuButton support = menus.rootMenu(viewer).buttonAt(0);
+
+        assertNotNull(support);
+        assertEquals(Material.RECOVERY_COMPASS, support.material());
+        assertTrue(support.glow());
+        assertNotNull(support.action());
+
+        Player player = mock(Player.class);
+        support.action().accept(player);
+
+        verify(player).performCommand("mh support");
+        verify(player).closeInventory();
     }
 
     @Test

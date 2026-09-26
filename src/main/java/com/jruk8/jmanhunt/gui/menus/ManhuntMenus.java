@@ -69,7 +69,7 @@ public final class ManhuntMenus {
                 feedback, sounds);
     }
 
-    /** 27-slot root with settings, history, modifiers, and override links. */
+    /** 27-slot root with support, settings, history, modifiers, and override links. */
     public Menu rootMenu(Player viewer) {
         return new Menu(title("title-root", "Manhunt"),
                 MenuLayout.parse("#########", "##s#h#m##", "#########"),
@@ -417,6 +417,15 @@ public final class ManhuntMenus {
 
     private Map<Integer, MenuButton> rootStatic(Player viewer) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
+        fixed.put(0, new MenuButton(Material.RECOVERY_COMPASS,
+                GuiTexts.name(messages, text("to-support", "<#de7766>Need Help?"), "Need Help?"),
+                GuiTexts.lore(messages, List.of(
+                        text("to-support-lore", "Click to see our help channels"))),
+                true, false,
+                player -> {
+                    player.performCommand("mh support");
+                    player.closeInventory();
+                }).silent());
         fixed.put(8, overrideButton(viewer));
         fixed.put(11, new MenuButton(Material.CHEST,
                 GuiTexts.name(messages, text("to-settings", "Settings"), "Settings"),

@@ -13,6 +13,8 @@ reappears; see [Interactive Setup](getting-started.md#interactive-setup).
 
 ## Root Menu
 
+- **Need Help?** (glowing recovery compass, first slot): runs
+  `/manhunt support` in chat and closes the panel.
 - **Settings** (chest): a quad over the four setting categories.
 - **History** (book): hover to read lifetime server stats: matches,
   kills, wins, damage, and playtime. It is display-only and opens nothing.

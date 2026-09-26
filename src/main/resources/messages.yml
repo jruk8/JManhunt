@@ -497,6 +497,8 @@ manhunt-gui:
   title-root: "JManhunt"
   title-settings: "Settings"
   title-category: "{name} Settings"
+  to-support: "<#de7766>Need Help?"
+  to-support-lore: "Click to see our help channels"
   to-settings: "Settings"
   to-settings-lore: "Match, Compass, Players, Server"
   to-history: "History"

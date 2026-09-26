@@ -8,7 +8,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt status [id\|all]`                    | Shows one match roster by id, or every running match plus populated lobbies with `all`. | `jmanhunt.command.status`, `jmanhunt.command.status.other` for the argument |
 | `/manhunt help`                                   | Shows the in-game command list. | `jmanhunt.command.help` |
 | `/manhunt setup`                                  | Starts the interactive setup tutorial (players only). | `jmanhunt.command.setup` |
-| `/manhunt support`                                | Shows Discord, GitHub, and Ko-fi links. Hidden from tab completion. | `jmanhunt.command.support` |
+| `/manhunt support`                                | Shows Discord, GitHub, and Ko-fi links. | `jmanhunt.command.support` |
 | `/manhunt challenges`                             | Shows a chat notice with a clickable link to the optional Challenges addon. | `jmanhunt.command.challenges` |
 | `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `spectator`, `afk`, or `none` in queues without a running match. | `jmanhunt.command.setplayer` (`jmanhunt.command.setplayer.self` for your own role only) |
 | `/manhunt lobby join <selector> <lobby-id> [role] [-notp]` | Moves players to a lobby queue, teleporting them there unless `-notp` is given. | `jmanhunt.command.lobby` |

@@ -220,10 +220,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /**
-     * Support links: Discord invite, GitHub, Ko-fi. Hidden from tab
-     * completion on purpose; players and console alike.
-     */
+    /** Support links: Discord invite, GitHub, Ko-fi. Players and console alike. */
     private boolean support(CommandSender sender) {
         sender.sendMessage(messages.miniMessage(
                 "\n<green>Need help? Join our <#de7766><click:open_url:'" + DISCORD_URL + "'>"
@@ -2537,7 +2534,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * tooling), but everything after a typed {@code dev} still completes.
      */
     static List<String> subcommandOptions() {
-        return new ArrayList<>(List.of("challenges", "help", "reload", "worldengine", "config",
+        return new ArrayList<>(List.of("challenges", "help", "support", "reload", "worldengine", "config",
                 "modifiers", "override", "debug", "lobby", "qs", "quickstart", "game", "end",
                 "start", "setplayer", "setup", "status"));
     }

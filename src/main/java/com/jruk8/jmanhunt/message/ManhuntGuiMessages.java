@@ -117,6 +117,12 @@ public class ManhuntGuiMessages extends OkaeriConfig {
     @CustomKey("title-category")
     private String titleCategory = "{name} Settings";
 
+    @CustomKey("to-support")
+    private String toSupport = "<#de7766>Need Help?";
+
+    @CustomKey("to-support-lore")
+    private String toSupportLore = "Click to see our help channels";
+
     @CustomKey("to-settings")
     private String toSettings = "Settings";
 
