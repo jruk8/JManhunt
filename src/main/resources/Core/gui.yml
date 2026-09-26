@@ -25,6 +25,7 @@ categories:
   match/autostart/minimums: CAULDRON
   match/game-boosts/nether-structures: NETHER_BRICKS
   match/game-boosts/overworld-structures: MOSSY_COBBLESTONE
+  match/game-boosts/disable-brutes: GOLDEN_AXE
   match/headstarts/hunter: CROSSBOW
   match/headstarts/speedrunner: RABBIT_FOOT
   compass: COMPASS
@@ -81,6 +82,7 @@ descriptions:
   "settings.match.game-boosts": "Bump structure rates and barter luck for runners."
   "settings.match.game-boosts.nether-structures": "Boost fortress and bastion generation."
   "settings.match.game-boosts.overworld-structures": "Boost overworld structure generation."
+  "settings.match.game-boosts.disable-brutes": "Block natural piglin brute spawns."
   "settings.match.game-leave": "Where players go when they leave a live match."
   "settings.match.headstarts": "Hold one side back when the match starts."
   "settings.match.headstarts.hunter": "Freeze hunters while runners get away."
@@ -184,6 +186,7 @@ descriptions:
   "settings.match.win-conditions.cancel.survived-time.time": "Survival time that cancels the match."
   "settings.match.game-boosts.nether-structures.enabled": "Boost nether fortress and bastion rates."
   "settings.match.game-boosts.overworld-structures.enabled": "Boost overworld structure rates."
+  "settings.match.game-boosts.disable-brutes.enabled": "Block natural piglin brute spawns."
   "settings.match.game-boosts.custom-piglin-barter": "Custom piglin barter odds for speedrunners."
   "settings.compass.given-to.hunters": "Hunters receive a tracking compass."
   "settings.compass.given-to.speedrunners": "Speedrunners receive a tracking compass."

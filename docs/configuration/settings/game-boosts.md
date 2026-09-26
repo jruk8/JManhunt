@@ -12,7 +12,9 @@ settings:
       enabled: false
     overworld-structures:
       enabled: false
-    custom-piglin-barter: false
+    disable-brutes:
+      enabled: true
+    custom-piglin-barter: true
 ```
 
 ## Nether Structures
@@ -35,6 +37,13 @@ If you hand-edit the structure files in the plugin folder, run
 the server so Minecraft loads them. Edits made directly to the world
 `datapacks` copies are overwritten on reload: the plugin folder is the source
 of truth.
+
+## Disable Brutes
+
+`disable-brutes` cancels natural piglin brute spawns, imitating
+1.16.1 where brutes never spawned. Spawner eggs, spawners, and commands
+still work. Unlike the structure boosts, it is checked live on every
+spawn, so toggling it needs no restart.
 
 ## Custom Piglin Barter
 

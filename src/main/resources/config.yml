@@ -341,6 +341,13 @@ settings:
       # Default: false
       overworld-structures:
         enabled: false
+      # When true, piglin brutes never spawn naturally, imitating
+      # 1.16.1 where they did not spawn. Spawner eggs, spawners,
+      # and commands still work. Checked live on each spawn, so
+      # no restart is needed.
+      # Default: true
+      disable-brutes:
+        enabled: true
       # Custom loot tables for things like piglin bartering.
       # Tables may be found in settings/loot-tables.
       # Loot tables are JSON files with the same format as vanilla Minecraft loot tables

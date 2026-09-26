@@ -382,6 +382,16 @@ public class MatchSettings extends OkaeriConfig {
         })
         private Toggle overworldStructures = new Toggle(false);
 
+        @CustomKey("disable-brutes")
+        @Comment({
+                "When true, piglin brutes never spawn naturally, imitating",
+                "1.16.1 where they did not spawn. Spawner eggs, spawners,",
+                "and commands still work. Checked live on each spawn, so",
+                "no restart is needed.",
+                "Default: true"
+        })
+        private Toggle disableBrutes = new Toggle(true);
+
         @CustomKey("custom-piglin-barter")
         @Comment({
                 "Custom loot tables for things like piglin bartering.",
@@ -402,6 +412,14 @@ public class MatchSettings extends OkaeriConfig {
 
         public void setNetherStructures(Toggle netherStructures) {
             this.netherStructures = netherStructures;
+        }
+
+        public Toggle getDisableBrutes() {
+            return disableBrutes;
+        }
+
+        public void setDisableBrutes(Toggle disableBrutes) {
+            this.disableBrutes = disableBrutes;
         }
 
         public Toggle getOverworldStructures() {

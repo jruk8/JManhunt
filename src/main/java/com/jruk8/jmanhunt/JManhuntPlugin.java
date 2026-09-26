@@ -65,6 +65,7 @@ import com.jruk8.jmanhunt.gui.GuiConfig;
 import com.jruk8.jmanhunt.gui.GuiConfigRegistrar;
 import com.jruk8.jmanhunt.gui.GuiListener;
 import com.jruk8.jmanhunt.gui.GuiService;
+import com.jruk8.jmanhunt.loot.BruteSpawnListener;
 import com.jruk8.jmanhunt.loot.PiglinBarterListener;
 import com.jruk8.jmanhunt.world.teleport.PortalRouter;
 import com.jruk8.jmanhunt.world.WorldEngineService;
@@ -332,6 +333,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         setupSpectatorToolbar();
         getServer().getPluginManager().registerEvents(respawn, this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
+        getServer().getPluginManager().registerEvents(new BruteSpawnListener(this), this);
         getServer().getPluginManager().registerEvents(new RolePadService(
                 this, lobbyService, playerStates, game, messages, sounds,
                 worldEngine::lobbyWorldName), this);

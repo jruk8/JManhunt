@@ -511,6 +511,7 @@ public final class SettingRegistry {
     private static void addGameBoostsEntries(List<SettingDescriptor> entries) {
         entries.add(restart(bool("settings.match.game-boosts.nether-structures.enabled", false)));
         entries.add(restart(bool("settings.match.game-boosts.overworld-structures.enabled", false)));
+        entries.add(bool("settings.match.game-boosts.disable-brutes.enabled", true));
         entries.add(bool("settings.match.game-boosts.custom-piglin-barter", true));
     }
 
