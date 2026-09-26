@@ -89,6 +89,9 @@ public final class PlayerCombatListener implements Listener {
         } else if (role == Role.HUNTER) {
             handleHunterDeath(player, instance, quiet);
         }
+        // Next tick: state is final, and compass items are safe to touch
+        // outside the death event. Unlocked picks re-resolve at once.
+        Bukkit.getScheduler().runTask(plugin, () -> compass.refreshInstance(instance));
     }
 
     private void handleSpeedrunnerDeath(Player player, GameInstance instance, boolean quiet) {
@@ -125,6 +128,7 @@ public final class PlayerCombatListener implements Listener {
         playerStates.setRole(player.getUniqueId(), Role.NONE);
         plugin.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());
+        compass.reconcileTeammateModes(instance);
         game.flagStore().removePlayer(matchId, player.getName());
         Bukkit.getScheduler().runTask(plugin, () -> {
             plugin.fakeSpectators().enable(player);
@@ -139,6 +143,7 @@ public final class PlayerCombatListener implements Listener {
         // Out of lives: eliminate permanently. Only an opposite-role
         // killer earns the final kill: same-role finishes never count.
         instance.deactivate(player.getUniqueId());
+        compass.reconcileTeammateModes(instance);
         game.flagStore().removePlayer(matchId, player.getName());
         Player finalKiller = player.getKiller();
         if (finalKiller != null && playerStates.role(finalKiller.getUniqueId()) == Role.HUNTER) {

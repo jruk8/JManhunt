@@ -320,7 +320,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(
                 this, playerStates, game, messages, configService, lobbyService,
-                worldEngine.teleportService(), worldEngine, disconnects, disconnectTasks), this);
+                worldEngine.teleportService(), worldEngine, disconnects, disconnectTasks,
+                compass), this);
         getServer().getPluginManager().registerEvents(new PlayerCombatListener(
                 this, playerStates, game, configService, compass, stats, lobbyService,
                 worldEngine, winConditionEngine, respawn, disconnects, disconnectTasks), this);

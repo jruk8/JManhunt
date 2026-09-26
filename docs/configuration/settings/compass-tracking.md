@@ -119,7 +119,9 @@ compass to refresh it. Left and right clicks share one cooldown under
 `settings.compass.click`: an accepted click of either kind blocks the
 other until `click-cooldown` time has elapsed. Clicks run apart from
 the automatic interval, so a fresh automatic refresh never blocks them;
-each click still restarts the automatic interval.
+each click still restarts the automatic interval. Deaths refresh
+immediately as well: when a target dies, every unlocked compass in
+the match re-resolves at once instead of waiting for the interval.
 
 ```yaml
 right-click:
@@ -176,8 +178,12 @@ teammates:
 
 The mode is per holder and clears when their match ends, like manual
 locks. Spectators cannot toggle, and respawning players are never
-targets either way. Set `enabled` to false to make shift-left-click
-lock exactly like a normal left-click.
+targets either way. Entering teammate mode needs at least one
+teammate: with nobody to track, the toggle is refused with a chat
+message. When the last teammate leaves the game, holders in
+teammate mode flip back to opponents automatically. Set `enabled`
+to false to make shift-left-click lock exactly like a normal
+left-click.
 
 ## Spinning
 

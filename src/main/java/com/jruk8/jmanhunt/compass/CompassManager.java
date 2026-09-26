@@ -118,6 +118,30 @@ public final class CompassManager {
         refreshCompassOutcome(holder);
     }
 
+    /** Flips emptied teammate modes in one match back to opponents. */
+    public void reconcileTeammateModes(GameInstance instance) {
+        locks.reconcileTeammateModes(instance);
+    }
+
+    /**
+     * Immediate compass refresh for one match's holders, bypassing the
+     * automatic interval: deaths must move needles at once, not on the
+     * next tick. Skips analysis routing on purpose: this re-resolves
+     * targets, it never starts a click tracking session.
+     */
+    public void refreshInstance(GameInstance instance) {
+        if (game == null) {
+            return;
+        }
+        long matchId = instance.matchId();
+        Bukkit.getOnlinePlayers().stream()
+                .filter(holder -> role(holder).isParticipant())
+                .filter(holder -> game.instanceOf(holder.getUniqueId())
+                        .map(match -> match.matchId() == matchId).orElse(false))
+                .filter(items::hasCompass)
+                .forEach(this::refreshCompass);
+    }
+
     /**
      * Refreshes the compass, reporting whether it now tracks a target.
      * NEARBY, TOO_FAR, bad signal, and no-target outcomes all report

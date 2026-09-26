@@ -134,6 +134,35 @@ final class CompassLockService {
     }
 
     /**
+     * Flips holders in the given match back to opponent tracking when
+     * their last teammate is gone, refreshing each flipped compass at
+     * once. Called after eliminations and leaves that can empty a team.
+     */
+    public void reconcileTeammateModes(GameInstance instance) {
+        if (game == null) {
+            return;
+        }
+        long matchId = instance.matchId();
+        for (Player holder : Bukkit.getOnlinePlayers()) {
+            if (!teammateMode(holder.getUniqueId())) {
+                continue;
+            }
+            Optional<GameInstance> match = game.instanceOf(holder.getUniqueId());
+            if (match.isEmpty() || match.get().matchId() != matchId) {
+                continue;
+            }
+            Role holderRole = playerStates.role(holder);
+            if (!holderRole.isParticipant()) {
+                continue;
+            }
+            if (targets.collectOpponents(holder, holderRole, match.get()).isEmpty()) {
+                clearTeammateMode(holder.getUniqueId());
+                refresher.accept(holder);
+            }
+        }
+    }
+
+    /**
      * Effective target role: the holder's own role in teammate mode,
      * else the enemy role.
      */
@@ -248,7 +277,8 @@ final class CompassLockService {
         if (game == null || !playerStates.role(player).isParticipant()) {
             return;
         }
-        if (game.instanceOf(player.getUniqueId()).isEmpty()) {
+        Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
+        if (match.isEmpty()) {
             clearMatchState(player.getUniqueId());
             return;
         }
@@ -256,6 +286,12 @@ final class CompassLockService {
         if (teammates.contains(holderId)) {
             teammates.remove(holderId);
         } else {
+            Role holderRole = playerStates.role(player);
+            if (targets.collectOpponents(player, holderRole, match.get()).isEmpty()) {
+                messages.message(player, "compass.no-teammates");
+                sounds.playAngrySound(player);
+                return;
+            }
             teammates.add(holderId);
         }
         locks.remove(holderId);

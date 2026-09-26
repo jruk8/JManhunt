@@ -262,6 +262,7 @@ compass:
   analyzing-actionbar: "<gray>Analyzing..."
   bad-signal-actionbar: "<gray>☹ Bad signal"
   bad-signal-reason-actionbar: "<gray>☹ Bad signal ({reason})"
+  no-teammates: "{prefix}<yellow>You have no teammates to track."
   signal-reason:
     light-level: "low light"
     underground: "underground"

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -201,6 +202,34 @@ class CompassLockServiceTest {
     }
 
     @Test
+    void shiftLeftRefusesWithoutTeammates() {
+        Fixture fixture = teammateFixture(List.of(), true, Role.HUNTER);
+
+        fixture.locks().handleShiftLeft(fixture.player());
+
+        assertFalse(fixture.locks().teammateMode(fixture.player().getUniqueId()));
+        assertEquals(Role.SPEEDRUNNER, fixture.locks().targetRole(fixture.player()));
+        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.no-teammates");
+        verify(fixture.sounds(), times(1)).playAngrySound(fixture.player());
+        verify(fixture.refresher(), never()).accept(any(Player.class));
+    }
+
+    @Test
+    void shiftLeftLeavesTeammateModeWithoutTeammates() {
+        Fixture fixture = teammateFixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)), true, Role.HUNTER);
+        fixture.locks().handleShiftLeft(fixture.player());
+        assertTrue(fixture.locks().teammateMode(fixture.player().getUniqueId()));
+        when(fixture.targets().collectOpponents(any(), any(), any())).thenReturn(List.of());
+
+        fixture.locks().handleShiftLeft(fixture.player());
+
+        assertFalse(fixture.locks().teammateMode(fixture.player().getUniqueId()));
+        assertEquals(Role.SPEEDRUNNER, fixture.locks().targetRole(fixture.player()));
+        verify(fixture.refresher(), times(2)).accept(fixture.player());
+    }
+
+    @Test
     void clearMatchStateDropsToggle() {
         Fixture fixture = teammateFixture(List.of(
                 new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)), true, Role.HUNTER);
@@ -214,7 +243,7 @@ class CompassLockServiceTest {
 
     private record Fixture(CompassLockService locks, Player player, Consumer<Player> refresher,
             GameManager game, SoundService sounds, CompassSignalService signal,
-            FakeSpectatorService fakes) {
+            FakeSpectatorService fakes, MessageService messages, CompassTargetService targets) {
     }
 
     @SuppressWarnings("unchecked")
@@ -246,13 +275,15 @@ class CompassLockServiceTest {
         when(targets.collectSightings(any(), any(), any())).thenReturn(List.of());
         Consumer<Player> refresher = mock(Consumer.class);
         SoundService sounds = mock(SoundService.class);
+        MessageService messages = mock(MessageService.class);
         CompassSignalService signal = mock(CompassSignalService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         CompassLockService locks = new CompassLockService(plugin, playerStates,
-                sounds, null, targets, signal,
+                sounds, messages, targets, signal,
                 new HashMap<>(), refresher, mock(Consumer.class), sharedClicks);
         locks.setGameManager(game);
-        return new Fixture(locks, player, refresher, game, sounds, signal, fakes);
+        return new Fixture(locks, player, refresher, game, sounds, signal, fakes,
+                messages, targets);
     }
 
     @SuppressWarnings("unchecked")
@@ -286,12 +317,14 @@ class CompassLockServiceTest {
         when(targets.collectSightings(any(), any(), any())).thenReturn(List.of());
         Consumer<Player> refresher = mock(Consumer.class);
         SoundService sounds = mock(SoundService.class);
+        MessageService messages = mock(MessageService.class);
         CompassSignalService signal = mock(CompassSignalService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         CompassLockService locks = new CompassLockService(plugin, playerStates,
-                sounds, null, targets, signal,
+                sounds, messages, targets, signal,
                 new HashMap<>(), refresher, mock(Consumer.class), sharedClicks);
         locks.setGameManager(game);
-        return new Fixture(locks, player, refresher, game, sounds, signal, fakes);
+        return new Fixture(locks, player, refresher, game, sounds, signal, fakes,
+                messages, targets);
     }
 }

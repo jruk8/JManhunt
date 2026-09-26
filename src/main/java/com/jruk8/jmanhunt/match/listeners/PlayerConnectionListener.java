@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match.listeners;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
@@ -37,11 +38,13 @@ public final class PlayerConnectionListener implements Listener {
     private final WorldEngineService worldEngine;
     private final SpeedrunnerDisconnectTracker disconnects;
     private final Map<UUID, BukkitTask> disconnectTasks;
+    private final CompassManager compass;
 
     public PlayerConnectionListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
             MessageService messages, ConfigService config, LobbyService lobbies,
             LobbyTeleporter lobbyTeleporter, WorldEngineService worldEngine,
-            SpeedrunnerDisconnectTracker disconnects, Map<UUID, BukkitTask> disconnectTasks) {
+            SpeedrunnerDisconnectTracker disconnects, Map<UUID, BukkitTask> disconnectTasks,
+            CompassManager compass) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.game = game;
@@ -52,6 +55,7 @@ public final class PlayerConnectionListener implements Listener {
         this.worldEngine = worldEngine;
         this.disconnects = disconnects;
         this.disconnectTasks = disconnectTasks;
+        this.compass = compass;
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
@@ -179,6 +183,7 @@ public final class PlayerConnectionListener implements Listener {
         }
         playerStates.setRole(playerId, Role.NONE);
         instance.deactivate(playerId);
+        compass.reconcileTeammateModes(instance);
         String playerName = Bukkit.getOfflinePlayer(playerId).getName();
         if (playerName != null) {
             game.flagStore().removePlayer(matchId, playerName);

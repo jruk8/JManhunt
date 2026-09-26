@@ -62,6 +62,9 @@ public class CompassMessages extends OkaeriConfig {
     @CustomKey("bad-signal-reason-actionbar")
     private String badSignalReasonActionbar = "<gray>☹ Bad signal ({reason})";
 
+    @CustomKey("no-teammates")
+    private String noTeammates = "{prefix}<yellow>You have no teammates to track.";
+
     @CustomKey("signal-reason")
     private Map<String, String> signalReason = new LinkedHashMap<>(Map.of(
             "light-level", "low light",

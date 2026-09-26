@@ -184,6 +184,7 @@ public final class MatchFinishService {
         }
         announceLeaves(instance, leftRoles, leftNames);
         if (removed > 0) {
+            compass.reconcileTeammateModes(instance);
             finishIfBucketEmpty(instance);
             cancelIfPreStartUnviable(instance);
         }
