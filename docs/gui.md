@@ -67,8 +67,10 @@ The modifiers and presets lists carry a create button at the
 top-right and an import loom at the bottom-right. Create prompts
 for a display name (you become the author) and opens the new entry
 in its editor; right-clicking any existing entry opens the same
-editor. Preset lore lists up to 8 members, then collapses to
-`..and N more`.
+editor. Preset lore shows the description first, then up to 8
+members, then collapses to `..and N more`. A preset with no members
+shows `No modifiers configured!` instead, and clicking it to enable
+plays the angry sound with a chat error rather than flipping state.
 
 Each editor is a quad. The modifier root holds Meta, Behavior,
 Export, and Delete Modifier; the preset root holds Meta, Modifiers,
@@ -76,6 +78,9 @@ Export, and Delete Preset. Meta edits name, description, icon, and
 author; right-clicking the name renames the id instead. Every field
 prompts or cycles in place, and blank answers clear optional
 fields. Setting the icon chats a confirmation naming the material.
+The preset Modifiers screen lists member modifiers first with a glow,
+then the rest on a fresh row; the Modifiers button count stays live
+after toggling.
 
 Behavior is a twin panel over Behavior Options and Command Lists.
 Behavior Options holds Runs On trigger checkboxes, Interval

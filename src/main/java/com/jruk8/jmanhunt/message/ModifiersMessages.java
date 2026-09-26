@@ -40,6 +40,9 @@ public class ModifiersMessages extends OkaeriConfig {
     private String setpresetSuccess = "{prefix}<green>Preset <white>{name}<green> is now <white>{state}<green> " +
             "(<white>{count}<green> modifiers).";
 
+    @CustomKey("preset-empty")
+    private String presetEmpty = "{prefix}<red>Preset <white>{name}<red> has no modifiers set to it.";
+
     @CustomKey("list-header")
     private String listHeader = "\n{prefix}\n<#de7766>Modifiers:";
 

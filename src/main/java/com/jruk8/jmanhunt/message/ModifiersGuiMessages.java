@@ -52,6 +52,9 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     @CustomKey("state-off")
     private String stateOff = "<red>Disabled";
 
+    @CustomKey("preset-empty-lore")
+    private String presetEmptyLore = "<red>No modifiers configured!";
+
     @CustomKey("import-modifier")
     private String importModifier = "Import Modifier";
 

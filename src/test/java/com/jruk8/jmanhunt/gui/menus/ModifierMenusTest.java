@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.jruk8.jmanhunt.command.ModifiersCommand;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.gui.GuiService;
@@ -16,6 +17,7 @@ import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
+import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
@@ -33,7 +35,11 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.ArgumentCaptor;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ModifierMenusTest {
@@ -61,8 +67,8 @@ class ModifierMenusTest {
         addModifier(config, "zebra", true, "Zulu", "Stripes", "COOKED_BEEF", "JManhunt");
         addModifier(config, "mike", false, "<red>Mike</red>", "", null, null);
         addModifier(config, "apple", false, "&aApple", "Fruit\nCrisp", "BOGUS_ITEM", " ");
-        addPreset(config, "pair", "Pair", "CHEST", "JManhunt", List.of("zebra", "apple"));
-        addPreset(config, "solo", "Solo", null, null, List.of("zebra"));
+        addPreset(config, "pair", "Pair", null, "CHEST", "JManhunt", List.of("zebra", "apple"));
+        addPreset(config, "solo", "Solo", null, null, null, List.of("zebra"));
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         messages = new MessageService();
@@ -86,10 +92,11 @@ class ModifierMenusTest {
     }
 
     private static void addPreset(ModifiersConfig config, String id, String name,
-            String item, String author, List<String> members) {
+            String description, String item, String author, List<String> members) {
         ModifierPreset preset = new ModifierPreset();
         ModifierMeta meta = new ModifierMeta();
         meta.setName(name);
+        meta.setDescription(description);
         meta.setItem(item);
         meta.setAuthor(author);
         preset.setMeta(meta);
@@ -210,7 +217,8 @@ class ModifierMenusTest {
         assertEquals(Material.STONE, solo.material());
         assertEquals(plain("Solo", NamedTextColor.WHITE), solo.name());
         assertTrue(solo.glow());
-        assertEquals(List.of(plain("» Zulu", NamedTextColor.GREEN), Component.text(" "),
+        assertEquals(List.of(plain("Enable for a twist!", NamedTextColor.GRAY), Component.text(" "),
+                plain("» Zulu", NamedTextColor.GREEN), Component.text(" "),
                 plain("Enabled", NamedTextColor.GREEN), Component.text(" "),
                 plain("Right-click to edit", NamedTextColor.GRAY)), solo.lore());
         assertNull(menu.buttonAt(3));
@@ -218,11 +226,12 @@ class ModifierMenusTest {
 
         MenuButton pair = menu.buttonAt(11);
         assertEquals(Material.CHEST, pair.material());
-        assertEquals(8, pair.lore().size());
-        assertEquals("» Zulu", textOf(pair.lore().get(0)));
-        assertEquals("» Apple", textOf(pair.lore().get(1)));
-        assertEquals(plain("Disabled", NamedTextColor.RED), pair.lore().get(3));
-        assertEquals(plain("by JManhunt", NamedTextColor.GRAY), pair.lore().get(5));
+        assertEquals(10, pair.lore().size());
+        assertEquals("Enable for a twist!", textOf(pair.lore().get(0)));
+        assertEquals("» Zulu", textOf(pair.lore().get(2)));
+        assertEquals("» Apple", textOf(pair.lore().get(3)));
+        assertEquals(plain("Disabled", NamedTextColor.RED), pair.lore().get(5));
+        assertEquals(plain("by JManhunt", NamedTextColor.GRAY), pair.lore().get(7));
 
         assertEquals("Modifiers", textOf(menu.parent().get().title()));
     }
@@ -260,14 +269,15 @@ class ModifierMenusTest {
         MenuButton button = bigMenus.presetsMenu().buttonAt(2);
 
         assertEquals(plain("Big", NamedTextColor.WHITE), button.name());
-        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 5, button.lore().size());
-        assertEquals("» M0", textOf(button.lore().get(0)));
-        assertEquals("» M7", textOf(button.lore().get(7)));
-        assertEquals("..and 2 more", textOf(button.lore().get(8)));
+        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 7, button.lore().size());
+        assertEquals(plain("Two up", NamedTextColor.GRAY), button.lore().get(0));
+        assertEquals("» M0", textOf(button.lore().get(2)));
+        assertEquals("» M7", textOf(button.lore().get(9)));
+        assertEquals("..and 2 more", textOf(button.lore().get(10)));
         assertEquals(fresh.nonItalic(fresh.parse("<gray>..and <gray>2</gray> more")),
-                button.lore().get(8));
-        assertEquals(Component.text(" "), button.lore().get(9));
-        assertEquals(plain("Enabled", NamedTextColor.GREEN), button.lore().get(10));
+                button.lore().get(10));
+        assertEquals(Component.text(" "), button.lore().get(11));
+        assertEquals(plain("Enabled", NamedTextColor.GREEN), button.lore().get(12));
     }
 
     @Test
@@ -276,10 +286,10 @@ class ModifierMenusTest {
 
         MenuButton button = bigMenus.presetsMenu().buttonAt(2);
 
-        assertEquals("..and 2 more", textOf(button.lore().get(8)));
+        assertEquals("..and 2 more", textOf(button.lore().get(10)));
         assertEquals(fresh.nonItalic(fresh.parse("<gray><red>..and <gray>2</gray> more")),
-                button.lore().get(8));
-        assertEquals(plain("Disabled", NamedTextColor.RED), button.lore().get(10));
+                button.lore().get(10));
+        assertEquals(plain("Disabled", NamedTextColor.RED), button.lore().get(12));
     }
 
     @Test
@@ -288,7 +298,7 @@ class ModifierMenusTest {
 
         MenuButton button = bigMenus.presetsMenu().buttonAt(2);
 
-        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 4, button.lore().size());
+        assertEquals(ModifierMenus.MAX_PRESET_LORE_LINES + 6, button.lore().size());
         for (Component line : button.lore()) {
             assertFalse(textOf(line).contains("..and"));
         }
@@ -300,10 +310,40 @@ class ModifierMenusTest {
 
         MenuButton button = bigMenus.presetsMenu().buttonAt(2);
 
-        assertEquals(plain("Disabled", NamedTextColor.RED), button.lore().get(0));
+        assertEquals(plain("Big", NamedTextColor.WHITE), button.name());
+        assertEquals(List.of(plain("No modifiers configured!", NamedTextColor.RED),
+                Component.text(" "),
+                plain("Disabled", NamedTextColor.RED), Component.text(" "),
+                plain("Right-click to edit", NamedTextColor.GRAY)), button.lore());
         for (Component line : button.lore()) {
             assertFalse(textOf(line).contains("..and"));
         }
+    }
+
+    @Test
+    void toggleEmptyPresetRefusesWithAngrySoundAndNoStateChange() {
+        ModifiersConfig config = new ModifiersConfig();
+        addPreset(config, "big", "Big", null, null, null, List.of());
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ModifierStore emptyStore = new ModifierStore(config, log);
+        SoundService sounds = mock(SoundService.class);
+        ModifiersCommand toggles = mock(ModifiersCommand.class);
+        Player player = mock(Player.class);
+        when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+        ModifierMenus live = new ModifierMenus(emptyStore, messages, sounds, null,
+                toggles, null, null, null, null, null);
+
+        live.presetsMenu().buttonAt(2).action().accept(player);
+
+        verify(sounds).playAngrySound(player);
+        verify(sounds, never()).playNeutralSound(player);
+        verify(toggles, never()).execute(any(), any());
+        ArgumentCaptor<Component> chat = ArgumentCaptor.forClass(Component.class);
+        verify(player).sendMessage(chat.capture());
+        assertEquals("[JManhunt] Preset Big has no modifiers set to it.",
+                textOf(chat.getValue()));
+        assertTrue(emptyStore.presetMembers("big").isEmpty());
     }
 
     @Test
@@ -349,7 +389,7 @@ class ModifierMenusTest {
             members.add(id);
             addModifier(config, id, index >= disabled, "M" + index, "", null, null);
         }
-        addPreset(config, "big", "Big", null, null, members);
+        addPreset(config, "big", "Big", "Two up", null, null, members);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         MessageService fresh = new MessageService();

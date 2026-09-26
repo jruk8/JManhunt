@@ -187,7 +187,7 @@ public final class PresetEditorMenus {
                                         return;
                                     }
                                     gui.navigate(player,
-                                            membersMenu(id, () -> self[0]));
+                                            membersMenu(id, () -> editor(id, parent)));
                                 }),
                         EditorButtons.actionButton(messages, Material.LOOM,
                                 text("editor-export", "Export"),
@@ -222,7 +222,7 @@ public final class PresetEditorMenus {
         final Menu[] self = new Menu[1];
         self[0] = new Menu(GuiTexts.title(messages, text("modifiers-title", "Modifiers")),
                 layout, () -> membersStatic(self),
-                () -> memberButtons(id), parent);
+                () -> memberButtons(id, layout.contentColumns()), parent);
         return self[0];
     }
 
@@ -237,22 +237,33 @@ public final class PresetEditorMenus {
         return fixed;
     }
 
-    private List<MenuButton> memberButtons(String id) {
+    private List<MenuButton> memberButtons(String id, int columns) {
         Set<String> members = new HashSet<>(store.presetMembers(id));
         Map<String, Integer> order = MenuOrder.fileOrder(store.modifierNames());
         List<String> ids = new ArrayList<>(store.modifierNames());
         ids.sort(MenuOrder.modifiers(store::metaName, members::contains, order::get));
+        int enabled = 0;
+        while (enabled < ids.size() && members.contains(ids.get(enabled))) {
+            enabled++;
+        }
         List<MenuButton> buttons = new ArrayList<>();
-        for (String member : ids) {
-            boolean on = members.contains(member);
-            buttons.add(EditorButtons.actionButton(messages, store.metaItem(member),
-                    store.metaName(member),
-                    List.of(on ? text("state-on", "Enabled") : text("state-off", "Disabled"),
-                            text("editor-click-toggle", "Click to toggle")),
-                    on,
-                    player -> toggleMember(player, id, member, on)).silent());
+        for (int index = 0; index < enabled; index++) {
+            buttons.add(memberButton(id, ids.get(index), true));
+        }
+        MenuOrder.padGroup(buttons, enabled, columns);
+        for (int index = enabled; index < ids.size(); index++) {
+            buttons.add(memberButton(id, ids.get(index), false));
         }
         return buttons;
+    }
+
+    private MenuButton memberButton(String id, String member, boolean on) {
+        return EditorButtons.actionButton(messages, store.metaItem(member),
+                store.metaName(member),
+                List.of(on ? text("state-on", "Enabled") : text("state-off", "Disabled"),
+                        text("editor-click-toggle", "Click to toggle")),
+                on,
+                player -> toggleMember(player, id, member, on)).silent();
     }
 
     private void toggleMember(Player player, String id, String member, boolean on) {

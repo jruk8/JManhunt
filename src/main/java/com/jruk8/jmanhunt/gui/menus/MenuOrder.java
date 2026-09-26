@@ -1,8 +1,10 @@
 package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.gui.GuiTexts;
+import com.jruk8.jmanhunt.gui.MenuButton;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -42,6 +44,17 @@ public final class MenuOrder {
             order.put(id, index++);
         }
         return order;
+    }
+
+    /**
+     * Pads the leading group with nulls so the next group starts on a
+     * fresh content row. Nulls render as empty slots.
+     */
+    public static void padGroup(List<MenuButton> buttons, int groupSize, int columns) {
+        int pad = (columns - groupSize % columns) % columns;
+        for (int index = 0; index < pad; index++) {
+            buttons.add(null);
+        }
     }
 
     private static Comparator<String> byState(Function<String, String> displayName,

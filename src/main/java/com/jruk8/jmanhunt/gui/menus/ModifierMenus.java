@@ -321,7 +321,7 @@ public final class ModifierMenus {
         for (int index = 0; index < enabled; index++) {
             buttons.add(modifierButton(ids.get(index), true, lobby, listParent));
         }
-        padGroup(buttons, enabled, columns);
+        MenuOrder.padGroup(buttons, enabled, columns);
         for (int index = enabled; index < ids.size(); index++) {
             buttons.add(modifierButton(ids.get(index), false, lobby, listParent));
         }
@@ -359,17 +359,6 @@ public final class ModifierMenus {
             feedback.overrideModifierCleared(player, lobby, id);
         } else {
             messages.message(player, "manhunt-gui.override-no-override");
-        }
-    }
-
-    /**
-     * Pads the leading group with nulls so the next group starts on a
-     * fresh content row. Nulls render as empty slots.
-     */
-    private static void padGroup(List<MenuButton> buttons, int groupSize, int columns) {
-        int pad = (columns - groupSize % columns) % columns;
-        for (int index = 0; index < pad; index++) {
-            buttons.add(null);
         }
     }
 
@@ -412,7 +401,7 @@ public final class ModifierMenus {
         for (int index = 0; index < allOn; index++) {
             buttons.add(presetButton(ids.get(index), true, lobby, listParent));
         }
-        padGroup(buttons, allOn, columns);
+        MenuOrder.padGroup(buttons, allOn, columns);
         for (int index = allOn; index < ids.size(); index++) {
             buttons.add(presetButton(ids.get(index), false, lobby, listParent));
         }
@@ -460,8 +449,15 @@ public final class ModifierMenus {
     }
 
     private List<Component> presetLore(String id, boolean allOn, Integer lobby) {
-        List<Component> lore = new ArrayList<>();
         List<String> members = store.presetMembers(id);
+        if (members.isEmpty()) {
+            return emptyPresetLore(id, lobby);
+        }
+        List<Component> lore = new ArrayList<>(
+                GuiTexts.lore(messages, store.presetDescription(id)));
+        if (!lore.isEmpty()) {
+            lore.add(Component.text(" "));
+        }
         int shown = Math.min(members.size(), MAX_PRESET_LORE_LINES);
         for (int index = 0; index < shown; index++) {
             String member = members.get(index);
@@ -473,9 +469,7 @@ public final class ModifierMenus {
             lore.addAll(GuiTexts.lore(messages, wrapper + "..and <gray>"
                     + (members.size() - shown) + "</gray> more"));
         }
-        if (!lore.isEmpty()) {
-            lore.add(Component.text(" "));
-        }
+        lore.add(Component.text(" "));
         lore.addAll(GuiTexts.lore(messages, text(stateKey(allOn), allOn ? "Enabled" : "Disabled")));
         String author = store.presetAuthor(id);
         if (author != null) {
@@ -485,14 +479,33 @@ public final class ModifierMenus {
         lore.add(Component.text(" "));
         lore.addAll(GuiTexts.lore(messages, text("edit-hint", "Right-click to edit")));
         if (lobby != null) {
-            lore.addAll(GuiTexts.lore(messages, messages.string(
-                    "manhunt-gui.override-shift-clear",
-                    "Shift-left-click to remove the override")));
-            if (hasPresetOverride(lobby, id)) {
-                lore.addAll(GuiTexts.lore(messages, overridesLine(lobby)));
-            }
+            appendOverrideLore(lore, lobby, id);
         }
         return lore;
+    }
+
+    /** Memberless preset lore: the error line, state, then the usual hints. */
+    private List<Component> emptyPresetLore(String id, Integer lobby) {
+        List<Component> lore = new ArrayList<>();
+        lore.addAll(GuiTexts.lore(messages,
+                text("preset-empty-lore", "<red>No modifiers configured!")));
+        lore.add(Component.text(" "));
+        lore.addAll(GuiTexts.lore(messages, text(stateKey(false), "Disabled")));
+        lore.add(Component.text(" "));
+        lore.addAll(GuiTexts.lore(messages, text("edit-hint", "Right-click to edit")));
+        if (lobby != null) {
+            appendOverrideLore(lore, lobby, id);
+        }
+        return lore;
+    }
+
+    private void appendOverrideLore(List<Component> lore, int lobby, String id) {
+        lore.addAll(GuiTexts.lore(messages, messages.string(
+                "manhunt-gui.override-shift-clear",
+                "Shift-left-click to remove the override")));
+        if (hasPresetOverride(lobby, id)) {
+            lore.addAll(GuiTexts.lore(messages, overridesLine(lobby)));
+        }
     }
 
     private String overridesLine(int lobby) {
@@ -526,14 +539,21 @@ public final class ModifierMenus {
                 return;
             }
             Integer lobby = lobbyOf(player);
+            List<String> members = store.presetMembers(id);
+            boolean next = lobby == null
+                    ? !store.presetEnabled(id)
+                    : !overrides.presetEnabled(lobby, id);
+            if (members.isEmpty() && next) {
+                messages.message(player, "modifiers.preset-empty",
+                        Map.of("name", store.presetName(id)));
+                sounds.playAngrySound(player);
+                return;
+            }
             if (lobby == null) {
-                boolean next = !store.presetEnabled(id);
                 toggles.execute(player, new String[]{"setpreset", id, String.valueOf(next)});
                 sounds.playNeutralSound(player);
                 return;
             }
-            boolean next = !overrides.presetEnabled(lobby, id);
-            List<String> members = store.presetMembers(id);
             for (String member : members) {
                 overrides.setModifierOverride(lobby, member, next);
             }

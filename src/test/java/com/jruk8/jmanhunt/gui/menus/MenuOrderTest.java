@@ -1,12 +1,15 @@
 package com.jruk8.jmanhunt.gui.menus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
+import com.jruk8.jmanhunt.gui.MenuButton;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.mock;
 
 class MenuOrderTest {
 
@@ -37,6 +40,32 @@ class MenuOrderTest {
         ids.sort(MenuOrder.modifiers(names::get, id -> false, fileOrder::get));
 
         assertEquals(List.of("mike", "apple", "zebra"), ids);
+    }
+
+    @Test
+    void padGroupCompletesPartialRowWithNulls() {
+        List<MenuButton> buttons = new ArrayList<>(List.of(mock(MenuButton.class)));
+
+        MenuOrder.padGroup(buttons, 1, 6);
+
+        assertEquals(6, buttons.size());
+        for (int index = 1; index < 6; index++) {
+            assertNull(buttons.get(index));
+        }
+    }
+
+    @Test
+    void padGroupAddsNothingForEmptyOrFullGroups() {
+        List<MenuButton> empty = new ArrayList<>();
+        MenuOrder.padGroup(empty, 0, 6);
+        assertEquals(0, empty.size());
+
+        List<MenuButton> full = new ArrayList<>();
+        for (int index = 0; index < 6; index++) {
+            full.add(mock(MenuButton.class));
+        }
+        MenuOrder.padGroup(full, 6, 6);
+        assertEquals(6, full.size());
     }
 
     @Test

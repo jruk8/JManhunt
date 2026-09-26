@@ -540,3 +540,13 @@ an export button that copies its own share string.
 3. Save a line with an unknown tag and confirm it saves with a warning.
 4. Export a modifier, import the string back, and confirm the copy works.
 5. Hover a preset with 9 members and confirm the `..and 1 more` line.
+
+# Preset Menu QA
+
+1. Hover a preset and confirm the description sits above the members.
+2. Toggle a member off in Edit Preset, go back, and confirm the
+   Modifiers button shows the fresh count.
+3. Click an empty preset and confirm the angry sound, the chat
+   error, and the `No modifiers configured!` lore.
+4. In Edit Preset Modifiers, confirm members list first with a glow
+   and the rest start on a fresh row.
