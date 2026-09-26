@@ -143,6 +143,10 @@ public class ModifiersMessages extends OkaeriConfig {
     private String editCommandSet = "{prefix}<green>{ordinal} command for {list} set to "
             + "<white>{command}</white>";
 
+    @CustomKey("edit-command-unchanged")
+    private String editCommandUnchanged =
+            "{prefix}<yellow>Nothing changed: that line already says that.";
+
     @CustomKey("edit-icon-set")
     private String editIconSet = "{prefix}<green>Icon set to <white>{material}<green>.";
 }

@@ -72,6 +72,19 @@ public final class GuiTexts {
         return lore;
     }
 
+    /**
+     * Truncates text to at most max characters, replacing the
+     * remainder with "...". Null reads as empty. The suffix counts
+     * toward max, so tiny limits yield a clipped "...".
+     */
+    public static String truncate(String value, int max) {
+        String text = value == null ? "" : value;
+        if (text.length() <= max) {
+            return text;
+        }
+        return text.substring(0, Math.max(0, max - 3)) + "...";
+    }
+
     /** Case-insensitive sort key with all tags stripped. */
     public static String sortKey(String raw) {
         if (raw == null) {

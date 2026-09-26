@@ -148,14 +148,6 @@ public final class ManhuntMenus {
                 null);
     }
 
-    /** Truncates long list values for lore lines. */
-    static String truncateValue(String value, int max) {
-        if (value.length() <= max) {
-            return value;
-        }
-        return value.substring(0, Math.max(0, max - 3)) + "...";
-    }
-
     private Menu sectionMenu(Player viewer, String path, Component title,
             Supplier<Menu> parent) {
         String effective = collapseSingles(path);
@@ -375,7 +367,7 @@ public final class ManhuntMenus {
         String name = text("list-entry-name", "#{index}").replace("{index}",
                 String.valueOf(index));
         List<String> lore = List.of(
-                MiniMessage.miniMessage().escapeTags(truncateValue(value, 60)),
+                MiniMessage.miniMessage().escapeTags(GuiTexts.truncate(value, 60)),
                 text("list-hint-edit", "Click to edit"),
                 text("list-hint-delete", "Right-click to delete"));
         return new MenuButton(Material.PAPER, GuiTexts.name(messages, name, name),
@@ -391,7 +383,7 @@ public final class ManhuntMenus {
                 GuiTexts.title(messages, deleteTitle(index)),
                 Material.PAPER, null,
                 GuiTexts.lore(messages, List.of(MiniMessage.miniMessage()
-                        .escapeTags(truncateValue(value, 60)))),
+                        .escapeTags(GuiTexts.truncate(value, 60)))),
                 GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
                 back -> gui.navigate(back, caller.get()),
                 GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),

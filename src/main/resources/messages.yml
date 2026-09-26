@@ -365,6 +365,7 @@ modifiers:
   edit-renamed: "{prefix}<green>Renamed to <white>{name}<green>."
   edit-deleted: "{prefix}<green>Deleted <white>{name}<green>."
   edit-command-set: "{prefix}<green>{ordinal} command for {list} set to <white>{command}</white>"
+  edit-command-unchanged: "{prefix}<yellow>Nothing changed: that line already says that."
   edit-icon-set: "{prefix}<green>Icon set to <white>{material}<green>."
 
 # Modifiers GUI text. Names render white, lore gray; user tags override.

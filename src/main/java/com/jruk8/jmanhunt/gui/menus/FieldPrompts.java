@@ -7,6 +7,7 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import org.bukkit.entity.Player;
 
 /**
@@ -28,6 +29,7 @@ public final class FieldPrompts {
     }
 
     /**
+     * @param reopen rebuilds the calling menu for submit and cancel
      * @param title dialog title, pre-rendered by the caller
      * @param current live value, prefilled; null shows as unset
      * @param clearable blank input clears the field instead of submitting
@@ -35,7 +37,7 @@ public final class FieldPrompts {
      */
     public static void prompt(SettingDialogs dialogs, GuiService gui,
             MessageService messages, SoundService sounds,
-            Player player, Menu self, String title, String current,
+            Player player, Supplier<Menu> reopen, String title, String current,
             boolean clearable, Submit submit) {
         String shown = current == null
                 ? messages.string("modifiers-gui.editor-unset", "Not set") : current;
@@ -54,8 +56,8 @@ public final class FieldPrompts {
                     } else {
                         sounds.playNeutralSound(player);
                     }
-                    gui.navigate(player, self);
+                    gui.navigate(player, reopen.get());
                 },
-                () -> gui.navigate(player, self));
+                () -> gui.navigate(player, reopen.get()));
     }
 }

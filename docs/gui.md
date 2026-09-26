@@ -80,9 +80,13 @@ plays the angry sound with a chat error rather than flipping state.
 Each editor is a quad. The modifier root holds Meta, Behavior,
 Export, and Delete Modifier; the preset root holds Meta, Modifiers,
 Export, and Delete Preset. Meta edits name, description, icon, and
-author; right-clicking the name renames the id instead. Every field
-prompts or cycles in place, and blank answers clear optional
-fields. Setting the icon chats a confirmation naming the material.
+author; right-clicking the name renames the id instead. The name
+lore prints the internal id under the Current line, and every edit
+refreshes the Current lore at once. Every field prompts or cycles
+in place, and blank answers clear optional fields. Setting the
+icon chats a confirmation naming the material. Cancel on a delete
+confirm returns to the editor; only confirming the delete returns
+to the list.
 The Author button wears the author's player head when the author is
 `JManhunt`, and the default head otherwise.
 The preset Modifiers screen lists member modifiers first with a glow,
@@ -102,7 +106,9 @@ Command Lists shows the six lists (player, speedrunner, hunter,
 console, and the two cleanups) with live line counts; non-empty
 lists glow. Each list menu shows one paper per line with a
 trailing stick to append: click a line to edit, right-click to
-delete after a confirm. Add and edit dialogs list every available
+delete after a confirm. Paper names clamp to 32 characters, and
+re-saving a line unchanged chats a notice instead of rewriting
+it. Add and edit dialogs list every available
 tag with a short note. Saving validates the line: unbalanced
 brackets, empty commands, malformed random args, unknown root
 commands, and unknown `give` items are refused with a chat error,

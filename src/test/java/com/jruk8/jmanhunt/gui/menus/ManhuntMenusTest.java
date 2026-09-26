@@ -286,13 +286,6 @@ class ManhuntMenusTest {
         assertNull(panel.parent());
     }
 
-    @Test
-    void truncateValueKeepsShortTextAndClipsLongText() {
-        assertEquals("abc", ManhuntMenus.truncateValue("abc", 60));
-        assertEquals(60, ManhuntMenus.truncateValue("x".repeat(100), 60).length());
-        assertEquals("...", ManhuntMenus.truncateValue("x".repeat(100), 3));
-    }
-
     private static MenuButton findButton(Menu menu, String name) {
         for (int slot = 0; slot < menu.layout().size(); slot++) {
             MenuButton button = menu.buttonAt(slot);

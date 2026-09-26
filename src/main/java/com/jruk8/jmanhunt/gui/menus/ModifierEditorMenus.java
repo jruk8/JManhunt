@@ -124,14 +124,14 @@ public final class ModifierEditorMenus {
                                 List.of(text("editor-export-lore", "Copy a share string"),
                                         text("editor-click-copy", "Click to copy")),
                                 player -> commands.exportEntry(player, "modifier", id)).silent(),
-                        deleteButton(id, parent)),
+                        deleteButton(id, parent, () -> self[0])),
                 gui,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 parent);
         return self[0];
     }
 
-    private MenuButton deleteButton(String id, Supplier<Menu> parent) {
+    private MenuButton deleteButton(String id, Supplier<Menu> parent, Supplier<Menu> editor) {
         return EditorButtons.actionButton(messages, Material.TNT,
                 text("editor-delete-modifier", "Delete Modifier"),
                 List.of(text("editor-delete-lore",
@@ -141,7 +141,7 @@ public final class ModifierEditorMenus {
                     if (denied(player)) {
                         return;
                     }
-                    deleteConfirm(player, id, parent);
+                    deleteConfirm(player, id, parent, editor);
                 });
     }
 
@@ -259,7 +259,7 @@ public final class ModifierEditorMenus {
         }
     }
 
-    private void deleteConfirm(Player player, String id, Supplier<Menu> parent) {
+    private void deleteConfirm(Player player, String id, Supplier<Menu> parent, Supplier<Menu> editor) {
         String name = store.metaName(id);
         Menu confirm = ConfirmMenu.create(
                 GuiTexts.title(messages,
@@ -268,7 +268,7 @@ public final class ModifierEditorMenus {
                 GuiTexts.lore(messages, text("editor-delete-confirm",
                         "This cannot be undone.")),
                 GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
-                back -> gui.navigate(back, parent.get()),
+                back -> gui.navigate(back, editor.get()),
                 GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
                 done -> {
                     store.removeModifier(id);

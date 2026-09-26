@@ -135,7 +135,7 @@ public final class ModifierDetailMenus {
         for (int index = 0; index < lines.size(); index++) {
             int lineIndex = index;
             buttons.add(new MenuButton(Material.PAPER,
-                    GuiTexts.name(messages, lines.get(index), "(blank)"),
+                    GuiTexts.name(messages, GuiTexts.truncate(lines.get(index), 32), "(blank)"),
                     GuiTexts.lore(messages, List.of(
                             text("editor-click-edit", "Click to edit"),
                             text("lines-delete-hint", "Right-click to delete"))),
@@ -187,6 +187,12 @@ public final class ModifierDetailMenus {
                         gui.navigate(player, self);
                         return;
                     }
+                    if (index >= 0 && unchanged(id, list, index, raw)) {
+                        messages.message(player, "modifiers.edit-command-unchanged");
+                        sounds.playNeutralSound(player);
+                        gui.navigate(player, self);
+                        return;
+                    }
                     patch(id, entry -> {
                         List<String> lines = ModifierStore.ensureCommands(
                                 ModifierStore.ensureBehavior(entry))
@@ -214,6 +220,12 @@ public final class ModifierDetailMenus {
 
     private boolean validateCommands() {
         return commandValidation == null || commandValidation.getAsBoolean();
+    }
+
+    /** True when the edit resubmits the live line unchanged. */
+    private boolean unchanged(String id, String list, int index, String raw) {
+        List<String> before = store.commandList(id, list);
+        return index < before.size() && raw.equals(before.get(index));
     }
 
     /** Feedback params with the command escaped so tags print literally. */

@@ -108,7 +108,7 @@ public final class BehaviorOptionsMenus {
                 }));
         buttons.add(leafRow(id, self, "delay", null, delayText(id),
                 null, null, ModifiedGlow.behaviorDelay(store, id),
-                player -> fieldPrompt(player, self.get(), "Delay", delayRaw(id), true,
+                player -> fieldPrompt(player, self, "Delay", delayRaw(id), true,
                         raw -> submitDelay(id, raw)),
                 () -> delayPatch(id, null)));
         buttons.add(EditorButtons.actionButton(messages, Material.HOPPER,
@@ -159,12 +159,12 @@ public final class BehaviorOptionsMenus {
         List<MenuButton> buttons = new ArrayList<>();
         buttons.add(leafRow(id, self, "interval", null, intervalText(id),
                 null, null, ModifiedGlow.behaviorInterval(store, id),
-                player -> fieldPrompt(player, self.get(), "Interval", intervalRaw(id), true,
+                player -> fieldPrompt(player, self, "Interval", intervalRaw(id), true,
                         raw -> submitInterval(id, raw)),
                 () -> intervalPatch(id, null, deviationOf(id))));
         buttons.add(leafRow(id, self, "deviation", null, deviationText(id),
                 null, null, ModifiedGlow.behaviorDeviation(store, id),
-                player -> fieldPrompt(player, self.get(), "Deviation", deviationRaw(id), true,
+                player -> fieldPrompt(player, self, "Deviation", deviationRaw(id), true,
                         raw -> submitDeviation(id, raw)),
                 () -> intervalPatch(id, intervalOf(id), null)));
         buttons.add(choiceRow(id, self, "interval-scope",
@@ -210,7 +210,7 @@ public final class BehaviorOptionsMenus {
                 () -> selectionPatch(id, null)));
         buttons.add(leafRow(id, self, "pick-count", null, pickCountText(id),
                 null, null, ModifiedGlow.behaviorPickCount(store, id),
-                player -> fieldPrompt(player, self.get(), "Pick count", pickCountRaw(id), true,
+                player -> fieldPrompt(player, self, "Pick count", pickCountRaw(id), true,
                         raw -> submitPickCount(id, raw)),
                 () -> pickCountPatch(id, null)));
         buttons.add(choiceRow(id, self, "pick-scope",
@@ -255,7 +255,7 @@ public final class BehaviorOptionsMenus {
         List<MenuButton> buttons = new ArrayList<>();
         buttons.add(leafRow(id, self, "chance", null, chanceText(id),
                 null, null, ModifiedGlow.behaviorChance(store, id),
-                player -> fieldPrompt(player, self.get(), "Chance", chanceRaw(id), true,
+                player -> fieldPrompt(player, self, "Chance", chanceRaw(id), true,
                         raw -> submitChance(id, raw)),
                 () -> chancePatch(id, null)));
         buttons.add(choiceRow(id, self, "chance-scope",
@@ -447,9 +447,9 @@ public final class BehaviorOptionsMenus {
         sounds.playNeutralSound(player);
     }
 
-    private void fieldPrompt(Player player, Menu self, String label, String current,
+    private void fieldPrompt(Player player, Supplier<Menu> reopen, String label, String current,
             boolean clearable, FieldPrompts.Submit submit) {
-        FieldPrompts.prompt(dialogs, gui, messages, sounds, player, self,
+        FieldPrompts.prompt(dialogs, gui, messages, sounds, player, reopen,
                 text("editor-prompt-title", "Edit {label}").replace("{label}", label),
                 current, clearable, submit);
     }

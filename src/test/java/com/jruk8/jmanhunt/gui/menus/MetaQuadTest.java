@@ -36,6 +36,11 @@ class MetaQuadTest {
         return messages.nonItalic(messages.parse("<gray>Current: <white>" + value));
     }
 
+    /** Expected id line: gray prefix with a white id. */
+    private Component idLine(String value) {
+        return messages.nonItalic(messages.parse("<gray>Id: <white>" + value));
+    }
+
     private static String textOf(Component component) {
         return PlainTextComponentSerializer.plainText().serialize(component);
     }
@@ -117,7 +122,7 @@ class MetaQuadTest {
 
         MenuButton name = menu.buttonAt(10);
         assertEquals(Material.NAME_TAG, name.material());
-        assertEquals(List.of(currentLine("Pack"),
+        assertEquals(List.of(currentLine("Pack"), idLine("pack"),
                 plain("Click to edit", NamedTextColor.GRAY),
                 plain("Right-click to rename id", NamedTextColor.GRAY)), name.lore());
         assertNotNull(name.action());

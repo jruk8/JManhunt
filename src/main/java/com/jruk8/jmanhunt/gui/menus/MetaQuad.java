@@ -51,11 +51,11 @@ public final class MetaQuad {
         self[0] = QuadPanel.menu(
                 GuiTexts.title(messages, text("meta-title", "Meta")),
                 List.of(
-                        nameButton(target, self, reopenRoot),
+                        nameButton(target, parent, reopenRoot),
                         EditorButtons.valueButton(messages, Material.BOOK,
                                 "Description", orUnset(target.description()),
                                 text("editor-click-edit", "Click to edit"),
-                                player -> fieldPrompt(player, self[0], "Description",
+                                player -> fieldPrompt(player, reopen(target, parent, reopenRoot), "Description",
                                         target.description(), true, raw -> {
                                             target.patchDescription(raw);
                                             return null;
@@ -63,7 +63,7 @@ public final class MetaQuad {
                         EditorButtons.valueButton(messages, target.item(),
                                 "Icon", target.item().name(),
                                 text("editor-click-edit", "Click to edit"),
-                                player -> fieldPrompt(player, self[0], "Icon",
+                                player -> fieldPrompt(player, reopen(target, parent, reopenRoot), "Icon",
                                         target.item().name(), false, raw -> {
                                             ModifierFieldEdits.Parsed<Material> item =
                                                     ModifierFieldEdits.item(raw);
@@ -78,7 +78,7 @@ public final class MetaQuad {
                         EditorButtons.valueButton(messages, Material.PLAYER_HEAD,
                                 "Author", orUnset(target.author()),
                                 text("editor-click-edit", "Click to edit"),
-                                player -> fieldPrompt(player, self[0], "Author",
+                                player -> fieldPrompt(player, reopen(target, parent, reopenRoot), "Author",
                                         target.author() == null ? "" : target.author(),
                                         true, raw -> {
                                             target.patchAuthor(raw);
@@ -91,16 +91,19 @@ public final class MetaQuad {
         return self[0];
     }
 
-    private MenuButton nameButton(MetaTarget target, Menu[] self,
+    private MenuButton nameButton(MetaTarget target, Supplier<Menu> parent,
             Function<String, Menu> reopenRoot) {
         return new MenuButton(Material.NAME_TAG,
                 GuiTexts.name(messages, "Name", "Name"),
                 GuiTexts.lore(messages, List.of(
                         EditorButtons.currentLine(messages, target.name()),
+                        messages.string("modifiers-gui.editor-id", "Id: <white>{id}")
+                                .replace("{id}", target.id()),
                         text("editor-click-edit", "Click to edit"),
                         text("editor-rename-hint", "Right-click to rename id"))),
                 false, false,
-                player -> fieldPrompt(player, self[0], "Name", target.name(), false,
+                player -> fieldPrompt(player, reopen(target, parent, reopenRoot),
+                        "Name", target.name(), false,
                         raw -> {
                             ModifierFieldEdits.Parsed<String> name =
                                     ModifierFieldEdits.name(raw);
@@ -110,17 +113,24 @@ public final class MetaQuad {
                             target.patchName(name.value());
                             return null;
                         }),
-                player -> renamePrompt(player, self[0], target, reopenRoot)).silent();
+                player -> renamePrompt(player, reopen(target, parent, reopenRoot),
+                        target, reopenRoot)).silent();
     }
 
-    private void fieldPrompt(Player player, Menu self, String label, String current,
+    /** Rebuild supplier so prompt callbacks reopen a fresh quad. */
+    private Supplier<Menu> reopen(MetaTarget target, Supplier<Menu> parent,
+            Function<String, Menu> reopenRoot) {
+        return () -> menu(target, parent, reopenRoot);
+    }
+
+    private void fieldPrompt(Player player, Supplier<Menu> reopen, String label, String current,
             boolean clearable, FieldPrompts.Submit submit) {
-        FieldPrompts.prompt(dialogs, gui, messages, sounds, player, self,
+        FieldPrompts.prompt(dialogs, gui, messages, sounds, player, reopen,
                 text("editor-prompt-title", "Edit {label}").replace("{label}", label),
                 current, clearable, submit);
     }
 
-    private void renamePrompt(Player player, Menu self, MetaTarget target,
+    private void renamePrompt(Player player, Supplier<Menu> reopen, MetaTarget target,
             Function<String, Menu> reopenRoot) {
         if (denied(player)) {
             return;
@@ -132,7 +142,7 @@ public final class MetaQuad {
                             ModifierFieldEdits.id(raw, target.takenIds());
                     if (!parsed.ok()) {
                         invalid(player, parsed.error());
-                        gui.navigate(player, self);
+                        gui.navigate(player, reopen.get());
                         return;
                     }
                     target.rename(parsed.value());
@@ -141,7 +151,7 @@ public final class MetaQuad {
                     sounds.playNeutralSound(player);
                     gui.navigate(player, reopenRoot.apply(parsed.value()));
                 },
-                () -> gui.navigate(player, self));
+                () -> gui.navigate(player, reopen.get()));
     }
 
     private String orUnset(String value) {
