@@ -70,6 +70,7 @@ nav:
           - Cells & Spawns: configuration/world-engine/cells-spawns.md
           - Pre-generating Cells: configuration/world-engine/pregenerating-cells.md
           - Borders: configuration/world-engine/borders.md
+          - End Dimensions: configuration/world-engine/end-dimensions.md
           - Troubleshooting: configuration/world-engine/troubleshooting.md
       - Modifiers: configuration/modifiers.md
       - Game Rules: configuration/game-rules.md

@@ -908,3 +908,15 @@ world-engine:
       # immediately.
       # Default: 5
       fadeout-time: 5
+  # Shared pool of reusable end dimensions.
+  end:
+    # Base name for pooled end dimensions. Pool members are
+    # created as <base-name>_<n> starting at 1, for example
+    # jmh_end_1. Renaming strands existing pool folders: delete
+    # them by hand or keep the old name.
+    # Default: jmh_end
+    base-name: "jmh_end"
+    # Free end dimensions kept ready for portal assignment.
+    # Minimum: 1.
+    # Default: 3
+    buffer: 3

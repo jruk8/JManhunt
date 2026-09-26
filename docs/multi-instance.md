@@ -147,11 +147,12 @@ one match, the survivor gets the real border again.
 
 Nether portals stay inside the match: destinations are clamped into the
 match's slice of the shared nether, so concurrent matches never meet there.
-End portals lead to the match's own end dimension, and leaving the end
-returns to the match cell.
+End portals lead to the match's own end dimension, assigned from the
+shared pool on first entry, and leaving the end returns to the match cell.
 
-Each match's end dimension is deleted when the match ends. Anything
-left behind by a crash is cleaned up on the next startup.
+Each match's end dimension resets when the match ends and rejoins the
+pool for reuse. Anything left behind by a crash is cleaned up on the
+next startup. See [End Dimensions](configuration/world-engine/end-dimensions.md).
 
 ## Preloading
 

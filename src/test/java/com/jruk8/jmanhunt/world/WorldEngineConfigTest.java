@@ -60,6 +60,36 @@ class WorldEngineConfigTest {
 
 
     @Test
+    void endPoolDefaultsToJmhEndWithBufferThree() {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(new JManhuntConfig()));
+
+        assertEquals("jmh_end", config.endBaseName());
+        assertEquals(3, config.endBuffer());
+    }
+
+    @Test
+    void endPoolReadsConfig() {
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "world-engine.end.base-name", "custom_end");
+        ConfigPathMapper.set(root, "world-engine.end.buffer", 5);
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+
+        assertEquals("custom_end", config.endBaseName());
+        assertEquals(5, config.endBuffer());
+    }
+
+    @Test
+    void endBufferClampsAtOneAndBlankBaseNameFallsBack() {
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "world-engine.end.buffer", 0);
+        ConfigPathMapper.set(root, "world-engine.end.base-name", "  ");
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+
+        assertEquals(1, config.endBuffer());
+        assertEquals("jmh_end", config.endBaseName());
+    }
+
+    @Test
     void calculatesDiameterUsingLargerOfConfiguredRadiusAndSpreadPlusOne() {
         // startBorderRadius (10) > tpSpreadRadius + 1 (6) → use 10
         assertEquals(20, WorldEngineConfig.calculateStartBorderDiameter(5, 10));

@@ -668,5 +668,7 @@ public final class SettingRegistry {
         entries.add(bool("world-engine.world-border.start-border.enabled", true));
         entries.add(intVal("world-engine.world-border.start-border.radius", 10, null, null));
         entries.add(intVal("world-engine.world-border.start-border.fadeout-time", 5, -1, null));
+        entries.add(string("world-engine.end.base-name", "jmh_end"));
+        entries.add(intVal("world-engine.end.buffer", 3, 1, null));
     }
 }

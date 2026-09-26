@@ -88,6 +88,9 @@ public class WorldEngineConfig extends OkaeriConfig {
     @Comment("World border configuration for cell confinement.")
     private WorldBorder worldBorder = new WorldBorder();
 
+    @Comment("Shared pool of reusable end dimensions.")
+    private End end = new End();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -166,6 +169,14 @@ public class WorldEngineConfig extends OkaeriConfig {
 
     public void setWorldBorder(WorldBorder worldBorder) {
         this.worldBorder = worldBorder;
+    }
+
+    public End getEnd() {
+        return end;
+    }
+
+    public void setEnd(End end) {
+        this.end = end;
     }
 
     private static Map<String, LobbyPresetEntry> defaultPresets() {
@@ -560,6 +571,44 @@ public class WorldEngineConfig extends OkaeriConfig {
             public void setFadeoutTime(int fadeoutTime) {
                 this.fadeoutTime = fadeoutTime;
             }
+        }
+    }
+
+    /** Shared pool of reusable end dimensions. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class End extends OkaeriConfig {
+
+        @CustomKey("base-name")
+        @Comment({
+                "Base name for pooled end dimensions. Pool members are",
+                "created as <base-name>_<n> starting at 1, for example",
+                "jmh_end_1. Renaming strands existing pool folders: delete",
+                "them by hand or keep the old name.",
+                "Default: jmh_end"
+        })
+        private String baseName = "jmh_end";
+
+        @Comment({
+                "Free end dimensions kept ready for portal assignment.",
+                "Minimum: 1.",
+                "Default: 3"
+        })
+        private int buffer = 3;
+
+        public String getBaseName() {
+            return baseName;
+        }
+
+        public void setBaseName(String baseName) {
+            this.baseName = baseName;
+        }
+
+        public int getBuffer() {
+            return buffer;
+        }
+
+        public void setBuffer(int buffer) {
+            this.buffer = buffer;
         }
     }
 }

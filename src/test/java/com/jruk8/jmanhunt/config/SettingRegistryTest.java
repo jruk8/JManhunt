@@ -150,6 +150,9 @@ class SettingRegistryTest {
                 SettingRegistry.byPath("world-engine.lobby-world-name").defaultValue());
         assertEquals("3", SettingRegistry
                 .byPath("world-engine.preloading.cell-buffer.stored-cells-buffer").defaultValue());
+        assertEquals("jmh_end",
+                SettingRegistry.byPath("world-engine.end.base-name").defaultValue());
+        assertEquals("3", SettingRegistry.byPath("world-engine.end.buffer").defaultValue());
     }
 
     @Test

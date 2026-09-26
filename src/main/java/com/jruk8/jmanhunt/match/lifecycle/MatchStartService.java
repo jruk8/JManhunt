@@ -166,7 +166,7 @@ public final class MatchStartService {
             worldEngine.clearInstanceBorders();
         }
         OptionalLong matchCell = worldEngine.onMatchStart(participants, spectators, firstMatch,
-                lobbyId, currentMatchId);
+                lobbyId);
         GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell,
                 assignees, spectators);
         instance.setStartCenter(engineOffStartCenter(participants, surroundOrigin, matchCell));

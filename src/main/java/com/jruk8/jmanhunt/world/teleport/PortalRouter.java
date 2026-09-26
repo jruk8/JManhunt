@@ -96,7 +96,7 @@ public final class PortalRouter implements Listener {
             plugin.logger().debug("debug.portal-reroute",
                     Map.of("player", player.getName(), "cell", String.valueOf(cell)));
         } else if (fromWorld.getEnvironment() == World.Environment.NORMAL) {
-            Optional<World> end = worldEngine.matchEndWorld(instance.matchId());
+            Optional<World> end = worldEngine.assignMatchEndWorld(instance.matchId());
             if (end.isEmpty()) {
                 return;
             }

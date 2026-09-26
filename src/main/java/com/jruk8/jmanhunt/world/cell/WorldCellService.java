@@ -56,7 +56,7 @@ public final class WorldCellService {
      * lone match; concurrent matches use pseudo-borders instead.
      */
     public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
-            boolean applyBorder, int lobbyId, long matchId) {
+            boolean applyBorder, int lobbyId) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled() || participants.isEmpty()) {
             return OptionalLong.empty();
@@ -78,7 +78,7 @@ public final class WorldCellService {
             }
         }
 
-        Location cellRoot = teleportToGame(participants, world, config, origin, lobbyId, applyBorder, matchId);
+        Location cellRoot = teleportToGame(participants, world, config, origin, applyBorder);
         teleportSpectatorsToCell(spectators, cellRoot);
         if (applyBorder) {
             borders.setWorldBorder(world, config, origin);
@@ -175,6 +175,9 @@ public final class WorldCellService {
                 == BufferRefillPolicy.NO_MATCH_RUNNING && matchRunning.getAsBoolean()) {
             return;
         }
+        // The end pool shares this buffer event: one refill policy drives
+        // both buffers, and portal-time replacement covers in-match dips.
+        endCells.maintainBuffer(config);
         int target = bufferTarget();
         while (cellBuffer.size() < target) {
             World world = Bukkit.getWorld(config.worldName());
@@ -319,7 +322,7 @@ public final class WorldCellService {
     }
 
     private Location teleportToGame(List<Player> participants, World world, WorldEngineConfig config,
-                                    CellOrigin origin, int lobbyId, boolean applyBorder, long matchId) {
+                                    CellOrigin origin, boolean applyBorder) {
         // Use the cell root as the respawn location for all participants so
         // that deaths send them back to the cell center rather than the lobby.
         Location cellRoot = new Location(world, origin.x() + 0.5,
@@ -331,8 +334,6 @@ public final class WorldCellService {
             participants.get(index).teleport(spawns.get(index));
             participants.get(index).setRespawnLocation(cellRoot, true);
         }
-
-        endCells.ensureEndCell(config, origin.index(), matchId);
 
         if (applyBorder) {
             borders.setWorldBorder(world, config, origin);

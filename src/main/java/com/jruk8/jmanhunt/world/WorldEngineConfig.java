@@ -15,13 +15,17 @@ public record WorldEngineConfig(
         double damageAmount,
         boolean startBorderEnabled,
         int startBorderRadius,
-        int startBorderFadeoutTime) {
+        int startBorderFadeoutTime,
+        String endBaseName,
+        int endBuffer) {
     private static final int DEFAULT_CELL_SIZE = 10_000;
     private static final int MAX_CELL_SIZE = 50_000;
     private static final int DEFAULT_START_BORDER_RADIUS = 10;
     private static final int DEFAULT_START_BORDER_FADEOUT_TIME = 5;
     private static final double DEFAULT_DAMAGE_BUFFER = 5.0;
     private static final double DEFAULT_DAMAGE_AMOUNT = 1.0;
+    private static final String DEFAULT_END_BASE_NAME = "jmh_end";
+    private static final int DEFAULT_END_BUFFER = 3;
 
     public static WorldEngineConfig fromConfig(ConfigService config) {
         String base = "world-engine.";
@@ -44,6 +48,12 @@ public record WorldEngineConfig(
         boolean startBorderEnabled = config.getBoolean(startBorderBase + "enabled", false);
         int startBorderRadius = config.getInt(startBorderBase + "radius", DEFAULT_START_BORDER_RADIUS);
         int startBorderFadeoutTime = config.getInt(startBorderBase + "fadeout-time", DEFAULT_START_BORDER_FADEOUT_TIME);
+        String endBase = base + "end.";
+        String endBaseName = config.getString(endBase + "base-name", DEFAULT_END_BASE_NAME);
+        if (endBaseName.isBlank()) {
+            endBaseName = DEFAULT_END_BASE_NAME;
+        }
+        int endBuffer = Math.max(1, config.getInt(endBase + "buffer", DEFAULT_END_BUFFER));
         return new WorldEngineConfig(
                 config.getBoolean(base + "enabled", false),
                 worldName,
@@ -57,7 +67,9 @@ public record WorldEngineConfig(
                 damageAmount,
                 startBorderEnabled,
                 startBorderRadius,
-                startBorderFadeoutTime
+                startBorderFadeoutTime,
+                endBaseName,
+                endBuffer
         );
     }
 

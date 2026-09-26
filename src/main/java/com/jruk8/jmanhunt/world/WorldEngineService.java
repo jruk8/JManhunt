@@ -72,8 +72,8 @@ public final class WorldEngineService implements SettingsListener {
      * lone match; concurrent matches use pseudo-borders instead.
      */
     public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
-                                     boolean applyBorder, int lobbyId, long matchId) {
-        return cells.onMatchStart(participants, spectators, applyBorder, lobbyId, matchId);
+                                     boolean applyBorder, int lobbyId) {
+        return cells.onMatchStart(participants, spectators, applyBorder, lobbyId);
     }
 
     /**
@@ -209,6 +209,19 @@ public final class WorldEngineService implements SettingsListener {
         return endCells.endWorldFor(matchId);
     }
 
+    /**
+     * Assigns the lowest free pooled end to a match on first portal
+     * entry, loading it. Empty when the engine is off or the pool
+     * cannot serve the match; the caller then leaves the portal alone.
+     */
+    public Optional<World> assignMatchEndWorld(long matchId) {
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
+        if (!config.enabled()) {
+            return Optional.empty();
+        }
+        return endCells.assign(config, matchId);
+    }
+
     /** Configured lobby world name. */
     public String lobbyWorldName() {
         return lobbyWorlds.lobbyWorldName();
@@ -291,7 +304,7 @@ public final class WorldEngineService implements SettingsListener {
      */
     public void deleteOrphanedEndCells() {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
-        int deleted = endCells.deleteOrphans(config.worldName());
+        int deleted = endCells.deleteOrphans(config);
         if (deleted > 0) {
             plugin.logger().info("Deleted " + deleted + " orphaned end dimension(s).");
         }

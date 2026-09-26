@@ -18,19 +18,31 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * Owns per-match end dimensions. Each match cell gets its own end world so
- * concurrent matches never share a dragon fight; reservations map live
- * matches to their dimension, persist across restarts, and are deleted
- * with their world when the match ends.
+ * Owns the shared pool of reusable end dimensions. Pool members live as
+ * {@code <base>_<n>} worlds in the world container, a free buffer of them
+ * is kept ready, and matches are assigned the lowest free member when a
+ * player first enters an end portal. Used members reset with a fresh
+ * deterministic seed when their match ends and rejoin the free buffer.
  */
 public final class EndCellManager {
+    /**
+     * Overflow ceiling multiplier: at most buffer times this many free
+     * dimensions are kept before the buffer event trims the highest-n
+     * member. Trimming at exactly the buffer size would churn disk with
+     * constant generation and deletion; five times the buffer means the
+     * pool almost never runs dry while spikes still get reclaimed.
+     */
+    static final int OVERFLOW_MULTIPLIER = 5;
+
     private final JManhuntPlugin plugin;
     private final EngineStateRepository engineState;
-    /** Live reservations, match id to end world name. */
+    /** Live assignments, match id to pool world name. */
     private final Map<Long, String> reservations = new HashMap<>();
 
     public EndCellManager(JManhuntPlugin plugin, EngineStateRepository engineState) {
@@ -38,35 +50,82 @@ public final class EndCellManager {
         this.engineState = engineState;
     }
 
-    /** Dedicated end world name for a match cell. The trailing underscore keeps it distinct from the shared end. */
-    public static String endCellName(String baseWorldName, long cellIndex) {
-        return baseWorldName + "_the_end_" + cellIndex;
+    /** Pool member world name: the base plus a hardcoded underscore and number. */
+    public static String poolName(String baseName, long n) {
+        return baseName + "_" + n;
+    }
+
+    /** Next pool number: highest existing plus 1, or 1 when the pool is empty. Pure for tests. */
+    static long nextN(Set<Long> existing) {
+        return existing.stream().mapToLong(Long::longValue).max().orElse(0L) + 1;
+    }
+
+    /** Lowest pool number with no live assignment, if any. Pure for tests. */
+    static OptionalLong lowestFree(Set<Long> existing, Set<Long> assigned) {
+        return existing.stream().mapToLong(Long::longValue).filter(n -> !assigned.contains(n)).min();
+    }
+
+    /** True when the free count dropped below the configured buffer. Pure for tests. */
+    static boolean needsTopUp(int freeCount, int buffer) {
+        return freeCount < buffer;
+    }
+
+    /** True when the free count exceeds the overflow ceiling. Pure for tests. */
+    static boolean exceedsOverflow(int freeCount, int buffer) {
+        return freeCount > (long) buffer * OVERFLOW_MULTIPLIER;
+    }
+
+    /** Highest free pool number: the overflow trim victim. Pure for tests. */
+    static OptionalLong overflowVictim(Set<Long> free) {
+        return free.stream().mapToLong(Long::longValue).max();
     }
 
     /**
-     * Ensures a dedicated end for a match cell: created fresh, or wiped and
-     * recreated when the cell is reused. Returns its world name.
+     * Pool number of a world-container directory, if it matches
+     * {@code <base>_<positive integer>}. Anything else is a stray that
+     * the pool ignores. Pure for tests.
      */
-    public String ensureEndCell(WorldEngineConfig config, long cellIndex, long matchId) {
-        String name = endCellName(config.worldName(), cellIndex);
-        reservations.put(matchId, name);
-        persistReservation(matchId, name);
-        plugin.logger().debug("debug.end-cell-reserved",
-                Map.of("cell", name, "id", String.valueOf(matchId)));
-        World existing = Bukkit.getWorld(name);
-        if (existing != null) {
-            resetEndWorld(existing, null);
-            plugin.logger().debug("debug.end-cell-reset", Map.of("cell", name));
-        } else {
-            WorldCreator creator = new WorldCreator(name);
-            creator.environment(World.Environment.THE_END);
-            creator.createWorld();
-            plugin.logger().debug("debug.end-cell-created", Map.of("cell", name));
+    static OptionalLong parsePoolNumber(String dirName, String baseName) {
+        String prefix = baseName + "_";
+        if (!dirName.startsWith(prefix)) {
+            return OptionalLong.empty();
         }
-        return name;
+        try {
+            long n = Long.parseLong(dirName.substring(prefix.length()));
+            return n >= 1 ? OptionalLong.of(n) : OptionalLong.empty();
+        } catch (NumberFormatException invalid) {
+            return OptionalLong.empty();
+        }
     }
 
-    /** Dedicated end world of a live match, if it has one loaded. */
+    /**
+     * Stray end world folders, sorted: every legacy
+     * {@code <world>_the_end_*} folder plus pool-prefixed folders that are
+     * not {@code <base>_<positive integer>}. Numeric pool members and the
+     * shared {@code <world>_the_end} are spared. Pure for tests.
+     */
+    static List<String> strayEndWorlds(List<String> dirNames, String legacyPrefix, String poolBase) {
+        return dirNames.stream()
+                .filter(name -> name.startsWith(legacyPrefix) || isPoolStray(name, poolBase))
+                .sorted()
+                .toList();
+    }
+
+    private static boolean isPoolStray(String dirName, String poolBase) {
+        return dirName.startsWith(poolBase + "_") && parsePoolNumber(dirName, poolBase).isEmpty();
+    }
+
+    private static int freeCount(Set<Long> existing, Set<Long> assigned) {
+        int count = 0;
+        for (long n : existing) {
+            if (!assigned.contains(n)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /** Assigned end world of a live match, if it has one loaded. */
     public Optional<World> endWorldFor(long matchId) {
         String name = reservations.get(matchId);
         if (name == null) {
@@ -76,40 +135,108 @@ public final class EndCellManager {
     }
 
     /**
-     * Releases a match reservation, deleting its end dimension. The
-     * caller evacuates players first. A failed delete keeps the
-     * reservation so the startup sweep retries it. True when a
-     * reservation existed.
+     * Assigns the lowest free pool member to a match on first end-portal
+     * entry, loading it, and records it for the whole match from that
+     * point on. Matches with an assignment get their member back without
+     * touching the pool. When taking the member drops the free count
+     * below the buffer, one replacement is generated during the same
+     * portal jump. Empty when the overworld is missing or generation
+     * fails; the caller then leaves the portal alone.
+     */
+    public Optional<World> assign(WorldEngineConfig config, long matchId) {
+        String current = reservations.get(matchId);
+        if (current != null) {
+            return Optional.ofNullable(loadDimension(current));
+        }
+        Map<Long, String> pool = scanPool(containerDirs(), config.endBaseName());
+        Set<Long> assigned = assignedNumbers(config.endBaseName());
+        if (lowestFree(pool.keySet(), assigned).isEmpty()) {
+            // Pool exhausted: generate one on demand rather than failing
+            // the portal jump. The buffer event normally prevents this.
+            if (generateNext(config, pool).isEmpty()) {
+                return Optional.empty();
+            }
+        }
+        long chosen = lowestFree(pool.keySet(), assigned).orElseThrow();
+        String name = pool.get(chosen);
+        reservations.put(matchId, name);
+        persistReservation(matchId, name);
+        plugin.logger().debug("debug.end-cell-reserved",
+                Map.of("cell", name, "id", String.valueOf(matchId)));
+        World world = loadDimension(name);
+        if (world == null) {
+            return Optional.empty();
+        }
+        assigned.add(chosen);
+        if (needsTopUp(freeCount(pool.keySet(), assigned), config.endBuffer())) {
+            generateNext(config, pool);
+        }
+        return Optional.of(world);
+    }
+
+    /**
+     * Releases a match assignment, resetting its dimension with a fresh
+     * deterministic seed so it rejoins the free buffer. The caller
+     * evacuates players first. A failed reset keeps the reservation so
+     * the startup sweep retries it. True when a reservation existed.
      */
     public boolean release(long matchId) {
         String name = reservations.get(matchId);
         if (name == null) {
             return false;
         }
-        if (!deleteEndWorld(name, null)) {
+        World world = Bukkit.getWorld(name);
+        if (world == null) {
+            world = loadDimension(name);
+        }
+        if (world == null) {
+            reservations.remove(matchId);
+            dropReservation(matchId);
+            return true;
+        }
+        if (!resetEndWorld(world, null, EndSeedHasher.resetSeed(world.getSeed()))) {
             return true;
         }
         reservations.remove(matchId);
         dropReservation(matchId);
+        plugin.logger().debug("debug.end-cell-reset", Map.of("cell", name));
         return true;
     }
 
     /**
-     * Deletes every tracked end reservation plus any stray
-     * &lt;base&gt;_the_end_* world folders. No match survives a
-     * restart, so every reservation is an orphan; strays are leftovers
-     * from older versions. The shared &lt;base&gt;_the_end stays
-     * untouched: the prefix keeps its trailing underscore. Returns the
-     * number deleted.
+     * Buffer event upkeep: generates exactly one member when the free
+     * count is below the buffer, then deletes exactly one member (the
+     * highest free number) when it exceeds the overflow ceiling.
+     * Assigned members are never trim candidates. Runs inside the cell
+     * buffer refill so one event drives both buffers.
      */
-    public int deleteOrphans(String baseWorldName) {
+    public void maintainBuffer(WorldEngineConfig config) {
+        Map<Long, String> pool = scanPool(containerDirs(), config.endBaseName());
+        Set<Long> assigned = assignedNumbers(config.endBaseName());
+        Set<Long> free = new TreeSet<>(pool.keySet());
+        free.removeAll(assigned);
+        if (needsTopUp(free.size(), config.endBuffer())) {
+            topUp(config, pool, free);
+        }
+        if (exceedsOverflow(free.size(), config.endBuffer())) {
+            trimOverflow(pool, free);
+        }
+    }
+
+    /**
+     * Deletes every tracked assignment plus stray end world folders. No
+     * match survives a restart, so every assignment is an orphan; strays
+     * are legacy {@code <world>_the_end_*} folders (removed, never
+     * converted) and non-numeric pool-prefixed folders. Numeric pool
+     * members stay: they are the free buffer, not orphans. The shared
+     * {@code <world>_the_end} stays untouched. Returns the number
+     * deleted.
+     */
+    public int deleteOrphans(WorldEngineConfig config) {
         Map<Long, String> rows = loadReservations();
         Set<String> targets = new TreeSet<>(rows.values());
-        File container = plugin.getServer().getWorldContainer();
-        String[] entries = container.list((dir, name) -> new File(dir, name).isDirectory());
-        if (entries != null) {
-            targets.addAll(strayEndWorlds(Arrays.asList(entries), baseWorldName + "_the_end_"));
-        }
+        targets.addAll(strayEndWorlds(containerDirs(),
+                config.worldName() + "_the_end_", config.endBaseName()));
         int deleted = 0;
         for (String name : targets) {
             if (!deleteEndWorld(name, null)) {
@@ -126,12 +253,97 @@ public final class EndCellManager {
         return deleted;
     }
 
-    /**
-     * Container entries that are stray end worlds for the prefix,
-     * sorted. Pure for tests.
-     */
-    static List<String> strayEndWorlds(List<String> dirNames, String prefix) {
-        return dirNames.stream().filter(name -> name.startsWith(prefix)).sorted().toList();
+    /** Generates the next pool member (highest existing plus 1). Empty when skipped or failed. */
+    private OptionalLong generateNext(WorldEngineConfig config, Map<Long, String> pool) {
+        OptionalLong seed = overworldSeed(config);
+        if (seed.isEmpty()) {
+            return OptionalLong.empty();
+        }
+        long n = nextN(pool.keySet());
+        if (generateDimension(config, n, seed.getAsLong()) == null) {
+            return OptionalLong.empty();
+        }
+        pool.put(n, poolName(config.endBaseName(), n));
+        return OptionalLong.of(n);
+    }
+
+    /** Generates one member and counts it as free. */
+    private void topUp(WorldEngineConfig config, Map<Long, String> pool, Set<Long> free) {
+        generateNext(config, pool).ifPresent(free::add);
+    }
+
+    /** Deletes the highest free member, skipping it when occupied. */
+    private void trimOverflow(Map<Long, String> pool, Set<Long> free) {
+        OptionalLong victim = overflowVictim(free);
+        if (victim.isEmpty()) {
+            return;
+        }
+        String name = pool.get(victim.getAsLong());
+        World loaded = Bukkit.getWorld(name);
+        if (loaded != null && !loaded.getPlayers().isEmpty()) {
+            return;
+        }
+        if (deleteEndWorld(name, null)) {
+            free.remove(victim.getAsLong());
+        }
+    }
+
+    /** Pool folders by number, strays ignored. */
+    private Map<Long, String> scanPool(List<String> dirNames, String baseName) {
+        Map<Long, String> pool = new TreeMap<>();
+        for (String dir : dirNames) {
+            OptionalLong n = parsePoolNumber(dir, baseName);
+            if (n.isPresent()) {
+                pool.putIfAbsent(n.getAsLong(), dir);
+            }
+        }
+        return pool;
+    }
+
+    /** Pool numbers behind the live assignments. */
+    private Set<Long> assignedNumbers(String baseName) {
+        Set<Long> assigned = new TreeSet<>();
+        for (String name : reservations.values()) {
+            parsePoolNumber(name, baseName).ifPresent(assigned::add);
+        }
+        return assigned;
+    }
+
+    private List<String> containerDirs() {
+        File container = plugin.getServer().getWorldContainer();
+        String[] entries = container.list((dir, name) -> new File(dir, name).isDirectory());
+        return entries == null ? List.of() : Arrays.asList(entries);
+    }
+
+    /** Loads a pool member, or returns it when already loaded. */
+    private World loadDimension(String name) {
+        World loaded = Bukkit.getWorld(name);
+        if (loaded != null) {
+            return loaded;
+        }
+        WorldCreator creator = new WorldCreator(name);
+        creator.environment(World.Environment.THE_END);
+        return creator.createWorld();
+    }
+
+    /** Generates a fresh pool member with its deterministic seed. Null when creation fails. */
+    private World generateDimension(WorldEngineConfig config, long n, long seed) {
+        String name = poolName(config.endBaseName(), n);
+        WorldCreator creator = new WorldCreator(name);
+        creator.environment(World.Environment.THE_END);
+        creator.seed(EndSeedHasher.initialSeed(seed, n));
+        World created = creator.createWorld();
+        if (created == null) {
+            plugin.logger().warning("Could not generate end dimension " + name + ".");
+            return null;
+        }
+        plugin.logger().debug("debug.end-cell-created", Map.of("cell", name));
+        return created;
+    }
+
+    private OptionalLong overworldSeed(WorldEngineConfig config) {
+        World overworld = Bukkit.getWorld(config.worldName());
+        return overworld == null ? OptionalLong.empty() : OptionalLong.of(overworld.getSeed());
     }
 
     /**
@@ -199,8 +411,11 @@ public final class EndCellManager {
         }
     }
 
-    /** Wipes and recreates one dedicated end world in place. */
-    private void resetEndWorld(World world, Location evacuateTo) {
+    /**
+     * Wipes and recreates one pool member in place with a new seed. True
+     * when the member is back and loadable.
+     */
+    private boolean resetEndWorld(World world, Location evacuateTo, long newSeed) {
         if (evacuateTo != null) {
             for (Player player : world.getPlayers()) {
                 player.teleport(evacuateTo);
@@ -213,16 +428,21 @@ public final class EndCellManager {
         String name = world.getName();
         if (!Bukkit.unloadWorld(world, true)) {
             plugin.logger().warning("Could not unload end world " + name + " for reset.");
-            return;
+            return false;
         }
         try {
             FileUtils.deleteRecursively(new File(plugin.getServer().getWorldContainer(), name));
         } catch (IOException exception) {
             plugin.logger().warning("Failed to clean end data at " + name + ": " + exception.getMessage());
-            return;
+            return false;
         }
         WorldCreator creator = new WorldCreator(name);
         creator.environment(World.Environment.THE_END);
-        creator.createWorld();
+        creator.seed(newSeed);
+        if (creator.createWorld() == null) {
+            plugin.logger().warning("Could not recreate end world " + name + " after reset.");
+            return false;
+        }
+        return true;
     }
 }
