@@ -37,6 +37,28 @@ public final class WorldBorderService {
     }
 
     /**
+     * True when a real border may be written to the world: never null,
+     * never the lobby world, and only overworld or nether game worlds.
+     * The End and everything else stay vanilla. Pure for tests.
+     */
+    public static boolean isBorderable(World world, String lobbyWorldName) {
+        if (world == null) {
+            return false;
+        }
+        if (lobbyWorldName != null && world.getName().equalsIgnoreCase(lobbyWorldName)) {
+            return false;
+        }
+        World.Environment environment = world.getEnvironment();
+        return environment == World.Environment.NORMAL
+                || environment == World.Environment.NETHER;
+    }
+
+    /** Configured lobby world name, live-read so renames apply on reload. */
+    private String lobbyWorldName() {
+        return configService.getString("world-engine.lobby-world-name", "jmh_lobby");
+    }
+
+    /**
      * Called when the game actually begins (via speedrunner damage or force start).
      * If the start-border is active, expands it to the full cell size.
      */
@@ -78,7 +100,7 @@ public final class WorldBorderService {
             return;
         }
         World world = Bukkit.getWorld(config.worldName());
-        if (world == null) {
+        if (world == null || !isBorderable(world, lobbyWorldName())) {
             return;
         }
         CellCoordinate grid = SpiralCoordinateMapper.toCoordinate(cellIndex);
@@ -105,6 +127,12 @@ public final class WorldBorderService {
             resetTrackedBorders();
             return;
         }
+        if (!isBorderable(overworld, lobbyWorldName())) {
+            plugin.logger().warning("Refusing to set a world border on '"
+                    + overworld.getName() + "': borders apply to overworld and nether "
+                    + "game worlds only, never the lobby world.");
+            return;
+        }
         trackBorderedWorlds(overworld);
 
         // Check if start-border should be used (requires start-on-speedrunner-damage enabled).
@@ -121,7 +149,7 @@ public final class WorldBorderService {
             border.setDamageBuffer(config.damageBuffer());
             border.setDamageAmount(config.damageAmount());
 
-            World nether = getNetherWorld(overworld);
+            World nether = writableNether(overworld);
             if (nether != null) {
                 WorldBorder netherBorder = nether.getWorldBorder();
                 netherBorder.setCenter(origin.x() / 8.0, origin.z() / 8.0);
@@ -129,9 +157,6 @@ public final class WorldBorderService {
                 netherBorder.setWarningDistance(warningDistance(startDiameter / 8.0));
                 netherBorder.setDamageBuffer(config.damageBuffer());
                 netherBorder.setDamageAmount(config.damageAmount());
-            } else {
-                plugin.logger().warning("Could not find matching Nether world for '"
-                        + overworld.getName() + "'. Skipping Nether world border sync.");
             }
 
             // Store state for onBeginGame() to expand the border later.
@@ -149,6 +174,9 @@ public final class WorldBorderService {
      * Applies the full cell size border to the overworld and Nether.
      */
     private void applyCellBorderSize(World overworld, WorldEngineConfig config, CellOrigin origin) {
+        if (!isBorderable(overworld, lobbyWorldName())) {
+            return;
+        }
         WorldBorder border = overworld.getWorldBorder();
         border.setCenter(origin.x(), origin.z());
         border.setSize(config.cellSize());
@@ -156,10 +184,8 @@ public final class WorldBorderService {
         border.setDamageBuffer(config.damageBuffer());
         border.setDamageAmount(config.damageAmount());
 
-        World nether = getNetherWorld(overworld);
+        World nether = writableNether(overworld);
         if (nether == null) {
-            plugin.logger().warning("Could not find matching Nether world for '"
-                    + overworld.getName() + "'. Skipping Nether world border sync.");
             return;
         }
 
@@ -187,6 +213,9 @@ public final class WorldBorderService {
      */
     @SuppressWarnings("removal") // setSize(double, long) is the only animated overload available
     private void applyCellBorderSize(World overworld, WorldEngineConfig config, CellOrigin origin, int seconds) {
+        if (!isBorderable(overworld, lobbyWorldName())) {
+            return;
+        }
         WorldBorder border = overworld.getWorldBorder();
         border.setCenter(origin.x(), origin.z());
         border.setSize(config.cellSize(), seconds);
@@ -194,10 +223,8 @@ public final class WorldBorderService {
         border.setDamageBuffer(config.damageBuffer());
         border.setDamageAmount(config.damageAmount());
 
-        World nether = getNetherWorld(overworld);
+        World nether = writableNether(overworld);
         if (nether == null) {
-            plugin.logger().warning("Could not find matching Nether world for '"
-                    + overworld.getName() + "'. Skipping Nether world border sync.");
             return;
         }
 
@@ -223,7 +250,8 @@ public final class WorldBorderService {
     }
 
     private void trackBorderedWorld(World world) {
-        if (!borderedWorldNames.contains(world.getName())) {
+        if (world != null && isBorderable(world, lobbyWorldName())
+                && !borderedWorldNames.contains(world.getName())) {
             borderedWorldNames.add(world.getName());
         }
     }
@@ -235,11 +263,31 @@ public final class WorldBorderService {
     private void resetTrackedBorders() {
         for (String name : borderedWorldNames) {
             World world = Bukkit.getWorld(name);
-            if (world != null) {
+            if (world != null && isBorderable(world, lobbyWorldName())) {
                 world.getWorldBorder().reset();
             }
         }
         borderedWorldNames.clear();
+    }
+
+    /**
+     * Nether companion of a bordered overworld, or null when missing or
+     * unborderable. Warns either way so a misconfiguration is visible.
+     */
+    private World writableNether(World overworld) {
+        World nether = getNetherWorld(overworld);
+        if (nether == null) {
+            plugin.logger().warning("Could not find matching Nether world for '"
+                    + overworld.getName() + "'. Skipping Nether world border sync.");
+            return null;
+        }
+        if (!isBorderable(nether, lobbyWorldName())) {
+            plugin.logger().warning("Refusing to set a world border on '"
+                    + nether.getName() + "': borders apply to overworld and nether "
+                    + "game worlds only, never the lobby world.");
+            return null;
+        }
+        return nether;
     }
 
     private World getNetherWorld(World overworld) {

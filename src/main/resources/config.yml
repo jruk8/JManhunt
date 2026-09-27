@@ -1024,10 +1024,10 @@ world-engine:
       # Maximum: 3.0.
       # Default: 0.5
       wave-speed: 0.5
-      # Hard ceiling on wall particles per player per tick;
-      # the nearest vertices win. Minimum: 1.
-      # Default: 100
-      max-particles-per-player: 100
+      # Hard ceiling on wall particles per player per tick, spread
+      # evenly across every visible wall. Minimum: 1.
+      # Default: 1000
+      max-particles-per-player: 1000
   # Shared pool of reusable end dimensions.
   end:
     # Base name for pooled end dimensions. Pool members are

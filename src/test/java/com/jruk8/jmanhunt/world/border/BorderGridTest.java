@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt.world.border;
 
 import com.jruk8.jmanhunt.world.border.BorderGrid.BorderVertex;
 import org.junit.jupiter.api.Test;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -75,28 +77,67 @@ class BorderGridTest {
         assertEquals(40L, BorderGrid.ceilMultiple(40.0, 2));
     }
 
-    @Test
-    void budgetKeepsNearestFirst() {
-        List<BorderVertex> candidates = List.of(
-                new BorderVertex(0, 64, 5, 5.0, 5, 64, BorderPlane.NEG_Z),
-                new BorderVertex(0, 64, 1, 1.0, 1, 64, BorderPlane.NEG_Z),
-                new BorderVertex(0, 64, 3, 3.0, 3, 64, BorderPlane.NEG_Z),
-                new BorderVertex(0, 64, 2, 2.0, 2, 64, BorderPlane.NEG_Z));
+    private static List<BorderVertex> wall(BorderPlane plane, int count, double distance) {
+        ArrayList<BorderVertex> vertices = new ArrayList<>(count);
+        for (int index = 0; index < count; index++) {
+            vertices.add(new BorderVertex(index, 64, index, distance, index, 64, plane));
+        }
+        return vertices;
+    }
 
-        List<BorderVertex> kept = BorderGrid.truncateNearest(candidates, 2);
-
-        assertEquals(List.of(1.0, 2.0), kept.stream().map(BorderVertex::planeDistance).toList());
+    private static long planeCount(List<BorderVertex> kept, BorderPlane plane) {
+        return kept.stream().filter(vertex -> vertex.plane() == plane).count();
     }
 
     @Test
-    void budgetBreaksTiesByCoordinates() {
-        List<BorderVertex> candidates = List.of(
-                new BorderVertex(9, 64, 2, 2.0, 9, 64, BorderPlane.NEG_Z),
-                new BorderVertex(1, 64, 2, 2.0, 1, 64, BorderPlane.NEG_Z));
+    void budgetCoversEveryWallEvenly() {
+        ArrayList<BorderVertex> candidates = new ArrayList<>();
+        for (BorderPlane plane : BorderPlane.values()) {
+            candidates.addAll(wall(plane, 50, 5.0));
+        }
 
-        List<BorderVertex> kept = BorderGrid.truncateNearest(candidates, 1);
+        List<BorderVertex> kept = BorderGrid.spreadBudget(candidates, 100);
 
-        assertEquals(1.0, kept.get(0).x(), 0.0);
+        assertEquals(100, kept.size());
+        for (BorderPlane plane : BorderPlane.values()) {
+            assertEquals(25, planeCount(kept, plane));
+        }
+    }
+
+    @Test
+    void budgetStrideSamplesAcrossEachWall() {
+        List<BorderVertex> kept = BorderGrid.spreadBudget(wall(BorderPlane.NEG_Z, 10, 5.0), 4);
+
+        assertEquals(List.of(0.0, 2.0, 5.0, 7.0),
+                kept.stream().map(BorderVertex::x).toList());
+    }
+
+    @Test
+    void budgetWaterFillsSmallWallsFirst() {
+        ArrayList<BorderVertex> candidates = new ArrayList<>();
+        candidates.addAll(wall(BorderPlane.NEG_Z, 5, 9.0));
+        candidates.addAll(wall(BorderPlane.POS_Z, 500, 1.0));
+
+        List<BorderVertex> kept = BorderGrid.spreadBudget(candidates, 100);
+
+        assertEquals(100, kept.size());
+        assertEquals(5, planeCount(kept, BorderPlane.NEG_Z));
+        assertEquals(95, planeCount(kept, BorderPlane.POS_Z));
+    }
+
+    @Test
+    void budgetNeverDuplicatesAndStaysStable() {
+        ArrayList<BorderVertex> candidates = new ArrayList<>();
+        for (BorderPlane plane : BorderPlane.values()) {
+            candidates.addAll(wall(plane, 500, 5.0));
+        }
+
+        List<BorderVertex> first = BorderGrid.spreadBudget(candidates, 100);
+        List<BorderVertex> second = BorderGrid.spreadBudget(candidates, 100);
+
+        assertEquals(100, first.size());
+        assertEquals(100, new HashSet<>(first).size());
+        assertEquals(first, second);
     }
 
     @Test
@@ -105,7 +146,9 @@ class BorderGridTest {
                 new BorderVertex(0, 64, 3, 3.0, 3, 64, BorderPlane.NEG_Z),
                 new BorderVertex(0, 64, 1, 1.0, 1, 64, BorderPlane.NEG_Z));
 
-        assertEquals(2, BorderGrid.truncateNearest(candidates, 100).size());
-        assertTrue(BorderGrid.truncateNearest(candidates, 0).isEmpty());
+        assertEquals(2, BorderGrid.spreadBudget(candidates, 100).size());
+        assertTrue(BorderGrid.spreadBudget(candidates, 0).isEmpty());
+        assertTrue(BorderGrid.spreadBudget(candidates, -5).isEmpty());
+        assertTrue(BorderGrid.spreadBudget(List.of(), 100).isEmpty());
     }
 }

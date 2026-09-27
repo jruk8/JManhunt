@@ -74,11 +74,11 @@ public class WorldEngineParticles extends OkaeriConfig {
 
     @CustomKey("max-particles-per-player")
     @Comment({
-            "Hard ceiling on wall particles per player per tick;",
-            "the nearest vertices win. Minimum: 1.",
-            "Default: 100"
+            "Hard ceiling on wall particles per player per tick, spread",
+            "evenly across every visible wall. Minimum: 1.",
+            "Default: 1000"
     })
-    private int maxParticlesPerPlayer = 100;
+    private int maxParticlesPerPlayer = 1000;
 
     public int getParticleSpacing() {
         return particleSpacing;

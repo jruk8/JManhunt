@@ -17,7 +17,7 @@ world-engine:
       wave-direction-angle: 0.0
       wave-length: 8.0
       wave-speed: 0.5
-      max-particles-per-player: 100
+      max-particles-per-player: 1000
 ```
 
 `particle-spacing` is the blocks between adjacent grid vertices on each
@@ -60,6 +60,8 @@ render at once. Shared corner edges belong to exactly one wall, so
 corners never render double-bright.
 
 `max-particles-per-player` caps the total wall particles per player per
-tick; the nearest vertices win. Cost scales with player count, never
-with cell size: each player only ever renders the wall patches around
-them, and distant or coarse-spacing walls stay cheap.
+tick; the budget spreads evenly across every visible wall, so even a
+small budget shows all four sides instead of one corner. Cost scales
+with player count, never with cell size: each player only ever
+renders the wall patches around them, and distant or coarse-spacing
+walls stay cheap.

@@ -28,6 +28,6 @@ public record PseudoborderConfig(
                 Math.clamp(config.getDouble(base + "wave-direction-angle", 0.0), 0.0, 360.0),
                 Math.clamp(config.getDouble(base + "wave-length", 8.0), 2.0, 64.0),
                 Math.clamp(config.getDouble(base + "wave-speed", 0.5), 0.05, 3.0),
-                Math.max(1, config.getInt(base + "max-particles-per-player", 100)));
+                Math.max(1, config.getInt(base + "max-particles-per-player", 1000)));
     }
 }

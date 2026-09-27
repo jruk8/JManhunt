@@ -80,6 +80,7 @@ class LobbyWorldManagerTest {
         assertTrue(LobbyWorldManager.namesClash("world", "world"));
         assertTrue(LobbyWorldManager.namesClash("World", "world"));
         assertFalse(LobbyWorldManager.namesClash("jmh-lobby", "world"));
+        assertFalse(LobbyWorldManager.namesClash("jmh_lobby", "world"));
         assertFalse(LobbyWorldManager.namesClash(null, "world"));
         assertFalse(LobbyWorldManager.namesClash("jmh-lobby", null));
     }

@@ -30,7 +30,7 @@ class PseudoborderConfigTest {
         assertEquals(0.0, config.waveDirectionAngle(), 0.0);
         assertEquals(8.0, config.waveLength(), 0.0);
         assertEquals(0.5, config.waveSpeedHz(), 0.0);
-        assertEquals(100, config.maxParticlesPerPlayer());
+        assertEquals(1000, config.maxParticlesPerPlayer());
     }
 
     @Test

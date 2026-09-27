@@ -683,7 +683,7 @@ public final class SettingRegistry {
         entries.add(floatVal("world-engine.world-border.particles.wave-direction-angle", 0.0, 0.0, 360.0));
         entries.add(floatVal("world-engine.world-border.particles.wave-length", 8.0, 2.0, 64.0));
         entries.add(floatVal("world-engine.world-border.particles.wave-speed", 0.5, 0.05, 3.0));
-        entries.add(intVal("world-engine.world-border.particles.max-particles-per-player", 100, 1, null));
+        entries.add(intVal("world-engine.world-border.particles.max-particles-per-player", 1000, 1, null));
         entries.add(string("world-engine.end.base-name", "jmh_end"));
         entries.add(intVal("world-engine.end.buffer", 3, 1, null));
     }

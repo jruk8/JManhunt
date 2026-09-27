@@ -2,7 +2,9 @@ package com.jruk8.jmanhunt.world.border;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Per-wall particle grids for pseudoborder rendering. */
 public final class BorderGrid {
@@ -56,15 +58,84 @@ public final class BorderGrid {
     }
 
     /**
-     * Budget truncation: nearest plane distance first with a coordinate
-     * tie-break, keeping at most {@code budget} vertices. Pure for tests.
+     * Budget spread: every wall with candidates gets a fair quota of the
+     * budget (small walls keep everything, the rest splits evenly), and
+     * each wall's quota is stride-sampled across its full patch. Low
+     * budgets cover all walls instead of freezing on one corner, output
+     * is stable across ticks for stable input, and no vertex repeats.
+     * Pure for tests.
      */
-    public static List<BorderVertex> truncateNearest(List<BorderVertex> candidates, int budget) {
-        List<BorderVertex> sorted = new ArrayList<>(candidates);
-        sorted.sort(Comparator.comparingDouble(BorderVertex::planeDistance)
-                .thenComparingDouble(BorderVertex::x)
-                .thenComparingDouble(BorderVertex::y)
-                .thenComparingDouble(BorderVertex::z));
-        return sorted.subList(0, Math.min(sorted.size(), Math.max(0, budget)));
+    public static List<BorderVertex> spreadBudget(List<BorderVertex> candidates, int budget) {
+        int cap = Math.max(0, budget);
+        List<List<BorderVertex>> groups = groupByPlane(candidates);
+        if (groups.isEmpty() || cap == 0) {
+            return List.of();
+        }
+        int total = 0;
+        for (List<BorderVertex> group : groups) {
+            total += group.size();
+        }
+        if (total <= cap) {
+            List<BorderVertex> all = new ArrayList<>(total);
+            for (List<BorderVertex> group : groups) {
+                all.addAll(group);
+            }
+            return all;
+        }
+        Map<List<BorderVertex>, Integer> quota = fillQuotas(groups, cap);
+        List<BorderVertex> shown = new ArrayList<>(cap);
+        for (List<BorderVertex> group : groups) {
+            shown.addAll(stride(group, quota.get(group)));
+        }
+        return shown;
+    }
+
+    /** Non-empty per-wall groups in plane order, generation order kept. */
+    private static List<List<BorderVertex>> groupByPlane(List<BorderVertex> candidates) {
+        List<List<BorderVertex>> groups = new ArrayList<>();
+        for (BorderPlane plane : BorderPlane.values()) {
+            List<BorderVertex> group = new ArrayList<>();
+            for (BorderVertex candidate : candidates) {
+                if (candidate.plane() == plane) {
+                    group.add(candidate);
+                }
+            }
+            if (!group.isEmpty()) {
+                groups.add(group);
+            }
+        }
+        return groups;
+    }
+
+    /**
+     * Water-filling quotas: smallest walls keep everything, the rest of
+     * the budget splits evenly. Stable: ties keep plane order.
+     */
+    private static Map<List<BorderVertex>, Integer> fillQuotas(
+            List<List<BorderVertex>> groups, int cap) {
+        List<List<BorderVertex>> bySize = new ArrayList<>(groups);
+        bySize.sort(Comparator.comparingInt(List::size));
+        Map<List<BorderVertex>, Integer> quota = new IdentityHashMap<>();
+        int remaining = cap;
+        int left = bySize.size();
+        for (List<BorderVertex> group : bySize) {
+            int take = Math.min(group.size(), remaining / left);
+            quota.put(group, take);
+            remaining -= take;
+            left--;
+        }
+        return quota;
+    }
+
+    /** Even stride across a group: quota distinct vertices, first kept. */
+    private static List<BorderVertex> stride(List<BorderVertex> group, int quota) {
+        if (quota >= group.size()) {
+            return new ArrayList<>(group);
+        }
+        List<BorderVertex> picked = new ArrayList<>(quota);
+        for (int index = 0; index < quota; index++) {
+            picked.add(group.get((int) ((long) index * group.size() / quota)));
+        }
+        return picked;
     }
 }

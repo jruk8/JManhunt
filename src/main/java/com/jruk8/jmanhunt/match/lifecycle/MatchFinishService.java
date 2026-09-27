@@ -626,8 +626,10 @@ public final class MatchFinishService {
     /**
      * Confines concurrent matches to their cells: players outside their
      * cell are rubber-banded back in and take border damage past the damage
-     * buffer. Spectators bypass it like the vanilla border, and the End is
-     * left alone until end cells land.
+     * buffer. Spectators bypass it like the vanilla border. The End is
+     * skipped: end dimensions are assigned one per match, so no sharing
+     * needs confining; if that ever changes, the recovery helper below
+     * already gives non-Nether worlds the surface treatment.
      */
     private void enforcePseudoBorders() {
         if (store.instances().size() < 2) {
@@ -659,7 +661,8 @@ public final class MatchFinishService {
                 }
                 double[] inside = bounds.clampInside(location.getX(), location.getZ(), nether, 2.0);
                 if (inside != null) {
-                    player.teleport(new Location(location.getWorld(), inside[0], location.getY(), inside[1],
+                    double y = recoveryY(location.getWorld(), inside[0], inside[1], location.getY());
+                    player.teleport(new Location(location.getWorld(), inside[0], y, inside[1],
                             location.getYaw(), location.getPitch()));
                 }
                 if (outside > config.damageBuffer() && config.damageAmount() > 0.0) {
@@ -667,5 +670,19 @@ public final class MatchFinishService {
                 }
             }
         }
+    }
+
+    /**
+     * Rubberband height at the clamped spot: the highest block plus one
+     * for the Overworld and the End, capped below the ceiling; the live
+     * Y in the Nether, where the roof would corrupt the lookup. Testable
+     * with a stubbed world.
+     */
+    static double recoveryY(World world, double x, double z, double currentY) {
+        if (world.getEnvironment() == World.Environment.NETHER) {
+            return currentY;
+        }
+        int top = world.getHighestBlockYAt((int) Math.floor(x), (int) Math.floor(z));
+        return Math.min(top + 1.0, world.getMaxHeight() - 2.0);
     }
 }

@@ -21,8 +21,8 @@ import java.util.List;
  * every active match player sees a grid patch on each wall within render
  * radius of their own cell box: the same box the enforcement guard
  * confines, so rendering never moves or resizes anything. Walls thin with
- * distance, pulse on the configured mode, and truncate to a per-player
- * budget with the nearest vertices winning.
+ * distance, pulse on the configured mode, and spread a per-player
+ * budget evenly across every visible wall.
  */
 public final class PseudoborderParticleService {
     private static final float PARTICLE_SIZE = 1.0f;
@@ -77,8 +77,8 @@ public final class PseudoborderParticleService {
 
     /**
      * Gathers one player's wall vertices post-thinning and post-dedup,
-     * truncates to the budget nearest-first, then applies the pulse gate
-     * to the survivors.
+     * spreads the budget across every visible wall, then applies the
+     * pulse gate to the survivors.
      */
     private void renderForPlayer(Player player, CellBounds bounds, PseudoborderConfig particles,
             Particle.DustOptions dust) {
@@ -110,7 +110,7 @@ public final class PseudoborderParticleService {
             return;
         }
         List<BorderGrid.BorderVertex> shown =
-                BorderGrid.truncateNearest(candidates, particles.maxParticlesPerPlayer());
+                BorderGrid.spreadBudget(candidates, particles.maxParticlesPerPlayer());
         Vector look = at.getDirection();
         double[] angles = {Double.NaN, Double.NaN, Double.NaN, Double.NaN};
         for (BorderGrid.BorderVertex vertex : shown) {

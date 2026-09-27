@@ -173,7 +173,7 @@ class SettingRegistryTest {
                 .byPath("world-engine.world-border.particles.wave-length").defaultValue());
         assertEquals("0.5", SettingRegistry
                 .byPath("world-engine.world-border.particles.wave-speed").defaultValue());
-        assertEquals("100", SettingRegistry
+        assertEquals("1000", SettingRegistry
                 .byPath("world-engine.world-border.particles.max-particles-per-player").defaultValue());
     }
 
