@@ -159,14 +159,15 @@ public final class MatchStartService {
         long currentMatchId = store.nextMatchId();
         List<UUID> assignees = prepareMatchPlayers(participants, currentMatchId);
         List<Player> spectators = lobbyNonePlayers(lobby.get());
+        participants.forEach(lobbies::restoreCollisions); // match wins; fakes re-disable below
+        spectators.forEach(lobbies::restoreCollisions);
         // A second match drops the real border: concurrent matches are
         // confined by per-instance pseudo-borders instead.
         boolean firstMatch = store.isEmpty();
         if (!firstMatch) {
             worldEngine.clearInstanceBorders();
         }
-        OptionalLong matchCell = worldEngine.onMatchStart(participants, spectators, firstMatch,
-                lobbyId);
+        OptionalLong matchCell = worldEngine.onMatchStart(participants, spectators, firstMatch, lobbyId);
         GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell,
                 assignees, spectators);
         instance.setStartCenter(engineOffStartCenter(participants, surroundOrigin, matchCell));
@@ -392,6 +393,7 @@ public final class MatchStartService {
             compass.giveCompass(player);
             compass.refreshCompass(player);
         }
+        lobbies.restoreCollisions(player); // match wins; fake enable below re-disables
         applyJoinGameMode(instance, player, role);
         Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(
                 instance.matchId(), playerId, GameManager.roleToPlayerRole(role)));

@@ -49,6 +49,9 @@ public final class MatchTeleportService implements LobbyTeleporter {
         for (Entity entity : targets) {
             entity.teleport(lobby);
         }
+        for (Player target : targets) {
+            plugin.lobbyService().applyLobbyCollisions(target);
+        }
         return true;
     }
 

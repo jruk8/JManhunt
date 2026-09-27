@@ -292,3 +292,4 @@ descriptions:
   "advanced.misc": "Power-user toggles that rarely need changing."
   "advanced.misc.debug": "Debug display toggles."
   "world-engine": "Grid engine: cells, borders, spawns, particles."
+  "advanced.lobbies.disable-player-collisions": "Lobby members pass through each other."

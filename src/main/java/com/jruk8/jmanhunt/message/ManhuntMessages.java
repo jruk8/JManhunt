@@ -448,7 +448,10 @@ public class ManhuntMessages extends OkaeriConfig {
     private String startUsage = "{prefix}<yellow>Usage: /manhunt start [lobby-id]";
 
     @CustomKey("end-usage")
-    private String endUsage = "{prefix}<yellow>Usage: /manhunt end [id] [-i|-immediate]";
+    private String endUsage = "{prefix}<yellow>Usage: /manhunt end [id|all] [-i|-immediate]";
+
+    @CustomKey("end-all-success")
+    private String endAllSuccess = "{prefix}<green>Ended <white>{count}<green> match(es).";
 
     @CustomKey("game-usage")
     private String gameUsage = "{prefix}<yellow>Usage: /manhunt game <join|leave> ...";

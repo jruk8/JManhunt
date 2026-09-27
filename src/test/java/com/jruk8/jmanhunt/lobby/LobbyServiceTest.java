@@ -1,5 +1,13 @@
 package com.jruk8.jmanhunt.lobby;
 
+import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import java.util.List;
+import java.util.Optional;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -7,6 +15,11 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class LobbyServiceTest {
 
@@ -125,5 +138,101 @@ class LobbyServiceTest {
 
     private static LobbyService service() {
         return new LobbyService(null);
+    }
+
+    @Test
+    void lobbyJoinDisablesCollisionsForMembers() {
+        Fixture fixture = fixture(true);
+        fixture.lobbies.setLobby(fixture.id, 0);
+
+        fixture.lobbies.applyLobbyCollisions(fixture.player);
+
+        verify(fixture.player).setCollidable(false);
+    }
+
+    @Test
+    void lobbyJoinLeavesMatchMembersOutsidersAndToggledOffUntouched() {
+        Fixture on = fixture(true);
+        on.lobbies.setLobby(on.id, 0);
+        when(on.game.instanceOf(on.id)).thenReturn(Optional.of(mock(GameInstance.class)));
+
+        on.lobbies.applyLobbyCollisions(on.player);
+
+        verify(on.player, never()).setCollidable(anyBoolean());
+
+        Fixture off = fixture(false);
+        off.lobbies.setLobby(off.id, 0);
+
+        off.lobbies.applyLobbyCollisions(off.player);
+
+        verify(off.player, never()).setCollidable(anyBoolean());
+
+        Fixture outsider = fixture(true);
+
+        outsider.lobbies.applyLobbyCollisions(outsider.player);
+
+        verify(outsider.player, never()).setCollidable(anyBoolean());
+    }
+
+    @Test
+    void restoreCollisionsSkipsFakeSpectators() {
+        Fixture fixture = fixture(true);
+
+        fixture.lobbies.restoreCollisions(fixture.player);
+
+        verify(fixture.player).setCollidable(true);
+
+        when(fixture.fakes.isFakeSpectator(fixture.player)).thenReturn(true);
+
+        fixture.lobbies.restoreCollisions(fixture.player);
+
+        verify(fixture.player, never()).setCollidable(false);
+    }
+
+    @Test
+    void reapplyCollisionsSortsEveryoneByState() {
+        Fixture fixture = fixture(false);
+        when(fixture.game.instanceOf(fixture.id))
+                .thenReturn(Optional.of(mock(GameInstance.class)));
+        Player fake = mock(Player.class);
+        UUID fakeId = UUID.randomUUID();
+        when(fake.getUniqueId()).thenReturn(fakeId);
+        when(fixture.fakes.isFakeSpectator(fake)).thenReturn(true);
+        Player member = mock(Player.class);
+        UUID memberId = UUID.randomUUID();
+        when(member.getUniqueId()).thenReturn(memberId);
+        fixture.lobbies.setLobby(memberId, 0);
+        Player outsider = mock(Player.class);
+        when(outsider.getUniqueId()).thenReturn(UUID.randomUUID());
+
+        fixture.lobbies.reapplyCollisions(List.of(fake, fixture.player, member, outsider));
+
+        verify(fake).setCollidable(false);
+        verify(fixture.player).setCollidable(true);
+        verify(member).setCollidable(true);
+        verify(outsider, never()).setCollidable(anyBoolean());
+    }
+
+    /** Wired service with one lobby-less non-fake player outside any match. */
+    private static Fixture fixture(boolean collisionsDisabled) {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        ConfigService config = mock(ConfigService.class);
+        GameManager game = mock(GameManager.class);
+        FakeSpectatorService fakes = mock(FakeSpectatorService.class);
+        when(plugin.configService()).thenReturn(config);
+        when(plugin.game()).thenReturn(game);
+        when(plugin.fakeSpectators()).thenReturn(fakes);
+        when(config.getBoolean(LobbyService.COLLISIONS_PATH, true))
+                .thenReturn(collisionsDisabled);
+        Player player = mock(Player.class);
+        UUID id = UUID.randomUUID();
+        when(player.getUniqueId()).thenReturn(id);
+        when(game.instanceOf(id)).thenReturn(Optional.empty());
+        when(fakes.isFakeSpectator(player)).thenReturn(false);
+        return new Fixture(new LobbyService(plugin), player, id, game, fakes);
+    }
+
+    private record Fixture(LobbyService lobbies, Player player, UUID id,
+            GameManager game, FakeSpectatorService fakes) {
     }
 }

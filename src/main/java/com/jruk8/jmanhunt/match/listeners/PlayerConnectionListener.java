@@ -84,6 +84,7 @@ public final class PlayerConnectionListener implements Listener {
         if (lobbyId >= 0) {
             lobbyTeleporter.teleportToLobby(List.of(player), lobbyId);
             lobbyTeleporter.setSpawnToLobbyQuiet(List.of(player), lobbyId);
+            lobbies.applyLobbyCollisions(player);
         }
     }
 

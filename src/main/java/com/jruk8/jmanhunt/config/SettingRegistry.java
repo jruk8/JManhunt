@@ -494,6 +494,7 @@ public final class SettingRegistry {
         entries.add(intMinusOne(root + "queue-caps.speedrunner", -1, 1));
         entries.add(intMinusOne(root + "queue-caps.hunter", -1, 1));
         entries.add(string(root + "lobby-world-name", "jmh_lobby"));
+        entries.add(bool(root + "disable-player-collisions", true));
     }
 
     private static void addAdvancedMiscEntries(List<SettingDescriptor> entries) {

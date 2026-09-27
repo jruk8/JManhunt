@@ -175,6 +175,31 @@ class ManhuntCommandTest {
     }
 
     @Test
+    void parseEndArgsAcceptsAllAloneAndWithFlagInEitherOrder() {
+        EndArgs bare = ManhuntCommand.parseEndArgs(new String[]{"end", "all"});
+        EndArgs allFirst = ManhuntCommand.parseEndArgs(new String[]{"end", "ALL", "-i"});
+        EndArgs flagFirst = ManhuntCommand.parseEndArgs(new String[]{"end", "-immediate", "All"});
+
+        assertTrue(bare.valid());
+        assertTrue(bare.all());
+        assertEquals(Optional.empty(), bare.instanceId());
+        assertFalse(bare.immediate());
+        for (EndArgs parsed : new EndArgs[]{allFirst, flagFirst}) {
+            assertTrue(parsed.valid());
+            assertTrue(parsed.all());
+            assertEquals(Optional.empty(), parsed.instanceId());
+            assertTrue(parsed.immediate());
+        }
+    }
+
+    @Test
+    void parseEndArgsRejectsAllWithIdOrTwice() {
+        assertFalse(ManhuntCommand.parseEndArgs(new String[]{"end", "3", "all"}).valid());
+        assertFalse(ManhuntCommand.parseEndArgs(new String[]{"end", "all", "3"}).valid());
+        assertFalse(ManhuntCommand.parseEndArgs(new String[]{"end", "all", "all"}).valid());
+    }
+
+    @Test
     void parseTptoTargetAcceptsBothWords() {
         assertEquals(Optional.of(ManhuntCommand.TptoTarget.LOBBY),
                 ManhuntCommand.parseTptoTarget("lobbyworld"));

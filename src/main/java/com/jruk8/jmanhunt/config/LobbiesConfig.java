@@ -84,6 +84,15 @@ public class LobbiesConfig extends OkaeriConfig {
     })
     private String lobbyWorldName = "jmh_lobby";
 
+    @CustomKey("disable-player-collisions")
+    @Comment({
+            "When true, lobby members pass through each other instead of",
+            "colliding. Match members always collide; players outside any",
+            "lobby are never affected.",
+            "Default: true"
+    })
+    private boolean disablePlayerCollisions = true;
+
     public int getDefaultLobbyId() {
         return defaultLobbyId;
     }
@@ -138,6 +147,14 @@ public class LobbiesConfig extends OkaeriConfig {
 
     public void setLobbyWorldName(String lobbyWorldName) {
         this.lobbyWorldName = lobbyWorldName;
+    }
+
+    public boolean isDisablePlayerCollisions() {
+        return disablePlayerCollisions;
+    }
+
+    public void setDisablePlayerCollisions(boolean disablePlayerCollisions) {
+        this.disablePlayerCollisions = disablePlayerCollisions;
     }
 
     /** Lobby bounds exit routing. */

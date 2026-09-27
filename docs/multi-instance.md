@@ -33,6 +33,9 @@ Pass `-notp` to skip that teleport for one join.
 `announce-lobby-changes` picks who hears the join and leave lines for
 positive lobbies: `ALL` (the moved player plus lobby members), `SELF`,
 `MEMBERS`, or `NONE`. Lobby 0 moves never announce.
+`disable-player-collisions`, when true, lets lobby members pass through
+each other instead of colliding. Match members always collide, and
+players outside any lobby are never affected.
 
 Move players between lobbies with:
 

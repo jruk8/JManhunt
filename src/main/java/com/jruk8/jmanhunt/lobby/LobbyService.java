@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.lobby;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.message.MessageService;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -19,6 +20,9 @@ import org.bukkit.entity.Player;
  */
 public final class LobbyService {
     public static final int MAX_LOBBY_ID = Integer.MAX_VALUE;
+
+    /** Collisions toggle path, shared with the change subscription. */
+    public static final String COLLISIONS_PATH = "advanced.lobbies.disable-player-collisions";
 
     private final JManhuntPlugin plugin;
     private final Map<Integer, Lobby> lobbies = new HashMap<>();
@@ -115,6 +119,61 @@ public final class LobbyService {
     public Optional<Lobby> lobbyOf(UUID playerId) {
         Integer lobbyId = membership.get(playerId);
         return lobbyId == null ? Optional.empty() : Optional.ofNullable(lobbies.get(lobbyId));
+    }
+
+    /**
+     * Disables collisions for a lobby member when the toggle is on.
+     * Match members and lobby outsiders are left untouched, as is
+     * everyone when the toggle is off.
+     */
+    public void applyLobbyCollisions(Player player) {
+        if (!plugin.configService().getBoolean(COLLISIONS_PATH, true)) {
+            return;
+        }
+        if (plugin.game().instanceOf(player.getUniqueId()).isPresent()) {
+            return;
+        }
+        if (lobbyOf(player.getUniqueId()).isEmpty()) {
+            return;
+        }
+        player.setCollidable(false);
+    }
+
+    /**
+     * Restores collisions unless fake spectator mode owns them: its
+     * disable restores them later and re-applies lobby state.
+     */
+    public void restoreCollisions(Player player) {
+        if (plugin.fakeSpectators().isFakeSpectator(player)) {
+            return;
+        }
+        player.setCollidable(true);
+    }
+
+    /**
+     * Re-applies collision state to everyone online after a toggle
+     * flip: fake spectators stay uncollidable, match members collide,
+     * lobby members follow the toggle, outsiders are never touched.
+     */
+    public void reapplyCollisions() {
+        reapplyCollisions(Bukkit.getOnlinePlayers());
+    }
+
+    /**
+     * Testable core of {@link #reapplyCollisions()}. Package-visible so
+     * unit tests can exercise it without a running server.
+     */
+    void reapplyCollisions(Collection<? extends Player> onlinePlayers) {
+        boolean disabled = plugin.configService().getBoolean(COLLISIONS_PATH, true);
+        for (Player online : onlinePlayers) {
+            if (plugin.fakeSpectators().isFakeSpectator(online)) {
+                online.setCollidable(false);
+            } else if (plugin.game().instanceOf(online.getUniqueId()).isPresent()) {
+                online.setCollidable(true);
+            } else if (lobbyOf(online.getUniqueId()).isPresent()) {
+                online.setCollidable(!disabled);
+            }
+        }
     }
 
     /**

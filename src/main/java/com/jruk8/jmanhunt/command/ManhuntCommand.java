@@ -1015,6 +1015,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         OptionalInt before = current.map(own -> OptionalInt.of(own.id())).orElseGet(OptionalInt::empty);
         lobbies.setLobby(target.getUniqueId(), lobbyId);
+        lobbies.applyLobbyCollisions(target);
         playerStates.setRole(target, role);
         plugin.roleTeams().sync(target);
         moved.add(target);
@@ -1085,6 +1086,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 continue;
             }
             lobbies.remove(target.getUniqueId());
+            lobbies.restoreCollisions(target);
             message(sender, "manhunt.lobby-leave-success", Map.of("player", target.getName(),
                     "lobby", String.valueOf(lobby.get().id())));
         }
@@ -1168,6 +1170,18 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (!parsed.valid()) {
             return message(sender, "manhunt.end-usage");
         }
+        if (parsed.all()) {
+            List<GameInstance> live = game.liveInstances();
+            if (live.isEmpty()) {
+                return message(sender, "manhunt.not-active");
+            }
+            for (GameInstance each : live) {
+                game.cancel(each, parsed.immediate());
+            }
+            message(sender, "manhunt.end-all-success",
+                    Map.of("count", String.valueOf(live.size())));
+            return true;
+        }
         GameInstance instance;
         if (parsed.instanceId().isPresent()) {
             Optional<GameInstance> resolved = game.resolveInstance(parsed.instanceId().get());
@@ -1195,16 +1209,19 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     static EndArgs parseEndArgs(String[] args) {
         Optional<String> instanceId = Optional.empty();
         boolean immediate = false;
+        boolean all = false;
         for (int i = 1; i < args.length; i++) {
             if (isImmediateFlag(args[i])) {
                 immediate = true;
-            } else if (instanceId.isEmpty()) {
+            } else if (args[i].equalsIgnoreCase("all") && instanceId.isEmpty() && !all) {
+                all = true;
+            } else if (instanceId.isEmpty() && !all) {
                 instanceId = Optional.of(args[i]);
             } else {
-                return new EndArgs(Optional.empty(), false, false);
+                return new EndArgs(Optional.empty(), false, false, false);
             }
         }
-        return new EndArgs(instanceId, immediate, true);
+        return new EndArgs(instanceId, immediate, all, true);
     }
 
     /** True for the -i and -immediate flags accepted by end. */
@@ -2321,13 +2338,15 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[1], lobbyIdOptions());
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("end")) {
-            List<String> options = new ArrayList<>(List.of("-i", "-immediate"));
+            List<String> options = new ArrayList<>(List.of("all", "-i", "-immediate"));
             options.addAll(instanceIdOptions());
             return partial(args[1], options);
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("end")) {
             if (isImmediateFlag(args[1])) {
-                return partial(args[2], instanceIdOptions());
+                List<String> options = new ArrayList<>(List.of("all"));
+                options.addAll(instanceIdOptions());
+                return partial(args[2], options);
             }
             return partial(args[2], List.of("-i", "-immediate"));
         }

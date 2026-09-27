@@ -99,6 +99,8 @@ public final class GameManager implements MatchControl {
                 (oldValue, newValue) -> worldEngine.onReload());
         configService.onChange("settings.match.game-boosts.overworld-structures.enabled",
                 (oldValue, newValue) -> worldEngine.onReload());
+        configService.onChange(LobbyService.COLLISIONS_PATH,
+                (oldValue, newValue) -> lobbies.reapplyCollisions());
     }
 
     /** True while any match runs, including end-delay phases. */

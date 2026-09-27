@@ -762,6 +762,11 @@ advanced:
     # Point this at your own world to use it instead.
     # Default: jmh_lobby
     lobby-world-name: "jmh_lobby"
+    # When true, lobby members pass through each other instead of
+    # colliding. Match members always collide; players outside any
+    # lobby are never affected.
+    # Default: true
+    disable-player-collisions: true
 
   # Power-user toggles that rarely need changing.
   misc:

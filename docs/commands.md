@@ -16,6 +16,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt start [lobby-id]`                       | Starts a match for a lobby queue. | `jmanhunt.command.start` |
 | `/manhunt end [id]`                               | Cancels a match with no winner and no saved stats. | `jmanhunt.command.end` |
 | `/manhunt end [id] -i` / `-immediate`           | Cancels the match immediately, skipping the end delay intermission. | `jmanhunt.command.end` |
+| `/manhunt end all [-i]`                         | Cancels every running match at once, with one reply. Works from console. | `jmanhunt.command.end` |
 | `/manhunt game join <id> [role] [selector]`       | Adds players to a running match (default role `spectator`). | `jmanhunt.command.game` |
 | `/manhunt game leave [id] [selector]`             | Removes players from a running match; leaving participants need a second run within 10 seconds. | `jmanhunt.command.game` |
 | `/manhunt quickstart [percentage]`                | Assigns eligible players to teams and starts immediately, bypassing autostart. | `jmanhunt.command.quickstart` |

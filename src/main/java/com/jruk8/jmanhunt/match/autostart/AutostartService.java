@@ -153,6 +153,7 @@ public final class AutostartService {
             }
             if (announce) {
                 messaging.sendToLobby(lobbyId, "manhunt.autostart-cancelled", Map.of());
+                messaging.playLobbySound(lobbyId, "game.autostart-cancelled");
             }
         }
     }

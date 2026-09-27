@@ -24,7 +24,7 @@ public class SoundsConfig extends OkaeriConfig {
 
     @CustomKey("sounds-version")
     @Comment("Used for sounds updates, don't change unless you know what you're doing.")
-    private int soundsVersion = 3;
+    private int soundsVersion = 4;
 
     private Game game = new Game();
     private Announce announce = new Announce();
@@ -140,6 +140,11 @@ public class SoundsConfig extends OkaeriConfig {
         private SoundEntry autostartCountdown =
                 SoundEntry.of("block.stone_button.click_on", 2.0, 1.0);
 
+        @CustomKey("autostart-cancelled")
+        @Comment("Runs when an autostart countdown is cancelled")
+        private SoundEntry autostartCancelled =
+                SoundEntry.of("block.lever.click", 1.0, 1.0);
+
         @CustomKey("speedrunner-death")
         @Comment("Runs on speedrunner killed (by any means)")
         private SoundEntry speedrunnerDeath =
@@ -169,6 +174,14 @@ public class SoundsConfig extends OkaeriConfig {
 
         public void setAutostartCountdown(SoundEntry autostartCountdown) {
             this.autostartCountdown = autostartCountdown;
+        }
+
+        public SoundEntry getAutostartCancelled() {
+            return autostartCancelled;
+        }
+
+        public void setAutostartCancelled(SoundEntry autostartCancelled) {
+            this.autostartCancelled = autostartCancelled;
         }
 
         public SoundEntry getSpeedrunnerDeath() {

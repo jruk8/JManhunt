@@ -43,6 +43,7 @@ the setup tutorial:
 Under `game`, each entry plays at a fixed moment in the match:
 
 - `autostart-countdown`: during the autostart countdown and the hunter spawn countdown.
+- `autostart-cancelled`: when an autostart countdown is cancelled.
 - `speedrunner-death`: when a speedrunner dies, by any means.
 - `hunter-death`: when a hunter dies, by any means.
 - `win-sound`: when the speedrunners win.

@@ -5,7 +5,7 @@
 # It's recommended to use a sound explorer like
 # https://mudkipdev.github.io/minecraft-sound-explorer/
 # Used for sounds updates, don't change unless you know what you're doing.
-sounds-version: 3
+sounds-version: 4
 ui:
   # Shared interface feedback: command and GUI confirmations.
   neutral-sound:
@@ -32,6 +32,12 @@ game:
     enabled: true
     sound: block.stone_button.click_on
     pitch: 2.0
+    volume: 1.0
+  # Runs when an autostart countdown is cancelled
+  autostart-cancelled:
+    enabled: true
+    sound: block.lever.click
+    pitch: 1.0
     volume: 1.0
   # Runs on speedrunner killed (by any means)
   speedrunner-death:
