@@ -86,11 +86,14 @@ author; right-clicking the name renames the id instead. The name
 lore prints the internal id under the Current line, and every edit
 refreshes the Current lore at once. Every field prompts or cycles
 in place, and blank answers clear optional fields. Setting the
-icon chats a confirmation naming the material. Cancel on a delete
-confirm returns to the editor; only confirming the delete returns
-to the list.
+icon chats a confirmation naming the material, renaming the name
+chats "Renamed to", and renaming the id chats its own "Id changed
+to" line; an id change returns to the same Meta menu. Cancel on a
+delete confirm returns to the editor; only confirming the delete
+returns to the list.
 The Author button wears the author's player head when the author is
-`JManhunt`, and the default head otherwise.
+a UUID (dashed or trimmed) or a known player name, and the default
+head otherwise.
 The preset Modifiers screen lists member modifiers first with a glow,
 then the rest on a fresh row; the Modifiers button count stays live
 after toggling.

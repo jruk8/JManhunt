@@ -294,6 +294,21 @@ public final class ConfigService {
         return SetOutcome.ok(null, oldValue, "-");
     }
 
+    /** Replaces a whole string list. Unknown paths fail. */
+    public SetOutcome setList(String listPath, List<String> entries) {
+        List<Object> live = liveList(listPath);
+        if (live == null) {
+            return SetOutcome.fail("manhunt.setting-invalid", Map.of());
+        }
+        List<Object> oldValue = new ArrayList<>(live);
+        live.clear();
+        for (String entry : entries) {
+            live.add(entry == null ? "" : entry.trim());
+        }
+        saver.run();
+        return SetOutcome.ok(null, oldValue, new ArrayList<>(live));
+    }
+
     /** Restores a string list to its schema defaults. Unknown paths fail. */
     public SetOutcome listReset(String listPath) {
         List<Object> live = liveList(listPath);

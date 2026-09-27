@@ -197,7 +197,7 @@ public final class PlayerCombatListener implements Listener {
                         Map.of("value", Integer.toString(playerCount)));
             }
         } else {
-            game.finishLater(instance, Role.HUNTER);
+            game.finishLater(instance, Role.HUNTER, "All speedrunners eliminated");
         }
         game.playInstanceSound(instance, "game.speedrunner-death");
     }
@@ -263,7 +263,7 @@ public final class PlayerCombatListener implements Listener {
     private void checkHuntersRemaining(GameInstance instance) {
         // No last-removed line: the win that follows is the announcement.
         if (game.activeHunterCount(instance) == 0) {
-            game.finishLater(instance, Role.SPEEDRUNNER);
+            game.finishLater(instance, Role.SPEEDRUNNER, "All hunters eliminated");
         }
     }
 
@@ -457,10 +457,12 @@ public final class PlayerCombatListener implements Listener {
         Integer lobby = match.originLobbyId();
         if (killerRole == Role.SPEEDRUNNER
                 && winConditionEngine.mobMatches(lobby, victim.getType(), Role.SPEEDRUNNER)) {
-            game.finishLater(match, Role.SPEEDRUNNER);
+            game.finishLater(match, Role.SPEEDRUNNER,
+                    "Slew " + WinConditionEngine.prettyKey(victim.getType().getKey().toString()));
         } else if (killerRole == Role.HUNTER
                 && winConditionEngine.mobMatches(lobby, victim.getType(), Role.HUNTER)) {
-            game.finishLater(match, Role.HUNTER);
+            game.finishLater(match, Role.HUNTER,
+                    "Slew " + WinConditionEngine.prettyKey(victim.getType().getKey().toString()));
         }
     }
 
@@ -478,7 +480,8 @@ public final class PlayerCombatListener implements Listener {
         Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
         if (winConditionEngine.materialWins(lobby, event.getItem().getItemStack().getType(), role)
                 || winConditionEngine.hasItem(lobby, player, role)) {
-            game.finishLater(match.get(), role);
+            game.finishLater(match.get(), role,
+                    "Acquired " + WinConditionEngine.prettyKey(winConditionEngine.item(lobby, role)));
         }
     }
 
@@ -500,10 +503,12 @@ public final class PlayerCombatListener implements Listener {
         Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
         if (playerStates.role(player) == Role.SPEEDRUNNER
                 && winConditionEngine.hasReachAdvancement(lobby, player, Role.SPEEDRUNNER)) {
-            game.finishLater(match.get(), Role.SPEEDRUNNER);
+            game.finishLater(match.get(), Role.SPEEDRUNNER, "Reached "
+                    + WinConditionEngine.prettyKey(winConditionEngine.advancement(lobby, Role.SPEEDRUNNER)));
         } else if (playerStates.role(player) == Role.HUNTER
                 && winConditionEngine.hasReachAdvancement(lobby, player, Role.HUNTER)) {
-            game.finishLater(match.get(), Role.HUNTER);
+            game.finishLater(match.get(), Role.HUNTER, "Reached "
+                    + WinConditionEngine.prettyKey(winConditionEngine.advancement(lobby, Role.HUNTER)));
         }
     }
 

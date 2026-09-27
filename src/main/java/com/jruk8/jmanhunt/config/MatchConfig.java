@@ -90,10 +90,43 @@ public class MatchConfig extends OkaeriConfig {
     @SuppressWarnings("FieldMayBeFinal")
     public static class GameRules extends OkaeriConfig {
 
+        /** Config path of the rules enum array. */
+        public static final String RULES_PATH =
+                "advanced.advanced-match-controls.game-rules.rules";
+
+        /** Known rule keys, in display order. */
+        public static final List<String> KNOWN = List.of(
+                "AUTO_SET_GAMEMODE",
+                "RESET_PLAYERS_STATS",
+                "DISABLE_LOCATOR_BAR",
+                "SET_RESPAWN_IMMEDIATE",
+                "SET_DAYTIME",
+                "DISABLE_PHANTOMS",
+                "DISABLE_COMMAND_FEEDBACK",
+                "DISABLE_PILLAGER_PATROLS",
+                "DISABLE_WANDERING_TRADER");
+
+        /** Rules enabled by default: all but DISABLE_COMMAND_FEEDBACK. */
+        public static final List<String> DEFAULT_RULES = List.of(
+                "AUTO_SET_GAMEMODE",
+                "RESET_PLAYERS_STATS",
+                "DISABLE_LOCATOR_BAR",
+                "SET_RESPAWN_IMMEDIATE",
+                "SET_DAYTIME",
+                "DISABLE_PHANTOMS",
+                "DISABLE_PILLAGER_PATROLS",
+                "DISABLE_WANDERING_TRADER");
+
         @Comment("if false, nothing runs.")
         private boolean enabled = true;
 
-        private Rules rules = new Rules();
+        @Comment({
+                "Enabled game-state rules. Unknown entries are ignored.",
+                "Known: AUTO_SET_GAMEMODE, RESET_PLAYERS_STATS, DISABLE_LOCATOR_BAR,",
+                "SET_RESPAWN_IMMEDIATE, SET_DAYTIME, DISABLE_PHANTOMS,",
+                "DISABLE_COMMAND_FEEDBACK, DISABLE_PILLAGER_PATROLS, DISABLE_WANDERING_TRADER."
+        })
+        private List<String> rules = new ArrayList<>(DEFAULT_RULES);
 
         public boolean isEnabled() {
             return enabled;
@@ -103,107 +136,25 @@ public class MatchConfig extends OkaeriConfig {
             this.enabled = enabled;
         }
 
-        public Rules getRules() {
+        public List<String> getRules() {
             return rules;
         }
 
-        public void setRules(Rules rules) {
+        public void setRules(List<String> rules) {
             this.rules = rules;
         }
 
-        /** Individual game-state rules. */
-        @SuppressWarnings("FieldMayBeFinal")
-        public static class Rules extends OkaeriConfig {
-            @CustomKey("auto-set-gamemode")
-            private boolean autoSetGamemode = true;
-            @CustomKey("reset-players-stats")
-            private boolean resetPlayersStats = true;
-            @CustomKey("disable-locator-bar")
-            private boolean disableLocatorBar = true;
-            @CustomKey("set-respawn-immediate")
-            private boolean setRespawnImmediate = true;
-            @CustomKey("set-daytime")
-            private boolean setDaytime = true;
-            @CustomKey("disable-phantoms")
-            private boolean disablePhantoms = true;
-            @CustomKey("disable-command-feedback")
-            private boolean disableCommandFeedback = false;
-            @CustomKey("disable-pillager-patrols")
-            private boolean disablePillagerPatrols = true;
-            @CustomKey("disable-wandering-trader")
-            private boolean disableWanderingTrader = true;
-
-            public boolean isAutoSetGamemode() {
-                return autoSetGamemode;
+        /** Case-insensitive membership for the rules array. Pure for tests. */
+        public static boolean isRuleEnabled(List<String> rules, String key) {
+            if (rules == null || key == null) {
+                return false;
             }
-
-            public void setAutoSetGamemode(boolean autoSetGamemode) {
-                this.autoSetGamemode = autoSetGamemode;
+            for (String entry : rules) {
+                if (key.equalsIgnoreCase(entry)) {
+                    return true;
+                }
             }
-
-            public boolean isResetPlayersStats() {
-                return resetPlayersStats;
-            }
-
-            public void setResetPlayersStats(boolean resetPlayersStats) {
-                this.resetPlayersStats = resetPlayersStats;
-            }
-
-            public boolean isDisableLocatorBar() {
-                return disableLocatorBar;
-            }
-
-            public void setDisableLocatorBar(boolean disableLocatorBar) {
-                this.disableLocatorBar = disableLocatorBar;
-            }
-
-            public boolean isSetRespawnImmediate() {
-                return setRespawnImmediate;
-            }
-
-            public void setSetRespawnImmediate(boolean setRespawnImmediate) {
-                this.setRespawnImmediate = setRespawnImmediate;
-            }
-
-            public boolean isSetDaytime() {
-                return setDaytime;
-            }
-
-            public void setDaytime(boolean setDaytime) {
-                this.setDaytime = setDaytime;
-            }
-
-            public boolean isDisablePhantoms() {
-                return disablePhantoms;
-            }
-
-            public void setDisablePhantoms(boolean disablePhantoms) {
-                this.disablePhantoms = disablePhantoms;
-            }
-
-            public boolean isDisableCommandFeedback() {
-                return disableCommandFeedback;
-            }
-
-            public void setDisableCommandFeedback(boolean disableCommandFeedback) {
-                this.disableCommandFeedback = disableCommandFeedback;
-            }
-
-            public boolean isDisablePillagerPatrols() {
-                return disablePillagerPatrols;
-            }
-
-            public void setDisablePillagerPatrols(boolean disablePillagerPatrols) {
-                this.disablePillagerPatrols = disablePillagerPatrols;
-            }
-
-            public boolean isDisableWanderingTrader() {
-                return disableWanderingTrader;
-            }
-
-            public void setDisableWanderingTrader(boolean disableWanderingTrader) {
-                this.disableWanderingTrader = disableWanderingTrader;
-            }
+            return false;
         }
     }
 

@@ -32,6 +32,30 @@ class AuthorHeadsTest {
     }
 
     @Test
+    void dashedUuidParsesWithSurroundingSpace() {
+        assertEquals(Optional.of(UUID.fromString("5663d1ab-276f-4b49-ab18-b2e6d8baa919")),
+                AuthorHeads.profileId("5663d1ab-276f-4b49-ab18-b2e6d8baa919"));
+        assertEquals(Optional.of(UUID.fromString("5663d1ab-276f-4b49-ab18-b2e6d8baa919")),
+                AuthorHeads.profileId("  5663d1ab-276f-4b49-ab18-b2e6d8baa919  "));
+    }
+
+    @Test
+    void trimmedUuidParsesToDashedForm() {
+        assertEquals(Optional.of(UUID.fromString("5663d1ab-276f-4b49-ab18-b2e6d8baa919")),
+                AuthorHeads.profileId("5663d1ab276f4b49ab18b2e6d8baa919"));
+        assertEquals(Optional.of(UUID.fromString("5663d1ab-276f-4b49-ab18-b2e6d8baa919")),
+                AuthorHeads.profileId("5663D1AB276F4B49AB18B2E6D8BAA919"));
+    }
+
+    @Test
+    void malformedUuidsKeepDefaultHead() {
+        assertEquals(Optional.empty(), AuthorHeads.profileId("5663d1ab-276f-4b49-ab18"));
+        assertEquals(Optional.empty(), AuthorHeads.profileId("5663d1ab276f4b49ab18b2e6d8baa91"));
+        assertEquals(Optional.empty(), AuthorHeads.profileId("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"));
+        assertEquals(Optional.empty(), AuthorHeads.profileId("not a uuid at all!"));
+    }
+
+    @Test
     void ownerConstantParsesAsUuid() {
         assertTrue(AuthorHeads.OWNER_PROFILE_ID
                 .equalsIgnoreCase(UUID.fromString(AuthorHeads.OWNER_PROFILE_ID).toString()));

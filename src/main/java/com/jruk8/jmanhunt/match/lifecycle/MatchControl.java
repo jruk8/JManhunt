@@ -12,8 +12,8 @@ public interface MatchControl {
     /** Begins play for a waiting match (force-start path). */
     void beginGame(GameInstance instance);
 
-    /** Finishes a begun match with the given winner. */
-    void finish(GameInstance instance, Role winner);
+    /** Finishes a begun match with the given winner and reason line. */
+    void finish(GameInstance instance, Role winner, String reason);
 
     /** Cancels a match with no winner. */
     void cancel(GameInstance instance);

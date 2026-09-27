@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -101,14 +102,7 @@ public final class ModifierEditorMenus {
                                 text("meta-title", "Meta"),
                                 List.of(text("meta-lore", "Name, description, icon, author"),
                                         text("editor-click-open", "Click to open")),
-                                player -> {
-                                    if (denied(player)) {
-                                        return;
-                                    }
-                                    gui.navigate(player, meta.menu(modifierTarget(id),
-                                            () -> self[0],
-                                            renamed -> editor(renamed, parent)));
-                                }),
+                                player -> openMeta(player, id, parent, () -> self[0])),
                         EditorButtons.actionButton(messages, Material.SCULK_SENSOR,
                                 text("behavior-title", "Behavior"),
                                 List.of(text("behavior-lore", "Triggers, options, commands"),
@@ -129,6 +123,22 @@ public final class ModifierEditorMenus {
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
                 parent);
         return self[0];
+    }
+
+    /** Opens the Meta quad, staying on it across id renames. */
+    private void openMeta(Player player, String id, Supplier<Menu> parent,
+            Supplier<Menu> self) {
+        if (denied(player)) {
+            return;
+        }
+        Function<String, Menu> reopenMeta = new Function<>() {
+            @Override
+            public Menu apply(String renamed) {
+                return meta.menu(modifierTarget(renamed),
+                        () -> editor(renamed, parent), this);
+            }
+        };
+        gui.navigate(player, meta.menu(modifierTarget(id), self, reopenMeta));
     }
 
     private MenuButton deleteButton(String id, Supplier<Menu> parent, Supplier<Menu> editor) {

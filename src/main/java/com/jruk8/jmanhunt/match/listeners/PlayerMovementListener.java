@@ -62,7 +62,7 @@ public final class PlayerMovementListener implements Listener {
                 && event.getTo().getWorld().getEnvironment() == World.Environment.NORMAL;
         if (exitWin) {
             // The winner lands outside the cell: skip auto-leave for this hop.
-            game.finishLater(match.get(), Role.SPEEDRUNNER);
+            game.finishLater(match.get(), Role.SPEEDRUNNER, "Exited the End");
         } else if (event.getTo() != null) {
             game.autoLeaveIfOutside(player, event.getTo());
         }
@@ -79,7 +79,7 @@ public final class PlayerMovementListener implements Listener {
                 && player.getWorld().getEnvironment() == World.Environment.NORMAL;
         if (exitWin) {
             // The winner lands outside the cell: skip auto-leave for this hop.
-            game.finishLater(match.get(), Role.SPEEDRUNNER);
+            game.finishLater(match.get(), Role.SPEEDRUNNER, "Exited the End");
         } else {
             game.autoLeaveIfOutside(player, player.getLocation());
         }

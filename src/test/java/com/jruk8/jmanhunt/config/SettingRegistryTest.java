@@ -331,9 +331,10 @@ class SettingRegistryTest {
     void movedDefaultsMirrorTheirSpecs() {
         assertEquals("30.0", SettingRegistry.byPath(
                 "advanced.advanced-match-controls.start-reminder-interval").defaultValue());
-        assertEquals("true", SettingRegistry.byPath(
-                "advanced.advanced-match-controls.game-rules.rules.disable-wandering-trader")
-                .defaultValue());
+        assertTrue(SettingRegistry.isListPath(
+                "advanced.advanced-match-controls.game-rules.rules"));
+        assertEquals(8, MatchConfig.GameRules.DEFAULT_RULES.size());
+        assertTrue(MatchConfig.GameRules.DEFAULT_RULES.contains("DISABLE_WANDERING_TRADER"));
         assertEquals("jmh_lobby", SettingRegistry.byPath(
                 "advanced.lobbies.lobby-world-name").defaultValue());
     }

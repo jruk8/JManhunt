@@ -165,4 +165,10 @@ class MessageServiceTest {
         }
         return text.toString();
     }
+
+    @Test
+    void winBlockHasBlankPrefixSeparatorsTitleAndReason() {
+        assertEquals("\n{prefix}\n---\ntitle\nreason\n---",
+                MessageService.winBlock("---", "title", "reason"));
+    }
 }

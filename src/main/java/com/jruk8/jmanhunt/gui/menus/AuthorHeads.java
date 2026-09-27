@@ -5,11 +5,14 @@ import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.profile.PlayerProfile;
 
 /**
- * Author head profiles for the shared Meta quad. Unset authors show the
- * default player head; the plugin author shows the owner's head by UUID
- * (permanent, unlike names); every other author keeps the default head.
+ * Author head profiles for the shared Meta quad. Authors resolve in
+ * order: unset/blank/"none" show the default head, the plugin author
+ * shows the owner's head by UUID, full and trimmed UUIDs show the
+ * referenced profile (the client fetches the skin), and anything else
+ * is a player name resolved against online and cached players.
  */
 public final class AuthorHeads {
 
@@ -23,16 +26,27 @@ public final class AuthorHeads {
     }
 
     /**
-     * Head profile UUID for an author, or empty for the default head.
-     * Unset, blank, and "none" authors all map to the default head. Pure
-     * for tests.
+     * Head profile UUID for a UUID-form author, or empty for the default
+     * head and for names (names resolve through Bukkit instead). Accepts
+     * full dashed UUIDs and trimmed 32-hex strings. Pure for tests.
      */
     public static Optional<UUID> profileId(String author) {
         if (author == null || author.isBlank() || author.equalsIgnoreCase("none")) {
             return Optional.empty();
         }
-        if (PLUGIN_AUTHOR.equals(author)) {
+        String trimmed = author.trim();
+        if (PLUGIN_AUTHOR.equals(trimmed)) {
             return Optional.of(UUID.fromString(OWNER_PROFILE_ID));
+        }
+        try {
+            return Optional.of(UUID.fromString(trimmed));
+        } catch (IllegalArgumentException ignored) {
+            // Not a dashed UUID; try the trimmed form below.
+        }
+        if (trimmed.matches("[0-9a-fA-F]{32}")) {
+            return Optional.of(UUID.fromString(trimmed.substring(0, 8) + "-"
+                    + trimmed.substring(8, 12) + "-" + trimmed.substring(12, 16) + "-"
+                    + trimmed.substring(16, 20) + "-" + trimmed.substring(20, 32)));
         }
         return Optional.empty();
     }
@@ -40,12 +54,30 @@ public final class AuthorHeads {
     /**
      * Applies the author head profile to skull meta. Non-skull meta is
      * untouched, and default-head authors need no profile since a fresh
-     * head has none.
+     * head has none. Names resolve to a cached UUID when one is known;
+     * unknown names keep a name-only profile (default head, no crash).
      */
     public static void applyTo(ItemMeta meta, String author) {
         if (!(meta instanceof SkullMeta skull)) {
             return;
         }
-        profileId(author).ifPresent(id -> skull.setOwnerProfile(Bukkit.createPlayerProfile(id)));
+        Optional<UUID> id = profileId(author);
+        if (id.isPresent()) {
+            skull.setOwnerProfile(Bukkit.createPlayerProfile(id.get()));
+            return;
+        }
+        nameProfile(author).ifPresent(skull::setOwnerProfile);
+    }
+
+    private static Optional<PlayerProfile> nameProfile(String author) {
+        if (author == null || author.isBlank() || author.equalsIgnoreCase("none")) {
+            return Optional.empty();
+        }
+        String name = author.trim();
+        UUID id = Bukkit.getPlayerUniqueId(name);
+        if (id != null) {
+            return Optional.of(Bukkit.createPlayerProfile(id));
+        }
+        return Optional.of(Bukkit.createPlayerProfile(name));
     }
 }

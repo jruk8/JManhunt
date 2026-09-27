@@ -729,16 +729,19 @@ advanced:
     # Built-in game-state actions applied at match start and match end.
     game-rules:
       enabled: true # if false, nothing runs.
+      # Enabled game-state rules. Unknown entries are ignored.
+      # Known: AUTO_SET_GAMEMODE, RESET_PLAYERS_STATS, DISABLE_LOCATOR_BAR,
+      # SET_RESPAWN_IMMEDIATE, SET_DAYTIME, DISABLE_PHANTOMS,
+      # DISABLE_COMMAND_FEEDBACK, DISABLE_PILLAGER_PATROLS, DISABLE_WANDERING_TRADER.
       rules:
-        auto-set-gamemode: true
-        reset-players-stats: true
-        disable-locator-bar: true
-        set-respawn-immediate: true
-        set-daytime: true
-        disable-phantoms: true
-        disable-command-feedback: false
-        disable-pillager-patrols: true
-        disable-wandering-trader: true
+        - AUTO_SET_GAMEMODE
+        - RESET_PLAYERS_STATS
+        - DISABLE_LOCATOR_BAR
+        - SET_RESPAWN_IMMEDIATE
+        - SET_DAYTIME
+        - DISABLE_PHANTOMS
+        - DISABLE_PILLAGER_PATROLS
+        - DISABLE_WANDERING_TRADER
 
     # Seconds between the win announcement and final inventory cleanup. Statistics
     # are displayed halfway through this delay.

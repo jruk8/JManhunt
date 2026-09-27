@@ -144,7 +144,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 plugin.overrides(), feedback);
         this.menus = new ManhuntMenus(config, plugin.overrides(), plugin.guiConfig(),
                 messages, sounds, plugin.guiService(), dialogs, feedback, plugin.stats(),
-                modifierMenus);
+                modifierMenus, modifierDialogs);
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {

@@ -10,6 +10,7 @@ import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.gui.ScrollList;
+import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -87,7 +88,7 @@ class ManhuntMenusTest {
         menus = new ManhuntMenus(config, overrides, guiData, messages,
                 mock(SoundService.class), gui, mock(SettingDialog.class),
                 mock(SettingFeedback.class), stats,
-                mock(ModifierMenus.class));
+                mock(ModifierMenus.class), mock(ModifierDialog.class));
     }
 
     @Test

@@ -59,8 +59,8 @@ class PlaceholderCheatsheetTest {
                 lines.toString());
         assertTrue(lines.stream().anyMatch(line -> line.contains("Modifiers docs page")),
                 lines.toString());
-        assertEquals(9 + PlaceholderCheatsheet.lines().size(), lines.size());
-        assertEquals(PlaceholderCheatsheet.lines(),
-                lines.subList(9, lines.size()));
+        assertEquals(8, lines.size());
+        assertTrue(lines.stream().noneMatch(line -> line.contains("all tags")),
+                lines.toString());
     }
 }

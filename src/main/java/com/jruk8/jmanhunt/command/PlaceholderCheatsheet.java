@@ -62,8 +62,8 @@ public final class PlaceholderCheatsheet {
 
     /**
      * Command dialog body: plain-command guidance plus a curated tag
-     * shortlist and a docs pointer, then the full tag list below a
-     * separator so no reference content is lost.
+     * shortlist and a docs pointer. The full tag list stays in
+     * {@link #lines()} for other surfaces.
      */
     public static List<String> commandDialogLines() {
         List<String> lines = new ArrayList<>();
@@ -83,8 +83,6 @@ public final class PlaceholderCheatsheet {
                 + "<gray>random entry from the list</gray>");
         lines.add("<gray>For statistics, if conditionals, and placeholders, "
                 + "read the Modifiers docs page.</gray>");
-        lines.add("<gray>--- all tags ---</gray>");
-        lines.addAll(lines());
         return lines;
     }
 }

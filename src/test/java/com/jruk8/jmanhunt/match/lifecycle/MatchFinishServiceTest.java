@@ -36,4 +36,5 @@ class MatchFinishServiceTest {
         assertEquals(318.0, MatchFinishService.recoveryY(
                 world(World.Environment.NORMAL, 400, 320), 10.4, 20.7, 11.0), 0.0);
     }
+
 }

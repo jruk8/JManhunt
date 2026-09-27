@@ -23,4 +23,16 @@ public interface ModifierDialog {
      */
     void openRunsOn(Player player, List<String> current,
             Consumer<Set<String>> onSubmit, Runnable reopen);
+
+    /**
+     * Opens the Game Rules checkbox dialog: one checkbox per known
+     * game-state rule, initialled from the live list.
+     *
+     * @param player clicking player
+     * @param current live rules entries, matched case-insensitively
+     * @param onSubmit receives the checked rules set, in known order
+     * @param reopen rebuilds the menu Submit and Cancel return to
+     */
+    void openGameRules(Player player, List<String> current,
+            Consumer<Set<String>> onSubmit, Runnable reopen);
 }

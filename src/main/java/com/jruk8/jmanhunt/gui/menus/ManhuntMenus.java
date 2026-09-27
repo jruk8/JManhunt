@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiConfig;
@@ -14,6 +15,7 @@ import com.jruk8.jmanhunt.gui.QuadPanel;
 import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.gui.ScrollList;
 import com.jruk8.jmanhunt.gui.TwinPanel;
+import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -50,12 +52,13 @@ public final class ManhuntMenus {
     private final SettingFeedback feedback;
     private final StatsManager stats;
     private final ModifierMenus modifiers;
+    private final ModifierDialog modifierDialogs;
     private final SettingButtons buttons;
 
     public ManhuntMenus(ConfigService config, OverrideService overrides, GuiConfig guiData,
             MessageService messages, SoundService sounds, GuiService gui,
             SettingDialog dialogs, SettingFeedback feedback, StatsManager stats,
-            ModifierMenus modifiers) {
+            ModifierMenus modifiers, ModifierDialog modifierDialogs) {
         this.config = config;
         this.overrides = overrides;
         this.guiData = guiData;
@@ -66,6 +69,7 @@ public final class ManhuntMenus {
         this.feedback = feedback;
         this.stats = stats;
         this.modifiers = modifiers;
+        this.modifierDialogs = modifierDialogs;
         this.buttons = new SettingButtons(config, overrides, guiData, messages, dialogs, gui,
                 feedback, sounds);
     }
@@ -348,7 +352,7 @@ public final class ManhuntMenus {
                 GuiTexts.lore(messages, lines),
                 lobby == null ? config.isListModified(path)
                         : overrides.hasListOverride(lobby, path),
-                false, open(openViewer -> listMenu(openViewer, path, caller)),
+                false, openList(player -> listMenu(player, path, caller), path, caller),
                 player -> listResetConfirm(player, path, caller));
         if (lobby == null) {
             return button;
@@ -591,6 +595,38 @@ public final class ManhuntMenus {
 
     private Consumer<Player> open(Function<Player, Menu> menu) {
         return player -> gui.navigate(player, menu.apply(player));
+    }
+
+    /**
+     * List open action: the game-rules enum array opens the checkbox
+     * dialog, every other list opens the index-based list menu.
+     */
+    private Consumer<Player> openList(Function<Player, Menu> menu, String path,
+            Supplier<Menu> caller) {
+        if (!MatchConfig.GameRules.RULES_PATH.equals(path)) {
+            return open(menu);
+        }
+        return player -> {
+            Integer lobby = gui.overrideLobby(player);
+            List<String> current = overrides.getStringList(lobby, path);
+            modifierDialogs.openGameRules(player, current,
+                    checked -> applyGameRules(player, lobby, path,
+                            new ArrayList<>(checked), caller),
+                    () -> gui.navigate(player, caller.get()));
+        };
+    }
+
+    /** Persists the checked game rules, globally or as a lobby override. */
+    private void applyGameRules(Player player, Integer lobby, String path,
+            List<String> checked, Supplier<Menu> caller) {
+        ConfigService.SetOutcome outcome = lobby == null
+                ? config.setList(path, checked)
+                : overrides.setListOverride(lobby, path, checked);
+        if (!outcome.ok()) {
+            feedback.failed(player, outcome);
+            sounds.playAngrySound(player);
+        }
+        gui.navigate(player, caller.get());
     }
 
     private String historyLine(String key, String value) {

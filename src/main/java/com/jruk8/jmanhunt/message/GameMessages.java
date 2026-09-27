@@ -80,16 +80,19 @@ public class GameMessages extends OkaeriConfig {
     private String hunterDisconnectRemoved = "{prefix}<yellow>A hunter has been removed for disconnecting.";
 
     @CustomKey("speedrunners-win")
-    private String speedrunnersWin = "{prefix}<green>Speedrunners Win!";
+    private String speedrunnersWin = "Speedrunners Win!";
 
     @CustomKey("hunters-win")
-    private String huntersWin = "{prefix}<red>Hunters Win!";
+    private String huntersWin = "Hunters Win!";
+
+    @CustomKey("win-reason")
+    private String winReason = "{rolecolor}🏆 {wincon}";
 
     @CustomKey("hunters-title")
-    private String huntersTitle = "<red>Hunters Win!";
+    private String huntersTitle = "Hunters Win!";
 
     @CustomKey("speedrunners-title")
-    private String speedrunnersTitle = "<green>Speedrunners Win!";
+    private String speedrunnersTitle = "Speedrunners Win!";
 
     @CustomKey("cancelled")
     private String cancelled = "{prefix}<yellow>Manhunt match cancelled.";

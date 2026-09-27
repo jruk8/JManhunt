@@ -105,7 +105,9 @@ public final class MatchFinishService {
             return;
         }
         bucketWinner(store.activeHunterCount(instance), store.activeRunnerCount(instance))
-                .ifPresent(winner -> finishLater(instance, winner));
+                .ifPresent(winner -> finishLater(instance, winner, winner == Role.HUNTER
+                        ? "All speedrunners removed"
+                        : "All hunters removed"));
     }
 
     /**
@@ -355,13 +357,13 @@ public final class MatchFinishService {
     }
 
     /** Ends the match when exactly one is live; a no-op otherwise. */
-    public void finish(Role winner) {
-        store.singleLiveInstance().ifPresent(instance -> finish(instance, winner));
+    public void finish(Role winner, String reason) {
+        store.singleLiveInstance().ifPresent(instance -> finish(instance, winner, reason));
     }
 
     /** Ends one match. */
-    public void finish(GameInstance instance, Role winner) {
-        finish(instance, winner, false);
+    public void finish(GameInstance instance, Role winner, String reason) {
+        finish(instance, winner, false, reason);
     }
 
     /**
@@ -371,7 +373,7 @@ public final class MatchFinishService {
      * during an in-progress end delay finishes the match at once instead of
      * being blocked.
      */
-    public void finish(GameInstance instance, Role winner, boolean immediate) {
+    public void finish(GameInstance instance, Role winner, boolean immediate, String reason) {
         if (instance.ending()) {
             if (immediate) {
                 showEndStatsOnce(instance);
@@ -387,10 +389,12 @@ public final class MatchFinishService {
         prestart.cancelHeadstarts(instance);
         timeLimits.cancelTimeLimit(instance);
 
-        String title = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
-        messaging.sendToInstanceComponent(instance, messages.renderLiteral(getWinMessage(winner), Map.of()));
+        messaging.sendToInstanceComponent(instance, messages.renderLiteral(
+                messages.winAnnouncement(winner),
+                Map.of("wincon", reason, "rolecolor", messages.roleColor(winner))));
+        Component titleComponent = messages.winTitle(winner);
         for (Player player : store.onlineAssignedPlayers(instance)) {
-            player.showTitle(Title.title(messages.component(title), Component.empty(),
+            player.showTitle(Title.title(titleComponent, Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
         playerStates.resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
@@ -585,20 +589,13 @@ public final class MatchFinishService {
     }
 
     /** Ends the match next tick when exactly one is live; a no-op otherwise. */
-    public void finishLater(Role winner) {
-        store.singleLiveInstance().ifPresent(instance -> finishLater(instance, winner));
+    public void finishLater(Role winner, String reason) {
+        store.singleLiveInstance().ifPresent(instance -> finishLater(instance, winner, reason));
     }
 
     /** Ends one match on the next tick. */
-    public void finishLater(GameInstance instance, Role winner) {
-        Bukkit.getScheduler().runTask(plugin, () -> finish(instance, winner));
-    }
-
-    private String getWinMessage(Role winner) {
-        String text = winner == Role.HUNTER
-                ? messages.string("game.hunters-win", "Hunters Win!")
-                : messages.string("game.speedrunners-win", "Speedrunners Win!");
-        return messages.addSeparators(text);
+    public void finishLater(GameInstance instance, Role winner, String reason) {
+        Bukkit.getScheduler().runTask(plugin, () -> finish(instance, winner, reason));
     }
 
     /** Online match assignees watching without playing, including eliminated hunters. */

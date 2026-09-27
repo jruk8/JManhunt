@@ -41,6 +41,12 @@ public class ManhuntGuiMessages extends OkaeriConfig {
     @CustomKey("dialog-title-edit")
     private String dialogTitleEdit = "Edit {name}";
 
+    @CustomKey("game-rules-title")
+    private String gameRulesTitle = "Game Rules";
+
+    @CustomKey("game-rules-hint")
+    private String gameRulesHint = "Tick the game-state rules this server applies.";
+
     @CustomKey("setting-value")
     private String settingValue = "Value: <white>{value}";
 

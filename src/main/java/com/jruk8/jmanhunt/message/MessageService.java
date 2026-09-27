@@ -72,6 +72,36 @@ public final class MessageService {
         return string("role-colors." + role.name().toLowerCase(Locale.ROOT), defaultRoleColor(role));
     }
 
+    /**
+     * Raw six-line win announcement for one winner: blank, prefix,
+     * separator, role-colored title, reason line, separator. Render it
+     * with the wincon and rolecolor slots. The color wrap is
+     * unconditional: plain titles take the role color while an explicit
+     * tag inside a custom override still dominates it.
+     */
+    public String winAnnouncement(Role winner) {
+        String title = winner == Role.HUNTER
+                ? string("game.hunters-win", "Hunters Win!")
+                : string("game.speedrunners-win", "Speedrunners Win!");
+        return winBlock(string("game.separator", ""), roleColor(winner) + title,
+                string("game.win-reason", "{rolecolor}🏆 {wincon}"));
+    }
+
+    /**
+     * Six-line win announcement shape: blank, prefix, separator, title,
+     * reason, separator. Pure for tests.
+     */
+    static String winBlock(String separator, String title, String reasonLine) {
+        return "\n{prefix}\n" + separator + "\n" + title + "\n" + reasonLine + "\n" + separator;
+    }
+
+    /** Role-colored fullscreen win title for one winner. */
+    public Component winTitle(Role winner) {
+        String key = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
+        String fallback = winner == Role.HUNTER ? "Hunters Win!" : "Speedrunners Win!";
+        return renderLiteral(roleColor(winner) + string(key, fallback), Map.of());
+    }
+
     private static String defaultRoleColor(Role role) {
         return switch (role) {
             case SPEEDRUNNER -> "<#74de66>";
@@ -186,11 +216,6 @@ public final class MessageService {
 
     public String formatPlaceholder(String raw) {
         return LegacyComponentSerializer.legacySection().serialize(parse(raw));
-    }
-
-    public String addSeparators(String text) {
-        String separator = string("game.separator", "");
-        return separator + "\n" + text + "\n" + separator;
     }
 
     public Component nonItalic(Component component) {

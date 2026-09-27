@@ -7,6 +7,7 @@ import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.core.PlaceholderPass;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.JManhuntPlugin;
@@ -555,9 +556,8 @@ public final class GameStateCommandManager {
     }
 
     /** Pauses a spawn gamerule while a match runs, restoring it after. */
-    private void applySpawnGamerule(List<World> worlds, String phase, int lobbyId,
-            boolean lastMatch, String togglePath, GameRule<Boolean> rule) {
-        boolean disabled = plugin.overrides().getBoolean(lobbyId, togglePath, false);
+    private void applySpawnGamerule(List<World> worlds, String phase,
+            boolean lastMatch, boolean disabled, GameRule<Boolean> rule) {
         worlds.forEach(world -> world.setGameRule(rule,
                 gameruleRestored(phase, lastMatch, disabled)));
     }
@@ -567,45 +567,53 @@ public final class GameStateCommandManager {
         if (!plugin.overrides().getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
             return;
         }
-        String path = "advanced.advanced-match-controls.game-rules.rules.";
-        if (plugin.overrides().getBoolean(lobbyId, path + "reset-players-stats", false)) {
+        List<String> rules = plugin.overrides().getStringList(lobbyId,
+                MatchConfig.GameRules.RULES_PATH);
+        if (MatchConfig.GameRules.isRuleEnabled(rules, "RESET_PLAYERS_STATS")) {
             participants.forEach(this::resetPlayer);
         }
-        if (plugin.overrides().getBoolean(lobbyId, path + "auto-set-gamemode", false)) {
+        if (MatchConfig.GameRules.isRuleEnabled(rules, "AUTO_SET_GAMEMODE")) {
             applyDefaultGamemodes(phase, participants, lobbySpectators, lobbyId);
         }
-        var worlds = Bukkit.getWorlds();
+        applyWorldRules(Bukkit.getWorlds(), phase, lastMatch, rules);
+        if (MatchConfig.GameRules.isRuleEnabled(rules, "SET_DAYTIME")) {
+            Bukkit.getWorlds().forEach(this::setDaytime);
+        }
+    }
+
+    /** Vanilla gamerule applications for one phase. */
+    private void applyWorldRules(List<World> worlds, String phase,
+            boolean lastMatch, List<String> rules) {
         boolean disableLocatorBar =
-                plugin.overrides().getBoolean(lobbyId, path + "disable-locator-bar", false);
+                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_LOCATOR_BAR");
         worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, !disableLocatorBar));
         // Quiet command feedback while a match runs and restore it when
-        // the last match ends. Unlike its siblings this toggle defaults
+        // the last match ends. Unlike its siblings this rule defaults
         // to off.
         boolean disableFeedback =
-                plugin.overrides().getBoolean(lobbyId, path + "disable-command-feedback", false);
+                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_COMMAND_FEEDBACK");
         worlds.forEach(world -> world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK,
                 gameruleRestored(phase, lastMatch, disableFeedback)));
         // Disable phantom spawning while a match runs and restore it when the
         // match ends. The gamerule is re-enabled on the end phase.
         boolean disablePhantoms =
-                plugin.overrides().getBoolean(lobbyId, path + "disable-phantoms", false);
+                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_PHANTOMS");
         worlds.forEach(world -> world.setGameRule(GameRules.SPAWN_PHANTOMS,
                 gameruleRestored(phase, lastMatch, disablePhantoms)));
         worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
-                plugin.overrides().getBoolean(lobbyId, path + "set-respawn-immediate", false)));
+                MatchConfig.GameRules.isRuleEnabled(rules, "SET_RESPAWN_IMMEDIATE")));
         // Prevent spectators from generating chunks while the match is active.
         // This is the native gamerule equivalent of the old spectator chunk
         // generation toggle and avoids lag from spectators exploring.
         worlds.forEach(world -> world.setGameRule(GameRules.SPECTATORS_GENERATE_CHUNKS, false));
         // Pillager patrols never spawn while a match runs; restored when the last match ends.
-        applySpawnGamerule(worlds, phase, lobbyId, lastMatch,
-                path + "disable-pillager-patrols", GameRules.SPAWN_PATROLS);
+        applySpawnGamerule(worlds, phase, lastMatch,
+                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_PILLAGER_PATROLS"),
+                GameRules.SPAWN_PATROLS);
         // Wandering traders never spawn while a match runs; restored when the last match ends.
-        applySpawnGamerule(worlds, phase, lobbyId, lastMatch,
-                path + "disable-wandering-trader", GameRules.SPAWN_WANDERING_TRADERS);
-        if (plugin.overrides().getBoolean(lobbyId, path + "set-daytime", false)) {
-            Bukkit.getWorlds().forEach(this::setDaytime);
-        }
+        applySpawnGamerule(worlds, phase, lastMatch,
+                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_WANDERING_TRADER"),
+                GameRules.SPAWN_WANDERING_TRADERS);
     }
 
     /**

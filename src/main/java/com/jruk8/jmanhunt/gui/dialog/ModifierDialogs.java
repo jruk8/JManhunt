@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.gui.dialog;
 
+import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.match.ModifierTriggers;
@@ -28,8 +29,9 @@ import org.bukkit.plugin.Plugin;
  * Native client dialogs for modifier editing.
  *
  * <p>Runs On shows one checkbox per known trigger, initialled from the
- * live list. Submit reports the checked set, plays neutral, and reopens
- * the caller; Cancel reopens silently. Reopens run through the scheduler
+ * live list; Game Rules shows one checkbox per known game-state rule.
+ * Submit reports the checked set, plays neutral, and reopens the
+ * caller; Cancel reopens silently. Reopens run through the scheduler
  * so the dialog close never swallows the returning menu. Opening plays
  * the neutral sound, like every other dialog.
  */
@@ -51,19 +53,36 @@ public final class ModifierDialogs implements ModifierDialog {
     @Override
     public void openRunsOn(Player player, List<String> current,
             Consumer<Set<String>> onSubmit, Runnable reopen) {
-        List<String> known = knownTriggers();
+        openChecklist(player, knownTriggers(),
+                "modifiers-gui.runs-on-title", "Runs On",
+                "modifiers-gui.runs-on-hint", "Tick the events this modifier runs on.",
+                current, onSubmit, reopen);
+    }
+
+    @Override
+    public void openGameRules(Player player, List<String> current,
+            Consumer<Set<String>> onSubmit, Runnable reopen) {
+        openChecklist(player, MatchConfig.GameRules.KNOWN,
+                "manhunt-gui.game-rules-title", "Game Rules",
+                "manhunt-gui.game-rules-hint", "Tick the game-state rules this server applies.",
+                current, onSubmit, reopen);
+    }
+
+    private void openChecklist(Player player, List<String> known,
+            String titleKey, String titleFallback, String hintKey, String hintFallback,
+            List<String> current, Consumer<Set<String>> onSubmit, Runnable reopen) {
         List<DialogBody> body = List.of(DialogBody.plainMessage(messages.parse(messages
-                .string("modifiers-gui.runs-on-hint", "Tick the events this modifier runs on."))));
+                .string(hintKey, hintFallback))));
         List<DialogInput> inputs = new ArrayList<>();
         for (int index = 0; index < known.size(); index++) {
-            String trigger = known.get(index);
-            boolean checked = current.stream().anyMatch(trigger::equalsIgnoreCase);
-            inputs.add(DialogInput.bool(DialogInputs.triggerKey(index), label(trigger))
+            String value = known.get(index);
+            boolean checked = current.stream().anyMatch(value::equalsIgnoreCase);
+            inputs.add(DialogInput.bool(DialogInputs.triggerKey(index), label(value))
                     .initial(checked).build());
         }
         Dialog dialog = Dialog.create(factory -> factory.empty()
                 .base(DialogBase.builder(GuiTexts.title(messages, messages
-                                .string("modifiers-gui.runs-on-title", "Runs On")))
+                                .string(titleKey, titleFallback)))
                         .body(body)
                         .inputs(inputs)
                         .canCloseWithEscape(true)
@@ -87,8 +106,8 @@ public final class ModifierDialogs implements ModifierDialog {
         return ModifierTriggers.KNOWN;
     }
 
-    private Component label(String trigger) {
-        return GuiTexts.name(messages, trigger, trigger);
+    private Component label(String value) {
+        return GuiTexts.name(messages, value, value);
     }
 
     private static DialogAction clickAction(DialogActionCallback callback) {

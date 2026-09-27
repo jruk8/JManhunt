@@ -215,7 +215,10 @@ public final class PlayerConnectionListener implements Listener {
                 : game.activeHunterCount(instance) == 0;
         if (bucketEmpty) {
             if (instance.begun()) {
-                game.finishLater(instance, role == Role.SPEEDRUNNER ? Role.HUNTER : Role.SPEEDRUNNER);
+                game.finishLater(instance, role == Role.SPEEDRUNNER ? Role.HUNTER : Role.SPEEDRUNNER,
+                        role == Role.SPEEDRUNNER
+                                ? "All speedrunners disconnected"
+                                : "All hunters disconnected");
             } else {
                 game.cancel(instance);
             }

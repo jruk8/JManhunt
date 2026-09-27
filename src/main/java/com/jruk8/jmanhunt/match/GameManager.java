@@ -339,14 +339,14 @@ public final class GameManager implements MatchControl {
     }
 
     /** Ends the match when exactly one is live; a no-op otherwise. */
-    public void finish(Role winner) {
-        matchFinish.finish(winner);
+    public void finish(Role winner, String reason) {
+        matchFinish.finish(winner, reason);
     }
 
     /** Ends one match. */
     @Override
-    public void finish(GameInstance instance, Role winner) {
-        matchFinish.finish(instance, winner);
+    public void finish(GameInstance instance, Role winner, String reason) {
+        matchFinish.finish(instance, winner, reason);
     }
 
     /**
@@ -354,8 +354,8 @@ public final class GameManager implements MatchControl {
      * {@code advanced.advanced-match-controls.end-delay} is skipped: statistics post instantly and the
      * final cleanup runs at once instead of after the delay.
      */
-    public void finish(GameInstance instance, Role winner, boolean immediate) {
-        matchFinish.finish(instance, winner, immediate);
+    public void finish(GameInstance instance, Role winner, boolean immediate, String reason) {
+        matchFinish.finish(instance, winner, immediate, reason);
     }
 
     /**
@@ -393,13 +393,13 @@ public final class GameManager implements MatchControl {
     }
 
     /** Ends the match next tick when exactly one is live; a no-op otherwise. */
-    public void finishLater(Role winner) {
-        matchFinish.finishLater(winner);
+    public void finishLater(Role winner, String reason) {
+        matchFinish.finishLater(winner, reason);
     }
 
     /** Ends one match on the next tick. */
-    public void finishLater(GameInstance instance, Role winner) {
-        matchFinish.finishLater(instance, winner);
+    public void finishLater(GameInstance instance, Role winner, String reason) {
+        matchFinish.finishLater(instance, winner, reason);
     }
 
 

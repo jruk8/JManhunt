@@ -159,13 +159,17 @@ class GameStateCommandManagerTest {
     }
 
     @Test
-    void bundledConfigDisablesPillagerPatrols() throws Exception {
+    void bundledConfigRulesListDefaults() throws Exception {
         try (InputStream stream = Objects.requireNonNull(
                 getClass().getClassLoader().getResourceAsStream("config.yml"),
                 "missing test resource: config.yml")) {
             YamlConfiguration config = YamlConfiguration.loadConfiguration(
                     new InputStreamReader(stream, StandardCharsets.UTF_8));
-            assertTrue(config.getBoolean("advanced.advanced-match-controls.game-rules.rules.disable-pillager-patrols"));
+            List<String> rules = config.getStringList(
+                    "advanced.advanced-match-controls.game-rules.rules");
+            assertEquals(8, rules.size());
+            assertTrue(rules.contains("DISABLE_PILLAGER_PATROLS"));
+            assertFalse(rules.contains("DISABLE_COMMAND_FEEDBACK"));
         }
     }
 }

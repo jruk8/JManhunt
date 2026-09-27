@@ -30,7 +30,8 @@ public final class SettingRegistry {
             "world-engine.preloading.commands",
             "settings.server.team-chat.prefixes",
             "settings.server.anti-spawn-camp.monitored-roles",
-            "world-engine.spawnpoint-algorithm.spawn-close-to-structure.structures");
+            "world-engine.spawnpoint-algorithm.spawn-close-to-structure.structures",
+            "advanced.advanced-match-controls.game-rules.rules");
 
     private SettingRegistry() {
     }
@@ -462,15 +463,6 @@ public final class SettingRegistry {
     private static void addAdvancedMatchControlsEntries(List<SettingDescriptor> entries) {
         String root = "advanced.advanced-match-controls.";
         entries.add(bool(root + "game-rules.enabled", true));
-        entries.add(bool(root + "game-rules.rules.auto-set-gamemode", true));
-        entries.add(bool(root + "game-rules.rules.reset-players-stats", true));
-        entries.add(bool(root + "game-rules.rules.disable-locator-bar", true));
-        entries.add(bool(root + "game-rules.rules.set-respawn-immediate", true));
-        entries.add(bool(root + "game-rules.rules.set-daytime", true));
-        entries.add(bool(root + "game-rules.rules.disable-phantoms", true));
-        entries.add(bool(root + "game-rules.rules.disable-command-feedback", false));
-        entries.add(bool(root + "game-rules.rules.disable-pillager-patrols", true));
-        entries.add(bool(root + "game-rules.rules.disable-wandering-trader", true));
         entries.add(floatVal(root + "end-delay", 10.0, null, null));
         entries.add(floatMinusOne(root + "start-reminder-interval", 30.0, 0.0));
         entries.add(intVal(root + "disconnect-handling.speedrunner.reconnect-grace-seconds", 60, null, null));

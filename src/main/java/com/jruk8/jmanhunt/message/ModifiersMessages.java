@@ -136,6 +136,9 @@ public class ModifiersMessages extends OkaeriConfig {
     @CustomKey("edit-renamed")
     private String editRenamed = "{prefix}<green>Renamed to <white>{name}<green>.";
 
+    @CustomKey("edit-id-changed")
+    private String editIdChanged = "{prefix}<green>Id changed to <white>{name}<green>.";
+
     @CustomKey("edit-deleted")
     private String editDeleted = "{prefix}<green>Deleted <white>{name}<green>.";
 

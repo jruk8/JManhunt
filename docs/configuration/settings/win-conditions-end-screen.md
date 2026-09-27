@@ -90,6 +90,17 @@ credits screen`. The elimination line hides while hunters have unlimited
 lives, since it could never be achieved. The sentence fragments live in
 `messages.yml` under `wincon:`, so every word of the rules is editable.
 
+# Win Announcement
+
+When a match ends with a winner, the announcement block reads, top to
+bottom: a blank line, the plugin prefix, a separator, the
+role-colored `Hunters Win!` or `Speedrunners Win!` title, a reason
+line, and a closing separator. The reason names the firing condition,
+e.g. `Exited the End` or `All hunters eliminated`. Its format lives
+in `messages.yml` under `game.win-reason` (`{rolecolor}` colors the
+trophy with the winner's role color, `{wincon}` holds the reason).
+The fullscreen title wears the winner's role color too.
+
 # End-Screen Statistics
 
 Under `advanced.advanced-match-controls.end-statistics`, you can configure which match statistics are broadcast

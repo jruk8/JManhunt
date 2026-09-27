@@ -42,20 +42,21 @@ public final class MetaQuad {
     /**
      * @param target live display-data reads and patches
      * @param parent menu back returns to, usually the creator root
-     * @param reopenRoot rebuilds the creator root after a rename
+     * @param reopenMeta rebuilds this same Meta menu over a fresh target
+     * after a rename
      * @return the Meta quad menu
      */
     public Menu menu(MetaTarget target, Supplier<Menu> parent,
-            Function<String, Menu> reopenRoot) {
+            Function<String, Menu> reopenMeta) {
         final Menu[] self = new Menu[1];
         self[0] = QuadPanel.menu(
                 GuiTexts.title(messages, text("meta-title", "Meta")),
                 List.of(
-                        nameButton(target, parent, reopenRoot),
+                        nameButton(target, parent, reopenMeta),
                         EditorButtons.valueButton(messages, Material.BOOK,
                                 "Description", orUnset(target.description()),
                                 text("editor-click-edit", "Click to edit"),
-                                player -> fieldPrompt(player, reopen(target, parent, reopenRoot), "Description",
+                                player -> fieldPrompt(player, reopen(target, parent, reopenMeta), "Description",
                                         target.description(), true, raw -> {
                                             target.patchDescription(raw);
                                             return null;
@@ -63,7 +64,7 @@ public final class MetaQuad {
                         EditorButtons.valueButton(messages, target.item(),
                                 "Icon", target.item().name(),
                                 text("editor-click-edit", "Click to edit"),
-                                player -> fieldPrompt(player, reopen(target, parent, reopenRoot), "Icon",
+                                player -> fieldPrompt(player, reopen(target, parent, reopenMeta), "Icon",
                                         target.item().name(), false, raw -> {
                                             ModifierFieldEdits.Parsed<Material> item =
                                                     ModifierFieldEdits.item(raw);
@@ -78,7 +79,7 @@ public final class MetaQuad {
                         EditorButtons.valueButton(messages, Material.PLAYER_HEAD,
                                 "Author", orUnset(target.author()),
                                 text("editor-click-edit", "Click to edit"),
-                                player -> fieldPrompt(player, reopen(target, parent, reopenRoot), "Author",
+                                player -> fieldPrompt(player, reopen(target, parent, reopenMeta), "Author",
                                         target.author() == null ? "" : target.author(),
                                         true, raw -> {
                                             target.patchAuthor(raw);
@@ -92,7 +93,7 @@ public final class MetaQuad {
     }
 
     private MenuButton nameButton(MetaTarget target, Supplier<Menu> parent,
-            Function<String, Menu> reopenRoot) {
+            Function<String, Menu> reopenMeta) {
         return new MenuButton(Material.NAME_TAG,
                 GuiTexts.name(messages, "Name", "Name"),
                 GuiTexts.lore(messages, List.of(
@@ -102,7 +103,7 @@ public final class MetaQuad {
                         text("editor-click-edit", "Click to edit"),
                         text("editor-rename-hint", "Right-click to rename id"))),
                 false, false,
-                player -> fieldPrompt(player, reopen(target, parent, reopenRoot),
+                player -> fieldPrompt(player, reopen(target, parent, reopenMeta),
                         "Name", target.name(), false,
                         raw -> {
                             ModifierFieldEdits.Parsed<String> name =
@@ -111,16 +112,19 @@ public final class MetaQuad {
                                 return name.error();
                             }
                             target.patchName(name.value());
+                            messages.message(player, "modifiers.edit-renamed",
+                                    Map.of("name", target.displayName(target.id())));
+                            sounds.playNeutralSound(player);
                             return null;
                         }),
-                player -> renamePrompt(player, reopen(target, parent, reopenRoot),
-                        target, reopenRoot)).silent();
+                player -> renamePrompt(player, reopen(target, parent, reopenMeta),
+                        target, reopenMeta)).silent();
     }
 
     /** Rebuild supplier so prompt callbacks reopen a fresh quad. */
     private Supplier<Menu> reopen(MetaTarget target, Supplier<Menu> parent,
-            Function<String, Menu> reopenRoot) {
-        return () -> menu(target, parent, reopenRoot);
+            Function<String, Menu> reopenMeta) {
+        return () -> menu(target, parent, reopenMeta);
     }
 
     private void fieldPrompt(Player player, Supplier<Menu> reopen, String label, String current,
@@ -131,7 +135,7 @@ public final class MetaQuad {
     }
 
     private void renamePrompt(Player player, Supplier<Menu> reopen, MetaTarget target,
-            Function<String, Menu> reopenRoot) {
+            Function<String, Menu> reopenMeta) {
         if (denied(player)) {
             return;
         }
@@ -146,10 +150,10 @@ public final class MetaQuad {
                         return;
                     }
                     target.rename(parsed.value());
-                    messages.message(player, "modifiers.edit-renamed",
+                    messages.message(player, "modifiers.edit-id-changed",
                             Map.of("name", target.displayName(parsed.value())));
                     sounds.playNeutralSound(player);
-                    gui.navigate(player, reopenRoot.apply(parsed.value()));
+                    gui.navigate(player, reopenMeta.apply(parsed.value()));
                 },
                 () -> gui.navigate(player, reopen.get()));
     }

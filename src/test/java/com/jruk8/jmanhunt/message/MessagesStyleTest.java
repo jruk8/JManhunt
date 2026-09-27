@@ -35,6 +35,19 @@ class MessagesStyleTest {
     }
 
     @Test
+    void winBlockKeysHaveNoPrefixAndReasonSlots() throws Exception {
+        YamlConfiguration messages = loadBundledMessages();
+
+        for (String key : List.of("game.hunters-win", "game.speedrunners-win",
+                "game.hunters-title", "game.speedrunners-title")) {
+            assertFalse(messages.getString(key, "").contains("{prefix}"), key);
+        }
+        String reason = messages.getString("game.win-reason", "");
+        assertTrue(reason.contains("{rolecolor}"), "win-reason needs {rolecolor}");
+        assertTrue(reason.contains("{wincon}"), "win-reason needs {wincon}");
+    }
+
+    @Test
     void cancelAndCellIndexKeysExist() throws Exception {
         YamlConfiguration messages = loadBundledMessages();
 
@@ -60,7 +73,7 @@ class MessagesStyleTest {
                 "modifiers.setmod-success", "modifiers.setpreset-success",
                 "modifiers.list-header", "modifiers.list-entry-on",
                 "modifiers.list-entry-off", "modifiers.list-presets-header",
-                "modifiers.list-empty")) {
+                "modifiers.list-empty", "modifiers.edit-id-changed")) {
             assertTrue(messages.getString(key, null) != null, key);
         }
         String announced = messages.getString("modifiers.toggle-announced", "");

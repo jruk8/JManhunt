@@ -102,7 +102,7 @@ public final class TimeLimitService {
             control.cancel(instance);
         } else {
             cancelTimeLimit(instance);
-            control.finish(instance, limit.winner());
+            control.finish(instance, limit.winner(), "Time expired");
         }
     }
 
