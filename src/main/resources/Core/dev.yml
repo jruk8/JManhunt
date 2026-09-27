@@ -1,0 +1,19 @@
+# JManhunt dev data (internal). Lobby presets for fresh lobby-world
+# generation. Loaded straight from the jar; never copied to the data
+# folder and never editable at runtime. This file is the source of
+# truth: preset changes ship with builds.
+# Per-preset generation. schematic is a vanilla structure-block .nbt in
+# JManhunt/settings/world-engine/lobby-schematics/, pasted with its
+# midpoint at 0,64,0. commands run as console after the paste and before
+# the first teleport lands ({world} and {preset} are substituted).
+# Do not touch unless you know what you are doing.
+lobby-presets:
+  EMPTY:
+    schematic: "empty-lobby"
+    commands: []
+  DEFAULT:
+    schematic: "default-lobby"
+    commands: []
+  ADVANCED:
+    schematic: "advanced-lobby"
+    commands: []

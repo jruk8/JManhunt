@@ -30,9 +30,9 @@ categories:
   match/headstarts/speedrunner: RABBIT_FOOT
   compass: COMPASS
   compass/given-to: CHEST
-  advanced/misc/analyze: AMETHYST_SHARD
-  advanced/misc/analyze/debuffs: POTION
-  advanced/misc/analyze/debuffs/commands: COMMAND_BLOCK
+  compass/analysis: AMETHYST_SHARD
+  compass/analysis/debuffs: POTION
+  compass/analysis/debuffs/commands: COMMAND_BLOCK
   compass/signal-interference: REDSTONE_TORCH
   compass/signal-interference/altitude: ELYTRA
   compass/signal-interference/biome: GRASS_BLOCK
@@ -77,10 +77,27 @@ categories:
   server/anti-spawn-camp: IRON_BARS
   server/team-chat: WRITABLE_BOOK
   advanced/advanced-match-controls: GOAT_HORN
+  advanced/advanced-match-controls/game-rules: LECTERN
+  advanced/advanced-match-controls/game-rules/rules: BOOKSHELF
+  advanced/advanced-match-controls/disconnect-handling: IRON_DOOR
+  advanced/advanced-match-controls/disconnect-handling/speedrunner: GLOW_BERRIES
+  advanced/advanced-match-controls/disconnect-handling/hunter: REDSTONE
   advanced/lobbies: LODESTONE
+  advanced/lobbies/bounds: OAK_FENCE
+  advanced/lobbies/queue-caps: DROPPER
   advanced/misc: COMPARATOR
-  advanced/misc/debug: DEBUG_STICK
   world-engine: BEACON
+  world-engine/role-pads: HEAVY_WEIGHTED_PRESSURE_PLATE
+  world-engine/role-pads/blocks: GRAY_CONCRETE
+  world-engine/spawnpoint-algorithm: RESPAWN_ANCHOR
+  world-engine/spawnpoint-algorithm/spawn-close-to-structure: BRICKS
+  world-engine/preloading: BARREL
+  world-engine/preloading/cell-buffer: SHULKER_BOX
+  world-engine/world-border: BEDROCK
+  world-engine/world-border/damage: LAVA_BUCKET
+  world-engine/world-border/start-border: LIME_BANNER
+  world-engine/world-border/particles: FIREWORK_STAR
+  world-engine/end: END_STONE
 descriptions:
   "settings.match": "Match flow: autostart, headstarts, leaving, and victory."
   "settings.match.autostart": "Begin matches automatically once queues fill up."
@@ -97,7 +114,7 @@ descriptions:
   "settings.match.start-on-speedrunner-damage": "Start only after a runner damages a hunter."
   "settings.match.win-conditions": "Every way either side can win or cancel."
   "settings.match.win-conditions.cancel": "Cancel the match instead of crowning a winner."
-  "settings.match.win-conditions.cancel.survived-time": "Survival time that cancels the match."
+  "settings.match.win-conditions.cancel.survived-time": "Match cancels after this many survived seconds."
   "settings.match.win-conditions.hunter": "Victory goals for the hunter team."
   "settings.match.win-conditions.hunter.acquire-item": "Hunters win by holding an item."
   "settings.match.win-conditions.hunter.kill-mob": "Hunters win by killing a mob."
@@ -110,9 +127,9 @@ descriptions:
   "settings.match.win-conditions.speedrunner.reach-advancement": "Speedrunners win via an advancement."
   "settings.match.win-conditions.speedrunner.survive-time": "Speedrunners win by surviving."
   "settings.compass": "Tracking compass: who gets one and how it behaves."
-  "advanced.misc.analyze": "Delayed analysis with tick sounds and commands."
-  "advanced.misc.analyze.debuffs": "Commands fired while analysis runs."
-  "advanced.misc.analyze.debuffs.commands": "Command lists for holders, runners, hunters."
+  "settings.compass.analysis": "Delayed analysis with tick sounds and commands."
+  "settings.compass.analysis.debuffs": "Commands fired while analysis runs."
+  "settings.compass.analysis.debuffs.commands": "Command lists for holders, runners, hunters."
   "settings.compass.drop-on-death": "Whether the compass drops when its holder dies."
   "settings.compass.given-to": "Which roles receive a tracking compass."
   "settings.compass.hunter": "Range limits for hunter compasses."
@@ -155,6 +172,7 @@ descriptions:
   "settings.players.spectator": "Spectator toolbar and lock-on follow."
   "settings.players.spectator.toolbar": "Hotbar buttons handed to spectators."
   "settings.server": "Broadcasts, spawn-camp guard, and status output."
+  "advanced.misc": "Power-user toggles that rarely need changing."
   "advanced.misc.interop": "Advanced server interop toggles."
   "advanced.misc.interop.disable-worldedit-navwand": "Block WorldEdit compass teleports."
   "advanced.misc.interop.validate-modifier-editor-commands": "Reject bad roots and give items in the editor."
@@ -197,7 +215,7 @@ descriptions:
   "settings.match.win-conditions.hunter.survive-time.enabled": "Hunters win by surviving."
   "settings.match.win-conditions.hunter.survive-time.time": "Seconds hunters must survive."
   "settings.match.win-conditions.cancel.survived-time.enabled": "Cancel instead of crowning on survive."
-  "settings.match.win-conditions.cancel.survived-time.time": "Survival time that cancels the match."
+  "settings.match.win-conditions.cancel.survived-time.time": "Survived seconds before the match cancels."
   "settings.match.game-boosts.nether-structures.enabled": "Boost nether fortress and bastion rates."
   "settings.match.game-boosts.overworld-structures.enabled": "Boost overworld structure rates."
   "settings.match.game-boosts.disable-brutes.enabled": "Block natural piglin brute spawns."
@@ -222,15 +240,15 @@ descriptions:
   "settings.compass.speedrunner.max-distance.distance": "Speedrunner compass range; -1 is unlimited."
   "settings.compass.speedrunner.min-distance.enabled": "Hide nearby targets from speedrunners."
   "settings.compass.speedrunner.min-distance.distance": "Radius inside which targets hide."
-  "advanced.misc.analyze.right-click": "Analysis lag applies to right-click refreshes."
-  "advanced.misc.analyze.auto": "Analysis lag applies to interval refreshes."
-  "advanced.misc.analyze.delay-seconds": "Seconds the analysis takes to complete."
-  "advanced.misc.analyze.delay-deviation-seconds": "Random jitter on the analysis delay."
-  "advanced.misc.analyze.sound-interval-seconds": "Seconds between analysis tick sounds."
-  "advanced.misc.analyze.debuffs.enabled": "Run commands when an analysis starts."
-  "advanced.misc.analyze.debuffs.commands.player": "Commands run for every analyzing holder."
-  "advanced.misc.analyze.debuffs.commands.speedrunner": "Extra commands for speedrunner holders."
-  "advanced.misc.analyze.debuffs.commands.hunter": "Extra commands for hunter holders."
+  "settings.compass.analysis.right-click": "Analysis lag applies to right-click refreshes."
+  "settings.compass.analysis.auto": "Analysis lag applies to interval refreshes."
+  "settings.compass.analysis.delay-seconds": "Seconds the analysis takes to complete."
+  "settings.compass.analysis.delay-deviation-seconds": "Random jitter on the analysis delay."
+  "settings.compass.analysis.sound-interval-seconds": "Seconds between analysis tick sounds."
+  "settings.compass.analysis.debuffs.enabled": "Run commands when an analysis starts."
+  "settings.compass.analysis.debuffs.commands.player": "Commands run for every analyzing holder."
+  "settings.compass.analysis.debuffs.commands.speedrunner": "Extra commands for speedrunner holders."
+  "settings.compass.analysis.debuffs.commands.hunter": "Extra commands for hunter holders."
   "settings.compass.signal-interference.enabled": "Master switch for signal interference."
   "settings.compass.signal-interference.two-way": "Target location needs a good signal too."
   "settings.compass.signal-interference.required-to-fail": "Failed checks needed to jam tracking."
@@ -283,13 +301,93 @@ descriptions:
   "settings.server.anti-spawn-camp.kills": "Kills on one victim that trigger it."
   "settings.server.anti-spawn-camp.window-seconds": "Rolling window in seconds."
   "settings.server.anti-spawn-camp.punishment": "KILL slays the camper; GEAR-WIPE strips them."
-  "advanced.misc.debug.show-ids": "Show match ids in status output."
+  "settings.server.status.show-ids": "Show lobby and game ids in status output."
   "settings.server.status.show-elapsed-time": "Show elapsed time in status output."
   "settings.server.status.show-modifiers": "Show modifiers in status output."
   "settings.server.status.show-win-conditions": "Show win conditions in status output."
   "advanced.advanced-match-controls": "Match lifecycle: delays, reminders, rules."
   "advanced.lobbies": "Lobby queues, bounds exits, and the lobby world."
-  "advanced.misc": "Power-user toggles that rarely need changing."
-  "advanced.misc.debug": "Debug display toggles."
   "world-engine": "Grid engine: cells, borders, spawns, particles."
   "advanced.lobbies.disable-player-collisions": "Lobby members pass through each other."
+  "advanced.advanced-match-controls.game-rules": "Vanilla gamerules applied around matches."
+  "advanced.advanced-match-controls.game-rules.rules": "Which gamerules the plugin manages."
+  "advanced.advanced-match-controls.disconnect-handling": "Grace periods for dropped players."
+  "advanced.advanced-match-controls.disconnect-handling.speedrunner": "Reconnect rules for speedrunners."
+  "advanced.advanced-match-controls.disconnect-handling.hunter": "Reconnect rules for hunters."
+  "advanced.lobbies.bounds": "Walk-in boxes that join and exit lobbies."
+  "advanced.lobbies.queue-caps": "Per-role queue caps for each lobby."
+  "world-engine.role-pads": "Lobby blocks that assign roles when stood on."
+  "world-engine.role-pads.blocks": "Concrete block mapped to each role."
+  "world-engine.spawnpoint-algorithm": "Validated per-player spawn selection."
+  "world-engine.spawnpoint-algorithm.spawn-close-to-structure": "Keep cells near listed structures."
+  "world-engine.preloading": "Console commands plus a ready-cell buffer."
+  "world-engine.preloading.cell-buffer": "Ready cells kept ahead of match starts."
+  "world-engine.world-border": "Cell confinement with a vanilla border."
+  "world-engine.world-border.damage": "Damage for standing outside the border."
+  "world-engine.world-border.start-border": "Small border that expands at game start."
+  "world-engine.world-border.particles": "Pseudo walls for concurrent matches."
+  "world-engine.end": "Shared pool of reusable end dimensions."
+  "advanced.advanced-match-controls.game-rules.enabled": "Run game-state actions at match start and end."
+  "advanced.advanced-match-controls.game-rules.rules.auto-set-gamemode": "Set gamemodes automatically."
+  "advanced.advanced-match-controls.game-rules.rules.reset-players-stats": "Reset player stats for the match."
+  "advanced.advanced-match-controls.game-rules.rules.disable-locator-bar": "Turn off the locator bar."
+  "advanced.advanced-match-controls.game-rules.rules.set-respawn-immediate": "Respawn without the death screen."
+  "advanced.advanced-match-controls.game-rules.rules.set-daytime": "Set daytime at match start."
+  "advanced.advanced-match-controls.game-rules.rules.disable-phantoms": "Turn off phantom spawns."
+  "advanced.advanced-match-controls.game-rules.rules.disable-command-feedback": "Silence command feedback."
+  "advanced.advanced-match-controls.game-rules.rules.disable-pillager-patrols": "Turn off pillager patrols."
+  "advanced.advanced-match-controls.game-rules.rules.disable-wandering-trader": "Turn off the wandering trader."
+  "advanced.advanced-match-controls.end-delay": "Seconds from win call to final cleanup."
+  "advanced.advanced-match-controls.start-reminder-interval": "Seconds between pre-start reminders."
+  "advanced.advanced-match-controls.disconnect-handling.speedrunner.reconnect-grace-seconds": "Seconds a dropped runner has to rejoin."
+  "advanced.advanced-match-controls.disconnect-handling.speedrunner.max-strikes": "Drops before a runner instantly loses."
+  "advanced.advanced-match-controls.disconnect-handling.hunter.reconnect-grace-seconds": "Seconds a dropped hunter has to rejoin."
+  "advanced.advanced-match-controls.disconnect-handling.hunter.max-strikes": "Drops before a hunter instantly loses."
+  "advanced.advanced-match-controls.end-statistics": "End-screen sections, in display order."
+  "advanced.lobbies.default-lobby-id": "Lobby id assigned on join; -1 is none."
+  "advanced.lobbies.join-teleports-to-lobby": "Teleport players to the lobby on join."
+  "advanced.lobbies.announce-lobby-changes": "Who hears lobby join and leave lines."
+  "advanced.lobbies.bounds.exit-lobby-id": "Lobby for bounds exits; -1 is none."
+  "advanced.lobbies.bounds.exit-behavior": "Keep or drop membership on bounds exit."
+  "advanced.lobbies.mid-match-setplayer": "How setplayer joins live matches."
+  "advanced.lobbies.queue-caps.speedrunner": "Max queued speedrunners; -1 is unlimited."
+  "advanced.lobbies.queue-caps.hunter": "Max queued hunters; -1 is unlimited."
+  "advanced.lobbies.lobby-world-name": "Lobby world name; missing worlds generate."
+  "world-engine.enabled": "Master switch for the grid engine."
+  "world-engine.world-name": "Game world holding the spiral cells."
+  "world-engine.role-pads.enabled": "Standing on pads assigns roles."
+  "world-engine.role-pads.silent-role-assignment": "Pads assign without message or sound."
+  "world-engine.role-pads.blocks.speedrunner": "Pad block for speedrunners."
+  "world-engine.role-pads.blocks.hunter": "Pad block for hunters."
+  "world-engine.role-pads.blocks.afk": "Pad block for AFK players."
+  "world-engine.role-pads.blocks.spectator": "Pad block for spectators."
+  "world-engine.role-pads.blocks.none": "Pad block for NONE players."
+  "world-engine.cell-size": "Spiral cell size in blocks; max 50000."
+  "world-engine.tp-spread-radius": "Spawn spread around each cell center."
+  "world-engine.spawnpoint-algorithm.enabled": "Use validated spawns over plain ones."
+  "world-engine.spawnpoint-algorithm.max-retries": "Re-rolls for off-median spawns."
+  "world-engine.spawnpoint-algorithm.y-tolerance": "Level band around median spawn height."
+  "world-engine.spawnpoint-algorithm.spawn-close-to-structure.enabled": "Keep cells near structures."
+  "world-engine.spawnpoint-algorithm.spawn-close-to-structure.structures": "Structure words to look for."
+  "world-engine.spawnpoint-algorithm.spawn-close-to-structure.attempts": "Structure lookups per cell fetch."
+  "world-engine.spawnpoint-algorithm.spawn-close-to-structure.max-distance": "Closest a structure must be, in blocks."
+  "world-engine.preloading.commands": "Console commands per fetched cell."
+  "world-engine.preloading.cell-buffer.stored-cells-buffer": "Ready cells kept ahead of starts."
+  "world-engine.preloading.cell-buffer.increment-when": "When the cell buffer refills."
+  "world-engine.world-border.enabled": "Confine cells with a vanilla border."
+  "world-engine.world-border.damage.buffer": "Grace blocks before border damage."
+  "world-engine.world-border.damage.amount": "Damage per block per second outside."
+  "world-engine.world-border.start-border.enabled": "Start small, expand at game start."
+  "world-engine.world-border.start-border.radius": "Initial border radius in blocks."
+  "world-engine.world-border.start-border.fadeout-time": "Seconds for the border expand animation."
+  "world-engine.world-border.particles.particle-spacing": "Blocks between wall grid vertices."
+  "world-engine.world-border.particles.color": "Wall color as a hex value."
+  "world-engine.world-border.particles.render-radius": "Blocks from a wall where it renders."
+  "world-engine.world-border.particles.pulse-mode": "INTERVAL blinks; SINE_WAVE sweeps."
+  "world-engine.world-border.particles.interval": "Seconds between INTERVAL blinks."
+  "world-engine.world-border.particles.wave-direction-angle": "SINE_WAVE travel direction in degrees."
+  "world-engine.world-border.particles.wave-length": "SINE_WAVE spatial period in blocks."
+  "world-engine.world-border.particles.wave-speed": "SINE_WAVE temporal frequency in Hz."
+  "world-engine.world-border.particles.max-particles-per-player": "Wall particle ceiling per player."
+  "world-engine.end.base-name": "Base name for pooled end dimensions."
+  "world-engine.end.buffer": "Free end dimensions kept ready."

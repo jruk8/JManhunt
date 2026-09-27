@@ -144,7 +144,8 @@ public final class SettingButtons {
                 typeName(descriptor.type()),
                 allowed, options, Set.of(displayCurrent(descriptor, lobby)),
                 displayDefault(descriptor),
-                hint(descriptor.type()));
+                hint(descriptor.type()),
+                descriptor.restartRequired());
         List<String> lines = new ArrayList<>(FieldLore.lines(messages, field));
         if (lobby != null) {
             lines.add(template("manhunt-gui.override-shift-clear",

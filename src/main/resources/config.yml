@@ -471,6 +471,39 @@ settings:
         # line of sight. From 1 to 1000.
         # Default: 300
         max-ray-distance: 300
+    # Purposeful lag before a compass refresh resolves, showing
+    # "Analyzing..." while it runs. No second refresh starts mid-analysis,
+    # and click cooldowns restart when the analysis ends.
+    analysis:
+      # Applies to right-click refreshes.
+      # Default: false
+      right-click: false
+      # Applies to automatic (interval) refreshes.
+      # Default: false
+      auto: false
+      # Seconds the analysis takes before the compass updates.
+      # Default: 1.0
+      delay-seconds: 1.0
+      # Random plus-or-minus jitter applied to delay-seconds per
+      # analysis. Capped at the delay itself.
+      # Default: 0.0
+      delay-deviation-seconds: 0.0
+      # Seconds between analysis tick sounds, rounded to whole ticks.
+      # Default: 0.5
+      sound-interval-seconds: 0.5
+      # Commands run as console when an analysis starts, in modifier
+      # style: <p> is the holder, ~ resolves against their location, and
+      # <duration> is the analysis delay in whole seconds (floored). The
+      # player list runs for every analyzing holder plus their own role
+      # list. Only participants are affected.
+      # Default: false
+      debuffs:
+        enabled: true
+        commands:
+          player:
+            - "effect give <p> minecraft:slowness <duration> 1 true"
+          speedrunner: []
+          hunter: []
 
 # Players: roles, respawn and lives, friendly fire, invulnerability, and role announcements.
   players:
@@ -625,6 +658,10 @@ settings:
       # Hidden when no custom modifier is enabled.
       # Default: false
       show-modifiers: false
+      # Show lobby and game ids as L{lobby}|G{game}.
+      # Useful for debugging.
+      # Default: true
+      show-ids: true
 
     # Team chat (@team ...) for match participants.
     team-chat:
@@ -790,47 +827,6 @@ advanced:
       # Default: true
       validate-modifier-editor-commands: true
 
-    # Purposeful lag before a compass refresh resolves, showing
-    # "Analyzing..." while it runs. No second refresh starts mid-analysis,
-    # and click cooldowns restart when the analysis ends.
-    analyze:
-      # Applies to right-click refreshes.
-      # Default: false
-      right-click: false
-      # Applies to automatic (interval) refreshes.
-      # Default: false
-      auto: false
-      # Seconds the analysis takes before the compass updates.
-      # Default: 1.0
-      delay-seconds: 1.0
-      # Random plus-or-minus jitter applied to delay-seconds per
-      # analysis. Capped at the delay itself.
-      # Default: 0.0
-      delay-deviation-seconds: 0.0
-      # Seconds between analysis tick sounds, rounded to whole ticks.
-      # Default: 0.5
-      sound-interval-seconds: 0.5
-      # Commands run as console when an analysis starts, in modifier
-      # style: <p> is the holder, ~ resolves against their location, and
-      # <duration> is the analysis delay in whole seconds (floored). The
-      # player list runs for every analyzing holder plus their own role
-      # list. Only participants are affected.
-      # Default: false
-      debuffs:
-        enabled: true
-        commands:
-          player:
-            - "effect give <p> minecraft:slowness <duration> 1 true"
-          speedrunner: []
-          hunter: []
-
-    # Debug display toggles.
-    debug:
-      # Show lobby and game ids as L{lobby}|G{game}.
-      # Useful for debugging.
-      # Default: false
-      show-ids: false
-
 
 # Grid-based single-world manhunt engine.
 # Uses persistent square-spiral cell indexing and teleports participants to
@@ -845,21 +841,6 @@ advanced:
 world-engine:
   enabled: false
   world-name: world
-  # Per-preset generation. schematic is a vanilla structure-block .nbt in
-  # JManhunt/settings/world-engine/lobby-schematics/, pasted with its
-  # midpoint at 0,64,0. commands run as console after the paste and before
-  # the first teleport lands ({world} and {preset} are substituted).
-  # Do not touch unless you know what you are doing.
-  lobby-presets:
-    EMPTY:
-      schematic: "empty-lobby"
-      commands: []
-    DEFAULT:
-      schematic: "default-lobby"
-      commands: []
-    ADVANCED:
-      schematic: "advanced-lobby"
-      commands: []
   # Stand-on role pads. A player in the lobby world inside a listed block's
   # XZ cell and at most 4 blocks above it is assigned the mapped role,
   # like setplayer. Material names are Bukkit Material names.

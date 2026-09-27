@@ -403,7 +403,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Optional lobby/game tag (L1, L1-0|G2 when sublobbed), on by default. */
     private void sendIdLine(CommandSender sender, String value) {
-        if (!config.getBoolean("advanced.misc.debug.show-ids", true)) {
+        if (!config.getBoolean("settings.server.status.show-ids", true)) {
             return;
         }
         message(sender, "manhunt.status-ids", Map.of("value", value));
@@ -2710,12 +2710,12 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Preset names for completion and error text: the configured
+     * Preset names for completion and error text: the dev-data
      * lobby-presets keys that name a real preset, else every preset.
      */
     private List<String> lobbyPresetOptions() {
         List<String> options = new ArrayList<>();
-        for (String key : config.lobbyPresetKeys()) {
+        for (String key : plugin.devConfig().presetKeys()) {
             if (LobbyPreset.tryParse(key).isPresent() && !options.contains(key)) {
                 options.add(key);
             }

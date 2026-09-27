@@ -288,7 +288,7 @@ public final class BehaviorOptionsMenus {
                 "modifiers." + id + "." + descriptor.pathSuffix(),
                 ModifierOptionDescriptors.typeName(descriptor.kind()),
                 descriptor.allowed(), options, marked,
-                descriptor.defaultText(), hintFor(descriptor.kind()));
+                descriptor.defaultText(), hintFor(descriptor.kind()), false);
         return FieldButtons.field(messages, descriptor.icon(),
                 label == null ? descriptor.label() : label,
                 FieldLore.lines(messages, field), glow,

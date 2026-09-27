@@ -26,7 +26,7 @@ class FieldLoreTest {
     void fullSchemaOrdersEverySection() {
         FieldLore.Field field = new FieldLore.Field(
                 "Lowest clean block light.", "5", "match.cells.min-light", "Integer",
-                "0 to 15", null, null, "5", "Click to edit");
+                "0 to 15", null, null, "5", "Click to edit", false);
 
         assertEquals(List.of(
                 "Lowest clean block light.",
@@ -47,7 +47,7 @@ class FieldLoreTest {
         FieldLore.Field field = new FieldLore.Field(
                 "", "PER_EXECUTOR", "modifiers.zebra.behavior.x", "Choice",
                 null, List.of("PER_INVOKE", "PER_EXECUTOR"), Set.of("PER_EXECUTOR"),
-                "PER_INVOKE", "Click to cycle");
+                "PER_INVOKE", "Click to cycle", false);
 
         assertEquals(List.of(
                 "Value: <white>PER_EXECUTOR",
@@ -63,12 +63,32 @@ class FieldLoreTest {
     }
 
     @Test
+    void restartNoticeSitsUnderDefaultWithBlankBeforeHint() {
+        FieldLore.Field field = new FieldLore.Field(
+                "World engine master switch.", "Enabled", "world-engine.enabled", "Boolean",
+                null, null, null, "Disabled", "Click to toggle", true);
+
+        assertEquals(List.of(
+                "World engine master switch.",
+                "",
+                "Value: <white>Enabled",
+                "Path: <white>world-engine.enabled",
+                "Type: <white>Boolean",
+                "Default: <white>Disabled",
+                "<gray>(requires a server restart)",
+                "",
+                "Click to toggle",
+                "Right-click to reset"),
+                FieldLore.lines(messages, field));
+    }
+
+    @Test
     void multipleMarksAllRenderGreen() {
         FieldLore.Field field = new FieldLore.Field(
                 "Events that trigger this modifier.", "2 selected",
                 "modifiers.zebra.behavior.runs-on", "Choice",
                 null, List.of("ON_START", "INTERVAL", "ON_RESPAWN"),
-                Set.of("ON_START", "INTERVAL"), "ON_START", "Click to open");
+                Set.of("ON_START", "INTERVAL"), "ON_START", "Click to open", false);
 
         assertEquals(List.of(
                 "Events that trigger this modifier.",

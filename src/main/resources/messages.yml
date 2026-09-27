@@ -505,6 +505,7 @@ manhunt-gui:
   setting-path: "Path: <white>{path}"
   setting-type: "Type: <white>{type}"
   setting-default: "Default: <white>{value}"
+  setting-restart-required: "<gray>(requires a server restart)"
   setting-hint-toggle: "Click to toggle"
   setting-hint-cycle: "Click to cycle"
   setting-hint-edit: "Click to edit"

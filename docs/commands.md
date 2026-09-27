@@ -159,12 +159,12 @@ queue. `/manhunt status [id|all]` needs `jmanhunt.command.status.other` on
 top of the base node: an id shows one match roster grouped by role with a
 spectator roll call whenever someone is watching, while `all` lists every
 running match first and then every lobby holding at least one player with
-its player count. Four extras can be toggled: three under
-`settings.server.status` (the per-side win conditions
-(`show-win-conditions`), the running time (`show-elapsed-time`), and the
+its player count. Four extras can be toggled under
+`settings.server.status`: the per-side win conditions
+(`show-win-conditions`), the running time (`show-elapsed-time`), the
 enabled modifiers (`show-modifiers`, hidden when none are enabled, listed
-by configured display name)), and a gray `L{lobby}|G{game}` tag
-(`advanced.misc.debug.show-ids`, on by default).
+by configured display name), and a gray `L{lobby}|G{game}` tag
+(`show-ids`, on by default).
 
 ## Lobby and Game Worlds
 

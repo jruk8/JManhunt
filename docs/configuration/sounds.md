@@ -60,7 +60,7 @@ Under `compass`, heard by the compass holder:
 - `right-click`: on a compass click refresh that tracks a target, and
   again when a click-initiated analysis resolves onto a target.
 - `analysis`: ticked while an analysis runs, every
-  `advanced.misc.analyze.sound-interval-seconds`.
+  `settings.compass.analysis.sound-interval-seconds`.
 - `failure`: when a compass click fails to track: target too near or
   too far, signal interference, no target, or a scroll with nothing
   to cycle to.

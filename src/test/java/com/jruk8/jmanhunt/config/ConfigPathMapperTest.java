@@ -34,10 +34,12 @@ class ConfigPathMapperTest {
 
     @Test
     void getResolvesMapLeaves() {
-        JManhuntConfig root = new JManhuntConfig();
+        DevConfig root = new DevConfig();
 
         assertEquals("default-lobby", ConfigPathMapper.get(
-                root, "world-engine.lobby-presets.DEFAULT.schematic"));
+                root, "lobby-presets.DEFAULT.schematic"));
+        assertEquals("default-lobby", ConfigPathMapper.get(
+                root, "lobby-presets.default.schematic"));
     }
 
     @Test

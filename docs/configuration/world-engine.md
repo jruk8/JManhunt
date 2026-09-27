@@ -67,6 +67,10 @@ has a `.jmhlobby` bundle, it wins over the legacy `.nbt`, and its
 bundled bounds and teleports build into the lobby config at the paste
 corner.
 
+Presets are dev-time data: they live in `Core/dev.yml` inside the jar,
+never in the plugin data folder, and cannot be edited at runtime. To
+change a preset's schematic or commands, edit that file and rebuild.
+
 To regenerate with another preset (or an updated schematic): stop the
 server, delete the lobby world folder, start up,
 and run `tpto lobbyworld <selector> <preset>` twice. Presets only apply on
@@ -124,5 +128,5 @@ dimensions, portal routing, and the ready-cell buffer.
    schematic pasted instead.
 3. Run `tpto lobbyworld @s BOGUS` and confirm the invalid-preset
    error names the valid presets.
-4. Confirm `world-engine.lobby-preset` no longer exists in
-   `/manhunt config` or `config.yml`.
+4. Confirm `world-engine.lobby-presets` exists only in the bundled
+   `Core/dev.yml`, not in `/manhunt config` or `config.yml`.

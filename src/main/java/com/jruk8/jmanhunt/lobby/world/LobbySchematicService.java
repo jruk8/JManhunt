@@ -42,8 +42,7 @@ public final class LobbySchematicService {
     }
 
     private void pasteSchematic(World world, LobbyPreset preset) {
-        String name = plugin.configService()
-                .getString("world-engine.lobby-presets." + preset.name() + ".schematic", "");
+        String name = plugin.devConfig().schematicFor(preset.name());
         if (name == null || name.isBlank()) {
             return;
         }
@@ -168,8 +167,7 @@ public final class LobbySchematicService {
     }
 
     private void runCommands(World world, LobbyPreset preset) {
-        List<String> commands = plugin.configService()
-                .getStringList("world-engine.lobby-presets." + preset.name() + ".commands");
+        List<String> commands = plugin.devConfig().commandsFor(preset.name());
         for (String command : commands) {
             if (command.isBlank()) {
                 continue;

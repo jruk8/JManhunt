@@ -244,5 +244,21 @@ public class ServerSettings extends OkaeriConfig {
         public void setShowModifiers(boolean showModifiers) {
             this.showModifiers = showModifiers;
         }
+
+        @CustomKey("show-ids")
+        @Comment({
+                "Show lobby and game ids as L{lobby}|G{game}.",
+                "Useful for debugging.",
+                "Default: true"
+        })
+        private boolean showIds = true;
+
+        public boolean isShowIds() {
+            return showIds;
+        }
+
+        public void setShowIds(boolean showIds) {
+            this.showIds = showIds;
+        }
     }
 }

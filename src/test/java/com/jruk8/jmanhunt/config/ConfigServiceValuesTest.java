@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.logging.Logger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -203,11 +202,6 @@ class ConfigServiceValuesTest {
         assertEquals(OnExpire.FORCE_START, service.getEnum(
                 "settings.match.start-on-speedrunner-damage.on-expire",
                 OnExpire.class, OnExpire.CANCEL));
-    }
-
-    @Test
-    void lobbyPresetKeysReadMap() {
-        assertEquals(Set.of("EMPTY", "DEFAULT", "ADVANCED"), service.lobbyPresetKeys());
     }
 
     @Test

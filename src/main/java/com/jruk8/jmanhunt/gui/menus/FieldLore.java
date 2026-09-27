@@ -9,7 +9,7 @@ import java.util.Set;
  * One lore schema for every config field, shared by the settings
  * browser and the modifier option rows. Order is fixed: description,
  * Value, Path, Type, Allowed bounds or option bullets, Default,
- * then the click hint and the reset hint.
+ * optional restart notice, then the click hint and the reset hint.
  */
 public final class FieldLore {
 
@@ -23,10 +23,11 @@ public final class FieldLore {
      * @param marked effective options, marked green in the bullets
      * @param defaultText default display for the Default line
      * @param hint click affordance line
+     * @param restartRequired shows the gray restart notice under Default
      */
     public record Field(String description, String value, String path, String type,
             String allowed, List<String> options, Set<String> marked,
-            String defaultText, String hint) {
+            String defaultText, String hint, boolean restartRequired) {
     }
 
     private FieldLore() {
@@ -60,6 +61,10 @@ public final class FieldLore {
         }
         lines.add(template(messages, "manhunt-gui.setting-default",
                 "Default: <white>{value}", field.defaultText()));
+        if (field.restartRequired()) {
+            lines.add(messages.string("manhunt-gui.setting-restart-required",
+                    "<gray>(requires a server restart)"));
+        }
         lines.add("");
         lines.add(field.hint());
         lines.add(messages.string("manhunt-gui.setting-hint-reset", "Right-click to reset"));

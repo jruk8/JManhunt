@@ -3,7 +3,6 @@ package com.jruk8.jmanhunt.config;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -56,15 +55,6 @@ public final class ConfigService {
     /** Registry descriptor for the path, or null when it is not an editable setting. */
     public SettingDescriptor describe(String setting) {
         return SettingRegistry.byPath(setting);
-    }
-
-    /** Lobby preset keys from the world-engine map, for completion and error text. */
-    public Set<String> lobbyPresetKeys() {
-        if (root == null || root.getWorldEngine() == null
-                || root.getWorldEngine().getLobbyPresets() == null) {
-            return Set.of();
-        }
-        return new LinkedHashSet<>(root.getWorldEngine().getLobbyPresets().keySet());
     }
 
     /** True when the path names an editable string list. */

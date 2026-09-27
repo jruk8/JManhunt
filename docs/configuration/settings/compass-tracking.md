@@ -220,7 +220,7 @@ a dimension you are not in. There is nothing to configure.
 
 ## Analysis Delay
 
-Under `advanced.misc.analyze`, a refresh can take a purposeful moment to
+Under `settings.compass.analysis`, a refresh can take a purposeful moment to
 resolve instead of answering instantly. While analyzing, the actionbar reads
 `Analyzing...`, no second refresh can start, and compass clicks are
 ignored until it resolves. The automatic clock stamps when the analysis
@@ -245,7 +245,7 @@ with the refresh click sound; automatic analyses resolve silently.
 
 ### Analysis Debuffs
 
-Under `advanced.misc.analyze.debuffs`, you can run console commands
+Under `settings.compass.analysis.debuffs`, you can run console commands
 every time an analysis starts, in modifier style: `<p>` is the
 compass holder, `~` resolves against their location, and `<duration>` is
 the analysis delay in whole seconds (floored). The `player` list runs for

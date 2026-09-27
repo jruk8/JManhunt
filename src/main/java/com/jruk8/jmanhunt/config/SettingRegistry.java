@@ -22,15 +22,12 @@ public final class SettingRegistry {
     private static final Set<String> NAMES = Set.copyOf(BY_PATH.keySet());
     private static final Set<String> LIST_PATHS = Set.of(
             "advanced.advanced-match-controls.end-statistics",
-            "advanced.misc.analyze.debuffs.commands.player",
-            "advanced.misc.analyze.debuffs.commands.speedrunner",
-            "advanced.misc.analyze.debuffs.commands.hunter",
+            "settings.compass.analysis.debuffs.commands.player",
+            "settings.compass.analysis.debuffs.commands.speedrunner",
+            "settings.compass.analysis.debuffs.commands.hunter",
             "settings.compass.signal-interference.weather.interfere-during",
             "settings.compass.signal-interference.biome.interfere-in",
             "world-engine.preloading.commands",
-            "world-engine.lobby-presets.EMPTY.commands",
-            "world-engine.lobby-presets.DEFAULT.commands",
-            "world-engine.lobby-presets.ADVANCED.commands",
             "settings.server.team-chat.prefixes",
             "world-engine.spawnpoint-algorithm.spawn-close-to-structure.structures");
 
@@ -501,13 +498,6 @@ public final class SettingRegistry {
         String root = "advanced.misc.";
         entries.add(bool(root + "interop.disable-worldedit-navwand", true));
         entries.add(bool(root + "interop.validate-modifier-editor-commands", true));
-        entries.add(bool(root + "analyze.right-click", false));
-        entries.add(bool(root + "analyze.auto", false));
-        entries.add(floatVal(root + "analyze.delay-seconds", 1.0, 0.0, null));
-        entries.add(floatVal(root + "analyze.delay-deviation-seconds", 0.0, 0.0, null));
-        entries.add(floatVal(root + "analyze.sound-interval-seconds", 0.5, 0.05, 3.0));
-        entries.add(bool(root + "analyze.debuffs.enabled", true));
-        entries.add(bool(root + "debug.show-ids", false));
     }
 
     private static void addSettingsMatchEntries(List<SettingDescriptor> entries) {
@@ -585,6 +575,17 @@ public final class SettingRegistry {
         entries.add(floatVal("settings.compass.speedrunner.min-distance.distance", 25.0, 0.0, null));
         entries.add(bool("settings.compass.speedrunner.max-distance.enabled", true));
         entries.add(floatVal("settings.compass.speedrunner.max-distance.distance", -1.0, -1.0, null));
+        addCompassAnalysisEntries(entries);
+    }
+
+    private static void addCompassAnalysisEntries(List<SettingDescriptor> entries) {
+        String root = "settings.compass.analysis.";
+        entries.add(bool(root + "right-click", false));
+        entries.add(bool(root + "auto", false));
+        entries.add(floatVal(root + "delay-seconds", 1.0, 0.0, null));
+        entries.add(floatVal(root + "delay-deviation-seconds", 0.0, 0.0, null));
+        entries.add(floatVal(root + "sound-interval-seconds", 0.5, 0.05, 3.0));
+        entries.add(bool(root + "debuffs.enabled", true));
     }
 
     private static void addSignalInterferenceEntries(List<SettingDescriptor> entries) {
@@ -652,6 +653,7 @@ public final class SettingRegistry {
         entries.add(bool("settings.server.status.show-win-conditions", false));
         entries.add(bool("settings.server.status.show-elapsed-time", false));
         entries.add(bool("settings.server.status.show-modifiers", false));
+        entries.add(bool("settings.server.status.show-ids", true));
         entries.add(bool("settings.server.team-chat.enabled", true));
         entries.add(bool("settings.server.team-chat.spectators-see", true));
     }
@@ -660,9 +662,6 @@ public final class SettingRegistry {
         entries.add(restart(bool("world-engine.enabled", false)));
         entries.add(string("world-engine.world-name", "world"));
 
-        entries.add(string("world-engine.lobby-presets.EMPTY.schematic", "empty-lobby"));
-        entries.add(string("world-engine.lobby-presets.DEFAULT.schematic", "default-lobby"));
-        entries.add(string("world-engine.lobby-presets.ADVANCED.schematic", "advanced-lobby"));
         entries.add(bool("world-engine.role-pads.enabled", true));
         entries.add(bool("world-engine.role-pads.silent-role-assignment", false));
         entries.add(string("world-engine.role-pads.blocks.speedrunner", "LIME_CONCRETE"));

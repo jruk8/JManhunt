@@ -53,6 +53,9 @@ public class ManhuntGuiMessages extends OkaeriConfig {
     @CustomKey("setting-default")
     private String settingDefault = "Default: <white>{value}";
 
+    @CustomKey("setting-restart-required")
+    private String settingRestartRequired = "<gray>(requires a server restart)";
+
     @CustomKey("setting-hint-toggle")
     private String settingHintToggle = "Click to toggle";
 

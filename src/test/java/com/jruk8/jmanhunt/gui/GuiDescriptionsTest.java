@@ -58,6 +58,55 @@ class GuiDescriptionsTest {
     }
 
     @Test
+    void everyAdvancedPathHasADescription() throws Exception {
+        YamlConfiguration yaml = bundledGui();
+        ConfigurationSection descriptions = yaml.getConfigurationSection("descriptions");
+
+        List<String> missing = new ArrayList<>();
+        for (String path : SettingRegistry.settingNames()) {
+            if (!isAdvanced(path)) {
+                continue;
+            }
+            String text = descriptions == null ? null : descriptions.getString(path);
+            if (text == null || text.isBlank()) {
+                missing.add(path);
+            }
+        }
+        for (String list : SettingRegistry.listPaths()) {
+            if (!isAdvanced(list)) {
+                continue;
+            }
+            String text = descriptions == null ? null : descriptions.getString(list);
+            if (text == null || text.isBlank()) {
+                missing.add(list);
+            }
+        }
+        for (String section : advancedSectionPaths()) {
+            String text = descriptions == null ? null : descriptions.getString(section);
+            if (text == null || text.isBlank()) {
+                missing.add(section);
+            }
+        }
+        assertTrue(missing.isEmpty(), "missing descriptions: " + missing);
+    }
+
+    @Test
+    void everyAdvancedSectionHasAnIcon() throws Exception {
+        YamlConfiguration yaml = bundledGui();
+        ConfigurationSection categories = yaml.getConfigurationSection("categories");
+
+        List<String> missing = new ArrayList<>();
+        for (String section : advancedSectionPaths()) {
+            String key = section.replace('.', '/');
+            String raw = categories == null ? null : categories.getString(key);
+            if (raw == null || raw.isBlank()) {
+                missing.add(key);
+            }
+        }
+        assertTrue(missing.isEmpty(), "advanced sections without icons: " + missing);
+    }
+
+    @Test
     void categoriesMapToRealMaterials() throws Exception {
         YamlConfiguration yaml = bundledGui();
         ConfigurationSection categories = yaml.getConfigurationSection("categories");
@@ -115,6 +164,35 @@ class GuiDescriptionsTest {
         }
         assertEquals(materials.size(), new HashSet<>(materials).size(),
                 "duplicate category icons");
+    }
+
+    private static boolean isAdvanced(String path) {
+        return path.startsWith("advanced.") || path.startsWith("world-engine.");
+    }
+
+    /** Every intermediate advanced section path implied by the registry. */
+    private static List<String> advancedSectionPaths() {
+        List<String> sections = new ArrayList<>();
+        List<String> leaves = new ArrayList<>(SettingRegistry.settingNames());
+        leaves.addAll(SettingRegistry.listPaths());
+        for (String path : leaves) {
+            if (!isAdvanced(path)) {
+                continue;
+            }
+            String[] parts = path.split("\\.");
+            StringBuilder prefix = new StringBuilder();
+            for (int index = 0; index < parts.length - 1; index++) {
+                if (index > 0) {
+                    prefix.append('.');
+                }
+                prefix.append(parts[index]);
+                String section = prefix.toString();
+                if (section.split("\\.").length > 1 && !sections.contains(section)) {
+                    sections.add(section);
+                }
+            }
+        }
+        return sections;
     }
 
     /** Every intermediate section path implied by the registry. */

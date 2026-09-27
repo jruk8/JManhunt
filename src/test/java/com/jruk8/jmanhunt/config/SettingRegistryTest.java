@@ -50,11 +50,11 @@ class SettingRegistryTest {
 
     @Test
     void floatParsesAndRejectsNonNumericAndNonFinite() {
-        assertEquals(25.5, validate("advanced.misc.analyze.delay-seconds", "25.5").value());
+        assertEquals(25.5, validate("settings.compass.analysis.delay-seconds", "25.5").value());
 
-        assertFalse(validate("advanced.misc.analyze.delay-seconds", "oops").ok());
-        assertFalse(validate("advanced.misc.analyze.delay-seconds", "NaN").ok());
-        assertFalse(validate("advanced.misc.analyze.delay-seconds", "Infinity").ok());
+        assertFalse(validate("settings.compass.analysis.delay-seconds", "oops").ok());
+        assertFalse(validate("settings.compass.analysis.delay-seconds", "NaN").ok());
+        assertFalse(validate("settings.compass.analysis.delay-seconds", "Infinity").ok());
     }
 
     @Test
@@ -280,7 +280,7 @@ class SettingRegistryTest {
         assertEquals(List.of(), givenTo.sections());
         assertEquals(List.of("hunters", "speedrunners"), givenTo.leaves());
 
-        var commands = SettingRegistry.children("advanced.misc.analyze.debuffs.commands");
+        var commands = SettingRegistry.children("settings.compass.analysis.debuffs.commands");
         assertEquals(List.of("hunter", "player", "speedrunner"), commands.sections());
     }
 
@@ -289,8 +289,8 @@ class SettingRegistryTest {
         assertTrue(SettingRegistry.isListPath("advanced.advanced-match-controls.end-statistics"));
         assertTrue(SettingRegistry.isListPath("ADVANCED.ADVANCED-MATCH-CONTROLS.END-STATISTICS"));
         assertFalse(SettingRegistry.isListPath("advanced.advanced-match-controls.end-delay"));
-        assertEquals("world-engine.lobby-presets.DEFAULT.commands",
-                SettingRegistry.canonicalListPath("world-engine.lobby-presets.default.commands"));
+        assertEquals("world-engine.preloading.commands",
+                SettingRegistry.canonicalListPath("World-Engine.Preloading.Commands"));
         assertNull(SettingRegistry.canonicalListPath("bogus"));
     }
 
@@ -317,7 +317,7 @@ class SettingRegistryTest {
     void advancedRootDrillsIntoThreeSections() {
         assertEquals(List.of("advanced-match-controls", "lobbies", "misc"),
                 SettingRegistry.children("advanced").sections());
-        assertEquals(List.of("analyze", "debug", "interop"),
+        assertEquals(List.of("interop"),
                 SettingRegistry.children("advanced.misc").sections());
     }
 

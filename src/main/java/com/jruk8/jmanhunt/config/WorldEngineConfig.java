@@ -5,9 +5,7 @@ import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /** Grid-based single-world manhunt engine. */
 @SuppressWarnings("FieldMayBeFinal")
@@ -17,16 +15,6 @@ public class WorldEngineConfig extends OkaeriConfig {
 
     @CustomKey("world-name")
     private String worldName = "world";
-
-    @CustomKey("lobby-presets")
-    @Comment({
-            "Per-preset generation. schematic is a vanilla structure-block .nbt in",
-            "JManhunt/settings/world-engine/lobby-schematics/, pasted with its",
-            "midpoint at 0,64,0. commands run as console after the paste and before",
-            "the first teleport lands ({world} and {preset} are substituted).",
-            "Do not touch unless you know what you are doing."
-    })
-    private Map<String, LobbyPresetEntry> lobbyPresets = defaultPresets();
 
     @CustomKey("role-pads")
     @Comment({
@@ -97,14 +85,6 @@ public class WorldEngineConfig extends OkaeriConfig {
         this.worldName = worldName;
     }
 
-    public Map<String, LobbyPresetEntry> getLobbyPresets() {
-        return lobbyPresets;
-    }
-
-    public void setLobbyPresets(Map<String, LobbyPresetEntry> lobbyPresets) {
-        this.lobbyPresets = lobbyPresets;
-    }
-
     public RolePads getRolePads() {
         return rolePads;
     }
@@ -159,43 +139,6 @@ public class WorldEngineConfig extends OkaeriConfig {
 
     public void setEnd(End end) {
         this.end = end;
-    }
-
-    private static Map<String, LobbyPresetEntry> defaultPresets() {
-        Map<String, LobbyPresetEntry> presets = new LinkedHashMap<>();
-        presets.put("EMPTY", LobbyPresetEntry.of("empty-lobby"));
-        presets.put("DEFAULT", LobbyPresetEntry.of("default-lobby"));
-        presets.put("ADVANCED", LobbyPresetEntry.of("advanced-lobby"));
-        return presets;
-    }
-
-    /** One lobby preset: schematic plus console commands. */
-    @SuppressWarnings("FieldMayBeFinal")
-    public static class LobbyPresetEntry extends OkaeriConfig {
-        private String schematic = "";
-        private List<String> commands = new ArrayList<>();
-
-        public static LobbyPresetEntry of(String schematic) {
-            LobbyPresetEntry entry = new LobbyPresetEntry();
-            entry.setSchematic(schematic);
-            return entry;
-        }
-
-        public String getSchematic() {
-            return schematic;
-        }
-
-        public void setSchematic(String schematic) {
-            this.schematic = schematic;
-        }
-
-        public List<String> getCommands() {
-            return commands;
-        }
-
-        public void setCommands(List<String> commands) {
-            this.commands = commands;
-        }
     }
 
     /** Stand-on role pads. */

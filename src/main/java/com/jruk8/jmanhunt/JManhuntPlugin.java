@@ -12,6 +12,8 @@ import com.jruk8.jmanhunt.core.MetricsBootstrap;
 import com.jruk8.jmanhunt.core.StartupBanner;
 import com.jruk8.jmanhunt.config.ConfigRegistrar;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.DevConfig;
+import com.jruk8.jmanhunt.config.DevConfigRegistrar;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.YamlFileUpdater;
 import com.jruk8.jmanhunt.lobby.bounds.LobbyBoundsService;
@@ -109,6 +111,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private TutorialConfigRegistrar tutorialConfigs;
     private GuiConfigRegistrar guiConfigs;
     private PlaceholderConfigRegistrar placeholderConfigs;
+    private DevConfigRegistrar devConfigs;
     private TutorialService tutorialService;
     private UpdateCheckService updateChecks;
     private UpdateCheckNotifier updateCheckNotifier;
@@ -164,6 +167,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         guiConfigs.register();
         placeholderConfigs = new PlaceholderConfigRegistrar(this);
         placeholderConfigs.register();
+        devConfigs = new DevConfigRegistrar(this);
+        devConfigs.register();
         configRegistrar = new ConfigRegistrar(this);
         configRegistrar.register();
         messageConfigs = new MessagesRegistrar(this);
@@ -500,6 +505,11 @@ public final class JManhuntPlugin extends JavaPlugin {
         return guiConfigs == null ? null : guiConfigs.getGuiConfig();
     }
 
+    /** Internal dev data: lobby presets for fresh lobby-world generation. */
+    public DevConfig devConfig() {
+        return devConfigs == null ? new DevConfig() : devConfigs.getDevConfig();
+    }
+
     /**
      * True once setup finished anywhere. A broken engine database fails
      * open to the GUI so a stats hiccup never blocks the admin surface.
@@ -561,18 +571,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
 
         reloadModifiers();
-
-        if (lobbyConfigs != null) {
-            lobbyConfigs.reload();
-        }
-
-        if (tutorialConfigs != null) {
-            tutorialConfigs.reload();
-        }
-
-        if (guiConfigs != null) {
-            guiConfigs.reload();
-        }
+        reloadContentConfigs();
 
         if (winConditionEngine != null) {
             winConditionEngine.reload(configService);
@@ -585,6 +584,22 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
         reloadSettingsListeners();
         logger().info("JManhunt has been reloaded.");
+    }
+
+    /** Reloads lobby, tutorial, GUI, and dev-data content configs. */
+    private void reloadContentConfigs() {
+        if (lobbyConfigs != null) {
+            lobbyConfigs.reload();
+        }
+        if (tutorialConfigs != null) {
+            tutorialConfigs.reload();
+        }
+        if (guiConfigs != null) {
+            guiConfigs.reload();
+        }
+        if (devConfigs != null) {
+            devConfigs.reload();
+        }
     }
 
     /** Re-runs every settings listener, generating missing data files first. */
