@@ -48,7 +48,29 @@ public final class PlaceholderCheatsheet {
                     new String[]{"<loseplayer:player,reason>", "eliminate a player, returns empty"}),
             Map.entry("win",
                     new String[]{"<win:ROLE,reason>", "end the match for a role, returns empty"}),
-            Map.entry("args", new String[]{"<args:index>", "trigger event arg, 0 when bare"}));
+            Map.entry("args", new String[]{"<args:index>", "trigger event arg, 0 when bare"}),
+            Map.entry("list.append", new String[]{"<list.append:list,x>", "append x, store back, empty"}),
+            Map.entry("list.get", new String[]{"<list.get:list,index>", "item at index, null when missing"}),
+            Map.entry("list.set", new String[]{"<list.set:list,index,x>", "set index, store back, empty"}),
+            Map.entry("list.remove", new String[]{"<list.remove:list,x>", "remove first x, true/false"}),
+            Map.entry("list.contains", new String[]{"<list.contains:list,x>", "true when x is an item"}),
+            Map.entry("list.clear", new String[]{"<list.clear:list>", "empty the list, store back"}),
+            Map.entry("list.pop", new String[]{"<list.pop:list>", "remove and return first item"}),
+            Map.entry("len", new String[]{"<len:list>", "item count, 0 when no list"}),
+            Map.entry("list.shuffle", new String[]{"<list.shuffle:list>", "shuffle, store back, empty"}),
+            Map.entry("active-players", new String[]{"<active-players:ROLE>", "eligible names as a list"}),
+            Map.entry("plocation", new String[]{"<plocation:player>", "player location list"}),
+            Map.entry("prole", new String[]{"<prole:player>", "HUNTER or SPEEDRUNNER, else null"}),
+            Map.entry("distance", new String[]{"<distance:loc1,loc2>", "3D distance, xyz only"}),
+            Map.entry("floor", new String[]{"<floor:2.7>", "2, rounds down"}),
+            Map.entry("ceil", new String[]{"<ceil:2.3>", "3, rounds up"}),
+            Map.entry("round", new String[]{"<round:2.5>", "3, rounds half up"}),
+            Map.entry("abs", new String[]{"<abs:-4>", "4"}),
+            Map.entry("sign", new String[]{"<sign:-4>", "-1, else 0 or 1"}),
+            Map.entry("range", new String[]{"<range:1,5>", "[1, 2, 3, 4], python style"}),
+            Map.entry("while", new String[]{"<while:1==1,...>", "repeats while true"}),
+            Map.entry("for", new String[]{"<for:[a,b],...>", "walks a list item by item"}),
+            Map.entry("i", new String[]{"<i>", "innermost for item, else null"}));
 
     private PlaceholderCheatsheet() {
     }

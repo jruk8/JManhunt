@@ -31,7 +31,7 @@ class TagPlaceholdersTest {
             return TagContext.run(scope, "get-stronger-on-kill", warnings::add, warnings::add,
                     (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                     (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), new FlagStore(), resolver));
+                    7L, new TagBackends(StatValues.inert(), new FlagStore(), resolver, RosterValues.inert()));
         }
 
         String replace(String command, String executor) {
@@ -62,7 +62,7 @@ class TagPlaceholdersTest {
         TagContext context = TagContext.run(scope, "gear-dice", fixture.warnings::add,
                 fixture.warnings::add, (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                     (player, reason) -> { }, (role, reason) -> { },
-                7L, new TagBackends(StatValues.inert(), new FlagStore(), (text, name) -> text));
+                7L, new TagBackends(StatValues.inert(), new FlagStore(), (text, name) -> text, RosterValues.inert()));
         assertEquals("", CommandPlaceholders.replace("<placeholder:x>", null, 0, 0, 0, context));
         assertEquals(1, fixture.warnings.size());
     }

@@ -1,5 +1,7 @@
 package com.jruk8.jmanhunt.command;
 
+import java.util.function.Consumer;
+
 /**
  * Bare arithmetic for modifier commands. Expressions use standard
  * precedence: parentheses, exponents ({@code **}, right associative),
@@ -26,6 +28,48 @@ public final class TagMath {
         EvalException(String message) {
             super(message);
         }
+    }
+
+    /** Evaluated operand: null, number, or literal text. */
+    public sealed interface Value permits Value.Null, Value.Num, Value.Text {
+        record Null() implements Value {
+        }
+
+        record Num(double number) implements Value {
+        }
+
+        record Text(String text) implements Value {
+        }
+    }
+
+    /**
+     * Evaluates one operand: math when it parses (numbers, groups,
+     * {@code ??}), else literal text. Math that parses but cannot
+     * run warns and yields 0.
+     */
+    static Value evalValue(String raw, Consumer<String> warn, String where) {
+        String text = unquote(raw.strip());
+        try {
+            Double number = TagMath.evaluate(text);
+            return number == null ? new Value.Null() : new Value.Num(number);
+        } catch (TagMath.SyntaxException syntax) {
+            return new Value.Text(text);
+        } catch (TagMath.EvalException failed) {
+            warn.accept(where + ": " + failed.getMessage() + ", using 0");
+            return new Value.Num(0.0);
+        }
+    }
+
+    /** Strips one balanced outer quote layer, else returns the text. */
+    static String unquote(String text) {
+        if (text.length() >= 2) {
+            char first = text.charAt(0);
+            if ((first == '"' || first == '\'') && text.charAt(text.length() - 1) == first
+                    && text.indexOf(first, 1) == text.length() - 1) {
+                return text.substring(1, text.length() - 1);
+            }
+        }
+        return text;
     }
 
     /**

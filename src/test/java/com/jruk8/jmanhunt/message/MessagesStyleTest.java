@@ -73,7 +73,8 @@ class MessagesStyleTest {
                 "modifiers.setmod-success", "modifiers.setpreset-success",
                 "modifiers.list-header", "modifiers.list-entry-on",
                 "modifiers.list-entry-off", "modifiers.list-presets-header",
-                "modifiers.list-empty", "modifiers.edit-id-changed")) {
+                "modifiers.list-empty", "modifiers.edit-id-changed",
+                "modifiers.loop-limit")) {
             assertTrue(messages.getString(key, null) != null, key);
         }
         String announced = messages.getString("modifiers.toggle-announced", "");

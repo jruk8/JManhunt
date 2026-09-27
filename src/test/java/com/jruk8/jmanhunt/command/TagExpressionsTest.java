@@ -179,6 +179,35 @@ class TagExpressionsTest {
     }
 
     @Test
+    void mathUnaryRoundsAndSigns() {
+        Fixture fixture = new Fixture();
+        assertEquals("2", replace(fixture, "<floor:2.7>"));
+        assertEquals("-3", replace(fixture, "<floor:-2.3>"));
+        assertEquals("3", replace(fixture, "<ceil:2.3>"));
+        assertEquals("-2", replace(fixture, "<ceil:-2.7>"));
+        assertEquals("3", replace(fixture, "<round:2.5>"));
+        assertEquals("2", replace(fixture, "<round:2.4>"));
+        assertEquals("-2", replace(fixture, "<round:-2.5>"));
+        assertEquals("4", replace(fixture, "<abs:-4>"));
+        assertEquals("4.5", replace(fixture, "<abs:-4.5>"));
+        assertEquals("-1", replace(fixture, "<sign:-4>"));
+        assertEquals("0", replace(fixture, "<sign:0>"));
+        assertEquals("1", replace(fixture, "<sign:0.5>"));
+        assertEquals("3", replace(fixture, "<floor:7/2>"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void mathUnaryNullOnBadInput() {
+        Fixture fixture = new Fixture();
+        assertEquals("null", replace(fixture, "<floor:abc>"));
+        assertEquals("null", replace(fixture, "<abs:null>"));
+        assertEquals("null", replace(fixture, "<sign:1,2>"));
+        assertEquals("null", replace(fixture, "<ceil:>"));
+        assertEquals(4, fixture.warnings.size());
+    }
+
+    @Test
     void messagesSendThroughSinksAndReturnEmpty() {
         Fixture fixture = new Fixture();
         assertEquals("say  done", replace(fixture, "say <gmessage:\"hi\"> done"));
@@ -255,11 +284,11 @@ class TagExpressionsTest {
 
     @Test
     void unquoteStripsOneBalancedLayer() {
-        assertEquals("hi", TagExpressions.unquote("\"hi\""));
-        assertEquals("hi", TagExpressions.unquote("'hi'"));
-        assertEquals("\"hi", TagExpressions.unquote("\"hi"));
-        assertEquals("a\"b", TagExpressions.unquote("a\"b"));
-        assertEquals("\"a\"b\"", TagExpressions.unquote("\"a\"b\""));
+        assertEquals("hi", TagMath.unquote("\"hi\""));
+        assertEquals("hi", TagMath.unquote("'hi'"));
+        assertEquals("\"hi", TagMath.unquote("\"hi"));
+        assertEquals("a\"b", TagMath.unquote("a\"b"));
+        assertEquals("\"a\"b\"", TagMath.unquote("\"a\"b\""));
     }
 
     @Test

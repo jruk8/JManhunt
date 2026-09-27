@@ -25,46 +25,37 @@ public final class TagExpressions {
         }
     }
 
-    /** Evaluated operand: null, number, or literal text. */
-    public sealed interface Value permits Value.Null, Value.Num, Value.Text {
-        record Null() implements Value {
-        }
-
-        record Num(double number) implements Value {
-        }
-
-        record Text(String text) implements Value {
-        }
-    }
-
     /**
-     * Evaluates one operand: math when it parses (numbers, groups,
-     * {@code ??}), else literal text. Math that parses but cannot
-     * run warns and yields 0.
+     * One-arg math tags ({@code floor}, {@code ceil}, {@code round},
+     * {@code abs}, {@code sign}): the arg may itself be math.
+     * Non-numeric input (including {@code null}) warns plus
+     * {@code "null"}. Rounds half up like {@code Math.round} without
+     * long overflow.
      */
-    static Value evalValue(String raw, Consumer<String> warn, String where) {
-        String text = unquote(raw.strip());
-        try {
-            Double number = TagMath.evaluate(text);
-            return number == null ? new Value.Null() : new Value.Num(number);
-        } catch (TagMath.SyntaxException syntax) {
-            return new Value.Text(text);
-        } catch (TagMath.EvalException failed) {
-            warn.accept(where + ": " + failed.getMessage() + ", using 0");
-            return new Value.Num(0.0);
+    static String mathUnary(String tag, String op, String args, TagContext context) {
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        if (parts.size() != 1) {
+            context.scope().warn("Tag <" + op + "> needs one number like <" + op + ":2.5>: " + tag);
+            return "null";
         }
-    }
-
-    /** Strips one balanced outer quote layer, else returns the text. */
-    static String unquote(String text) {
-        if (text.length() >= 2) {
-            char first = text.charAt(0);
-            if ((first == '"' || first == '\'') && text.charAt(text.length() - 1) == first
-                    && text.indexOf(first, 1) == text.length() - 1) {
-                return text.substring(1, text.length() - 1);
-            }
+        Optional<String> item = CommandPlaceholders.parsePickItem(parts.get(0));
+        if (item.isEmpty() || item.get().isBlank()) {
+            context.scope().warn("Tag <" + op + "> needs one number like <" + op + ":2.5>: " + tag);
+            return "null";
         }
-        return text;
+        TagMath.Value value = TagMath.evalValue(item.get(), context.scope()::warn, tag);
+        if (!(value instanceof TagMath.Value.Num num)) {
+            context.scope().warn("Tag <" + op + "> needs a number, using null: " + tag);
+            return "null";
+        }
+        double result = switch (op) {
+            case "floor" -> Math.floor(num.number());
+            case "ceil" -> Math.ceil(num.number());
+            case "round" -> Math.floor(num.number() + 0.5);
+            case "abs" -> Math.abs(num.number());
+            default -> Math.signum(num.number());
+        };
+        return TagMath.formatNumber(result);
     }
 
     /**
@@ -96,8 +87,8 @@ public final class TagExpressions {
         if (comparison == null) {
             throw new ExprException("condition needs a comparison (==, !=, lt, le, gt, ge)");
         }
-        Value left = evalValue(comparison.left(), warn, where);
-        Value right = evalValue(comparison.right(), warn, where);
+        TagMath.Value left = TagMath.evalValue(comparison.left(), warn, where);
+        TagMath.Value right = TagMath.evalValue(comparison.right(), warn, where);
         return switch (comparison.operator()) {
             case "==" -> equalsValue(left, right);
             case "!=" -> !equalsValue(left, right);
@@ -279,20 +270,20 @@ public final class TagExpressions {
         }
     }
 
-    private static boolean equalsValue(Value left, Value right) {
-        if (left instanceof Value.Null && right instanceof Value.Null) {
+    private static boolean equalsValue(TagMath.Value left, TagMath.Value right) {
+        if (left instanceof TagMath.Value.Null && right instanceof TagMath.Value.Null) {
             return true;
         }
-        if (left instanceof Value.Null || right instanceof Value.Null) {
+        if (left instanceof TagMath.Value.Null || right instanceof TagMath.Value.Null) {
             return false;
         }
-        if (left instanceof Value.Num leftNumber && right instanceof Value.Num rightNumber) {
+        if (left instanceof TagMath.Value.Num leftNumber && right instanceof TagMath.Value.Num rightNumber) {
             return leftNumber.number() == rightNumber.number();
         }
         return displayValue(left).equals(displayValue(right));
     }
 
-    private static boolean orderValue(Value left, Value right, String operator)
+    private static boolean orderValue(TagMath.Value left, TagMath.Value right, String operator)
             throws ExprException {
         long leftNumber = wholeNumber(left);
         long rightNumber = wholeNumber(right);
@@ -305,19 +296,19 @@ public final class TagExpressions {
         };
     }
 
-    private static long wholeNumber(Value value) throws ExprException {
-        if (value instanceof Value.Num number && number.number() == Math.floor(number.number())
+    private static long wholeNumber(TagMath.Value value) throws ExprException {
+        if (value instanceof TagMath.Value.Num number && number.number() == Math.floor(number.number())
                 && Double.isFinite(number.number())) {
             return (long) number.number();
         }
         throw new ExprException("ordering comparisons need whole numbers");
     }
 
-    private static String displayValue(Value value) {
-        if (value instanceof Value.Num number) {
+    private static String displayValue(TagMath.Value value) {
+        if (value instanceof TagMath.Value.Num number) {
             return TagMath.formatNumber(number.number());
         }
-        if (value instanceof Value.Text text) {
+        if (value instanceof TagMath.Value.Text text) {
             return text.text();
         }
         return "null";
@@ -415,8 +406,8 @@ public final class TagExpressions {
                 context.scope().warn("Tag <" + name + "> has a malformed number: " + tag);
                 return "0";
             }
-            Value value = evalValue(item.get(), context.scope()::warn, tag);
-            if (!(value instanceof Value.Num number)) {
+            TagMath.Value value = TagMath.evalValue(item.get(), context.scope()::warn, tag);
+            if (!(value instanceof TagMath.Value.Num number)) {
                 context.scope().warn("Tag <" + name + "> needs numbers: " + tag);
                 return "0";
             }
@@ -523,7 +514,7 @@ public final class TagExpressions {
             return "unknown reason";
         }
         String joined = String.join(",", parts.subList(1, parts.size())).strip();
-        String reason = unquote(joined);
+        String reason = TagMath.unquote(joined);
         return reason.isBlank() ? "unknown reason" : reason;
     }
 
@@ -630,11 +621,12 @@ public final class TagExpressions {
         return new IfSpan(open, end + 1, line.substring(argsStart, end));
     }
 
-    private static boolean isRootChar(char letter) {
+    static boolean isRootChar(char letter) {
         return letter == '_' || letter == '-' || Character.isLetterOrDigit(letter);
     }
 
-    private static Integer spanEnd(String line, int open) {
+    /** Inclusive index of the balancing {@code >}, or null when unclosed. Shared with loops. */
+    static Integer spanEnd(String line, int open) {
         int depth = 0;
         StringBuilder quotes = new StringBuilder();
         for (int index = open; index < line.length(); index++) {

@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.PlaceholderResolver;
+import com.jruk8.jmanhunt.command.RosterValues;
 import com.jruk8.jmanhunt.command.StatValues;
 import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.core.PlaceholderPass;
@@ -14,6 +15,7 @@ import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.match.MatchRosterValues;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -537,7 +539,9 @@ final class CompassLockService {
         List<String> commands = debuffCommands(lobby, holderRole);
         Location location = holder.getLocation();
         TagContext context = debuffContext(holder);
-        for (String command : commands) {
+        for (int lineIndex = 0; lineIndex < commands.size(); lineIndex++) {
+            String command = commands.get(lineIndex);
+            stampProvenance(context, lineIndex);
             if (command.isBlank()) {
                 continue;
             }
@@ -567,6 +571,11 @@ final class CompassLockService {
         }
     }
 
+    /** Stamps the debuff line provenance for loop-limit diagnostics. */
+    private static void stampProvenance(TagContext context, int lineIndex) {
+        context.setProvenance(TagContext.Provenance.of("debuffs", -1, "debuffs").withLine(lineIndex));
+    }
+
     /** Shared player debuffs plus the holder's own role list. */
     private List<String> debuffCommands(Integer lobby, Role holderRole) {
         List<String> commands = new ArrayList<>(plugin.overrides()
@@ -587,7 +596,9 @@ final class CompassLockService {
         PlaceholderResolver placeholderPass = plugin.placeholderValues() == null
                 ? PlaceholderResolver.inert()
                 : new PlaceholderPass(plugin.placeholderValues());
-        TagBackends backends = new TagBackends(stats, flags, placeholderPass);
+        RosterValues roster = game == null ? RosterValues.inert()
+                : new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId);
+        TagBackends backends = new TagBackends(stats, flags, placeholderPass, roster);
         return TagContext.run(scope, "debuffs",
                 text -> messages.broadcastText(formatEngineMessage(text)),
                 text -> messages.sendText(holder, formatEngineMessage(text)),
@@ -601,7 +612,29 @@ final class CompassLockService {
                 },
                 (target, reason) -> scope.warn("Tag <loseplayer> only works in modifiers: skipped."),
                 (role, reason) -> scope.warn("Tag <win> only works in modifiers: skipped."),
-                matchId, backends);
+                matchId, backends, List.of(), detail -> loopLimitExceeded(detail, matchId));
+    }
+
+    /**
+     * Loop-limit sink for debuff lines: without a live match there is
+     * nothing to cancel, so the source line is only logged.
+     */
+    private void loopLimitExceeded(String detail, long matchId) {
+        plugin.logger().severe("JMHScript loop exceeded 1000 steps at " + detail);
+        if (game == null || matchId == TagContext.NO_MATCH) {
+            return;
+        }
+        Optional<GameInstance> instance = game.instance(matchId);
+        if (instance.isEmpty()) {
+            return;
+        }
+        String text = messages.string("modifiers.loop-limit",
+                "{prefix}<red>A modifier loop exceeded its step limit and the match was cancelled. "
+                        + "Please tell an administrator.");
+        for (Player player : game.onlineParticipants(matchId)) {
+            messages.sendText(player, text);
+        }
+        game.cancel(instance.get());
     }
 
     private String formatEngineMessage(String text) {

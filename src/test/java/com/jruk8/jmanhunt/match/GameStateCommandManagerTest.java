@@ -1,15 +1,19 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
+import com.jruk8.jmanhunt.command.StatValues;
 import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -17,12 +21,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -183,10 +191,48 @@ class GameStateCommandManagerTest {
 
         // A bare set evaluates to blank text; dispatching it crashes the
         // server dispatcher, so the line must be skipped with no error.
-        manager.runCommandList(List.of("<pflag:lastuse-<id>,5>"), null, context);
+        manager.runCommandList(List.of("<pflag:lastuse-<id>,5>"), null, context,
+                TagContext.Provenance.of("gapple-on-low-hp", 0, "console"));
 
         assertTrue(warnings.isEmpty(), warnings.toString());
         verify(logger, never()).severe(anyString());
+    }
+
+    @Test
+    void runawayLoopCancelsMatchWithProvenance() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        JManhuntLogger logger = mock(JManhuntLogger.class);
+        when(plugin.logger()).thenReturn(logger);
+        OverrideService overrides = mock(OverrideService.class);
+        when(plugin.overrides()).thenReturn(overrides);
+        when(overrides.modifierEnabled(any(), eq("spin"))).thenReturn(true);
+        ConfigService config = mock(ConfigService.class);
+        when(config.modifierNames()).thenReturn(java.util.Set.of("spin"));
+        when(config.behaviorIndexes("spin")).thenReturn(List.of(0));
+        when(config.commandList("spin", 0, "console-cleanup"))
+                .thenReturn(List.of("<gmessage:warm>", "<while:true,<gmessage:x>>"));
+        GameManager game = mock(GameManager.class);
+        GameInstance instance = mock(GameInstance.class);
+        Player player = mock(Player.class);
+        when(game.instance(7L)).thenReturn(Optional.of(instance));
+        when(game.onlineParticipants(7L)).thenReturn(List.of(player));
+        when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
+        when(game.flagStore()).thenReturn(new FlagStore());
+        MessageService messages = mock(MessageService.class);
+        when(messages.string(anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+        GameStateCommandManager manager = new GameStateCommandManager(plugin,
+                new PlayerStateStore(), config, messages,
+                mock(SoundService.class), game);
+
+        manager.runConsoleCleanup(7L);
+
+        verify(logger).severe(argThat(line -> line != null && line.contains("<while>")
+                && line.contains(
+                        "modifier 'spin', behavior 0, list 'console-cleanup', line 1 (0-based)")));
+        verify(messages).sendText(eq(player), argThat(text -> text != null
+                && text.contains("step limit") && text.contains("administrator")));
+        verify(game).cancel(instance);
     }
 
     @Test

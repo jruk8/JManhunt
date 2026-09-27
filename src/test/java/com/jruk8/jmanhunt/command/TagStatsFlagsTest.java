@@ -40,7 +40,7 @@ class TagStatsFlagsTest {
             return TagContext.run(scope, "gear-dice", warnings::add, warnings::add,
                     (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                     (player, reason) -> { }, (role, reason) -> { },
-                    matchId, new TagBackends(backend, flags, (text, name) -> text));
+                    matchId, new TagBackends(backend, flags, (text, name) -> text, RosterValues.inert()));
         }
 
         String replace(String command, String executor, long matchId) {
@@ -51,6 +51,18 @@ class TagStatsFlagsTest {
         String replace(String command) {
             return replace(command, "Steve", 7L);
         }
+    }
+
+    @Test
+    void flagsStoreAndReadListValues() {
+        Fixture fixture = new Fixture();
+
+        assertEquals("", fixture.replace("<gflag:nums,[1, 2, 3]>"));
+        assertEquals("[1, 2, 3]", fixture.replace("<gflag:nums>"));
+        TagContext local = fixture.context("Steve", 7L);
+        assertEquals("", CommandPlaceholders.replace("<lflag:one,[a]>", "Steve", 0, 0, 0, local));
+        assertEquals("[a]", CommandPlaceholders.replace("<lflag:one>", "Steve", 0, 0, 0, local));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }
 
     @Test

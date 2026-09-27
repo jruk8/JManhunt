@@ -1,8 +1,11 @@
 package com.jruk8.jmanhunt.command;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -22,6 +25,39 @@ public final class TagContext {
         void play(String soundId, float pitch, float volume);
     }
 
+    /**
+     * Where one tag line comes from: the modifier id, the behavior
+     * index in that modifier, the command list name, and the 0-based
+     * line index in that list. Managers stamp the current line before
+     * each evaluation; loop-limit and null-line diagnostics read it.
+     * Non-modifier runs (compass debuffs) use a negative behavior
+     * index and the dispatch name for both id and list.
+     */
+    public record Provenance(String modifierId, int behaviorIndex, String listName, int lineIndex) {
+        /** Base provenance before any line runs: line unknown. */
+        public static Provenance of(String modifierId, int behaviorIndex, String listName) {
+            return new Provenance(modifierId, behaviorIndex, listName, -1);
+        }
+
+        /** Same source with the 0-based line index filled in. */
+        public Provenance withLine(int lineIndex) {
+            return new Provenance(modifierId, behaviorIndex, listName, lineIndex);
+        }
+
+        /**
+         * One-line source for severe logs: the behavior part drops
+         * out for non-modifier runs.
+         */
+        public String describe() {
+            if (behaviorIndex < 0) {
+                return "modifier '" + modifierId + "', list '" + listName
+                        + "', line " + lineIndex + " (0-based)";
+            }
+            return "modifier '" + modifierId + "', behavior " + behaviorIndex
+                    + ", list '" + listName + "', line " + lineIndex + " (0-based)";
+        }
+    }
+
     private final ModifierTagScope scope;
     private final String containerId;
     private final Consumer<String> globalMessage;
@@ -34,13 +70,16 @@ public final class TagContext {
     private final TagBackends backends;
     private final List<String> eventArgs;
     private final Map<String, String> localFlags;
+    private final Deque<String> loopItems;
+    private final Consumer<String> loopLimit;
+    private Provenance provenance;
 
     private TagContext(ModifierTagScope scope, String containerId,
             Consumer<String> globalMessage, Consumer<String> playerMessage,
             SoundSink globalSound, SoundSink playerSound,
             BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
             long matchId, TagBackends backends, List<String> eventArgs,
-            Map<String, String> localFlags) {
+            Map<String, String> localFlags, Consumer<String> loopLimit) {
         this.scope = scope;
         this.containerId = containerId;
         this.globalMessage = globalMessage;
@@ -53,6 +92,9 @@ public final class TagContext {
         this.backends = backends;
         this.eventArgs = eventArgs;
         this.localFlags = localFlags;
+        this.loopItems = new ArrayDeque<>();
+        this.loopLimit = loopLimit;
+        this.provenance = Provenance.of(containerId, -1, "");
     }
 
     /**
@@ -73,16 +115,33 @@ public final class TagContext {
 
     /**
      * Full run context with trigger event args behind
-     * {@code <args:index>}. The list is copied and frozen.
+     * {@code <args:index>}. The list is copied and frozen. Loop
+     * limits resolve to {@code "null"} with no match response.
      */
     public static TagContext run(ModifierTagScope scope, String containerId,
             Consumer<String> globalMessage, Consumer<String> playerMessage,
             SoundSink globalSound, SoundSink playerSound,
             BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
             long matchId, TagBackends backends, List<String> eventArgs) {
+        return run(scope, containerId, globalMessage, playerMessage,
+                globalSound, playerSound, losePlayer, winMatch,
+                matchId, backends, eventArgs, detail -> { });
+    }
+
+    /**
+     * Full run context with a loop-limit sink behind over-step
+     * {@code <while>} and {@code <for>} loops: managers log, tell
+     * the match, and cancel it.
+     */
+    public static TagContext run(ModifierTagScope scope, String containerId,
+            Consumer<String> globalMessage, Consumer<String> playerMessage,
+            SoundSink globalSound, SoundSink playerSound,
+            BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
+            long matchId, TagBackends backends, List<String> eventArgs,
+            Consumer<String> loopLimit) {
         return new TagContext(scope, containerId, globalMessage, playerMessage,
                 globalSound, playerSound, losePlayer, winMatch,
-                matchId, backends, List.copyOf(eventArgs), new HashMap<>());
+                matchId, backends, List.copyOf(eventArgs), new HashMap<>(), loopLimit);
     }
 
     /** Full context for one modifier or debuff dispatch. */
@@ -91,7 +150,7 @@ public final class TagContext {
             SoundSink globalSound, SoundSink playerSound) {
         return new TagContext(scope, containerId, globalMessage, playerMessage,
                 globalSound, playerSound, (player, reason) -> { }, (role, reason) -> { },
-                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>());
+                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { });
     }
 
     /** Inert context for scope-only callers: empty id, silent sinks. */
@@ -99,7 +158,7 @@ public final class TagContext {
         return new TagContext(scope, "", text -> { }, text -> { },
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                 (player, reason) -> { }, (role, reason) -> { },
-                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>());
+                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { });
     }
 
     public ModifierTagScope scope() {
@@ -135,9 +194,44 @@ public final class TagContext {
         return localFlags;
     }
 
+    /** Match roster reads for roster tags. */
+    public RosterValues roster() {
+        return backends.roster();
+    }
+
     /** This trigger's event args behind {@code <args:index>}. */
     public List<String> eventArgs() {
         return eventArgs;
+    }
+
+    /** Source line stamped by the manager before each evaluation. */
+    public Provenance provenance() {
+        return provenance;
+    }
+
+    /** Stamps the source line; managers call this per line. */
+    public void setProvenance(Provenance provenance) {
+        this.provenance = provenance;
+    }
+
+    /** Pushes one for-loop item; nested loops see the innermost. */
+    public void pushLoopItem(String item) {
+        loopItems.push(item);
+    }
+
+    /** Pops one for-loop item; callers pair pushes with pops. */
+    public void popLoopItem() {
+        loopItems.pop();
+    }
+
+    /** Innermost for-loop item, or empty outside any for loop. */
+    public Optional<String> loopItem() {
+        return loopItems.isEmpty() ? Optional.empty() : Optional.of(loopItems.peek());
+    }
+
+    /** Fires the loop-limit response behind an over-step loop. */
+    public void loopLimitExceeded(String detail) {
+        loopLimit.accept(detail);
     }
 
     public void sendGlobalMessage(String text) {

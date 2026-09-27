@@ -10,6 +10,10 @@ public class ModifiersMessages extends OkaeriConfig {
     @CustomKey("message-format")
     private String messageFormat = "{prefix}{message}";
 
+    @CustomKey("loop-limit")
+    private String loopLimit = "{prefix}<red>A modifier loop exceeded its step limit and the match was cancelled. " +
+            "Please tell an administrator.";
+
     @CustomKey("usage")
     private String usage = "{prefix}<yellow>Usage: <white>/manhunt modifiers [setmod <name> " +
             "<true|false>|setpreset <id> <true|false>]<yellow>.";

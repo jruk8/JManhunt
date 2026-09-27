@@ -34,7 +34,7 @@ public final class TagFlags {
 
     /** Resolves {@code <lflag:name>} and {@code <lflag:name,value>}. */
     static String local(String tag, String args, TagContext context) {
-        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        List<String> parts = TagLists.splitTopLevel(args);
         Optional<String> name = flagName(tag, parts, context, "lflag");
         if (name.isEmpty()) {
             return "";
@@ -51,10 +51,49 @@ public final class TagFlags {
         return "";
     }
 
+    /**
+     * Loads one flag value for list write-back; unset reads as
+     * {@code null} and match-less match-scoped reads stay silent.
+     */
+    static String loadFlag(String kind, String name, TagContext context) {
+        String tag = "<" + kind + ":" + name + ">";
+        return switch (kind) {
+            case "gflag" -> global(tag, name, context);
+            case "pflag" -> player(tag, name, context);
+            default -> local(tag, name, context);
+        };
+    }
+
+    /**
+     * Stores one flag value for list write-back. Match-scoped stores
+     * without a live match warn and skip the write.
+     */
+    static void storeFlag(String kind, String name, String value, String tag, TagContext context) {
+        switch (kind) {
+            case "gflag" -> {
+                if (context.matchId() == TagContext.NO_MATCH) {
+                    context.scope().warn("Tag <gflag> needs a live match: " + tag);
+                } else {
+                    context.flagStore().setGlobal(context.matchId(), name, value);
+                }
+            }
+            case "pflag" -> {
+                if (context.matchId() == TagContext.NO_MATCH) {
+                    context.scope().warn("Tag <pflag> needs a live match: " + tag);
+                } else {
+                    String suffix = FlagStore.suffixFor(context.scope());
+                    context.flagStore().setPlayer(context.matchId(),
+                            FlagStore.playerKey(name, suffix), value);
+                }
+            }
+            default -> context.localFlags().put(name, value);
+        }
+    }
+
     /** Shared get/set shape for the match-scoped flag kinds. */
     private static String flag(String tag, String args, TagContext context, String root,
             FlagSetter setter, FlagGetter getter) {
-        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        List<String> parts = TagLists.splitTopLevel(args);
         Optional<String> name = flagName(tag, parts, context, root);
         if (name.isEmpty()) {
             return "";

@@ -172,6 +172,23 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <args> done").isEmpty());
         assertTrue(CommandSyntax.error("say <args:0> done").isEmpty());
         assertTrue(CommandSyntax.error("say <args:2> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <list.append:<gflag:l>,x> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <list.get:[a,b],1> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <list.set:<gflag:l>,0,x> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <list.remove:<gflag:l>,x> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <list.contains:[a],x> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <list.clear:<gflag:l>> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <list.pop:<gflag:l>> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <len:[a,b]> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <list.shuffle:<gflag:l>> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <active-players:HUNTER> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <active-players:speedrunner> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <plocation:Steve> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <prole:Steve> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <distance:[0,0,0],[3,4,0]> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <floor:7/2> <ceil:1> <round:2> <abs:0> <sign:3> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <range:5> <range:1,5> <range:5,0,-1> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <while:true,x> <for:[a,b],x> <i> x").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"<if:1==1,y,n> == y\",\"Y\"> done").isEmpty());
     }
 
@@ -216,6 +233,22 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <win:ref,out> done").isPresent());
         assertTrue(CommandSyntax.error("say <args:x> done").isPresent());
         assertTrue(CommandSyntax.error("say <args:0,1> done").isPresent());
+        assertTrue(CommandSyntax.error("say <list.get:[a]> done").isPresent());
+        assertTrue(CommandSyntax.error("say <list.set:[a],0> done").isPresent());
+        assertTrue(CommandSyntax.error("say <list.clear:[a],x> done").isPresent());
+        assertTrue(CommandSyntax.error("say <len> done").isPresent());
+        assertTrue(CommandSyntax.error("say <active-players:REF> x").isPresent());
+        assertTrue(CommandSyntax.error("say <active-players> x").isPresent());
+        assertTrue(CommandSyntax.error("say <plocation> x").isPresent());
+        assertTrue(CommandSyntax.error("say <prole:> x").isPresent());
+        assertTrue(CommandSyntax.error("say <distance:[0,0,0]> x").isPresent());
+        assertTrue(CommandSyntax.error("say <floor> x").isPresent());
+        assertTrue(CommandSyntax.error("say <sign:1,2> x").isPresent());
+        assertTrue(CommandSyntax.error("say <range:> x").isPresent());
+        assertTrue(CommandSyntax.error("say <range:1,2,3,4> x").isPresent());
+        assertTrue(CommandSyntax.error("say <while:true> x").isPresent());
+        assertTrue(CommandSyntax.error("say <for:[a],x,y> x").isPresent());
+        assertTrue(CommandSyntax.error("say <i:x> x").isPresent());
         assertTrue(CommandSyntax.error("give <p> apple <min:8>").isPresent());
         assertTrue(CommandSyntax.error("give <p> apple <clamp:8,1>").isPresent());
         assertTrue(CommandSyntax.error("say <gmessage> done").isPresent());

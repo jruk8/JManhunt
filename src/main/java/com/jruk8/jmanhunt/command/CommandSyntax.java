@@ -37,7 +37,11 @@ public final class CommandSyntax {
                 "random-pick", "random-player", "all-players", "id", "min",
                 "max", "clamp", "if", "gmessage", "pmessage", "gsound", "psound",
                 "pstat", "gstat", "gflag", "pflag", "lflag", "placeholder",
-                "loseplayer", "win", "args");
+                "loseplayer", "win", "args", "list.append", "list.get", "list.set", "list.remove",
+                "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
+                "active-players", "plocation", "prole", "distance",
+                "floor", "ceil", "round", "abs", "sign",
+                "while", "for", "i");
     }
 
     /**
@@ -213,7 +217,7 @@ public final class CommandSyntax {
         return switch (name) {
             case "random-num" -> randomNumberError(args);
             case "random-pick" -> randomPickError(args);
-            case "id" -> idError(args);
+            case "id", "i" -> noArgsError(name, args);
             case "min", "max" -> arityError(name, args, 2, "two numbers");
             case "clamp" -> arityError(name, args, 3, "a value plus low and high");
             case "gmessage", "pmessage" -> arityError(name, args, 1, "one text");
@@ -226,6 +230,25 @@ public final class CommandSyntax {
             case "loseplayer" -> loseplayerError(name, args);
             case "win" -> winError(name, args);
             case "args" -> argsError(name, args);
+            case "list.append" -> topLevelArityError(name, args, 2, "<list.append:list,x>");
+            case "list.get" -> topLevelArityError(name, args, 2, "<list.get:list,index>");
+            case "list.set" -> topLevelArityError(name, args, 3, "<list.set:list,index,x>");
+            case "list.remove" -> topLevelArityError(name, args, 2, "<list.remove:list,x>");
+            case "list.contains" -> topLevelArityError(name, args, 2, "<list.contains:list,x>");
+            case "list.clear" -> topLevelArityError(name, args, 1, "<list.clear:list>");
+            case "list.pop" -> topLevelArityError(name, args, 1, "<list.pop:list>");
+            case "len" -> topLevelArityError(name, args, 1, "<len:list>");
+            case "list.shuffle" -> topLevelArityError(name, args, 1, "<list.shuffle:list>");
+            case "range" -> rangeError(name, args);
+            case "active-players" -> activePlayersError(name, args);
+            case "plocation", "prole" -> playerNameError(name, args);
+            case "distance" -> topLevelArityError(name, args, 2, "<distance:loc1,loc2>");
+            case "floor" -> topLevelArityError(name, args, 1, "<floor:x>");
+            case "ceil" -> topLevelArityError(name, args, 1, "<ceil:x>");
+            case "round" -> topLevelArityError(name, args, 1, "<round:x>");
+            case "abs" -> topLevelArityError(name, args, 1, "<abs:x>");
+            case "sign" -> topLevelArityError(name, args, 1, "<sign:x>");
+            case "while", "for" -> loopError(name, args);
             default -> Optional.empty();
         };
     }
@@ -293,9 +316,29 @@ public final class CommandSyntax {
         return Optional.of("Tag <random-pick:" + args.trim() + "> has no valid item.");
     }
 
-    private static Optional<String> idError(String args) {
+    private static Optional<String> noArgsError(String name, String args) {
         if (args != null && !args.isBlank()) {
-            return Optional.of("Tag <id> takes no arguments.");
+            return Optional.of("Tag <" + name + "> takes no arguments.");
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Loop shape: a condition or list plus a body. Split top-level
+     * so list args survive, mirroring the runtime split.
+     */
+    private static Optional<String> loopError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs a condition or list plus a body.");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 2) {
+            return Optional.of("Tag <" + name + "> needs a condition or list plus a body.");
+        }
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
+                return Optional.of("Tag <" + name + "> mixes quotes.");
+            }
         }
         return Optional.empty();
     }
@@ -353,6 +396,86 @@ public final class CommandSyntax {
         return Optional.empty();
     }
 
+    /**
+     * Fixed-arity shape over top-level segments (list literals stay
+     * whole), each quote-clean unless blank, mirroring the runtime
+     * splitter. Serves every tag whose args may hold lists.
+     */
+    private static Optional<String> topLevelArityError(String name, String args, int arity, String example) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs " + arity + " args like " + example + ".");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != arity) {
+            return Optional.of("Tag <" + name + "> needs " + arity + " args like " + example + ".");
+        }
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty() && !part.isBlank()) {
+                return Optional.of("Tag <" + name + "> mixes quotes.");
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Active-players shape: one role, HUNTER or SPEEDRUNNER. Like
+     * {@code <win>} the role must be literal here.
+     */
+    /**
+     * Range shape: one to three quote-clean bounds; values are
+     * checked at runtime since they may be math or nested tags.
+     */
+    private static Optional<String> rangeError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <range> needs stop like <range:5>.");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.isEmpty() || parts.size() > 3) {
+            return Optional.of("Tag <range> needs stop like <range:5>.");
+        }
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
+                return Optional.of("Tag <range> mixes quotes.");
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static Optional<String> activePlayersError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <active-players> needs HUNTER or SPEEDRUNNER.");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 1) {
+            return Optional.of("Tag <active-players> needs HUNTER or SPEEDRUNNER.");
+        }
+        Optional<String> item = CommandPlaceholders.parsePickItem(parts.get(0));
+        if (item.isEmpty()) {
+            return Optional.of("Tag <active-players> mixes quotes.");
+        }
+        String role = item.get().strip().toUpperCase(Locale.ROOT);
+        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER")) {
+            return Optional.of("Tag <active-players> needs HUNTER or SPEEDRUNNER.");
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Player-name shape for {@code <plocation>} and {@code <prole>}:
+     * one present, quote-clean name. Like {@code <loseplayer>} the
+     * name may resolve from a nested tag at runtime.
+     */
+    private static Optional<String> playerNameError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs a player like <" + name + ":Steve>.");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 1 || CommandPlaceholders.parsePickItem(parts.get(0)).isEmpty()) {
+            return Optional.of("Tag <" + name + "> needs a player like <" + name + ":Steve>.");
+        }
+        return Optional.empty();
+    }
+
     private static Optional<String> arityError(String name, String args, int arity, String what) {
         if (args == null || args.isBlank()
                 || CommandPlaceholders.splitPickArgs(args).size() != arity) {
@@ -398,7 +521,7 @@ public final class CommandSyntax {
         if (args == null || args.isBlank()) {
             return Optional.of("Tag <" + name + "> needs a name plus an optional value.");
         }
-        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        List<String> parts = TagLists.splitTopLevel(args);
         if (parts.size() < 1 || parts.size() > 2) {
             return Optional.of("Tag <" + name + "> needs a name plus an optional value.");
         }

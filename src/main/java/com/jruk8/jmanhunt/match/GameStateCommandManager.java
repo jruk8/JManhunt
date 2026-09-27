@@ -93,7 +93,8 @@ public final class GameStateCommandManager {
             ModifierTagScope scope = ModifierTagScope.executor(null, plugin.logger()::warning);
             for (int index : configService.behaviorIndexes(name)) {
                 runCommandList(configService.commandList(name, index, "console-cleanup"), null,
-                        tagContext(name, null, scope, matchId, List.of()));
+                        tagContext(name, null, scope, matchId, List.of()),
+                        TagContext.Provenance.of(name, index, "console-cleanup"));
             }
         }
     }
@@ -103,7 +104,8 @@ public final class GameStateCommandManager {
             for (int index : configService.behaviorIndexes(name)) {
                 for (Player player : participants) {
                     runCommandList(configService.commandList(name, index, "player-cleanup"), player,
-                            tagContext(name, player, matchScope(player, participants), matchId, List.of()));
+                            tagContext(name, player, matchScope(player, participants), matchId, List.of()),
+                            TagContext.Provenance.of(name, index, "player-cleanup"));
                 }
             }
         }
@@ -194,7 +196,7 @@ public final class GameStateCommandManager {
         if (chanceScope == ModifierTriggers.TriggerScope.PER_EXECUTOR) {
             if (ModifierTriggers.rollChance(chance, random.nextDouble())) {
                 runCommandList(sharedPicks ? shared.get("console") : resolveCommandList(name, index, "console"),
-                        null, consoleContext);
+                        null, consoleContext, TagContext.Provenance.of(name, index, "console"));
             }
             for (Player target : targets) {
                 if (!ModifierTriggers.rollChance(chance, random.nextDouble())) {
@@ -211,7 +213,7 @@ public final class GameStateCommandManager {
         // The shared map only exists for PER_INVOKE picks; per-executor
         // picks resolve their lists here instead of reading nulls.
         runCommandList(sharedPicks ? shared.get("console") : resolveCommandList(name, index, "console"),
-                null, consoleContext);
+                null, consoleContext, TagContext.Provenance.of(name, index, "console"));
         for (Player target : targets) {
             runExecutorPlayerLists(name, index, target, shared, sharedPicks,
                     tagContext(name, target, matchScope(target, match), matchId, eventArgs));
@@ -238,10 +240,10 @@ public final class GameStateCommandManager {
                                         Map<String, List<String>> shared,
                                         boolean useShared, TagContext context) {
         runCommandList(useShared ? shared.get("player") : resolveCommandList(name, index, "player"), target,
-                context);
+                context, TagContext.Provenance.of(name, index, "player"));
         String roleCommands = playerStates.role(target) == Role.HUNTER ? "hunter" : "speedrunner";
         runCommandList(useShared ? shared.get(roleCommands) : resolveCommandList(name, index, roleCommands),
-                target, context);
+                target, context, TagContext.Provenance.of(name, index, roleCommands));
     }
 
     /** Tag context for one modifier dispatch run: id, sinks, stats, flags, event args. */
@@ -267,8 +269,29 @@ public final class GameStateCommandManager {
                 (target, reason) -> losePlayerByName(name, target, reason, scope, matchId),
                 (role, reason) -> winForRole(name, role, reason, scope, matchId),
                 matchId, new TagBackends(game.matchStatValues(matchId), game.flagStore(),
-                        new PlaceholderPass(plugin.placeholderValues())),
-                eventArgs);
+                        new PlaceholderPass(plugin.placeholderValues()),
+                        new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId)),
+                eventArgs, detail -> loopLimitExceeded(detail, matchId));
+    }
+
+    /**
+     * Loop-limit sink: a {@code <while>} or {@code <for>} passed 1000
+     * steps. Logs the source line, tells the match to contact an
+     * administrator, and cancels the match.
+     */
+    private void loopLimitExceeded(String detail, long matchId) {
+        plugin.logger().severe("JMHScript loop exceeded 1000 steps at " + detail);
+        Optional<GameInstance> instance = game.instance(matchId);
+        if (instance.isEmpty()) {
+            return;
+        }
+        String text = messages.string("modifiers.loop-limit",
+                "{prefix}<red>A modifier loop exceeded its step limit and the match was cancelled. "
+                        + "Please tell an administrator.");
+        for (Player player : game.onlineParticipants(matchId)) {
+            messages.sendText(player, text);
+        }
+        game.cancel(instance.get());
     }
 
     /**
@@ -460,8 +483,15 @@ public final class GameStateCommandManager {
     }
 
     /** Runs one command list; package-visible so tests can pin dispatch routing. */
-    void runCommandList(List<String> commands, Player player, TagContext context) {
-        for (String command : commands) {
+    /**
+     * Runs one command list, stamping the 0-based line provenance
+     * before each line for loop-limit and null-line diagnostics.
+     */
+    void runCommandList(List<String> commands, Player player, TagContext context,
+            TagContext.Provenance base) {
+        for (int lineIndex = 0; lineIndex < commands.size(); lineIndex++) {
+            String command = commands.get(lineIndex);
+            context.setProvenance(base.withLine(lineIndex));
             if (command.isBlank()) {
                 continue;
             }

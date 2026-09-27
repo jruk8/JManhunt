@@ -222,8 +222,8 @@ public final class CommandPlaceholders {
         return spans;
     }
 
-    /** Matching close of the tag opening at {@code open}; -1 when unclosed. */
-    private static int spanClose(String command, int open) {
+    /** Matching close of the tag opening at {@code open}; -1 when unclosed. Shared with the pre-pass. */
+    static int spanClose(String command, int open) {
         int depth = 0;
         char quote = 0;
         for (int index = open; index < command.length(); index++) {
@@ -391,14 +391,22 @@ public final class CommandPlaceholders {
     }
 
     /**
-     * Inside-out tag evaluation; unknown tags survive untouched. If-tags
-     * resolve first each pass because their conditions may hold bare
-     * {@code < > <= >=} that the plain innermost scan cannot see.
+     * Inside-out tag evaluation; unknown tags survive untouched. Loops
+     * resolve first each pass so their bodies (with {@code <i>} and
+     * per-iteration conditions) stay frozen for the loop protocol
+     * instead of pre-resolving. If-tags go next because their
+     * conditions may hold bare {@code < > <= >=} that the plain
+     * innermost scan cannot see. Mutating list tags with flag
+     * references resolve last so they can write back before the
+     * reference itself resolves to a value.
      */
     private static String evaluateTags(String command, String playerName, TagContext context) {
         String current = command;
+        TagLoops.Evaluator eval = fragment -> evaluateTags(fragment, playerName, context);
         for (int pass = 0; pass < MAX_TAG_PASSES; pass++) {
-            String stepped = resolveIfSpans(current, playerName, context);
+            String stepped = TagPrePass.resolveLoopSpans(current, context, eval);
+            stepped = TagPrePass.resolveIfSpans(stepped, context, eval);
+            stepped = TagPrePass.resolveListSpans(stepped, context, eval);
             boolean changed = !stepped.equals(current);
             current = stepped;
             Matcher matcher = INNER_TAG.matcher(current);
@@ -423,28 +431,6 @@ public final class CommandPlaceholders {
         return current;
     }
 
-    /** Resolves if-spans without nested ifs, right to left. */
-    private static String resolveIfSpans(String command, String playerName, TagContext context) {
-        List<TagExpressions.IfSpan> ready = new ArrayList<>();
-        for (TagExpressions.IfSpan span : TagExpressions.findIfSpans(command)) {
-            if (!TagExpressions.hasNestedIf(span.args())) {
-                ready.add(span);
-            }
-        }
-        if (ready.isEmpty()) {
-            return command;
-        }
-        ready.sort((first, second) -> Integer.compare(second.start(), first.start()));
-        StringBuilder result = new StringBuilder(command);
-        for (TagExpressions.IfSpan span : ready) {
-            String args = evaluateTags(span.args(), playerName, context);
-            String resolved = TagExpressions.ifEval(command.substring(span.start(), span.end()),
-                    args, context);
-            result.replace(span.start(), span.end(), resolved);
-        }
-        return result.toString();
-    }
-
     private static String resolveTag(String body, String playerName, TagContext context) {
         ModifierTagScope scope = context.scope();
         String tag = "<" + body + ">";
@@ -462,6 +448,7 @@ public final class CommandPlaceholders {
             // Handled separately by withDuration before evaluation.
             case "duration" -> tag;
             case "id" -> context.containerId();
+            case "i" -> context.loopItem().orElse("null");
             case "pstat" -> TagStats.player(tag, args, context);
             case "gstat" -> TagStats.global(tag, args, context);
             case "gflag" -> TagFlags.global(tag, args, context);
@@ -475,6 +462,16 @@ public final class CommandPlaceholders {
             case "loseplayer" -> TagExpressions.loseplayer(tag, args, context);
             case "win" -> TagExpressions.win(tag, args, context);
             case "args" -> TagArgs.resolve(tag, args, context);
+            case "list.append", "list.get", "list.set", "list.remove", "list.contains",
+                    "list.clear", "list.pop", "len", "list.shuffle" ->
+                    TagLists.resolve(tag, name, args, context);
+            case "range" -> TagLists.range(tag, args, context);
+            case "active-players" -> TagRoster.activePlayers(tag, args, context);
+            case "plocation" -> TagLocations.plocation(tag, args, context);
+            case "prole" -> TagRoster.role(tag, args, context);
+            case "distance" -> TagLocations.distance(tag, args, context);
+            case "floor", "ceil", "round", "abs", "sign" ->
+                    TagExpressions.mathUnary(tag, name, args, context);
             default -> tag;
         };
     }
@@ -499,9 +496,8 @@ public final class CommandPlaceholders {
                 List<String> names = scope.participantNames(args.isBlank() ? null : args.strip());
                 if (names.isEmpty()) {
                     scope.warn("Skipping <all-players> with no players in scope, using []: " + tag);
-                    yield "[]";
                 }
-                yield "[" + String.join(", ", names) + "]";
+                yield TagLists.format(names);
             }
             default -> {
                 scope.warn("@a outside match fan-out covers only the executor.");

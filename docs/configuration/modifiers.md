@@ -329,10 +329,24 @@ creator editor validates them as you type:
 | `<loseplayer:Alex,fell>` | Eliminates Alex with the reason `fell`; the tag leaves nothing behind. |
 | `<win:HUNTER,trapped>` | Ends the match for the hunters with the reason `trapped`; the tag leaves nothing behind. |
 | `<args:0>` | The trigger's first event arg (see below); bare `<args>` reads index `0`. |
+| `<len:[a,b]>` | List tools (`list.get`, `list.set`, `list.append`, and more; see Lists). |
+| `<range:1,5>` | The list `[1, 2, 3, 4]`, Python style (see Lists). |
+| `<active-players:HUNTER>` | Eligible hunters as a list, like `[Alex, Bo]`. |
+| `<prole:Alex>` | `HUNTER` or `SPEEDRUNNER` for Alex, else `null`. |
+| `<plocation:Alex>` | Alex's spot as `[x, y, z, pitch, yaw, dimension]`. |
+| `<distance:[0,0,0],[3,4,0]>` | Blocks between two spots: `5`. |
+| `<floor:2.7>` | `2`; `<ceil:2.3>` is `3`, `<round:2.5>` is `3`. |
+| `<abs:-4>` | `4`; `<sign:-4>` is `-1` (`0` and `1` for the rest). |
+| `<for:[a,b],...>` | Repeats the body per item with the item behind `<i>` (see Loops). |
+| `<while:1==1,...>` | Repeats the body while the condition holds (see Loops). |
+| `<i>` | The innermost for-loop item, else `null`. |
 
 `<min>`, `<max>`, and `<clamp>` accept math in their arguments
 (`<min:8+5,10>` is `10`) and yield `0` with a console warning when an
-argument is not a number.
+argument is not a number. `<floor>`, `<ceil>`, `<round>`, `<abs>`,
+and `<sign>` also accept math (`<floor:7/2>` is `3`), round halves
+up, and yield `null` with a warning when the argument is not a
+number.
 
 ### Event args
 
@@ -429,6 +443,81 @@ Flags are modifier-agnostic on purpose: any modifier can read what
 another wrote. For a strictly private flag, namespace the name with
 `<id>`: `lastuse-<id>` can only collide with itself. Flags live in
 memory: a reload or restart wipes them.
+
+### Lists
+
+Lists are bracketed values like `[a, b]` and live happily in flags:
+`<gflag:nums,[1, 2, 3]>` stores one, `<gflag:nums>` reads it back.
+Items split on top-level commas, so nested lists and quoted commas
+survive. Positions start at `0`, and out-of-range reads yield `null`:
+
+| Tag | Meaning |
+| --- | --- |
+| `<len:[a,b]>` | `2`. |
+| `<list.get:[a,b],1>` | `b`. |
+| `<list.set:[a,b],0,z>` | `[z, b]` (position `size` appends). |
+| `<list.append:[a],b>` | `[a, b]`. |
+| `<list.remove:[a,b],a>` | `[b]` (first match only). |
+| `<list.contains:[a,b],b>` | `true`. |
+| `<list.pop:[a,b]>` | `b`, the last item. |
+| `<list.shuffle:[a,b]>` | The items in random order. |
+| `<list.clear:[a,b]>` | `[]`. |
+| `<range:5>` | `[0, 1, 2, 3, 4]`; `<range:1,5>` starts at `1`, and `<range:5,0,-1>` counts down. |
+
+`<range>` follows Python: start inclusive, stop exclusive, step `1`
+unless given. Ranges past 1000 items keep the first thousand with a
+warning; a zero step or a non-number warns and yields `null`.
+
+The mutating ops (`append`, `set`, `remove`, `clear`, `pop`,
+`shuffle`) write back when their list is a verbatim flag reference:
+`<list.append:<gflag:nums>,4>` grows the stored flag and leaves
+nothing behind. Anything else (literals, other expressions) applies
+purely and returns the new list.
+
+### Roster and locations
+
+`<active-players:HUNTER>` (or `SPEEDRUNNER`, case does not matter)
+lists the players currently eligible for interval commands: online,
+active, and neither respawning nor held. `<prole:Alex>` reads one
+player's side, and `<plocation:Alex>` reads their spot as
+`[x, y, z, pitch, yaw, dimension]`, the same shape as the respawn
+event arg. Unknown or offline players yield `null` silently, as do
+spectators for `<prole>`.
+
+`<distance>` measures between two spots with only the `x`, `y`, `z`
+entries, ignoring pitch, yaw, and dimension, so locations from
+different worlds still compare by coordinates:
+`<distance:<plocation:Alex>,[0, 64, 0]>` is the blocks from Alex to
+spawn. Bad shapes warn and stop the line.
+
+### Loops
+
+`<for:list,body>` walks a list with each item behind `<i>`, and
+`<while:condition,body>` repeats while its condition holds. Bodies
+run for side effects (flag writes, messages, sounds) and any text
+they produce is discarded; both loops leave nothing behind on
+success:
+
+```yaml
+- '<gflag:out,[]>'
+- '<for:<range:3>,<list.append:<gflag:out>,item<i>>>'
+- 'say <gflag:out>'
+```
+
+This says `[item0, item1, item2]`. Nested loops work, with `<i>`
+always reading the innermost item; outside any for loop `<i>` is a
+silent `null`. The while condition re-resolves every iteration and
+accepts a bare `true`/`false` word or a full condition (`<gflag:n>
+lt 3`); anything else warns and the whole tag becomes `null`.
+
+Two tripwires keep loops honest. A for loop over a flag reference
+snapshots the flag and cancels to `null` with a warning when the
+body changes it mid-loop (literals cannot change, so they never
+cancel). And every loop stops at 1000 steps: past that the match is
+cancelled, the console logs the modifier, behavior, list, and line,
+and the players are told to contact the administrator. Quote
+literal `<` and `>` inside loop bodies so the tag scanner does not
+mistake them for tags.
 
 ### Placeholders
 
