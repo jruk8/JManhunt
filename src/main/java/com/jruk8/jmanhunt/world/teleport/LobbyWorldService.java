@@ -213,6 +213,20 @@ public final class LobbyWorldService {
     }
 
     /**
+     * Lowest lobby id holding a teleport, as a lobby-world location.
+     * Empty when the lobby world is missing or no lobbytp exists.
+     */
+    public Optional<Location> lowestLobbyTeleport() {
+        World lobbyWorld = Bukkit.getWorld(lobbyWorlds.lobbyWorldName());
+        LobbyConfig lobbyConfig = plugin.lobbyConfig();
+        if (lobbyWorld == null || lobbyConfig == null) {
+            return Optional.empty();
+        }
+        return LobbyWorldManager.lowestLobbyTp(lobbyConfig.getLobbies())
+                .map(lowest -> toLobbyLocation(lobbyWorld, lowest.getValue()));
+    }
+
+    /**
      * resolveLobby plus the nothing-anywhere announcement: when no
      * lobbytp exists anywhere (or the lobby world is missing), every
      * target is told that no lobby exists and to contact an

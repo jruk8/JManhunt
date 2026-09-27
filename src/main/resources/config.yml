@@ -602,6 +602,16 @@ settings:
         # least 1.
         # Default: 25
         tp-distance: 25
+      # Travel limit keeping spectators near the action.
+      travel:
+        # Pull spectators back when they roam too far from players
+        # or last-seen spots. Prevents redundant chunk generation.
+        # Default: true
+        enabled: true
+        # Blocks a spectator may roam from the nearest player or
+        # last-seen spot before being teleported back to it.
+        # Default: 125.0
+        max-distance: 125.0
 
     # Announces each participant's role when a match starts, in chat and/or as a
     # title. Both are toggled independently; when both are off, no announcement
@@ -985,12 +995,19 @@ world-engine:
       fadeout-time: 5
     # Pseudoborder wall particles for concurrent matches.
     particles:
+      # Wall particle type: DUST, SMOKE, LARGE_SMOKE, HEART,
+      # HAPPY_VILLAGER, ANGRY_VILLAGER, WITCH, FIREWORK, FLASH,
+      # FLAME, SMALL_FLAME, EFFECT, INSTANT_EFFECT, PORTAL, END_ROD,
+      # NOTE, SOUL, or ENCHANT.
+      # Default: DUST
+      type: DUST
       # Blocks between adjacent grid vertices on each wall.
       # 1 is the tightest grid (most detail, most expensive),
       # 8 is the loosest. Minimum: 1. Maximum: 8.
       # Default: 2
       particle-spacing: 2
       # Wall color as a hex value, with or without a leading #.
+      # Applies to the DUST type only.
       # Default: #de7766
       color: "#de7766"
       # Perpendicular blocks from a wall at which it starts

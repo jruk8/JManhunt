@@ -10,6 +10,7 @@ import com.jruk8.jmanhunt.match.LeaveDestination;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.SpectatorTravelService;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.border.BorderMode;
 import com.jruk8.jmanhunt.world.cell.CellBounds;
@@ -82,8 +83,12 @@ public final class MatchFinishService {
         this.autostart = autostart;
         this.flagStore = flagStore;
         // Pseudo-border guard for concurrent matches; idle unless at least two
-        // matches run with the engine border on.
-        Bukkit.getScheduler().runTaskTimer(plugin, this::enforcePseudoBorders, 20L, 20L);
+        // matches run with the engine border on. The spectator travel limit
+        // rides the same one-second tick.
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            enforcePseudoBorders();
+            enforceSpectatorTravel();
+        }, 20L, 20L);
     }
 
     public void addGameEndListener(Consumer<GameInstance> listener) {
@@ -252,7 +257,8 @@ public final class MatchFinishService {
             if (!dropGear && instance.cellIndex().isPresent()) {
                 // Auto-leave pulled them out of bounds: put the watcher
                 // back in the cell instead of stranding them outside it.
-                worldEngine.teleportJoinersToCell(List.of(player), instance.cellIndex().getAsLong());
+                worldEngine.teleportJoinersToCell(instance, List.of(player),
+                        instance.cellIndex().getAsLong());
             }
         }
     }
@@ -276,7 +282,7 @@ public final class MatchFinishService {
     /**
      * Removes a begun-match participant standing outside their cell or in
      * the lobby world, with a reason notice. The End is skipped like the
-     * border enforcement, and while borders are enabled they confine
+     * border enforcement, and concurrent matches confine by rubber-band
      * instead. Returns true when the player was removed.
      */
     public boolean autoLeaveIfOutside(Player player, Location at) {
@@ -304,8 +310,9 @@ public final class MatchFinishService {
         if (!config.enabled() || instance.cellIndex().isEmpty()) {
             return false;
         }
-        if (config.worldBorderEnabled()) {
-            // Borders confine instead: the rubber-band brings them back.
+        if (config.worldBorderEnabled() && store.instances().size() >= 2) {
+            // Concurrent matches confine by rubber-band instead; lone
+            // matches set no vanilla border, so auto-leave confines them.
             return false;
         }
         boolean nether = environment == World.Environment.NETHER;
@@ -463,7 +470,6 @@ public final class MatchFinishService {
         store.removeInstance(teardownId);
         plugin.logger().debug("debug.match-end", Map.of("index", GameManager.cellString(instance)));
         worldEngine.prepareNextCell();
-        restoreSingleBorder();
         logBorderMode();
         autostart.updateAutostartState();
     }
@@ -614,20 +620,6 @@ public final class MatchFinishService {
     }
 
     /**
-     * Hands the real border to the surviving match when concurrency drops
-     * back to one. Honors its start-border phase when it has not begun yet.
-     */
-    private void restoreSingleBorder() {
-        if (store.instances().size() != 1) {
-            return;
-        }
-        GameInstance survivor = store.liveInstances().get(0);
-        if (survivor.cellIndex().isPresent()) {
-            worldEngine.applyInstanceBorder(survivor.cellIndex().getAsLong(), survivor.begun());
-        }
-    }
-
-    /**
      * Confines concurrent matches to their cells: players outside their
      * cell are rubber-banded back in and take border damage past the damage
      * buffer. Spectators bypass it like the vanilla border. The End is
@@ -674,6 +666,61 @@ public final class MatchFinishService {
                 }
             }
         }
+    }
+
+    /**
+     * Pulls roaming watchers back to the nearest player or last-seen
+     * spot once they pass the travel cap, so spectators cannot farm
+     * chunk generation far from the action. Cell center is the fallback
+     * when no anchor exists. Silent: no message, no sound.
+     */
+    private void enforceSpectatorTravel() {
+        if (!configService.getBoolean("settings.players.spectator.travel.enabled", true)) {
+            return;
+        }
+        double maxDistance = configService.getDouble(
+                "settings.players.spectator.travel.max-distance", 125.0);
+        if (maxDistance <= 0.0) {
+            return;
+        }
+        for (GameInstance instance : store.liveInstances()) {
+            if (instance.cellIndex().isEmpty()) {
+                continue;
+            }
+            Location center = worldEngine.cellCenter(instance.cellIndex().getAsLong()).orElse(null);
+            List<Location> anchors = travelAnchors(instance);
+            for (Player player : store.onlineActivePlayers(instance)) {
+                Role role = playerStates.role(player);
+                boolean watching = role == Role.SPECTATOR
+                        || (plugin.fakeSpectators().isFakeSpectator(player) && !role.isParticipant());
+                if (!watching) {
+                    continue;
+                }
+                SpectatorTravelService.teleportTarget(player.getLocation(), anchors,
+                        center, maxDistance).ifPresent(player::teleport);
+            }
+        }
+    }
+
+    /** Online participant spots plus every recorded last-seen spot. */
+    private List<Location> travelAnchors(GameInstance instance) {
+        List<Location> anchors = new ArrayList<>();
+        for (Player player : store.onlineActivePlayers(instance)) {
+            if (playerStates.role(player).isParticipant()) {
+                anchors.add(player.getLocation());
+            }
+        }
+        Map<UUID, Map<UUID, Location>> sightings = playerStates.sightings();
+        for (UUID playerId : instance.assignedPlayerIds()) {
+            if (!playerStates.role(playerId).isParticipant()) {
+                continue;
+            }
+            Map<UUID, Location> seen = sightings.get(playerId);
+            if (seen != null) {
+                anchors.addAll(seen.values());
+            }
+        }
+        return anchors;
     }
 
     /**

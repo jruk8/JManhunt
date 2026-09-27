@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.config.ConfigService;
 
 /** Pseudoborder wall particles for concurrent matches. */
 public record PseudoborderConfig(
+        PseudoBorderParticle type,
         int particleSpacing,
         String colorHex,
         double renderRadius,
@@ -20,6 +21,7 @@ public record PseudoborderConfig(
     public static PseudoborderConfig fromConfig(ConfigService config) {
         String base = "world-engine.world-border.particles.";
         return new PseudoborderConfig(
+                PseudoBorderParticle.parse(config.getString(base + "type", "DUST")),
                 Math.clamp(config.getInt(base + "particle-spacing", 2), 1, 8),
                 config.getString(base + "color", DEFAULT_COLOR_HEX),
                 Math.max(0.0, config.getDouble(base + "render-radius", 10.0)),

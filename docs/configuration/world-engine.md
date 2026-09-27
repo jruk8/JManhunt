@@ -25,7 +25,8 @@ world-engine:
    the lobby world does not exist yet; the second run (within 10 seconds)
    generates a clean void world, pastes your lobby schematic (see Lobby
    Presets below), and teleports you onto it. Lobby 0 is pointed at the
-   spawn automatically.
+   spawn automatically, the world spawn follows the lowest lobby id with a
+   teleport, and `tpto lobbyworld` always lands on that same spot.
 3. Walk the pasted lobby: role pads assign roles when stood on. Falling off
    is safe: you pop back at the lobby instead of dying.
 4. Restart the server. Everything works without a restart, but the stronghold

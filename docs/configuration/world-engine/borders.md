@@ -1,11 +1,12 @@
 # World Border
 
-Under `world-engine.world-border`, you can enable a world border that
-confines players to their assigned cell. This prevents players from
-wandering into unused or already-used cells. When the border is disabled, or
-when the world engine is disabled while the border is on, every touched world
-is restored to the vanilla defaults (center 0, 0 and size 59999968) at match
-start and end, so no shrunken border survives into the next match.
+Under `world-engine.world-border`, you can enable confinement that keeps
+players inside their assigned cell. This prevents players from wandering
+into unused or already-used cells. No vanilla border is ever set: a lone
+match removes stray participants with a notice (auto-leave), while
+concurrent matches pull them back in (pseudo-border rubber-band). When a
+second match starts, any vanilla border is cleared, so no shrunken border
+survives into the next match.
 
 ```yaml
 world-engine:
@@ -26,13 +27,13 @@ world-engine:
 
 ## Concurrent Matches
 
-A lone match uses the real world border described above. Once a second match
-starts, the real border drops (one world can only hold one) and every match
-is confined by a per-instance pseudo-border instead: players outside their
-cell are pulled back in and take `damage.amount` past `damage.buffer`, with
-the start diameter applying until their match begins. Spectators bypass it
-like the vanilla border. When concurrency drops back to one match, the
-survivor gets the real border again. See
+A lone match sets no vanilla border: participants outside their cell are
+removed from the match with a notice instead. Once a second match starts,
+every match is confined by a per-instance pseudo-border instead: players
+outside their cell are pulled back in and take `damage.amount` past
+`damage.buffer`, with the start diameter applying until their match
+begins. Spectators bypass it entirely. When concurrency drops back to one
+match, the survivor falls back to auto-leave. See
 [Concurrent Matches](../../multi-instance.md). The walls render as
 particle grids; see
 [Pseudoborder Particles](pseudoborder-particles.md).
@@ -48,15 +49,17 @@ buffer.
 
 ## Start Border
 
-The `start-border` sub-section provides a smaller initial border that
-expands to the full cell size when the game begins. This is only active when
-both `world-border.enabled` and
-`settings.start-on-speedrunner-damage.enabled` are true.
+The `start-border` sub-section provides a smaller initial confinement area
+that expands to the full cell size when the game begins. This is only active
+when both `world-border.enabled` and
+`settings.start-on-speedrunner-damage.enabled` are true. Since no vanilla
+border is set, the expansion applies to confinement checks directly rather
+than animating a border.
 
-- `start-border.radius`: Initial border radius in blocks. The actual diameter
-  used is `max(this, tp-spread-radius + 1) * 2`, ensuring players never spawn
-  outside the border. Set to `-1` to use `tp-spread-radius + 1` only.
-  Default: `10`
-- `start-border.fadeout-time`: Time in seconds for the start border to animate
-  expanding to cell size. Set to `0` or `-1` to skip the animation and snap to
-  cell size immediately. Default: `5`
+- `start-border.radius`: Initial confinement radius in blocks. The actual
+  diameter used is `max(this, tp-spread-radius + 1) * 2`, ensuring players
+  never spawn outside the area. Set to `-1` to use `tp-spread-radius + 1`
+  only. Default: `10`
+- `start-border.fadeout-time`: Reserved for the expansion animation. With no
+  vanilla border set, expansion applies immediately; this value is kept for
+  a future animated border. Default: `5`

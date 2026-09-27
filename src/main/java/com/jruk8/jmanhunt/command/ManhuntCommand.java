@@ -2771,7 +2771,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             message(sender, "manhunt.worldengine-lobbyconfig-setlobbytp-success", Map.of(
                     "lobby", "0", "location", formatLocation(world.getSpawnLocation())));
         }
-        Location spawn = world.getSpawnLocation();
+        Location spawn = game.lowestLobbyTeleport().orElseGet(world::getSpawnLocation);
+        spawn.setWorld(world);
         for (Player target : targets) {
             target.teleport(spawn);
         }

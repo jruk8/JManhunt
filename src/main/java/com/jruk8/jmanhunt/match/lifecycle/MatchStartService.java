@@ -161,13 +161,13 @@ public final class MatchStartService {
         List<Player> spectators = lobbyNonePlayers(lobby.get());
         participants.forEach(lobbies::restoreCollisions); // match wins; fakes re-disable below
         spectators.forEach(lobbies::restoreCollisions);
-        // A second match drops the real border: concurrent matches are
-        // confined by per-instance pseudo-borders instead.
-        boolean firstMatch = store.isEmpty();
-        if (!firstMatch) {
+        // A second match drops any vanilla border: concurrent matches
+        // are confined by per-instance pseudo-borders instead. Lone
+        // matches set no vanilla border; auto-leave confines them.
+        if (!store.isEmpty()) {
             worldEngine.clearInstanceBorders();
         }
-        OptionalLong matchCell = worldEngine.onMatchStart(participants, spectators, firstMatch, lobbyId);
+        OptionalLong matchCell = worldEngine.onMatchStart(participants, spectators, lobbyId);
         GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell,
                 assignees, spectators);
         instance.setStartCenter(engineOffStartCenter(participants, surroundOrigin, matchCell));
@@ -386,7 +386,7 @@ public final class MatchStartService {
         }
         playerStates.setLives(playerId, livesFor(instance.originLobbyId(), role));
         if (instance.cellIndex().isPresent()) {
-            worldEngine.teleportJoinersToCell(List.of(player), instance.cellIndex().getAsLong());
+            worldEngine.teleportJoinersToCell(instance, List.of(player), instance.cellIndex().getAsLong());
         }
         playerStates.recordLastSeen(player, player.getLocation());
         if (role.isParticipant()) {

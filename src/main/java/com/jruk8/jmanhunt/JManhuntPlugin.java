@@ -198,7 +198,7 @@ public final class JManhuntPlugin extends JavaPlugin {
                 new JManhuntTutorialLogger(logger));
         compass = new CompassManager(this, messages, sounds, playerStates,
                 new NamespacedKey(this, "hunters_compass"));
-        worldEngine = new WorldEngineService(this, messages, configService, engineState);
+        worldEngine = new WorldEngineService(this, messages, configService, engineState, playerStates);
         worldEngine.deleteOrphanedEndCells();
         loadLobbyWorldOnBoot();
         checkCrashFlag();

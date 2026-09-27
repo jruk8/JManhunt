@@ -1,12 +1,14 @@
 package com.jruk8.jmanhunt.player;
 
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /** Owns role and per-match player state, including dimension-aware sightings. */
@@ -111,6 +113,34 @@ public final class PlayerStateStore {
 
     public Map<UUID, Map<UUID, Location>> sightings() {
         return lastSeenByWorld;
+    }
+
+    /**
+     * One last-seen location for the player, preferring the overworld and
+     * otherwise the lowest world id, so repeated calls agree. Empty when
+     * nothing was ever recorded.
+     */
+    public Optional<Location> lastSeen(UUID playerId) {
+        Map<UUID, Location> byWorld = lastSeenByWorld.get(playerId);
+        if (byWorld == null || byWorld.isEmpty()) {
+            return Optional.empty();
+        }
+        return byWorld.entrySet().stream()
+                .sorted((left, right) -> {
+                    boolean leftNormal = isNormal(left.getValue());
+                    boolean rightNormal = isNormal(right.getValue());
+                    if (leftNormal != rightNormal) {
+                        return leftNormal ? -1 : 1;
+                    }
+                    return left.getKey().toString().compareTo(right.getKey().toString());
+                })
+                .map(Map.Entry::getValue)
+                .findFirst();
+    }
+
+    private static boolean isNormal(Location location) {
+        return location != null && location.getWorld() != null
+                && location.getWorld().getEnvironment() == World.Environment.NORMAL;
     }
 
     public void recordLastSeen(Player player, Location location) {

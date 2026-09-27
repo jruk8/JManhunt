@@ -71,6 +71,7 @@ categories:
   players/announce-roles/title: OAK_HANGING_SIGN
   players/spectator: ECHO_SHARD
   players/spectator/toolbar: BLAZE_ROD
+  players/spectator/travel: LEAD
   server: BELL
   server/status: MAP
   advanced/misc/interop: ANVIL
@@ -171,6 +172,7 @@ descriptions:
   "settings.players.roles.turn-nones-spectator": "Park roleless players in spectator."
   "settings.players.spectator": "Spectator toolbar and lock-on follow."
   "settings.players.spectator.toolbar": "Hotbar buttons handed to spectators."
+  "settings.players.spectator.travel": "Travel limit keeping spectators near the action."
   "settings.server": "Broadcasts, spawn-camp guard, and status output."
   "advanced.misc": "Power-user toggles that rarely need changing."
   "advanced.misc.interop": "Advanced server interop toggles."
@@ -295,6 +297,8 @@ descriptions:
   "settings.players.spectator.toolbar.layout": "Hotbar slots: c matches, p players, b lobby."
   "settings.players.spectator.toolbar.lock-on": "Follow teleported-to players automatically."
   "settings.players.spectator.toolbar.tp-distance": "Follow range in blocks before teleporting."
+  "settings.players.spectator.travel.enabled": "Pull back spectators who roam too far."
+  "settings.players.spectator.travel.max-distance": "Blocks from players or last-seen spots."
   "settings.server.announce-config-changes": "Broadcast config changes to admins."
   "settings.server.announce-role-changes": "Broadcast role changes."
   "settings.server.anti-spawn-camp.enabled": "Punish repeated kills on one victim."
@@ -380,6 +384,7 @@ descriptions:
   "world-engine.world-border.start-border.enabled": "Start small, expand at game start."
   "world-engine.world-border.start-border.radius": "Initial border radius in blocks."
   "world-engine.world-border.start-border.fadeout-time": "Seconds for the border expand animation."
+  "world-engine.world-border.particles.type": "Wall particle shape, from dust to hearts."
   "world-engine.world-border.particles.particle-spacing": "Blocks between wall grid vertices."
   "world-engine.world-border.particles.color": "Wall color as a hex value."
   "world-engine.world-border.particles.render-radius": "Blocks from a wall where it renders."

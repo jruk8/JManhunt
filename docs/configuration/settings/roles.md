@@ -56,9 +56,11 @@ whenever the plugin's automatic gamemode assignment is active:
 - `false`: `NONE` players keep their gamemode and stay put, like `afk`.
 
 When the world engine is enabled and this setting is `true`, `NONE`
-players are teleported to the match cell center together with the
-participants when a match starts, so they can spectate the match instead
-of waiting in the lobby. They return to the lobby when the match ends.
+players are teleported to the match together with the participants when
+a match starts, landing on the shared spectator spawn pick, so they can
+spectate instead of waiting in the lobby. They return to the lobby when
+the match ends. `SPECTATOR`-role players always travel, regardless of
+this setting.
 When this setting is `false`, they are not teleported to the cell. `AFK`
 players are always left alone either way.
 

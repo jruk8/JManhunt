@@ -112,6 +112,40 @@ class LobbyWorldManagerTest {
     }
 
     @Test
+    void lowestLobbyTpPicksLowestIdWithTeleport() {
+        LobbyConfig lobbyConfig = new LobbyConfig();
+        lobbyConfig.getLobbies().clear();
+        LobbyConfig.LobbyEntry two = new LobbyConfig.LobbyEntry();
+        two.setLobbytp(LobbyConfig.LobbyTp.of(2.0, 65.0, 2.0, 0.0f, 0.0f));
+        LobbyConfig.LobbyEntry five = new LobbyConfig.LobbyEntry();
+        five.setLobbytp(LobbyConfig.LobbyTp.of(5.0, 65.0, 5.0, 0.0f, 0.0f));
+        LobbyConfig.LobbyEntry unset = new LobbyConfig.LobbyEntry();
+        lobbyConfig.getLobbies().put("5", five);
+        lobbyConfig.getLobbies().put("bogus", five);
+        lobbyConfig.getLobbies().put("-1", five);
+        lobbyConfig.getLobbies().put("1", unset);
+        lobbyConfig.getLobbies().put("2", two);
+
+        Optional<Map.Entry<Integer, LobbyConfig.LobbyTp>> lowest =
+                LobbyWorldManager.lowestLobbyTp(lobbyConfig.getLobbies());
+
+        assertTrue(lowest.isPresent());
+        assertEquals(2, lowest.get().getKey());
+        assertEquals(2.0, lowest.get().getValue().getX());
+    }
+
+    @Test
+    void lowestLobbyTpEmptyWhenNoneAvailable() {
+        assertEquals(Optional.empty(), LobbyWorldManager.lowestLobbyTp(null));
+        assertEquals(Optional.empty(), LobbyWorldManager.lowestLobbyTp(Map.of()));
+        LobbyConfig lobbyConfig = new LobbyConfig();
+        lobbyConfig.getLobbies().clear();
+        lobbyConfig.getLobbies().put("0", new LobbyConfig.LobbyEntry());
+        assertEquals(Optional.empty(),
+                LobbyWorldManager.lowestLobbyTp(lobbyConfig.getLobbies()));
+    }
+
+    @Test
     void rescuePrefersMemberLobbyThenZero() {
         Location own = new Location(null, 1.0, 2.0, 3.0);
         Location zero = new Location(null, 4.0, 5.0, 6.0);

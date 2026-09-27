@@ -133,19 +133,20 @@ leave ever empties a side, the other side wins immediately; a forced
 
 A participant who leaves their cell, or who wanders into the lobby world
 mid-match, is removed from the match automatically and reset
-match-end-style, for themselves only. This is the backstop for servers
-running without borders; where borders are on, the rubber-band still
-brings stray players back instead.
+match-end-style, for themselves only. This is the backstop for lone
+matches and for servers running without borders; with two or more
+concurrent matches and borders on, the rubber-band still brings stray
+players back instead.
 
 ## Borders
 
-A lone match uses the real world border from
-[Cells & Spawns](configuration/world-engine/cells-spawns.md). Once a second
-match starts, the real border drops and every match is confined by a
-per-instance pseudo-border instead: players outside their cell are pulled
-back in and take the configured border damage past the damage buffer.
-Spectators bypass it like the vanilla border. When concurrency drops back to
-one match, the survivor gets the real border again.
+A lone match sets no vanilla border (see
+[Cells & Spawns](configuration/world-engine/cells-spawns.md)): strays are
+removed by the enforcement above. Once a second match starts, every match
+is confined by a per-instance pseudo-border instead: players outside
+their cell are pulled back in and take the configured border damage past
+the damage buffer. Spectators bypass it entirely. When concurrency drops
+back to one match, the survivor falls back to auto-leave.
 
 ## Portals and End Dimensions
 

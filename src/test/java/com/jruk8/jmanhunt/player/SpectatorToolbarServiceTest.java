@@ -104,33 +104,6 @@ class SpectatorToolbarServiceTest {
     }
 
     @Test
-    void pickPrefersSpeedrunnersThenHunters() {
-        UUID hunter = UUID.randomUUID();
-        UUID runner = UUID.randomUUID();
-        List<SpectatorToolbarService.SpectateCandidate> candidates = List.of(
-                candidate(hunter, Role.HUNTER), candidate(runner, Role.SPEEDRUNNER));
-
-        assertEquals(Optional.of(runner),
-                SpectatorToolbarService.pickTeleportTarget(candidates));
-        assertEquals(Optional.of(hunter), SpectatorToolbarService.pickTeleportTarget(
-                List.of(candidate(hunter, Role.HUNTER))));
-        assertEquals(Optional.empty(), SpectatorToolbarService.pickTeleportTarget(List.of(
-                candidate(UUID.randomUUID(), Role.SPECTATOR))));
-    }
-
-    @Test
-    void pickSkipsInvalidCandidates() {
-        UUID id = UUID.randomUUID();
-        List<SpectatorToolbarService.SpectateCandidate> candidates = List.of(
-                new SpectatorToolbarService.SpectateCandidate(
-                        UUID.randomUUID(), Role.SPEEDRUNNER, true, true, true, true),
-                candidate(id, Role.HUNTER));
-
-        assertEquals(Optional.of(id),
-                SpectatorToolbarService.pickTeleportTarget(candidates));
-    }
-
-    @Test
     void toolbarButtonReadsMarker() {
         NamespacedKey key = new NamespacedKey("jmanhunt", "spectator_toolbar");
         PersistentDataContainer container = mock(PersistentDataContainer.class);

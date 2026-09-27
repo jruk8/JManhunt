@@ -22,6 +22,7 @@ class PseudoborderConfigTest {
     void defaultsMatchSpec() {
         PseudoborderConfig config = PseudoborderConfig.fromConfig(service(new JManhuntConfig()));
 
+        assertEquals(PseudoBorderParticle.DUST, config.type());
         assertEquals(2, config.particleSpacing());
         assertEquals("#de7766", config.colorHex());
         assertEquals(10.0, config.renderRadius(), 0.0);
@@ -36,6 +37,7 @@ class PseudoborderConfigTest {
     @Test
     void readsConfig() {
         JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, BASE + "type", "HEART");
         ConfigPathMapper.set(root, BASE + "particle-spacing", 4);
         ConfigPathMapper.set(root, BASE + "color", "#ffffff");
         ConfigPathMapper.set(root, BASE + "render-radius", 20.0);
@@ -47,6 +49,7 @@ class PseudoborderConfigTest {
         ConfigPathMapper.set(root, BASE + "max-particles-per-player", 50);
         PseudoborderConfig config = PseudoborderConfig.fromConfig(service(root));
 
+        assertEquals(PseudoBorderParticle.HEART, config.type());
         assertEquals(4, config.particleSpacing());
         assertEquals("#ffffff", config.colorHex());
         assertEquals(20.0, config.renderRadius(), 0.0);

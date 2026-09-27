@@ -10,7 +10,6 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
@@ -37,7 +36,6 @@ public final class GameStateCommandManager {
     private final ConfigService configService;
     private final MessageService messages;
     private final SoundService sounds;
-    private final LobbyTeleporter lobbyTeleporter;
     private final GameManager game;
     /** One interval engine per live match, keyed by match id. */
     private final Map<Long, IntervalEngine> intervalEngines = new HashMap<>();
@@ -65,14 +63,12 @@ public final class GameStateCommandManager {
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
                                    ConfigService configService, MessageService messages,
-                                   SoundService sounds, LobbyTeleporter lobbyTeleporter,
-                                   GameManager game) {
+                                   SoundService sounds, GameManager game) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.configService = configService;
         this.messages = messages;
         this.sounds = sounds;
-        this.lobbyTeleporter = lobbyTeleporter;
         this.game = game;
     }
 
@@ -614,8 +610,8 @@ public final class GameStateCommandManager {
 
     /**
      * Default modes for a phase: participants to survival, NONEs to fake
-     * spectator on start (or back to survival on end) unless AFK, with
-     * lobby travel for NONEs when the engine does not move them.
+     * spectator on start (or back to survival on end) unless AFK. Nobody
+     * is teleported here: match travel belongs to the cell teleports.
      */
     private void applyDefaultGamemodes(String phase, List<Player> participants,
             List<Player> lobbySpectators, int lobbyId) {
@@ -623,7 +619,6 @@ public final class GameStateCommandManager {
         // the toggle, keeping their mode like AFK when it is off.
         boolean setNoneSpectator = plugin.overrides().getBoolean(lobbyId,
                 "settings.players.roles.turn-nones-spectator.enabled", false);
-        List<Player> nonePlayers = new ArrayList<>();
         for (Player player : participants) {
             plugin.fakeSpectators().disable(player);
         }
@@ -635,19 +630,9 @@ public final class GameStateCommandManager {
                 if (setNoneSpectator) {
                     plugin.fakeSpectators().enable(player);
                 }
-                nonePlayers.add(player);
             } else {
                 plugin.fakeSpectators().disable(player);
             }
-        }
-        // When the world engine is enabled, NONE spectators travel to the
-        // match cell with the players instead of waiting in the lobby.
-        boolean engineMovesSpectators = phase.equals("start")
-                && setNoneSpectator
-                && configService.getBoolean("world-engine.enabled", false);
-        if (!nonePlayers.isEmpty() && !engineMovesSpectators) {
-            lobbyTeleporter.teleportToLobby(nonePlayers, lobbyId);
-            lobbyTeleporter.setSpawnToLobbyQuiet(nonePlayers, lobbyId);
         }
     }
 

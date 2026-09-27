@@ -635,6 +635,8 @@ public final class SettingRegistry {
         entries.add(stringLength("settings.players.spectator.toolbar.layout", "cp######b", 9));
         entries.add(bool("settings.players.spectator.toolbar.lock-on", true));
         entries.add(intVal("settings.players.spectator.toolbar.tp-distance", 25, 1, null));
+        entries.add(bool("settings.players.spectator.travel.enabled", true));
+        entries.add(floatVal("settings.players.spectator.travel.max-distance", 125.0, 0.0, null));
         entries.add(bool("settings.players.announce-roles.chat.enabled", true));
         entries.add(bool("settings.players.announce-roles.title.enabled", true));
         entries.add(floatVal("settings.players.announce-roles.title.fade-in-seconds", 0.5, 0.0, null));
@@ -682,6 +684,10 @@ public final class SettingRegistry {
         entries.add(bool("world-engine.world-border.start-border.enabled", true));
         entries.add(intVal("world-engine.world-border.start-border.radius", 10, null, null));
         entries.add(intVal("world-engine.world-border.start-border.fadeout-time", 5, -1, null));
+        entries.add(option("world-engine.world-border.particles.type", "DUST",
+                "DUST", "SMOKE", "LARGE_SMOKE", "HEART", "HAPPY_VILLAGER", "ANGRY_VILLAGER",
+                "WITCH", "FIREWORK", "FLASH", "FLAME", "SMALL_FLAME", "EFFECT",
+                "INSTANT_EFFECT", "PORTAL", "END_ROD", "NOTE", "SOUL", "ENCHANT"));
         entries.add(intVal("world-engine.world-border.particles.particle-spacing", 2, 1, 8));
         entries.add(string("world-engine.world-border.particles.color", "#de7766"));
         entries.add(floatVal("world-engine.world-border.particles.render-radius", 10.0, 0.0, null));

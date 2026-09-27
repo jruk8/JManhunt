@@ -354,12 +354,59 @@ public class PlayerSettings extends OkaeriConfig {
         @Comment("Hotbar toolbar handed to spectators: layout plus lock-on follow.")
         private Toolbar toolbar = new Toolbar();
 
+        @Comment("Travel limit keeping spectators near the action.")
+        private Travel travel = new Travel();
+
         public Toolbar getToolbar() {
             return toolbar;
         }
 
         public void setToolbar(Toolbar toolbar) {
             this.toolbar = toolbar;
+        }
+
+        public Travel getTravel() {
+            return travel;
+        }
+
+        public void setTravel(Travel travel) {
+            this.travel = travel;
+        }
+
+        /** Spectator travel limit. */
+        @SuppressWarnings("FieldMayBeFinal")
+        public static class Travel extends OkaeriConfig {
+
+            @Comment({
+                    "Pull spectators back when they roam too far from players",
+                    "or last-seen spots. Prevents redundant chunk generation.",
+                    "Default: true"
+            })
+            private boolean enabled = true;
+
+            @CustomKey("max-distance")
+            @Comment({
+                    "Blocks a spectator may roam from the nearest player or",
+                    "last-seen spot before being teleported back to it.",
+                    "Default: 125.0"
+            })
+            private double maxDistance = 125.0;
+
+            public boolean isEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(boolean enabled) {
+                this.enabled = enabled;
+            }
+
+            public double getMaxDistance() {
+                return maxDistance;
+            }
+
+            public void setMaxDistance(double maxDistance) {
+                this.maxDistance = maxDistance;
+            }
         }
 
         /** Spectator hotbar toolbar. */

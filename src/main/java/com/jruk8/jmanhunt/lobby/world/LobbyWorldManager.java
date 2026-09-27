@@ -143,6 +143,8 @@ public final class LobbyWorldManager {
         Location spawn = safeSpawn(world);
         world.setSpawnLocation(spawn);
         boolean lobbyZeroSet = ensureLobbyZero(spawn);
+        lowestLobbyTp(plugin.lobbyConfig().getLobbies()).ifPresent(lowest ->
+                world.setSpawnLocation(toSpawn(world, lowest.getValue())));
         return Optional.of(new LobbyWorld(world, true, lobbyZeroSet));
     }
 
@@ -233,5 +235,43 @@ public final class LobbyWorldManager {
         lobbyConfig.getLobbies().put("0", entry);
         lobbyConfig.save();
         return true;
+    }
+
+    /**
+     * Lowest lobby id holding a teleport, with its point. Pure for tests:
+     * skips non-integer keys, negative ids, and entries without a lobbytp.
+     */
+    public static Optional<Map.Entry<Integer, LobbyConfig.LobbyTp>> lowestLobbyTp(
+            Map<String, LobbyConfig.LobbyEntry> lobbies) {
+        if (lobbies == null) {
+            return Optional.empty();
+        }
+        Integer lowestId = null;
+        LobbyConfig.LobbyTp lowestTp = null;
+        for (Map.Entry<String, LobbyConfig.LobbyEntry> candidate : lobbies.entrySet()) {
+            if (candidate.getValue() == null || candidate.getValue().getLobbytp() == null) {
+                continue;
+            }
+            int id;
+            try {
+                id = Integer.parseInt(candidate.getKey());
+            } catch (NumberFormatException invalid) {
+                continue;
+            }
+            if (id < 0 || (lowestId != null && id >= lowestId)) {
+                continue;
+            }
+            lowestId = id;
+            lowestTp = candidate.getValue().getLobbytp();
+        }
+        if (lowestId == null) {
+            return Optional.empty();
+        }
+        return Optional.of(Map.entry(lowestId, lowestTp));
+    }
+
+    private static Location toSpawn(World world, LobbyConfig.LobbyTp point) {
+        return new Location(world, point.getX(), point.getY(), point.getZ(),
+                point.getYaw(), point.getPitch());
     }
 }

@@ -54,7 +54,9 @@ public final class PseudoborderParticleService {
         if (particles.renderRadius() <= 0.0) {
             return;
         }
-        Particle.DustOptions dust = new Particle.DustOptions(particleColor(particles), PARTICLE_SIZE);
+        Particle.DustOptions dust = particles.type().usesDustOptions()
+                ? new Particle.DustOptions(particleColor(particles), PARTICLE_SIZE)
+                : null;
         for (GameInstance instance : store.liveInstances()) {
             if (instance.cellIndex().isEmpty()) {
                 continue;
@@ -117,7 +119,12 @@ public final class PseudoborderParticleService {
             if (!pulseVisible(vertex, look, angles, particles)) {
                 continue;
             }
-            player.spawnParticle(Particle.DUST, vertex.x(), vertex.y(), vertex.z(), 1, dust);
+            if (dust != null) {
+                player.spawnParticle(Particle.DUST, vertex.x(), vertex.y(), vertex.z(), 1, dust);
+            } else {
+                player.spawnParticle(particles.type().particle(),
+                        vertex.x(), vertex.y(), vertex.z(), 1);
+            }
         }
     }
 

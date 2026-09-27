@@ -71,7 +71,7 @@ public final class GameManager implements MatchControl {
         this.winConditionEngine = winConditionEngine;
         this.lobbies = lobbyService;
         this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService,
-                messages, sounds, worldEngine.teleportService(), this);
+                messages, sounds, this);
         this.store = new MatchStore(playerStates);
         this.flagStore = new FlagStore();
         this.stats = stats;
@@ -651,6 +651,10 @@ public final class GameManager implements MatchControl {
     /** Teleports players to a lobby spawn, announcing the travel. */
     public boolean teleportToLobby(List<Player> targets, int lobbyId) {
         return worldEngine.teleportToLobby(targets, lobbyId);
+    }
+
+    public Optional<Location> lowestLobbyTeleport() {
+        return worldEngine.lowestLobbyTeleport();
     }
 
     /** Pins respawn locations to a lobby spawn without announcing. */

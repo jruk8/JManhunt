@@ -9,6 +9,7 @@ render; cells are unbounded vertically, so there is no floor or ceiling.
 world-engine:
   world-border:
     particles:
+      type: DUST
       particle-spacing: 2
       color: "#de7766"
       render-radius: 10.0
@@ -20,12 +21,18 @@ world-engine:
       max-particles-per-player: 1000
 ```
 
+`type` is the wall particle shape: `DUST`, `SMOKE`, `LARGE_SMOKE`,
+`HEART`, `HAPPY_VILLAGER`, `ANGRY_VILLAGER`, `WITCH`, `FIREWORK`,
+`FLASH`, `FLAME`, `SMALL_FLAME`, `EFFECT`, `INSTANT_EFFECT`, `PORTAL`,
+`END_ROD`, `NOTE`, `SOUL`, or `ENCHANT`. Default: `DUST`.
+
 `particle-spacing` is the blocks between adjacent grid vertices on each
 wall, 1 to 8. 1 is the tightest grid (most detail, most expensive) and 8
 is the loosest.
 
-`color` is the wall color as a hex value, with or without a leading `#`.
-Invalid values fall back to the default brand color.
+`color` is the wall color as a hex value, with or without a leading `#`,
+and applies to the `DUST` type only. Invalid values fall back to the
+default brand color.
 
 `render-radius` is how close, in perpendicular blocks from a wall, a
 player must be before that wall starts rendering. 0 disables the walls.

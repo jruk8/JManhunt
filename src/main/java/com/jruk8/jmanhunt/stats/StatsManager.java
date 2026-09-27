@@ -6,12 +6,10 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -352,27 +350,15 @@ public final class StatsManager {
     }
 
     private void updateProgression(long matchId) {
-        Map<String, String> milestones = new LinkedHashMap<>();
-        milestones.put("got_wood", "story/mine_wood"); milestones.put("got_iron", "story/smelt_iron");
-        milestones.put("entered_nether", "story/enter_the_nether");
-        milestones.put("found_bastion", "nether/find_bastion");
-        milestones.put("found_fortress", "nether/find_fortress");
-        milestones.put("entered_stronghold", "story/follow_ender_eye");
-        milestones.put("entered_end", "story/enter_the_end");
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
         for (Stats stat : slice.values()) {
             Player player = Bukkit.getPlayer(stat.uuid);
             if (player == null) {
                 continue;
             }
-            stat.progression = 0; stat.progressionKey = null; int rank = 0;
-            for (Map.Entry<String, String> milestone : milestones.entrySet()) {
-                rank++;
-                var advancement = Bukkit.getAdvancement(new NamespacedKey("minecraft", milestone.getValue()));
-                if (advancement != null && player.getAdvancementProgress(advancement).isDone()) {
-                    stat.progression = rank; stat.progressionKey = milestone.getKey();
-                }
-            }
+            ProgressionRank.Rank rank = ProgressionRank.of(player);
+            stat.progression = rank.value();
+            stat.progressionKey = rank.key();
         }
     }
 

@@ -81,9 +81,8 @@ the default.
   their role to `none`, exiting spectator mode.
 - `c` (right-click) opens the match browser: every running match.
   Sublobby matches glow and sort to the top. Clicking an entry moves
-  the spectator into that match and lands them on the teleport-priority
-  target: an alive, non-respawning speedrunner first, then an alive,
-  non-respawning hunter, else the match cell's center. Moving within
+  the spectator into that match and lands them on the shared spectator
+  spawn pick (see below). Moving within
   the same lobby (including into its sublobbies) is always allowed;
   switching to another lobby's match needs the
   `jmanhunt.spectator.swaplobby` permission.
@@ -104,3 +103,24 @@ and a neutral sound. The target going offline, dying, changing role,
 or leaving the match also exits the follow with feedback. With
 lock-on disabled, teleports still confirm in chat but never follow,
 so the actionbar stays empty.
+
+## Where spectators land
+
+Match starts, mid-match joins, and the match browser all land
+spectators on the same shared spawn pick, in this order:
+
+1. The online speedrunner with the highest progression (Got Iron
+   outranks Got Wood), ties broken by name.
+2. The online hunter with the highest progression, ties by name.
+3. The last-seen speedrunner spot, when no online runner qualifies.
+4. The last-seen hunter spot, when no online hunter qualifies.
+5. The match cell center.
+
+## Travel limit
+
+`settings.players.spectator.travel` (default on, 125 blocks) keeps
+spectators near the action: a watcher farther than `max-distance` from
+every online participant and last-seen spot is teleported back to the
+nearest one, or to the cell center when no anchor exists. This stops
+roaming spectators from generating chunks far from the match. It is
+silent: no message, no sound.

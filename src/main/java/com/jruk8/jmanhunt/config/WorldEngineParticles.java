@@ -8,6 +8,15 @@ import eu.okaeri.configs.annotation.CustomKey;
 @SuppressWarnings("FieldMayBeFinal")
 public class WorldEngineParticles extends OkaeriConfig {
 
+    @Comment({
+            "Wall particle type: DUST, SMOKE, LARGE_SMOKE, HEART,",
+            "HAPPY_VILLAGER, ANGRY_VILLAGER, WITCH, FIREWORK, FLASH,",
+            "FLAME, SMALL_FLAME, EFFECT, INSTANT_EFFECT, PORTAL, END_ROD,",
+            "NOTE, SOUL, or ENCHANT.",
+            "Default: DUST"
+    })
+    private String type = "DUST";
+
     @CustomKey("particle-spacing")
     @Comment({
             "Blocks between adjacent grid vertices on each wall.",
@@ -19,6 +28,7 @@ public class WorldEngineParticles extends OkaeriConfig {
 
     @Comment({
             "Wall color as a hex value, with or without a leading #.",
+            "Applies to the DUST type only.",
             "Default: #de7766"
     })
     private String color = "#de7766";
@@ -79,6 +89,14 @@ public class WorldEngineParticles extends OkaeriConfig {
             "Default: 1000"
     })
     private int maxParticlesPerPlayer = 1000;
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
 
     public int getParticleSpacing() {
         return particleSpacing;

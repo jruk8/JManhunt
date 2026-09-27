@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.world;
 
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
+import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.world.end.EndCellManager;
 import com.jruk8.jmanhunt.world.end.EndResetManager;
@@ -26,6 +27,7 @@ import com.jruk8.jmanhunt.world.border.WorldBorderService;
 import com.jruk8.jmanhunt.world.cell.WorldCellService;
 import com.jruk8.jmanhunt.world.teleport.LobbyWorldService;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
+import com.jruk8.jmanhunt.player.PlayerStateStore;
 
 public final class WorldEngineService implements SettingsListener {
     private final JManhuntPlugin plugin;
@@ -41,7 +43,7 @@ public final class WorldEngineService implements SettingsListener {
     private final LobbyWorldService lobbyWorlds;
 
     public WorldEngineService(JManhuntPlugin plugin, MessageService messages, ConfigService configService,
-            EngineStateRepository engineState) {
+            EngineStateRepository engineState, PlayerStateStore playerStates) {
         this.plugin = plugin;
         this.configService = configService;
         this.strongholdDatapackManager = new StrongholdDatapackManager(plugin);
@@ -50,7 +52,7 @@ public final class WorldEngineService implements SettingsListener {
         this.endResetManager = new EndResetManager(plugin);
         this.endCells = new EndCellManager(plugin, engineState);
         this.borders = new WorldBorderService(plugin, configService);
-        this.cells = new WorldCellService(plugin, engineState, endCells, borders);
+        this.cells = new WorldCellService(plugin, engineState, endCells, playerStates);
         this.lobbyWorlds = new LobbyWorldService(plugin, messages);
         this.teleport = new MatchTeleportService(plugin, lobbyWorlds);
     }
@@ -68,12 +70,11 @@ public final class WorldEngineService implements SettingsListener {
     /**
      * Teleports participants to the next match cell. Returns the used cell
      * index, or empty when the engine is off, the world is missing, or no
-     * valid cell could be allocated. The real border is only applied for a
-     * lone match; concurrent matches use pseudo-borders instead.
+     * valid cell could be allocated. No vanilla border is ever set.
      */
     public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
-                                     boolean applyBorder, int lobbyId) {
-        return cells.onMatchStart(participants, spectators, applyBorder, lobbyId);
+                                     int lobbyId) {
+        return cells.onMatchStart(participants, spectators, lobbyId);
     }
 
     /**
@@ -81,8 +82,8 @@ public final class WorldEngineService implements SettingsListener {
      * pins their respawn to the cell center. No-op when the engine is off or
      * the world is missing.
      */
-    public void teleportJoinersToCell(List<Player> joiners, long cellIndex) {
-        cells.teleportJoinersToCell(joiners, cellIndex);
+    public void teleportJoinersToCell(GameInstance instance, List<Player> joiners, long cellIndex) {
+        cells.teleportJoinersToCell(instance, joiners, cellIndex);
     }
 
     /**
@@ -172,6 +173,10 @@ public final class WorldEngineService implements SettingsListener {
 
     public boolean teleportToLobby(List<Player> targets, int lobbyId) {
         return teleport.teleportToLobby(targets, lobbyId);
+    }
+
+    public Optional<Location> lowestLobbyTeleport() {
+        return lobbyWorlds.lowestLobbyTeleport();
     }
 
     public boolean setSpawnToLobby(List<Player> targets, int lobbyId) {

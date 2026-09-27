@@ -22,10 +22,12 @@ world-engine:
 ```
 
 When `enabled`, teleports participants to a fresh cell when a match
-starts and returns them to the lobby when it ends. Players with role `none`
-travel to the cell center as spectators when
-`settings.roles.turn-nones-spectator` is enabled, and return to the lobby
-with everyone else. Enabling it additionally
+starts and returns them to the lobby when it ends. Queued `spectator`
+players always travel to the match with everyone else, and players with
+role `none` join them when `settings.roles.turn-nones-spectator` is
+enabled; both land on the shared spectator spawn pick (top-progression
+runner, then hunter, then last-seen spots, then cell center). They return
+to the lobby with everyone else. Enabling it additionally
 modifies stronghold generation to bypass the 128-per-world limit and spread
 strongholds around like normal structures. You can tweak the rates in
 `settings/world-engine/strongholds.json` (defaults imitate average distance

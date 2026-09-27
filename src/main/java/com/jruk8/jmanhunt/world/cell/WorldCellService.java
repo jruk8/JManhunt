@@ -19,8 +19,11 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.function.BooleanSupplier;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
-import com.jruk8.jmanhunt.world.border.WorldBorderService;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
+import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.player.PlayerStateStore;
+import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.SpectatorSpawnResolver;
 
 /** Match cells: allocation, buffering, index, and game teleports. */
 public final class WorldCellService {
@@ -29,7 +32,7 @@ public final class WorldCellService {
     private final JManhuntPlugin plugin;
     private final WorldCellAllocator cellAllocator;
     private final EndCellManager endCells;
-    private final WorldBorderService borders;
+    private final PlayerStateStore playerStates;
     // Ready cells kept ahead of match starts so matches never wait on
     // allocation or pregeneration.
     private final Deque<CellOrigin> cellBuffer = new ArrayDeque<>();
@@ -37,11 +40,11 @@ public final class WorldCellService {
     private BooleanSupplier matchRunning = () -> false;
 
     public WorldCellService(JManhuntPlugin plugin, EngineStateRepository engineState,
-            EndCellManager endCells, WorldBorderService borders) {
+            EndCellManager endCells, PlayerStateStore playerStates) {
         this.plugin = plugin;
         this.cellAllocator = new WorldCellAllocator(engineState);
         this.endCells = endCells;
-        this.borders = borders;
+        this.playerStates = playerStates;
     }
 
     /** Wires the match-running check behind the NO_MATCH_RUNNING refill policy. */
@@ -52,11 +55,12 @@ public final class WorldCellService {
     /**
      * Teleports participants to the next match cell. Returns the used cell
      * index, or empty when the engine is off, the world is missing, or no
-     * valid cell could be allocated. The real border is only applied for a
-     * lone match; concurrent matches use pseudo-borders instead.
+     * valid cell could be allocated. No vanilla border is ever set:
+     * concurrent matches confine by pseudo-border rubber-band, and lone
+     * matches by auto-leave.
      */
     public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
-            boolean applyBorder, int lobbyId) {
+            int lobbyId) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled() || participants.isEmpty()) {
             return OptionalLong.empty();
@@ -78,30 +82,35 @@ public final class WorldCellService {
             }
         }
 
-        Location cellRoot = teleportToGame(participants, world, config, origin, applyBorder);
-        teleportSpectatorsToCell(spectators, cellRoot);
-        if (applyBorder) {
-            borders.setWorldBorder(world, config, origin);
-        }
+        Location cellRoot = teleportToGame(participants, world, config, origin);
+        teleportSpectatorsToCell(spectators, participants, cellRoot);
         return OptionalLong.of(origin.index());
     }
 
     /**
-     * Teleports NONE players to the match cell center so they can spectate
-     * the match instead of waiting in the lobby. Skipped entirely when
-     * spectator handling for NONE players is disabled.
+     * Teleports watchers to the match so they spectate instead of waiting
+     * in the lobby. SPECTATOR-role watchers always travel; NONE watchers
+     * only when the turn-nones-spectator toggle is on. Everyone lands on
+     * the shared spectator spawn pick, pinned to respawn at cell center.
      */
-    private void teleportSpectatorsToCell(List<Player> spectators, Location cellRoot) {
+    private void teleportSpectatorsToCell(List<Player> spectators, List<Player> participants,
+            Location cellRoot) {
         if (spectators.isEmpty() || cellRoot == null) {
             return;
         }
-        // AFK players never reach this list; the toggle moves NONE and
-        // spectator-role watchers together, and leaves them put when off.
-        if (!plugin.configService().getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
-            return;
-        }
+        // AFK players never reach this list.
+        boolean nonesAllowed = plugin.configService().getBoolean(
+                "settings.players.roles.turn-nones-spectator.enabled", false);
+        SpectatorSpawnResolver resolver =
+                new SpectatorSpawnResolver(playerStates, plugin.fakeSpectators());
+        List<SpectatorSpawnResolver.SpawnCandidate> candidates =
+                resolver.candidatesOfPool(participants);
         for (Player spectator : spectators) {
-            spectator.teleport(cellRoot);
+            if (playerStates.role(spectator) != Role.SPECTATOR && !nonesAllowed) {
+                continue;
+            }
+            Location spawn = SpectatorSpawnResolver.resolve(candidates, cellRoot).orElse(cellRoot);
+            spectator.teleport(spawn);
             spectator.setRespawnLocation(cellRoot, true);
             plugin.fakeSpectators().enable(spectator);
         }
@@ -112,7 +121,7 @@ public final class WorldCellService {
      * pins their respawn to the cell center. No-op when the engine is off or
      * the world is missing.
      */
-    public void teleportJoinersToCell(List<Player> joiners, long cellIndex) {
+    public void teleportJoinersToCell(GameInstance instance, List<Player> joiners, long cellIndex) {
         if (joiners.isEmpty()) {
             return;
         }
@@ -120,16 +129,33 @@ public final class WorldCellService {
         if (center.isEmpty()) {
             return;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
-        World world = center.get().getWorld();
-        CellCoordinate grid = SpiralCoordinateMapper.toCoordinate(cellIndex);
-        int originX = MatchTeleportService.toBlockCoordinate(grid.x() * config.cellSize());
-        int originZ = MatchTeleportService.toBlockCoordinate(grid.z() * config.cellSize());
-        List<Location> spawns = MatchTeleportService.spreadSpawnsForConfig(world, originX, originZ,
-                config.tpSpreadRadius(), joiners, config);
-        for (int index = 0; index < joiners.size(); index++) {
-            joiners.get(index).teleport(spawns.get(index));
-            joiners.get(index).setRespawnLocation(center.get(), true);
+        List<Player> participants = joiners.stream()
+                .filter(joiner -> playerStates.role(joiner).isParticipant()).toList();
+        List<Player> watchers = joiners.stream()
+                .filter(joiner -> !playerStates.role(joiner).isParticipant()).toList();
+        if (!participants.isEmpty()) {
+            WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+            World world = center.get().getWorld();
+            CellCoordinate grid = SpiralCoordinateMapper.toCoordinate(cellIndex);
+            int originX = MatchTeleportService.toBlockCoordinate(grid.x() * config.cellSize());
+            int originZ = MatchTeleportService.toBlockCoordinate(grid.z() * config.cellSize());
+            List<Location> spawns = MatchTeleportService.spreadSpawnsForConfig(world, originX, originZ,
+                    config.tpSpreadRadius(), participants, config);
+            for (int index = 0; index < participants.size(); index++) {
+                participants.get(index).teleport(spawns.get(index));
+                participants.get(index).setRespawnLocation(center.get(), true);
+            }
+        }
+        if (!watchers.isEmpty()) {
+            SpectatorSpawnResolver resolver =
+                    new SpectatorSpawnResolver(playerStates, plugin.fakeSpectators());
+            List<SpectatorSpawnResolver.SpawnCandidate> candidates = resolver.candidatesOf(instance);
+            for (Player watcher : watchers) {
+                Location spawn = SpectatorSpawnResolver.resolve(candidates, center.get())
+                        .orElse(center.get());
+                watcher.teleport(spawn);
+                watcher.setRespawnLocation(center.get(), true);
+            }
         }
     }
 
@@ -350,7 +376,7 @@ public final class WorldCellService {
     }
 
     private Location teleportToGame(List<Player> participants, World world, WorldEngineConfig config,
-                                    CellOrigin origin, boolean applyBorder) {
+                                    CellOrigin origin) {
         // Use the cell root as the respawn location for all participants so
         // that deaths send them back to the cell center rather than the lobby.
         Location cellRoot = new Location(world, origin.x() + 0.5,
@@ -361,10 +387,6 @@ public final class WorldCellService {
         for (int index = 0; index < participants.size(); index++) {
             participants.get(index).teleport(spawns.get(index));
             participants.get(index).setRespawnLocation(cellRoot, true);
-        }
-
-        if (applyBorder) {
-            borders.setWorldBorder(world, config, origin);
         }
         return cellRoot;
     }

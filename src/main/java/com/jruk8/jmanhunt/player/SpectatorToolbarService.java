@@ -141,20 +141,6 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         return candidate.role() != Role.SPEEDRUNNER || candidate.runnerAlive();
     }
 
-    /**
-     * Teleport-target pick: the first valid speedrunner, else the first
-     * valid hunter, else empty for the cell-center fallback. Pure for
-     * tests.
-     */
-    public static Optional<UUID> pickTeleportTarget(List<SpectateCandidate> candidates) {
-        List<SpectateCandidate> valid = candidates.stream().filter(
-                SpectatorToolbarService::targetValid).toList();
-        return valid.stream().filter(candidate -> candidate.role() == Role.SPEEDRUNNER)
-                .map(SpectateCandidate::id).findFirst()
-                .or(() -> valid.stream().filter(candidate -> candidate.role() == Role.HUNTER)
-                        .map(SpectateCandidate::id).findFirst());
-    }
-
     @Override
     public void onModeChange(Player player, boolean enabled) {
         if (enabled) {
@@ -338,19 +324,15 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         return true;
     }
 
-    /** Teleports to the priority target of a match, else its cell center. */
+    /** Teleports to the shared spectator spawn pick of a match. */
     void teleportToPriority(Player spectator, GameInstance target) {
-        List<SpectateCandidate> candidates = new ArrayList<>();
-        for (Player player : game.onlineActivePlayers(target)) {
-            candidates.add(candidateOf(player, target));
+        SpectatorSpawnResolver resolver = new SpectatorSpawnResolver(playerStates, fakes);
+        Location center = null;
+        if (target.cellIndex().isPresent()) {
+            center = game.cellCenter(target.cellIndex().getAsLong()).orElse(null);
         }
-        Optional<Player> pick = pickTeleportTarget(candidates).map(Bukkit::getPlayer);
-        if (pick.isPresent()) {
-            spectator.teleport(pick.get().getLocation());
-            return;
-        }
-        target.cellIndex().ifPresent(cell -> game.cellCenter(cell)
-                .ifPresent(spectator::teleport));
+        SpectatorSpawnResolver.resolve(resolver.candidatesOf(target), center)
+                .ifPresent(spectator::teleport);
     }
 
     /**
