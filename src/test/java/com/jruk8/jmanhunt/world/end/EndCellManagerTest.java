@@ -1,6 +1,11 @@
 package com.jruk8.jmanhunt.world.end;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.Set;
@@ -73,6 +78,29 @@ class EndCellManagerTest {
         assertEquals("1, 2, 4", EndCellManager.describe(Set.of(4L, 1L, 2L)));
         assertEquals("jmh_end_1, jmh_end_2",
                 EndCellManager.describe(List.of("jmh_end_2", "jmh_end_1")));
+    }
+
+    @Test
+    void unloadedPoolFolderPrefersContainerRoot(@TempDir Path container) throws IOException {
+        Files.createDirectory(container.resolve("jmh_end_1"));
+
+        assertEquals(container.resolve("jmh_end_1").toFile(), EndCellManager.unloadedPoolFolder(
+                container.toFile(), "world", "jmh_end_1"));
+    }
+
+    @Test
+    void unloadedPoolFolderFallsBackToDimensionsDir(@TempDir Path container) throws IOException {
+        Path dimensions = Files.createDirectories(container.resolve("world/dimensions/minecraft"));
+        Files.createDirectory(dimensions.resolve("jmh_end_1"));
+
+        assertEquals(dimensions.resolve("jmh_end_1").toFile(), EndCellManager.unloadedPoolFolder(
+                container.toFile(), "world", "jmh_end_1"));
+    }
+
+    @Test
+    void unloadedPoolFolderReturnsDimensionsCandidateWhenMissing(@TempDir Path container) {
+        assertEquals(new File(container.toFile(), "world/dimensions/minecraft/jmh_end_9"),
+                EndCellManager.unloadedPoolFolder(container.toFile(), "world", "jmh_end_9"));
     }
 
     @Test

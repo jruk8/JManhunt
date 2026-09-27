@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -26,7 +27,9 @@ import java.util.TreeSet;
 
 /**
  * Owns the shared pool of reusable end dimensions. Pool members live as
- * {@code <base>_<n>} worlds in the world container, a free buffer of them
+ * {@code <base>_<n>} worlds in the world container (classic layout) or the
+ * main level's dimensions dir (Paper 26+ creator layout); loaded worlds
+ * count regardless of layout. A free buffer of them
  * is kept ready, and matches are assigned the lowest free member when a
  * player first enters an end portal. Used members reset with a fresh
  * deterministic seed when their match ends and rejoin the free buffer.
@@ -149,7 +152,7 @@ public final class EndCellManager {
         if (current != null) {
             return Optional.ofNullable(loadDimension(current));
         }
-        Map<Long, String> pool = scanPool(containerDirs(), config.endBaseName());
+        Map<Long, String> pool = scanPool(poolDirs(config), config.endBaseName());
         Set<Long> assigned = assignedNumbers(config.endBaseName());
         if (lowestFree(pool.keySet(), assigned).isEmpty()) {
             // Pool exhausted: generate one on demand rather than failing
@@ -213,7 +216,7 @@ public final class EndCellManager {
      */
     public void maintainBuffer(WorldEngineConfig config) {
         File container = worldContainer();
-        List<String> entries = containerDirs();
+        List<String> entries = poolDirs(config);
         Map<Long, String> pool = scanPool(entries, config.endBaseName());
         Set<Long> assigned = assignedNumbers(config.endBaseName());
         Set<Long> free = new TreeSet<>(pool.keySet());
@@ -230,7 +233,7 @@ public final class EndCellManager {
             topUp(config, pool, free);
         }
         if (exceedsOverflow(free.size(), config.endBuffer())) {
-            trimOverflow(pool, free);
+            trimOverflow(config, pool, free);
         }
     }
 
@@ -246,11 +249,11 @@ public final class EndCellManager {
     public int deleteOrphans(WorldEngineConfig config) {
         Map<Long, String> rows = loadReservations();
         Set<String> targets = new TreeSet<>(rows.values());
-        targets.addAll(strayEndWorlds(containerDirs(),
+        targets.addAll(strayEndWorlds(poolDirs(config),
                 config.worldName() + "_the_end_", config.endBaseName()));
         int deleted = 0;
         for (String name : targets) {
-            if (!deleteEndWorld(name, null)) {
+            if (!deleteEndWorld(config, name, null)) {
                 continue;
             }
             deleted++;
@@ -287,7 +290,7 @@ public final class EndCellManager {
     }
 
     /** Deletes the highest free member, skipping it when occupied. */
-    private void trimOverflow(Map<Long, String> pool, Set<Long> free) {
+    private void trimOverflow(WorldEngineConfig config, Map<Long, String> pool, Set<Long> free) {
         OptionalLong victim = overflowVictim(free);
         if (victim.isEmpty()) {
             return;
@@ -297,7 +300,7 @@ public final class EndCellManager {
         if (loaded != null && !loaded.getPlayers().isEmpty()) {
             return;
         }
-        if (deleteEndWorld(name, null)) {
+        if (deleteEndWorld(config, name, null)) {
             free.remove(victim.getAsLong());
         }
     }
@@ -332,6 +335,39 @@ public final class EndCellManager {
         return entries == null ? List.of() : Arrays.asList(entries);
     }
 
+    /**
+     * Everywhere pool members can live: container-root folders (classic
+     * layout), loaded worlds (authoritative regardless of layout), and
+     * the main level's dimensions dir (Paper 26+ creator layout).
+     */
+    private List<String> poolDirs(WorldEngineConfig config) {
+        List<String> dirs = new ArrayList<>(containerDirs());
+        dirs.addAll(loadedPoolWorlds(config.endBaseName()));
+        dirs.addAll(dimensionDirs(config.worldName()));
+        return dirs;
+    }
+
+    /** Folders under the main level's dimensions dir, or empty. */
+    private List<String> dimensionDirs(String worldName) {
+        File dimensions = new File(worldContainer(), worldName + "/dimensions/minecraft");
+        String[] entries = dimensions.list((dir, name) -> new File(dir, name).isDirectory());
+        return entries == null ? List.of() : Arrays.asList(entries);
+    }
+
+    /**
+     * Locates an unloaded pool world's folder: container root first,
+     * then the main level's dimensions dir. Returns the dimensions
+     * candidate when neither exists (deleting it is a no-op). Pure
+     * core for tests; loaded worlds report their own folder instead.
+     */
+    static File unloadedPoolFolder(File container, String worldName, String name) {
+        File root = new File(container, name);
+        if (root.isDirectory()) {
+            return root;
+        }
+        return new File(container, worldName + "/dimensions/minecraft/" + name);
+    }
+
     /** Sorted comma list for debug lines, or (empty). Pure for tests. */
     static String describe(Collection<?> values) {
         if (values.isEmpty()) {
@@ -364,10 +400,13 @@ public final class EndCellManager {
     /** Generates a fresh pool member with its deterministic seed. Null when creation fails. */
     private World generateDimension(WorldEngineConfig config, long n, long seed) {
         String name = poolName(config.endBaseName(), n);
+        boolean loaded = Bukkit.getWorld(name) != null;
+        boolean folder = loaded
+                || unloadedPoolFolder(worldContainer(), config.worldName(), name).isDirectory();
         plugin.logger().debug("debug.end-cell-create-attempt", Map.of(
                 "cell", name,
-                "loaded", String.valueOf(Bukkit.getWorld(name) != null),
-                "folder", String.valueOf(new File(worldContainer(), name).isDirectory())));
+                "loaded", String.valueOf(loaded),
+                "folder", String.valueOf(folder)));
         WorldCreator creator = new WorldCreator(name);
         creator.environment(World.Environment.THE_END);
         creator.seed(EndSeedHasher.initialSeed(seed, n));
@@ -389,8 +428,9 @@ public final class EndCellManager {
      * Unloads and deletes one end world, riding stragglers to the
      * fallback first. True when the directory is gone.
      */
-    private boolean deleteEndWorld(String name, Location fallback) {
+    private boolean deleteEndWorld(WorldEngineConfig config, String name, Location fallback) {
         World loaded = Bukkit.getWorld(name);
+        File liveFolder = loaded == null ? null : loaded.getWorldFolder();
         if (loaded != null) {
             if (fallback != null) {
                 for (Player player : loaded.getPlayers()) {
@@ -403,8 +443,10 @@ public final class EndCellManager {
             }
             Bukkit.unloadWorld(loaded, false);
         }
+        File target = liveFolder != null ? liveFolder
+                : unloadedPoolFolder(worldContainer(), config.worldName(), name);
         try {
-            FileUtils.deleteRecursively(new File(plugin.getServer().getWorldContainer(), name));
+            FileUtils.deleteRecursively(target);
         } catch (IOException exception) {
             plugin.logger().warning("Failed to delete end dimension " + name + ": " + exception.getMessage());
             return false;
@@ -465,12 +507,13 @@ public final class EndCellManager {
             chunk.unload();
         }
         String name = world.getName();
+        File folder = world.getWorldFolder();
         if (!Bukkit.unloadWorld(world, true)) {
             plugin.logger().warning("Could not unload end world " + name + " for reset.");
             return false;
         }
         try {
-            FileUtils.deleteRecursively(new File(plugin.getServer().getWorldContainer(), name));
+            FileUtils.deleteRecursively(folder);
         } catch (IOException exception) {
             plugin.logger().warning("Failed to clean end data at " + name + ": " + exception.getMessage());
             return false;

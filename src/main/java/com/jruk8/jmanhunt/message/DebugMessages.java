@@ -41,8 +41,8 @@ public class DebugMessages extends OkaeriConfig {
     private String endCellPruned = "{debug-prefix}<gray>Pruned end dimension <white>{cell}<gray>.";
 
     @CustomKey("end-pool-scan")
-    private String endPoolScan = "{debug-prefix}<gray>End pool scan: container <white>{container} <gray>has " +
-            "<white>{entries} <gray>entries; pool <white>{pool} <gray>loaded <white>{loaded} <gray>free " +
+    private String endPoolScan = "{debug-prefix}<gray>End pool scan: container <white>{container} <gray>scan " +
+            "saw <white>{entries} <gray>candidates; pool <white>{pool} <gray>loaded <white>{loaded} <gray>free " +
             "<white>{free}<gray>/<white>{buffer} <gray>assigned <white>{assigned}<gray>.";
 
     @CustomKey("end-cell-topup")

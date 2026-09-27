@@ -1,9 +1,11 @@
 # End Dimensions
 
 The world engine keeps a shared pool of reusable end dimensions instead of
-generating one per match. Pool members live as `<base-name>_<n>` worlds in
-the server's world container, starting at `jmh_end_1`, and are handed out to
-matches on demand.
+generating one per match. Pool members live as `<base-name>_<n>` worlds,
+starting at `jmh_end_1`, and are handed out to matches on demand. Depending
+on the server version their folders sit in the world container root or under
+the main level's `dimensions/minecraft` dir; the pool scan counts loaded
+worlds either way, so both layouts behave the same.
 
 ```yaml
 world-engine:

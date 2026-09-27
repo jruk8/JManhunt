@@ -322,7 +322,7 @@ debug:
   end-cell-created: "{debug-prefix}<gray>Created end dimension <white>{cell}<gray>."
   end-cell-reset: "{debug-prefix}<gray>Reset end dimension <white>{cell}<gray>."
   end-cell-pruned: "{debug-prefix}<gray>Pruned end dimension <white>{cell}<gray>."
-  end-pool-scan: "{debug-prefix}<gray>End pool scan: container <white>{container} <gray>has <white>{entries} <gray>entries; pool <white>{pool} <gray>loaded <white>{loaded} <gray>free <white>{free}<gray>/<white>{buffer} <gray>assigned <white>{assigned}<gray>."
+  end-pool-scan: "{debug-prefix}<gray>End pool scan: container <white>{container} <gray>scan saw <white>{entries} <gray>candidates; pool <white>{pool} <gray>loaded <white>{loaded} <gray>free <white>{free}<gray>/<white>{buffer} <gray>assigned <white>{assigned}<gray>."
   end-cell-topup: "{debug-prefix}<gray>End pool top-up: chose <white>{cell} <gray>from pool <white>{pool}<gray>."
   end-cell-create-attempt: "{debug-prefix}<gray>End dimension create: <white>{cell} <gray>already-loaded=<white>{loaded} <gray>folder-exists=<white>{folder}<gray>."
   border-mode: "{debug-prefix}<gray>Border mode: <white>{mode}<gray>."
