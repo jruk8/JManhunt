@@ -553,9 +553,10 @@ public final class SettingRegistry {
         entries.add(bool("settings.compass.right-click.refresh-on-right-click", true));
         entries.add(floatVal("settings.compass.click.click-cooldown", 3.0, -1.0, null));
         entries.add(bool("settings.compass.left-click.enabled", true));
-        entries.add(intVal("settings.compass.left-click.max-targets", 5, 1, null));
+        entries.add(intVal("settings.compass.left-click.max-targets", 5, 1, 20));
         entries.add(floatVal("settings.compass.left-click.scroll-cooldown", 0.5, 0.0, null));
         entries.add(bool("settings.compass.teammates.enabled", true));
+        entries.add(floatVal("settings.compass.teammates.switch-cooldown", 0.5, 0.0, null));
         entries.add(bool("settings.compass.analyze.right-click", false));
         entries.add(bool("settings.compass.analyze.auto", false));
         entries.add(floatVal("settings.compass.analyze.delay-seconds", 1.0, 0.0, null));

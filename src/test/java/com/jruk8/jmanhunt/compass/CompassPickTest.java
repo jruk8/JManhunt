@@ -210,4 +210,57 @@ class CompassPickTest {
         assertEquals(1, CompassPick.orderedCandidates(opponents, List.of(), 5).size());
         assertEquals(0, CompassPick.orderedCandidates(List.of(), List.of(), 5).size());
     }
+
+    private static CompassIdentity identity(UUID id, String name) {
+        return new CompassIdentity(id, name);
+    }
+
+    @Test
+    void cachedOrderRunsSpotsThenSightingsThenIdentities() {
+        List<CompassCandidate> cached = List.of(
+                candidate(BOB, "Bob", 200.0, 200.0),
+                candidate(ALICE, "Alice", 100.0, 100.0));
+        List<CompassSighting> sightings = List.of(sighting(CAROL, "Carol", 50.0));
+        UUID dave = UUID.randomUUID();
+        List<CompassIdentity> identities = List.of(
+                identity(CAROL, "Carol"), identity(dave, "Dave"));
+
+        assertEquals(List.of(ALICE, BOB, CAROL, dave), CompassPick
+                .orderedCachedCandidates(cached, sightings, identities, 5));
+    }
+
+    @Test
+    void cachedOrderDedupesAndCaps() {
+        List<CompassCandidate> cached = List.of(candidate(ALICE, "Alice", 100.0, 100.0));
+        List<CompassSighting> sightings = List.of(sighting(ALICE, "Alice", 50.0));
+        List<CompassIdentity> identities = List.of(
+                identity(ALICE, "Alice"), identity(BOB, "Bob"), identity(CAROL, "Carol"));
+
+        assertEquals(List.of(ALICE, BOB), CompassPick
+                .orderedCachedCandidates(cached, sightings, identities, 2));
+        assertEquals(List.of(ALICE, BOB, CAROL), CompassPick
+                .orderedCachedCandidates(cached, sightings, identities, 5));
+    }
+
+    @Test
+    void cachedOrderClampsNonPositiveCapToOne() {
+        List<CompassCandidate> cached = List.of(
+                candidate(ALICE, "Alice", 100.0, 100.0),
+                candidate(BOB, "Bob", 200.0, 200.0));
+
+        assertEquals(List.of(ALICE), CompassPick
+                .orderedCachedCandidates(cached, List.of(), List.of(), 0));
+    }
+
+    @Test
+    void orderedCycleStepsAndWrapsToAutomatic() {
+        List<UUID> ordered = List.of(ALICE, BOB, CAROL);
+
+        assertEquals(ALICE, CompassPick.cycleOrdered(ordered, null));
+        assertEquals(BOB, CompassPick.cycleOrdered(ordered, ALICE));
+        assertEquals(CAROL, CompassPick.cycleOrdered(ordered, BOB));
+        assertNull(CompassPick.cycleOrdered(ordered, CAROL));
+        assertNull(CompassPick.cycleOrdered(ordered, UUID.randomUUID()));
+        assertNull(CompassPick.cycleOrdered(List.of(), null));
+    }
 }

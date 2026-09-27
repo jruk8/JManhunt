@@ -32,7 +32,9 @@ player's last seen location. Anything else (no targets at all, or
 only out-of-range ones) makes the needle spin instead of freezing.
 
 The compass does nothing while its holder is in spectator mode:
-refreshes show no target and clicks are ignored.
+refreshes show no target and clicks are ignored. Holders in vanilla
+spectator mode (for example admins) get nothing at all: no refresh,
+no actionbar, and no click behavior.
 
 ## Given to Roles
 
@@ -115,13 +117,14 @@ refresh-interval: 10.0        # in seconds
 ```
 
 Under `settings.compass.right-click`, you can configure right-clicking the
-compass to refresh it. Left and right clicks share one cooldown under
-`settings.compass.click`: an accepted click of either kind blocks the
-other until `click-cooldown` time has elapsed. Clicks run apart from
-the automatic interval, so a fresh automatic refresh never blocks them;
-each click still restarts the automatic interval. Deaths refresh
-immediately as well: when a target dies, every unlocked compass in
-the match re-resolves at once instead of waiting for the interval.
+compass to refresh it. Right-clicks run on their own cooldown under
+`settings.compass.click` and apart from the automatic interval, so a
+fresh automatic refresh never blocks them; each click still restarts
+the automatic interval. Left-click and shift-left-click never touch
+this cooldown: they only browse the snapshot cache (see below).
+Deaths refresh immediately as well: when a target dies, every
+unlocked compass in the match re-resolves at once instead of waiting
+for the interval.
 
 ```yaml
 right-click:
@@ -131,11 +134,12 @@ click:
 ```
 
 Under `settings.compass.left-click`, you can let holders left-click the
-compass to cycle a manual target lock through the nearest candidates: live
-opponents nearest-first, then last-seen locations nearest-first, up to
-`max-targets` total. While locked, the actionbar shows `LOCKED` and
-automatic refreshes keep pointing at the locked target, within the same
-min/max distance limits. Cycling past
+compass to cycle a manual target lock through the nearest candidates:
+cached opponents nearest-first, then last-seen locations
+nearest-first, then uncached players, up to `max-targets` total
+(minimum 1, maximum 20). While locked, the actionbar shows `LOCKED`
+and automatic refreshes keep pointing at the locked target, within the
+same min/max distance limits. Cycling past
 the last candidate returns to automatic tracking, as does clicking again
 after the locked target left the candidate set. Only left-clicks on air or
 blocks cycle the lock; attacking an entity with the compass does not.
@@ -147,34 +151,42 @@ left-click:
   scroll-cooldown: 0.5
 ```
 
+Every refresh snapshots the closest hunters plus the closest
+speedrunners (capped at `max-targets` each), and cycling reads only
+those snapshots: it never fetches a live position and never touches
+the refresh cooldown, so browsing targets cannot reveal anyone early.
+A target with no snapshot yet shows a Bad Signal without a reason
+until the next refresh.
+
 `scroll-cooldown` is the seconds between accepted scrolls; clicks inside
 the window are ignored, so holding the button cannot scroll. Set it to
-`0` for no throttling. Left clicks also pass through the shared
-`click-cooldown` above. A scroll runs an analysis first when click
-analysis is enabled, exactly like a right-click.
+`0` for no throttling. Scrolls never run an analysis and are only
+refused while an analysis is running.
 
 With one or fewer candidates there is nothing to lock onto: the click
-only consumes the shared cooldown and refreshes nothing. Scrolls are
-also refused while the signal is bad or while an analysis is running.
-
-Each successful scroll plays a short click. You can change it under
-`sounds.compass.left-click`, or turn it off there. A scroll with
-nothing to cycle to, or one refused for bad signal, plays
-`sounds.compass.failure` instead.
+quits silently without any sound or cooldown. Each successful scroll
+plays a short click. You can change it under
+`sounds.compass.left-click`, or turn it off there.
 
 ## Teammate Tracking
 
 Under `settings.compass.teammates`, shift-left-clicking the compass
 toggles between tracking enemies and tracking teammates instead of
 cycling a lock. Teammate mode tracks same-role players with the same
-distance limits and signal rules; toggling back returns to the other
-role. The toggle drops any manual lock and refreshes at once, and it
-passes through the shared `click-cooldown` like other clicks:
+distance limits and signal rules, and the actionbar reads `Tracking
+teammate ...`; toggling back returns to the other role. The toggle
+drops any manual lock and renders the current snapshot cache at once,
+without fetching or touching the refresh cooldown:
 
 ```yaml
 teammates:
   enabled: true
+  switch-cooldown: 0.5
 ```
+
+`switch-cooldown` is the seconds between accepted switches; switches
+inside the window are ignored silently. Set it to `0` for no
+throttling.
 
 The mode is per holder and clears when their match ends, like manual
 locks. Spectators cannot toggle, and respawning players are never

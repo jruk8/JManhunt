@@ -20,6 +20,7 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
@@ -45,17 +46,22 @@ final class CompassLockService {
     private final SoundService sounds;
     private final MessageService messages;
     private final CompassTargetService targets;
-    private final CompassSignalService signal;
     private final Map<UUID, Component> actionbars;
     private final Consumer<Player> refresher;
     /** Click-initiated refresh: refreshes plus the outcome click sound. */
     private final Consumer<Player> clickResolver;
+    /** Cache-only render for accepted clicks; never fetches or refreshes. */
+    private final Consumer<Player> cacheRenderer;
+    /** Location snapshots written by refresh events, read by clicks. */
+    private final CompassCache cache;
     /** Manual left-click target locks: holder id -> locked target id. */
     private final Map<UUID, UUID> locks = new HashMap<>();
     /** Holders tracking teammates instead of enemies, toggled by shift-left. */
     private final Set<UUID> teammates = new HashSet<>();
     /** Last accepted left-click scroll per holder; throttles held clicks. */
     private final Map<UUID, Long> lastScroll = new HashMap<>();
+    /** Last accepted shift-left switch per holder; a pure feel throttle. */
+    private final Map<UUID, Long> lastSwitch = new HashMap<>();
     private final Set<UUID> analyzing = new HashSet<>();
     /** Analysis generation per holder; stale tick tasks cancel themselves. */
     private final Map<UUID, Long> generations = new HashMap<>();
@@ -64,18 +70,20 @@ final class CompassLockService {
     private GameManager game;
 
     CompassLockService(JManhuntPlugin plugin, PlayerStateStore playerStates, SoundService sounds,
-            MessageService messages, CompassTargetService targets, CompassSignalService signal,
+            MessageService messages, CompassTargetService targets,
             Map<UUID, Component> actionbars, Consumer<Player> refresher,
-            Consumer<Player> clickResolver, Map<UUID, Long> sharedClicks) {
+            Consumer<Player> clickResolver, Consumer<Player> cacheRenderer, CompassCache cache,
+            Map<UUID, Long> sharedClicks) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.sounds = sounds;
         this.messages = messages;
         this.targets = targets;
-        this.signal = signal;
         this.actionbars = actionbars;
         this.refresher = refresher;
         this.clickResolver = clickResolver;
+        this.cacheRenderer = cacheRenderer;
+        this.cache = cache;
         this.sharedClicks = sharedClicks;
     }
 
@@ -112,6 +120,73 @@ final class CompassLockService {
         return new LockedTargets(lockedOpponents, lockedSightings, true);
     }
 
+    /**
+     * Narrows cached spots and stored sightings to the manual lock. A
+     * lock on a still-trackable but uncached target is kept with empty
+     * inputs so the render shows Bad Signal; only truly stale locks
+     * clear back to automatic tracking.
+     */
+    LockedTargets narrowToLockCached(UUID holderId, List<CompassCandidate> cached,
+            List<CompassSighting> sightings, Set<UUID> trackableIds) {
+        UUID lockedId = locks.get(holderId);
+        if (lockedId == null) {
+            return new LockedTargets(cached, sightings, false);
+        }
+        List<CompassCandidate> lockedCached = cached.stream()
+                .filter(candidate -> candidate.id().equals(lockedId)).toList();
+        List<CompassSighting> lockedSightings = sightings.stream()
+                .filter(sighting -> sighting.ownerId().equals(lockedId)).toList();
+        if (!lockedCached.isEmpty() || !lockedSightings.isEmpty()) {
+            return new LockedTargets(lockedCached, lockedSightings, true);
+        }
+        if (trackableIds.contains(lockedId)) {
+            return new LockedTargets(List.of(), List.of(), true);
+        }
+        locks.remove(holderId);
+        return new LockedTargets(cached, sightings, false);
+    }
+
+    /** Cache-only render inputs for one holder: spots, sightings, and order. */
+    record CachedCycle(List<CompassCandidate> cached, List<CompassSighting> sightings,
+            Set<UUID> trackableIds, List<UUID> ordered) {
+    }
+
+    /**
+     * Builds one holder's cache-only inputs: snapshots filtered to
+     * currently trackable same-world targets, stored sightings, and
+     * the capped cycle order. Reads no live positions.
+     */
+    CachedCycle buildCycle(Player holder, GameInstance instance, Role targetRole, int maxTargets) {
+        List<CompassIdentity> identities =
+                targets.collectIdentities(holder, targetRole, instance);
+        Map<UUID, String> names = new HashMap<>();
+        for (CompassIdentity identity : identities) {
+            names.put(identity.id(), identity.name());
+        }
+        List<CompassCandidate> cached = new ArrayList<>();
+        Map<UUID, Location> spots = cache.spotsFor(holder.getUniqueId());
+        if (!spots.isEmpty()) {
+            Location origin = holder.getLocation();
+            UUID worldId = holder.getWorld().getUID();
+            for (Map.Entry<UUID, Location> entry : spots.entrySet()) {
+                Location spot = entry.getValue();
+                if (!names.containsKey(entry.getKey()) || spot == null
+                        || spot.getWorld() == null
+                        || !spot.getWorld().getUID().equals(worldId)) {
+                    continue;
+                }
+                cached.add(new CompassCandidate(entry.getKey(), names.get(entry.getKey()),
+                        origin.distance(spot),
+                        CompassTargetService.flatDistance(origin, spot)));
+            }
+        }
+        List<CompassSighting> sightings =
+                targets.collectSightings(holder, targetRole, instance);
+        List<UUID> ordered =
+                CompassPick.orderedCachedCandidates(cached, sightings, identities, maxTargets);
+        return new CachedCycle(cached, sightings, names.keySet(), ordered);
+    }
+
     /** Drops the holder's manual lock, if any. */
     void clearLock(UUID holderId) {
         locks.remove(holderId);
@@ -127,10 +202,11 @@ final class CompassLockService {
         teammates.remove(holderId);
     }
 
-    /** Drops lock plus teammate mode: the per-holder match state. */
+    /** Drops lock, teammate mode, and snapshots: the per-holder match state. */
     void clearMatchState(UUID holderId) {
         locks.remove(holderId);
         teammates.remove(holderId);
+        cache.clear(holderId);
     }
 
     /**
@@ -178,40 +254,27 @@ final class CompassLockService {
 
     /** Cycles the holder's manual target lock one step; see the facade docs. */
     void handleLeftClick(Player player) {
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            return;
+        }
         long now = System.currentTimeMillis();
         Optional<GameInstance> match = scrollMatch(player, now);
         if (match.isEmpty()) {
             return;
         }
+        int maxTargets = CompassCache.clampMaxTargets(plugin.overrides()
+                .getInt(lobbyOf(player), "settings.compass.left-click.max-targets", 5));
+        CachedCycle cycle =
+                buildCycle(player, match.get(), targetRole(player), maxTargets);
+        if (cycle.ordered().size() <= 1) {
+            return;
+        }
         lastScroll.put(player.getUniqueId(), now);
-        GameInstance instance = match.get();
-        Role targetRole = targetRole(player);
-        List<CompassCandidate> opponents = targets.collectOpponents(player, targetRole, instance);
-        List<CompassSighting> sightings = targets.collectSightings(player, targetRole, instance);
-        int maxTargets = plugin.overrides()
-                .getInt(lobbyOf(player), "settings.compass.left-click.max-targets", 5);
-        if (CompassPick.orderedCandidates(opponents, sightings, maxTargets).size() <= 1) {
-            locks.remove(player.getUniqueId());
-            sharedClicks.put(player.getUniqueId(), now);
-            sounds.playSound(player, "compass.failure");
-            return;
-        }
-        if (signal.badSignalForScroll(player, opponents, sightings)) {
-            sharedClicks.put(player.getUniqueId(), now);
-            refresher.accept(player);
-            sounds.playSound(player, "compass.failure");
-            return;
-        }
-        applyScrollCycle(player, opponents, sightings, maxTargets);
-        if (analyzeEnabled(lobbyOf(player), false)) {
-            startAnalysis(player, true);
-            return;
-        }
-        sharedClicks.put(player.getUniqueId(), now);
-        refresher.accept(player);
+        applyCachedCycle(player, cycle.ordered());
+        cacheRenderer.accept(player);
     }
 
-    /** Resolves the scroll match, applying the enabled, cooldown, and membership gates. */
+    /** Resolves the scroll match, applying the enabled, throttle, and membership gates. */
     private Optional<GameInstance> scrollMatch(Player player, long now) {
         Integer lobby = lobbyOf(player);
         if (!plugin.overrides()
@@ -224,15 +287,9 @@ final class CompassLockService {
         if (analyzing.contains(player.getUniqueId())) {
             return Optional.empty();
         }
-        long clickMs = (long) (plugin.overrides()
-                .getDouble(lobby, "settings.compass.click.click-cooldown", 3.0) * 1000);
-        // Shared pure helper lives on the facade.
-        if (!CompassManager.shouldRefresh(now,
-                sharedClicks.getOrDefault(player.getUniqueId(), 0L), clickMs)) {
-            return Optional.empty();
-        }
         long cooldownMs = (long) (Math.max(0.0, plugin.overrides()
                 .getDouble(lobby, "settings.compass.left-click.scroll-cooldown", 0.5)) * 1000);
+        // Shared pure helper lives on the facade.
         if (!CompassManager.shouldRefresh(now, lastScroll.getOrDefault(player.getUniqueId(), 0L),
                 cooldownMs)) {
             return Optional.empty();
@@ -251,11 +308,15 @@ final class CompassLockService {
     /**
      * Shift-left-click: with teammate tracking enabled, toggles the
      * holder between enemies and teammates, drops the manual lock,
-     * and refreshes at once. With it disabled, behaves exactly like
-     * a normal left-click lock. Spectators, analyses, the shared
-     * click cooldown, and non-participants refuse the toggle.
+     * and renders the current cache at once. With it disabled, behaves
+     * exactly like a normal left-click lock. Vanilla and fake
+     * spectators, analyses, the switch throttle, and non-participants
+     * refuse the toggle. The refresh cooldown is never touched.
      */
     void handleShiftLeft(Player player) {
+        if (player.getGameMode() == GameMode.SPECTATOR) {
+            return;
+        }
         Integer lobby = lobbyOf(player);
         if (!plugin.overrides()
                 .getBoolean(lobby, "settings.compass.teammates.enabled", true)) {
@@ -267,11 +328,11 @@ final class CompassLockService {
             return;
         }
         long now = System.currentTimeMillis();
-        long clickMs = (long) (plugin.overrides()
-                .getDouble(lobby, "settings.compass.click.click-cooldown", 3.0) * 1000);
+        long switchMs = (long) (Math.max(0.0, plugin.overrides().getDouble(lobby,
+                "settings.compass.teammates.switch-cooldown", 0.5)) * 1000);
         // Shared pure helper lives on the facade.
         if (!CompassManager.shouldRefresh(now,
-                sharedClicks.getOrDefault(player.getUniqueId(), 0L), clickMs)) {
+                lastSwitch.getOrDefault(player.getUniqueId(), 0L), switchMs)) {
             return;
         }
         if (game == null || !playerStates.role(player).isParticipant()) {
@@ -283,28 +344,38 @@ final class CompassLockService {
             return;
         }
         UUID holderId = player.getUniqueId();
-        if (teammates.contains(holderId)) {
-            teammates.remove(holderId);
-        } else {
-            Role holderRole = playerStates.role(player);
-            if (targets.collectOpponents(player, holderRole, match.get()).isEmpty()) {
-                messages.message(player, "compass.no-teammates");
-                sounds.playAngrySound(player);
-                return;
-            }
-            teammates.add(holderId);
+        if (!applyShiftToggle(player, match.get(), holderId)) {
+            return;
         }
         locks.remove(holderId);
+        lastSwitch.put(holderId, now);
         sounds.playSound(player, "compass.left-click");
-        sharedClicks.put(holderId, now);
-        refresher.accept(player);
+        cacheRenderer.accept(player);
     }
 
-    /** Advances the manual lock to the next scroll target. */
-    private void applyScrollCycle(Player player, List<CompassCandidate> opponents,
-            List<CompassSighting> sightings, int maxTargets) {
+    /**
+     * Flips one holder's teammate mode, refusing with a message when
+     * entering it with nobody to track. True when the mode flipped.
+     */
+    private boolean applyShiftToggle(Player player, GameInstance match, UUID holderId) {
+        if (teammates.contains(holderId)) {
+            teammates.remove(holderId);
+            return true;
+        }
+        Role holderRole = playerStates.role(player);
+        if (targets.collectIdentities(player, holderRole, match).isEmpty()) {
+            messages.message(player, "compass.no-teammates");
+            sounds.playAngrySound(player);
+            return false;
+        }
+        teammates.add(holderId);
+        return true;
+    }
+
+    /** Advances the manual lock to the next cached cycle target. */
+    private void applyCachedCycle(Player player, List<UUID> ordered) {
         UUID current = locks.get(player.getUniqueId());
-        UUID next = CompassPick.cycleLock(opponents, sightings, current, maxTargets);
+        UUID next = CompassPick.cycleOrdered(ordered, current);
         if (!Objects.equals(next, current)) {
             sounds.playSound(player, "compass.left-click");
         }

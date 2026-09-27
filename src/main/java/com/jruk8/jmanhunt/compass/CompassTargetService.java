@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /** Collects live opponents and last-seen sightings for compass tracking. */
 final class CompassTargetService {
@@ -28,17 +29,55 @@ final class CompassTargetService {
      */
     List<CompassCandidate> collectOpponents(Player holder, Role targetRole, GameInstance instance) {
         Location origin = holder.getLocation();
-        return Bukkit.getOnlinePlayers().stream()
-                .filter(p -> playerStates.role(p) == targetRole
-                        && isTrackableTarget(p.getUniqueId(), targetRole, instance)
-                        && !fakes.isFakeSpectator(p)
-                        && !p.getUniqueId().equals(holder.getUniqueId())
-                        && p.getWorld().equals(holder.getWorld()))
+        return liveTrackable(holder, targetRole, instance)
                 .map(player -> new CompassCandidate(player.getUniqueId(), player.getName(),
                         origin.distance(player.getLocation()),
                         flatDistance(origin, player.getLocation())))
                 .sorted(Comparator.comparingDouble(CompassCandidate::distance))
                 .toList();
+    }
+
+    /**
+     * Live location snapshots of the nearest trackable players of the
+     * given role, capped at the limit. Refresh events are the only
+     * callers; the snapshots feed the click cache.
+     */
+    List<CompassSnapshot> collectSnapshots(Player holder, Role targetRole, GameInstance instance,
+            int limit) {
+        Location origin = holder.getLocation();
+        return liveTrackable(holder, targetRole, instance)
+                .sorted(Comparator.comparingDouble(player -> origin.distance(player.getLocation())))
+                .limit(Math.max(0, limit))
+                .map(player -> new CompassSnapshot(player.getUniqueId(),
+                        player.getLocation().clone()))
+                .toList();
+    }
+
+    /**
+     * Trackable player identities of the given role, name-sorted, with
+     * no locations attached and no same-world filter. Click paths use
+     * this for cycle membership so they never fetch a live position.
+     */
+    List<CompassIdentity> collectIdentities(Player holder, Role targetRole, GameInstance instance) {
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(p -> playerStates.role(p) == targetRole
+                        && isTrackableTarget(p.getUniqueId(), targetRole, instance)
+                        && !fakes.isFakeSpectator(p)
+                        && !p.getUniqueId().equals(holder.getUniqueId()))
+                .map(player -> new CompassIdentity(player.getUniqueId(), player.getName()))
+                .sorted(Comparator.comparing(CompassIdentity::name))
+                .toList();
+    }
+
+    /** Live, same-world, same-match trackable players of the given role. */
+    private Stream<? extends Player> liveTrackable(Player holder, Role targetRole,
+            GameInstance instance) {
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(p -> playerStates.role(p) == targetRole
+                        && isTrackableTarget(p.getUniqueId(), targetRole, instance)
+                        && !fakes.isFakeSpectator(p)
+                        && !p.getUniqueId().equals(holder.getUniqueId())
+                        && p.getWorld().equals(holder.getWorld()));
     }
 
     /**

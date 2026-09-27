@@ -10,7 +10,6 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -63,27 +62,6 @@ final class CompassSignalService {
         }
         Boolean sight = interference.losEnabled() ? lineOfSight(holder, seen, interference) : null;
         return reason(holder, target, interference, sight);
-    }
-
-    /**
-     * Interference verdict for a scroll attempt, evaluated against the
-     * nearest candidate: live opponents first, then sightings.
-     */
-    boolean badSignalForScroll(Player holder, List<CompassCandidate> opponents,
-            List<CompassSighting> sightings) {
-        SignalInterference.Config interference = interferenceConfig(lobbyOf(holder));
-        Location target = null;
-        Player seen = null;
-        if (!opponents.isEmpty()) {
-            seen = Bukkit.getPlayer(opponents.get(0).id());
-            target = seen == null ? null : seen.getLocation();
-        }
-        if (target == null && !sightings.isEmpty()) {
-            target = playerStates.sightings().getOrDefault(sightings.get(0).ownerId(), Map.of())
-                    .get(holder.getWorld().getUID());
-        }
-        Boolean sight = interference.losEnabled() ? lineOfSight(holder, seen, interference) : null;
-        return badSignal(holder, target, interference, sight);
     }
 
     /**

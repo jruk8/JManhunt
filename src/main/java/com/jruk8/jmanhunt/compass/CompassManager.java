@@ -9,6 +9,7 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
@@ -31,9 +32,10 @@ public final class CompassManager {
     private final CompassSignalService signal;
     private final CompassLockService locks;
     private final CompassItemService items;
+    private final CompassCache cache = new CompassCache();
     /** Last automatic refresh per holder; clicks also stamp this. */
     private final Map<UUID, Long> lastAutoRefresh = new HashMap<>();
-    /** Last accepted compass click per holder; left and right share it. */
+    /** Last accepted refresh click per holder; right-clicks only. */
     private final Map<UUID, Long> lastClick = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
     private GameManager game;
@@ -46,8 +48,9 @@ public final class CompassManager {
         this.playerStates = playerStates;
         this.targets = new CompassTargetService(playerStates, plugin.fakeSpectators());
         this.signal = new CompassSignalService(plugin, playerStates);
-        this.locks = new CompassLockService(plugin, playerStates, sounds, messages, targets, signal,
-                compassActionbars, this::refreshCompass, this::resolveClickRefresh, lastClick);
+        this.locks = new CompassLockService(plugin, playerStates, sounds, messages, targets,
+                compassActionbars, this::refreshCompass, this::resolveClickRefresh,
+                this::renderFromCache, cache, lastClick);
         this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
     }
 
@@ -71,6 +74,7 @@ public final class CompassManager {
             long now = System.currentTimeMillis();
             Bukkit.getOnlinePlayers().stream()
                     .filter(p -> role(p).isParticipant())
+                    .filter(p -> !isVanillaSpectator(p))
                     .filter(p -> inLiveInstance(p))
                     .filter(items::hasCompass)
                     .forEach(holder -> {
@@ -104,9 +108,20 @@ public final class CompassManager {
                 .filter(p -> inLiveInstance(p))
                 .filter(p -> items.isCompass(p.getInventory().getItemInMainHand())
                         || items.isCompass(p.getInventory().getItemInOffHand()))
-                .forEach(p -> p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
-                        component("compass.no-target-actionbar",
-                                Map.of("role", messages.roleName(locks.targetRole(p)))))));
+                .forEach(p -> {
+                    if (isVanillaSpectator(p)) {
+                        compassActionbars.remove(p.getUniqueId());
+                        return;
+                    }
+                    p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
+                            component("compass.no-target-actionbar",
+                                    Map.of("role", messages.roleName(locks.targetRole(p))))));
+                });
+    }
+
+    /** Vanilla spectators (for example admins) get no compass behavior at all. */
+    static boolean isVanillaSpectator(Player player) {
+        return player.getGameMode() == GameMode.SPECTATOR;
     }
 
     /** True when the holder actively participates in a live match. */
@@ -157,6 +172,7 @@ public final class CompassManager {
             return false;
         }
         RefreshMatch target = match.get();
+        writeCache(holder, target.instance());
         List<CompassCandidate> opponents = targets.collectOpponents(holder, target.targetRole(),
                 target.instance());
         List<CompassSighting> sightings = targets.collectSightings(holder, target.targetRole(),
@@ -192,8 +208,24 @@ public final class CompassManager {
         return Optional.of(new RefreshSlot(slot, item));
     }
 
+    /**
+     * Snapshots the closest hunters plus the closest speedrunners for one
+     * holder, capped at the clamped max-targets each. Every refresh event
+     * funnels through here, so clicks always read a fresh cache.
+     */
+    private void writeCache(Player holder, GameInstance instance) {
+        int cap = CompassCache.clampMaxTargets(plugin.overrides()
+                .getInt(lobbyOf(holder), "settings.compass.left-click.max-targets", 5));
+        cache.replace(holder.getUniqueId(),
+                targets.collectSnapshots(holder, Role.HUNTER, instance, cap),
+                targets.collectSnapshots(holder, Role.SPEEDRUNNER, instance, cap));
+    }
+
     /** Resolves the match and roles for a refresh, rendering the spectator fallback. */
     private Optional<RefreshMatch> refreshMatch(Player holder, RefreshSlot slot) {
+        if (isVanillaSpectator(holder)) {
+            return Optional.empty();
+        }
         Role holderRole = role(holder);
         if (!holderRole.isParticipant()) {
             locks.clearMatchState(holder.getUniqueId());
@@ -266,6 +298,102 @@ public final class CompassManager {
         };
     }
 
+    /**
+     * Renders the holder's current lock and mode from the snapshot cache
+     * only. Accepted clicks call this instead of refreshing, so browsing
+     * never fetches a live position and never touches the refresh
+     * cooldown. Uncached targets show a reasonless Bad Signal.
+     */
+    void renderFromCache(Player holder) {
+        Optional<RefreshSlot> slot = refreshSlot(holder);
+        if (slot.isEmpty()) {
+            return;
+        }
+        Optional<RefreshMatch> match = refreshMatch(holder, slot.get());
+        if (match.isEmpty()) {
+            return;
+        }
+        RefreshMatch target = match.get();
+        int maxTargets = CompassCache.clampMaxTargets(plugin.overrides()
+                .getInt(lobbyOf(holder), "settings.compass.left-click.max-targets", 5));
+        CompassLockService.CachedCycle cycle =
+                locks.buildCycle(holder, target.instance(), target.targetRole(), maxTargets);
+        CompassLockService.LockedTargets narrowed = locks.narrowToLockCached(holder.getUniqueId(),
+                cycle.cached(), cycle.sightings(), cycle.trackableIds());
+        CompassPick pick = resolveCompassPick(target.instance().originLobbyId(),
+                target.holderRole(), narrowed.opponents(), narrowed.sightings());
+        renderCachedPick(holder, slot.get().item(), slot.get().slot(), pick,
+                target.targetRoleString(), narrowed.locked());
+    }
+
+    /**
+     * Renders a cache-resolved pick. Signal interference is deliberately
+     * not consulted: evaluating it would read live positions, and the
+     * switch must serve whatever is currently cached.
+     */
+    private void renderCachedPick(Player holder, ItemStack item, int slot, CompassPick pick,
+            String targetRoleString, boolean locked) {
+        switch (pick.kind()) {
+            case TRACK_PLAYER -> trackCachedPlayer(holder, item, slot, pick, locked);
+            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked);
+            case NEARBY -> {
+                spinNeedle(item, holder);
+                holder.getInventory().setItem(slot, item);
+                compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
+                        Map.of("player", pick.name())));
+            }
+            case TOO_FAR -> {
+                spinNeedle(item, holder);
+                holder.getInventory().setItem(slot, item);
+                compassActionbars.put(holder.getUniqueId(), component("compass.too-far-actionbar",
+                        Map.of("player", pick.name())));
+            }
+            case NONE -> showCacheBadSignal(holder, item, slot);
+        }
+    }
+
+    /** Points the needle at a snapshotted location, or Bad Signals when gone. */
+    private void trackCachedPlayer(Player holder, ItemStack item, int slot, CompassPick pick,
+            boolean locked) {
+        Location spot = cache.spotsFor(holder.getUniqueId()).get(pick.id());
+        if (spot == null || spot.getWorld() == null
+                || !spot.getWorld().getUID().equals(holder.getWorld().getUID())) {
+            showCacheBadSignal(holder, item, slot);
+            return;
+        }
+        setLodestone(item, spot);
+        holder.getInventory().setItem(slot, item);
+        compassActionbars.put(holder.getUniqueId(), component(
+                trackingKey(holder, locked, false),
+                Map.of("player", pick.name(),
+                        "distance",
+                        String.valueOf(Math.round(holder.getLocation().distance(spot))))));
+    }
+
+    /** Reasonless Bad Signal for uncached switch targets, by spec. */
+    private void showCacheBadSignal(Player holder, ItemStack item, int slot) {
+        spinNeedle(item, holder);
+        holder.getInventory().setItem(slot, item);
+        compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-actionbar"));
+    }
+
+    /** Tracking actionbar key for the holder's mode, lock, and sighting state. */
+    private String trackingKey(Player holder, boolean locked, boolean lastSeen) {
+        boolean teammate = locks.teammateMode(holder.getUniqueId());
+        if (lastSeen) {
+            if (teammate) {
+                return locked ? "compass.teammate-last-seen-locked-actionbar"
+                        : "compass.teammate-last-seen-actionbar";
+            }
+            return locked ? "compass.compass-last-seen-locked-actionbar"
+                    : "compass.compass-last-seen-actionbar";
+        }
+        if (teammate) {
+            return locked ? "compass.teammate-locked-actionbar" : "compass.teammate-actionbar";
+        }
+        return locked ? "compass.compass-locked-actionbar" : "compass.compass-actionbar";
+    }
+
     private boolean trackPlayer(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
             boolean locked) {
         Player target = Bukkit.getPlayer(pick.id());
@@ -276,7 +404,7 @@ public final class CompassManager {
         setLodestone(item, target.getLocation());
         holder.getInventory().setItem(slot, item);
         compassActionbars.put(holder.getUniqueId(), component(
-                locked ? "compass.compass-locked-actionbar" : "compass.compass-actionbar",
+                trackingKey(holder, locked, false),
                 Map.of("player", target.getName(),
                         "distance",
                         String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
@@ -298,7 +426,7 @@ public final class CompassManager {
         holder.getInventory().setItem(slot, item);
         String reason = seen != null ? "Another Dimension" : "Log-Out";
         compassActionbars.put(holder.getUniqueId(), component(
-                locked ? "compass.compass-last-seen-locked-actionbar" : "compass.compass-last-seen-actionbar",
+                trackingKey(holder, locked, true),
                 Map.of("player", pick.name(),
                         "distance",
                         String.valueOf(Math.round(holder.getLocation().distance(location))),
@@ -401,6 +529,9 @@ public final class CompassManager {
     }
 
     public void handleRightClick(Player player) {
+        if (isVanillaSpectator(player)) {
+            return;
+        }
         Integer lobby = lobbyOf(player);
         if (!plugin.overrides()
                 .getBoolean(lobby, "settings.compass.right-click.refresh-on-right-click", false)) {
@@ -418,11 +549,12 @@ public final class CompassManager {
         if (!shouldRefresh(now, lastClick.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
             return;
         }
-        // Clicks run on their own shared cooldown, so a fresh automatic
-        // refresh never blocks them; each click also stamps the automatic
-        // clock at initiation, restarting the interval from here. With
-        // analysis, the shared stamp lands at resolution instead, so the
-        // full cooldown runs after the refresh.
+        // Right-clicks run on the refresh click cooldown, so a fresh
+        // automatic refresh never blocks them; each click also stamps the
+        // automatic clock at initiation, restarting the interval from here.
+        // With analysis, the stamp lands at resolution instead, so the full
+        // cooldown runs after the refresh. Left and shift-left clicks use
+        // their own throttles and never touch this cooldown.
         lastAutoRefresh.put(player.getUniqueId(), now);
         if (locks.analyzeEnabled(lobby, false)) {
             locks.startAnalysis(player, true);
@@ -450,14 +582,14 @@ public final class CompassManager {
      * the nearest candidate, further clicks advance through the rest,
      * and cycling past the last candidate returns to automatic. No-op
      * unless left-click cycling is enabled and the holder participates
-     * in a live match. Clicks inside the shared click cooldown or the
-     * scroll cooldown are ignored, which also stops held clicks from
-     * scrolling; scrolling is refused during bad signal and during
-     * analysis, and consumes analysis like a right-click when enabled.
-     * With one or fewer candidates the click only consumes the shared
-     * cooldown and refreshes nothing. Locks survive automatic
-     * refreshes; the refresh after each click applies the new lock
-     * immediately.
+     * in a live match. Clicks inside the scroll cooldown are ignored,
+     * which also stops held clicks from scrolling; scrolling is refused
+     * during analysis. Cycling reads only the snapshot cache, never
+     * fetches a live position, and never touches the refresh cooldown;
+     * uncached targets render a reasonless Bad Signal. With one or
+     * fewer candidates the click quits silently. Locks survive
+     * automatic refreshes; the cached render after each click applies
+     * the new lock immediately.
      */
     public void handleLeftClick(Player player) {
         locks.handleLeftClick(player);
@@ -465,7 +597,10 @@ public final class CompassManager {
 
     /**
      * Shift-left-click: toggles teammate tracking when enabled, else
-     * locks exactly like a left-click. See the lock service docs.
+     * locks exactly like a left-click. The toggle has its own
+     * switch-cooldown throttle and, like left-clicks, renders only
+     * from cache without touching the refresh cooldown. See the lock
+     * service docs.
      */
     public void handleShiftLeft(Player player) {
         locks.handleShiftLeft(player);

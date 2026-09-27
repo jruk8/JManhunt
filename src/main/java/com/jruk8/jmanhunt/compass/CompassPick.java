@@ -82,7 +82,46 @@ public record CompassPick(Kind kind, UUID id, String name) {
      */
     public static UUID cycleLock(List<CompassCandidate> opponents, List<CompassSighting> sightings,
             UUID currentLock, int maxTargets) {
-        List<UUID> ordered = orderedCandidates(opponents, sightings, maxTargets);
+        return cycleOrdered(orderedCandidates(opponents, sightings, maxTargets), currentLock);
+    }
+
+    /**
+     * Cache-only cycle order: cached spots nearest-first, then stored
+     * sightings nearest-first, then uncached identities in given order,
+     * capped at maxTargets total (at least one). Live players win over
+     * their own sightings and identities. Pure for tests.
+     */
+    public static List<UUID> orderedCachedCandidates(List<CompassCandidate> cached,
+            List<CompassSighting> sightings, List<CompassIdentity> identities, int maxTargets) {
+        int cap = Math.max(1, maxTargets);
+        List<UUID> ordered = new ArrayList<>();
+        cached.stream()
+                .sorted(Comparator.comparingDouble(CompassCandidate::distance))
+                .map(CompassCandidate::id)
+                .filter(id -> id != null && !ordered.contains(id))
+                .limit(cap)
+                .forEachOrdered(ordered::add);
+        sightings.stream()
+                .sorted(Comparator.comparingDouble(CompassSighting::distance))
+                .map(CompassSighting::ownerId)
+                .filter(id -> id != null && !ordered.contains(id))
+                .limit(cap - ordered.size())
+                .forEachOrdered(ordered::add);
+        identities.stream()
+                .map(CompassIdentity::id)
+                .filter(id -> id != null && !ordered.contains(id))
+                .limit(cap - ordered.size())
+                .forEachOrdered(ordered::add);
+        return ordered;
+    }
+
+    /**
+     * Next lock in a pre-ordered cycle, or null for automatic tracking.
+     * From automatic the first id locks; from the last id, or from a
+     * lock that left the set, cycling returns to automatic. Pure for
+     * tests.
+     */
+    public static UUID cycleOrdered(List<UUID> ordered, UUID currentLock) {
         if (ordered.isEmpty()) {
             return null;
         }

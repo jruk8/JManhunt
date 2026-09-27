@@ -62,21 +62,17 @@ public class CompassSettings extends OkaeriConfig {
     @CustomKey("right-click")
     private RightClick rightClick = new RightClick();
 
-    @Comment("Cooldown shared by left-click and right-click compass actions.")
+    @Comment({
+            "Cooldown for right-click compass refreshes. Left-click and",
+            "shift-left-click use their own throttles and never touch this."
+    })
     private Click click = new Click();
 
     @CustomKey("left-click")
     private LeftClick leftClick = new LeftClick();
 
     @CustomKey("teammates")
-    @Comment({
-            "When true, shift-left-clicking the compass toggles teammate",
-            "tracking instead of cycling a manual lock: teammates mode",
-            "tracks same-role players, enemy mode tracks the other role.",
-            "When false, shift-left-click locks exactly like left-click.",
-            "Default: true"
-    })
-    private Toggle teammates = new Toggle(true);
+    private Teammates teammates = new Teammates();
 
     @Comment({
             "Purposeful lag before a compass refresh resolves, showing",
@@ -167,11 +163,11 @@ public class CompassSettings extends OkaeriConfig {
         this.leftClick = leftClick;
     }
 
-    public Toggle getTeammates() {
+    public Teammates getTeammates() {
         return teammates;
     }
 
-    public void setTeammates(Toggle teammates) {
+    public void setTeammates(Teammates teammates) {
         this.teammates = teammates;
     }
 
@@ -247,12 +243,12 @@ public class CompassSettings extends OkaeriConfig {
         }
     }
 
-    /** Cooldown shared by left-click and right-click compass actions. */
+    /** Cooldown for right-click compass refreshes. */
     @SuppressWarnings("FieldMayBeFinal")
     public static class Click extends OkaeriConfig {
 
         @CustomKey("click-cooldown")
-        @Comment("Seconds between accepted compass clicks. Set to -1 for no cooldown.")
+        @Comment("Seconds between accepted refresh clicks. Set to -1 for no cooldown.")
         private double clickCooldown = 3.0;
 
         public double getClickCooldown() {
@@ -273,9 +269,12 @@ public class CompassSettings extends OkaeriConfig {
                 "through the nearest candidates (live opponents first, then",
                 "last-seen locations). While locked, the actionbar shows LOCKED and",
                 "automatic refreshes keep pointing at the locked target. Cycling",
-                "past the last candidate returns to automatic tracking. Locking",
-                "needs at least two candidates, and is refused during bad signal",
-                "and during analysis.",
+                "past the last candidate returns to automatic tracking. Cycling",
+                "reads only the snapshot cache written by refreshes: it never",
+                "fetches a live position and never touches the refresh cooldown.",
+                "Uncached targets show a reasonless Bad Signal, and with one or",
+                "fewer candidates the click quits silently. Scrolls are refused",
+                "during analysis.",
                 "Default: true"
         })
         private boolean enabled = true;
@@ -283,7 +282,8 @@ public class CompassSettings extends OkaeriConfig {
         @CustomKey("max-targets")
         @Comment({
                 "How many nearest candidates the lock cycles through at most.",
-                "Minimum: 1.",
+                "Also caps the per-role snapshot cache each refresh writes.",
+                "Minimum: 1, maximum: 20.",
                 "Default: 5"
         })
         private int maxTargets = 5;
@@ -319,6 +319,46 @@ public class CompassSettings extends OkaeriConfig {
 
         public void setScrollCooldown(double scrollCooldown) {
             this.scrollCooldown = scrollCooldown;
+        }
+    }
+
+    /** Shift-left-click teammate tracking toggle. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Teammates extends OkaeriConfig {
+
+        @Comment({
+                "When true, shift-left-clicking the compass toggles teammate",
+                "tracking instead of cycling a manual lock: teammates mode",
+                "tracks same-role players, enemy mode tracks the other role.",
+                "When false, shift-left-click locks exactly like left-click.",
+                "Default: true"
+        })
+        private boolean enabled = true;
+
+        @CustomKey("switch-cooldown")
+        @Comment({
+                "Seconds between accepted teammate switches. Switches inside",
+                "the window are ignored silently, which also stops a held",
+                "click from toggling. Set to 0 for no throttling. This never",
+                "touches the refresh cooldown and never fetches on expiry.",
+                "Default: 0.5"
+        })
+        private double switchCooldown = 0.5;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public double getSwitchCooldown() {
+            return switchCooldown;
+        }
+
+        public void setSwitchCooldown(double switchCooldown) {
+            this.switchCooldown = switchCooldown;
         }
     }
 

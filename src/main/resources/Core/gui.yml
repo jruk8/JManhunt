@@ -126,6 +126,7 @@ descriptions:
   "settings.compass.speedrunner": "Range limits for speedrunner compasses."
   "settings.compass.teammates": "Track teammates with shift-left-click."
   "settings.compass.teammates.enabled": "Shift-left toggles teammate tracking."
+  "settings.compass.teammates.switch-cooldown": "Seconds between teammate switches."
   "settings.compass.speedrunner.max-distance": "Cap on speedrunner tracking range."
   "settings.compass.speedrunner.min-distance": "Hide targets too close to speedrunners."
   "settings.players": "Roles, respawns, damage rules, and announcements."

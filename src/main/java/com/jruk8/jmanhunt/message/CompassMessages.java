@@ -44,6 +44,21 @@ public class CompassMessages extends OkaeriConfig {
     private String compassLastSeenLockedActionbar = "<#de7766>Tracking <white>{player}<#de7766>'s Last Seen • " +
             "<white>{distance}m <gray>({reason}) [LOCKED]";
 
+    @CustomKey("teammate-actionbar")
+    private String teammateActionbar = "<#de7766>Tracking teammate <white>{player}<#de7766> • <white>{distance}m";
+
+    @CustomKey("teammate-last-seen-actionbar")
+    private String teammateLastSeenActionbar = "<#de7766>Tracking teammate <white>{player}<#de7766>'s Last Seen • " +
+            "<white>{distance}m <gray>({reason})";
+
+    @CustomKey("teammate-locked-actionbar")
+    private String teammateLockedActionbar = "<#de7766>Tracking teammate <white>{player}<#de7766> • " +
+            "<white>{distance}m <gray>[LOCKED]";
+
+    @CustomKey("teammate-last-seen-locked-actionbar")
+    private String teammateLastSeenLockedActionbar = "<#de7766>Tracking teammate " +
+            "<white>{player}<#de7766>'s Last Seen • <white>{distance}m <gray>({reason}) [LOCKED]";
+
     @CustomKey("no-target-actionbar")
     private String noTargetActionbar = "<gray>No {role}<gray> location available.";
 

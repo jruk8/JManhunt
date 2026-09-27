@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.bukkit.GameMode;
@@ -40,7 +41,7 @@ class CompassLockServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void rapidClicksRefreshOncePerCooldown() {
+    void rapidClicksRenderOncePerScrollCooldown() {
         Fixture fixture = fixture(List.of(
                 new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
                 new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
@@ -48,41 +49,47 @@ class CompassLockServiceTest {
         fixture.locks().handleLeftClick(fixture.player());
         fixture.locks().handleLeftClick(fixture.player());
 
-        verify(fixture.refresher(), times(1)).accept(fixture.player());
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    void singleTargetClickSkipsRefresh() {
-        Fixture fixture = fixture(List.of(
-                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)));
-
-        fixture.locks().handleLeftClick(fixture.player());
-
+        verify(fixture.renderer(), times(1)).accept(fixture.player());
         verify(fixture.refresher(), never()).accept(any(Player.class));
     }
 
     @Test
-    void singleTargetClickPlaysFailure() {
+    @SuppressWarnings("unchecked")
+    void singleTargetClickQuitsSilently() {
         Fixture fixture = fixture(List.of(
                 new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)));
 
         fixture.locks().handleLeftClick(fixture.player());
 
-        verify(fixture.sounds(), times(1)).playSound(fixture.player(), "compass.failure");
+        verify(fixture.renderer(), never()).accept(any(Player.class));
+        verify(fixture.refresher(), never()).accept(any(Player.class));
+        verify(fixture.sounds(), never()).playSound(any(Player.class), any(String.class));
+        assertTrue(fixture.sharedClicks().isEmpty());
     }
 
     @Test
-    void badSignalScrollPlaysFailureOnce() {
+    @SuppressWarnings("unchecked")
+    void leftClickIgnoresSharedClickCooldown() {
         Fixture fixture = fixture(List.of(
                 new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
                 new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
-        when(fixture.signal().badSignalForScroll(any(), any(), any())).thenReturn(true);
+        fixture.sharedClicks().put(fixture.player().getUniqueId(), System.currentTimeMillis());
 
         fixture.locks().handleLeftClick(fixture.player());
 
-        verify(fixture.refresher(), times(1)).accept(fixture.player());
-        verify(fixture.sounds(), times(1)).playSound(fixture.player(), "compass.failure");
+        verify(fixture.renderer(), times(1)).accept(fixture.player());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void leftClickNeverStampsSharedClicks() {
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
+
+        fixture.locks().handleLeftClick(fixture.player());
+
+        assertTrue(fixture.sharedClicks().isEmpty());
     }
 
     @Test
@@ -94,6 +101,22 @@ class CompassLockServiceTest {
         fixture.locks().handleLeftClick(fixture.player());
 
         verify(fixture.sounds(), never()).playSound(fixture.player(), "compass.failure");
+        verify(fixture.renderer(), times(1)).accept(fixture.player());
+    }
+
+    @Test
+    void vanillaSpectatorClicksDoNothing() {
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
+        when(fixture.player().getGameMode()).thenReturn(GameMode.SPECTATOR);
+
+        fixture.locks().handleLeftClick(fixture.player());
+        fixture.locks().handleShiftLeft(fixture.player());
+
+        verify(fixture.renderer(), never()).accept(any(Player.class));
+        verify(fixture.refresher(), never()).accept(any(Player.class));
+        verify(fixture.sounds(), never()).playSound(any(Player.class), any(String.class));
     }
 
     @Test
@@ -113,6 +136,34 @@ class CompassLockServiceTest {
     }
 
     @Test
+    void uncachedLockSurvivesCachedNarrow() {
+        UUID locked = UUID.randomUUID();
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(locked, "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
+        fixture.locks().handleLeftClick(fixture.player());
+
+        CompassLockService.LockedTargets narrowed = fixture.locks().narrowToLockCached(
+                fixture.player().getUniqueId(), List.of(), List.of(), Set.of(locked));
+
+        assertTrue(narrowed.locked());
+        assertTrue(narrowed.opponents().isEmpty());
+    }
+
+    @Test
+    void staleLockClearsCachedNarrow() {
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
+        fixture.locks().handleLeftClick(fixture.player());
+
+        CompassLockService.LockedTargets narrowed = fixture.locks().narrowToLockCached(
+                fixture.player().getUniqueId(), List.of(), List.of(), Set.of());
+
+        assertFalse(narrowed.locked());
+    }
+
+    @Test
     void shiftLeftTogglesBetweenEnemiesAndTeammates() {
         Fixture fixture = teammateFixture(List.of(
                 new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)), true, Role.HUNTER);
@@ -128,7 +179,8 @@ class CompassLockServiceTest {
 
         assertFalse(fixture.locks().teammateMode(fixture.player().getUniqueId()));
         assertEquals(Role.SPEEDRUNNER, fixture.locks().targetRole(fixture.player()));
-        verify(fixture.refresher(), times(2)).accept(fixture.player());
+        verify(fixture.renderer(), times(2)).accept(fixture.player());
+        verify(fixture.refresher(), never()).accept(any(Player.class));
     }
 
     @Test
@@ -140,6 +192,22 @@ class CompassLockServiceTest {
         fixture.locks().handleShiftLeft(fixture.player());
 
         assertEquals(Role.SPEEDRUNNER, fixture.locks().targetRole(fixture.player()));
+    }
+
+    @Test
+    void switchCooldownThrottlesSecondToggleSilently() {
+        Fixture fixture = teammateFixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)), true,
+                Role.HUNTER, 10.0);
+
+        fixture.locks().handleShiftLeft(fixture.player());
+        fixture.locks().handleShiftLeft(fixture.player());
+
+        assertTrue(fixture.locks().teammateMode(fixture.player().getUniqueId()));
+        verify(fixture.renderer(), times(1)).accept(fixture.player());
+        verify(fixture.sounds(), times(1)).playSound(fixture.player(), "compass.left-click");
+        verify(fixture.sounds(), never()).playSound(fixture.player(), "compass.failure");
+        assertTrue(fixture.sharedClicks().isEmpty());
     }
 
     @Test
@@ -155,7 +223,7 @@ class CompassLockServiceTest {
         assertEquals(Role.SPEEDRUNNER, fixture.locks().targetRole(fixture.player()));
         assertTrue(fixture.locks().narrowToLock(fixture.player().getUniqueId(),
                 opponents, List.of()).locked());
-        verify(fixture.refresher(), times(1)).accept(fixture.player());
+        verify(fixture.renderer(), times(1)).accept(fixture.player());
     }
 
     @Test
@@ -186,7 +254,7 @@ class CompassLockServiceTest {
         fixture.locks().handleShiftLeft(fixture.player());
 
         assertFalse(fixture.locks().teammateMode(fixture.player().getUniqueId()));
-        verify(fixture.refresher(), times(1)).accept(fixture.player());
+        verify(fixture.renderer(), times(1)).accept(fixture.player());
     }
 
     @Test
@@ -198,7 +266,7 @@ class CompassLockServiceTest {
         fixture.locks().handleShiftLeft(fixture.player());
 
         assertFalse(fixture.locks().teammateMode(fixture.player().getUniqueId()));
-        verify(fixture.refresher(), never()).accept(any(Player.class));
+        verify(fixture.renderer(), never()).accept(any(Player.class));
     }
 
     @Test
@@ -211,7 +279,7 @@ class CompassLockServiceTest {
         assertEquals(Role.SPEEDRUNNER, fixture.locks().targetRole(fixture.player()));
         verify(fixture.messages(), times(1)).message(fixture.player(), "compass.no-teammates");
         verify(fixture.sounds(), times(1)).playAngrySound(fixture.player());
-        verify(fixture.refresher(), never()).accept(any(Player.class));
+        verify(fixture.renderer(), never()).accept(any(Player.class));
     }
 
     @Test
@@ -220,13 +288,13 @@ class CompassLockServiceTest {
                 new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)), true, Role.HUNTER);
         fixture.locks().handleShiftLeft(fixture.player());
         assertTrue(fixture.locks().teammateMode(fixture.player().getUniqueId()));
-        when(fixture.targets().collectOpponents(any(), any(), any())).thenReturn(List.of());
+        when(fixture.targets().collectIdentities(any(), any(), any())).thenReturn(List.of());
 
         fixture.locks().handleShiftLeft(fixture.player());
 
         assertFalse(fixture.locks().teammateMode(fixture.player().getUniqueId()));
         assertEquals(Role.SPEEDRUNNER, fixture.locks().targetRole(fixture.player()));
-        verify(fixture.refresher(), times(2)).accept(fixture.player());
+        verify(fixture.renderer(), times(2)).accept(fixture.player());
     }
 
     @Test
@@ -242,8 +310,9 @@ class CompassLockServiceTest {
     }
 
     private record Fixture(CompassLockService locks, Player player, Consumer<Player> refresher,
-            GameManager game, SoundService sounds, CompassSignalService signal,
-            FakeSpectatorService fakes, MessageService messages, CompassTargetService targets) {
+            Consumer<Player> renderer, GameManager game, SoundService sounds,
+            FakeSpectatorService fakes, MessageService messages, CompassTargetService targets,
+            Map<UUID, Long> sharedClicks) {
     }
 
     @SuppressWarnings("unchecked")
@@ -273,26 +342,35 @@ class CompassLockServiceTest {
         CompassTargetService targets = mock(CompassTargetService.class);
         when(targets.collectOpponents(any(), any(), any())).thenReturn(opponents);
         when(targets.collectSightings(any(), any(), any())).thenReturn(List.of());
+        when(targets.collectIdentities(any(), any(), any())).thenReturn(opponents.stream()
+                .map(opponent -> new CompassIdentity(opponent.id(), opponent.name())).toList());
         Consumer<Player> refresher = mock(Consumer.class);
+        Consumer<Player> renderer = mock(Consumer.class);
         SoundService sounds = mock(SoundService.class);
         MessageService messages = mock(MessageService.class);
-        CompassSignalService signal = mock(CompassSignalService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         CompassLockService locks = new CompassLockService(plugin, playerStates,
-                sounds, messages, targets, signal,
-                new HashMap<>(), refresher, mock(Consumer.class), sharedClicks);
+                sounds, messages, targets,
+                new HashMap<>(), refresher, mock(Consumer.class), renderer,
+                new CompassCache(), sharedClicks);
         locks.setGameManager(game);
-        return new Fixture(locks, player, refresher, game, sounds, signal, fakes,
-                messages, targets);
+        return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
+                messages, targets, sharedClicks);
     }
 
     @SuppressWarnings("unchecked")
     private static Fixture teammateFixture(List<CompassCandidate> opponents,
             boolean teammatesEnabled, Role role) {
+        return teammateFixture(opponents, teammatesEnabled, role, 0.0);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Fixture teammateFixture(List<CompassCandidate> opponents,
+            boolean teammatesEnabled, Role role, double switchCooldown) {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "settings.compass.left-click.enabled", true);
         ConfigPathMapper.set(root, "settings.compass.teammates.enabled", teammatesEnabled);
-        ConfigPathMapper.set(root, "settings.compass.click.click-cooldown", 0.0);
+        ConfigPathMapper.set(root, "settings.compass.teammates.switch-cooldown", switchCooldown);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
@@ -315,16 +393,19 @@ class CompassLockServiceTest {
         CompassTargetService targets = mock(CompassTargetService.class);
         when(targets.collectOpponents(any(), any(), any())).thenReturn(opponents);
         when(targets.collectSightings(any(), any(), any())).thenReturn(List.of());
+        when(targets.collectIdentities(any(), any(), any())).thenReturn(opponents.stream()
+                .map(opponent -> new CompassIdentity(opponent.id(), opponent.name())).toList());
         Consumer<Player> refresher = mock(Consumer.class);
+        Consumer<Player> renderer = mock(Consumer.class);
         SoundService sounds = mock(SoundService.class);
         MessageService messages = mock(MessageService.class);
-        CompassSignalService signal = mock(CompassSignalService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         CompassLockService locks = new CompassLockService(plugin, playerStates,
-                sounds, messages, targets, signal,
-                new HashMap<>(), refresher, mock(Consumer.class), sharedClicks);
+                sounds, messages, targets,
+                new HashMap<>(), refresher, mock(Consumer.class), renderer,
+                new CompassCache(), sharedClicks);
         locks.setGameManager(game);
-        return new Fixture(locks, player, refresher, game, sounds, signal, fakes,
-                messages, targets);
+        return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
+                messages, targets, sharedClicks);
     }
 }

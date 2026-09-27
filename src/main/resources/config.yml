@@ -25,7 +25,7 @@
 #
 
 # Used for config updates, don't change unless you know what you're doing.
-config-version: 8
+config-version: 9
 
 
 # Send anonymous statistics via bStats (open-source). We never collect personal data or IP addresses.
@@ -405,22 +405,27 @@ settings:
     right-click:
       # Optional refresh-on-right-click runs alongside interval refreshes.
       refresh-on-right-click: true
-    # Cooldown shared by left-click and right-click compass actions.
+    # Cooldown for right-click compass refreshes. Left-click and
+    # shift-left-click use their own throttles and never touch this.
     click:
-      # Seconds between accepted compass clicks. Set to -1 for no cooldown.
+      # Seconds between accepted refresh clicks. Set to -1 for no cooldown.
       click-cooldown: 3.0
     left-click:
       # When true, left-clicking the compass cycles a manual target lock
       # through the nearest candidates (live opponents first, then
       # last-seen locations). While locked, the actionbar shows LOCKED and
       # automatic refreshes keep pointing at the locked target. Cycling
-      # past the last candidate returns to automatic tracking. Locking
-      # needs at least two candidates, and is refused during bad signal
-      # and during analysis.
+      # past the last candidate returns to automatic tracking. Cycling
+      # reads only the snapshot cache written by refreshes: it never
+      # fetches a live position and never touches the refresh cooldown.
+      # Uncached targets show a reasonless Bad Signal, and with one or
+      # fewer candidates the click quits silently. Scrolls are refused
+      # during analysis.
       # Default: true
       enabled: true
       # How many nearest candidates the lock cycles through at most.
-      # Minimum: 1.
+      # Also caps the per-role snapshot cache each refresh writes.
+      # Minimum: 1, maximum: 20.
       # Default: 5
       max-targets: 5
       # Seconds between manual target scrolls. Clicks inside the window
@@ -435,6 +440,12 @@ settings:
       # When false, shift-left-click locks exactly like left-click.
       # Default: true
       enabled: true
+      # Seconds between accepted teammate switches. Switches inside
+      # the window are ignored silently, which also stops a held
+      # click from toggling. Set to 0 for no throttling. This never
+      # touches the refresh cooldown and never fetches on expiry.
+      # Default: 0.5
+      switch-cooldown: 0.5
     # Purposeful lag before a compass refresh resolves, showing
     # "Analyzing..." while it runs. No second refresh starts mid-analysis,
     # and click cooldowns restart when the analysis ends.
