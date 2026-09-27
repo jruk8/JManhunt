@@ -40,6 +40,19 @@ public class DebugMessages extends OkaeriConfig {
     @CustomKey("end-cell-pruned")
     private String endCellPruned = "{debug-prefix}<gray>Pruned end dimension <white>{cell}<gray>.";
 
+    @CustomKey("end-pool-scan")
+    private String endPoolScan = "{debug-prefix}<gray>End pool scan: container <white>{container} <gray>has " +
+            "<white>{entries} <gray>entries; pool <white>{pool} <gray>loaded <white>{loaded} <gray>free " +
+            "<white>{free}<gray>/<white>{buffer} <gray>assigned <white>{assigned}<gray>.";
+
+    @CustomKey("end-cell-topup")
+    private String endCellTopup = "{debug-prefix}<gray>End pool top-up: chose <white>{cell} <gray>from pool " +
+            "<white>{pool}<gray>.";
+
+    @CustomKey("end-cell-create-attempt")
+    private String endCellCreateAttempt = "{debug-prefix}<gray>End dimension create: <white>{cell} " +
+            "<gray>already-loaded=<white>{loaded} <gray>folder-exists=<white>{folder}<gray>.";
+
     @CustomKey("border-mode")
     private String borderMode = "{debug-prefix}<gray>Border mode: <white>{mode}<gray>.";
 

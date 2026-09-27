@@ -68,6 +68,14 @@ class EndCellManagerTest {
     }
 
     @Test
+    void describeSortsAndMarksEmpty() {
+        assertEquals("(empty)", EndCellManager.describe(List.of()));
+        assertEquals("1, 2, 4", EndCellManager.describe(Set.of(4L, 1L, 2L)));
+        assertEquals("jmh_end_1, jmh_end_2",
+                EndCellManager.describe(List.of("jmh_end_2", "jmh_end_1")));
+    }
+
+    @Test
     void strayEndWorldsMatchLegacyAndNonNumericPoolFolders() {
         List<String> dirs = List.of(
                 "world_the_end_9", "other", "world_the_end_old", "world",

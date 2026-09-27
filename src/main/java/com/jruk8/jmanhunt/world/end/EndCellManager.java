@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -211,10 +212,20 @@ public final class EndCellManager {
      * buffer refill so one event drives both buffers.
      */
     public void maintainBuffer(WorldEngineConfig config) {
-        Map<Long, String> pool = scanPool(containerDirs(), config.endBaseName());
+        File container = worldContainer();
+        List<String> entries = containerDirs();
+        Map<Long, String> pool = scanPool(entries, config.endBaseName());
         Set<Long> assigned = assignedNumbers(config.endBaseName());
         Set<Long> free = new TreeSet<>(pool.keySet());
         free.removeAll(assigned);
+        plugin.logger().debug("debug.end-pool-scan", Map.of(
+                "container", container.getAbsolutePath(),
+                "entries", String.valueOf(entries.size()),
+                "pool", describe(pool.keySet()),
+                "loaded", describe(loadedPoolWorlds(config.endBaseName())),
+                "free", String.valueOf(free.size()),
+                "buffer", String.valueOf(config.endBuffer()),
+                "assigned", describe(assigned)));
         if (needsTopUp(free.size(), config.endBuffer())) {
             topUp(config, pool, free);
         }
@@ -260,6 +271,9 @@ public final class EndCellManager {
             return OptionalLong.empty();
         }
         long n = nextN(pool.keySet());
+        plugin.logger().debug("debug.end-cell-topup", Map.of(
+                "cell", poolName(config.endBaseName(), n),
+                "pool", describe(pool.keySet())));
         if (generateDimension(config, n, seed.getAsLong()) == null) {
             return OptionalLong.empty();
         }
@@ -309,10 +323,31 @@ public final class EndCellManager {
         return assigned;
     }
 
+    private File worldContainer() {
+        return plugin.getServer().getWorldContainer();
+    }
+
     private List<String> containerDirs() {
-        File container = plugin.getServer().getWorldContainer();
-        String[] entries = container.list((dir, name) -> new File(dir, name).isDirectory());
+        String[] entries = worldContainer().list((dir, name) -> new File(dir, name).isDirectory());
         return entries == null ? List.of() : Arrays.asList(entries);
+    }
+
+    /** Sorted comma list for debug lines, or (empty). Pure for tests. */
+    static String describe(Collection<?> values) {
+        if (values.isEmpty()) {
+            return "(empty)";
+        }
+        return String.join(", ", values.stream().map(String::valueOf).sorted().toList());
+    }
+
+    /** Loaded worlds under the pool prefix, sorted. */
+    private static List<String> loadedPoolWorlds(String baseName) {
+        String prefix = baseName + "_";
+        return Bukkit.getWorlds().stream()
+                .map(World::getName)
+                .filter(name -> name.startsWith(prefix))
+                .sorted()
+                .toList();
     }
 
     /** Loads a pool member, or returns it when already loaded. */
@@ -329,6 +364,10 @@ public final class EndCellManager {
     /** Generates a fresh pool member with its deterministic seed. Null when creation fails. */
     private World generateDimension(WorldEngineConfig config, long n, long seed) {
         String name = poolName(config.endBaseName(), n);
+        plugin.logger().debug("debug.end-cell-create-attempt", Map.of(
+                "cell", name,
+                "loaded", String.valueOf(Bukkit.getWorld(name) != null),
+                "folder", String.valueOf(new File(worldContainer(), name).isDirectory())));
         WorldCreator creator = new WorldCreator(name);
         creator.environment(World.Environment.THE_END);
         creator.seed(EndSeedHasher.initialSeed(seed, n));
