@@ -459,7 +459,8 @@ public final class GameStateCommandManager {
         }
     }
 
-    private void runCommandList(List<String> commands, Player player, TagContext context) {
+    /** Runs one command list; package-visible so tests can pin dispatch routing. */
+    void runCommandList(List<String> commands, Player player, TagContext context) {
         for (String command : commands) {
             if (command.isBlank()) {
                 continue;
@@ -485,10 +486,8 @@ public final class GameStateCommandManager {
                         context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
                         continue;
                     }
-                    if (parsed.startsWith("/")) {
-                        parsed = parsed.substring(1);
-                    }
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+                    TagExpressions.dispatchableLine(parsed).ifPresent(line ->
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line));
                 }
             } catch (Exception e) {
                 plugin.logger().severe("Failed to run command '%s'. Skipping..".formatted(command));

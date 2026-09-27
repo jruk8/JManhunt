@@ -293,6 +293,17 @@ class TagExpressionsTest {
     }
 
     @Test
+    void dispatchableLineSkipsBlankAndStripsSlash() {
+        assertTrue(TagExpressions.dispatchableLine("").isEmpty());
+        assertTrue(TagExpressions.dispatchableLine("   ").isEmpty());
+        assertTrue(TagExpressions.dispatchableLine("/").isEmpty());
+        assertTrue(TagExpressions.dispatchableLine(" / ").isEmpty());
+        assertEquals("say hi", TagExpressions.dispatchableLine("say hi").orElseThrow());
+        assertEquals("say hi", TagExpressions.dispatchableLine("/say hi").orElseThrow());
+        assertEquals("say hi", TagExpressions.dispatchableLine("  say hi  ").orElseThrow());
+    }
+
+    @Test
     void winEndsMatchForCanonicalRole() {
         Recording recording = new Recording();
 

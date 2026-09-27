@@ -1,10 +1,20 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.command.ModifierTagScope;
+import com.jruk8.jmanhunt.command.TagBackends;
+import com.jruk8.jmanhunt.command.TagContext;
+import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.player.PlayerStateStore;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
@@ -12,6 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class GameStateCommandManagerTest {
 
@@ -148,6 +163,30 @@ class GameStateCommandManagerTest {
         assertFalse(ModifierTriggers.runsAfterPrestart("banana"));
         assertTrue(ModifierTriggers.runsAfterPrestart("AFTER"));
         assertTrue(ModifierTriggers.runsAfterPrestart("  after  "));
+    }
+
+    @Test
+    void tagOnlyLinesSkipDispatchQuietly() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        JManhuntLogger logger = mock(JManhuntLogger.class);
+        when(plugin.logger()).thenReturn(logger);
+        GameStateCommandManager manager = new GameStateCommandManager(plugin,
+                new PlayerStateStore(), mock(ConfigService.class), mock(MessageService.class),
+                mock(SoundService.class), mock(GameManager.class));
+        List<String> warnings = new ArrayList<>();
+        TagContext context = TagContext.run(
+                ModifierTagScope.executor("Steve", warnings::add), "gapple-on-low-hp",
+                text -> { }, text -> { },
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                (player, reason) -> { }, (role, reason) -> { },
+                7L, TagBackends.inert());
+
+        // A bare set evaluates to blank text; dispatching it crashes the
+        // server dispatcher, so the line must be skipped with no error.
+        manager.runCommandList(List.of("<pflag:lastuse-<id>,5>"), null, context);
+
+        assertTrue(warnings.isEmpty(), warnings.toString());
+        verify(logger, never()).severe(anyString());
     }
 
     @Test

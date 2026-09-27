@@ -706,4 +706,16 @@ public final class TagExpressions {
         String stripped = line.strip();
         return stripped.startsWith("/") ? stripped.substring(1) : stripped;
     }
+
+    /**
+     * Dispatch text for a parsed command line. Tag-only lines evaluate
+     * to nothing (a bare {@code <pflag:...>} set, {@code <gmessage:...>},
+     * ...), and dispatching blank text crashes the server dispatcher,
+     * so blank lines resolve empty and the caller skips them quietly.
+     * One leading slash is dropped; surrounding whitespace is trimmed.
+     */
+    public static Optional<String> dispatchableLine(String parsed) {
+        String line = stripSlash(parsed);
+        return line.isEmpty() ? Optional.empty() : Optional.of(line);
+    }
 }

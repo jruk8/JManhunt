@@ -557,10 +557,8 @@ final class CompassLockService {
                     context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
                     continue;
                 }
-                if (parsed.startsWith("/")) {
-                    parsed = parsed.substring(1);
-                }
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+                TagExpressions.dispatchableLine(parsed).ifPresent(line ->
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line));
             } catch (Exception exception) {
                 plugin.logger().severe(
                         "Failed to run analysis debuff command '" + command + "'. Skipping..");
