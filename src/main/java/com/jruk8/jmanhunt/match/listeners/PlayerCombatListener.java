@@ -27,12 +27,16 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 
 /** Deaths, damage, kills, and item/advancement win triggers. */
 public final class PlayerCombatListener implements Listener {
+    /** Mocking friendly fire lines the broadcast picks between. */
+    static final int FRIENDLY_FIRE_LINES = 3;
+
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
     private final GameManager game;
@@ -89,9 +93,40 @@ public final class PlayerCombatListener implements Listener {
         } else if (role == Role.HUNTER) {
             handleHunterDeath(player, instance, quiet);
         }
+        compass.clearLocksOnTargetDeath(player.getUniqueId());
+        if (!quiet) {
+            broadcastFriendlyFireKill(instance, player);
+        }
         // Next tick: state is final, and compass items are safe to touch
         // outside the death event. Unlocked picks re-resolve at once.
         Bukkit.getScheduler().runTask(plugin, () -> compass.refreshInstance(instance));
+    }
+
+    /** Mocking lobby broadcast for same-team kills, when enabled. */
+    private void broadcastFriendlyFireKill(GameInstance instance, Player victim) {
+        if (!(victim.getKiller() instanceof Player killer)) {
+            return;
+        }
+        if (!isFriendlyFireKill(playerStates.role(killer), playerStates.role(victim),
+                killer.getUniqueId().equals(victim.getUniqueId()))) {
+            return;
+        }
+        if (!config.getBoolean("settings.players.friendly-fire.broadcast-kills", true)) {
+            return;
+        }
+        int roll = ThreadLocalRandom.current().nextInt(FRIENDLY_FIRE_LINES);
+        game.sendToLobby(instance.originLobbyId(), friendlyFireKey(roll),
+                Map.of("dead", victim.getName(), "killer", killer.getName()));
+    }
+
+    /** True for a kill of a teammate: same participant role, no suicides. Pure for tests. */
+    static boolean isFriendlyFireKill(Role killerRole, Role victimRole, boolean selfKill) {
+        return !selfKill && killerRole.isParticipant() && killerRole == victimRole;
+    }
+
+    /** Friendly fire line key for a roll in [0, 3). Pure for tests. */
+    static String friendlyFireKey(int roll) {
+        return "game.friendly-fire-" + (Math.floorMod(roll, FRIENDLY_FIRE_LINES) + 1);
     }
 
     private void handleSpeedrunnerDeath(Player player, GameInstance instance, boolean quiet) {

@@ -53,6 +53,7 @@ categories:
   compass/teammates: SPYGLASS
   compass/must-be-inventory: ENDER_CHEST
   compass/right-click: OAK_BUTTON
+  compass/chat-messages: NOTE_BLOCK
   players: PLAYER_HEAD
   players/respawn: TOTEM_OF_UNDYING
   players/respawn/hunter: RED_BED
@@ -127,6 +128,8 @@ descriptions:
   "settings.compass.teammates": "Track teammates with shift-left-click."
   "settings.compass.teammates.enabled": "Shift-left toggles teammate tracking."
   "settings.compass.teammates.switch-cooldown": "Seconds between teammate switches."
+  "settings.compass.chat-messages": "Chat the holder about compass actions."
+  "settings.compass.chat-messages.enabled": "Lock, switch, and died chat messages."
   "settings.compass.speedrunner.max-distance": "Cap on speedrunner tracking range."
   "settings.compass.speedrunner.min-distance": "Hide targets too close to speedrunners."
   "settings.players": "Roles, respawns, damage rules, and announcements."
@@ -201,8 +204,8 @@ descriptions:
   "settings.compass.drop-on-death.enabled": "Compass survives death as a dropped item."
   "settings.compass.refresh-interval": "Seconds between retargets; -1 disables."
   "settings.compass.right-click.refresh-on-right-click": "Right-click refreshes the compass target."
-  "settings.compass.click": "Cooldown shared by compass clicks."
-  "settings.compass.click.click-cooldown": "Seconds between accepted compass clicks."
+  "settings.compass.click": "Cooldown for right-click compass refreshes."
+  "settings.compass.click.click-cooldown": "Seconds between accepted refresh clicks."
   "settings.compass.left-click.enabled": "Left-click cycles locked compass targets."
   "settings.compass.left-click.max-targets": "Most targets the lock can cycle through."
   "settings.compass.left-click.scroll-cooldown": "Seconds between lock scrolls."
@@ -258,6 +261,7 @@ descriptions:
   "settings.players.respawn.speedrunner.lives": "Speedrunner lives; -1 is unlimited."
   "settings.players.friendly-fire.hunter": "Hunters can damage other hunters."
   "settings.players.friendly-fire.speedrunner": "Speedrunners can damage each other."
+  "settings.players.friendly-fire.broadcast-kills": "Broadcast same-team kills to the lobby."
   "settings.players.invulnerability.none-players.enabled": "Spectators stay invulnerable."
   "settings.players.invulnerability.on-game-end.enabled": "Protect everyone when a match ends."
   "settings.players.announce-roles.chat.enabled": "Announce roles in chat at match start."

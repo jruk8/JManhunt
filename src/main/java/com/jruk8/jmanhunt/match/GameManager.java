@@ -153,6 +153,10 @@ public final class GameManager implements MatchControl {
     public void sendToInstance(GameInstance instance, String key, Map<String, String> values) {
         messaging.sendToInstance(instance, key, values);
     }
+    /** Sends a message to every online member of one lobby. */
+    public void sendToLobby(int lobbyId, String key, Map<String, String> values) {
+        messaging.sendToLobby(lobbyId, key, values);
+    }
     /** Plays a match sound for a match's online players. */
     public void playInstanceSound(GameInstance instance, String key) {
         messaging.playInstanceSound(instance, key);

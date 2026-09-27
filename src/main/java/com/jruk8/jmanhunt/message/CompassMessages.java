@@ -80,6 +80,18 @@ public class CompassMessages extends OkaeriConfig {
     @CustomKey("no-teammates")
     private String noTeammates = "{prefix}<yellow>You have no teammates to track.";
 
+    @CustomKey("locked-chat")
+    private String lockedChat = "{prefix}<yellow>Locked onto target <white>{player}</white>";
+
+    @CustomKey("teammate-on-chat")
+    private String teammateOnChat = "{prefix}<yellow>Now tracking <white>teammates</white>.";
+
+    @CustomKey("teammate-off-chat")
+    private String teammateOffChat = "{prefix}<yellow>Now tracking <white>enemies</white>.";
+
+    @CustomKey("locked-target-died-chat")
+    private String lockedTargetDiedChat = "{prefix}<yellow>Locked-on target died.";
+
     @CustomKey("signal-reason")
     private Map<String, String> signalReason = new LinkedHashMap<>(Map.of(
             "light-level", "low light",

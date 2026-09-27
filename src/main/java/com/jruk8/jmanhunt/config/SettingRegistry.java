@@ -557,6 +557,7 @@ public final class SettingRegistry {
         entries.add(floatVal("settings.compass.left-click.scroll-cooldown", 0.5, 0.0, null));
         entries.add(bool("settings.compass.teammates.enabled", true));
         entries.add(floatVal("settings.compass.teammates.switch-cooldown", 0.5, 0.0, null));
+        entries.add(bool("settings.compass.chat-messages.enabled", true));
         entries.add(bool("settings.compass.analyze.right-click", false));
         entries.add(bool("settings.compass.analyze.auto", false));
         entries.add(floatVal("settings.compass.analyze.delay-seconds", 1.0, 0.0, null));
@@ -614,6 +615,7 @@ public final class SettingRegistry {
         entries.add(intMinusOne("settings.players.respawn.speedrunner.lives", 1, 0));
         entries.add(bool("settings.players.friendly-fire.speedrunner", true));
         entries.add(bool("settings.players.friendly-fire.hunter", true));
+        entries.add(bool("settings.players.friendly-fire.broadcast-kills", true));
         entries.add(bool("settings.players.invulnerability.on-game-end.enabled", true));
         entries.add(bool("settings.players.invulnerability.none-players.enabled", true));
         entries.add(stringLength("settings.players.spectator.toolbar.layout", "cp######b", 9));

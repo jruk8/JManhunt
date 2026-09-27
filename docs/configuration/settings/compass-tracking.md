@@ -197,6 +197,22 @@ teammate mode flip back to opponents automatically. Set `enabled`
 to false to make shift-left-click lock exactly like a normal
 left-click.
 
+## Chat Messages
+
+Under `settings.compass.chat-messages`, compass actions can chat the
+holder: locking onto a target, switching teammate mode on and off,
+and the death of a locked target:
+
+```yaml
+chat-messages:
+  enabled: true
+```
+
+The lines come from `compass.locked-chat`,
+`compass.teammate-on-chat`, `compass.teammate-off-chat`, and
+`compass.locked-target-died-chat` in `messages.yml`. Refused or
+silent outcomes (no teammates, single-candidate quits) stay silent.
+
 ## Spinning
 
 When the compass has nothing to point at, its needle spins by aiming at

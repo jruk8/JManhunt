@@ -119,6 +119,14 @@ matches with more than one.
 
 `hunter` toggles whether hunters can damage other hunters.
 
+## Kill Broadcasts
+
+`broadcast-kills` (default on) broadcasts a mocking line to the
+origin lobby whenever a player kills a teammate, picked at random
+from `game.friendly-fire-1`, `game.friendly-fire-2`, and
+`game.friendly-fire-3` in `messages.yml`. Cross-team kills and
+suicides never trigger it.
+
 # Respawn & Lives
 
 Under `settings.respawn`, each role configures its own respawn delay and how

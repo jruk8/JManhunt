@@ -278,6 +278,14 @@ public class PlayerSettings extends OkaeriConfig {
         private boolean speedrunner = true;
         private boolean hunter = true;
 
+        @CustomKey("broadcast-kills")
+        @Comment({
+                "When true, same-team kills broadcast a mocking line to the",
+                "origin lobby, picked at random from three variants.",
+                "Default: true"
+        })
+        private boolean broadcastKills = true;
+
         public boolean isSpeedrunner() {
             return speedrunner;
         }
@@ -292,6 +300,14 @@ public class PlayerSettings extends OkaeriConfig {
 
         public void setHunter(boolean hunter) {
             this.hunter = hunter;
+        }
+
+        public boolean isBroadcastKills() {
+            return broadcastKills;
+        }
+
+        public void setBroadcastKills(boolean broadcastKills) {
+            this.broadcastKills = broadcastKills;
         }
     }
 

@@ -74,6 +74,9 @@ public class CompassSettings extends OkaeriConfig {
     @CustomKey("teammates")
     private Teammates teammates = new Teammates();
 
+    @CustomKey("chat-messages")
+    private ChatMessages chatMessages = new ChatMessages();
+
     @Comment({
             "Purposeful lag before a compass refresh resolves, showing",
             "\"Analyzing...\" while it runs. No second refresh starts mid-analysis,",
@@ -169,6 +172,14 @@ public class CompassSettings extends OkaeriConfig {
 
     public void setTeammates(Teammates teammates) {
         this.teammates = teammates;
+    }
+
+    public ChatMessages getChatMessages() {
+        return chatMessages;
+    }
+
+    public void setChatMessages(ChatMessages chatMessages) {
+        this.chatMessages = chatMessages;
     }
 
     public Analyze getAnalyze() {
@@ -359,6 +370,27 @@ public class CompassSettings extends OkaeriConfig {
 
         public void setSwitchCooldown(double switchCooldown) {
             this.switchCooldown = switchCooldown;
+        }
+    }
+
+    /** Compass action chat messages. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class ChatMessages extends OkaeriConfig {
+
+        @Comment({
+                "When true, compass actions chat the holder: lock confirmations,",
+                "teammate mode switches, and locked-target deaths. Refused or",
+                "silent outcomes stay silent.",
+                "Default: true"
+        })
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 

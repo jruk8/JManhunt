@@ -446,6 +446,12 @@ settings:
       # touches the refresh cooldown and never fetches on expiry.
       # Default: 0.5
       switch-cooldown: 0.5
+    chat-messages:
+      # When true, compass actions chat the holder: lock confirmations,
+      # teammate mode switches, and locked-target deaths. Refused or
+      # silent outcomes stay silent.
+      # Default: true
+      enabled: true
     # Purposeful lag before a compass refresh resolves, showing
     # "Analyzing..." while it runs. No second refresh starts mid-analysis,
     # and click cooldowns restart when the analysis ends.
@@ -673,6 +679,10 @@ settings:
     friendly-fire:
       speedrunner: true
       hunter: true
+      # When true, same-team kills broadcast a mocking line to the
+      # origin lobby, picked at random from three variants.
+      # Default: true
+      broadcast-kills: true
 
     # Invulnerability settings.
     invulnerability:

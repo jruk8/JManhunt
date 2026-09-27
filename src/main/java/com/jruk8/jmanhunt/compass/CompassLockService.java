@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Manual target locks, left-click scroll cycling, and the analysis lag
@@ -146,9 +147,9 @@ final class CompassLockService {
         return new LockedTargets(cached, sightings, false);
     }
 
-    /** Cache-only render inputs for one holder: spots, sightings, and order. */
+    /** Cache-only inputs for one holder: spots, sightings, names, and order. */
     record CachedCycle(List<CompassCandidate> cached, List<CompassSighting> sightings,
-            Set<UUID> trackableIds, List<UUID> ordered) {
+            Set<UUID> trackableIds, List<UUID> ordered, Map<UUID, String> names) {
     }
 
     /**
@@ -184,7 +185,7 @@ final class CompassLockService {
                 targets.collectSightings(holder, targetRole, instance);
         List<UUID> ordered =
                 CompassPick.orderedCachedCandidates(cached, sightings, identities, maxTargets);
-        return new CachedCycle(cached, sightings, names.keySet(), ordered);
+        return new CachedCycle(cached, sightings, names.keySet(), ordered, names);
     }
 
     /** Drops the holder's manual lock, if any. */
@@ -270,7 +271,7 @@ final class CompassLockService {
             return;
         }
         lastScroll.put(player.getUniqueId(), now);
-        applyCachedCycle(player, cycle.ordered());
+        applyCachedCycle(player, cycle);
         cacheRenderer.accept(player);
     }
 
@@ -358,31 +359,67 @@ final class CompassLockService {
      * entering it with nobody to track. True when the mode flipped.
      */
     private boolean applyShiftToggle(Player player, GameInstance match, UUID holderId) {
+        boolean entering;
         if (teammates.contains(holderId)) {
             teammates.remove(holderId);
-            return true;
+            entering = false;
+        } else {
+            Role holderRole = playerStates.role(player);
+            if (targets.collectIdentities(player, holderRole, match).isEmpty()) {
+                messages.message(player, "compass.no-teammates");
+                sounds.playAngrySound(player);
+                return false;
+            }
+            teammates.add(holderId);
+            entering = true;
         }
-        Role holderRole = playerStates.role(player);
-        if (targets.collectIdentities(player, holderRole, match).isEmpty()) {
-            messages.message(player, "compass.no-teammates");
-            sounds.playAngrySound(player);
-            return false;
+        if (chatMessagesEnabled(lobbyOf(player))) {
+            messages.message(player,
+                    entering ? "compass.teammate-on-chat" : "compass.teammate-off-chat");
         }
-        teammates.add(holderId);
         return true;
     }
 
+    /** True when compass chat messages are enabled for one lobby. */
+    private boolean chatMessagesEnabled(Integer lobby) {
+        return plugin.overrides()
+                .getBoolean(lobby, "settings.compass.chat-messages.enabled", true);
+    }
+
+    /**
+     * Clears every manual lock pointing at a dead target, notifying each
+     * online holder once when chat messages are enabled for their lobby.
+     * The lookup is injected so tests never touch the server.
+     */
+    void clearLocksOnTargetDeath(UUID victimId, Function<UUID, Player> onlineLookup) {
+        for (UUID holderId : List.copyOf(locks.keySet())) {
+            if (!victimId.equals(locks.get(holderId))) {
+                continue;
+            }
+            locks.remove(holderId);
+            Player holder = onlineLookup.apply(holderId);
+            if (holder == null || !chatMessagesEnabled(lobbyOf(holder))) {
+                continue;
+            }
+            messages.message(holder, "compass.locked-target-died-chat");
+        }
+    }
+
     /** Advances the manual lock to the next cached cycle target. */
-    private void applyCachedCycle(Player player, List<UUID> ordered) {
+    private void applyCachedCycle(Player player, CachedCycle cycle) {
         UUID current = locks.get(player.getUniqueId());
-        UUID next = CompassPick.cycleOrdered(ordered, current);
+        UUID next = CompassPick.cycleOrdered(cycle.ordered(), current);
         if (!Objects.equals(next, current)) {
             sounds.playSound(player, "compass.left-click");
         }
         if (next == null) {
             locks.remove(player.getUniqueId());
-        } else {
-            locks.put(player.getUniqueId(), next);
+            return;
+        }
+        locks.put(player.getUniqueId(), next);
+        if (chatMessagesEnabled(lobbyOf(player))) {
+            String name = cycle.names().getOrDefault(next, playerStates.playerName(next));
+            messages.message(player, "compass.locked-chat", Map.of("player", name));
         }
     }
 

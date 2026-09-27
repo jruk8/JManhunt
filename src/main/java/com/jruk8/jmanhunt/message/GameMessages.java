@@ -44,6 +44,18 @@ public class GameMessages extends OkaeriConfig {
     @CustomKey("speedrunner-death")
     private String speedrunnerDeath = "{prefix}<yellow>A speedrunner has died! <white>({value} remaining)</white>";
 
+    @CustomKey("friendly-fire-1")
+    private String friendlyFire1 = "{prefix}<yellow><white>{dead}</white> became collateral damage for "
+            + "<white>{killer}</white>";
+
+    @CustomKey("friendly-fire-2")
+    private String friendlyFire2 = "{prefix}<yellow><white>{killer}</white> mistook <white>{dead}</white> "
+            + "for the enemy";
+
+    @CustomKey("friendly-fire-3")
+    private String friendlyFire3 = "{prefix}<yellow><white>{dead}</white> was teamkilled by "
+            + "<white>{killer}</white> (oops)";
+
     @CustomKey("speedrunner-disconnect-warning")
     private String speedrunnerDisconnectWarning = "{prefix}<yellow>A speedrunner has disconnected! They will be " +
             "removed after <white>{seconds} seconds</white> unless they " +

@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -164,6 +165,97 @@ class CompassLockServiceTest {
     }
 
     @Test
+    void lockCycleChatsLockedWhenEnabled() {
+        UUID locked = UUID.randomUUID();
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(locked, "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
+
+        fixture.locks().handleLeftClick(fixture.player());
+
+        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.locked-chat",
+                Map.of("player", "a"));
+    }
+
+    @Test
+    void cycleWrapToAutomaticChatsNothing() {
+        Fixture fixture = teammateFixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)), true, Role.HUNTER);
+
+        fixture.locks().handleLeftClick(fixture.player());
+        fixture.locks().handleLeftClick(fixture.player());
+        fixture.locks().handleLeftClick(fixture.player());
+
+        verify(fixture.renderer(), times(3)).accept(fixture.player());
+        verify(fixture.messages(), times(2)).message(eq(fixture.player()),
+                eq("compass.locked-chat"), any());
+    }
+
+    @Test
+    void teammateToggleChatsOnAndOff() {
+        Fixture fixture = teammateFixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)), true, Role.HUNTER);
+
+        fixture.locks().handleShiftLeft(fixture.player());
+        fixture.locks().handleShiftLeft(fixture.player());
+
+        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.teammate-on-chat");
+        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.teammate-off-chat");
+    }
+
+    @Test
+    void compassChatDisabledStaysSilent() {
+        List<CompassCandidate> opponents = List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0));
+        Fixture fixture = teammateFixture(opponents, true, Role.HUNTER, 0.0, false);
+
+        fixture.locks().handleLeftClick(fixture.player());
+        fixture.locks().handleShiftLeft(fixture.player());
+
+        verify(fixture.messages(), never()).message(eq(fixture.player()),
+                eq("compass.locked-chat"), any());
+        verify(fixture.messages(), never())
+                .message(fixture.player(), "compass.teammate-on-chat");
+        verify(fixture.messages(), never())
+                .message(fixture.player(), "compass.teammate-off-chat");
+    }
+
+    @Test
+    void lockedTargetDeathClearsAndChatsOnce() {
+        UUID locked = UUID.randomUUID();
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(locked, "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
+        fixture.locks().handleLeftClick(fixture.player());
+
+        fixture.locks().clearLocksOnTargetDeath(locked, id -> fixture.player());
+        fixture.locks().clearLocksOnTargetDeath(locked, id -> fixture.player());
+
+        verify(fixture.messages(), times(1))
+                .message(fixture.player(), "compass.locked-target-died-chat");
+        assertFalse(fixture.locks().narrowToLock(fixture.player().getUniqueId(),
+                List.of(new CompassCandidate(locked, "a", 10.0, 10.0)), List.of()).locked());
+    }
+
+    @Test
+    void lockedTargetDeathOfflineHolderSkipsChat() {
+        UUID locked = UUID.randomUUID();
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(locked, "a", 10.0, 10.0),
+                new CompassCandidate(UUID.randomUUID(), "b", 20.0, 20.0)));
+        fixture.locks().handleLeftClick(fixture.player());
+
+        fixture.locks().clearLocksOnTargetDeath(locked, id -> null);
+
+        verify(fixture.messages(), never())
+                .message(any(Player.class), eq("compass.locked-target-died-chat"));
+        assertFalse(fixture.locks().narrowToLock(fixture.player().getUniqueId(),
+                List.of(new CompassCandidate(locked, "a", 10.0, 10.0)), List.of()).locked());
+    }
+
+    @Test
     void shiftLeftTogglesBetweenEnemiesAndTeammates() {
         Fixture fixture = teammateFixture(List.of(
                 new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)), true, Role.HUNTER);
@@ -312,7 +404,7 @@ class CompassLockServiceTest {
     private record Fixture(CompassLockService locks, Player player, Consumer<Player> refresher,
             Consumer<Player> renderer, GameManager game, SoundService sounds,
             FakeSpectatorService fakes, MessageService messages, CompassTargetService targets,
-            Map<UUID, Long> sharedClicks) {
+            Map<UUID, Long> sharedClicks, PlayerStateStore players) {
     }
 
     @SuppressWarnings("unchecked")
@@ -355,22 +447,30 @@ class CompassLockServiceTest {
                 new CompassCache(), sharedClicks);
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
-                messages, targets, sharedClicks);
+                messages, targets, sharedClicks, playerStates);
     }
 
     @SuppressWarnings("unchecked")
     private static Fixture teammateFixture(List<CompassCandidate> opponents,
             boolean teammatesEnabled, Role role) {
-        return teammateFixture(opponents, teammatesEnabled, role, 0.0);
+        return teammateFixture(opponents, teammatesEnabled, role, 0.0, true);
     }
 
     @SuppressWarnings("unchecked")
     private static Fixture teammateFixture(List<CompassCandidate> opponents,
             boolean teammatesEnabled, Role role, double switchCooldown) {
+        return teammateFixture(opponents, teammatesEnabled, role, switchCooldown, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Fixture teammateFixture(List<CompassCandidate> opponents,
+            boolean teammatesEnabled, Role role, double switchCooldown, boolean chatEnabled) {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "settings.compass.left-click.enabled", true);
+        ConfigPathMapper.set(root, "settings.compass.left-click.scroll-cooldown", 0.0);
         ConfigPathMapper.set(root, "settings.compass.teammates.enabled", teammatesEnabled);
         ConfigPathMapper.set(root, "settings.compass.teammates.switch-cooldown", switchCooldown);
+        ConfigPathMapper.set(root, "settings.compass.chat-messages.enabled", chatEnabled);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
@@ -406,6 +506,6 @@ class CompassLockServiceTest {
                 new CompassCache(), sharedClicks);
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
-                messages, targets, sharedClicks);
+                messages, targets, sharedClicks, playerStates);
     }
 }

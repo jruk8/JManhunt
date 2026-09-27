@@ -138,6 +138,11 @@ public final class CompassManager {
         locks.reconcileTeammateModes(instance);
     }
 
+    /** Clears every manual lock on a dead target, notifying holders when enabled. */
+    public void clearLocksOnTargetDeath(UUID victimId) {
+        locks.clearLocksOnTargetDeath(victimId, Bukkit::getPlayer);
+    }
+
     /**
      * Immediate compass refresh for one match's holders, bypassing the
      * automatic interval: deaths must move needles at once, not on the
