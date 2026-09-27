@@ -10,7 +10,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 /** Spectator toolbar clicks, lock breaks, crash recovery, and item guards. */
 public final class SpectatorToolbarListener implements Listener {
     private final SpectatorToolbarService toolbar;
@@ -52,12 +52,9 @@ public final class SpectatorToolbarListener implements Listener {
         }
     }
 
-    @EventHandler public void onMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        if (toolbar.lockedTarget(player.getUniqueId()) != null
-                && SpectatorToolbarService.changedBlock(
-                        event.getFrom(), event.getTo())) {
-            toolbar.clearLock(player.getUniqueId());
+    @EventHandler public void onSneak(PlayerToggleSneakEvent event) {
+        if (event.isSneaking()) {
+            toolbar.exitFollow(event.getPlayer());
         }
     }
 

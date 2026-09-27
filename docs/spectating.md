@@ -1,9 +1,9 @@
 # Spectating
 
 JManhunt never puts spectators into vanilla spectator gamemode. Instead,
-the `spectator` role (plus headstart holds, death watches, and respawn
-waits) activates fake spectator mode: adventure gamemode with flight,
-terrain collision, and full invisibility to other players.
+joining a match as a `spectator` (plus headstart holds, death watches,
+and respawn waits) activates fake spectator mode: adventure gamemode
+with flight, terrain collision, and full invisibility to other players.
 
 ## What fake spectator mode does
 
@@ -20,6 +20,7 @@ While active, the following are cancelled for the spectator:
 - Block placing and breaking.
 - Block clicks and physical triggers (doors, buttons, pressure plates).
 - Dealing damage, by melee or by projectile.
+- Picking up items from the ground.
 
 Hotbar items stay usable through right-click air, since the player is in
 adventure gamemode rather than true spectator.
@@ -28,12 +29,14 @@ adventure gamemode rather than true spectator.
 
 Being a spectator and being in fake spectator mode are two different
 things. The role is an assignment (`spectator` in the role list); the
-mode is the transient flight-and-hidden state. Most of the time they
-move together: setting the role to `spectator` enables the mode, and
-leaving the role disables it. But the mode also covers players who keep
-a participant role while held or watching (headstart holds, death cam,
-respawn waits), and `NONE` players put into spectator mode by the
-`turn-nones-spectator` toggle have the mode without the role.
+mode is the transient flight-and-hidden state. Setting the role alone
+never enters the mode: only actually joining a match as a spectator
+(or a held or watching state) does. Leaving the `spectator` role
+exits the mode, but only for players who have it. The mode also
+covers players who keep a participant role while held or watching
+(headstart holds, death cam, respawn waits), and `NONE` players put
+into spectator mode by the `turn-nones-spectator` toggle have the
+mode without the role.
 
 ## Safety guarantees
 
@@ -87,14 +90,17 @@ the default.
 - `p` opens the player browser: heads of online speedrunners and
   hunters in the spectator's match (or lobby, when outside matches),
   each described by its role in that role's color. Clicking a head
-  teleports to that player and locks on. The locked player's head
-  glows.
+  plays a click, chats a spectate confirmation, teleports to that
+  player, and locks on. The locked player's head glows.
 
 ### Lock-on
 
 `settings.players.spectator.toolbar.lock-on` (default `true`) follows
 the teleported-to player: every 5 ticks, a locked spectator farther
 than `tp-distance` (default 25 blocks, minimum 1) is teleported back
-to the target. Any manual movement breaks the lock, as does the target
-going offline, dying into a respawn wait, changing role, or leaving
-the match. With lock-on disabled, teleports never follow.
+to the target, and the actionbar shows who is followed. Moving around
+never breaks the lock; shifting exits the follow with a chat message
+and a neutral sound. The target going offline, dying, changing role,
+or leaving the match also exits the follow with feedback. With
+lock-on disabled, teleports still confirm in chat but never follow,
+so the actionbar stays empty.

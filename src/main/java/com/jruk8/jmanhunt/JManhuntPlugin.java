@@ -362,7 +362,7 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     /** Creates the spectator toolbar and registers its listener. */
     private void setupSpectatorToolbar() {
-        spectatorToolbar = new SpectatorToolbarService(overrideService, messages, playerStates,
+        spectatorToolbar = new SpectatorToolbarService(overrideService, messages, sounds, playerStates,
                 fakeSpectators, game, lobbyService, new NamespacedKey(this, "spectator_toolbar"));
         SpectatorMenus menus = new SpectatorMenus(messages, guiService, spectatorToolbar);
         getServer().getPluginManager().registerEvents(

@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.player;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -19,6 +20,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -73,6 +75,18 @@ class FakeSpectatorListenerTest {
     }
 
     @Test
+    void joinNeverEnablesSpectatorRoleOutsideMatch() {
+        Fixture fixture = fixture();
+        when(fixture.players().role(fixture.player())).thenReturn(Role.SPECTATOR);
+        when(fixture.game().instanceOf(fixture.player().getUniqueId()))
+                .thenReturn(Optional.empty());
+
+        listener(fixture).onJoin(new PlayerJoinEvent(fixture.player(), ""));
+
+        verify(fixture.fakes(), never()).enable(any(Player.class));
+    }
+
+    @Test
     void quitDisables() {
         Fixture fixture = fixture();
 
@@ -119,6 +133,29 @@ class FakeSpectatorListenerTest {
         listener(fixture).onDamage(damage);
 
         verify(damage, never()).setCancelled(true);
+    }
+
+    @Test
+    void cancelsPickupForFakes() {
+        Fixture fixture = fixture();
+        fake(fixture);
+        EntityPickupItemEvent pickup = new EntityPickupItemEvent(fixture.player(),
+                mock(org.bukkit.entity.Item.class), 1);
+
+        listener(fixture).onPickup(pickup);
+
+        assertTrue(pickup.isCancelled());
+    }
+
+    @Test
+    void allowsPickupForNonFakes() {
+        Fixture fixture = fixture();
+        EntityPickupItemEvent pickup = new EntityPickupItemEvent(fixture.player(),
+                mock(org.bukkit.entity.Item.class), 1);
+
+        listener(fixture).onPickup(pickup);
+
+        assertFalse(pickup.isCancelled());
     }
 
     @Test

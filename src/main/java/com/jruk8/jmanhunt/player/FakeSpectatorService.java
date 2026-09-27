@@ -17,9 +17,10 @@ import org.bukkit.plugin.Plugin;
  * hidden from other players. This keeps terrain collision (noclip is a
  * vanilla spectator property, not a flight property) while hiding held
  * items and armor client-side. Role-spectator and fake-spectator-mode
- * are not the same thing: entering the SPECTATOR role enables this
- * mode, but death waits, headstart holds, and NONE watchers also use
- * it with other roles.
+ * are not the same thing: queuing as a spectator never enters this
+ * mode by itself. Only explicit join and watch paths enable it;
+ * death waits, headstart holds, and NONE watchers also use it with
+ * other roles.
  *
  * <p>State is memory only: a crash or restart always starts clean, and
  * quit plus join handlers reset any dangling flight.
@@ -139,26 +140,22 @@ public final class FakeSpectatorService {
     }
 
     private void onRoleChange(UUID playerId, Role from, Role to) {
-        if (to != Role.SPECTATOR && from != Role.SPECTATOR) {
+        // Queuing as a spectator never enters fake mode by itself: only
+        // explicit join and watch paths enable it. Leaving the role
+        // unwinds fake mode, but only for players who actually have it.
+        if (to == Role.SPECTATOR || from != Role.SPECTATOR) {
             return;
         }
-        Player player = null;
+        if (!isFakeSpectator(playerId)) {
+            actives.remove(playerId);
+            return;
+        }
         for (Player online : onlinePlayers.get()) {
             if (online.getUniqueId().equals(playerId)) {
-                player = online;
-                break;
+                disable(online);
+                return;
             }
         }
-        if (player == null) {
-            if (from == Role.SPECTATOR) {
-                actives.remove(playerId);
-            }
-            return;
-        }
-        if (to == Role.SPECTATOR) {
-            enable(player);
-        } else {
-            disable(player);
-        }
+        actives.remove(playerId);
     }
 }

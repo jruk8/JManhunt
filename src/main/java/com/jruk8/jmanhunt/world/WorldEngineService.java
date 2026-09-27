@@ -145,14 +145,13 @@ public final class WorldEngineService implements SettingsListener {
             player.teleport(lobby);
             player.setRespawnLocation(lobby, true);
         }
-        // Spectators placed at the cell center at match start return to the
-        // lobby with everyone else. When NONE spectator handling is disabled
-        // they were never moved, so they are left alone.
-        if (configService.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
-            for (Player spectator : spectators) {
-                spectator.teleport(lobby);
-                spectator.setRespawnLocation(lobby, true);
-            }
+        // In-game spectators return to the lobby with everyone else,
+        // exactly like speedrunners and hunters. Fake mode and toolbar
+        // locks unwind through the mode listener when teardown disables
+        // them just before this runs.
+        for (Player spectator : spectators) {
+            spectator.teleport(lobby);
+            spectator.setRespawnLocation(lobby, true);
         }
         borders.clearWorldBorder(lobby.getWorld());
     }

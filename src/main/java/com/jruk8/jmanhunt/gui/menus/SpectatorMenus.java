@@ -2,12 +2,17 @@ package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
+import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
-import com.jruk8.jmanhunt.gui.ScrollList;
+import com.jruk8.jmanhunt.gui.MenuLayout;
+import com.jruk8.jmanhunt.gui.PagedList;
+import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.SpectatorToolbarService;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -33,9 +38,7 @@ public final class SpectatorMenus {
             messages.message(spectator, "spectator.no-matches");
             return;
         }
-        gui.open(spectator, ScrollList.menu(
-                GuiTexts.title(messages, text("lobbies-title", "Running Matches")),
-                () -> lobbyButtons(spectator), null, gui, messages));
+        gui.open(spectator, lobbiesMenu(spectator));
     }
 
     /** Opens the player browser, or says so when nobody qualifies. */
@@ -45,9 +48,33 @@ public final class SpectatorMenus {
             messages.message(spectator, "spectator.no-players");
             return;
         }
-        gui.open(spectator, ScrollList.menu(
-                GuiTexts.title(messages, text("players-title", "Spectate Player")),
-                () -> playerButtons(spectator), null, gui, messages));
+        gui.open(spectator, playersMenu(spectator));
+    }
+
+    /** Browse Matches: the shared modifiers-pattern scrollable list. */
+    Menu lobbiesMenu(Player spectator) {
+        return PagedList.menu(
+                GuiTexts.title(messages, text("lobbies-title", "Running Matches")),
+                columns -> lobbyButtons(spectator), null, gui,
+                GuiTexts.name(messages, text("scroll-up", "Scroll up"), "Scroll up"),
+                GuiTexts.name(messages, text("scroll-down", "Scroll down"), "Scroll down"),
+                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                self -> PagedList.Chrome.none());
+    }
+
+    /** Spectate Player: a scaling menu like the settings drills. */
+    Menu playersMenu(Player spectator) {
+        Supplier<List<MenuButton>> content = () -> playerButtons(spectator);
+        MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(content.get().size()));
+        final Menu[] self = new Menu[1];
+        self[0] = new Menu(GuiTexts.title(messages, text("players-title", "Spectate Player")),
+                layout, () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
+                        new MenuButton(Material.PAPER,
+                                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                                null, false, false,
+                                player -> gui.back(player, self[0]))),
+                content::get, null);
+        return self[0];
     }
 
     private List<MenuButton> lobbyButtons(Player spectator) {

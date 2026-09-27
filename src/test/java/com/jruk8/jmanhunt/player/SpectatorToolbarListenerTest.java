@@ -11,8 +11,6 @@ import static org.mockito.Mockito.when;
 import com.jruk8.jmanhunt.gui.menus.SpectatorMenus;
 import java.util.Optional;
 import java.util.UUID;
-import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
@@ -22,7 +20,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
@@ -112,21 +110,21 @@ class SpectatorToolbarListenerTest {
     }
 
     @Test
-    void blockMoveBreaksLock() {
+    void sneakExitsFollow() {
         Fixture fixture = fixture();
-        UUID target = UUID.randomUUID();
-        when(fixture.toolbar().lockedTarget(fixture.player().getUniqueId()))
-                .thenReturn(target);
-        World world = mock(World.class);
-        PlayerMoveEvent moved = new PlayerMoveEvent(fixture.player(),
-                new Location(world, 0.5, 64.0, 0.5), new Location(world, 1.5, 64.0, 0.5));
-        PlayerMoveEvent turned = new PlayerMoveEvent(fixture.player(),
-                new Location(world, 0.5, 64.0, 0.5), new Location(world, 0.6, 64.0, 0.4));
 
-        fixture.listener().onMove(turned);
-        verify(fixture.toolbar(), never()).clearLock(any());
-        fixture.listener().onMove(moved);
-        verify(fixture.toolbar()).clearLock(fixture.player().getUniqueId());
+        fixture.listener().onSneak(new PlayerToggleSneakEvent(fixture.player(), true));
+
+        verify(fixture.toolbar()).exitFollow(fixture.player());
+    }
+
+    @Test
+    void unsneakLeavesFollowAlone() {
+        Fixture fixture = fixture();
+
+        fixture.listener().onSneak(new PlayerToggleSneakEvent(fixture.player(), false));
+
+        verify(fixture.toolbar(), never()).exitFollow(any());
     }
 
     @Test

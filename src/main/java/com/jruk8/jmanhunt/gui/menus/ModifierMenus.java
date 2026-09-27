@@ -6,7 +6,7 @@ import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
-import com.jruk8.jmanhunt.gui.MenuLayout;
+import com.jruk8.jmanhunt.gui.PagedList;
 import com.jruk8.jmanhunt.gui.TwinPanel;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
@@ -15,7 +15,6 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
@@ -162,29 +161,12 @@ public final class ModifierMenus {
     private Menu listMenu(String titleKey, Function<Integer, List<MenuButton>> content,
             Supplier<Menu> parent, Supplier<MenuButton> toggleAll,
             Function<Menu[], MenuButton> importButton, MenuButton create) {
-        MenuLayout layout = MenuLayout.parse(
-                "##xxxxxx#", "u#xxxxxx#", "b#xxxxxxt", "d#xxxxxx#", "##xxxxxx#");
-        final Menu[] self = new Menu[1];
-        self[0] = new Menu(GuiTexts.title(messages, text(titleKey, "Modifiers")),
-                layout, () -> listStatic(self, toggleAll, importButton, create),
-                () -> content.apply(layout.contentColumns()), parent);
-        return self[0];
-    }
-
-    private Map<Integer, MenuButton> listStatic(
-            Menu[] self, Supplier<MenuButton> toggleAll,
-            Function<Menu[], MenuButton> importButton, MenuButton create) {
-        Map<Integer, MenuButton> fixed = new HashMap<>();
-        fixed.put(8, create);
-        fixed.put(9, scrollButton(Material.ARROW, "scroll-up", "Scroll up", self, -1));
-        fixed.put(18, new MenuButton(Material.PAPER,
+        return PagedList.menu(GuiTexts.title(messages, text(titleKey, "Modifiers")), content,
+                parent, gui,
+                GuiTexts.name(messages, text("scroll-up", "Scroll up"), "Scroll up"),
+                GuiTexts.name(messages, text("scroll-down", "Scroll down"), "Scroll down"),
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
-                null, false, false,
-                player -> gui.back(player, self[0])));
-        fixed.put(26, toggleAll.get());
-        fixed.put(27, scrollButton(Material.ARROW, "scroll-down", "Scroll down", self, 1));
-        fixed.put(44, importButton.apply(self));
-        return fixed;
+                self -> new PagedList.Chrome(create, toggleAll.get(), importButton.apply(self)));
     }
 
     /** Bottom-right import loom: prompts for a share string, then refreshes. */
@@ -296,14 +278,6 @@ public final class ModifierMenus {
                 GuiTexts.name(messages, text(nameKey, fallback), fallback),
                 GuiTexts.lore(messages, loreText), false, false,
                 player -> gui.navigate(player, target.get()));
-    }
-
-    private MenuButton scrollButton(Material material, String nameKey, String fallback,
-            Menu[] self, int delta) {
-        return new MenuButton(material,
-                GuiTexts.name(messages, text(nameKey, fallback), fallback),
-                null, false, false,
-                player -> self[0].window().scrollLine(delta));
     }
 
     private List<MenuButton> modifierButtons(int columns, Player viewer,

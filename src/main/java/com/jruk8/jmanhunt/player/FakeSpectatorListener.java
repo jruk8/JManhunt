@@ -10,6 +10,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -57,6 +58,12 @@ public final class FakeSpectatorListener implements Listener {
 
     @EventHandler public void onTarget(EntityTargetEvent event) {
         if (event.getTarget() instanceof Player player && fakes.isFakeSpectator(player)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler public void onPickup(EntityPickupItemEvent event) {
+        if (event.getEntity() instanceof Player player && fakes.isFakeSpectator(player)) {
             event.setCancelled(true);
         }
     }

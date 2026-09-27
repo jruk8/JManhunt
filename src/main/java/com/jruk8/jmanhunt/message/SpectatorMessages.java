@@ -57,4 +57,22 @@ public class SpectatorMessages extends OkaeriConfig {
 
     @CustomKey("no-players")
     private String noPlayers = "{prefix}<yellow>No speedrunners or hunters to spectate right now.";
+
+    @CustomKey("now-spectating")
+    private String nowSpectating = "{prefix}<green>Now spectating [{role}<green>] <white>{player}";
+
+    @CustomKey("following-actionbar")
+    private String followingActionbar = "<gray>Following [{role}<gray>] <white>{player} <gray>• shift to exit";
+
+    @CustomKey("follow-exited")
+    private String followExited = "{prefix}<gray>Stopped following <white>{player}<gray>.";
+
+    @CustomKey("scroll-up")
+    private String scrollUp = "Scroll up";
+
+    @CustomKey("scroll-down")
+    private String scrollDown = "Scroll down";
+
+    @CustomKey("back")
+    private String back = "Back";
 }

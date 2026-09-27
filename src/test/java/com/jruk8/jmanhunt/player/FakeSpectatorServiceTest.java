@@ -146,24 +146,38 @@ class FakeSpectatorServiceTest {
     }
 
     @Test
-    void spectatorRoleEnablesOnlinePlayer() {
+    void spectatorRoleNeverEnablesFakeMode() {
         Fixture fixture = fixture();
 
         fixture.players().setRole(fixture.watched(), Role.SPECTATOR);
 
-        assertTrue(fixture.fakes().isFakeSpectator(fixture.watched()));
-        verify(fixture.watched()).setGameMode(GameMode.ADVENTURE);
+        assertFalse(fixture.fakes().isFakeSpectator(fixture.watched()));
+        verify(fixture.watched(), never()).setGameMode(GameMode.ADVENTURE);
+        verify(fixture.watched(), never()).setAllowFlight(true);
     }
 
     @Test
-    void leavingSpectatorRoleDisables() {
+    void leavingSpectatorRoleDisablesOnlyWhenFake() {
         Fixture fixture = fixture();
+        fixture.fakes().enable(fixture.watched());
         fixture.players().setRole(fixture.watched(), Role.SPECTATOR);
 
         fixture.players().setRole(fixture.watched(), Role.HUNTER);
 
         assertFalse(fixture.fakes().isFakeSpectator(fixture.watched()));
         verify(fixture.watched()).setGameMode(GameMode.SURVIVAL);
+    }
+
+    @Test
+    void leavingSpectatorRoleWithoutFakeTouchesNothing() {
+        Fixture fixture = fixture();
+        fixture.players().setRole(fixture.watched(), Role.SPECTATOR);
+
+        fixture.players().setRole(fixture.watched(), Role.HUNTER);
+
+        assertFalse(fixture.fakes().isFakeSpectator(fixture.watched()));
+        verify(fixture.watched(), never()).setGameMode(GameMode.SURVIVAL);
+        verify(fixture.watched(), never()).setAllowFlight(false);
     }
 
     @Test
@@ -199,6 +213,7 @@ class FakeSpectatorServiceTest {
         List<Player> online = new ArrayList<>(List.of(watched));
         FakeSpectatorService fakes = new FakeSpectatorService(plugin, players, () -> online);
         players.setRole(watched, Role.SPECTATOR);
+        fakes.enable(watched);
         assertTrue(fakes.isFakeSpectator(watchedId));
         online.clear();
 

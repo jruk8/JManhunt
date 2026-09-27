@@ -10,12 +10,11 @@ import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SoundService;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
-import org.bukkit.World;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -27,7 +26,7 @@ class SpectatorToolbarServiceTest {
 
     private SpectatorToolbarService toolbar(NamespacedKey key) {
         return new SpectatorToolbarService(mock(OverrideService.class),
-                mock(MessageService.class), new PlayerStateStore(),
+                mock(MessageService.class), mock(SoundService.class), new PlayerStateStore(),
                 mock(FakeSpectatorService.class), mock(GameManager.class),
                 mock(LobbyService.class), key);
     }
@@ -129,23 +128,6 @@ class SpectatorToolbarServiceTest {
 
         assertEquals(Optional.of(id),
                 SpectatorToolbarService.pickTeleportTarget(candidates));
-    }
-
-    @Test
-    void changedBlockDetectsBlockMovesOnly() {
-        World world = mock(World.class);
-        Location from = new Location(world, 1.2, 64.0, 3.9);
-
-        assertFalse(SpectatorToolbarService.changedBlock(from,
-                new Location(world, 1.8, 64.9, 3.1)));
-        assertTrue(SpectatorToolbarService.changedBlock(from,
-                new Location(world, 2.0, 64.0, 3.9)));
-        assertTrue(SpectatorToolbarService.changedBlock(from,
-                new Location(world, 1.2, 65.0, 3.9)));
-        assertTrue(SpectatorToolbarService.changedBlock(from,
-                new Location(mock(World.class), 1.2, 64.0, 3.9)));
-        assertFalse(SpectatorToolbarService.changedBlock(from, null));
-        assertFalse(SpectatorToolbarService.changedBlock(null, from));
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SoundService;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -83,6 +84,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
 
     private final OverrideService overrides;
     private final MessageService messages;
+    private final SoundService sounds;
     private final PlayerStateStore playerStates;
     private final FakeSpectatorService fakes;
     private final GameManager game;
@@ -92,10 +94,11 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     private final Map<UUID, UUID> locks = new HashMap<>();
 
     public SpectatorToolbarService(OverrideService overrides, MessageService messages,
-            PlayerStateStore playerStates, FakeSpectatorService fakes, GameManager game,
-            LobbyService lobbies, NamespacedKey toolbarKey) {
+            SoundService sounds, PlayerStateStore playerStates, FakeSpectatorService fakes,
+            GameManager game, LobbyService lobbies, NamespacedKey toolbarKey) {
         this.overrides = overrides;
         this.messages = messages;
+        this.sounds = sounds;
         this.playerStates = playerStates;
         this.fakes = fakes;
         this.game = game;
@@ -152,23 +155,6 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
                         .map(SpectateCandidate::id).findFirst());
     }
 
-    /**
-     * True when the move crossed a block boundary (or worlds). Pure for
-     * tests.
-     */
-    public static boolean changedBlock(Location from, Location to) {
-        if (from == null || to == null) {
-            return false;
-        }
-        if (from.getWorld() == null || to.getWorld() == null
-                || !from.getWorld().equals(to.getWorld())) {
-            return true;
-        }
-        return from.getBlockX() != to.getBlockX()
-                || from.getBlockY() != to.getBlockY()
-                || from.getBlockZ() != to.getBlockZ();
-    }
-
     @Override
     public void onModeChange(Player player, boolean enabled) {
         if (enabled) {
@@ -222,6 +208,23 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         locks.remove(spectatorId);
     }
 
+    /**
+     * Exits lock-on follow with chat feedback and a neutral sound, and
+     * clears the follow actionbar. False when not following anyone.
+     */
+    public boolean exitFollow(Player spectator) {
+        UUID targetId = locks.remove(spectator.getUniqueId());
+        if (targetId == null) {
+            return false;
+        }
+        Player target = Bukkit.getPlayer(targetId);
+        String name = target != null ? target.getName() : playerStates.playerName(targetId);
+        messages.message(spectator, "spectator.follow-exited", Map.of("player", name));
+        sounds.playNeutralSound(spectator);
+        spectator.sendActionBar(Component.empty());
+        return true;
+    }
+
     /** Locked target of the spectator, or null when none. */
     public UUID lockedTarget(UUID spectatorId) {
         return locks.get(spectatorId);
@@ -248,8 +251,10 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     }
 
     /**
-     * Shared lock tick, every 5 ticks: drops dead locks and pulls locked
-     * spectators back within range of their target.
+     * Shared lock tick, every 5 ticks: pulls locked spectators back
+     * within range of their target and shows the follow actionbar.
+     * Dead, logged out, or otherwise invalid targets exit the follow
+     * with feedback; unloads and disabled lock-on drop silently.
      */
     public void tickLocks() {
         for (Map.Entry<UUID, UUID> entry : List.copyOf(locks.entrySet())) {
@@ -262,7 +267,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             UUID targetId = entry.getValue();
             Player target = Bukkit.getPlayer(targetId);
             if (target == null || !targetValid(candidateOf(target))) {
-                locks.remove(spectatorId);
+                exitFollow(spectator);
                 continue;
             }
             Location from = spectator.getLocation();
@@ -270,6 +275,9 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             if (!from.getWorld().equals(to.getWorld()) || from.distance(to) > tpDistance(spectator)) {
                 spectator.teleport(to);
             }
+            spectator.sendActionBar(messages.component("spectator.following-actionbar",
+                    Map.of("role", messages.roleName(playerStates.role(target)),
+                            "player", target.getName())));
         }
     }
 
@@ -325,6 +333,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             return false;
         }
         teleportToPriority(spectator, target.get());
+        clearLock(spectator.getUniqueId());
         spectator.closeInventory();
         return true;
     }
@@ -365,7 +374,11 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
                 .toList();
     }
 
-    /** Teleports to a player and locks on when lock-on applies. */
+    /**
+     * Teleports to a player and locks on when lock-on applies. Always
+     * chats the spectate confirmation; without a lock the follow
+     * actionbar stays empty since there is nothing to follow.
+     */
     public boolean teleportAndLock(Player spectator, UUID targetId) {
         Player target = Bukkit.getPlayer(targetId);
         if (target == null) {
@@ -378,6 +391,9 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         } else {
             locks.remove(spectator.getUniqueId());
         }
+        messages.message(spectator, "spectator.now-spectating",
+                Map.of("role", messages.roleName(playerStates.role(target)),
+                        "player", target.getName()));
         spectator.closeInventory();
         return true;
     }
