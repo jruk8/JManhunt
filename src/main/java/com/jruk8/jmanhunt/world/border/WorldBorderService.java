@@ -55,7 +55,7 @@ public final class WorldBorderService {
 
     /** Configured lobby world name, live-read so renames apply on reload. */
     private String lobbyWorldName() {
-        return configService.getString("world-engine.lobby-world-name", "jmh_lobby");
+        return configService.getString("advanced.lobbies.lobby-world-name", "jmh_lobby");
     }
 
     /**

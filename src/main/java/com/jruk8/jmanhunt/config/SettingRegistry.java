@@ -21,10 +21,10 @@ public final class SettingRegistry {
     private static final Map<String, SettingDescriptor> BY_PATH = build();
     private static final Set<String> NAMES = Set.copyOf(BY_PATH.keySet());
     private static final Set<String> LIST_PATHS = Set.of(
-            "match.end-statistics",
-            "settings.compass.analyze.debuffs.commands.player",
-            "settings.compass.analyze.debuffs.commands.speedrunner",
-            "settings.compass.analyze.debuffs.commands.hunter",
+            "advanced.advanced-match-controls.end-statistics",
+            "advanced.misc.analyze.debuffs.commands.player",
+            "advanced.misc.analyze.debuffs.commands.speedrunner",
+            "advanced.misc.analyze.debuffs.commands.hunter",
             "settings.compass.signal-interference.weather.interfere-during",
             "settings.compass.signal-interference.biome.interfere-in",
             "world-engine.preloading.commands",
@@ -420,8 +420,9 @@ public final class SettingRegistry {
         List<SettingDescriptor> entries = new ArrayList<>();
         addCoreEntries(entries);
         addStatisticsEntries(entries);
-        addMatchEntries(entries);
-        addLobbiesEntries(entries);
+        addAdvancedMatchControlsEntries(entries);
+        addAdvancedLobbiesEntries(entries);
+        addAdvancedMiscEntries(entries);
         addSettingsMatchEntries(entries);
         addWinConditionEntries(entries);
         addGameBoostsEntries(entries);
@@ -460,35 +461,52 @@ public final class SettingRegistry {
         entries.add(restart(intVal("statistics.pool-size", 4, 1, null)));
     }
 
-    private static void addMatchEntries(List<SettingDescriptor> entries) {
-        entries.add(bool("match.game-rules.enabled", true));
-        entries.add(bool("match.game-rules.rules.auto-set-gamemode", true));
-        entries.add(bool("match.game-rules.rules.reset-players-stats", true));
-        entries.add(bool("match.game-rules.rules.disable-locator-bar", true));
-        entries.add(bool("match.game-rules.rules.set-respawn-immediate", true));
-        entries.add(bool("match.game-rules.rules.set-daytime", true));
-        entries.add(bool("match.game-rules.rules.disable-phantoms", true));
-        entries.add(bool("match.game-rules.rules.disable-command-feedback", false));
-        entries.add(bool("match.game-rules.rules.disable-pillager-patrols", true));
-        entries.add(floatVal("match.end-delay", 10.0, null, null));
-        entries.add(floatMinusOne("match.start-reminder-interval", 10.0, 0.0));
-        entries.add(intVal("match.disconnect-handling.speedrunner.reconnect-grace-seconds", 60, null, null));
-        entries.add(intVal("match.disconnect-handling.speedrunner.max-strikes", 3, 1, null));
-        entries.add(intVal("match.disconnect-handling.hunter.reconnect-grace-seconds", 60, null, null));
-        entries.add(intVal("match.disconnect-handling.hunter.max-strikes", 3, 1, null));
+    private static void addAdvancedMatchControlsEntries(List<SettingDescriptor> entries) {
+        String root = "advanced.advanced-match-controls.";
+        entries.add(bool(root + "game-rules.enabled", true));
+        entries.add(bool(root + "game-rules.rules.auto-set-gamemode", true));
+        entries.add(bool(root + "game-rules.rules.reset-players-stats", true));
+        entries.add(bool(root + "game-rules.rules.disable-locator-bar", true));
+        entries.add(bool(root + "game-rules.rules.set-respawn-immediate", true));
+        entries.add(bool(root + "game-rules.rules.set-daytime", true));
+        entries.add(bool(root + "game-rules.rules.disable-phantoms", true));
+        entries.add(bool(root + "game-rules.rules.disable-command-feedback", false));
+        entries.add(bool(root + "game-rules.rules.disable-pillager-patrols", true));
+        entries.add(bool(root + "game-rules.rules.disable-wandering-trader", true));
+        entries.add(floatVal(root + "end-delay", 10.0, null, null));
+        entries.add(floatMinusOne(root + "start-reminder-interval", 30.0, 0.0));
+        entries.add(intVal(root + "disconnect-handling.speedrunner.reconnect-grace-seconds", 60, null, null));
+        entries.add(intVal(root + "disconnect-handling.speedrunner.max-strikes", 3, 1, null));
+        entries.add(intVal(root + "disconnect-handling.hunter.reconnect-grace-seconds", 60, null, null));
+        entries.add(intVal(root + "disconnect-handling.hunter.max-strikes", 3, 1, null));
     }
 
-    private static void addLobbiesEntries(List<SettingDescriptor> entries) {
-        entries.add(intVal("lobbies.default-lobby-id", 0, null, null));
-        entries.add(bool("lobbies.join-teleports-to-lobby", true));
-        entries.add(option("lobbies.announce-lobby-changes", "ALL", "ALL", "SELF", "MEMBERS", "NONE"));
-        entries.add(intVal("lobbies.bounds.exit-lobby-id", -1, null, null));
-        entries.add(option("lobbies.bounds.exit-behavior", "KEEP_IN_LOBBY",
+    private static void addAdvancedLobbiesEntries(List<SettingDescriptor> entries) {
+        String root = "advanced.lobbies.";
+        entries.add(intVal(root + "default-lobby-id", 0, null, null));
+        entries.add(bool(root + "join-teleports-to-lobby", true));
+        entries.add(option(root + "announce-lobby-changes", "ALL", "ALL", "SELF", "MEMBERS", "NONE"));
+        entries.add(intVal(root + "bounds.exit-lobby-id", -1, null, null));
+        entries.add(option(root + "bounds.exit-behavior", "KEEP_IN_LOBBY",
                 "KEEP_IN_LOBBY", "EXIT_LOBBY"));
-        entries.add(option("lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS",
+        entries.add(option(root + "mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS",
                 "HOLD", "JOIN_ANY", "JOIN_SPECTATORS", "SUBLOBBY", "SUBLOBBY_WITH_SPECTATORS"));
-        entries.add(intMinusOne("lobbies.queue-caps.speedrunner", -1, 1));
-        entries.add(intMinusOne("lobbies.queue-caps.hunter", -1, 1));
+        entries.add(intMinusOne(root + "queue-caps.speedrunner", -1, 1));
+        entries.add(intMinusOne(root + "queue-caps.hunter", -1, 1));
+        entries.add(string(root + "lobby-world-name", "jmh_lobby"));
+    }
+
+    private static void addAdvancedMiscEntries(List<SettingDescriptor> entries) {
+        String root = "advanced.misc.";
+        entries.add(bool(root + "interop.disable-worldedit-navwand", true));
+        entries.add(bool(root + "interop.validate-modifier-editor-commands", true));
+        entries.add(bool(root + "analyze.right-click", false));
+        entries.add(bool(root + "analyze.auto", false));
+        entries.add(floatVal(root + "analyze.delay-seconds", 1.0, 0.0, null));
+        entries.add(floatVal(root + "analyze.delay-deviation-seconds", 0.0, 0.0, null));
+        entries.add(floatVal(root + "analyze.sound-interval-seconds", 0.5, 0.05, 3.0));
+        entries.add(bool(root + "analyze.debuffs.enabled", true));
+        entries.add(bool(root + "debug.show-ids", false));
     }
 
     private static void addSettingsMatchEntries(List<SettingDescriptor> entries) {
@@ -558,12 +576,6 @@ public final class SettingRegistry {
         entries.add(bool("settings.compass.teammates.enabled", true));
         entries.add(floatVal("settings.compass.teammates.switch-cooldown", 0.5, 0.0, null));
         entries.add(bool("settings.compass.chat-messages.enabled", true));
-        entries.add(bool("settings.compass.analyze.right-click", false));
-        entries.add(bool("settings.compass.analyze.auto", false));
-        entries.add(floatVal("settings.compass.analyze.delay-seconds", 1.0, 0.0, null));
-        entries.add(floatVal("settings.compass.analyze.delay-deviation-seconds", 0.0, 0.0, null));
-        entries.add(floatVal("settings.compass.analyze.sound-interval-seconds", 0.5, 0.05, 3.0));
-        entries.add(bool("settings.compass.analyze.debuffs.enabled", true));
         entries.add(bool("settings.compass.hunter.min-distance.enabled", true));
         entries.add(floatVal("settings.compass.hunter.min-distance.distance", 25.0, 0.0, null));
         entries.add(bool("settings.compass.hunter.max-distance.enabled", true));
@@ -639,9 +651,6 @@ public final class SettingRegistry {
         entries.add(bool("settings.server.status.show-win-conditions", false));
         entries.add(bool("settings.server.status.show-elapsed-time", false));
         entries.add(bool("settings.server.status.show-modifiers", false));
-        entries.add(bool("settings.server.status.show-ids", false));
-        entries.add(bool("settings.server.advanced.disable-worldedit-navwand", true));
-        entries.add(bool("settings.server.advanced.validate-modifier-editor-commands", true));
         entries.add(bool("settings.server.team-chat.enabled", true));
         entries.add(bool("settings.server.team-chat.spectators-see", true));
     }
@@ -649,7 +658,6 @@ public final class SettingRegistry {
     private static void addWorldEngineEntries(List<SettingDescriptor> entries) {
         entries.add(restart(bool("world-engine.enabled", false)));
         entries.add(string("world-engine.world-name", "world"));
-        entries.add(string("world-engine.lobby-world-name", "jmh_lobby"));
 
         entries.add(string("world-engine.lobby-presets.EMPTY.schematic", "empty-lobby"));
         entries.add(string("world-engine.lobby-presets.DEFAULT.schematic", "default-lobby"));

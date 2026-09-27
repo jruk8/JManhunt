@@ -151,9 +151,9 @@ public final class PlayerConnectionListener implements Listener {
             return;
         }
         String roleKey = role == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
-        int maxStrikes = config.getInt("match.disconnect-handling." + roleKey + ".max-strikes", 3);
-        int graceSeconds = Math.max(0,
-                config.getInt("match.disconnect-handling." + roleKey + ".reconnect-grace-seconds", 60));
+        String handling = "advanced.advanced-match-controls.disconnect-handling." + roleKey + ".";
+        int maxStrikes = config.getInt(handling + "max-strikes", 3);
+        int graceSeconds = Math.max(0, config.getInt(handling + "reconnect-grace-seconds", 60));
         DisconnectDecision decision =
                 disconnects.registerDisconnect(player.getUniqueId(), matchId, maxStrikes);
         cancelDisconnectTask(disconnectTasks, player.getUniqueId());

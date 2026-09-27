@@ -14,6 +14,7 @@ import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
+import org.bukkit.GameRule;
 import org.bukkit.GameRules;
 import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
@@ -557,12 +558,20 @@ public final class GameStateCommandManager {
         return (phase.equals("end") && lastMatch) || !toggleEnabled;
     }
 
+    /** Pauses a spawn gamerule while a match runs, restoring it after. */
+    private void applySpawnGamerule(List<World> worlds, String phase, int lobbyId,
+            boolean lastMatch, String togglePath, GameRule<Boolean> rule) {
+        boolean disabled = plugin.overrides().getBoolean(lobbyId, togglePath, false);
+        worlds.forEach(world -> world.setGameRule(rule,
+                gameruleRestored(phase, lastMatch, disabled)));
+    }
+
     private void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
                             boolean lastMatch) {
-        if (!plugin.overrides().getBoolean(lobbyId, "match.game-rules.enabled", true)) {
+        if (!plugin.overrides().getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
             return;
         }
-        String path = "match.game-rules.rules.";
+        String path = "advanced.advanced-match-controls.game-rules.rules.";
         if (plugin.overrides().getBoolean(lobbyId, path + "reset-players-stats", false)) {
             participants.forEach(this::resetPlayer);
         }
@@ -592,12 +601,12 @@ public final class GameStateCommandManager {
         // This is the native gamerule equivalent of the old spectator chunk
         // generation toggle and avoids lag from spectators exploring.
         worlds.forEach(world -> world.setGameRule(GameRules.SPECTATORS_GENERATE_CHUNKS, false));
-        // Pillager patrols never spawn while a match runs; restored when the
-        // last match ends.
-        boolean disablePatrols =
-                plugin.overrides().getBoolean(lobbyId, path + "disable-pillager-patrols", false);
-        worlds.forEach(world -> world.setGameRule(GameRules.SPAWN_PATROLS,
-                gameruleRestored(phase, lastMatch, disablePatrols)));
+        // Pillager patrols never spawn while a match runs; restored when the last match ends.
+        applySpawnGamerule(worlds, phase, lobbyId, lastMatch,
+                path + "disable-pillager-patrols", GameRules.SPAWN_PATROLS);
+        // Wandering traders never spawn while a match runs; restored when the last match ends.
+        applySpawnGamerule(worlds, phase, lobbyId, lastMatch,
+                path + "disable-wandering-trader", GameRules.SPAWN_WANDERING_TRADERS);
         if (plugin.overrides().getBoolean(lobbyId, path + "set-daytime", false)) {
             Bukkit.getWorlds().forEach(this::setDaytime);
         }

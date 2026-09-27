@@ -117,6 +117,12 @@ public class ManhuntGuiMessages extends OkaeriConfig {
     @CustomKey("title-category")
     private String titleCategory = "{name} Settings";
 
+    @CustomKey("title-settings-general")
+    private String titleSettingsGeneral = "General Settings";
+
+    @CustomKey("title-settings-advanced")
+    private String titleSettingsAdvanced = "Advanced Settings";
+
     @CustomKey("to-support")
     private String toSupport = "<#de7766>Need Help?";
 
@@ -127,7 +133,19 @@ public class ManhuntGuiMessages extends OkaeriConfig {
     private String toSettings = "Settings";
 
     @CustomKey("to-settings-lore")
-    private String toSettingsLore = "Match, Compass, Players, Server";
+    private String toSettingsLore = "General, Advanced";
+
+    @CustomKey("to-general")
+    private String toGeneral = "General Settings";
+
+    @CustomKey("to-general-lore")
+    private String toGeneralLore = "Match, Compass, Players, Server";
+
+    @CustomKey("to-advanced")
+    private String toAdvanced = "Advanced Settings";
+
+    @CustomKey("to-advanced-lore")
+    private String toAdvancedLore = "Match Controls, World Engine, Lobbies, Misc";
 
     @CustomKey("to-history")
     private String toHistory = "History";

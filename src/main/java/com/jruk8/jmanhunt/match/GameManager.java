@@ -349,7 +349,7 @@ public final class GameManager implements MatchControl {
 
     /**
      * Ends one match. When {@code immediate} is true the configured
-     * {@code match.end-delay} is skipped: statistics post instantly and the
+     * {@code advanced.advanced-match-controls.end-delay} is skipped: statistics post instantly and the
      * final cleanup runs at once instead of after the delay.
      */
     public void finish(GameInstance instance, Role winner, boolean immediate) {

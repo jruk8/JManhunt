@@ -140,7 +140,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,
                 plugin.guiService(), modifiersCmd, dialogs, modifierDialogs,
                 () -> config.getBoolean(
-                        "settings.server.advanced.validate-modifier-editor-commands", true),
+                        "advanced.misc.interop.validate-modifier-editor-commands", true),
                 plugin.overrides(), feedback);
         this.menus = new ManhuntMenus(config, plugin.overrides(), plugin.guiConfig(),
                 messages, sounds, plugin.guiService(), dialogs, feedback, plugin.stats(),
@@ -403,7 +403,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Optional lobby/game tag (L1, L1-0|G2 when sublobbed), on by default. */
     private void sendIdLine(CommandSender sender, String value) {
-        if (!config.getBoolean("settings.server.status.show-ids", true)) {
+        if (!config.getBoolean("advanced.misc.debug.show-ids", true)) {
             return;
         }
         message(sender, "manhunt.status-ids", Map.of("value", value));
@@ -739,7 +739,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return;
         }
         MidMatchPolicy policy = MidMatchPolicy.parse(
-                config.getString("lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
+                config.getString("advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
         GameInstance target = targetLobby.map(lobby ->
                 game.midMatchJoinTarget(policy, lobby.id(), live, role)).orElse(live);
         if (policy.joinsMidMatch(role)
@@ -1034,7 +1034,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             sounds.playNeutralSound(player);
         }
         if (!moved.isEmpty() && !noTeleport
-                && config.getBoolean("lobbies.join-teleports-to-lobby", true)) {
+                && config.getBoolean("advanced.lobbies.join-teleports-to-lobby", true)) {
             teleportJoinersToLobby(sender, moved, lobbyId);
         }
         if (!moved.isEmpty()) {
@@ -1122,7 +1122,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     /** Configured queue cap for a participant role, -1 when uncapped. */
     private int capFor(Role role) {
         return config.getInt(
-                "lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1);
+                "advanced.lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1);
     }
 
     private boolean start(CommandSender sender, String[] args) {

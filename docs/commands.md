@@ -57,7 +57,7 @@ only pick roles they have the permission for.
 
 `setplayer` assigns directly while the target's lobby has no running
 match. With a live match and the world engine on,
-`lobbies.mid-match-setplayer` decides what happens instead (see
+`advanced.lobbies.mid-match-setplayer` decides what happens instead (see
 [Mid-match Setplayer](multi-instance.md#mid-match-setplayer)); with the
 engine off the in-match block stays and `/manhunt game join` plus
 `/manhunt game leave` are the mid-match tools (`-force` never bypasses
@@ -115,7 +115,7 @@ into a lobby (default role `none`) and teleports them to it unless `-notp`
 is passed, honoring the per-role queue caps unless `-f` (`-force`) is
 passed. Joining or leaving a positive lobby prints join and leave lines
 to the moved player and that lobby's members; lobby 0 moves stay silent.
-`lobbies.announce-lobby-changes` (`ALL`, `SELF`, `MEMBERS`, `NONE`) trims
+`advanced.lobbies.announce-lobby-changes` (`ALL`, `SELF`, `MEMBERS`, `NONE`) trims
 who hears those lines. `/manhunt lobby leave [selector]` removes players
 from whatever lobby they are in. Re-joining the same lobby with the same
 role is refused with a notice. Multiple lobbies need the world engine;
@@ -158,11 +158,12 @@ queue. `/manhunt status [id|all]` needs `jmanhunt.command.status.other` on
 top of the base node: an id shows one match roster grouped by role with a
 spectator roll call whenever someone is watching, while `all` lists every
 running match first and then every lobby holding at least one player with
-its player count. Four extras can be toggled under `settings.status`: the
-per-side win conditions (`show-win-conditions`), the running time
-(`show-elapsed-time`), the enabled modifiers (`show-modifiers`, hidden when
-none are enabled, listed by configured display name), and a gray
-`L{lobby}|G{game}` tag (`show-ids`, on by default).
+its player count. Four extras can be toggled: three under
+`settings.server.status` (the per-side win conditions
+(`show-win-conditions`), the running time (`show-elapsed-time`), and the
+enabled modifiers (`show-modifiers`, hidden when none are enabled, listed
+by configured display name)), and a gray `L{lobby}|G{game}` tag
+(`advanced.misc.debug.show-ids`, on by default).
 
 ## Lobby and Game Worlds
 

@@ -165,7 +165,7 @@ class GameStateCommandManagerTest {
                 "missing test resource: config.yml")) {
             YamlConfiguration config = YamlConfiguration.loadConfiguration(
                     new InputStreamReader(stream, StandardCharsets.UTF_8));
-            assertTrue(config.getBoolean("match.game-rules.rules.disable-pillager-patrols"));
+            assertTrue(config.getBoolean("advanced.advanced-match-controls.game-rules.rules.disable-pillager-patrols"));
         }
     }
 }

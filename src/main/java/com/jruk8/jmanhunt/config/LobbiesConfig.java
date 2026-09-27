@@ -74,6 +74,16 @@ public class LobbiesConfig extends OkaeriConfig {
     })
     private QueueCaps queueCaps = new QueueCaps();
 
+    @CustomKey("lobby-world-name")
+    @Comment({
+            "Name of the lobby world used by /manhunt worldengine tpto lobbyworld.",
+            "When no world with this name exists, the plugin generates a void world",
+            "filled by the tpto preset (DEFAULT unless the command names one).",
+            "Point this at your own world to use it instead.",
+            "Default: jmh_lobby"
+    })
+    private String lobbyWorldName = "jmh_lobby";
+
     public int getDefaultLobbyId() {
         return defaultLobbyId;
     }
@@ -120,6 +130,14 @@ public class LobbiesConfig extends OkaeriConfig {
 
     public void setQueueCaps(QueueCaps queueCaps) {
         this.queueCaps = queueCaps;
+    }
+
+    public String getLobbyWorldName() {
+        return lobbyWorldName;
+    }
+
+    public void setLobbyWorldName(String lobbyWorldName) {
+        this.lobbyWorldName = lobbyWorldName;
     }
 
     /** Lobby bounds exit routing. */

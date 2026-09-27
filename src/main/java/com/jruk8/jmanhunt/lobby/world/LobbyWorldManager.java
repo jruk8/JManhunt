@@ -53,7 +53,7 @@ public final class LobbyWorldManager {
 
     /** Configured lobby world name, live-read so renames apply on reload. */
     public String lobbyWorldName() {
-        return plugin.configService().getString("world-engine.lobby-world-name", "jmh_lobby");
+        return plugin.configService().getString("advanced.lobbies.lobby-world-name", "jmh_lobby");
     }
 
     /** True when the lobby world name collides with the game world name. Pure for tests. */
@@ -112,7 +112,7 @@ public final class LobbyWorldManager {
         String name = lobbyWorldName();
         if (namesClash(name, plugin.configService().getString("world-engine.world-name", "world"))) {
             plugin.logger().warning("Refusing to load lobby world '" + name
-                    + "': it matches the game world. Rename world-engine.lobby-world-name.");
+                    + "': it matches the game world. Rename advanced.lobbies.lobby-world-name.");
             return Optional.empty();
         }
         World loaded = Bukkit.getWorld(name);
@@ -157,7 +157,7 @@ public final class LobbyWorldManager {
         String gameWorldName = plugin.configService().getString("world-engine.world-name", "world");
         if (namesClash(world.getName(), gameWorldName)) {
             plugin.logger().warning("Refusing to apply lobby defaults to '" + world.getName()
-                    + "': it matches the game world. Rename world-engine.lobby-world-name.");
+                    + "': it matches the game world. Rename advanced.lobbies.lobby-world-name.");
             return;
         }
         world.setDifficulty(Difficulty.PEACEFUL);

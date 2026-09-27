@@ -206,7 +206,7 @@ public final class LobbyBoundsService implements Listener {
             game.updateAutostartState();
             return;
         }
-        int target = plugin.configService().getInt("lobbies.bounds.exit-lobby-id", -1);
+        int target = plugin.configService().getInt("advanced.lobbies.bounds.exit-lobby-id", -1);
         int destination = exitDestination(lobbyId, target, lobbies.multiLobbyAllowed());
         if (destination == lobbyId) {
             return;
@@ -223,7 +223,7 @@ public final class LobbyBoundsService implements Listener {
 
     private LobbyBoundsExitBehavior exitBehavior() {
         return LobbyBoundsExitBehavior.parse(
-                plugin.configService().getString("lobbies.bounds.exit-behavior", "KEEP_IN_LOBBY"));
+                plugin.configService().getString("advanced.lobbies.bounds.exit-behavior", "KEEP_IN_LOBBY"));
     }
 
     /**

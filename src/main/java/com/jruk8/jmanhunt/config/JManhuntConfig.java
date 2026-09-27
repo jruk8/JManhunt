@@ -82,23 +82,13 @@ public class JManhuntConfig extends OkaeriConfig {
     private StatisticsConfig statistics = new StatisticsConfig();
 
     @Comment({
-            "Match lifecycle settings: end-of-match delay, pre-start reminders,",
-            "disconnect rules, end-screen statistics, and game rules."
-    })
-    private MatchConfig match = new MatchConfig();
-
-    @Comment({
-            "Lobby queues. Each lobby runs its own queue, autostart countdown, and match.",
-            "Players join the default lobby on login and keep it until they join another",
-            "lobby or leave the server."
-    })
-    private LobbiesConfig lobbies = new LobbiesConfig();
-
-    @Comment({
             "Settings that modify the game.",
             "These can be toggled in-game with the 'config' subcommand."
     })
     private SettingsConfig settings = new SettingsConfig();
+
+    @Comment("Advanced controls: match lifecycle, lobbies, and misc power toggles.")
+    private AdvancedConfig advanced = new AdvancedConfig();
 
     @CustomKey("world-engine")
     @Comment({
@@ -155,20 +145,12 @@ public class JManhuntConfig extends OkaeriConfig {
         this.statistics = statistics;
     }
 
-    public MatchConfig getMatch() {
-        return match;
+    public AdvancedConfig getAdvanced() {
+        return advanced;
     }
 
-    public void setMatch(MatchConfig match) {
-        this.match = match;
-    }
-
-    public LobbiesConfig getLobbies() {
-        return lobbies;
-    }
-
-    public void setLobbies(LobbiesConfig lobbies) {
-        this.lobbies = lobbies;
+    public void setAdvanced(AdvancedConfig advanced) {
+        this.advanced = advanced;
     }
 
     public SettingsConfig getSettings() {

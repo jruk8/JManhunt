@@ -257,7 +257,7 @@ public final class JmhLobbyService {
 
     /** Configured lobby world name for the paste gate. */
     public String lobbyWorldName() {
-        return plugin.configService().getString("world-engine.lobby-world-name", "jmh_lobby");
+        return plugin.configService().getString("advanced.lobbies.lobby-world-name", "jmh_lobby");
     }
 
     private static LobbyConfig.LobbyEntry entryFor(LobbyConfig lobbyConfig, int lobbyId) {

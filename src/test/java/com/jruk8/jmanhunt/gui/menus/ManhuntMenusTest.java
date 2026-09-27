@@ -25,6 +25,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -32,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -92,7 +94,7 @@ class ManhuntMenusTest {
     void listMenuRebuildsEntriesOnRefresh() {
         when(config.getStringList(anyString())).thenReturn(List.of("a"));
         Menu menu = menus.listMenu(viewer,
-                "settings.compass.analyze.debuffs.commands.player", () -> null);
+                "advanced.misc.analyze.debuffs.commands.player", () -> null);
 
         assertEquals(2, menu.window().visibleEntries().size());
 
@@ -140,15 +142,39 @@ class ManhuntMenusTest {
     }
 
     @Test
-    void settingsMenuHasFourCategoriesAndBack() {
+    void settingsMenuHasGeneralAndAdvancedLinksAndBack() {
         Menu settings = menus.settingsMenu(viewer);
 
-        assertLink(settings, 10, Material.CLOCK);
-        assertLink(settings, 12, Material.CLOCK);
-        assertLink(settings, 14, Material.CLOCK);
-        assertLink(settings, 16, Material.CLOCK);
-        assertLink(settings, 22, Material.PAPER);
+        assertLink(settings, 12, Material.CHEST);
+        assertLink(settings, 14, Material.ANVIL);
+        assertLink(settings, 13, Material.PAPER);
         assertNotNull(settings.parent());
+    }
+
+    @Test
+    void generalLinkOpensFourCategoryQuad() {
+        menus.settingsMenu(viewer).buttonAt(12).action().accept(viewer);
+
+        Menu general = navigateTarget();
+        assertLink(general, 10, Material.CLOCK);
+        assertLink(general, 12, Material.CLOCK);
+        assertLink(general, 14, Material.CLOCK);
+        assertLink(general, 16, Material.CLOCK);
+        assertLink(general, 22, Material.PAPER);
+        assertNotNull(general.parent());
+    }
+
+    @Test
+    void advancedLinkOpensFourSectionQuad() {
+        menus.settingsMenu(viewer).buttonAt(14).action().accept(viewer);
+
+        Menu advanced = navigateTarget();
+        assertLink(advanced, 10, Material.CLOCK);
+        assertLink(advanced, 12, Material.CLOCK);
+        assertLink(advanced, 14, Material.CLOCK);
+        assertLink(advanced, 16, Material.CLOCK);
+        assertLink(advanced, 22, Material.PAPER);
+        assertNotNull(advanced.parent());
     }
 
     @Test
@@ -306,6 +332,13 @@ class ManhuntMenusTest {
         assertNotNull(button, "missing button at slot " + slot);
         assertEquals(material, button.material());
         assertNotNull(button.action(), "link at slot " + slot + " must navigate");
+    }
+
+    /** The menu the last navigate call pointed at. */
+    private Menu navigateTarget() {
+        ArgumentCaptor<Menu> target = ArgumentCaptor.forClass(Menu.class);
+        verify(gui).navigate(eq(viewer), target.capture());
+        return target.getValue();
     }
 
     private static List<MenuButton> shownButtons(Menu menu, int... excluded) {

@@ -44,9 +44,9 @@ class ConfigPathMapperTest {
     void getResolvesListIndices() {
         JManhuntConfig root = new JManhuntConfig();
 
-        assertEquals("DAMAGE_DEALT", ConfigPathMapper.get(root, "match.end-statistics.0"));
-        assertNull(ConfigPathMapper.get(root, "match.end-statistics.9"));
-        assertNull(ConfigPathMapper.get(root, "match.end-statistics.bogus"));
+        assertEquals("DAMAGE_DEALT", ConfigPathMapper.get(root, "advanced.advanced-match-controls.end-statistics.0"));
+        assertNull(ConfigPathMapper.get(root, "advanced.advanced-match-controls.end-statistics.9"));
+        assertNull(ConfigPathMapper.get(root, "advanced.advanced-match-controls.end-statistics.bogus"));
     }
 
     @Test
@@ -97,9 +97,9 @@ class ConfigPathMapperTest {
     void setReplacesListEntries() {
         JManhuntConfig root = new JManhuntConfig();
 
-        assertTrue(ConfigPathMapper.set(root, "match.end-statistics.0", "PROGRESSION"));
-        assertEquals("PROGRESSION", ConfigPathMapper.get(root, "match.end-statistics.0"));
-        assertFalse(ConfigPathMapper.set(root, "match.end-statistics.9", "X"));
+        assertTrue(ConfigPathMapper.set(root, "advanced.advanced-match-controls.end-statistics.0", "PROGRESSION"));
+        assertEquals("PROGRESSION", ConfigPathMapper.get(root, "advanced.advanced-match-controls.end-statistics.0"));
+        assertFalse(ConfigPathMapper.set(root, "advanced.advanced-match-controls.end-statistics.9", "X"));
     }
 
     @Test

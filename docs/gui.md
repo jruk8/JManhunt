@@ -15,7 +15,9 @@ reappears; see [Interactive Setup](getting-started.md#interactive-setup).
 
 - **Need Help?** (glowing recovery compass, first slot): runs
   `/manhunt support` in chat and closes the panel.
-- **Settings** (chest): a quad over the four setting categories.
+- **Settings** (chest): General and Advanced panels. General holds a quad
+  over the four everyday setting categories; Advanced holds a quad over
+  match controls, the world engine, lobbies, and misc power toggles.
 - **History** (book): hover to read lifetime server stats: matches,
   kills, wins, damage, and playtime. It is display-only and opens nothing.
 - **Modifiers** (book): a twin panel over the modifier and preset
@@ -115,7 +117,7 @@ note. Saving validates the line: unbalanced
 brackets, empty commands, malformed random args, unknown root
 commands, and unknown `give` items are refused with a chat error,
 while unknown tags and skipped pick items only warn. Set
-`settings.server.advanced.validate-modifier-editor-commands` to
+`advanced.misc.interop.validate-modifier-editor-commands` to
 false to skip the root and item checks. Each save chats which
 ordinal line was set. See
 [Creating Modifiers and Presets](configuration/modifiers.md#creating-modifiers-and-presets).

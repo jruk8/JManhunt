@@ -31,7 +31,7 @@ world-engine:
 4. Restart the server. Everything works without a restart, but the stronghold
    generation changes only apply after one.
 
-Prefer your own world instead? Set `world-engine.lobby-world-name` to its
+Prefer your own world instead? Set `advanced.lobbies.lobby-world-name` to its
 name, reload, and `tpto lobbyworld` takes you there without generating
 anything. The lobby world is remembered across restarts: while its
 folder exists, it loads on boot and `tpto lobbyworld` just takes you

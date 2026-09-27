@@ -2,7 +2,7 @@ package com.jruk8.jmanhunt.lobby;
 
 /**
  * Who hears lobby leave and join lines. Backs
- * {@code lobbies.announce-lobby-changes}: ALL tells everyone involved,
+ * {@code advanced.lobbies.announce-lobby-changes}: ALL tells everyone involved,
  * SELF only the moved player, MEMBERS only the other members, NONE
  * stays silent.
  */

@@ -150,7 +150,7 @@ public final class CompassProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onNavwand(PlayerInteractEvent event) {
         if (!plugin.configService()
-                .getBoolean("settings.server.advanced.disable-worldedit-navwand", true)) {
+                .getBoolean("advanced.misc.interop.disable-worldedit-navwand", true)) {
             return;
         }
         ItemStack item = event.getItem();

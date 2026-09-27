@@ -50,11 +50,11 @@ class SettingRegistryTest {
 
     @Test
     void floatParsesAndRejectsNonNumericAndNonFinite() {
-        assertEquals(25.5, validate("settings.compass.analyze.delay-seconds", "25.5").value());
+        assertEquals(25.5, validate("advanced.misc.analyze.delay-seconds", "25.5").value());
 
-        assertFalse(validate("settings.compass.analyze.delay-seconds", "oops").ok());
-        assertFalse(validate("settings.compass.analyze.delay-seconds", "NaN").ok());
-        assertFalse(validate("settings.compass.analyze.delay-seconds", "Infinity").ok());
+        assertFalse(validate("advanced.misc.analyze.delay-seconds", "oops").ok());
+        assertFalse(validate("advanced.misc.analyze.delay-seconds", "NaN").ok());
+        assertFalse(validate("advanced.misc.analyze.delay-seconds", "Infinity").ok());
     }
 
     @Test
@@ -88,10 +88,10 @@ class SettingRegistryTest {
     @Test
     void boundsExitBehaviorAcceptsBothModes() {
         assertEquals("EXIT_LOBBY",
-                validate("lobbies.bounds.exit-behavior", "exit_lobby").value());
+                validate("advanced.lobbies.bounds.exit-behavior", "exit_lobby").value());
         assertEquals("KEEP_IN_LOBBY",
-                validate("lobbies.bounds.exit-behavior", "keep_in_lobby").value());
-        assertFalse(validate("lobbies.bounds.exit-behavior", "block").ok());
+                validate("advanced.lobbies.bounds.exit-behavior", "keep_in_lobby").value());
+        assertFalse(validate("advanced.lobbies.bounds.exit-behavior", "block").ok());
     }
 
     @Test
@@ -147,7 +147,7 @@ class SettingRegistryTest {
     @Test
     void worldEngineDefaultsMatchBundledConfig() {
         assertEquals("jmh_lobby",
-                SettingRegistry.byPath("world-engine.lobby-world-name").defaultValue());
+                SettingRegistry.byPath("advanced.lobbies.lobby-world-name").defaultValue());
         assertEquals("3", SettingRegistry
                 .byPath("world-engine.preloading.cell-buffer.stored-cells-buffer").defaultValue());
         assertEquals("jmh_end",
@@ -191,10 +191,10 @@ class SettingRegistryTest {
 
     @Test
     void minusOneOrMinAcceptsSentinelAndMinimum() {
-        assertEquals(-1, validate("lobbies.queue-caps.hunter", "-1").value());
-        assertEquals(2, validate("lobbies.queue-caps.hunter", "2").value());
+        assertEquals(-1, validate("advanced.lobbies.queue-caps.hunter", "-1").value());
+        assertEquals(2, validate("advanced.lobbies.queue-caps.hunter", "2").value());
 
-        var outcome = validate("lobbies.queue-caps.hunter", "0");
+        var outcome = validate("advanced.lobbies.queue-caps.hunter", "0");
         assertFalse(outcome.ok());
         assertEquals("-1 or at least 1", outcome.slots().get("bounds"));
 
@@ -261,12 +261,12 @@ class SettingRegistryTest {
 
         assertTrue(validate("settings.players.respawn.hunter.lives", "-1").ok());
         assertFalse(validate("settings.players.respawn.hunter.lives", "-2").ok());
-        assertTrue(validate("match.end-delay", "-5").ok());
+        assertTrue(validate("advanced.advanced-match-controls.end-delay", "-5").ok());
     }
 
     @Test
     void topCategoriesAreAlphabetical() {
-        assertEquals(List.of("debug", "lobbies", "match", "settings", "statistics",
+        assertEquals(List.of("advanced", "debug", "settings", "statistics",
                 "update-checker", "world-engine"), SettingRegistry.topCategories());
     }
 
@@ -280,15 +280,15 @@ class SettingRegistryTest {
         assertEquals(List.of(), givenTo.sections());
         assertEquals(List.of("hunters", "speedrunners"), givenTo.leaves());
 
-        var commands = SettingRegistry.children("settings.compass.analyze.debuffs.commands");
+        var commands = SettingRegistry.children("advanced.misc.analyze.debuffs.commands");
         assertEquals(List.of("hunter", "player", "speedrunner"), commands.sections());
     }
 
     @Test
     void listPathsResolve() {
-        assertTrue(SettingRegistry.isListPath("match.end-statistics"));
-        assertTrue(SettingRegistry.isListPath("MATCH.END-STATISTICS"));
-        assertFalse(SettingRegistry.isListPath("match.end-delay"));
+        assertTrue(SettingRegistry.isListPath("advanced.advanced-match-controls.end-statistics"));
+        assertTrue(SettingRegistry.isListPath("ADVANCED.ADVANCED-MATCH-CONTROLS.END-STATISTICS"));
+        assertFalse(SettingRegistry.isListPath("advanced.advanced-match-controls.end-delay"));
         assertEquals("world-engine.lobby-presets.DEFAULT.commands",
                 SettingRegistry.canonicalListPath("world-engine.lobby-presets.default.commands"));
         assertNull(SettingRegistry.canonicalListPath("bogus"));
@@ -311,5 +311,24 @@ class SettingRegistryTest {
         assertTrue(SettingRegistry.isSection("settings.match"));
         assertFalse(SettingRegistry.isSection("settings.compass.item"));
         assertFalse(SettingRegistry.isSection("bogus"));
+    }
+
+    @Test
+    void advancedRootDrillsIntoThreeSections() {
+        assertEquals(List.of("advanced-match-controls", "lobbies", "misc"),
+                SettingRegistry.children("advanced").sections());
+        assertEquals(List.of("analyze", "debug", "interop"),
+                SettingRegistry.children("advanced.misc").sections());
+    }
+
+    @Test
+    void movedDefaultsMirrorTheirSpecs() {
+        assertEquals("30.0", SettingRegistry.byPath(
+                "advanced.advanced-match-controls.start-reminder-interval").defaultValue());
+        assertEquals("true", SettingRegistry.byPath(
+                "advanced.advanced-match-controls.game-rules.rules.disable-wandering-trader")
+                .defaultValue());
+        assertEquals("jmh_lobby", SettingRegistry.byPath(
+                "advanced.lobbies.lobby-world-name").defaultValue());
     }
 }

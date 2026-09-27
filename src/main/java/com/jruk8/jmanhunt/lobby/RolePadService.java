@@ -182,7 +182,7 @@ public final class RolePadService implements Listener {
             }
             MidMatchPolicy policy = MidMatchPolicy.parse(
                     plugin.configService().getString(
-                            "lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
+                            "advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
             GameInstance target = targetLobby.map(lobby ->
                     game.midMatchJoinTarget(policy, lobby.id(), live.get(), role)).orElse(live.get());
             if (policy.joinsMidMatch(role)
@@ -239,7 +239,7 @@ public final class RolePadService implements Listener {
             }
         }
         return CapLimits.allows(count, plugin.configService()
-                .getInt("lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1));
+                .getInt("advanced.lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1));
     }
 
 }

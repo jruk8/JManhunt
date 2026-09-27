@@ -232,7 +232,7 @@ public final class MatchStartService {
                 System.currentTimeMillis());
         if (lobbies.multiLobbyAllowed()
                 && MidMatchPolicy.parse(configService
-                        .getString("lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"))
+                        .getString("advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"))
                         .usesSubLobbies()) {
             instance.setSubLobby(new SubLobby(lobbyId, lobbies.nextSubId(lobbyId)));
         }

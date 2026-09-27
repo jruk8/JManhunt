@@ -1,7 +1,7 @@
 # Game Rules
 
 **Game rules** are the plugin's own game-state actions, configured in
-`config.yml` under `match.game-rules`. They run at both match start and
+`config.yml` under `advanced.advanced-match-controls.game-rules`. They run at both match start and
 match end when enabled, and can be browsed and toggled in-game with
 `/manhunt config`.
 
@@ -9,17 +9,19 @@ All examples are the default config settings. Refer to the latest
 version of `config.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
 
 ```yaml
-match:
-  game-rules:
-    enabled: true
-    rules:
-      auto-set-gamemode: true
-      reset-players-stats: true
-      disable-locator-bar: true
-      set-respawn-immediate: true
-      set-daytime: true
-      disable-phantoms: true
-      disable-command-feedback: false
+advanced:
+  advanced-match-controls:
+    game-rules:
+      enabled: true
+      rules:
+        auto-set-gamemode: true
+        reset-players-stats: true
+        disable-locator-bar: true
+        set-respawn-immediate: true
+        set-daytime: true
+        disable-phantoms: true
+        disable-command-feedback: false
+        disable-wandering-trader: true
 ```
 
 - `auto-set-gamemode` puts participants in survival mode. Players with role
@@ -37,6 +39,8 @@ match:
 - `disable-command-feedback` sets `send_command_feedback` to false while a
   match runs, and restores it afterwards. Unlike the rest, it stays off
   unless you enable it.
+- `disable-wandering-trader` stops wandering traders from spawning while a
+  match runs, and re-enables them afterwards.
 
 Pillager patrols (`spawnPatrols`) are always paused while a match runs and
 restored when the last match ends. This one has no toggle.

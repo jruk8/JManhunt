@@ -220,7 +220,7 @@ a dimension you are not in. There is nothing to configure.
 
 ## Analysis Delay
 
-Under `settings.compass.analyze`, a refresh can take a purposeful moment to
+Under `advanced.misc.analyze`, a refresh can take a purposeful moment to
 resolve instead of answering instantly. While analyzing, the actionbar reads
 `Analyzing...`, no second refresh can start, and compass clicks are
 ignored until it resolves. The automatic clock stamps when the analysis
@@ -245,7 +245,7 @@ with the refresh click sound; automatic analyses resolve silently.
 
 ### Analysis Debuffs
 
-Under `settings.compass.analyze.debuffs`, you can run console commands
+Under `advanced.misc.analyze.debuffs`, you can run console commands
 every time an analysis starts, in modifier style: `<p>` is the
 compass holder, `~` resolves against their location, and `<duration>` is
 the analysis delay in whole seconds (floored). The `player` list runs for
@@ -339,7 +339,7 @@ once, the most recently found one shows. The names come from the
 ## WorldEdit Navwand
 
 WorldEdit teleports players who click with a compass, which fights the
-tracking compass. `settings.server.advanced.disable-worldedit-navwand`
+tracking compass. `advanced.misc.interop.disable-worldedit-navwand`
 (default on) blocks that teleport for compass clicks without needing
 WorldEdit installed. Turn it off if you rely on the navwand.
 

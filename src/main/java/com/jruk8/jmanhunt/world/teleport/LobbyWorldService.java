@@ -182,7 +182,7 @@ public final class LobbyWorldService {
             return true;
         }
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
-        plugin.logger().warning("world-engine.lobby-world-name '" + lobbyWorlds.lobbyWorldName()
+        plugin.logger().warning("advanced.lobbies.lobby-world-name '" + lobbyWorlds.lobbyWorldName()
                 + "' matches the game world '" + config.worldName()
                 + "'. Lobby world loading stays disabled until it is renamed.");
         return false;

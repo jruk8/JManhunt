@@ -31,7 +31,7 @@ public class MatchConfig extends OkaeriConfig {
             "the repeat interval when delay-seconds is -1 (wait indefinitely).",
             "Set to -1 to disable the reminders entirely while still waiting for damage."
     })
-    private double startReminderInterval = 10.0;
+    private double startReminderInterval = 30.0;
 
     @CustomKey("disconnect-handling")
     @Comment("Disconnect rules for active participants.")
@@ -130,6 +130,8 @@ public class MatchConfig extends OkaeriConfig {
             private boolean disableCommandFeedback = false;
             @CustomKey("disable-pillager-patrols")
             private boolean disablePillagerPatrols = true;
+            @CustomKey("disable-wandering-trader")
+            private boolean disableWanderingTrader = true;
 
             public boolean isAutoSetGamemode() {
                 return autoSetGamemode;
@@ -193,6 +195,14 @@ public class MatchConfig extends OkaeriConfig {
 
             public void setDisablePillagerPatrols(boolean disablePillagerPatrols) {
                 this.disablePillagerPatrols = disablePillagerPatrols;
+            }
+
+            public boolean isDisableWanderingTrader() {
+                return disableWanderingTrader;
+            }
+
+            public void setDisableWanderingTrader(boolean disableWanderingTrader) {
+                this.disableWanderingTrader = disableWanderingTrader;
             }
         }
     }

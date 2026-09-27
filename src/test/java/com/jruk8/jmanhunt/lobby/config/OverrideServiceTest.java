@@ -28,9 +28,9 @@ class OverrideServiceTest {
 
     private static final String BOOL = "settings.match.autostart.enabled";
     private static final String INT = "settings.match.autostart.countdown-seconds";
-    private static final String FLOAT = "match.end-delay";
+    private static final String FLOAT = "advanced.advanced-match-controls.end-delay";
     private static final String OPTION = "settings.match.game-leave.destination";
-    private static final String LIST = "match.end-statistics";
+    private static final String LIST = "advanced.advanced-match-controls.end-statistics";
 
     private ConfigService config;
     private LobbyConfig lobbies;
@@ -146,7 +146,7 @@ class OverrideServiceTest {
         assertFalse(overrides.hasListOverride(0, BOOL));
         assertTrue(overrides.hasOverridesBeneath(0, "settings.match.autostart"));
         assertTrue(overrides.hasOverridesBeneath(0, "settings"));
-        assertTrue(overrides.hasOverridesBeneath(0, "match"));
+        assertTrue(overrides.hasOverridesBeneath(0, "advanced"));
         assertFalse(overrides.hasOverridesBeneath(0, "settings.compass"));
         assertFalse(overrides.hasOverridesBeneath(7, "settings"));
     }

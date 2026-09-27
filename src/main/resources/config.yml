@@ -76,118 +76,6 @@ statistics:
   pool-size: 4
 
 
-# Match lifecycle settings: end-of-match delay, pre-start reminders,
-# disconnect rules, end-screen statistics, and game rules.
-match:
-  # Built-in game-state actions applied at match start and match end.
-  game-rules:
-    enabled: true # if false, nothing runs.
-    rules:
-      auto-set-gamemode: true
-      reset-players-stats: true
-      disable-locator-bar: true
-      set-respawn-immediate: true
-      set-daytime: true
-      disable-phantoms: true
-      disable-command-feedback: false
-      disable-pillager-patrols: true
-
-  # Seconds between the win announcement and final inventory cleanup. Statistics
-  # are displayed halfway through this delay.
-  # Set to -1 to skip the delay (cleanup is immediate); other negative values are
-  # also treated as zero.
-  end-delay: 10.0
-
-  # Seconds between reminders while waiting for the first speedrunner hit.
-  # For finite delays, exactly three reminders are shown at the delay and two
-  # equally-sized slices (e.g. 30s -> 30, 20, 10). This value is only used as
-  # the repeat interval when delay-seconds is -1 (wait indefinitely).
-  # Set to -1 to disable the reminders entirely while still waiting for damage.
-  start-reminder-interval: 10.0
-
-  # Disconnect rules for active participants.
-  disconnect-handling:
-    speedrunner:
-      # Seconds a disconnected speedrunner has to rejoin before they are treated
-      # as dead and removed from the match.
-      reconnect-grace-seconds: 60
-      # Disconnect strike limit before a speedrunner instantly loses.
-      # Set to 1 to disable retries entirely.
-      max-strikes: 3
-    hunter:
-      # Seconds a disconnected hunter has to rejoin before they are removed
-      # from the match.
-      reconnect-grace-seconds: 60
-      # Disconnect strike limit before a hunter instantly loses.
-      # Set to 1 to disable retries entirely.
-      max-strikes: 3
-
-  # End-screen sections, in display order. Available values are DAMAGE_DEALT,
-  # HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based
-  # on reliable vanilla advancements and is calculated only at match end.
-  end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
-
-
-# Lobby queues. Each lobby runs its own queue, autostart countdown, and match.
-# Players join the default lobby on login and keep it until they join another
-# lobby or leave the server.
-lobbies:
-  # Lobby id assigned on join. Use -1 (or any negative value) to leave players
-  # without a lobby until they join one manually.
-  # Default: 0
-  default-lobby-id: 0
-  # When true, joining a lobby also teleports the player to that lobby's
-  # location. When no location exists for the lobby, the player is told to
-  # create one instead of being teleported. The -notp join flag skips the
-  # teleport for one invocation.
-  # Default: true
-  join-teleports-to-lobby: true
-  # Who hears lobby leave and join lines. Only positive lobbies announce,
-  # and only to the subject plus members of the affected lobbies.
-  # - ALL tells the subject and the other members
-  # - SELF tells only the subject
-  # - MEMBERS tells only the other members
-  # - NONE stays silent
-  # Default: ALL
-  announce-lobby-changes: ALL
-  bounds:
-    # What walking out of every bounds box does: KEEP_IN_LOBBY
-    # keeps the lobby membership, EXIT_LOBBY leaves the lobby
-    # for exit-lobby-id (unless the destination lands straight
-    # inside another lobby's box).
-    # Default: KEEP_IN_LOBBY
-    exit-behavior: KEEP_IN_LOBBY
-    # Where lobby members go when they leave their lobby's bounds box.
-    # Only applies under EXIT_LOBBY. Only fires for members whose lobby
-    # has complete bounds, and never for players in a live match. Use -1
-    # (or any negative value) to leave them without a lobby.
-    # Default: -1
-    exit-lobby-id: -1
-  # What /manhunt setplayer does when the target's lobby has a live match.
-  # Only applies with the world engine on; otherwise the in-match block
-  # stays since only one match can run without the engine.
-  # - HOLD queues roles for the next game
-  # - JOIN_ANY joins any role mid-match
-  # - JOIN_SPECTATORS joins spectators and holds everyone else,
-  # - SUBLOBBY queues roles for the next sublobby (theoretically infinite matches
-  # on one lobby).
-  # - SUBLOBBY_WITH_SPECTATORS queues like SUBLOBBY, but spectators always
-  # join the oldest running sublobby.
-  #
-  # Default: SUBLOBBY_WITH_SPECTATORS
-  mid-match-setplayer: SUBLOBBY_WITH_SPECTATORS
-  # Per-role queue caps for each lobby. Only enforced on the queue before a
-  # match starts, and bypassed with -force. Lowering a cap below the current
-  # queue blocks new entries of that role but never kicks queued players.
-  queue-caps:
-    # Max queued speedrunners per lobby. -1 means no limit. Minimum: 1.
-    # Default: -1
-    speedrunner: -1
-    # Max queued hunters per lobby. -1 means no limit. Minimum: 1.
-    # Default: -1
-    hunter: -1
-
-
 # Settings that modify the game.
 # These can be toggled in-game with the 'config' subcommand.
 settings:
@@ -452,39 +340,6 @@ settings:
       # silent outcomes stay silent.
       # Default: true
       enabled: true
-    # Purposeful lag before a compass refresh resolves, showing
-    # "Analyzing..." while it runs. No second refresh starts mid-analysis,
-    # and click cooldowns restart when the analysis ends.
-    analyze:
-      # Applies to right-click refreshes.
-      # Default: false
-      right-click: false
-      # Applies to automatic (interval) refreshes.
-      # Default: false
-      auto: false
-      # Seconds the analysis takes before the compass updates.
-      # Default: 1.0
-      delay-seconds: 1.0
-      # Random plus-or-minus jitter applied to delay-seconds per
-      # analysis. Capped at the delay itself.
-      # Default: 0.0
-      delay-deviation-seconds: 0.0
-      # Seconds between analysis tick sounds, rounded to whole ticks.
-      # Default: 0.5
-      sound-interval-seconds: 0.5
-      # Commands run as console when an analysis starts, in modifier
-      # style: <p> is the holder, ~ resolves against their location, and
-      # <duration> is the analysis delay in whole seconds (floored). The
-      # player list runs for every analyzing holder plus their own role
-      # list. Only participants are affected.
-      # Default: false
-      debuffs:
-        enabled: true
-        commands:
-          player:
-            - "effect give <p> minecraft:slowness <duration> 1 true"
-          speedrunner: []
-          hunter: []
     # Per-role tracking distances. The holder's role picks which block
     # applies. Manually locked targets obey the same limits.
     hunter:
@@ -770,30 +625,6 @@ settings:
       # Hidden when no custom modifier is enabled.
       # Default: false
       show-modifiers: false
-      # Show lobby and game ids as L{lobby}|G{game}.
-      # Useful for debugging.
-      # Default: false
-      show-ids: false
-
-    # Advanced server interop toggles.
-    advanced:
-      # When true, compass clicks never trigger WorldEdit's navwand
-      # teleport. The navwand is a conflicting feature with the compass
-      # affecting OP'd users. This option fixes it.
-      # Purely passive, requires no dependency. If no WorlEdit is installed,
-      # feel free to leave off.
-      # Note: this also blocks breaking blocks with a compass in hand.
-      # To avoid that, configure the WorldEdit plugin navwand item to
-      # something other than the compass and turn this setting off.
-      #
-      # Performance impact: none
-      # Default: true
-      disable-worldedit-navwand: true
-      # When true, the modifier editor rejects command lines with
-      # unknown root commands or unknown give items. Placeholder
-      # checks always run either way.
-      # Default: true
-      validate-modifier-editor-commands: true
 
     # Team chat (@team ...) for match participants.
     team-chat:
@@ -812,6 +643,190 @@ settings:
       # Default: true
       spectators-see: true
 
+
+# Advanced controls: match lifecycle, lobbies, and misc power toggles.
+advanced:
+  # Match lifecycle settings: end-of-match delay, pre-start reminders,
+  # disconnect rules, end-screen statistics, and game rules.
+  advanced-match-controls:
+    # Built-in game-state actions applied at match start and match end.
+    game-rules:
+      enabled: true # if false, nothing runs.
+      rules:
+        auto-set-gamemode: true
+        reset-players-stats: true
+        disable-locator-bar: true
+        set-respawn-immediate: true
+        set-daytime: true
+        disable-phantoms: true
+        disable-command-feedback: false
+        disable-pillager-patrols: true
+        disable-wandering-trader: true
+
+    # Seconds between the win announcement and final inventory cleanup. Statistics
+    # are displayed halfway through this delay.
+    # Set to -1 to skip the delay (cleanup is immediate); other negative values are
+    # also treated as zero.
+    end-delay: 10.0
+
+    # Seconds between reminders while waiting for the first speedrunner hit.
+    # For finite delays, exactly three reminders are shown at the delay and two
+    # equally-sized slices (e.g. 30s -> 30, 20, 10). This value is only used as
+    # the repeat interval when delay-seconds is -1 (wait indefinitely).
+    # Set to -1 to disable the reminders entirely while still waiting for damage.
+    start-reminder-interval: 30.0
+
+    # Disconnect rules for active participants.
+    disconnect-handling:
+      speedrunner:
+        # Seconds a disconnected speedrunner has to rejoin before they are treated
+        # as dead and removed from the match.
+        reconnect-grace-seconds: 60
+        # Disconnect strike limit before a speedrunner instantly loses.
+        # Set to 1 to disable retries entirely.
+        max-strikes: 3
+      hunter:
+        # Seconds a disconnected hunter has to rejoin before they are removed
+        # from the match.
+        reconnect-grace-seconds: 60
+        # Disconnect strike limit before a hunter instantly loses.
+        # Set to 1 to disable retries entirely.
+        max-strikes: 3
+
+    # End-screen sections, in display order. Available values are DAMAGE_DEALT,
+    # HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based
+    # on reliable vanilla advancements and is calculated only at match end.
+    end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
+
+  # Lobby queues. Each lobby runs its own queue, autostart countdown, and match.
+  # Players join the default lobby on login and keep it until they join another
+  # lobby or leave the server.
+  lobbies:
+    # Lobby id assigned on join. Use -1 (or any negative value) to leave players
+    # without a lobby until they join one manually.
+    # Default: 0
+    default-lobby-id: 0
+    # When true, joining a lobby also teleports the player to that lobby's
+    # location. When no location exists for the lobby, the player is told to
+    # create one instead of being teleported. The -notp join flag skips the
+    # teleport for one invocation.
+    # Default: true
+    join-teleports-to-lobby: true
+    # Who hears lobby leave and join lines. Only positive lobbies announce,
+    # and only to the subject plus members of the affected lobbies.
+    # - ALL tells the subject and the other members
+    # - SELF tells only the subject
+    # - MEMBERS tells only the other members
+    # - NONE stays silent
+    # Default: ALL
+    announce-lobby-changes: ALL
+    bounds:
+      # What walking out of every bounds box does: KEEP_IN_LOBBY
+      # keeps the lobby membership, EXIT_LOBBY leaves the lobby
+      # for exit-lobby-id (unless the destination lands straight
+      # inside another lobby's box).
+      # Default: KEEP_IN_LOBBY
+      exit-behavior: KEEP_IN_LOBBY
+      # Where lobby members go when they leave their lobby's bounds box.
+      # Only applies under EXIT_LOBBY. Only fires for members whose lobby
+      # has complete bounds, and never for players in a live match. Use -1
+      # (or any negative value) to leave them without a lobby.
+      # Default: -1
+      exit-lobby-id: -1
+    # What /manhunt setplayer does when the target's lobby has a live match.
+    # Only applies with the world engine on; otherwise the in-match block
+    # stays since only one match can run without the engine.
+    # - HOLD queues roles for the next game
+    # - JOIN_ANY joins any role mid-match
+    # - JOIN_SPECTATORS joins spectators and holds everyone else,
+    # - SUBLOBBY queues roles for the next sublobby (theoretically infinite matches
+    # on one lobby).
+    # - SUBLOBBY_WITH_SPECTATORS queues like SUBLOBBY, but spectators always
+    # join the oldest running sublobby.
+    #
+    # Default: SUBLOBBY_WITH_SPECTATORS
+    mid-match-setplayer: SUBLOBBY_WITH_SPECTATORS
+    # Per-role queue caps for each lobby. Only enforced on the queue before a
+    # match starts, and bypassed with -force. Lowering a cap below the current
+    # queue blocks new entries of that role but never kicks queued players.
+    queue-caps:
+      # Max queued speedrunners per lobby. -1 means no limit. Minimum: 1.
+      # Default: -1
+      speedrunner: -1
+      # Max queued hunters per lobby. -1 means no limit. Minimum: 1.
+      # Default: -1
+      hunter: -1
+    # Name of the lobby world used by /manhunt worldengine tpto lobbyworld.
+    # When no world with this name exists, the plugin generates a void world
+    # filled by the tpto preset (DEFAULT unless the command names one).
+    # Point this at your own world to use it instead.
+    # Default: jmh_lobby
+    lobby-world-name: "jmh_lobby"
+
+  # Power-user toggles that rarely need changing.
+  misc:
+    # Advanced server interop toggles.
+    interop:
+      # When true, compass clicks never trigger WorldEdit's navwand
+      # teleport. The navwand is a conflicting feature with the compass
+      # affecting OP'd users. This option fixes it.
+      # Purely passive, requires no dependency. If no WorlEdit is installed,
+      # feel free to leave off.
+      # Note: this also blocks breaking blocks with a compass in hand.
+      # To avoid that, configure the WorldEdit plugin navwand item to
+      # something other than the compass and turn this setting off.
+      #
+      # Performance impact: none
+      # Default: true
+      disable-worldedit-navwand: true
+      # When true, the modifier editor rejects command lines with
+      # unknown root commands or unknown give items. Placeholder
+      # checks always run either way.
+      # Default: true
+      validate-modifier-editor-commands: true
+
+    # Purposeful lag before a compass refresh resolves, showing
+    # "Analyzing..." while it runs. No second refresh starts mid-analysis,
+    # and click cooldowns restart when the analysis ends.
+    analyze:
+      # Applies to right-click refreshes.
+      # Default: false
+      right-click: false
+      # Applies to automatic (interval) refreshes.
+      # Default: false
+      auto: false
+      # Seconds the analysis takes before the compass updates.
+      # Default: 1.0
+      delay-seconds: 1.0
+      # Random plus-or-minus jitter applied to delay-seconds per
+      # analysis. Capped at the delay itself.
+      # Default: 0.0
+      delay-deviation-seconds: 0.0
+      # Seconds between analysis tick sounds, rounded to whole ticks.
+      # Default: 0.5
+      sound-interval-seconds: 0.5
+      # Commands run as console when an analysis starts, in modifier
+      # style: <p> is the holder, ~ resolves against their location, and
+      # <duration> is the analysis delay in whole seconds (floored). The
+      # player list runs for every analyzing holder plus their own role
+      # list. Only participants are affected.
+      # Default: false
+      debuffs:
+        enabled: true
+        commands:
+          player:
+            - "effect give <p> minecraft:slowness <duration> 1 true"
+          speedrunner: []
+          hunter: []
+
+    # Debug display toggles.
+    debug:
+      # Show lobby and game ids as L{lobby}|G{game}.
+      # Useful for debugging.
+      # Default: false
+      show-ids: false
+
+
 # Grid-based single-world manhunt engine.
 # Uses persistent square-spiral cell indexing and teleports participants to
 # randomized points near each cell center.
@@ -825,12 +840,6 @@ settings:
 world-engine:
   enabled: false
   world-name: world
-  # Name of the lobby world used by /manhunt worldengine tpto lobbyworld.
-  # When no world with this name exists, the plugin generates a void world
-  # filled by the tpto preset (DEFAULT unless the command names one).
-  # Point this at your own world to use it instead.
-  # Default: jmh_lobby
-  lobby-world-name: "jmh_lobby"
   # Per-preset generation. schematic is a vanilla structure-block .nbt in
   # JManhunt/settings/world-engine/lobby-schematics/, pasted with its
   # midpoint at 0,64,0. commands run as console after the paste and before

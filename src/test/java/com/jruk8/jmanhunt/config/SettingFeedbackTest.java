@@ -87,21 +87,22 @@ class SettingFeedbackTest {
     @Test
     void listAddedAndRemovedReportValues() {
         ConfigService.SetOutcome added =
-                config.listAdd("match.end-statistics", "EXTRA");
+                config.listAdd("advanced.advanced-match-controls.end-statistics", "EXTRA");
 
         assertTrue(added.ok());
-        feedback.listAdded(sender, "match.end-statistics", added);
+        feedback.listAdded(sender, "advanced.advanced-match-controls.end-statistics", added);
 
         assertEquals(1, sent.size());
-        assertEquals("[JManhunt] Added to match.end-statistics: EXTRA.", plain(sent.get(0)));
+        assertEquals("[JManhunt] Added to advanced.advanced-match-controls.end-statistics: EXTRA.", plain(sent.get(0)));
 
-        ConfigService.SetOutcome removed = config.listRemove("match.end-statistics", 4);
+        ConfigService.SetOutcome removed = config.listRemove("advanced.advanced-match-controls.end-statistics", 4);
 
         assertTrue(removed.ok());
-        feedback.listRemoved(sender, "match.end-statistics", removed);
+        feedback.listRemoved(sender, "advanced.advanced-match-controls.end-statistics", removed);
 
         assertEquals(2, sent.size());
-        assertEquals("[JManhunt] Removed from match.end-statistics: EXTRA.", plain(sent.get(1)));
+        assertEquals("[JManhunt] Removed from "
+                + "advanced.advanced-match-controls.end-statistics: EXTRA.", plain(sent.get(1)));
         verify(sounds, times(2)).playNeutralSound(sender);
     }
 
@@ -123,27 +124,27 @@ class SettingFeedbackTest {
 
     @Test
     void listResetReportsDefaults() {
-        assertTrue(config.listAdd("match.end-statistics", "EXTRA").ok());
-        ConfigService.SetOutcome outcome = config.listReset("match.end-statistics");
+        assertTrue(config.listAdd("advanced.advanced-match-controls.end-statistics", "EXTRA").ok());
+        ConfigService.SetOutcome outcome = config.listReset("advanced.advanced-match-controls.end-statistics");
 
         assertTrue(outcome.ok());
-        feedback.listReset(sender, "match.end-statistics", outcome);
+        feedback.listReset(sender, "advanced.advanced-match-controls.end-statistics", outcome);
 
         assertEquals(1, sent.size());
-        assertEquals("[JManhunt] Reset match.end-statistics to defaults.",
+        assertEquals("[JManhunt] Reset advanced.advanced-match-controls.end-statistics to defaults.",
                 plain(sent.get(0)));
         verify(sounds, times(1)).playNeutralSound(sender);
     }
 
     @Test
     void listResetUnmodifiedReportsUnchanged() {
-        ConfigService.SetOutcome outcome = config.listReset("match.end-statistics");
+        ConfigService.SetOutcome outcome = config.listReset("advanced.advanced-match-controls.end-statistics");
 
         assertTrue(outcome.ok());
-        feedback.listReset(sender, "match.end-statistics", outcome);
+        feedback.listReset(sender, "advanced.advanced-match-controls.end-statistics", outcome);
 
         assertEquals(1, sent.size());
-        assertEquals("[JManhunt] Nothing changed. match.end-statistics was already "
+        assertEquals("[JManhunt] Nothing changed. advanced.advanced-match-controls.end-statistics was already "
                 + "[DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION].",
                 plain(sent.get(0)));
         verifyNoInteractions(sounds);

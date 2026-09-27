@@ -13,6 +13,7 @@ import com.jruk8.jmanhunt.gui.MenuLayout;
 import com.jruk8.jmanhunt.gui.QuadPanel;
 import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.gui.ScrollList;
+import com.jruk8.jmanhunt.gui.TwinPanel;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -76,16 +77,73 @@ public final class ManhuntMenus {
                 () -> rootStatic(viewer), List::of, null);
     }
 
-    /** 27-slot settings menu with the four category links. */
+    /** 27-slot settings root: General and Advanced panel links. */
     public Menu settingsMenu(Player viewer) {
         return settingsMenu(viewer, () -> rootMenu(viewer));
     }
 
-    /** Settings menu with an explicit parent. */
+    /** Settings root with an explicit parent. */
     private Menu settingsMenu(Player viewer, Supplier<Menu> parent) {
-        return QuadPanel.menu(title("title-settings", "Settings"),
-                categorySpecs(viewer), gui,
+        return TwinPanel.menu(title("title-settings", "Settings"),
+                generalButton(viewer), advancedButton(viewer), gui,
                 GuiTexts.name(messages, text("back", "Back"), "Back"), parent);
+    }
+
+    /** General quad: the four everyday setting categories. */
+    private Menu generalMenu(Player viewer, Supplier<Menu> parent) {
+        return QuadPanel.menu(title("title-settings-general", "General Settings"),
+                categorySpecs(viewer, parent), gui,
+                GuiTexts.name(messages, text("back", "Back"), "Back"), parent);
+    }
+
+    /** Advanced quad: match controls, world engine, lobbies, misc. */
+    private Menu advancedMenu(Player viewer, Supplier<Menu> parent) {
+        return QuadPanel.menu(title("title-settings-advanced", "Advanced Settings"),
+                advancedSpecs(viewer, parent), gui,
+                GuiTexts.name(messages, text("back", "Back"), "Back"), parent);
+    }
+
+    /** TwinPanel left: General opens the everyday quad. */
+    private MenuButton generalButton(Player viewer) {
+        Integer lobby = gui.overrideLobby(viewer);
+        return new MenuButton(Material.CHEST,
+                GuiTexts.name(messages, text("to-general", "General Settings"),
+                        "General Settings"),
+                GuiTexts.lore(messages, List.of(
+                        text("to-general-lore", "Match, Compass, Players, Server"))),
+                lobby == null ? ModifiedGlow.section(config, "settings")
+                        : overrides.hasOverridesBeneath(lobby, "settings"),
+                false,
+                open(openViewer -> generalMenu(openViewer, () -> settingsMenu(openViewer))));
+    }
+
+    /** TwinPanel right: Advanced opens the power-user quad. */
+    private MenuButton advancedButton(Player viewer) {
+        Integer lobby = gui.overrideLobby(viewer);
+        boolean changed = lobby == null
+                ? ModifiedGlow.section(config, "advanced")
+                        || ModifiedGlow.section(config, "world-engine")
+                : overrides.hasOverridesBeneath(lobby, "advanced")
+                        || overrides.hasOverridesBeneath(lobby, "world-engine");
+        return new MenuButton(Material.ANVIL,
+                GuiTexts.name(messages, text("to-advanced", "Advanced Settings"),
+                        "Advanced Settings"),
+                GuiTexts.lore(messages, List.of(
+                        text("to-advanced-lore",
+                                "Match Controls, World Engine, Lobbies, Misc"))),
+                changed, false,
+                open(openViewer -> advancedMenu(openViewer, () -> settingsMenu(openViewer))));
+    }
+
+    /** Advanced quad specs: one drill button per advanced section. */
+    private List<MenuButton> advancedSpecs(Player viewer, Supplier<Menu> parent) {
+        List<MenuButton> specs = new ArrayList<>();
+        Supplier<Menu> caller = () -> advancedMenu(viewer, parent);
+        for (String path : new String[]{"advanced.advanced-match-controls", "world-engine",
+                "advanced.lobbies", "advanced.misc"}) {
+            specs.add(childButton(viewer, path, caller));
+        }
+        return specs;
     }
 
     /** Drill level for one settings section. */
@@ -422,7 +480,7 @@ public final class ManhuntMenus {
         fixed.put(11, new MenuButton(Material.CHEST,
                 GuiTexts.name(messages, text("to-settings", "Settings"), "Settings"),
                 GuiTexts.lore(messages, List.of(
-                        text("to-settings-lore", "Match, Compass, Players, Server"))),
+                        text("to-settings-lore", "General, Advanced"))),
                 false, false, open(openViewer -> settingsMenu(openViewer))));
         // Lifetime stats live on the book itself: hover to read, no
         // separate menu. The action stays null so clicks pass through
@@ -494,7 +552,7 @@ public final class ManhuntMenus {
         gui.navigate(player, rootMenu(player));
     }
 
-    private List<MenuButton> categorySpecs(Player viewer) {
+    private List<MenuButton> categorySpecs(Player viewer, Supplier<Menu> parent) {
         List<MenuButton> specs = new ArrayList<>();
         Integer lobby = gui.overrideLobby(viewer);
         for (String category : new String[]{"match", "compass", "players", "server"}) {
@@ -507,12 +565,12 @@ public final class ManhuntMenus {
                             : overrides.hasOverridesBeneath(lobby, path),
                     false,
                     open(openViewer -> sectionMenu(openViewer, path,
-                            () -> settingsMenu(openViewer))));
+                            () -> generalMenu(openViewer, parent))));
             if (lobby == null) {
                 specs.add(button);
             } else {
                 specs.add(button.shiftAction(player ->
-                        clearCategoryConfirm(player, path, () -> settingsMenu(player))));
+                        clearCategoryConfirm(player, path, () -> generalMenu(player, parent))));
             }
         }
         return specs;
@@ -569,7 +627,7 @@ public final class ManhuntMenus {
 
     private Component sectionTitle(String path) {
         String[] parts = path.split("\\.");
-        if (parts.length == 2) {
+        if (parts.length == 2 && !parts[0].equals("advanced")) {
             return GuiTexts.title(messages, messages
                     .string("manhunt-gui.title-category", "{name} Settings")
                     .replace("{name}", SettingButtons.prettify(parts[1])));

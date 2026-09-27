@@ -52,7 +52,7 @@ public final class LobbyService {
     }
 
     public int defaultLobbyId() {
-        return plugin.configService().getInt("lobbies.default-lobby-id", 0);
+        return plugin.configService().getInt("advanced.lobbies.default-lobby-id", 0);
     }
 
     /**
@@ -127,7 +127,7 @@ public final class LobbyService {
             return;
         }
         AnnounceMode mode = plugin.configService().getEnum(
-                "lobbies.announce-lobby-changes", AnnounceMode.class, AnnounceMode.ALL);
+                "advanced.lobbies.announce-lobby-changes", AnnounceMode.class, AnnounceMode.ALL);
         boolean toSelf = mode.tellsSelf();
         boolean toMembers = mode.tellsMembers();
         if (!toSelf && !toMembers) {

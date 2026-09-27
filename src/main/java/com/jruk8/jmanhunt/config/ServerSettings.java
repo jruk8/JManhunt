@@ -38,9 +38,6 @@ public class ServerSettings extends OkaeriConfig {
     @Comment("Optional /manhunt status extras. Each toggles independently.")
     private Status status = new Status();
 
-    @Comment("Advanced server interop toggles.")
-    private Advanced advanced = new Advanced();
-
     @CustomKey("team-chat")
     @Comment("Team chat (@team ...) for match participants.")
     private TeamChat teamChat = new TeamChat();
@@ -75,14 +72,6 @@ public class ServerSettings extends OkaeriConfig {
 
     public void setStatus(Status status) {
         this.status = status;
-    }
-
-    public Advanced getAdvanced() {
-        return advanced;
-    }
-
-    public void setAdvanced(Advanced advanced) {
-        this.advanced = advanced;
     }
 
     public TeamChat getTeamChat() {
@@ -143,52 +132,6 @@ public class ServerSettings extends OkaeriConfig {
 
         public void setSpectatorsSee(boolean spectatorsSee) {
             this.spectatorsSee = spectatorsSee;
-        }
-    }
-
-    /** Advanced server interop toggles. */
-    @SuppressWarnings("FieldMayBeFinal")
-    public static class Advanced extends OkaeriConfig {
-
-        @CustomKey("disable-worldedit-navwand")
-        @Comment({
-                "When true, compass clicks never trigger WorldEdit's navwand",
-                "teleport. The navwand is a conflicting feature with the compass",
-                "affecting OP'd users. This option fixes it.",
-                "Purely passive, requires no dependency. If no WorldEdit is installed,",
-                "feel free to leave off.",
-                "Note: this also blocks breaking blocks with a compass in hand.",
-                "To avoid that, configure the WorldEdit plugin navwand item to",
-                "something other than the compass and turn this setting off.",
-                "",
-                "Performance impact: none",
-                "Default: true"
-        })
-        private boolean disableWorldeditNavwand = true;
-
-        public boolean isDisableWorldeditNavwand() {
-            return disableWorldeditNavwand;
-        }
-
-        public void setDisableWorldeditNavwand(boolean disableWorldeditNavwand) {
-            this.disableWorldeditNavwand = disableWorldeditNavwand;
-        }
-
-        @CustomKey("validate-modifier-editor-commands")
-        @Comment({
-                "When true, the modifier editor rejects command lines with",
-                "unknown root commands or unknown give items. Placeholder",
-                "checks always run either way.",
-                "Default: true"
-        })
-        private boolean validateModifierEditorCommands = true;
-
-        public boolean isValidateModifierEditorCommands() {
-            return validateModifierEditorCommands;
-        }
-
-        public void setValidateModifierEditorCommands(boolean validateModifierEditorCommands) {
-            this.validateModifierEditorCommands = validateModifierEditorCommands;
         }
     }
 
@@ -278,14 +221,6 @@ public class ServerSettings extends OkaeriConfig {
         })
         private boolean showModifiers = false;
 
-        @CustomKey("show-ids")
-        @Comment({
-                "Show lobby and game ids as L{lobby}|G{game}.",
-                "Useful for debugging.",
-                "Default: false"
-        })
-        private boolean showIds = false;
-
         public boolean isShowWinConditions() {
             return showWinConditions;
         }
@@ -308,14 +243,6 @@ public class ServerSettings extends OkaeriConfig {
 
         public void setShowModifiers(boolean showModifiers) {
             this.showModifiers = showModifiers;
-        }
-
-        public boolean isShowIds() {
-            return showIds;
-        }
-
-        public void setShowIds(boolean showIds) {
-            this.showIds = showIds;
         }
     }
 }

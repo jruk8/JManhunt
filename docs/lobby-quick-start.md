@@ -39,7 +39,7 @@ Pick whichever fits your server:
 - **Autostart**: eligible lobbies count down and start on their own.
 
 While a match runs, the lobby keeps queueing: newcomers wait (or join
-as spectators) under `lobbies.mid-match-setplayer`.
+as spectators) under `advanced.lobbies.mid-match-setplayer`.
 
 ## Next steps
 

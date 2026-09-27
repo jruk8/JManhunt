@@ -96,30 +96,30 @@ class ConfigServiceValuesTest {
     @Test
     void setValueIndexPathReplacesEntry() {
         ConfigService.SetOutcome outcome =
-                service.setValue("match.end-statistics.0", "PROGRESSION");
+                service.setValue("advanced.advanced-match-controls.end-statistics.0", "PROGRESSION");
 
         assertTrue(outcome.ok());
         assertEquals("DAMAGE_DEALT", outcome.oldValue());
         assertEquals(List.of("PROGRESSION", "HUNTER_FINAL_KILLS", "SPEEDRUNNER_KILLS", "PROGRESSION"),
-                service.getStringList("match.end-statistics"));
+                service.getStringList("advanced.advanced-match-controls.end-statistics"));
     }
 
     @Test
     void listAddAndRemoveRoundtrip() {
-        ConfigService.SetOutcome added = service.listAdd("match.end-statistics", "EXTRA");
+        ConfigService.SetOutcome added = service.listAdd("advanced.advanced-match-controls.end-statistics", "EXTRA");
 
         assertTrue(added.ok());
-        assertEquals(5, service.getStringList("match.end-statistics").size());
+        assertEquals(5, service.getStringList("advanced.advanced-match-controls.end-statistics").size());
 
-        ConfigService.SetOutcome removed = service.listRemove("match.end-statistics", 4);
+        ConfigService.SetOutcome removed = service.listRemove("advanced.advanced-match-controls.end-statistics", 4);
         assertTrue(removed.ok());
         assertEquals("EXTRA", removed.oldValue());
-        assertEquals(4, service.getStringList("match.end-statistics").size());
+        assertEquals(4, service.getStringList("advanced.advanced-match-controls.end-statistics").size());
     }
 
     @Test
     void listRemoveOutOfRangeReportsSize() {
-        ConfigService.SetOutcome outcome = service.listRemove("match.end-statistics", 9);
+        ConfigService.SetOutcome outcome = service.listRemove("advanced.advanced-match-controls.end-statistics", 9);
 
         assertFalse(outcome.ok());
         assertEquals("manhunt.setting-index-invalid", outcome.errorKey());
@@ -128,20 +128,20 @@ class ConfigServiceValuesTest {
 
     @Test
     void listResetRestoresDefaults() {
-        assertTrue(service.listAdd("match.end-statistics", "EXTRA").ok());
-        assertTrue(service.isListModified("match.end-statistics"));
+        assertTrue(service.listAdd("advanced.advanced-match-controls.end-statistics", "EXTRA").ok());
+        assertTrue(service.isListModified("advanced.advanced-match-controls.end-statistics"));
 
-        ConfigService.SetOutcome outcome = service.listReset("match.end-statistics");
+        ConfigService.SetOutcome outcome = service.listReset("advanced.advanced-match-controls.end-statistics");
 
         assertTrue(outcome.ok());
         assertEquals(List.of("DAMAGE_DEALT", "HUNTER_FINAL_KILLS", "SPEEDRUNNER_KILLS", "PROGRESSION"),
-                service.getStringList("match.end-statistics"));
-        assertFalse(service.isListModified("match.end-statistics"));
+                service.getStringList("advanced.advanced-match-controls.end-statistics"));
+        assertFalse(service.isListModified("advanced.advanced-match-controls.end-statistics"));
     }
 
     @Test
     void listResetUnknownPathFails() {
-        ConfigService.SetOutcome outcome = service.listReset("match.nope");
+        ConfigService.SetOutcome outcome = service.listReset("advanced.advanced-match-controls.nope");
 
         assertFalse(outcome.ok());
         assertEquals("manhunt.setting-invalid", outcome.errorKey());
@@ -149,13 +149,13 @@ class ConfigServiceValuesTest {
 
     @Test
     void isListModifiedComparesAgainstDefaults() {
-        assertFalse(service.isListModified("match.end-statistics"));
+        assertFalse(service.isListModified("advanced.advanced-match-controls.end-statistics"));
 
-        assertTrue(service.listAdd("match.end-statistics", "EXTRA").ok());
-        assertTrue(service.isListModified("match.end-statistics"));
+        assertTrue(service.listAdd("advanced.advanced-match-controls.end-statistics", "EXTRA").ok());
+        assertTrue(service.isListModified("advanced.advanced-match-controls.end-statistics"));
 
-        assertTrue(service.listRemove("match.end-statistics", 4).ok());
-        assertFalse(service.isListModified("match.end-statistics"));
+        assertTrue(service.listRemove("advanced.advanced-match-controls.end-statistics", 4).ok());
+        assertFalse(service.isListModified("advanced.advanced-match-controls.end-statistics"));
     }
 
     @Test
@@ -212,10 +212,10 @@ class ConfigServiceValuesTest {
 
     @Test
     void indexPathsDetected() {
-        assertTrue(service.isIndexPath("match.end-statistics.0"));
-        assertFalse(service.isIndexPath("match.end-statistics"));
-        assertFalse(service.isIndexPath("match.end-delay"));
-        assertTrue(service.isList("match.end-statistics"));
-        assertFalse(service.isList("match.end-delay"));
+        assertTrue(service.isIndexPath("advanced.advanced-match-controls.end-statistics.0"));
+        assertFalse(service.isIndexPath("advanced.advanced-match-controls.end-statistics"));
+        assertFalse(service.isIndexPath("advanced.advanced-match-controls.end-delay"));
+        assertTrue(service.isList("advanced.advanced-match-controls.end-statistics"));
+        assertFalse(service.isList("advanced.advanced-match-controls.end-delay"));
     }
 }

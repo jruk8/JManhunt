@@ -162,13 +162,14 @@ both chat and title are disabled, no announcement plays at all.
 
 # Match End Delay
 
-Under `match.end-delay`, you can configure how long the plugin waits between
+Under `advanced.advanced-match-controls.end-delay`, you can configure how long the plugin waits between
 the win or cancel announcement and the final cleanup (running end commands,
 returning players to the lobby, and deactivating the match):
 
 ```yaml
-match:
-  end-delay: 10.0        # in seconds
+advanced:
+  advanced-match-controls:
+    end-delay: 10.0        # in seconds
 ```
 
 Match statistics are broadcast halfway through this delay. Interval modifiers
@@ -185,12 +186,13 @@ stats, with or without the flag.
 
 # Start Reminders
 
-Under `match.start-reminder-interval`, you can configure how often players are
+Under `advanced.advanced-match-controls.start-reminder-interval`, you can configure how often players are
 reminded while waiting for the first speedrunner hit:
 
 ```yaml
-match:
-  start-reminder-interval: 10.0        # in seconds
+advanced:
+  advanced-match-controls:
+    start-reminder-interval: 30.0        # in seconds
 ```
 
 For finite pre-start timeouts this value is not used directly. Instead,
@@ -202,18 +204,19 @@ entirely while still waiting.
 
 # Disconnect Handling
 
-Under `match.disconnect-handling`, you can configure what happens when a participant
+Under `advanced.advanced-match-controls.disconnect-handling`, you can configure what happens when a participant
 disconnects mid-match, per role:
 
 ```yaml
-match:
-  disconnect-handling:
-    speedrunner:
-      reconnect-grace-seconds: 60
-      max-strikes: 3
-    hunter:
-      reconnect-grace-seconds: 60
-      max-strikes: 3
+advanced:
+  advanced-match-controls:
+    disconnect-handling:
+      speedrunner:
+        reconnect-grace-seconds: 60
+        max-strikes: 3
+      hunter:
+        reconnect-grace-seconds: 60
+        max-strikes: 3
 ```
 
 `reconnect-grace-seconds` is how long a disconnected player has to rejoin

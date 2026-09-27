@@ -402,15 +402,22 @@ public final class MatchFinishService {
         stateCommands.runConsoleCleanup(instance.matchId());
         stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
 
-        long delay = immediate
-                ? 0L
-                : Math.max(0L, Math.round(plugin.overrides()
-                        .getDouble(instance.originLobbyId(), "match.end-delay", 10.0) * 20.0));
+        long delay = endDelayTicks(instance, immediate);
         Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
     }
 
     /** Sends end-of-match statistics, exactly once per match. */
+    /** End-delay in ticks, or zero when the end is immediate. */
+    private long endDelayTicks(GameInstance instance, boolean immediate) {
+        if (immediate) {
+            return 0L;
+        }
+        return Math.max(0L, Math.round(plugin.overrides().getDouble(
+                instance.originLobbyId(),
+                "advanced.advanced-match-controls.end-delay", 10.0) * 20.0));
+    }
+
     private void showEndStatsOnce(GameInstance instance) {
         if (instance.endStatsShown()) {
             return;
@@ -566,10 +573,7 @@ public final class MatchFinishService {
         stateCommands.runConsoleCleanup(instance.matchId());
         stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
 
-        long delay = immediate
-                ? 0L
-                : Math.max(0L, Math.round(plugin.overrides()
-                        .getDouble(instance.originLobbyId(), "match.end-delay", 10.0) * 20.0));
+        long delay = endDelayTicks(instance, immediate);
         Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
         Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
     }

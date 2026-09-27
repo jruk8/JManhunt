@@ -84,7 +84,7 @@ class ConfigDrillTest {
 
     @Test
     void topLevelChildrenAreRegistryCategories() {
-        assertEquals(List.of("debug", "lobbies", "match", "settings", "statistics",
+        assertEquals(List.of("advanced", "debug", "settings", "statistics",
                 "update-checker", "world-engine"), ManhuntCommand.drillChildren(List.of(), noLists()));
     }
 
@@ -106,21 +106,22 @@ class ConfigDrillTest {
     @Test
     void listChildrenOfferIndicesAndVerbs() {
         Function<String, List<String>> fixtures =
-                lists(Map.of("match.end-statistics", List.of("a", "b")));
+                lists(Map.of("advanced.advanced-match-controls.end-statistics", List.of("a", "b")));
 
         assertEquals(List.of("0", "1", "add", "remove", "reset"),
-                ManhuntCommand.drillChildren(List.of("match", "end-statistics"), fixtures));
+                ManhuntCommand.drillChildren(List.of("advanced", "advanced-match-controls",
+                        "end-statistics"), fixtures));
     }
 
     @Test
     void indexPathResolvesAsLeaf() {
         Function<String, List<String>> fixtures =
-                lists(Map.of("match.end-statistics", List.of("a", "b")));
+                lists(Map.of("advanced.advanced-match-controls.end-statistics", List.of("a", "b")));
 
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                List.of("match", "end-statistics", "1"), fixtures);
+                List.of("advanced", "advanced-match-controls", "end-statistics", "1"), fixtures);
 
-        assertEquals("match.end-statistics.1", resolved.path());
+        assertEquals("advanced.advanced-match-controls.end-statistics.1", resolved.path());
         assertTrue(resolved.leaf());
         assertTrue(resolved.remainder().isEmpty());
     }
@@ -128,12 +129,12 @@ class ConfigDrillTest {
     @Test
     void indexOutOfRangeStopsAtList() {
         Function<String, List<String>> fixtures =
-                lists(Map.of("match.end-statistics", List.of("a", "b")));
+                lists(Map.of("advanced.advanced-match-controls.end-statistics", List.of("a", "b")));
 
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                List.of("match", "end-statistics", "7"), fixtures);
+                List.of("advanced", "advanced-match-controls", "end-statistics", "7"), fixtures);
 
-        assertEquals("match.end-statistics", resolved.path());
+        assertEquals("advanced.advanced-match-controls.end-statistics", resolved.path());
         assertFalse(resolved.leaf());
         assertTrue(resolved.section());
         assertEquals(List.of("7"), resolved.remainder());
@@ -170,7 +171,7 @@ class ConfigDrillTest {
         assertEquals(List.of(), missing.sections());
         assertEquals(List.of(), missing.leaves());
 
-        var scalar = SettingRegistry.children("match.end-delay");
+        var scalar = SettingRegistry.children("advanced.advanced-match-controls.end-delay");
         assertEquals(List.of(), scalar.sections());
         assertEquals(List.of(), scalar.leaves());
     }

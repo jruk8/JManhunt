@@ -501,7 +501,7 @@ empty commands, malformed `<random-num:>` or `<random-pick:>`
 arguments, unknown root commands, and unknown `give` items are
 refused with an error, while unknown tags and skipped pick items
 only warn. `<duration>` is compass-only and warns on modifiers.
-Set `settings.server.advanced.validate-modifier-editor-commands`
+Set `advanced.misc.interop.validate-modifier-editor-commands`
 to false to skip the root and item checks; placeholder checks
 always run. The command-line creator enforces the same rules; see
 [Modifiers](../commands.md#modifiers) for its flags.

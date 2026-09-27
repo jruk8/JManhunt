@@ -14,13 +14,14 @@ another lobby or leave the server. Lobby membership is not saved across
 restarts.
 
 ```yaml
-lobbies:
-  default-lobby-id: 0
-  join-teleports-to-lobby: true
-  announce-lobby-changes: ALL
-  caps:
-    speedrunner: -1
-    hunter: -1
+advanced:
+  lobbies:
+    default-lobby-id: 0
+    join-teleports-to-lobby: true
+    announce-lobby-changes: ALL
+    caps:
+      speedrunner: -1
+      hunter: -1
 ```
 
 `default-lobby-id` is the lobby players join on login. Set it to a negative
@@ -77,7 +78,7 @@ world-engine cell index works as an alias wherever an id is accepted.
 
 ## Mid-match Setplayer
 
-`lobbies.mid-match-setplayer` decides what `setplayer` does when the
+`advanced.lobbies.mid-match-setplayer` decides what `setplayer` does when the
 target's lobby has a live match. It only applies with the world engine
 on; otherwise the in-match block stays.
 

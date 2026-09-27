@@ -92,12 +92,13 @@ lives, since it could never be achieved. The sentence fragments live in
 
 # End-Screen Statistics
 
-Under `match.end-statistics`, you can configure which match statistics are broadcast
+Under `advanced.advanced-match-controls.end-statistics`, you can configure which match statistics are broadcast
 after a match ends, and in what order:
 
 ```yaml
-match:
-  end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
+advanced:
+  advanced-match-controls:
+    end-statistics: [DAMAGE_DEALT, HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, PROGRESSION]
 ```
 
 Available values are `DAMAGE_DEALT`, `HUNTER_FINAL_KILLS`,

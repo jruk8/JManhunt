@@ -588,5 +588,5 @@ public class ManhuntMessages extends OkaeriConfig {
 
     @CustomKey("worldengine-tpto-lobby-world-clash")
     private String worldengineTptoLobbyWorldClash = "{prefix}<red>Lobby world name matches the game world. " +
-            "Rename <white>world-engine.lobby-world-name<red> first.";
+            "Rename <white>advanced.lobbies.lobby-world-name<red> first.";
 }

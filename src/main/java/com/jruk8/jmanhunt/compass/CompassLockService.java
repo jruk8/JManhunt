@@ -440,15 +440,15 @@ final class CompassLockService {
         long generation = generations.merge(id, 1L, Long::sum);
         Integer lobby = lobbyOf(holder);
         double effectiveDelay = jitteredDelay(
-                plugin.overrides().getDouble(lobby, "settings.compass.analyze.delay-seconds", 1.0),
+                plugin.overrides().getDouble(lobby, "advanced.misc.analyze.delay-seconds", 1.0),
                 plugin.overrides()
-                        .getDouble(lobby, "settings.compass.analyze.delay-deviation-seconds", 0.0),
+                        .getDouble(lobby, "advanced.misc.analyze.delay-deviation-seconds", 0.0),
                 ThreadLocalRandom.current().nextDouble());
         runAnalysisDebuffs(holder, effectiveDelay);
         actionbars.put(id, messages.component("compass.analyzing-actionbar"));
         sounds.playSound(holder, "compass.analysis");
         long intervalTicks = analysisTickInterval(clampedSoundInterval(plugin.overrides()
-                .getDouble(lobby, "settings.compass.analyze.sound-interval-seconds", 0.5)));
+                .getDouble(lobby, "advanced.misc.analyze.sound-interval-seconds", 0.5)));
         Bukkit.getScheduler().runTaskTimer(plugin, task -> {
             if (!analyzing.contains(id) || generations.getOrDefault(id, 0L) != generation) {
                 task.cancel();
@@ -490,7 +490,7 @@ final class CompassLockService {
     /** Sound interval clamped to its registry bounds, for stale files. */
     static double clampedSoundInterval(double value) {
         SettingDescriptor descriptor =
-                SettingRegistry.byPath("settings.compass.analyze.sound-interval-seconds");
+                SettingRegistry.byPath("advanced.misc.analyze.sound-interval-seconds");
         if (descriptor == null) {
             return value;
         }
@@ -524,7 +524,7 @@ final class CompassLockService {
     private void runAnalysisDebuffs(Player holder, double effectiveDelaySeconds) {
         Integer lobby = lobbyOf(holder);
         if (!plugin.overrides().getBoolean(lobby,
-                "settings.compass.analyze.debuffs.enabled", false)) {
+                "advanced.misc.analyze.debuffs.enabled", false)) {
             return;
         }
         Role holderRole = playerStates.role(holder);
@@ -570,9 +570,9 @@ final class CompassLockService {
     /** Shared player debuffs plus the holder's own role list. */
     private List<String> debuffCommands(Integer lobby, Role holderRole) {
         List<String> commands = new ArrayList<>(plugin.overrides()
-                .getStringList(lobby, "settings.compass.analyze.debuffs.commands.player"));
+                .getStringList(lobby, "advanced.misc.analyze.debuffs.commands.player"));
         commands.addAll(plugin.overrides().getStringList(lobby,
-                "settings.compass.analyze.debuffs.commands." + holderRole.name().toLowerCase(Locale.ROOT)));
+                "advanced.misc.analyze.debuffs.commands." + holderRole.name().toLowerCase(Locale.ROOT)));
         return commands;
     }
 
@@ -625,6 +625,6 @@ final class CompassLockService {
 
     boolean analyzeEnabled(Integer lobby, boolean auto) {
         return plugin.overrides().getBoolean(lobby, auto
-                ? "settings.compass.analyze.auto" : "settings.compass.analyze.right-click", false);
+                ? "advanced.misc.analyze.auto" : "advanced.misc.analyze.right-click", false);
     }
 }

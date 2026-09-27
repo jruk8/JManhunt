@@ -203,7 +203,8 @@ public final class PrestartService {
         // Indefinite waiting (-1): use the configured reminder interval and
         // never schedule an expiry.
         double interval = plugin.overrides()
-                .getFloat(instance.originLobbyId(), "match.start-reminder-interval", 10.0f);
+                                .getFloat(instance.originLobbyId(),
+                        "advanced.advanced-match-controls.start-reminder-interval", 30.0f);
         if (interval == -1.0) {
             return false;
         }

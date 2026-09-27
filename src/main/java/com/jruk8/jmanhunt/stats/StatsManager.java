@@ -314,7 +314,8 @@ public final class StatsManager {
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
         GameManager game = plugin.game();
         Integer lobby = game == null ? null : game.lobbyOf(matchId);
-        for (String statistic : plugin.overrides().getStringList(lobby, "match.end-statistics")) {
+        for (String statistic : plugin.overrides().getStringList(lobby,
+                "advanced.advanced-match-controls.end-statistics")) {
             if (statistic.equalsIgnoreCase("PROGRESSION")) {
                 updateProgression(matchId);
             }

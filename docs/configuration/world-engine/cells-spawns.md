@@ -152,9 +152,9 @@ while in the lobby world joins that lobby with role `none`, the same as
 already there). Players already in that lobby, and players in a running
 match, are left alone. Where boxes overlap, the box whose midpoint is
 nearest wins. Walking out of every box is governed by
-`lobbies.bounds.exit-behavior`: `KEEP_IN_LOBBY` (default) keeps the
+`advanced.lobbies.bounds.exit-behavior`: `KEEP_IN_LOBBY` (default) keeps the
 membership, so the walk-out is ignored; `EXIT_LOBBY` leaves the lobby,
-moving members to `lobbies.bounds.exit-lobby-id` (lobby-less by
+moving members to `advanced.lobbies.bounds.exit-lobby-id` (lobby-less by
 default), unless the destination lands straight inside another lobby's
 box, in which case they join that lobby instead. Either way this only
 fires for members whose lobby has complete bounds, and never for
@@ -172,7 +172,7 @@ The fastest way to get a lobby is `/manhunt worldengine tpto lobbyworld`,
 run twice: it generates the `jmh_lobby` void world (filled by the
 `DEFAULT` preset, or the preset you name) and points lobby 0 at the
 spawn automatically.
-Set `world-engine.lobby-world-name` to use your own world instead.
+Set `advanced.lobbies.lobby-world-name` to use your own world instead.
 
 Players who fall into the void in the lobby world pop back at their lobby
 teleport (or lobby 0 when theirs is unset) instead of dying. This never

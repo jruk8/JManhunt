@@ -30,9 +30,9 @@ categories:
   match/headstarts/speedrunner: RABBIT_FOOT
   compass: COMPASS
   compass/given-to: CHEST
-  compass/analyze: AMETHYST_SHARD
-  compass/analyze/debuffs: POTION
-  compass/analyze/debuffs/commands: COMMAND_BLOCK
+  advanced/misc/analyze: AMETHYST_SHARD
+  advanced/misc/analyze/debuffs: POTION
+  advanced/misc/analyze/debuffs/commands: COMMAND_BLOCK
   compass/signal-interference: REDSTONE_TORCH
   compass/signal-interference/altitude: ELYTRA
   compass/signal-interference/biome: GRASS_BLOCK
@@ -73,9 +73,14 @@ categories:
   players/spectator/toolbar: BLAZE_ROD
   server: BELL
   server/status: MAP
-  server/advanced: ANVIL
+  advanced/misc/interop: ANVIL
   server/anti-spawn-camp: IRON_BARS
   server/team-chat: WRITABLE_BOOK
+  advanced/advanced-match-controls: GOAT_HORN
+  advanced/lobbies: LODESTONE
+  advanced/misc: COMPARATOR
+  advanced/misc/debug: DEBUG_STICK
+  world-engine: BEACON
 descriptions:
   "settings.match": "Match flow: autostart, headstarts, leaving, and victory."
   "settings.match.autostart": "Begin matches automatically once queues fill up."
@@ -105,9 +110,9 @@ descriptions:
   "settings.match.win-conditions.speedrunner.reach-advancement": "Speedrunners win via an advancement."
   "settings.match.win-conditions.speedrunner.survive-time": "Speedrunners win by surviving."
   "settings.compass": "Tracking compass: who gets one and how it behaves."
-  "settings.compass.analyze": "Delayed analysis with tick sounds and commands."
-  "settings.compass.analyze.debuffs": "Commands fired while analysis runs."
-  "settings.compass.analyze.debuffs.commands": "Command lists for holders, runners, hunters."
+  "advanced.misc.analyze": "Delayed analysis with tick sounds and commands."
+  "advanced.misc.analyze.debuffs": "Commands fired while analysis runs."
+  "advanced.misc.analyze.debuffs.commands": "Command lists for holders, runners, hunters."
   "settings.compass.drop-on-death": "Whether the compass drops when its holder dies."
   "settings.compass.given-to": "Which roles receive a tracking compass."
   "settings.compass.hunter": "Range limits for hunter compasses."
@@ -150,9 +155,9 @@ descriptions:
   "settings.players.spectator": "Spectator toolbar and lock-on follow."
   "settings.players.spectator.toolbar": "Hotbar buttons handed to spectators."
   "settings.server": "Broadcasts, spawn-camp guard, and status output."
-  "settings.server.advanced": "Advanced server interop toggles."
-  "settings.server.advanced.disable-worldedit-navwand": "Block WorldEdit compass teleports."
-  "settings.server.advanced.validate-modifier-editor-commands": "Reject bad roots and give items in the editor."
+  "advanced.misc.interop": "Advanced server interop toggles."
+  "advanced.misc.interop.disable-worldedit-navwand": "Block WorldEdit compass teleports."
+  "advanced.misc.interop.validate-modifier-editor-commands": "Reject bad roots and give items in the editor."
   "settings.server.anti-spawn-camp": "Punish farming kills on one victim."
   "settings.server.status": "Pick which lines status commands show."
   "settings.server.team-chat": "Prefixed chat for match teammates."
@@ -217,15 +222,15 @@ descriptions:
   "settings.compass.speedrunner.max-distance.distance": "Speedrunner compass range; -1 is unlimited."
   "settings.compass.speedrunner.min-distance.enabled": "Hide nearby targets from speedrunners."
   "settings.compass.speedrunner.min-distance.distance": "Radius inside which targets hide."
-  "settings.compass.analyze.right-click": "Analysis lag applies to right-click refreshes."
-  "settings.compass.analyze.auto": "Analysis lag applies to interval refreshes."
-  "settings.compass.analyze.delay-seconds": "Seconds the analysis takes to complete."
-  "settings.compass.analyze.delay-deviation-seconds": "Random jitter on the analysis delay."
-  "settings.compass.analyze.sound-interval-seconds": "Seconds between analysis tick sounds."
-  "settings.compass.analyze.debuffs.enabled": "Run commands when an analysis starts."
-  "settings.compass.analyze.debuffs.commands.player": "Commands run for every analyzing holder."
-  "settings.compass.analyze.debuffs.commands.speedrunner": "Extra commands for speedrunner holders."
-  "settings.compass.analyze.debuffs.commands.hunter": "Extra commands for hunter holders."
+  "advanced.misc.analyze.right-click": "Analysis lag applies to right-click refreshes."
+  "advanced.misc.analyze.auto": "Analysis lag applies to interval refreshes."
+  "advanced.misc.analyze.delay-seconds": "Seconds the analysis takes to complete."
+  "advanced.misc.analyze.delay-deviation-seconds": "Random jitter on the analysis delay."
+  "advanced.misc.analyze.sound-interval-seconds": "Seconds between analysis tick sounds."
+  "advanced.misc.analyze.debuffs.enabled": "Run commands when an analysis starts."
+  "advanced.misc.analyze.debuffs.commands.player": "Commands run for every analyzing holder."
+  "advanced.misc.analyze.debuffs.commands.speedrunner": "Extra commands for speedrunner holders."
+  "advanced.misc.analyze.debuffs.commands.hunter": "Extra commands for hunter holders."
   "settings.compass.signal-interference.enabled": "Master switch for signal interference."
   "settings.compass.signal-interference.two-way": "Target location needs a good signal too."
   "settings.compass.signal-interference.required-to-fail": "Failed checks needed to jam tracking."
@@ -278,7 +283,12 @@ descriptions:
   "settings.server.anti-spawn-camp.kills": "Kills on one victim that trigger it."
   "settings.server.anti-spawn-camp.window-seconds": "Rolling window in seconds."
   "settings.server.anti-spawn-camp.punishment": "KILL slays the camper; GEAR-WIPE strips them."
-  "settings.server.status.show-ids": "Show match ids in status output."
+  "advanced.misc.debug.show-ids": "Show match ids in status output."
   "settings.server.status.show-elapsed-time": "Show elapsed time in status output."
   "settings.server.status.show-modifiers": "Show modifiers in status output."
   "settings.server.status.show-win-conditions": "Show win conditions in status output."
+  "advanced.advanced-match-controls": "Match lifecycle: delays, reminders, rules."
+  "advanced.lobbies": "Lobby queues, bounds exits, and the lobby world."
+  "advanced.misc": "Power-user toggles that rarely need changing."
+  "advanced.misc.debug": "Debug display toggles."
+  "world-engine": "Grid engine: cells, borders, spawns, particles."
