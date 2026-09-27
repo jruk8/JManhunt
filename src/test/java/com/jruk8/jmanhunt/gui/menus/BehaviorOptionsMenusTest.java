@@ -99,13 +99,13 @@ class BehaviorOptionsMenusTest {
         opts.setExecution(execution);
         opts.setDelay(100L);
         behavior.setOptions(opts);
-        entry.setBehavior(behavior);
+        entry.setBehavior(new java.util.HashMap<>(java.util.Map.of("0", behavior)));
         return entry;
     }
 
     @Test
     void optionsMenuListsFiveGlowingEntries() {
-        Menu menu = options.optionsMenu("zebra", null);
+        Menu menu = options.optionsMenu("zebra", 0, null);
 
         assertEquals(title("Behavior Options"), menu.title());
         Material[] materials = {Material.LEVER, Material.REPEATER,
@@ -128,7 +128,7 @@ class BehaviorOptionsMenusTest {
                 "Events that trigger this modifier.",
                 "",
                 "Value: 2 selected",
-                "Path: modifiers.zebra.behavior.runs-on",
+                "Path: modifiers.zebra.behavior.0.runs-on",
                 "Type: Choice",
                 "» ON_START",
                 "» INTERVAL",
@@ -155,7 +155,7 @@ class BehaviorOptionsMenusTest {
                 "Ticks to wait after the trigger before commands run.",
                 "",
                 "Value: " + value,
-                "Path: modifiers." + id + ".behavior.options.delay",
+                "Path: modifiers." + id + ".behavior.0.options.delay",
                 "Type: Integer",
                 "Allowed: 0 or more",
                 "Default: Not set",
@@ -166,7 +166,7 @@ class BehaviorOptionsMenusTest {
 
     @Test
     void runsOnMarksSelectedTriggers() {
-        Menu menu = options.optionsMenu("zebra", null);
+        Menu menu = options.optionsMenu("zebra", 0, null);
 
         Component marked = menu.buttonAt(0).lore().get(5);
         Component unmarked = menu.buttonAt(0).lore().get(7);
@@ -190,7 +190,7 @@ class BehaviorOptionsMenusTest {
 
     @Test
     void unknownIdsShowDefaultsWithoutGlow() {
-        Menu menu = options.optionsMenu("ghost", null);
+        Menu menu = options.optionsMenu("ghost", 0, null);
 
         for (int slot = 0; slot < 5; slot++) {
             assertFalse(menu.buttonAt(slot).glow(), "slot " + slot + " should not glow");
@@ -215,7 +215,7 @@ class BehaviorOptionsMenusTest {
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
-        gated.optionsMenu("ghost", null).buttonAt(1).action().accept(player);
+        gated.optionsMenu("ghost", 0, null).buttonAt(1).action().accept(player);
 
         verify(sounds).playAngrySound(player);
         verify(messages).message(eq(player), eq("modifiers.edit-invalid"), any(Map.class));
@@ -238,7 +238,7 @@ class BehaviorOptionsMenusTest {
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
-        gated.optionsMenu("zebra", null).buttonAt(1).action().accept(player);
+        gated.optionsMenu("zebra", 0, null).buttonAt(1).action().accept(player);
 
         verify(gui).navigate(eq(player), any(Menu.class));
         verify(sounds).playSound(player, "compass.left-click");
@@ -261,7 +261,7 @@ class BehaviorOptionsMenusTest {
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
-        menus.optionsMenu("zebra", null).buttonAt(0).action().accept(player);
+        menus.optionsMenu("zebra", 0, null).buttonAt(0).action().accept(player);
 
         verify(dialogs).openRunsOn(eq(player), eq(List.of("ON_START", "INTERVAL")),
                 any(), any());
@@ -269,7 +269,7 @@ class BehaviorOptionsMenusTest {
 
     @Test
     void intervalMenuShowsLiveValues() {
-        Menu menu = options.intervalMenu("zebra", null);
+        Menu menu = options.intervalMenu("zebra", 0, null);
 
         assertEquals(title("Interval Settings"), menu.title());
         assertEquals(Material.CLOCK, menu.buttonAt(0).material());
@@ -277,7 +277,7 @@ class BehaviorOptionsMenusTest {
                 "Seconds between runs while INTERVAL is selected.",
                 "",
                 "Value: 30.0s",
-                "Path: modifiers.zebra.behavior.options.interval-settings.interval",
+                "Path: modifiers.zebra.behavior.0.options.interval-settings.interval",
                 "Type: Number",
                 "Allowed: 0 or more",
                 "Default: Not set",
@@ -289,7 +289,7 @@ class BehaviorOptionsMenusTest {
                 "Random jitter added to each interval, never above it.",
                 "",
                 "Value: 5.0s",
-                "Path: modifiers.zebra.behavior.options.interval-settings.deviation",
+                "Path: modifiers.zebra.behavior.0.options.interval-settings.deviation",
                 "Type: Number",
                 "Allowed: 0 up to interval",
                 "Default: Not set",
@@ -301,7 +301,7 @@ class BehaviorOptionsMenusTest {
                 "Whether the interval clock is shared or runs per player.",
                 "",
                 "Value: PER_EXECUTOR",
-                "Path: modifiers.zebra.behavior.options.interval-settings.behavior",
+                "Path: modifiers.zebra.behavior.0.options.interval-settings.behavior",
                 "Type: Choice",
                 "» PER_INVOKE",
                 "» PER_EXECUTOR",
@@ -313,7 +313,7 @@ class BehaviorOptionsMenusTest {
 
     @Test
     void executionMenuShowsLiveValues() {
-        Menu menu = options.executionMenu("zebra", null);
+        Menu menu = options.executionMenu("zebra", 0, null);
 
         assertEquals(title("Execution"), menu.title());
         assertEquals(Material.DISPENSER, menu.buttonAt(0).material());
@@ -321,7 +321,7 @@ class BehaviorOptionsMenusTest {
                 "How command lines are picked on each run.",
                 "",
                 "Value: PICK_RANDOM",
-                "Path: modifiers.zebra.behavior.options.execution.selection",
+                "Path: modifiers.zebra.behavior.0.options.execution.selection",
                 "Type: Choice",
                 "» IN_ORDER",
                 "» PICK_RANDOM",
@@ -334,7 +334,7 @@ class BehaviorOptionsMenusTest {
                 "How many lines each PICK_RANDOM draw takes.",
                 "",
                 "Value: Default (1)",
-                "Path: modifiers.zebra.behavior.options.execution.pick-random.count",
+                "Path: modifiers.zebra.behavior.0.options.execution.pick-random.count",
                 "Type: Integer",
                 "Allowed: 1 or more",
                 "Default: 1",
@@ -345,7 +345,7 @@ class BehaviorOptionsMenusTest {
                 "Whether ON_START fires before or after the pre-start window.",
                 "",
                 "Value: Default (IN_ORDER)",
-                "Path: modifiers.zebra.behavior.on-start.pre-start-order",
+                "Path: modifiers.zebra.behavior.0.on-start.pre-start-order",
                 "Type: Choice",
                 "» IN_ORDER",
                 "» AFTER",
@@ -357,7 +357,7 @@ class BehaviorOptionsMenusTest {
 
     @Test
     void chanceMenuShowsLiveValues() {
-        Menu menu = options.chanceMenu("zebra", null);
+        Menu menu = options.chanceMenu("zebra", 0, null);
 
         assertEquals(title("Success Chance"), menu.title());
         assertEquals(Material.EXPERIENCE_BOTTLE, menu.buttonAt(0).material());
@@ -365,7 +365,7 @@ class BehaviorOptionsMenusTest {
                 "Probability the modifier runs at all, from 0 to 1.",
                 "",
                 "Value: 50%",
-                "Path: modifiers.zebra.behavior.options.success-chance.chance",
+                "Path: modifiers.zebra.behavior.0.options.success-chance.chance",
                 "Type: Number",
                 "Allowed: 0 to 1",
                 "Default: 100%",
@@ -385,12 +385,12 @@ class BehaviorOptionsMenusTest {
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
-        menus.executionMenu("zebra", null).buttonAt(3).action().accept(player);
-        assertEquals("IN_ORDER", store.preStartOrder("zebra"));
+        menus.executionMenu("zebra", 0, null).buttonAt(3).action().accept(player);
+        assertEquals("IN_ORDER", store.preStartOrder("zebra", 0));
 
-        menus.executionMenu("zebra", null).buttonAt(3).action().accept(player);
-        assertEquals("AFTER", store.preStartOrder("zebra"));
-        assertTrue(ModifiedGlow.behaviorPreStart(store, "zebra"));
+        menus.executionMenu("zebra", 0, null).buttonAt(3).action().accept(player);
+        assertEquals("AFTER", store.preStartOrder("zebra", 0));
+        assertTrue(ModifiedGlow.behaviorPreStart(store, "zebra", 0));
     }
 
     @Test
@@ -407,11 +407,11 @@ class BehaviorOptionsMenusTest {
             return null;
         }).when(gui).navigate(eq(player), any(Menu.class));
 
-        menus.optionsMenu("zebra", null).buttonAt(3).rightAction().accept(player);
+        menus.optionsMenu("zebra", 0, null).buttonAt(3).rightAction().accept(player);
 
         assertEquals("Reset Delay?", textOf(shown.get().title()));
         shown.get().buttonAt(ConfirmMenu.CONFIRM_SLOT).action().accept(player);
-        assertEquals(0L, store.delayTicks("zebra"));
+        assertEquals(0L, store.delayTicks("zebra", 0));
         verify(sounds).playNeutralSound(player);
         verify(gui, times(2)).navigate(eq(player), any(Menu.class));
     }
@@ -424,7 +424,7 @@ class BehaviorOptionsMenusTest {
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
-        menus.optionsMenu("ghost", null).buttonAt(3).rightAction().accept(player);
+        menus.optionsMenu("ghost", 0, null).buttonAt(3).rightAction().accept(player);
 
         verify(gui, never()).navigate(any(Player.class), any(Menu.class));
         verify(player).sendMessage(any(Component.class));

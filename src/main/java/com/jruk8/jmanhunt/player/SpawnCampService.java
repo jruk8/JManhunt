@@ -106,16 +106,23 @@ public final class SpawnCampService {
             wipeGear(attacker);
             broadcast("game.spawncamp-gear-wipe", attacker, victim, count);
         } else {
-            // The death below re-enters onDeath synchronously: tag it so the
-            // listener runs the quiet path (state changes intact, no chatter).
-            // try/finally keeps the tag exact even if a totem saves them.
-            quietPunishment.add(attacker.getUniqueId());
-            try {
-                attacker.setHealth(0.0);
-            } finally {
-                quietPunishment.remove(attacker.getUniqueId());
-            }
+            quietKill(attacker);
             broadcast("game.spawncamp-kill", attacker, victim, count);
+        }
+    }
+
+    /**
+     * Kills through the quiet death path: the death below re-enters
+     * onDeath synchronously with the tag set, so the listener applies
+     * state changes without chatter. try/finally keeps the tag exact
+     * even if a totem saves them.
+     */
+    public void quietKill(Player player) {
+        quietPunishment.add(player.getUniqueId());
+        try {
+            player.setHealth(0.0);
+        } finally {
+            quietPunishment.remove(player.getUniqueId());
         }
     }
 

@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.function.Consumer;
 import org.bukkit.Material;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -32,15 +33,17 @@ public final class ModifierStore {
     private final ModifiersConfig config;
     private final Logger log;
     private final Set<String> warnedItems = new HashSet<>();
+    private final Set<String> warnedBehaviorKeys = new HashSet<>();
 
     public ModifierStore(ModifiersConfig config, Logger log) {
         this.config = config;
         this.log = log;
     }
 
-    /** Clears one-per-load item warnings, e.g. after /mh reload. */
+    /** Clears one-per-load warnings, e.g. after /mh reload. */
     public void clearItemWarnings() {
         warnedItems.clear();
+        warnedBehaviorKeys.clear();
     }
 
     /** Raw modifier entry, or null when unknown. */
@@ -225,12 +228,69 @@ public final class ModifierStore {
         return true;
     }
 
-    /** Behavior block, creating it when missing. */
-    public static ModifierBehavior ensureBehavior(ModifierEntry entry) {
+    /** Behavior block at one index, creating map and block when missing. */
+    public static ModifierBehavior ensureBehavior(ModifierEntry entry, int index) {
         if (entry.getBehavior() == null) {
-            entry.setBehavior(new ModifierBehavior());
+            entry.setBehavior(new LinkedHashMap<>());
         }
-        return entry.getBehavior();
+        return entry.getBehavior().computeIfAbsent(String.valueOf(index),
+                key -> new ModifierBehavior());
+    }
+
+    /**
+     * Present behavior indexes, sorted ascending. Non-numeric keys warn
+     * once per load and are skipped; sparse indexes need no contiguity.
+     */
+    public List<Integer> behaviorIndexes(String name) {
+        ModifierEntry entry = config.getModifiers().get(name);
+        if (entry == null || entry.getBehavior() == null) {
+            return List.of();
+        }
+        List<Integer> indexes = new ArrayList<>();
+        for (String key : entry.getBehavior().keySet()) {
+            try {
+                indexes.add(Integer.parseInt(key.trim()));
+            } catch (NumberFormatException invalid) {
+                if (warnedBehaviorKeys.add(name + ":" + key)) {
+                    log.warning("Modifier '" + name + "' has non-numeric behavior key '"
+                            + key + "'; skipping.");
+                }
+            }
+        }
+        indexes.sort(Integer::compareTo);
+        return indexes;
+    }
+
+    /**
+     * Appends an empty behavior, saving immediately. The index is one
+     * past the highest present index, or 0 when none exist. Returns the
+     * new index, or -1 when the modifier is unknown.
+     */
+    public int addBehavior(String name) {
+        ModifierEntry entry = config.getModifiers().get(name);
+        if (entry == null) {
+            return -1;
+        }
+        int index = 0;
+        for (int present : behaviorIndexes(name)) {
+            index = Math.max(index, present + 1);
+        }
+        ensureBehavior(entry, index);
+        save();
+        return index;
+    }
+
+    /** Removes one behavior, saving immediately. False when nothing removed. */
+    public boolean removeBehavior(String name, int index) {
+        ModifierEntry entry = config.getModifiers().get(name);
+        if (entry == null || entry.getBehavior() == null) {
+            return false;
+        }
+        if (entry.getBehavior().remove(String.valueOf(index)) == null) {
+            return false;
+        }
+        save();
+        return true;
     }
 
     /** Meta block, creating it when missing. */
@@ -357,73 +417,73 @@ public final class ModifierStore {
     }
 
     /** Trigger names, or empty when the modifier omits runs-on. */
-    public List<String> runsOn(String name) {
-        ModifierBehavior behavior = behavior(name);
+    public List<String> runsOn(String name, int index) {
+        ModifierBehavior behavior = behavior(name, index);
         return behavior == null || behavior.getRunsOn() == null ? List.of() : behavior.getRunsOn();
     }
 
     /** Raw pre-start-order key, or null when unset. */
-    public String preStartOrder(String name) {
-        ModifierBehavior behavior = behavior(name);
+    public String preStartOrder(String name, int index) {
+        ModifierBehavior behavior = behavior(name, index);
         return behavior == null || behavior.getOnStart() == null
                 ? null : behavior.getOnStart().getPreStartOrder();
     }
 
     /** Interval seconds; 60 when unset. */
-    public double intervalSeconds(String name) {
-        ModifierOptions options = options(name);
+    public double intervalSeconds(String name, int index) {
+        ModifierOptions options = options(name, index);
         Double interval = options == null || options.getIntervalSettings() == null
                 ? null : options.getIntervalSettings().getInterval();
         return interval == null ? 60.0 : interval;
     }
 
     /** Interval deviation seconds; 0 when unset. */
-    public double intervalDeviation(String name) {
-        ModifierOptions options = options(name);
+    public double intervalDeviation(String name, int index) {
+        ModifierOptions options = options(name, index);
         Double deviation = options == null || options.getIntervalSettings() == null
                 ? null : options.getIntervalSettings().getDeviation();
         return deviation == null ? 0.0 : deviation;
     }
 
     /** Raw interval behavior key, or null when unset. */
-    public String intervalBehavior(String name) {
-        ModifierOptions options = options(name);
+    public String intervalBehavior(String name, int index) {
+        ModifierOptions options = options(name, index);
         return options == null || options.getIntervalSettings() == null
                 ? null : options.getIntervalSettings().getBehavior();
     }
 
     /** Success chance fraction; 1 when unset. */
-    public double chance(String name) {
-        ModifierOptions options = options(name);
+    public double chance(String name, int index) {
+        ModifierOptions options = options(name, index);
         Double chance = options == null || options.getSuccessChance() == null
                 ? null : options.getSuccessChance().getChance();
         return chance == null ? 1.0 : chance;
     }
 
     /** Raw success-chance behavior key, or null when unset. */
-    public String chanceBehavior(String name) {
-        ModifierOptions options = options(name);
+    public String chanceBehavior(String name, int index) {
+        ModifierOptions options = options(name, index);
         return options == null || options.getSuccessChance() == null
                 ? null : options.getSuccessChance().getBehavior();
     }
 
     /** Raw pick-random behavior key, or null when unset. */
-    public String pickBehavior(String name) {
-        ModifierExecution execution = execution(name);
+    public String pickBehavior(String name, int index) {
+        ModifierExecution execution = execution(name, index);
         return execution == null || execution.getPickRandom() == null
                 ? null : execution.getPickRandom().getBehavior();
     }
 
     /** Ticks to wait after triggering; 0 when unset. */
-    public long delayTicks(String name) {
-        ModifierOptions options = options(name);
+    public long delayTicks(String name, int index) {
+        ModifierOptions options = options(name, index);
         Long delay = options == null ? null : options.getDelay();
         return delay == null ? 0L : delay;
     }
 
     /** One command list; empty when the modifier or list is unknown. */
-    public List<String> commandList(String name, String listKey) {
-        ModifierCommands commands = commands(name);
+    public List<String> commandList(String name, int index, String listKey) {
+        ModifierCommands commands = commands(name, index);
         if (commands == null) {
             return List.of();
         }
@@ -432,14 +492,14 @@ public final class ModifierStore {
     }
 
     /** Raw execution selection key, or null when unset. */
-    public String selection(String name) {
-        ModifierExecution execution = execution(name);
+    public String selection(String name, int index) {
+        ModifierExecution execution = execution(name, index);
         return execution == null ? null : execution.getSelection();
     }
 
     /** Pick-random line count; 1 when unset. */
-    public int pickCount(String name) {
-        ModifierExecution execution = execution(name);
+    public int pickCount(String name, int index) {
+        ModifierExecution execution = execution(name, index);
         Integer count = execution == null || execution.getPickRandom() == null
                 ? null : execution.getPickRandom().getCount();
         return count == null ? 1 : count;
@@ -526,9 +586,12 @@ public final class ModifierStore {
         return preset == null ? null : preset.getMeta();
     }
 
-    private ModifierBehavior behavior(String name) {
+    private ModifierBehavior behavior(String name, int index) {
         ModifierEntry entry = config.getModifiers().get(name);
-        return entry == null ? null : entry.getBehavior();
+        if (entry == null || entry.getBehavior() == null) {
+            return null;
+        }
+        return entry.getBehavior().get(String.valueOf(index));
     }
 
     private ModifierMeta meta(String name) {
@@ -536,18 +599,18 @@ public final class ModifierStore {
         return entry == null ? null : entry.getMeta();
     }
 
-    private ModifierCommands commands(String name) {
-        ModifierBehavior behavior = behavior(name);
+    private ModifierCommands commands(String name, int index) {
+        ModifierBehavior behavior = behavior(name, index);
         return behavior == null ? null : behavior.getCommands();
     }
 
-    private ModifierOptions options(String name) {
-        ModifierBehavior behavior = behavior(name);
+    private ModifierOptions options(String name, int index) {
+        ModifierBehavior behavior = behavior(name, index);
         return behavior == null ? null : behavior.getOptions();
     }
 
-    private ModifierExecution execution(String name) {
-        ModifierOptions options = options(name);
+    private ModifierExecution execution(String name, int index) {
+        ModifierOptions options = options(name, index);
         return options == null ? null : options.getExecution();
     }
 

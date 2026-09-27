@@ -55,6 +55,7 @@ class CommandSyntaxTest {
     void randomNumberRules() {
         assertTrue(CommandSyntax.error("give <p> apple <random-num:1,6>").isEmpty());
         assertTrue(CommandSyntax.error("give <p> apple <random-num:6,1>").isEmpty());
+        assertTrue(CommandSyntax.error("give <p> apple <random-num:\"1\",\"6\">").isEmpty());
         assertTrue(CommandSyntax.error("give <p> apple <random-num:1>").isPresent());
         assertTrue(CommandSyntax.error("give <p> apple <random-num:a,b>").isPresent());
         assertTrue(CommandSyntax.error("give <p> apple <random-num>").isPresent());
@@ -163,6 +164,14 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <if:\"7 le 5\",\"y\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"<random-num:1,6> == 5\",\"y\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"<flag:a> == <flag:a>\",\"y\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <loseplayer:Alex> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <loseplayer:Alex,fell, hard> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <win:HUNTER> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <win:speedrunner> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <win:HUNTER,trapped> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <args> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <args:0> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <args:2> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"<if:1==1,y,n> == y\",\"Y\"> done").isEmpty());
     }
 
@@ -200,6 +209,13 @@ class CommandSyntaxTest {
     @Test
     void extendedTagArityFails() {
         assertTrue(CommandSyntax.error("say <id:x>").isPresent());
+        assertTrue(CommandSyntax.error("say <loseplayer> done").isPresent());
+        assertTrue(CommandSyntax.error("say <loseplayer:> done").isPresent());
+        assertTrue(CommandSyntax.error("say <win> done").isPresent());
+        assertTrue(CommandSyntax.error("say <win:ref> done").isPresent());
+        assertTrue(CommandSyntax.error("say <win:ref,out> done").isPresent());
+        assertTrue(CommandSyntax.error("say <args:x> done").isPresent());
+        assertTrue(CommandSyntax.error("say <args:0,1> done").isPresent());
         assertTrue(CommandSyntax.error("give <p> apple <min:8>").isPresent());
         assertTrue(CommandSyntax.error("give <p> apple <clamp:8,1>").isPresent());
         assertTrue(CommandSyntax.error("say <gmessage> done").isPresent());

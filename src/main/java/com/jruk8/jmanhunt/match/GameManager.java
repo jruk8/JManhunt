@@ -343,6 +343,15 @@ public final class GameManager implements MatchControl {
         matchFinish.finish(winner, reason);
     }
 
+    /**
+     * Eliminates a runner/hunter by name with a loss announcement.
+     * False with no effect when the match is not live or the player
+     * is unknown, offline, or not a runner/hunter.
+     */
+    public boolean losePlayer(long matchId, String playerName, String reason) {
+        return matchFinish.losePlayer(matchId, playerName, reason);
+    }
+
     /** Ends one match. */
     @Override
     public void finish(GameInstance instance, Role winner, String reason) {

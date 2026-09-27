@@ -23,6 +23,7 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.scheduler.BukkitTask;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -439,19 +440,22 @@ public final class PlayerCombatListener implements Listener {
         plugin.spawnCamp().handleKill(matchId, killer, (Player) event.getEntity(),
                 playerStates.role(killer.getUniqueId()));
         if (victimIsPlayer) {
-            game.stateCommands().runEventModifiers("ON_PLAYER_KILL", killer, matchId);
+            List<String> eventArgs = List.of(event.getEntity().getName());
+            game.stateCommands().runEventModifiers("ON_PLAYER_KILL", killer, matchId, eventArgs);
             Role victimRole = playerStates.role(event.getEntity().getUniqueId());
             if (victimRole == Role.HUNTER) {
-                game.stateCommands().runEventModifiers("ON_HUNTER_KILL", killer, matchId);
+                game.stateCommands().runEventModifiers("ON_HUNTER_KILL", killer, matchId, eventArgs);
             } else if (victimRole == Role.SPEEDRUNNER) {
-                game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_KILL", killer, matchId);
+                game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_KILL", killer, matchId,
+                        eventArgs);
             }
         }
     }
 
     private void handleMobKill(GameInstance match, Player killer, Entity victim) {
         stats.recordMobKill(match.matchId(), killer.getUniqueId());
-        game.stateCommands().runEventModifiers("ON_MOB_KILL", killer, match.matchId());
+        game.stateCommands().runEventModifiers("ON_MOB_KILL", killer, match.matchId(),
+                List.of(victim.getType().name()));
         // Mob kills only matter for the kill-mob win conditions.
         Role killerRole = playerStates.role(killer);
         Integer lobby = match.originLobbyId();
@@ -499,7 +503,8 @@ public final class PlayerCombatListener implements Listener {
         }
         long matchId = match.get().matchId();
         stats.recordAdvancement(matchId, player.getUniqueId());
-        game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId);
+        game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId,
+                List.of(event.getAdvancement().getKey().toString()));
         Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
         if (playerStates.role(player) == Role.SPEEDRUNNER
                 && winConditionEngine.hasReachAdvancement(lobby, player, Role.SPEEDRUNNER)) {

@@ -261,4 +261,77 @@ class TagExpressionsTest {
         assertEquals("a\"b", TagExpressions.unquote("a\"b"));
         assertEquals("\"a\"b\"", TagExpressions.unquote("\"a\"b\""));
     }
+
+    @Test
+    void loseplayerEliminatesByNameAndReturnsEmpty() {
+        Recording recording = new Recording();
+
+        assertEquals("", TagExpressions.loseplayer("<loseplayer:Alex,fell>", "Alex,fell",
+                recording.context));
+        assertEquals(List.of("Alex|fell"), recording.lost);
+        assertTrue(recording.warnings.isEmpty(), recording.warnings.toString());
+    }
+
+    @Test
+    void loseplayerReasonDefaultsAndKeepsCommas() {
+        Recording recording = new Recording();
+
+        assertEquals("", TagExpressions.loseplayer("<loseplayer:Alex>", "Alex", recording.context));
+        assertEquals("", TagExpressions.loseplayer("<loseplayer:\"Bob Smith\",fell, hard>",
+                "\"Bob Smith\",fell, hard", recording.context));
+        assertEquals(List.of("Alex|unknown reason", "Bob Smith|fell, hard"), recording.lost);
+        assertTrue(recording.warnings.isEmpty(), recording.warnings.toString());
+    }
+
+    @Test
+    void loseplayerWithoutPlayerWarnsAndSkips() {
+        Recording recording = new Recording();
+
+        assertEquals("", TagExpressions.loseplayer("<loseplayer:>", "", recording.context));
+        assertTrue(recording.lost.isEmpty());
+        assertEquals(1, recording.warnings.size());
+    }
+
+    @Test
+    void winEndsMatchForCanonicalRole() {
+        Recording recording = new Recording();
+
+        assertEquals("", TagExpressions.win("<win:hunter,trapped>", "hunter,trapped", recording.context));
+        assertEquals(List.of("HUNTER|trapped"), recording.wins);
+
+        assertEquals("", TagExpressions.win("<win:SPEEDRUNNER>", "SPEEDRUNNER", recording.context));
+        assertEquals(List.of("HUNTER|trapped", "SPEEDRUNNER|unknown reason"), recording.wins);
+    }
+
+    @Test
+    void winReasonKeepsCommas() {
+        Recording recording = new Recording();
+
+        assertEquals("", TagExpressions.win("<win:HUNTER,fell, hard>", "HUNTER,fell, hard",
+                recording.context));
+        assertEquals(List.of("HUNTER|fell, hard"), recording.wins);
+    }
+
+    @Test
+    void winWithBadRoleWarnsAndSkips() {
+        Recording recording = new Recording();
+
+        assertEquals("", TagExpressions.win("<win:ref,out>", "ref,out", recording.context));
+        assertEquals("", TagExpressions.win("<win:>", "", recording.context));
+        assertTrue(recording.wins.isEmpty());
+        assertEquals(2, recording.warnings.size());
+    }
+
+    private static final class Recording {
+        final List<String> warnings = new ArrayList<>();
+        final List<String> wins = new ArrayList<>();
+        final List<String> lost = new ArrayList<>();
+        final TagContext context = TagContext.run(
+                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
+                "beef", warnings::add, warnings::add,
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                (player, reason) -> lost.add(player + "|" + reason),
+                (role, reason) -> wins.add(role + "|" + reason),
+                TagContext.NO_MATCH, TagBackends.inert());
+    }
 }

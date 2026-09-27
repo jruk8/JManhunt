@@ -13,6 +13,7 @@ import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -89,22 +90,25 @@ public final class PlayerMovementListener implements Listener {
         }
         long matchId = match.get().matchId();
         World.Environment to = player.getWorld().getEnvironment();
+        List<String> eventArgs = List.of(event.getFrom().getName(), player.getWorld().getName());
         if (to == World.Environment.NETHER) {
             EnumSet<DimensionEnterTracker.Fire> fire = dimensionEnterTracker.onEnter(
                     DimensionEnterTracker.Dimension.NETHER, player.getUniqueId(), matchId);
             if (!fire.isEmpty()) {
-                game.stateCommands().runEventModifiers("ON_NETHER_ENTER", player, matchId);
+                game.stateCommands().runEventModifiers("ON_NETHER_ENTER", player, matchId, eventArgs);
                 if (fire.contains(DimensionEnterTracker.Fire.GLOBAL_FIRST)) {
-                    game.stateCommands().runEventModifiers("ON_FIRST_NETHER_ENTER", player, matchId);
+                    game.stateCommands().runEventModifiers("ON_FIRST_NETHER_ENTER", player, matchId,
+                            eventArgs);
                 }
             }
         } else if (to == World.Environment.THE_END) {
             EnumSet<DimensionEnterTracker.Fire> fire = dimensionEnterTracker.onEnter(
                     DimensionEnterTracker.Dimension.END, player.getUniqueId(), matchId);
             if (!fire.isEmpty()) {
-                game.stateCommands().runEventModifiers("ON_END_ENTER", player, matchId);
+                game.stateCommands().runEventModifiers("ON_END_ENTER", player, matchId, eventArgs);
                 if (fire.contains(DimensionEnterTracker.Fire.GLOBAL_FIRST)) {
-                    game.stateCommands().runEventModifiers("ON_FIRST_END_ENTER", player, matchId);
+                    game.stateCommands().runEventModifiers("ON_FIRST_END_ENTER", player, matchId,
+                            eventArgs);
                 }
             }
         }

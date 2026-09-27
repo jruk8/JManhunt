@@ -69,20 +69,20 @@ class ModifierCodecTest {
         assertEquals("Roll for gear", back.getMeta().getDescription());
         assertEquals("TNT", back.getMeta().getItem());
         assertEquals("jruk", back.getMeta().getAuthor());
-        assertEquals(List.of("INTERVAL", "ON_START"), back.getBehavior().getRunsOn());
-        assertEquals("AFTER", back.getBehavior().getOnStart().getPreStartOrder());
-        assertEquals(15.0, back.getBehavior().getOptions().getIntervalSettings().getInterval());
-        assertEquals(5.0, back.getBehavior().getOptions().getIntervalSettings().getDeviation());
+        assertEquals(List.of("INTERVAL", "ON_START"), back.getBehavior().get("0").getRunsOn());
+        assertEquals("AFTER", back.getBehavior().get("0").getOnStart().getPreStartOrder());
+        assertEquals(15.0, back.getBehavior().get("0").getOptions().getIntervalSettings().getInterval());
+        assertEquals(5.0, back.getBehavior().get("0").getOptions().getIntervalSettings().getDeviation());
         assertEquals("PER_EXECUTOR",
-                back.getBehavior().getOptions().getIntervalSettings().getBehavior());
-        assertEquals(0.5, back.getBehavior().getOptions().getSuccessChance().getChance());
-        assertEquals("PICK_RANDOM", back.getBehavior().getOptions().getExecution().getSelection());
-        assertEquals(2, back.getBehavior().getOptions().getExecution().getPickRandom().getCount());
-        assertEquals(100L, back.getBehavior().getOptions().getDelay());
+                back.getBehavior().get("0").getOptions().getIntervalSettings().getBehavior());
+        assertEquals(0.5, back.getBehavior().get("0").getOptions().getSuccessChance().getChance());
+        assertEquals("PICK_RANDOM", back.getBehavior().get("0").getOptions().getExecution().getSelection());
+        assertEquals(2, back.getBehavior().get("0").getOptions().getExecution().getPickRandom().getCount());
+        assertEquals(100L, back.getBehavior().get("0").getOptions().getDelay());
         assertEquals(List.of("give <p> beef 8", "say hi"),
-                back.getBehavior().getCommands().getLists().get("player"));
+                back.getBehavior().get("0").getCommands().getLists().get("player"));
         assertEquals(List.of("say custom"),
-                back.getBehavior().getCommands().getLists().get("custom-list"));
+                back.getBehavior().get("0").getCommands().getLists().get("custom-list"));
         assertEquals(payload, ModifierCodec.exportModifier(decoded.get().id(), back));
     }
 
@@ -130,7 +130,7 @@ class ModifierCodecTest {
         commands.getLists().put("player",
                 List.of("say " + "x".repeat(2000), "say " + "y".repeat(2000)));
         behavior.setCommands(commands);
-        entry.setBehavior(behavior);
+        entry.setBehavior(new java.util.HashMap<>(java.util.Map.of("0", behavior)));
 
         String payload = ModifierCodec.exportModifier("big", entry);
 
@@ -159,7 +159,7 @@ class ModifierCodecTest {
         ModifierCommands commands = new ModifierCommands();
         commands.getLists().put("player", List.of("say " + "z".repeat(1_200_000)));
         behavior.setCommands(commands);
-        entry.setBehavior(behavior);
+        entry.setBehavior(new java.util.HashMap<>(java.util.Map.of("0", behavior)));
 
         String payload = ModifierCodec.exportModifier("huge", entry);
 
@@ -188,15 +188,15 @@ class ModifierCodecTest {
         assertTrue(ModifierCodec.decode(envelope(badItem)).isEmpty());
 
         String badTrigger = "{\"type\":\"modifier\",\"id\":\"a\",\"data\":{\"meta\":{\"name\":\"A\","
-                + "\"item\":\"STONE\"},\"behavior\":{\"runs-on\":[\"nope\"]}}}";
+                + "\"item\":\"STONE\"},\"behavior\":{\"0\":{\"runs-on\":[\"nope\"]}}}}";
         assertTrue(ModifierCodec.decode(envelope(badTrigger)).isEmpty());
 
         String badChance = "{\"type\":\"modifier\",\"id\":\"a\",\"data\":{\"meta\":{\"name\":\"A\","
-                + "\"item\":\"STONE\"},\"behavior\":{\"options\":{\"success-chance\":{\"chance\":2.0}}}}}";
+                + "\"item\":\"STONE\"},\"behavior\":{\"0\":{\"options\":{\"success-chance\":{\"chance\":2.0}}}}}}";
         assertTrue(ModifierCodec.decode(envelope(badChance)).isEmpty());
 
         String badSelection = "{\"type\":\"modifier\",\"id\":\"a\",\"data\":{\"meta\":{\"name\":\"A\","
-                + "\"item\":\"STONE\"},\"behavior\":{\"options\":{\"execution\":{\"selection\":\"MAYBE\"}}}}}";
+                + "\"item\":\"STONE\"},\"behavior\":{\"0\":{\"options\":{\"execution\":{\"selection\":\"MAYBE\"}}}}}}";
         assertTrue(ModifierCodec.decode(envelope(badSelection)).isEmpty());
 
         String badCount = "{\"type\":\"modifier\",\"id\":\"a\",\"data\":{\"meta\":{\"name\":\"A\","
@@ -270,7 +270,7 @@ class ModifierCodecTest {
         commands.getLists().put("player", List.of("give <p> beef 8", "say hi"));
         commands.getLists().put("custom-list", List.of("say custom"));
         behavior.setCommands(commands);
-        entry.setBehavior(behavior);
+        entry.setBehavior(new java.util.HashMap<>(java.util.Map.of("0", behavior)));
         return entry;
     }
 

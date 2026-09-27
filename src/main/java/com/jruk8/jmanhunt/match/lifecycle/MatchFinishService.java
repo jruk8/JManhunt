@@ -61,6 +61,7 @@ public final class MatchFinishService {
     private final PrestartService prestart;
     private final AutostartService autostart;
     private final FlagStore flagStore;
+    private final MatchEliminationService elimination;
     private final List<Consumer<GameInstance>> gameEndListeners = new ArrayList<>();
 
     public MatchFinishService(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
@@ -82,6 +83,8 @@ public final class MatchFinishService {
         this.prestart = prestart;
         this.autostart = autostart;
         this.flagStore = flagStore;
+        this.elimination = new MatchEliminationService(plugin, playerStates, compass, store,
+                messaging, flagStore, this::finishIfBucketEmpty);
         // Pseudo-border guard for concurrent matches; idle unless at least two
         // matches run with the engine border on. The spectator travel limit
         // rides the same one-second tick.
@@ -108,6 +111,11 @@ public final class MatchFinishService {
                 .ifPresent(winner -> finishLater(instance, winner, winner == Role.HUNTER
                         ? "All speedrunners removed"
                         : "All hunters removed"));
+    }
+
+    /** Eliminates one runner/hunter by name; see {@link MatchEliminationService}. */
+    public boolean losePlayer(long matchId, String playerName, String reason) {
+        return elimination.losePlayer(matchId, playerName, reason);
     }
 
     /**

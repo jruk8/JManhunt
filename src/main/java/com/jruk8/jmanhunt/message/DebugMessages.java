@@ -66,4 +66,8 @@ public class DebugMessages extends OkaeriConfig {
     @CustomKey("lobby-missing")
     private String lobbyMissing = "{debug-prefix}<gray>No lobbytp for lobby <white>{lobby}<gray> anywhere (or " +
             "the lobby world is missing); targets were told to contact an administrator.";
+
+    @CustomKey("interval-skip")
+    private String intervalSkip = "{debug-prefix}<gray>INTERVAL <white>{modifier} <gray>skipped " +
+            "<white>{player} <gray>({why}).";
 }

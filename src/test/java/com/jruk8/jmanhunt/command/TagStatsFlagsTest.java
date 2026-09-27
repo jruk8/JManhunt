@@ -39,6 +39,7 @@ class TagStatsFlagsTest {
                     warnings::add);
             return TagContext.run(scope, "gear-dice", warnings::add, warnings::add,
                     (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                    (player, reason) -> { }, (role, reason) -> { },
                     matchId, new TagBackends(backend, flags, (text, name) -> text));
         }
 

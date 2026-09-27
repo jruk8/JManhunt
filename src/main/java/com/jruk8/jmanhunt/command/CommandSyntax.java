@@ -36,7 +36,8 @@ public final class CommandSyntax {
         return List.of("p", "random-mob", "random-item", "random-num",
                 "random-pick", "random-player", "all-players", "id", "min",
                 "max", "clamp", "if", "gmessage", "pmessage", "gsound", "psound",
-                "pstat", "gstat", "gflag", "pflag", "lflag", "placeholder");
+                "pstat", "gstat", "gflag", "pflag", "lflag", "placeholder",
+                "loseplayer", "win", "args");
     }
 
     /**
@@ -222,6 +223,9 @@ public final class CommandSyntax {
             case "gstat" -> statError(name, args, 0, TagStats.GSTAT_KEYS);
             case "gflag", "pflag", "lflag" -> flagError(name, args);
             case "placeholder" -> arityError(name, args, 1, "one key");
+            case "loseplayer" -> loseplayerError(name, args);
+            case "win" -> winError(name, args);
+            case "args" -> argsError(name, args);
             default -> Optional.empty();
         };
     }
@@ -251,13 +255,18 @@ public final class CommandSyntax {
         if (args == null) {
             return Optional.of("Tag <random-num> needs two numbers like <random-num:1,6>.");
         }
-        String[] bounds = args.split(",", -1);
-        if (bounds.length != 2) {
+        List<String> bounds = CommandPlaceholders.splitPickArgs(args);
+        if (bounds.size() != 2) {
             return Optional.of("Tag <random-num:" + args.trim() + "> needs two numbers like <random-num:1,6>.");
         }
+        Optional<String> firstItem = CommandPlaceholders.parsePickItem(bounds.get(0));
+        Optional<String> secondItem = CommandPlaceholders.parsePickItem(bounds.get(1));
+        if (firstItem.isEmpty() || secondItem.isEmpty()) {
+            return Optional.of("Tag <random-num:" + args.trim() + "> mixes quotes.");
+        }
         try {
-            long first = Long.parseLong(bounds[0].trim());
-            long second = Long.parseLong(bounds[1].trim());
+            long first = Long.parseLong(firstItem.get().strip());
+            long second = Long.parseLong(secondItem.get().strip());
             long low = Math.min(first, second);
             long high = Math.max(first, second);
             if (high - low + 1 <= 0) {
@@ -287,6 +296,59 @@ public final class CommandSyntax {
     private static Optional<String> idError(String args) {
         if (args != null && !args.isBlank()) {
             return Optional.of("Tag <id> takes no arguments.");
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Loseplayer tag shape: a required head player plus an optional
+     * reason after the first comma.
+     */
+    private static Optional<String> loseplayerError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <loseplayer> needs a player like <loseplayer:Steve>.");
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        if (CommandPlaceholders.parsePickItem(parts.get(0)).isEmpty()) {
+            return Optional.of("Tag <loseplayer> needs a player like <loseplayer:Steve>.");
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Win tag shape: a head role, HUNTER or SPEEDRUNNER, plus an
+     * optional reason after the first comma.
+     */
+    private static Optional<String> winError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <win> needs HUNTER or SPEEDRUNNER.");
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        Optional<String> item = CommandPlaceholders.parsePickItem(parts.get(0));
+        if (item.isEmpty()) {
+            return Optional.of("Tag <win> mixes quotes.");
+        }
+        String role = item.get().strip().toUpperCase(Locale.ROOT);
+        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER")) {
+            return Optional.of("Tag <win> needs HUNTER or SPEEDRUNNER.");
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Args tag shape: bare or one whole index. Like
+     * {@code <random-num>} bounds the index must be literal here;
+     * nested tags resolve at runtime but the editor cannot see
+     * through them.
+     */
+    private static Optional<String> argsError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            Integer.parseInt(args.strip());
+        } catch (NumberFormatException unmatched) {
+            return Optional.of("Tag <args> needs a whole index like <args:0>.");
         }
         return Optional.empty();
     }

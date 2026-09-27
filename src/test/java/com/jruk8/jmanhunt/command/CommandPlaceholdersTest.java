@@ -109,16 +109,30 @@ class CommandPlaceholdersTest {
 
     @Test
     void convertSelectorsBareAt() {
-        assertEquals("tp <all-players> Steve", CommandPlaceholders.convertSelectors("tp @a Steve"));
+        assertEquals("tp <all-fanout> Steve", CommandPlaceholders.convertSelectors("tp @a Steve"));
         assertEquals("give <random-player> apple", CommandPlaceholders.convertSelectors("give @r apple"));
     }
 
     @Test
     void convertSelectorsKeepsTeamFilter() {
-        assertEquals("give <all-players:HUNTER> apple",
+        assertEquals("give <all-fanout:HUNTER> apple",
                 CommandPlaceholders.convertSelectors("give @a[team=HUNTER] apple"));
-        assertEquals("give <all-players:SPEEDRUNNER> apple",
+        assertEquals("give <all-fanout:SPEEDRUNNER> apple",
                 CommandPlaceholders.convertSelectors("give @a[distance=..15,team=speedrunner] apple"));
+    }
+
+    @Test
+    void convertSelectorsSkipsTagInteriors() {
+        assertEquals("say <if:\"@p == Steve\",\"@a\",\"@r\"> done",
+                CommandPlaceholders.convertSelectors("say <if:\"@p == Steve\",\"@a\",\"@r\"> done"));
+        assertEquals("give <p> <random-pick:coal @a, dirt> <random-player>",
+                CommandPlaceholders.convertSelectors("give @p <random-pick:coal @a, dirt> @r"));
+    }
+
+    @Test
+    void convertSelectorsConvertsAroundUnclosedProse() {
+        assertEquals("give <p> apple < 5",
+                CommandPlaceholders.convertSelectors("give @p apple < 5"));
     }
 
     @Test
@@ -179,6 +193,14 @@ class CommandPlaceholdersTest {
         assertEquals("give Steve coal 0", CommandPlaceholders.replace("give <p> coal <random-num:a,b>",
                 "Steve", 0, 0, 0, matchContext(warnings)));
         assertEquals(2, warnings.size());
+    }
+
+    @Test
+    void randomNumberAcceptsQuotedBounds() {
+        List<String> warnings = new ArrayList<>();
+        assertEquals("give Steve coal 5", CommandPlaceholders.replace(
+                "give <p> coal <random-num:\"5\",\"5\">", "Steve", 0, 0, 0, matchContext(warnings)));
+        assertTrue(warnings.isEmpty(), warnings.toString());
     }
 
     @Test
@@ -267,8 +289,65 @@ class CommandPlaceholdersTest {
         assertEquals(List.of("give Bob apple"),
                 CommandPlaceholders.expandAllPlayers("give @a[team=SPEEDRUNNER] apple", matchScope(warnings)));
         assertEquals(List.of("give Alice apple"),
-                CommandPlaceholders.expandAllPlayers("give <all-players:HUNTER> apple", matchScope(warnings)));
+                CommandPlaceholders.expandAllPlayers("give @a[team=HUNTER] apple", matchScope(warnings)));
         assertTrue(warnings.isEmpty());
+    }
+
+    @Test
+    void expandAllPlayersLeavesNameListTagAlone() {
+        List<String> warnings = new ArrayList<>();
+        assertEquals(List.of("say <all-players> win"),
+                CommandPlaceholders.expandAllPlayers("say <all-players> win", matchScope(warnings)));
+        assertEquals(List.of("say <all-players:HUNTER> win"),
+                CommandPlaceholders.expandAllPlayers("say <all-players:HUNTER> win", matchScope(warnings)));
+        assertTrue(warnings.isEmpty());
+    }
+
+    @Test
+    void allPlayersResolvesToNameList() {
+        List<String> warnings = new ArrayList<>();
+        assertEquals("say [Alice, Bob] win", CommandPlaceholders.replace("say <all-players> win",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertEquals("say [Alice] win", CommandPlaceholders.replace("say <all-players:HUNTER> win",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertEquals("say [Bob] win", CommandPlaceholders.replace("say <all-players:speedrunner> win",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertTrue(warnings.isEmpty(), warnings.toString());
+    }
+
+    @Test
+    void allPlayersEmptyScopeWarnsAndYieldsEmptyList() {
+        List<String> warnings = new ArrayList<>();
+        TagContext context = TagContext.of(ModifierTagScope.executor("Steve", warnings::add), "test",
+                text -> { }, text -> { },
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { });
+        assertEquals("say [] win",
+                CommandPlaceholders.replace("say <all-players> win", "Steve", 0, 0, 0, context));
+        assertEquals("say [] win",
+                CommandPlaceholders.replace("say <all-players:REF> win", "Steve", 0, 0, 0,
+                        matchContext(warnings)));
+        assertEquals(2, warnings.size());
+    }
+
+    @Test
+    void selectorsInsideTagArgsStayVerbatim() {
+        List<String> warnings = new ArrayList<>();
+        assertEquals("n", CommandPlaceholders.replace("<if:\"@p == Steve\",\"y\",\"n\">",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertEquals("y", CommandPlaceholders.replace("<if:\"<p> == Steve\",\"y\",\"n\">",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertTrue(warnings.isEmpty(), warnings.toString());
+    }
+
+    @Test
+    void fanoutMarkerOutsideFanoutCoversExecutor() {
+        List<String> warnings = new ArrayList<>();
+        TagContext context = TagContext.of(ModifierTagScope.executor("Steve", warnings::add), "test",
+                text -> { }, text -> { },
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { });
+        assertEquals("give Steve apple",
+                CommandPlaceholders.replace("give @a apple", "Steve", 0, 0, 0, context));
+        assertEquals(1, warnings.size());
     }
 
     @Test

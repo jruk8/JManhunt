@@ -601,6 +601,8 @@ final class CompassLockService {
                     }
                     sounds.playCustomSound(holder, soundId, pitch, volume);
                 },
+                (target, reason) -> scope.warn("Tag <loseplayer> only works in modifiers: skipped."),
+                (role, reason) -> scope.warn("Tag <win> only works in modifiers: skipped."),
                 matchId, backends);
     }
 

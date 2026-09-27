@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -143,9 +144,15 @@ public final class ModifierCodec {
             written.addProperty("author", meta.getAuthor());
         }
         data.add("meta", written);
-        ModifierBehavior behavior = entry.getBehavior();
-        if (behavior != null) {
-            data.add("behavior", behaviorData(behavior));
+        Map<String, ModifierBehavior> behaviors = entry.getBehavior();
+        if (behaviors != null && !behaviors.isEmpty()) {
+            JsonObject indexed = new JsonObject();
+            for (Map.Entry<String, ModifierBehavior> behavior : behaviors.entrySet()) {
+                if (behavior.getValue() != null) {
+                    indexed.add(behavior.getKey(), behaviorData(behavior.getValue()));
+                }
+            }
+            data.add("behavior", indexed);
         }
         return data;
     }
@@ -288,7 +295,15 @@ public final class ModifierCodec {
         entry.setMeta(written);
         JsonObject behavior = optionalObject(data, "behavior");
         if (behavior != null) {
-            entry.setBehavior(readBehavior(behavior));
+            Map<String, ModifierBehavior> behaviors = new LinkedHashMap<>();
+            for (Map.Entry<String, JsonElement> indexed : behavior.entrySet()) {
+                if (!indexed.getValue().isJsonObject()) {
+                    throw new Invalid();
+                }
+                behaviors.put(indexed.getKey(),
+                        readBehavior(indexed.getValue().getAsJsonObject()));
+            }
+            entry.setBehavior(behaviors);
         }
         return entry;
     }

@@ -128,6 +128,16 @@ class MessagesStyleTest {
     }
 
     @Test
+    void intervalSkipKeyCarriesModifierPlayerAndWhy() throws Exception {
+        YamlConfiguration messages = loadBundledMessages();
+
+        String value = messages.getString("debug.interval-skip", "");
+        assertTrue(value.contains("{modifier}"), "interval-skip needs {modifier}");
+        assertTrue(value.contains("{player}"), "interval-skip needs {player}");
+        assertTrue(value.contains("{why}"), "interval-skip needs {why}");
+    }
+
+    @Test
     void bundledResourcesContainNoEmDashes() throws Exception {
         assertFalse(rawResource("config.yml").contains("\u2014"), "config.yml");
         assertFalse(rawResource("messages.yml").contains("\u2014"), "messages.yml");

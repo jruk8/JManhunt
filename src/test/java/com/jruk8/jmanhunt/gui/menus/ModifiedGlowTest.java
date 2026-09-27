@@ -67,7 +67,7 @@ class ModifiedGlowTest {
         options.setExecution(execution);
         options.setDelay(100L);
         behavior.setOptions(options);
-        entry.setBehavior(behavior);
+        entry.setBehavior(new java.util.HashMap<>(java.util.Map.of("0", behavior)));
         return entry;
     }
 
@@ -79,7 +79,7 @@ class ModifiedGlowTest {
         interval.setInterval(60.0);
         options.setIntervalSettings(interval);
         behavior.setOptions(options);
-        entry.setBehavior(behavior);
+        entry.setBehavior(new java.util.HashMap<>(java.util.Map.of("0", behavior)));
         return entry;
     }
 
@@ -106,36 +106,36 @@ class ModifiedGlowTest {
     @Test
     void behaviorLeavesGlowOnDrift() {
         assertTrue(ModifiedGlow.behaviorEnabled(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorRunsOn(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorInterval(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorDeviation(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorIntervalScope(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorSelection(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorPickCount(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorPickScope(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorDelay(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorChance(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorChanceScope(store, "zebra"));
-        assertFalse(ModifiedGlow.behaviorPreStart(store, "zebra"));
+        assertTrue(ModifiedGlow.behaviorRunsOn(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorInterval(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorDeviation(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorIntervalScope(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorSelection(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorPickCount(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorPickScope(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorDelay(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorChance(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorChanceScope(store, "zebra", 0));
+        assertFalse(ModifiedGlow.behaviorPreStart(store, "zebra", 0));
     }
 
     @Test
     void behaviorGroupsGlowWhenAnyLeafGlows() {
-        assertTrue(ModifiedGlow.behaviorIntervalGroup(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorExecutionGroup(store, "zebra"));
-        assertTrue(ModifiedGlow.behaviorChanceGroup(store, "zebra"));
+        assertTrue(ModifiedGlow.behaviorIntervalGroup(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorExecutionGroup(store, "zebra", 0));
+        assertTrue(ModifiedGlow.behaviorChanceGroup(store, "zebra", 0));
         assertTrue(ModifiedGlow.behaviorAny(store, "zebra"));
 
-        assertFalse(ModifiedGlow.behaviorIntervalGroup(store, "ghost"));
-        assertFalse(ModifiedGlow.behaviorExecutionGroup(store, "ghost"));
-        assertFalse(ModifiedGlow.behaviorChanceGroup(store, "ghost"));
+        assertFalse(ModifiedGlow.behaviorIntervalGroup(store, "ghost", 0));
+        assertFalse(ModifiedGlow.behaviorExecutionGroup(store, "ghost", 0));
+        assertFalse(ModifiedGlow.behaviorChanceGroup(store, "ghost", 0));
         assertFalse(ModifiedGlow.behaviorAny(store, "ghost"));
     }
 
     @Test
     void explicitDefaultsDoNotGlow() {
-        assertFalse(ModifiedGlow.behaviorInterval(store, "plain"));
-        assertFalse(ModifiedGlow.behaviorIntervalGroup(store, "plain"));
+        assertFalse(ModifiedGlow.behaviorInterval(store, "plain", 0));
+        assertFalse(ModifiedGlow.behaviorIntervalGroup(store, "plain", 0));
         assertFalse(ModifiedGlow.behaviorAny(store, "plain"));
     }
 

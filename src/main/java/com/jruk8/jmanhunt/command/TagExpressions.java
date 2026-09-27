@@ -458,6 +458,76 @@ public final class TagExpressions {
     }
 
     /**
+     * {@code <loseplayer:player,reason>}: eliminates one player by
+     * name through the context sink and returns empty. The reason is
+     * everything after the first comma and defaults to unknown
+     * reason; the head arg is required.
+     */
+    static String loseplayer(String tag, String args, TagContext context) {
+        Optional<String> player = headArg(tag, args, context, "loseplayer", "a player");
+        if (player.isEmpty()) {
+            return "";
+        }
+        context.losePlayer(player.get(), reasonArg(args));
+        return "";
+    }
+
+    /**
+     * {@code <win:ROLE,reason>}: ends the match for HUNTER or
+     * SPEEDRUNNER through the context sink and returns empty. The
+     * reason is everything after the first comma and defaults to
+     * unknown reason; it becomes the win screen reason.
+     */
+    static String win(String tag, String args, TagContext context) {
+        Optional<String> head = headArg(tag, args, context, "win", "a role");
+        if (head.isEmpty()) {
+            return "";
+        }
+        String role = head.get().toUpperCase(Locale.ROOT);
+        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER")) {
+            context.scope().warn("Tag <win> needs HUNTER or SPEEDRUNNER: " + tag);
+            return "";
+        }
+        context.winMatch(role, reasonArg(args));
+        return "";
+    }
+
+    /**
+     * Head arg of a player/reason tag: the text before the first
+     * comma, quote-checked. Warns and returns empty when missing.
+     */
+    private static Optional<String> headArg(String tag, String args, TagContext context,
+            String name, String what) {
+        if (args == null || args.isBlank()) {
+            context.scope().warn("Tag <" + name + "> needs " + what + ": " + tag);
+            return Optional.empty();
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        Optional<String> head = CommandPlaceholders.parsePickItem(parts.get(0));
+        if (head.isEmpty()) {
+            context.scope().warn("Tag <" + name + "> needs " + what + ": " + tag);
+            return Optional.empty();
+        }
+        return head;
+    }
+
+    /**
+     * Reason of a player/reason tag: everything after the first
+     * comma, so reasons may contain commas. One balanced quote
+     * layer is stripped and the rest passes through untouched;
+     * blank reasons default to unknown reason.
+     */
+    private static String reasonArg(String args) {
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        if (parts.size() < 2) {
+            return "unknown reason";
+        }
+        String joined = String.join(",", parts.subList(1, parts.size())).strip();
+        String reason = unquote(joined);
+        return reason.isBlank() ? "unknown reason" : reason;
+    }
+
+    /**
      * {@code <gsound:id,pitch,volume>} and {@code <psound:...>}:
      * plays through the context sinks and returns empty. Pitch and
      * volume default to 1 and fall back to 1 on bad numbers.

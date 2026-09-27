@@ -455,52 +455,57 @@ public final class ConfigService {
         return true;
     }
 
-    public List<String> runsOn(String name) {
-        return modifiers.runsOn(name);
+    public List<String> runsOn(String name, int index) {
+        return modifiers.runsOn(name, index);
     }
 
-    public String preStartOrder(String name) {
-        return modifiers.preStartOrder(name);
+    /** Present behavior indexes for one modifier, sorted ascending. */
+    public List<Integer> behaviorIndexes(String name) {
+        return modifiers.behaviorIndexes(name);
     }
 
-    public double intervalSeconds(String name) {
-        return modifiers.intervalSeconds(name);
+    public String preStartOrder(String name, int index) {
+        return modifiers.preStartOrder(name, index);
     }
 
-    public double intervalDeviation(String name) {
-        return modifiers.intervalDeviation(name);
+    public double intervalSeconds(String name, int index) {
+        return modifiers.intervalSeconds(name, index);
     }
 
-    public String intervalBehavior(String name) {
-        return modifiers.intervalBehavior(name);
+    public double intervalDeviation(String name, int index) {
+        return modifiers.intervalDeviation(name, index);
     }
 
-    public double chance(String name) {
-        return modifiers.chance(name);
+    public String intervalBehavior(String name, int index) {
+        return modifiers.intervalBehavior(name, index);
     }
 
-    public String chanceBehavior(String name) {
-        return modifiers.chanceBehavior(name);
+    public double chance(String name, int index) {
+        return modifiers.chance(name, index);
     }
 
-    public String pickBehavior(String name) {
-        return modifiers.pickBehavior(name);
+    public String chanceBehavior(String name, int index) {
+        return modifiers.chanceBehavior(name, index);
     }
 
-    public long delayTicks(String name) {
-        return modifiers.delayTicks(name);
+    public String pickBehavior(String name, int index) {
+        return modifiers.pickBehavior(name, index);
     }
 
-    public List<String> commandList(String name, String listKey) {
-        return modifiers.commandList(name, listKey);
+    public long delayTicks(String name, int index) {
+        return modifiers.delayTicks(name, index);
     }
 
-    public String selection(String name) {
-        return modifiers.selection(name);
+    public List<String> commandList(String name, int index, String listKey) {
+        return modifiers.commandList(name, index, listKey);
     }
 
-    public int pickCount(String name) {
-        return modifiers.pickCount(name);
+    public String selection(String name, int index) {
+        return modifiers.selection(name, index);
+    }
+
+    public int pickCount(String name, int index) {
+        return modifiers.pickCount(name, index);
     }
 
     private void fireChange(String setting, boolean oldValue, boolean newValue) {

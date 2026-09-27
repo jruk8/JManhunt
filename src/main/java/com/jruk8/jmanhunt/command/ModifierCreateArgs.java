@@ -92,7 +92,13 @@ public final class ModifierCreateArgs {
                 behavior.setCommands(lists);
                 touched = true;
             }
-            entry.setBehavior(touched ? behavior : null);
+            if (touched) {
+                Map<String, ModifierBehavior> behaviors = new LinkedHashMap<>();
+                behaviors.put("0", behavior);
+                entry.setBehavior(behaviors);
+            } else {
+                entry.setBehavior(null);
+            }
             return entry;
         }
 

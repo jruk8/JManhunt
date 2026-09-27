@@ -81,7 +81,7 @@ class ModifierEditorMenusTest {
         ModifierCommands commands = new ModifierCommands();
         commands.getLists().put("player", new ArrayList<>(List.of("give <p> apple")));
         behavior.setCommands(commands);
-        entry.setBehavior(behavior);
+        entry.setBehavior(new java.util.HashMap<>(java.util.Map.of("0", behavior)));
         config.getModifiers().put("zebra", entry);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
@@ -123,8 +123,24 @@ class ModifierEditorMenusTest {
     }
 
     @Test
-    void behaviorMenuIsATwin() {
+    void behaviorMenuListsBehaviorsWithAdd() {
         Menu menu = editor.behaviorMenu("zebra", null);
+
+        assertEquals(title("Behaviors"), menu.title());
+
+        MenuButton first = menu.buttonAt(0);
+        assertEquals(Material.TRIPWIRE_HOOK, first.material());
+        assertNotNull(first.action());
+        assertNotNull(first.rightAction());
+
+        MenuButton add = menu.buttonAt(1);
+        assertEquals(Material.STICK, add.material());
+        assertNotNull(add.action());
+    }
+
+    @Test
+    void behaviorTwinIsATwin() {
+        Menu menu = editor.behaviorTwin("zebra", 0, null);
 
         assertEquals(27, menu.layout().size());
         assertEquals(title("Behavior"), menu.title());
@@ -142,7 +158,7 @@ class ModifierEditorMenusTest {
 
     @Test
     void commandsMenuShowsLiveCounts() {
-        Menu menu = detail.commandsMenu("zebra", null);
+        Menu menu = detail.commandsMenu("zebra", 0, null);
 
         assertEquals(title("Command Lists"), menu.title());
         MenuButton player = menu.buttonAt(10);
@@ -172,7 +188,7 @@ class ModifierEditorMenusTest {
 
     @Test
     void linesMenuShowsLinesWithEditAndDelete() {
-        Menu menu = detail.linesMenu("zebra", "player", null);
+        Menu menu = detail.linesMenu("zebra", 0, "player", null);
 
         assertEquals(title("Commands: player"), menu.title());
         MenuButton line = menu.buttonAt(2);
@@ -191,7 +207,7 @@ class ModifierEditorMenusTest {
 
     @Test
     void emptyLinesMenuShowsStickFirst() {
-        Menu menu = detail.linesMenu("zebra", "console", null);
+        Menu menu = detail.linesMenu("zebra", 0, "console", null);
 
         MenuButton stick = menu.buttonAt(2);
         assertEquals(Material.STICK, stick.material());

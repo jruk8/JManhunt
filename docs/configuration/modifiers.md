@@ -1,13 +1,13 @@
 # Modifiers
 
-**Modifiers** are named command bundles you define in `config.yml`
+**Modifiers** are named command bundles you define in `modifiers.yml`
 under `modifiers`. They are disabled by default. A modifier can run
 commands when a match starts, on a recurring interval during the match, when
 specific game events happen, and when the match ends, either from the console
 or once for each participating player.
 
 All command examples are the default config settings. Refer to the latest
-version of `config.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
+version of `modifiers.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/modifiers.yml).
 
 Settings for modifiers are categorized under `modifiers`:
 
@@ -30,13 +30,46 @@ bundle runs at all. Toggle a bundle in-game with:
 /manhunt config modifiers everyone-gets-beef enabled true
 ```
 
-You can also flip `enabled` in `config.yml` directly, then run
+You can also flip `enabled` in `modifiers.yml` directly, then run
 `/manhunt reload`. When creating a modifier, copy the structure of an existing
 one. Currently only manual YAML file editing is supported for creation.
 
+# Behaviors
+
+Under `modifiers.<name>.behavior`, a modifier holds one behavior per
+index (`0`, `1`, ...). Each behavior has its own triggers, options,
+and command lists, and every behavior of an enabled modifier fires on
+its own triggers. Indexes need not be contiguous; a modifier with no
+behaviors does nothing:
+
+```yaml
+modifiers:
+  everyone-gets-beef:
+    enabled: false
+    behavior:
+      0:
+        runs-on:
+          - ON_START
+        commands:
+          player:
+            - "give <p> minecraft:cooked_beef 8"
+      1:
+        runs-on:
+          - INTERVAL
+        options:
+          interval-settings:
+            interval: 60
+        commands:
+          player:
+            - "give <p> minecraft:cooked_beef 1"
+```
+
+All trigger, option, and command paths below live under
+`modifiers.<name>.behavior.<index>`.
+
 # Command Lists
 
-Under `modifiers.<name>.commands`, you can configure which commands run
+Under `commands`, you configure which commands run
 and for whom. The bundled `everyone-gets-beef` example gives every
 participating player eight steaks when the match starts:
 
@@ -44,10 +77,12 @@ participating player eight steaks when the match starts:
 modifiers:
   everyone-gets-beef:
     enabled: false
-    commands:
-      player:
-        # Runs for every participating player (only hunters and speedrunners, not including NONE)
-        - "give <p> minecraft:cooked_beef 8"
+    behavior:
+      0:
+        commands:
+          player:
+            # Runs for every participating player (only hunters and speedrunners, not including NONE)
+            - "give <p> minecraft:cooked_beef 8"
 ```
 
 The available command lists are:
@@ -70,7 +105,7 @@ commands run in parallel regardless of any player's role.
 
 # Run Timing
 
-Under `modifiers.<name>.runs-on`, you can configure when the commands
+Under `runs-on`, you configure when the commands
 (other than cleanup) run. It is a list of any of:
 
 | Value | Trigger |
@@ -99,16 +134,18 @@ Except for `ON_START`, every event trigger runs the `player`, `hunter`, and
 
 ## Start Timing
 
-Under `modifiers.<name>.on-start`, an `ON_START` modifier can wait
+Under `on-start`, an `ON_START` modifier can wait
 out the pre-start window before running:
 
 ```yaml
 modifiers:
   hunter-post-start-speed:
-    on-start:
-      # BEFORE runs at /manhunt start; AFTER waits until the speedrunner
-      # first hits a hunter (or the match force-starts). Defaults to BEFORE.
-      pre-start-order: AFTER
+    behavior:
+      0:
+        on-start:
+          # BEFORE runs at /manhunt start; AFTER waits until the speedrunner
+          # first hits a hunter (or the match force-starts). Defaults to BEFORE.
+          pre-start-order: AFTER
 ```
 
 This only applies when `runs-on` contains `ON_START` or is omitted (which
@@ -117,20 +154,22 @@ there is no pre-start window, so both settings run at match start.
 
 ## Success Chance
 
-Under `modifiers.<name>.options.success-chance`, you can make the modifier
+Under `options.success-chance`, you can make the modifier
 run only sometimes:
 
 ```yaml
 modifiers:
   gear-dice:
-    options:
-      success-chance:
-        # Chance to run, from 0.0 (never) to 1.0 (always). This is a fraction,
-        # not a percent: use 0.5 for 50%. Defaults to 1.0.
-        chance: 0.5
-        # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls the console
-        # and each player separately. Defaults to PER_INVOKE.
-        behavior: PER_EXECUTOR
+    behavior:
+      0:
+        options:
+          success-chance:
+            # Chance to run, from 0.0 (never) to 1.0 (always). This is a fraction,
+            # not a percent: use 0.5 for 50%. Defaults to 1.0.
+            chance: 0.5
+            # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls the console
+            # and each player separately. Defaults to PER_INVOKE.
+            behavior: PER_EXECUTOR
 ```
 
 Without this section the modifier always runs. The roll happens on every
@@ -139,23 +178,25 @@ never rolled.
 
 ## Command Execution
 
-Under `modifiers.<name>.options.execution`, you can run a random line
+Under `options.execution`, you can run a random line
 from a command list instead of every line:
 
 ```yaml
 modifiers:
   gear-dice:
-    options:
-      execution:
-        # IN_ORDER runs every line. PICK_RANDOM runs a random few instead.
-        # Defaults to IN_ORDER.
-        selection: PICK_RANDOM
-        pick-random:
-          # How many lines to pick. Minimum 1. Defaults to 1.
-          count: 1
-          # PER_INVOKE picks once for everyone; PER_EXECUTOR picks separately
-          # for the console and each player. Defaults to PER_INVOKE.
-          behavior: PER_EXECUTOR
+    behavior:
+      0:
+        options:
+          execution:
+            # IN_ORDER runs every line. PICK_RANDOM runs a random few instead.
+            # Defaults to IN_ORDER.
+            selection: PICK_RANDOM
+            pick-random:
+              # How many lines to pick. Minimum 1. Defaults to 1.
+              count: 1
+              # PER_INVOKE picks once for everyone; PER_EXECUTOR picks separately
+              # for the console and each player. Defaults to PER_INVOKE.
+              behavior: PER_EXECUTOR
 ```
 
 This applies to each command list on its own. If you ask for more lines than
@@ -164,7 +205,7 @@ changes are reliably undone.
 
 ## Interval Settings
 
-Under `modifiers.<name>.options.interval-settings`, you can configure how
+Under `options.interval-settings`, you configure how
 often an `INTERVAL` modifier repeats. It only applies when `runs-on`
 contains `INTERVAL`:
 
@@ -172,18 +213,20 @@ contains `INTERVAL`:
 modifiers:
   random-mob-spawner:
     enabled: false
-    runs-on:
-      - INTERVAL
-    options:
-      interval-settings:
-        # Interval duration in seconds.
-        interval: 60
-        # Random spread in seconds. 60 and 15 means every 45 to 75 seconds.
-        # Cannot go above interval. Defaults to 0.
-        deviation: 15
-        # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
-        # console their own timer. Defaults to PER_INVOKE.
-        behavior: PER_INVOKE
+    behavior:
+      0:
+        runs-on:
+          - INTERVAL
+        options:
+          interval-settings:
+            # Interval duration in seconds.
+            interval: 60
+            # Random spread in seconds. 60 and 15 means every 45 to 75 seconds.
+            # Cannot go above interval. Defaults to 0.
+            deviation: 15
+            # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
+            # console their own timer. Defaults to PER_INVOKE.
+            behavior: PER_INVOKE
 ```
 
 Interval modifiers start counting when the game actually begins (when a
@@ -196,16 +239,22 @@ The `interval` value supports decimals and is rounded to the nearest tick (1
 tick = 0.05 seconds). Values between `0` and `0.05` execute every tick. Set to
 `0` or `0.05` for every-tick execution. Negative values disable the modifier.
 
+Each firing skips players who cannot play right now: match watchers,
+dead players waiting on a respawn, and players held in spectator mode
+(respawn waits and headstart holds). The console list still fires.
+
 ## Command Delay
 
-Under `modifiers.<name>.options.delay`, you can delay the modifier's
+Under `options.delay`, you can delay the modifier's
 commands by a number of ticks after they trigger:
 
 ```yaml
 modifiers:
   everyone-gets-beef:
-    options:
-      delay: 5
+    behavior:
+      0:
+        options:
+          delay: 5
 ```
 
 The delay applies to start, interval, and event triggers, but never to
@@ -215,6 +264,13 @@ commands are dropped.
 
 ## Placeholders in Commands
 
+Modifier commands run through JMHScript (JMHS), the tag engine: tags
+evaluate to text, then the full line runs as one command.
+
+Every tag looks like `<name>` or `<name:arg1,arg2>`, with lowercase
+names and comma-separated args; quote an arg when it holds commas,
+and nest tags freely (they evaluate inside out).
+
 Commands can use these tags:
 
 | Tag | Replaced with |
@@ -222,7 +278,7 @@ Commands can use these tags:
 | `<p>` | The participating player's name. Use this in player and role commands. |
 | `<random-mob>` | A random spawnable living entity type in lowercase (e.g. `zombie`, `creeper`). Under pick-random `PER_INVOKE` one mob is rolled per activation for everyone; under `PER_EXECUTOR` every executor rolls their own. |
 | `<random-item>` | A random item material in lowercase (e.g. `diamond_sword`, `bread`). Same scope rule as `<random-mob>`. |
-| `<all-players>` | Every participating player in this match. The command runs once per player with their name. Never touches other matches. |
+| `<all-players>` | Every participating player in this match, as a name list like `[Alice, Bob]`. `[]` when nobody matches. |
 | `<all-players:HUNTER>` | Same, but only hunters. `SPEEDRUNNER` works too. |
 | `<random-player>` | One random participating player in this match. |
 | `<random-num:4,12>` | A random whole number between 4 and 12. Order does not matter: `<random-num:12,4>` works the same. |
@@ -242,15 +298,19 @@ diamonds (1-3).
 If a `<random-pick>` item is malformed (mixed quotes, two quoted strings in
 one item), it is skipped with a console warning and another item is tried.
 
-Raw `@a` and `@r` selectors are converted to `<all-players>` and
-`<random-player>` automatically, so old commands stay match-safe. A
-`team=` argument on `@a[...]` survives as a role filter; other vanilla
-selector arguments are dropped. `@p` and `@s` convert to `<p>` the
-same way, resolving to the executing player.
+Raw `@a`, `@r`, `@p`, and `@s` selectors work like vanilla and are
+the recommended default for plain commands: they convert automatically
+and stay scoped to the match, so commands never leak into other
+matches. `@a` runs the command once per participant; a `team=`
+argument on `@a[...]` survives as a role filter, while other vanilla
+selector arguments are dropped. `@r` draws one random participant,
+and `@p`/`@s` resolve to the executing player. Inside tag arguments
+only JMHS tags (`<p>`, `<random-player>`) resolve; bare `@`
+selectors there stay verbatim.
 
 ## Extended Tags
 
-Besides the placeholders above, commands understand a few computing
+Besides the placeholders above, JMHS understands a few computing
 tags. They nest inside each other and inside the basic tags, and the
 creator editor validates them as you type:
 
@@ -266,10 +326,40 @@ creator editor validates them as you type:
 | `<gsound:block.stone.break>` | Plays the sound for every participant. |
 | `<psound:block.stone.break,0.5,2>` | Plays the sound for the executing player, with pitch `0.5` and volume `2` (both default to `1`). |
 | `<placeholder:jmanhunt_game_kills_this_session>` | Same placeholder as a tag, so math and conditions can use it. |
+| `<loseplayer:Alex,fell>` | Eliminates Alex with the reason `fell`; the tag leaves nothing behind. |
+| `<win:HUNTER,trapped>` | Ends the match for the hunters with the reason `trapped`; the tag leaves nothing behind. |
+| `<args:0>` | The trigger's first event arg (see below); bare `<args>` reads index `0`. |
 
 `<min>`, `<max>`, and `<clamp>` accept math in their arguments
 (`<min:8+5,10>` is `10`) and yield `0` with a console warning when an
 argument is not a number.
+
+### Event args
+
+Each trigger carries its own event args, read with `<args:index>`.
+A missing index yields `null`; a non-numeric index warns and yields
+`null`:
+
+| Trigger | Args |
+| --- | --- |
+| `ON_START` | None: every index is `null`. |
+| `INTERVAL` | `0`: the seconds actually waited for this firing. |
+| `ON_MOB_KILL` | `0`: the killed mob's entity type name (e.g. `ZOMBIE`). |
+| `ON_PLAYER_KILL`, `ON_HUNTER_KILL`, `ON_SPEEDRUNNER_KILL` | `0`: the exact name of the killed player. |
+| `ON_NETHER_ENTER`, `ON_END_ENTER`, `ON_FIRST_NETHER_ENTER`, `ON_FIRST_END_ENTER` | `0`: the origin world name, `1`: the destination world name. |
+| `ON_EVERY_ADVANCEMENT` | `0`: the advancement's namespaced key (e.g. `minecraft:nether/root`). |
+| `ON_RESPAWN`, `ON_SPEEDRUNNER_RESPAWN`, `ON_HUNTER_RESPAWN` | `0`: the death location as one list, `[x, y, z, pitch, yaw, dimension]`. |
+
+### Match control
+
+`<loseplayer:player,reason>` instantly eliminates a hunter or
+speedrunner by name (even one already dead) and moves them to
+spectator, announcing `lost: <reason>` with that role's death sound.
+`<win:ROLE,reason>` ends the match for `HUNTER` or `SPEEDRUNNER`
+(case does not matter). Both tags leave nothing behind. The reason
+is everything after the first comma, so it may hold commas; an empty
+or missing reason becomes `unknown reason`. The win reason is posted
+on the win screen.
 
 ### Conditions
 
@@ -381,22 +471,25 @@ side with the `team` selector argument:
 modifiers:
   hunter-fear:
     enabled: false
-    runs-on:
-      - INTERVAL
-    options:
-      interval-settings:
-        interval: 30
-    commands:
-      console:
-        - "effect give <all-players:HUNTER> minecraft:darkness 5 0"
+    behavior:
+      0:
+        runs-on:
+          - INTERVAL
+        options:
+          interval-settings:
+            interval: 30
+        commands:
+          console:
+            - "effect give @a[team=HUNTER] minecraft:darkness 5 0"
 ```
 
-`<all-players:HUNTER>` only covers hunters in the running match, so it
+`@a[team=HUNTER]` only covers hunters in the running match, so it
 stays safe when several matches run at once. Membership follows roles
 exactly (repaired on every role change and login), carries no colors or
 friendly-fire rules, and `none`/`afk` players sit in no team. Pair with
 `player`/`hunter`/`speedrunner` lists when you need per-player tags like
-`<p>` or `~` coordinates instead.
+`<p>` or `~` coordinates instead. To print the names instead of running
+once per player, use the `<all-players:HUNTER>` list tag in a message.
 
 # Match-End Cleanup
 
@@ -409,14 +502,16 @@ match is over:
 modifiers:
   perma-night:
     enabled: false
-    commands:
-      console:
-        # Ran by the console when the match starts.
-        - "gamerule advance_time false"
-        - "time set midnight"
-      console-cleanup:
-        # Ran by the console when the match ends.
-        - "gamerule advance_time true"
+    behavior:
+      0:
+        commands:
+          console:
+            # Ran by the console when the match starts.
+            - "gamerule advance_time false"
+            - "time set midnight"
+          console-cleanup:
+            # Ran by the console when the match ends.
+            - "gamerule advance_time true"
 ```
 
 Similarly, `speedrunner-health-advantage` resets every participant's max health
@@ -431,17 +526,19 @@ A minimal modifier that hands every participant a starter kit looks like this:
 modifiers:
   starter-kit:
     enabled: false
-    commands:
-      player:
-        - "give <p> cooked_beef 8"
-      hunter: []
-      speedrunner: []
-      console: []
-      console-cleanup: []
-      player-cleanup: []
+    behavior:
+      0:
+        commands:
+          player:
+            - "give <p> cooked_beef 8"
+          hunter: []
+          speedrunner: []
+          console: []
+          console-cleanup: []
+          player-cleanup: []
 ```
 
-The default `config.yml` ships more examples to copy from: `full-iron-kit`,
+The default `modifiers.yml` ships more examples to copy from: `full-iron-kit`,
 `speedrunner-health-advantage`, `random-mob-spawner`, `random-item-giver`,
 `random-start-resources`, `gear-dice`, `regen-on-kill`, `diamond-on-advancement`,
 `fireres-on-nether-enter`, `hunter-start-debuffs` (slowness II plus

@@ -71,19 +71,19 @@ public final class ModifierDetailMenus {
     }
 
     /** Command list picker with live line counts. */
-    public Menu commandsMenu(String id, Supplier<Menu> parent) {
+    public Menu commandsMenu(String id, int behavior, Supplier<Menu> parent) {
         MenuLayout layout = MenuLayout.parse("#########", "#########", "#########");
         final Menu[] self = new Menu[1];
         self[0] = new Menu(GuiTexts.title(messages, text("commands-title", "Command Lists")),
-                layout, () -> commandsStatic(id, self[0]), List::of, parent);
+                layout, () -> commandsStatic(id, behavior, self[0]), List::of, parent);
         return self[0];
     }
 
-    private Map<Integer, MenuButton> commandsStatic(String id, Menu self) {
+    private Map<Integer, MenuButton> commandsStatic(String id, int behavior, Menu self) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
         for (int index = 0; index < DISPLAY_ORDER.size(); index++) {
             String list = DISPLAY_ORDER.get(index);
-            int count = store.commandList(id, list).size();
+            int count = store.commandList(id, behavior, list).size();
             List<String> lore = new ArrayList<>();
             if (count > 0) {
                 lore.add("Lines: <white>" + count);
@@ -95,8 +95,8 @@ public final class ModifierDetailMenus {
                         if (denied(player)) {
                             return;
                         }
-                        gui.navigate(player,
-                                linesMenu(id, list, () -> commandsMenu(id, self.parent())));
+                        gui.navigate(player, linesMenu(id, behavior, list,
+                                () -> commandsMenu(id, behavior, self.parent())));
                     }));
         }
         fixed.put(22, new MenuButton(Material.PAPER,
@@ -107,14 +107,14 @@ public final class ModifierDetailMenus {
     }
 
     /** Scrollable lines of one command list with add, edit, and delete. */
-    public Menu linesMenu(String id, String list, Supplier<Menu> parent) {
+    public Menu linesMenu(String id, int behavior, String list, Supplier<Menu> parent) {
         MenuLayout layout = MenuLayout.parse(
                 "##xxxxxx#", "u#xxxxxx#", "b#xxxxxxt", "d#xxxxxx#", "##xxxxxx#");
         final Menu[] self = new Menu[1];
         self[0] = new Menu(GuiTexts.title(messages,
                 text("lines-title", "Commands: {list}").replace("{list}", list)),
                 layout, () -> linesStatic(id, list, self),
-                () -> lineButtons(id, list, self[0]), parent);
+                () -> lineButtons(id, behavior, list, self[0]), parent);
         return self[0];
     }
 
@@ -129,8 +129,8 @@ public final class ModifierDetailMenus {
         return fixed;
     }
 
-    private List<MenuButton> lineButtons(String id, String list, Menu self) {
-        List<String> lines = store.commandList(id, list);
+    private List<MenuButton> lineButtons(String id, int behavior, String list, Menu self) {
+        List<String> lines = store.commandList(id, behavior, list);
         List<MenuButton> buttons = new ArrayList<>();
         for (int index = 0; index < lines.size(); index++) {
             int lineIndex = index;
@@ -145,13 +145,14 @@ public final class ModifierDetailMenus {
                             return;
                         }
                         linePrompt(player, self, text("lines-edit-title", "Edit Command"),
-                                store.commandList(id, list).get(lineIndex), id, list, lineIndex);
+                                store.commandList(id, behavior, list).get(lineIndex), id, behavior,
+                                list, lineIndex);
                     },
                     player -> {
                         if (denied(player)) {
                             return;
                         }
-                        deleteLineConfirm(player, self, id, list, lineIndex);
+                        deleteLineConfirm(player, self, id, behavior, list, lineIndex);
                     }).silent());
         }
         buttons.add(AddStick.button(messages,
@@ -162,7 +163,7 @@ public final class ModifierDetailMenus {
                         return;
                     }
                     linePrompt(player, self, text("lines-add-title", "Add Command"), "",
-                            id, list, -1);
+                            id, behavior, list, -1);
                 }));
         return buttons;
     }
@@ -173,7 +174,7 @@ public final class ModifierDetailMenus {
      * through to chat, and a submit chats ordinal feedback.
      */
     private void linePrompt(Player player, Menu self, String title, String initial,
-            String id, String list, int index) {
+            String id, int behavior, String list, int index) {
         dialogs.prompt(player, title, initial, PlaceholderCheatsheet.commandDialogLines(),
                 raw -> {
                     Optional<String> problem = CommandValidation.validateLine(raw,
@@ -187,7 +188,7 @@ public final class ModifierDetailMenus {
                         gui.navigate(player, self);
                         return;
                     }
-                    if (index >= 0 && unchanged(id, list, index, raw)) {
+                    if (index >= 0 && unchanged(id, behavior, list, index, raw)) {
                         messages.message(player, "modifiers.edit-command-unchanged");
                         sounds.playNeutralSound(player);
                         gui.navigate(player, self);
@@ -195,7 +196,7 @@ public final class ModifierDetailMenus {
                     }
                     patch(id, entry -> {
                         List<String> lines = ModifierStore.ensureCommands(
-                                ModifierStore.ensureBehavior(entry))
+                                ModifierStore.ensureBehavior(entry, behavior))
                                 .getLists().computeIfAbsent(list, ignored -> new ArrayList<>());
                         if (index < 0) {
                             lines.add(raw);
@@ -207,7 +208,7 @@ public final class ModifierDetailMenus {
                         messages.message(player, "modifiers.create-command-warning",
                                 Map.of("warning", warning));
                     }
-                    List<String> fresh = store.commandList(id, list);
+                    List<String> fresh = store.commandList(id, behavior, list);
                     int position = index < 0
                             ? fresh.size() : Math.min(index + 1, Math.max(fresh.size(), 1));
                     messages.message(player, "modifiers.edit-command-set",
@@ -223,8 +224,8 @@ public final class ModifierDetailMenus {
     }
 
     /** True when the edit resubmits the live line unchanged. */
-    private boolean unchanged(String id, String list, int index, String raw) {
-        List<String> before = store.commandList(id, list);
+    private boolean unchanged(String id, int behavior, String list, int index, String raw) {
+        List<String> before = store.commandList(id, behavior, list);
         return index < before.size() && raw.equals(before.get(index));
     }
 
@@ -235,8 +236,9 @@ public final class ModifierDetailMenus {
                 "command", MiniMessage.miniMessage().escapeTags(command));
     }
 
-    private void deleteLineConfirm(Player player, Menu self, String id, String list, int index) {
-        List<String> lines = store.commandList(id, list);
+    private void deleteLineConfirm(Player player, Menu self, String id, int behavior, String list,
+            int index) {
+        List<String> lines = store.commandList(id, behavior, list);
         String line = index < lines.size() ? lines.get(index) : "";
         Menu confirm = ConfirmMenu.create(
                 GuiTexts.title(messages, text("lines-delete-title", "Delete this line?")),
@@ -247,11 +249,15 @@ public final class ModifierDetailMenus {
                 GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
                 done -> {
                     patch(id, entry -> {
-                        ModifierBehavior behavior = entry.getBehavior();
-                        if (behavior == null || behavior.getCommands() == null) {
+                        if (entry.getBehavior() == null) {
                             return;
                         }
-                        List<String> kept = behavior.getCommands().getLists().get(list);
+                        ModifierBehavior keptBehavior =
+                                entry.getBehavior().get(String.valueOf(behavior));
+                        if (keptBehavior == null || keptBehavior.getCommands() == null) {
+                            return;
+                        }
+                        List<String> kept = keptBehavior.getCommands().getLists().get(list);
                         if (kept != null && index < kept.size()) {
                             kept.remove(index);
                         }

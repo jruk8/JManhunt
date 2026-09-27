@@ -65,90 +65,97 @@ public final class ModifiedGlow {
     }
 
     /** True when runs-on carries any trigger. */
-    public static boolean behaviorRunsOn(ModifierStore store, String id) {
-        return !store.runsOn(id).isEmpty();
+    public static boolean behaviorRunsOn(ModifierStore store, String id, int index) {
+        return !store.runsOn(id, index).isEmpty();
     }
 
     /** True when the interval seconds differ from 60. */
-    public static boolean behaviorInterval(ModifierStore store, String id) {
-        return store.intervalSeconds(id) != 60.0;
+    public static boolean behaviorInterval(ModifierStore store, String id, int index) {
+        return store.intervalSeconds(id, index) != 60.0;
     }
 
     /** True when the deviation seconds differ from 0. */
-    public static boolean behaviorDeviation(ModifierStore store, String id) {
-        return store.intervalDeviation(id) != 0.0;
+    public static boolean behaviorDeviation(ModifierStore store, String id, int index) {
+        return store.intervalDeviation(id, index) != 0.0;
     }
 
     /** True when the interval scope differs from PER_INVOKE. */
-    public static boolean behaviorIntervalScope(ModifierStore store, String id) {
-        return explicitScope(store.intervalBehavior(id));
+    public static boolean behaviorIntervalScope(ModifierStore store, String id, int index) {
+        return explicitScope(store.intervalBehavior(id, index));
     }
 
     /** True when ANY interval leaf glows. */
-    public static boolean behaviorIntervalGroup(ModifierStore store, String id) {
-        return behaviorInterval(store, id)
-                || behaviorDeviation(store, id)
-                || behaviorIntervalScope(store, id);
+    public static boolean behaviorIntervalGroup(ModifierStore store, String id, int index) {
+        return behaviorInterval(store, id, index)
+                || behaviorDeviation(store, id, index)
+                || behaviorIntervalScope(store, id, index);
     }
 
     /** True when the selection differs from IN_ORDER. */
-    public static boolean behaviorSelection(ModifierStore store, String id) {
-        String selection = store.selection(id);
+    public static boolean behaviorSelection(ModifierStore store, String id, int index) {
+        String selection = store.selection(id, index);
         return selection != null && !"IN_ORDER".equalsIgnoreCase(selection);
     }
 
     /** True when the pick count differs from 1. */
-    public static boolean behaviorPickCount(ModifierStore store, String id) {
-        return store.pickCount(id) != 1;
+    public static boolean behaviorPickCount(ModifierStore store, String id, int index) {
+        return store.pickCount(id, index) != 1;
     }
 
     /** True when the pick scope differs from PER_INVOKE. */
-    public static boolean behaviorPickScope(ModifierStore store, String id) {
-        return explicitScope(store.pickBehavior(id));
+    public static boolean behaviorPickScope(ModifierStore store, String id, int index) {
+        return explicitScope(store.pickBehavior(id, index));
     }
 
     /** True when pre-start order defers past the pre-start hit. */
-    public static boolean behaviorPreStart(ModifierStore store, String id) {
-        String order = store.preStartOrder(id);
+    public static boolean behaviorPreStart(ModifierStore store, String id, int index) {
+        String order = store.preStartOrder(id, index);
         return order != null && "AFTER".equalsIgnoreCase(order.trim());
     }
 
     /** True when ANY execution leaf glows. */
-    public static boolean behaviorExecutionGroup(ModifierStore store, String id) {
-        return behaviorSelection(store, id)
-                || behaviorPickCount(store, id)
-                || behaviorPickScope(store, id)
-                || behaviorPreStart(store, id);
+    public static boolean behaviorExecutionGroup(ModifierStore store, String id, int index) {
+        return behaviorSelection(store, id, index)
+                || behaviorPickCount(store, id, index)
+                || behaviorPickScope(store, id, index)
+                || behaviorPreStart(store, id, index);
     }
 
     /** True when the delay ticks differ from 0. */
-    public static boolean behaviorDelay(ModifierStore store, String id) {
-        return store.delayTicks(id) != 0L;
+    public static boolean behaviorDelay(ModifierStore store, String id, int index) {
+        return store.delayTicks(id, index) != 0L;
     }
 
     /** True when the success chance differs from 100%. */
-    public static boolean behaviorChance(ModifierStore store, String id) {
-        return store.chance(id) != 1.0;
+    public static boolean behaviorChance(ModifierStore store, String id, int index) {
+        return store.chance(id, index) != 1.0;
     }
 
     /** True when the chance scope differs from PER_INVOKE. */
-    public static boolean behaviorChanceScope(ModifierStore store, String id) {
-        return explicitScope(store.chanceBehavior(id));
+    public static boolean behaviorChanceScope(ModifierStore store, String id, int index) {
+        return explicitScope(store.chanceBehavior(id, index));
     }
 
     /** True when ANY success-chance leaf glows. */
-    public static boolean behaviorChanceGroup(ModifierStore store, String id) {
-        return behaviorChance(store, id) || behaviorChanceScope(store, id);
+    public static boolean behaviorChanceGroup(ModifierStore store, String id, int index) {
+        return behaviorChance(store, id, index) || behaviorChanceScope(store, id, index);
     }
 
     /** True when ANY behavior leaf of one modifier glows. */
     public static boolean behaviorAny(ModifierStore store, String id) {
-        return behaviorEnabled(store, id)
-                || behaviorRunsOn(store, id)
-                || behaviorIntervalGroup(store, id)
-                || behaviorExecutionGroup(store, id)
-                || behaviorDelay(store, id)
-                || behaviorChanceGroup(store, id);
+        if (behaviorEnabled(store, id)) {
+            return true;
+        }
+        for (int index : store.behaviorIndexes(id)) {
+            if (behaviorRunsOn(store, id, index)
+                    || behaviorIntervalGroup(store, id, index)
+                    || behaviorExecutionGroup(store, id, index)
+                    || behaviorDelay(store, id, index)
+                    || behaviorChanceGroup(store, id, index)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean explicitScope(String raw) {

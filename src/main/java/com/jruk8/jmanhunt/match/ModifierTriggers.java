@@ -66,6 +66,19 @@ public final class ModifierTriggers {
         return trigger.trim();
     }
 
+    /**
+     * True when a behavior's {@code runs-on} covers an event. An omitted
+     * (empty) list defaults to ON_START. Pure for tests.
+     */
+    static boolean runsOn(List<String> runsOn, String event) {
+        String canonical = normalizeTrigger(event);
+        if (runsOn.isEmpty()) {
+            return "ON_START".equalsIgnoreCase(canonical);
+        }
+        return runsOn.stream().map(ModifierTriggers::normalizeTrigger)
+                .anyMatch(canonical::equalsIgnoreCase);
+    }
+
     /** Parses a {@code PER_INVOKE} / {@code PER_EXECUTOR} behavior key. */
     static TriggerScope parseScope(String raw) {
         if (raw != null && raw.trim().equalsIgnoreCase("PER_EXECUTOR")) {

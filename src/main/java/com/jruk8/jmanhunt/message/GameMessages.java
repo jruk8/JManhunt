@@ -44,6 +44,9 @@ public class GameMessages extends OkaeriConfig {
     @CustomKey("speedrunner-death")
     private String speedrunnerDeath = "{prefix}<yellow>A speedrunner has died! <white>({value} remaining)</white>";
 
+    @CustomKey("loseplayer")
+    private String loseplayer = "{prefix}<yellow><white>{player}</white> lost: {reason}";
+
     @CustomKey("friendly-fire-1")
     private String friendlyFire1 = "{prefix}<yellow><white>{dead}</white> became collateral damage for "
             + "<white>{killer}</white>";

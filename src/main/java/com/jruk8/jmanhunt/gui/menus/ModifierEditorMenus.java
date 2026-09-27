@@ -6,7 +6,9 @@ import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
+import com.jruk8.jmanhunt.gui.MenuLayout;
 import com.jruk8.jmanhunt.gui.QuadPanel;
+import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.gui.TwinPanel;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
@@ -14,6 +16,7 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierFieldEdits;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -155,8 +158,87 @@ public final class ModifierEditorMenus {
                 });
     }
 
-    /** Behavior twin: Options on the left, Commands on the right. */
+    /** Behavior list: one button per index, plus add. Edits open the twin. */
     public Menu behaviorMenu(String id, Supplier<Menu> parent) {
+        final Menu[] self = new Menu[1];
+        Supplier<List<MenuButton>> content = () -> behaviorButtons(id, () -> self[0]);
+        MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(content.get().size()));
+        self[0] = new Menu(
+                GuiTexts.title(messages, text("behaviors-title", "Behaviors")),
+                layout,
+                () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
+                        new MenuButton(Material.PAPER,
+                                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                                null, false, false,
+                                player -> gui.back(player, self[0]))),
+                content::get, parent);
+        return self[0];
+    }
+
+    private List<MenuButton> behaviorButtons(String id, Supplier<Menu> self) {
+        List<MenuButton> buttons = new ArrayList<>();
+        for (int index : store.behaviorIndexes(id)) {
+            List<String> triggers = store.runsOn(id, index);
+            String summary = triggers.isEmpty()
+                    ? text("behaviors-no-triggers", "No triggers")
+                    : String.join(", ", triggers);
+            buttons.add(new MenuButton(Material.TRIPWIRE_HOOK,
+                    GuiTexts.name(messages,
+                            text("behaviors-entry", "Behavior {index}")
+                                    .replace("{index}", String.valueOf(index)),
+                            "Behavior " + index),
+                    GuiTexts.lore(messages, List.of(
+                            summary,
+                            text("editor-click-open", "Click to open"),
+                            text("behaviors-delete-hint", "Right-click to delete"))),
+                    false, false,
+                    player -> {
+                        if (denied(player)) {
+                            return;
+                        }
+                        gui.navigate(player, behaviorTwin(id, index, self));
+                    },
+                    player -> {
+                        if (denied(player)) {
+                            return;
+                        }
+                        deleteBehaviorConfirm(player, id, index, self);
+                    }).silent());
+        }
+        buttons.add(AddStick.button(messages,
+                text("behaviors-add", "Add Behavior"),
+                List.of(text("editor-click-open", "Click to open")),
+                player -> {
+                    if (denied(player)) {
+                        return;
+                    }
+                    int created = store.addBehavior(id);
+                    gui.navigate(player, behaviorTwin(id, created, self));
+                }));
+        return buttons;
+    }
+
+    private void deleteBehaviorConfirm(Player player, String id, int index, Supplier<Menu> self) {
+        Menu confirm = ConfirmMenu.create(
+                GuiTexts.title(messages, text("behaviors-delete-title", "Delete behavior {index}?")
+                        .replace("{index}", String.valueOf(index))),
+                Material.TRIPWIRE_HOOK, null,
+                GuiTexts.lore(messages, text("editor-delete-confirm",
+                        "This cannot be undone.")),
+                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                back -> gui.navigate(back, self.get()),
+                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                done -> {
+                    store.removeBehavior(id, index);
+                    sounds.playNeutralSound(done);
+                    gui.navigate(done, self.get());
+                },
+                self);
+        gui.navigate(player, confirm);
+    }
+
+    /** Behavior twin: Options on the left, Commands on the right. */
+    public Menu behaviorTwin(String id, int index, Supplier<Menu> parent) {
         final Menu[] self = new Menu[1];
         self[0] = TwinPanel.menu(
                 GuiTexts.title(messages, text("behavior-title", "Behavior")),
@@ -169,7 +251,7 @@ public final class ModifierEditorMenus {
                             if (denied(player)) {
                                 return;
                             }
-                            gui.navigate(player, options.optionsMenu(id, () -> self[0]));
+                            gui.navigate(player, options.optionsMenu(id, index, () -> self[0]));
                         }),
                 EditorButtons.actionButton(messages, Material.CHAIN_COMMAND_BLOCK,
                         text("commands-title", "Command Lists"),
@@ -180,7 +262,7 @@ public final class ModifierEditorMenus {
                                 return;
                             }
                             gui.navigate(player,
-                                    detail.commandsMenu(id, () -> self[0]));
+                                    detail.commandsMenu(id, index, () -> self[0]));
                         }),
                 gui,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),

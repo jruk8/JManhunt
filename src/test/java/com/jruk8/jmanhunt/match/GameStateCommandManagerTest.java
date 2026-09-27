@@ -151,6 +151,15 @@ class GameStateCommandManagerTest {
     }
 
     @Test
+    void runsOnMatchesTriggersAndDefaultsEmptyToStart() {
+        assertTrue(ModifierTriggers.runsOn(List.of("INTERVAL"), "INTERVAL"));
+        assertTrue(ModifierTriggers.runsOn(List.of("  on_start "), "ON_START"));
+        assertTrue(ModifierTriggers.runsOn(List.of(), "ON_START"));
+        assertFalse(ModifierTriggers.runsOn(List.of(), "INTERVAL"));
+        assertFalse(ModifierTriggers.runsOn(List.of("ON_START"), "INTERVAL"));
+    }
+
+    @Test
     void staleDispatchVoidsRestartedOrTornDownEngines() {
         assertFalse(ModifierTriggers.isStaleDispatch(3L, 3L, true));
         assertTrue(ModifierTriggers.isStaleDispatch(3L, 4L, true));

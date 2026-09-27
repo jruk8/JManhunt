@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match.listeners;
 
+import com.jruk8.jmanhunt.command.TagLocations;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -12,6 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.scheduler.BukkitTask;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,13 +49,20 @@ public final class PlayerRespawnListener implements Listener {
             return;
         }
         long matchId = match.get().matchId();
-        game.stateCommands().runEventModifiers("ON_RESPAWN", player, matchId);
-        Role role = playerStates.role(player);
-        if (role == Role.HUNTER) {
-            game.stateCommands().runEventModifiers("ON_HUNTER_RESPAWN", player, matchId);
-        } else if (role == Role.SPEEDRUNNER) {
-            game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_RESPAWN", player, matchId);
+        fireRespawnTriggers(player, matchId);
+    }
+
+    /**
+     * Respawn event args: the death location as one 6-element list
+     * arg, or empty when the server kept no death location (then
+     * every {@code <args>} index reads {@code "null"}).
+     */
+    private static List<String> deathArgs(Player player) {
+        Location death = player.getLastDeathLocation();
+        if (death == null || death.getWorld() == null) {
+            return List.of();
         }
+        return List.of(TagLocations.formatLocation(death, death.getWorld().getName()));
     }
 
     /**
@@ -139,12 +148,19 @@ public final class PlayerRespawnListener implements Listener {
         if (!instance.begun() || !playerStates.role(player).isParticipant()) {
             return;
         }
-        game.stateCommands().runEventModifiers("ON_RESPAWN", player, matchId);
+        fireRespawnTriggers(player, matchId);
+    }
+
+    /** Fires ON_RESPAWN plus the role split with the death-location arg. */
+    private void fireRespawnTriggers(Player player, long matchId) {
+        List<String> eventArgs = deathArgs(player);
+        game.stateCommands().runEventModifiers("ON_RESPAWN", player, matchId, eventArgs);
         Role role = playerStates.role(player);
         if (role == Role.HUNTER) {
-            game.stateCommands().runEventModifiers("ON_HUNTER_RESPAWN", player, matchId);
+            game.stateCommands().runEventModifiers("ON_HUNTER_RESPAWN", player, matchId, eventArgs);
         } else if (role == Role.SPEEDRUNNER) {
-            game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_RESPAWN", player, matchId);
+            game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_RESPAWN", player, matchId,
+                    eventArgs);
         }
     }
 

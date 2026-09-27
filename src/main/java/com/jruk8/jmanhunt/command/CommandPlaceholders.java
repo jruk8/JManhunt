@@ -24,11 +24,15 @@ import java.util.regex.Pattern;
  * number, then picks an item. Unknown tags are left untouched.
  *
  * <p>Vanilla {@code @a} and {@code @r} selectors are implicitly converted to
- * the match-scoped {@code <all-players>} and {@code <random-player>} tags so
- * a modifier can never leak into another running match. A {@code team=}
- * argument on {@code @a[...]} survives as a role filter; every other vanilla
- * selector argument is dropped. {@code @p} and {@code @s} become the
- * executor tag {@code <p>} for the same reason.
+ * match-scoped forms so a modifier can never leak into another running
+ * match: {@code @a} becomes a hidden fan-out marker (expanded up front by
+ * {@link #expandAllPlayers}), {@code @r} becomes
+ * {@code <random-player>}. A {@code team=} argument on {@code @a[...]}
+ * survives as a role filter; every other vanilla selector argument is
+ * dropped. {@code @p} and {@code @s} become the executor tag {@code <p>}
+ * for the same reason. Conversion only touches text outside tags: a bare
+ * {@code @} selector inside tag arguments stays verbatim, so only JMHScript
+ * tags nest.
  */
 public final class CommandPlaceholders {
     private static final Pattern TILDE_PATTERN = Pattern.compile("~([+-]?\\d+(?:\\.\\d+)?)?");
@@ -41,8 +45,11 @@ public final class CommandPlaceholders {
     private static final Pattern SELECTOR_SELF = Pattern.compile("@[ps](?![A-Za-z0-9_])(\\[[^\\]]*\\])?");
     /** team=HUNTER inside vanilla selector args. */
     private static final Pattern TEAM_ARGUMENT = Pattern.compile("(?i)(?:^|[,\\[])\\s*team\\s*=\\s*([^,\\]]+)");
-    /** Fan-out token, with an optional :TEAM filter. */
-    private static final Pattern ALL_PLAYERS_TOKEN = Pattern.compile("<all-players(?::([A-Za-z]+))?>");
+    /**
+     * Hidden fan-out token from {@code @a} conversion, with an optional
+     * :TEAM filter. Never advertised: it stays out of the tag table.
+     */
+    private static final Pattern FANOUT_TOKEN = Pattern.compile("<all-fanout(?::([A-Za-z]+))?>");
     /** Maximal no-space runs for the bare math pass. */
     private static final Pattern MATH_TOKEN = Pattern.compile("\\S+");
     /** Safety cap for the inside-out evaluation loop. */
@@ -76,9 +83,10 @@ public final class CommandPlaceholders {
     /**
      * Same, with a tag context for match tags, extended expressions,
      * and warning delivery. Call {@link #expandAllPlayers} first when
-     * a command may fan out to the whole match; any surviving token
-     * here falls back to the executor. Bare no-space math evaluates
-     * after tags; anything else stays verbatim.
+     * a command may fan out to the whole match; a surviving fan-out
+     * marker here covers only the executor, while
+     * {@code <all-players>} resolves to a name list. Bare no-space
+     * math evaluates after tags; anything else stays verbatim.
      */
     public static String replace(String command, String playerName, double x, double y, double z,
             TagContext context) {
@@ -158,16 +166,84 @@ public final class CommandPlaceholders {
     }
 
     /**
-     * Converts vanilla selectors to match-scoped tags: {@code @a} becomes
-     * {@code <all-players>} and {@code @r} becomes {@code <random-player>}.
-     * A {@code team=} argument becomes a role filter ({@code <all-players:HUNTER>});
-     * other vanilla arguments are dropped. {@code @p} and {@code @s} become
-     * the executor tag {@code <p>}; their arguments are dropped. Pure for tests.
+     * Converts vanilla selectors outside tags to match-scoped forms:
+     * {@code @a} becomes the hidden fan-out marker and {@code @r}
+     * becomes {@code <random-player>}. A {@code team=} argument becomes
+     * a role filter ({@code <all-fanout:HUNTER>}); other vanilla
+     * arguments are dropped. {@code @p} and {@code @s} become the
+     * executor tag {@code <p>}; their arguments are dropped. Text
+     * inside {@code <...>} spans is left untouched, so only JMHScript
+     * tags nest. Pure for tests.
      */
     static String convertSelectors(String command) {
-        String converted = replaceSelector(command, SELECTOR_ALL, true);
+        List<int[]> spans = topLevelTagSpans(command);
+        if (spans.isEmpty()) {
+            return convertSelectorRun(command);
+        }
+        StringBuilder out = new StringBuilder();
+        int cursor = 0;
+        for (int[] span : spans) {
+            out.append(convertSelectorRun(command.substring(cursor, span[0])));
+            out.append(command, span[0], span[1]);
+            cursor = span[1];
+        }
+        out.append(convertSelectorRun(command.substring(cursor)));
+        return out.toString();
+    }
+
+    /** Selector conversion for one tag-free run. Pure for tests. */
+    private static String convertSelectorRun(String run) {
+        String converted = replaceSelector(run, SELECTOR_ALL, true);
         converted = replaceSelector(converted, SELECTOR_RANDOM, false);
         return replaceSelfSelector(converted);
+    }
+
+    /**
+     * Top-level {@code <...>} spans as [start, end) pairs. Angle
+     * brackets inside quotes do not count, and a {@code <} with no
+     * matching close is prose, not a span. Pure for tests.
+     */
+    static List<int[]> topLevelTagSpans(String command) {
+        List<int[]> spans = new ArrayList<>();
+        int index = 0;
+        while (index < command.length()) {
+            int open = command.indexOf('<', index);
+            if (open < 0) {
+                return spans;
+            }
+            int close = spanClose(command, open);
+            if (close < 0) {
+                index = open + 1;
+            } else {
+                spans.add(new int[]{open, close + 1});
+                index = close + 1;
+            }
+        }
+        return spans;
+    }
+
+    /** Matching close of the tag opening at {@code open}; -1 when unclosed. */
+    private static int spanClose(String command, int open) {
+        int depth = 0;
+        char quote = 0;
+        for (int index = open; index < command.length(); index++) {
+            char letter = command.charAt(index);
+            if (quote != 0) {
+                if (letter == quote) {
+                    quote = 0;
+                }
+            } else if (letter == '"' || letter == '\'') {
+                quote = letter;
+            } else if (letter == '<') {
+                depth++;
+            } else if (letter == '>') {
+                depth--;
+                if (depth == 0) {
+                    return index;
+                }
+            }
+        }
+        return -1;
     }
 
     private static String replaceSelfSelector(String command) {
@@ -184,13 +260,13 @@ public final class CommandPlaceholders {
         Matcher matcher = pattern.matcher(command);
         StringBuffer result = new StringBuffer();
         while (matcher.find()) {
-            String replacement = "<all-players>";
+            String replacement = "<all-fanout>";
             if (!keepTeam) {
                 replacement = "<random-player>";
             } else if (matcher.group(1) != null) {
                 Matcher team = TEAM_ARGUMENT.matcher(matcher.group(1));
                 if (team.find()) {
-                    replacement = "<all-players:" + team.group(1).trim().toUpperCase(Locale.ROOT) + ">";
+                    replacement = "<all-fanout:" + team.group(1).trim().toUpperCase(Locale.ROOT) + ">";
                 }
             }
             matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
@@ -201,22 +277,23 @@ public final class CommandPlaceholders {
 
     /**
      * Fans a command out to one copy per in-match participant when it holds
-     * an {@code <all-players>} token (after implicit {@code @a} conversion).
-     * With nobody to cover, warns and returns no commands so nothing leaks
-     * outside the match. Pure for tests.
+     * the hidden {@code @a} fan-out marker. With nobody to cover, warns and
+     * returns no commands so nothing leaks outside the match. The
+     * {@code <all-players>} tag is NOT expanded here: it resolves to a name
+     * list during tag evaluation instead. Pure for tests.
      */
     public static List<String> expandAllPlayers(String command, ModifierTagScope scope) {
         String converted = convertSelectors(command);
-        Matcher matcher = ALL_PLAYERS_TOKEN.matcher(converted);
+        Matcher matcher = FANOUT_TOKEN.matcher(converted);
         if (!matcher.find()) {
             return List.of(command);
         }
         String team = matcher.group(1);
         List<String> names = scope.participantNames(team);
         if (names.isEmpty()) {
-            scope.warn("Skipping command with <all-players"
-                    + (team == null ? "" : ":" + team)
-                    + "> because the match has no covered players: " + command);
+            scope.warn("Skipping command with @a"
+                    + (team == null ? "" : "[team=" + team + "]")
+                    + " because the match has no covered players: " + command);
             return List.of();
         }
         List<String> expanded = new ArrayList<>(names.size());
@@ -380,18 +457,8 @@ public final class CommandPlaceholders {
             case "random-item" -> randomItem();
             case "random-num" -> randomNumber(args, scope, tag);
             case "random-pick" -> randomPick(args, scope, tag);
-            case "random-player" -> scope.randomParticipant()
-                    .or(() -> Optional.ofNullable(playerName))
-                    .orElseGet(() -> {
-                        scope.warn("Skipping <random-player> with no players in scope: " + tag);
-                        return tag;
-                    });
-            case "all-players" -> {
-                // Normally expanded up front by expandAllPlayers; reaching
-                // here means executor-only dispatch, so cover the executor.
-                scope.warn("<all-players> outside a match covers only the executor.");
-                yield playerName != null ? playerName : tag;
-            }
+            case "random-player", "all-players", "all-fanout" ->
+                    scopeTag(tag, name, args, playerName, context);
             // Handled separately by withDuration before evaluation.
             case "duration" -> tag;
             case "id" -> context.containerId();
@@ -405,7 +472,41 @@ public final class CommandPlaceholders {
             case "if" -> TagExpressions.ifEval(tag, args, context);
             case "gmessage", "pmessage" -> TagExpressions.message(tag, name, args, context);
             case "gsound", "psound" -> TagExpressions.sound(tag, name, args, context);
+            case "loseplayer" -> TagExpressions.loseplayer(tag, args, context);
+            case "win" -> TagExpressions.win(tag, args, context);
+            case "args" -> TagArgs.resolve(tag, args, context);
             default -> tag;
+        };
+    }
+
+    /**
+     * Match-scope tags: one random participant, the participant name
+     * list, or the hidden {@code @a} fan-out marker (executor-only
+     * dispatch covers the executor; the modifier path expands it up
+     * front instead).
+     */
+    private static String scopeTag(String tag, String name, String args, String playerName,
+            TagContext context) {
+        ModifierTagScope scope = context.scope();
+        return switch (name) {
+            case "random-player" -> scope.randomParticipant()
+                    .or(() -> Optional.ofNullable(playerName))
+                    .orElseGet(() -> {
+                        scope.warn("Skipping <random-player> with no players in scope: " + tag);
+                        return tag;
+                    });
+            case "all-players" -> {
+                List<String> names = scope.participantNames(args.isBlank() ? null : args.strip());
+                if (names.isEmpty()) {
+                    scope.warn("Skipping <all-players> with no players in scope, using []: " + tag);
+                    yield "[]";
+                }
+                yield "[" + String.join(", ", names) + "]";
+            }
+            default -> {
+                scope.warn("@a outside match fan-out covers only the executor.");
+                yield playerName != null ? playerName : tag;
+            }
         };
     }
 
@@ -414,14 +515,16 @@ public final class CommandPlaceholders {
      * Unparseable input warns and yields 0 so dispatch keeps a valid int.
      */
     static String randomNumber(String args, ModifierTagScope scope, String tag) {
-        if (args != null) {
-            String[] bounds = args.split(",", -1);
-            if (bounds.length == 2) {
+        List<String> bounds = splitPickArgs(args == null ? "" : args);
+        if (bounds.size() == 2) {
+            Optional<String> first = parsePickItem(bounds.get(0));
+            Optional<String> second = parsePickItem(bounds.get(1));
+            if (first.isPresent() && second.isPresent()) {
                 try {
-                    long first = Long.parseLong(bounds[0].trim());
-                    long second = Long.parseLong(bounds[1].trim());
-                    long low = Math.min(first, second);
-                    long high = Math.max(first, second);
+                    long firstBound = Long.parseLong(first.get().strip());
+                    long secondBound = Long.parseLong(second.get().strip());
+                    long low = Math.min(firstBound, secondBound);
+                    long high = Math.max(firstBound, secondBound);
                     long span = high - low + 1;
                     if (span > 0) {
                         long rolled = low + nextLong(scope, span);

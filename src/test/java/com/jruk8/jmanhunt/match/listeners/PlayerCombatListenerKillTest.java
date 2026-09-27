@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match.listeners;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -23,8 +24,10 @@ import com.jruk8.jmanhunt.player.SpawnCampService;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDeathEvent;
@@ -64,14 +67,18 @@ class PlayerCombatListenerKillTest {
         Fixture fixture = fixture();
         LivingEntity victim = mock(LivingEntity.class);
         when(victim.getKiller()).thenReturn(fixture.killer());
+        when(victim.getType()).thenReturn(EntityType.ZOMBIE);
         EntityDeathEvent event = mock(EntityDeathEvent.class);
         when(event.getEntity()).thenReturn(victim);
 
         fixture.listener().onEntityDeath(event);
 
-        verify(fixture.commands()).runEventModifiers(eq("ON_MOB_KILL"), eq(fixture.killer()), eq(7L));
-        verify(fixture.commands(), never()).runEventModifiers(eq("ON_PLAYER_KILL"), any(), anyLong());
-        verify(fixture.commands(), never()).runEventModifiers(eq("ON_EVERY_KILL"), any(), anyLong());
+        verify(fixture.commands()).runEventModifiers(eq("ON_MOB_KILL"), eq(fixture.killer()), eq(7L),
+                eq(List.of("ZOMBIE")));
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_PLAYER_KILL"), any(), anyLong(),
+                anyList());
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_EVERY_KILL"), any(), anyLong(),
+                anyList());
     }
 
     @Test
@@ -80,6 +87,7 @@ class PlayerCombatListenerKillTest {
         Player victim = mock(Player.class);
         UUID victimId = UUID.randomUUID();
         when(victim.getUniqueId()).thenReturn(victimId);
+        when(victim.getName()).thenReturn("Alex");
         when(victim.getKiller()).thenReturn(fixture.killer());
         fixture.players().setRole(victim, Role.SPEEDRUNNER);
         when(fixture.game().instanceOf(victimId)).thenReturn(Optional.of(fixture.instance()));
@@ -89,8 +97,10 @@ class PlayerCombatListenerKillTest {
         fixture.listener().onEntityDeath(event);
 
         verify(fixture.commands()).runEventModifiers(
-                eq("ON_PLAYER_KILL"), eq(fixture.killer()), eq(7L));
-        verify(fixture.commands(), never()).runEventModifiers(eq("ON_MOB_KILL"), any(), anyLong());
-        verify(fixture.commands(), never()).runEventModifiers(eq("ON_EVERY_KILL"), any(), anyLong());
+                eq("ON_PLAYER_KILL"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_MOB_KILL"), any(), anyLong(),
+                anyList());
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_EVERY_KILL"), any(), anyLong(),
+                anyList());
     }
 }

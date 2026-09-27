@@ -191,6 +191,7 @@ game:
   speedrunners-unlimited-lives: "{prefix}<yellow>Speedrunners have unlimited lives."
   hunters-unlimited-lives: "{prefix}<yellow>Hunters have unlimited lives."
   speedrunner-death: "{prefix}<yellow>A speedrunner has died! <white>({value} remaining)</white>"
+  loseplayer: "{prefix}<yellow><white>{player}</white> lost: {reason}"
   friendly-fire-1: "{prefix}<yellow><white>{dead}</white> became collateral damage for <white>{killer}</white>"
   friendly-fire-2: "{prefix}<yellow><white>{killer}</white> mistook <white>{dead}</white> for the enemy"
   friendly-fire-3: "{prefix}<yellow><white>{dead}</white> was teamkilled by <white>{killer}</white> (oops)"
@@ -330,6 +331,7 @@ debug:
   portal-reroute: "{debug-prefix}<gray>Rerouted <white>{player} <gray>to <white>{cell}<gray>."
   lobby-fallback: "{debug-prefix}<gray>Failed to fetch lobbytp for lobby <white>{lobby}<gray>, using fallback <white>{fallback}<gray>."
   lobby-missing: "{debug-prefix}<gray>No lobbytp for lobby <white>{lobby}<gray> anywhere (or the lobby world is missing); targets were told to contact an administrator."
+  interval-skip: "{debug-prefix}<gray>INTERVAL <white>{modifier} <gray>skipped <white>{player} <gray>({why})."
 
 # Developer schematic tools (/manhunt dev schem). Not for production use.
 dev:

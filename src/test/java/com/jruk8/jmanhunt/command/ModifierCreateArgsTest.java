@@ -100,24 +100,24 @@ class ModifierCreateArgsTest {
 
     private static void assertEntryMatchesPlan(ModifierEntry entry) {
         assertNotNull(entry.getBehavior());
-        assertEquals(java.util.List.of("ON_START", "INTERVAL"), entry.getBehavior().getRunsOn());
-        assertEquals("PICK_RANDOM", entry.getBehavior().getOnStart().getPreStartOrder());
-        assertEquals(30.0, entry.getBehavior().getOptions().getIntervalSettings().getInterval());
-        assertEquals(5.0, entry.getBehavior().getOptions().getIntervalSettings().getDeviation());
+        assertEquals(java.util.List.of("ON_START", "INTERVAL"), entry.getBehavior().get("0").getRunsOn());
+        assertEquals("PICK_RANDOM", entry.getBehavior().get("0").getOnStart().getPreStartOrder());
+        assertEquals(30.0, entry.getBehavior().get("0").getOptions().getIntervalSettings().getInterval());
+        assertEquals(5.0, entry.getBehavior().get("0").getOptions().getIntervalSettings().getDeviation());
         assertEquals("PER_EXECUTOR",
-                entry.getBehavior().getOptions().getIntervalSettings().getBehavior());
-        assertEquals(0.5, entry.getBehavior().getOptions().getSuccessChance().getChance());
+                entry.getBehavior().get("0").getOptions().getIntervalSettings().getBehavior());
+        assertEquals(0.5, entry.getBehavior().get("0").getOptions().getSuccessChance().getChance());
         assertEquals("PER_INVOKE",
-                entry.getBehavior().getOptions().getSuccessChance().getBehavior());
-        assertEquals("PICK_RANDOM", entry.getBehavior().getOptions().getExecution().getSelection());
-        assertEquals(2, entry.getBehavior().getOptions().getExecution().getPickRandom().getCount());
+                entry.getBehavior().get("0").getOptions().getSuccessChance().getBehavior());
+        assertEquals("PICK_RANDOM", entry.getBehavior().get("0").getOptions().getExecution().getSelection());
+        assertEquals(2, entry.getBehavior().get("0").getOptions().getExecution().getPickRandom().getCount());
         assertEquals("PER_EXECUTOR",
-                entry.getBehavior().getOptions().getExecution().getPickRandom().getBehavior());
-        assertEquals(100L, entry.getBehavior().getOptions().getDelay());
+                entry.getBehavior().get("0").getOptions().getExecution().getPickRandom().getBehavior());
+        assertEquals(100L, entry.getBehavior().get("0").getOptions().getDelay());
         assertEquals(java.util.List.of("say hi <p>"),
-                entry.getBehavior().getCommands().getLists().get("console"));
+                entry.getBehavior().get("0").getCommands().getLists().get("console"));
         assertEquals(java.util.List.of("give <p> apple"),
-                entry.getBehavior().getCommands().getLists().get("player"));
+                entry.getBehavior().get("0").getCommands().getLists().get("player"));
     }
 
     @Test

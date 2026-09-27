@@ -1,14 +1,15 @@
 package com.jruk8.jmanhunt.modifiers.config;
 
 import eu.okaeri.configs.OkaeriConfig;
+import java.util.Map;
 
-/** One modifier: its toggle, display metadata, and trigger behavior. */
+/** One modifier: its toggle, display metadata, and trigger behaviors. */
 @SuppressWarnings("FieldMayBeFinal")
 public class ModifierEntry extends OkaeriConfig {
 
     private boolean enabled = false;
     private ModifierMeta meta;
-    private ModifierBehavior behavior;
+    private Map<String, ModifierBehavior> behavior;
 
     public boolean isEnabled() {
         return enabled;
@@ -26,11 +27,11 @@ public class ModifierEntry extends OkaeriConfig {
         this.meta = meta;
     }
 
-    public ModifierBehavior getBehavior() {
+    public Map<String, ModifierBehavior> getBehavior() {
         return behavior;
     }
 
-    public void setBehavior(ModifierBehavior behavior) {
+    public void setBehavior(Map<String, ModifierBehavior> behavior) {
         this.behavior = behavior;
     }
 }

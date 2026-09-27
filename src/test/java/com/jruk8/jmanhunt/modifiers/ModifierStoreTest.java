@@ -43,35 +43,43 @@ class ModifierStoreTest {
                   item: COOKED_BEEF
                   author: JManhunt
                 behavior:
-                  runs-on:
-                    - ON_START
-                  options:
-                    interval-settings:
-                      interval: 90
-                      deviation: 5
-                      behavior: PER_EXECUTOR
-                    success-chance:
-                      chance: 0.5
-                      behavior: PER_EXECUTOR
-                    execution:
-                      selection: PICK_RANDOM
-                      pick-random:
-                        count: 2
+                  0:
+                    runs-on:
+                      - ON_START
+                    options:
+                      interval-settings:
+                        interval: 90
+                        deviation: 5
                         behavior: PER_EXECUTOR
-                    delay: 100
-                  commands:
-                    player:
-                      - "give <p> beef 8"
-                    custom-list:
-                      - "say hi"
+                      success-chance:
+                        chance: 0.5
+                        behavior: PER_EXECUTOR
+                      execution:
+                        selection: PICK_RANDOM
+                        pick-random:
+                          count: 2
+                          behavior: PER_EXECUTOR
+                      delay: 100
+                    commands:
+                      player:
+                        - "give <p> beef 8"
+                      custom-list:
+                        - "say hi"
+                  2:
+                    runs-on:
+                      - ON_KILL
               bare:
                 enabled: false
               thin:
                 enabled: false
                 behavior:
-                  commands:
-                    player:
-                      - "say thin"
+                  0:
+                    commands:
+                      player:
+                        - "say thin"
+                  extra:
+                    runs-on:
+                      - ON_START
             presets:
               mixed:
                 meta:
@@ -140,36 +148,36 @@ class ModifierStoreTest {
 
     @Test
     void typedBehaviorReads() {
-        assertEquals(List.of("ON_START"), store.runsOn("beef"));
-        assertEquals(90.0, store.intervalSeconds("beef"));
-        assertEquals(5.0, store.intervalDeviation("beef"));
-        assertEquals("PER_EXECUTOR", store.intervalBehavior("beef"));
-        assertEquals(0.5, store.chance("beef"));
-        assertEquals("PER_EXECUTOR", store.chanceBehavior("beef"));
-        assertEquals("PER_EXECUTOR", store.pickBehavior("beef"));
-        assertEquals(100L, store.delayTicks("beef"));
-        assertEquals("PICK_RANDOM", store.selection("beef"));
-        assertEquals(2, store.pickCount("beef"));
-        assertEquals(List.of("give <p> beef 8"), store.commandList("beef", "player"));
-        assertEquals(List.of("say hi"), store.commandList("beef", "custom-list"));
-        assertTrue(store.commandList("beef", "missing").isEmpty());
-        assertNull(store.preStartOrder("beef"));
+        assertEquals(List.of("ON_START"), store.runsOn("beef", 0));
+        assertEquals(90.0, store.intervalSeconds("beef", 0));
+        assertEquals(5.0, store.intervalDeviation("beef", 0));
+        assertEquals("PER_EXECUTOR", store.intervalBehavior("beef", 0));
+        assertEquals(0.5, store.chance("beef", 0));
+        assertEquals("PER_EXECUTOR", store.chanceBehavior("beef", 0));
+        assertEquals("PER_EXECUTOR", store.pickBehavior("beef", 0));
+        assertEquals(100L, store.delayTicks("beef", 0));
+        assertEquals("PICK_RANDOM", store.selection("beef", 0));
+        assertEquals(2, store.pickCount("beef", 0));
+        assertEquals(List.of("give <p> beef 8"), store.commandList("beef", 0, "player"));
+        assertEquals(List.of("say hi"), store.commandList("beef", 0, "custom-list"));
+        assertTrue(store.commandList("beef", 0, "missing").isEmpty());
+        assertNull(store.preStartOrder("beef", 0));
     }
 
     @Test
     void bareModifierUsesDefaults() {
-        assertTrue(store.runsOn("bare").isEmpty());
-        assertEquals(60.0, store.intervalSeconds("bare"));
-        assertEquals(0.0, store.intervalDeviation("bare"));
-        assertNull(store.intervalBehavior("bare"));
-        assertEquals(1.0, store.chance("bare"));
-        assertNull(store.chanceBehavior("bare"));
-        assertNull(store.pickBehavior("bare"));
-        assertEquals(0L, store.delayTicks("bare"));
-        assertNull(store.selection("bare"));
-        assertEquals(1, store.pickCount("bare"));
-        assertTrue(store.commandList("bare", "player").isEmpty());
-        assertNull(store.preStartOrder("bare"));
+        assertTrue(store.runsOn("bare", 0).isEmpty());
+        assertEquals(60.0, store.intervalSeconds("bare", 0));
+        assertEquals(0.0, store.intervalDeviation("bare", 0));
+        assertNull(store.intervalBehavior("bare", 0));
+        assertEquals(1.0, store.chance("bare", 0));
+        assertNull(store.chanceBehavior("bare", 0));
+        assertNull(store.pickBehavior("bare", 0));
+        assertEquals(0L, store.delayTicks("bare", 0));
+        assertNull(store.selection("bare", 0));
+        assertEquals(1, store.pickCount("bare", 0));
+        assertTrue(store.commandList("bare", 0, "player").isEmpty());
+        assertNull(store.preStartOrder("bare", 0));
     }
 
     @Test
@@ -227,6 +235,47 @@ class ModifierStoreTest {
     }
 
     @Test
+    void behaviorIndexesAreSortedAndSparse() {
+        assertEquals(List.of(0, 2), store.behaviorIndexes("beef"));
+        assertEquals(List.of(), store.behaviorIndexes("bare"));
+        assertEquals(List.of(), store.behaviorIndexes("missing"));
+    }
+
+    @Test
+    void behaviorsReadIndependentlyByIndex() {
+        assertEquals(List.of("ON_START"), store.runsOn("beef", 0));
+        assertEquals(List.of("ON_KILL"), store.runsOn("beef", 2));
+        assertTrue(store.runsOn("beef", 1).isEmpty());
+        assertEquals(90.0, store.intervalSeconds("beef", 0));
+        assertEquals(60.0, store.intervalSeconds("beef", 2));
+    }
+
+    @Test
+    void nonNumericBehaviorKeyWarnsOnceAndSkips() {
+        assertEquals(List.of(0), store.behaviorIndexes("thin"));
+        assertEquals(List.of(0), store.behaviorIndexes("thin"));
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).contains("thin"));
+        assertTrue(warnings.get(0).contains("extra"));
+
+        store.clearItemWarnings();
+        assertEquals(List.of(0), store.behaviorIndexes("thin"));
+        assertEquals(2, warnings.size());
+    }
+
+    @Test
+    void addAndRemoveBehaviorRoundTrip() {
+        assertEquals(3, store.addBehavior("beef"));
+        assertEquals(List.of(0, 2, 3), store.behaviorIndexes("beef"));
+        assertEquals(-1, store.addBehavior("missing"));
+
+        assertTrue(store.removeBehavior("beef", 2));
+        assertEquals(List.of(0, 3), store.behaviorIndexes("beef"));
+        assertFalse(store.removeBehavior("beef", 2));
+        assertFalse(store.removeBehavior("missing", 0));
+    }
+
+    @Test
     void presetsReadThrough() {
         assertEquals(1, store.presetNames().size());
         assertEquals(List.of("beef", "bare"), store.presetMembers("mixed"));
@@ -250,7 +299,7 @@ class ModifierStoreTest {
         assertFalse(bare.contains("meta"));
         assertFalse(bare.contains("behavior"));
 
-        var thin = reread.getConfigurationSection("modifiers.thin.behavior");
+        var thin = reread.getConfigurationSection("modifiers.thin.behavior.0");
         assertTrue(thin.contains("commands"));
         assertFalse(thin.contains("runs-on"));
         assertFalse(thin.contains("options"));
@@ -262,11 +311,11 @@ class ModifierStoreTest {
         assertTrue(store.setEnabled("bare", true));
 
         ModifierStore reread = new ModifierStore(load(file), Logger.getAnonymousLogger());
-        assertEquals(List.of("say hi"), reread.commandList("beef", "custom-list"));
-        assertEquals("PICK_RANDOM", reread.selection("beef"));
-        assertEquals(2, reread.pickCount("beef"));
-        assertEquals("PER_EXECUTOR", reread.pickBehavior("beef"));
-        assertEquals(List.of("say thin"), reread.commandList("thin", "player"));
+        assertEquals(List.of("say hi"), reread.commandList("beef", 0, "custom-list"));
+        assertEquals("PICK_RANDOM", reread.selection("beef", 0));
+        assertEquals(2, reread.pickCount("beef", 0));
+        assertEquals("PER_EXECUTOR", reread.pickBehavior("beef", 0));
+        assertEquals(List.of("say thin"), reread.commandList("thin", 0, "player"));
     }
 
     @Test
@@ -288,9 +337,13 @@ class ModifierStoreTest {
             assertTrue(section.getConfigurationSection("meta").contains("description"), name);
             assertTrue(section.getConfigurationSection("meta").contains("item"), name);
             assertTrue(section.getConfigurationSection("meta").contains("author"), name);
-            List<String> behaviorKeys = new ArrayList<>(
-                    section.getConfigurationSection("behavior").getKeys(false));
-            assertEquals("commands", behaviorKeys.get(behaviorKeys.size() - 1), name);
+            var behavior = section.getConfigurationSection("behavior");
+            for (String index : behavior.getKeys(false)) {
+                List<String> behaviorKeys = new ArrayList<>(
+                        behavior.getConfigurationSection(index).getKeys(false));
+                assertEquals("commands", behaviorKeys.get(behaviorKeys.size() - 1),
+                        name + "/" + index);
+            }
         }
 
         var presets = bundled.getConfigurationSection("presets");
@@ -316,12 +369,12 @@ class ModifierStoreTest {
 
         assertEquals(19, bundled.modifierNames().size());
         assertEquals(3, bundled.presetNames().size());
-        assertEquals("PICK_RANDOM", bundled.selection("gear-dice"));
-        assertEquals(15.0, bundled.intervalSeconds("gear-dice"));
-        assertEquals(0.5, bundled.chance("gear-dice"));
-        assertEquals(1, bundled.pickCount("gear-dice"));
-        assertEquals(100L, bundled.delayTicks("tpall-on-end"));
-        assertEquals("AFTER", bundled.preStartOrder("hunter-start-debuffs"));
+        assertEquals("PICK_RANDOM", bundled.selection("gear-dice", 0));
+        assertEquals(15.0, bundled.intervalSeconds("gear-dice", 0));
+        assertEquals(0.5, bundled.chance("gear-dice", 0));
+        assertEquals(1, bundled.pickCount("gear-dice", 0));
+        assertEquals(100L, bundled.delayTicks("tpall-on-end", 0));
+        assertEquals("AFTER", bundled.preStartOrder("hunter-start-debuffs", 0));
         assertEquals(3, bundled.presetMembers("chaos-mode").size());
         assertEquals(Material.TNT, bundled.presetItem("chaos-mode"));
     }
@@ -339,17 +392,24 @@ class ModifierStoreTest {
         var modifiers = bundled.getConfigurationSection("modifiers");
         int checked = 0;
         for (String name : modifiers.getKeys(false)) {
-            var commands = modifiers.getConfigurationSection(name)
-                    .getConfigurationSection("behavior").getConfigurationSection("commands");
-            if (commands == null) {
+            var behavior = modifiers.getConfigurationSection(name)
+                    .getConfigurationSection("behavior");
+            if (behavior == null) {
                 continue;
             }
-            for (String list : commands.getKeys(false)) {
-                for (String line : commands.getStringList(list)) {
-                    assertTrue(CommandSyntax.error(line).isEmpty(),
-                            name + "/" + list + ": " + line + " -> "
-                                    + CommandSyntax.error(line).orElse(""));
-                    checked++;
+            for (String index : behavior.getKeys(false)) {
+                var commands = behavior.getConfigurationSection(index)
+                        .getConfigurationSection("commands");
+                if (commands == null) {
+                    continue;
+                }
+                for (String list : commands.getKeys(false)) {
+                    for (String line : commands.getStringList(list)) {
+                        assertTrue(CommandSyntax.error(line).isEmpty(),
+                                name + "/" + index + "/" + list + ": " + line + " -> "
+                                        + CommandSyntax.error(line).orElse(""));
+                        checked++;
+                    }
                 }
             }
         }
