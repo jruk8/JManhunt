@@ -164,7 +164,8 @@ the window are ignored, so holding the button cannot scroll. Set it to
 refused while an analysis is running.
 
 With one or fewer candidates there is nothing to lock onto: the click
-quits silently without any sound or cooldown. Each successful scroll
+quits silently without any sound, but still starts the scroll
+cooldown so failed clicks cannot be spammed. Each successful scroll
 plays a short click. You can change it under
 `sounds.compass.left-click`, or turn it off there.
 
@@ -192,10 +193,38 @@ The mode is per holder and clears when their match ends, like manual
 locks. Spectators cannot toggle, and respawning players are never
 targets either way. Entering teammate mode needs at least one
 teammate: with nobody to track, the toggle is refused with a chat
-message. When the last teammate leaves the game, holders in
+message, but still starts the switch cooldown so failed toggles
+cannot be spammed. When the last teammate leaves the game, holders in
 teammate mode flip back to opponents automatically. Set `enabled`
 to false to make shift-left-click lock exactly like a normal
 left-click.
+
+## Actionbar
+
+Under `settings.compass.actionbar`, `refresh-ticks` sets how often the
+tracking actionbar is pushed to holders, in ticks (default 1, minimum
+1). This is frontend only: the tracking refresh interval is
+untouched, so lowering it redraws the same snapshot more often.
+
+```yaml
+actionbar:
+  refresh-ticks: 1
+  show-distance-delta:
+    enabled: true
+    further-format: "<green>▲{distance}m"
+    closer-format: "<red>▼{distance}m"
+    max-distance: 200.0
+    min-delta-to-show: 5.0
+```
+
+`show-distance-delta` colors the distance by movement since the last
+refresh: a green up triangle when the rounded distance grew, a red
+down triangle when it shrank. The first sighting of a target, and
+any refresh where the rounded distance did not change, renders the
+plain white distance. Deltas only show within `max-distance` meters,
+and only when the change reaches `min-delta-to-show` meters, so
+small wobbles far away do not clutter the screen. Both formats
+support `{distance}` and MiniMessage.
 
 ## Chat Messages
 

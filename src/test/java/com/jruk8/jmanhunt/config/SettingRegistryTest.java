@@ -145,6 +145,12 @@ class SettingRegistryTest {
     }
 
     @Test
+    void compassActionbarRefreshTicksDefaultsToOne() {
+        assertEquals("1", SettingRegistry
+                .byPath("settings.compass.actionbar.refresh-ticks").defaultValue());
+    }
+
+    @Test
     void worldEngineDefaultsMatchBundledConfig() {
         assertEquals("jmh_lobby",
                 SettingRegistry.byPath("advanced.lobbies.lobby-world-name").defaultValue());

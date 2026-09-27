@@ -80,22 +80,29 @@ to their lobby as `NONE`. See [Joining and Leaving](../../commands.md#joining-an
 
 # Anti-Spawn-Camp
 
-Under `settings.anti-spawn-camp`, a rolling kill limit punishes campers:
-by default, three kills by one attacker on the same victim within 120
+Under `settings.server.anti-spawn-camp`, a rolling kill limit punishes campers:
+by default, three kills by one attacker on the same victim within 90
 seconds triggers it. Every punishment is broadcast to the whole server.
 
 ```yaml
 settings:
-  anti-spawn-camp:
-    enabled: true
-    kills: 3
-    window-seconds: 120.0
-    punishment: KILL
+  server:
+    anti-spawn-camp:
+      enabled: true
+      kills: 3
+      window-seconds: 90.0
+      punishment: KILL
+      monitored-roles:
+        - SPEEDRUNNER
 ```
 
 `KILL` slays the camper through a normal death; `GEAR-WIPE` instead clears
 their armor, offhand, and main hand. One kill before the limit, the
 killer gets a private warning naming their victim.
+
+`monitored-roles` lists which attacker roles the guard punishes:
+`SPEEDRUNNER`, `HUNTER`, or both. An empty list switches the guard
+off entirely. Unknown values are ignored with a console warning.
 
 # Friendly Fire
 

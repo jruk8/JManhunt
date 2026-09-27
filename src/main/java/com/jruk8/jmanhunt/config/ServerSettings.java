@@ -162,6 +162,14 @@ public class ServerSettings extends OkaeriConfig {
         })
         private String punishment = "KILL";
 
+        @CustomKey("monitored-roles")
+        @Comment({
+                "Attacker roles the guard punishes: SPEEDRUNNER, HUNTER, both,",
+                "or empty to switch the guard off.",
+                "Default: [SPEEDRUNNER]"
+        })
+        private List<String> monitoredRoles = new ArrayList<>(List.of("SPEEDRUNNER"));
+
         public boolean isEnabled() {
             return enabled;
         }
@@ -188,6 +196,14 @@ public class ServerSettings extends OkaeriConfig {
 
         public String getPunishment() {
             return punishment;
+        }
+
+        public List<String> getMonitoredRoles() {
+            return monitoredRoles;
+        }
+
+        public void setMonitoredRoles(List<String> monitoredRoles) {
+            this.monitoredRoles = monitoredRoles;
         }
 
         public void setPunishment(String punishment) {

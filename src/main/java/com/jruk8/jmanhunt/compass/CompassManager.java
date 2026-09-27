@@ -38,6 +38,8 @@ public final class CompassManager {
     /** Last accepted refresh click per holder; right-clicks only. */
     private final Map<UUID, Long> lastClick = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
+    /** Last rounded distance per holder and tracking key plus target. */
+    private final Map<UUID, Map<String, Long>> lastRoundedDistances = new HashMap<>();
     private GameManager game;
 
     public CompassManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
@@ -111,6 +113,7 @@ public final class CompassManager {
                 .forEach(p -> {
                     if (isVanillaSpectator(p)) {
                         compassActionbars.remove(p.getUniqueId());
+                        lastRoundedDistances.remove(p.getUniqueId());
                         return;
                     }
                     p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
@@ -368,11 +371,12 @@ public final class CompassManager {
         }
         setLodestone(item, spot);
         holder.getInventory().setItem(slot, item);
+        String key = trackingKey(holder, locked, false);
         compassActionbars.put(holder.getUniqueId(), component(
-                trackingKey(holder, locked, false),
+                key,
                 Map.of("player", pick.name(),
                         "distance",
-                        String.valueOf(Math.round(holder.getLocation().distance(spot))))));
+                        distanceText(holder, key, pick.id(), holder.getLocation().distance(spot)))));
     }
 
     /** Reasonless Bad Signal for uncached switch targets, by spec. */
@@ -408,11 +412,13 @@ public final class CompassManager {
         }
         setLodestone(item, target.getLocation());
         holder.getInventory().setItem(slot, item);
+        String key = trackingKey(holder, locked, false);
         compassActionbars.put(holder.getUniqueId(), component(
-                trackingKey(holder, locked, false),
+                key,
                 Map.of("player", target.getName(),
                         "distance",
-                        String.valueOf(Math.round(holder.getLocation().distance(target.getLocation()))))));
+                        distanceText(holder, key, pick.id(),
+                                holder.getLocation().distance(target.getLocation())))));
         return true;
     }
 
@@ -430,13 +436,50 @@ public final class CompassManager {
         setLodestone(item, location);
         holder.getInventory().setItem(slot, item);
         String reason = seen != null ? "Another Dimension" : "Log-Out";
+        String key = trackingKey(holder, locked, true);
         compassActionbars.put(holder.getUniqueId(), component(
-                trackingKey(holder, locked, true),
+                key,
                 Map.of("player", pick.name(),
                         "distance",
-                        String.valueOf(Math.round(holder.getLocation().distance(location))),
+                        distanceText(holder, key, pick.id(),
+                                holder.getLocation().distance(location)),
                         "reason", reason)));
         return true;
+    }
+
+    /**
+     * Distance substitution for one tracking actionbar: the plain rounded
+     * meters, or the delta triangle format when the target moved enough
+     * since this holder last saw it under the same tracking key.
+     */
+    private String distanceText(Player holder, String trackingKey, UUID targetId, double distance) {
+        long rounded = Math.round(distance);
+        String plain = String.valueOf(rounded);
+        if (!Double.isFinite(distance) || distance < 0.0) {
+            return plain;
+        }
+        Integer lobby = lobbyOf(holder);
+        String base = "settings.compass.actionbar.show-distance-delta.";
+        if (!plugin.overrides().getBoolean(lobby, base + "enabled", true)) {
+            return plain;
+        }
+        String historyKey = trackingKey + "|" + targetId;
+        Map<String, Long> history =
+                lastRoundedDistances.computeIfAbsent(holder.getUniqueId(), ignored -> new HashMap<>());
+        Long previous = history.get(historyKey);
+        double maxDistance = plugin.overrides().getDouble(lobby, base + "max-distance", 200.0);
+        double minDelta = plugin.overrides().getDouble(lobby, base + "min-delta-to-show", 5.0);
+        DistanceDelta.Kind kind = DistanceDelta.of(previous, rounded, maxDistance, minDelta);
+        history.put(historyKey, rounded);
+        return switch (kind) {
+            case FURTHER -> plugin.overrides()
+                    .getString(lobby, base + "further-format", "<green>▲{distance}m")
+                    .replace("{distance}", plain);
+            case CLOSER -> plugin.overrides()
+                    .getString(lobby, base + "closer-format", "<red>▼{distance}m")
+                    .replace("{distance}", plain);
+            case SAME -> plain;
+        };
     }
 
     private void showNoTarget(Player holder, ItemStack item, int slot, String targetRoleString) {
@@ -515,6 +558,7 @@ public final class CompassManager {
 
     public void removeCompasses(Player player) {
         items.removeCompasses(player);
+        lastRoundedDistances.remove(player.getUniqueId());
     }
 
     public boolean isCompass(ItemStack item) {

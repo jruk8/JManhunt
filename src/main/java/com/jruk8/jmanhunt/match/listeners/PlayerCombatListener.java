@@ -436,7 +436,8 @@ public final class PlayerCombatListener implements Listener {
         stats.recordPlayerKill(matchId, killer.getUniqueId(),
                 playerStates.role(killer.getUniqueId()),
                 playerStates.role(event.getEntity().getUniqueId()));
-        plugin.spawnCamp().handleKill(matchId, killer, (Player) event.getEntity());
+        plugin.spawnCamp().handleKill(matchId, killer, (Player) event.getEntity(),
+                playerStates.role(killer.getUniqueId()));
         if (victimIsPlayer) {
             game.stateCommands().runEventModifiers("ON_PLAYER_KILL", killer, matchId);
             Role victimRole = playerStates.role(event.getEntity().getUniqueId());

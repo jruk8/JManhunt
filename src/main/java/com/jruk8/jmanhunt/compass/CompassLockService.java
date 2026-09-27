@@ -263,6 +263,8 @@ final class CompassLockService {
         if (match.isEmpty()) {
             return;
         }
+        // Stamped before target checks so failed clicks throttle too.
+        lastScroll.put(player.getUniqueId(), now);
         int maxTargets = CompassCache.clampMaxTargets(plugin.overrides()
                 .getInt(lobbyOf(player), "settings.compass.left-click.max-targets", 5));
         CachedCycle cycle =
@@ -270,7 +272,6 @@ final class CompassLockService {
         if (cycle.ordered().size() <= 1) {
             return;
         }
-        lastScroll.put(player.getUniqueId(), now);
         applyCachedCycle(player, cycle);
         cacheRenderer.accept(player);
     }
@@ -345,11 +346,12 @@ final class CompassLockService {
             return;
         }
         UUID holderId = player.getUniqueId();
+        // Stamped before the toggle so failed clicks throttle too.
+        lastSwitch.put(holderId, now);
         if (!applyShiftToggle(player, match.get(), holderId)) {
             return;
         }
         locks.remove(holderId);
-        lastSwitch.put(holderId, now);
         sounds.playSound(player, "compass.left-click");
         cacheRenderer.accept(player);
     }

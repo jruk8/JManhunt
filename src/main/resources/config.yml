@@ -504,6 +504,31 @@ settings:
             - "effect give <p> minecraft:slowness <duration> 1 true"
           speedrunner: []
           hunter: []
+    # Actionbar push rate and distance delta.
+    actionbar:
+      # Ticks between actionbar pushes. Frontend only: the tracking
+      # refresh interval is untouched.
+      # Default: 1
+      refresh-ticks: 1
+      # Distance delta triangles.
+      show-distance-delta:
+        # Show a green up triangle when the target got further
+        # since the last refresh, or a red down triangle when it
+        # got closer. Off renders the plain white distance.
+        # Default: true
+        enabled: true
+        # Format when the rounded distance grew. Default: <green>▲{distance}m
+        further-format: "<green>▲{distance}m"
+        # Format when the rounded distance shrank. Default: <red>▼{distance}m
+        closer-format: "<red>▼{distance}m"
+        # Delta colors stop past this distance in meters; small
+        # changes far away only clutter the screen.
+        # Default: 200.0
+        max-distance: 200.0
+        # Deltas below this many meters render the plain white
+        # distance instead.
+        # Default: 5.0
+        min-delta-to-show: 5.0
 
 # Players: roles, respawn and lives, friendly fire, invulnerability, and role announcements.
   players:
@@ -655,6 +680,11 @@ settings:
       # offhand, and main hand.
       # Default: KILL
       punishment: KILL
+      # Attacker roles the guard punishes: SPEEDRUNNER, HUNTER, both,
+      # or empty to switch the guard off.
+      # Default: [SPEEDRUNNER]
+      monitored-roles:
+        - SPEEDRUNNER
 
     # Optional /manhunt status extras. Each toggles independently.
     status:

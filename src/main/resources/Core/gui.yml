@@ -33,6 +33,8 @@ categories:
   compass/analysis: AMETHYST_SHARD
   compass/analysis/debuffs: POTION
   compass/analysis/debuffs/commands: COMMAND_BLOCK
+  compass/actionbar: GLOW_INK_SAC
+  compass/actionbar/show-distance-delta: ARROW
   compass/signal-interference: REDSTONE_TORCH
   compass/signal-interference/altitude: ELYTRA
   compass/signal-interference/biome: GRASS_BLOCK
@@ -251,6 +253,14 @@ descriptions:
   "settings.compass.analysis.debuffs.commands.player": "Commands run for every analyzing holder."
   "settings.compass.analysis.debuffs.commands.speedrunner": "Extra commands for speedrunner holders."
   "settings.compass.analysis.debuffs.commands.hunter": "Extra commands for hunter holders."
+  "settings.compass.actionbar": "Actionbar push rate and distance delta."
+  "settings.compass.actionbar.refresh-ticks": "Ticks between actionbar pushes."
+  "settings.compass.actionbar.show-distance-delta": "Distance delta triangles."
+  "settings.compass.actionbar.show-distance-delta.enabled": "Show up/down triangles on distance."
+  "settings.compass.actionbar.show-distance-delta.further-format": "Format when the target got further."
+  "settings.compass.actionbar.show-distance-delta.closer-format": "Format when the target got closer."
+  "settings.compass.actionbar.show-distance-delta.max-distance": "Delta colors stop past this range."
+  "settings.compass.actionbar.show-distance-delta.min-delta-to-show": "Smallest delta that shows colors."
   "settings.compass.signal-interference.enabled": "Master switch for signal interference."
   "settings.compass.signal-interference.two-way": "Target location needs a good signal too."
   "settings.compass.signal-interference.required-to-fail": "Failed checks needed to jam tracking."
@@ -305,6 +315,7 @@ descriptions:
   "settings.server.anti-spawn-camp.kills": "Kills on one victim that trigger it."
   "settings.server.anti-spawn-camp.window-seconds": "Rolling window in seconds."
   "settings.server.anti-spawn-camp.punishment": "KILL slays the camper; GEAR-WIPE strips them."
+  "settings.server.anti-spawn-camp.monitored-roles": "Attacker roles punished; empty switches off."
   "settings.server.status.show-ids": "Show lobby and game ids in status output."
   "settings.server.status.show-elapsed-time": "Show elapsed time in status output."
   "settings.server.status.show-modifiers": "Show modifiers in status output."

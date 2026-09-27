@@ -1,6 +1,8 @@
 package com.jruk8.jmanhunt.player;
 
 import org.junit.jupiter.api.Test;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -85,5 +87,21 @@ class SpawnCampServiceTest {
         assertFalse(SpawnCampService.shouldWarn(1, 3));
         assertFalse(SpawnCampService.shouldWarn(3, 3));
         assertFalse(SpawnCampService.shouldWarn(0, 1));
+    }
+
+    @Test
+    void isMonitoredMatchesRolesCaseInsensitively() {
+        assertTrue(SpawnCampService.isMonitored(Role.SPEEDRUNNER, List.of("SPEEDRUNNER")));
+        assertTrue(SpawnCampService.isMonitored(Role.HUNTER, List.of(" hunter ")));
+        assertTrue(SpawnCampService.isMonitored(Role.HUNTER,
+                List.of("SPEEDRUNNER", "HUNTER")));
+        assertFalse(SpawnCampService.isMonitored(Role.HUNTER, List.of("SPEEDRUNNER")));
+        assertFalse(SpawnCampService.isMonitored(Role.SPECTATOR,
+                List.of("SPEEDRUNNER", "HUNTER")));
+        assertFalse(SpawnCampService.isMonitored(Role.HUNTER, List.of()));
+        assertFalse(SpawnCampService.isMonitored(Role.HUNTER, null));
+        assertFalse(SpawnCampService.isMonitored(Role.HUNTER, List.of("ADMIN")));
+        assertFalse(SpawnCampService.isMonitored(Role.HUNTER,
+                Arrays.asList(null, "  ")));
     }
 }

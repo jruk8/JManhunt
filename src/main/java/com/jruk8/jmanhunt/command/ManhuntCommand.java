@@ -223,8 +223,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Support links: Discord invite, GitHub, Ko-fi. Players and console alike. */
     private boolean support(CommandSender sender) {
+        sender.sendMessage(messages.miniMessage("{prefix}"));
+        sender.sendMessage(Component.empty());
         sender.sendMessage(messages.miniMessage(
-                "\n<green>Need help? Join our <#de7766><click:open_url:'" + DISCORD_URL + "'>"
+                "<green>Need help? Join our <#de7766><click:open_url:'" + DISCORD_URL + "'>"
                         + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
         sender.sendMessage(messages.miniMessage(
                 "<green>Star us on <#de7766><click:open_url:'" + GITHUB_URL + "'>"

@@ -8,6 +8,8 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -41,6 +43,7 @@ public final class SpawnCampService {
     private final MessageService messages;
     private final Map<KillKey, Deque<Long>> kills = new HashMap<>();
     private final Set<UUID> quietPunishment = new HashSet<>();
+    private final Set<String> warnedRoles = new HashSet<>();
     private final LongSupplier clock;
 
     public SpawnCampService(JManhuntPlugin plugin, MessageService messages) {
@@ -54,11 +57,36 @@ public final class SpawnCampService {
     }
 
     /**
-     * Records one match kill and punishes the attacker when they cross
-     * the configured rolling limit on the same victim.
+     * True when the attacker role is punished under the monitored-roles
+     * list. Matching is case-insensitive; unknown values never match,
+     * and an empty or missing list punishes nobody. Pure for tests.
      */
-    public void handleKill(long matchId, Player attacker, Player victim) {
+    public static boolean isMonitored(Role attackerRole, List<String> monitoredRoles) {
+        if (monitoredRoles == null || monitoredRoles.isEmpty()) {
+            return false;
+        }
+        for (String raw : monitoredRoles) {
+            if (raw != null && raw.trim().equalsIgnoreCase(attackerRole.name())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Records one match kill and punishes the attacker when they cross
+     * the configured rolling limit on the same victim. Attackers whose
+     * role is not monitored are ignored entirely: no tracking, no
+     * warning, no punishment.
+     */
+    public void handleKill(long matchId, Player attacker, Player victim, Role attackerRole) {
         if (!plugin.configService().getBoolean("settings.server.anti-spawn-camp.enabled", true)) {
+            return;
+        }
+        List<String> monitoredRoles = plugin.configService()
+                .getStringList("settings.server.anti-spawn-camp.monitored-roles");
+        warnUnknownRoles(monitoredRoles);
+        if (!isMonitored(attackerRole, monitoredRoles)) {
             return;
         }
         int limit = plugin.configService().getInt("settings.server.anti-spawn-camp.kills", 3);
@@ -109,6 +137,23 @@ public final class SpawnCampService {
             stamps.removeFirst();
         }
         return stamps.size();
+    }
+
+    /** Warns once per unknown monitored-roles value, then ignores it. */
+    private void warnUnknownRoles(List<String> monitoredRoles) {
+        if (monitoredRoles == null) {
+            return;
+        }
+        for (String raw : monitoredRoles) {
+            String normalized = raw == null ? "" : raw.trim().toUpperCase(Locale.ROOT);
+            if (normalized.equals("SPEEDRUNNER") || normalized.equals("HUNTER")
+                    || normalized.isEmpty() || !warnedRoles.add(normalized)) {
+                continue;
+            }
+            plugin.getLogger().warning(
+                    "Unknown settings.server.anti-spawn-camp.monitored-roles value '"
+                            + raw + "': expected SPEEDRUNNER or HUNTER.");
+        }
     }
 
     /**

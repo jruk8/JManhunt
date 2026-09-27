@@ -29,6 +29,7 @@ public final class SettingRegistry {
             "settings.compass.signal-interference.biome.interfere-in",
             "world-engine.preloading.commands",
             "settings.server.team-chat.prefixes",
+            "settings.server.anti-spawn-camp.monitored-roles",
             "world-engine.spawnpoint-algorithm.spawn-close-to-structure.structures");
 
     private SettingRegistry() {
@@ -586,6 +587,17 @@ public final class SettingRegistry {
         entries.add(floatVal(root + "delay-deviation-seconds", 0.0, 0.0, null));
         entries.add(floatVal(root + "sound-interval-seconds", 0.5, 0.05, 3.0));
         entries.add(bool(root + "debuffs.enabled", true));
+        addCompassActionbarEntries(entries);
+    }
+
+    private static void addCompassActionbarEntries(List<SettingDescriptor> entries) {
+        String root = "settings.compass.actionbar.";
+        entries.add(intVal(root + "refresh-ticks", 1, 1, null));
+        entries.add(bool(root + "show-distance-delta.enabled", true));
+        entries.add(string(root + "show-distance-delta.further-format", "<green>▲{distance}m"));
+        entries.add(string(root + "show-distance-delta.closer-format", "<red>▼{distance}m"));
+        entries.add(floatVal(root + "show-distance-delta.max-distance", 200.0, 0.0, null));
+        entries.add(floatVal(root + "show-distance-delta.min-delta-to-show", 5.0, 0.0, null));
     }
 
     private static void addSignalInterferenceEntries(List<SettingDescriptor> entries) {

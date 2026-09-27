@@ -102,6 +102,9 @@ public class CompassSettings extends OkaeriConfig {
     })
     private Analysis analysis = new Analysis();
 
+    @Comment("Actionbar push rate and distance delta.")
+    private CompassActionbarSettings actionbar = new CompassActionbarSettings();
+
     public GivenTo getGivenTo() {
         return givenTo;
     }
@@ -212,6 +215,14 @@ public class CompassSettings extends OkaeriConfig {
 
     public void setAnalysis(Analysis analysis) {
         this.analysis = analysis;
+    }
+
+    public CompassActionbarSettings getActionbar() {
+        return actionbar;
+    }
+
+    public void setActionbar(CompassActionbarSettings actionbar) {
+        this.actionbar = actionbar;
     }
 
     /** Refresh analysis lag and debuffs. */

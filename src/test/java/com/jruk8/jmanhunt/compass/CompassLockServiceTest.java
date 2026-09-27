@@ -70,6 +70,35 @@ class CompassLockServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void failedScrollStillThrottles() {
+        Fixture fixture = fixture(List.of(
+                new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0)));
+
+        fixture.locks().handleLeftClick(fixture.player());
+        when(fixture.targets().collectIdentities(any(), any(), any())).thenReturn(List.of(
+                new CompassIdentity(UUID.randomUUID(), "a"),
+                new CompassIdentity(UUID.randomUUID(), "b")));
+        fixture.locks().handleLeftClick(fixture.player());
+
+        verify(fixture.renderer(), never()).accept(any(Player.class));
+    }
+
+    @Test
+    void failedShiftToggleStillThrottles() {
+        Fixture fixture = teammateFixture(List.of(), true, Role.HUNTER, 10.0);
+
+        fixture.locks().handleShiftLeft(fixture.player());
+        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.no-teammates");
+        when(fixture.targets().collectIdentities(any(), any(), any())).thenReturn(List.of(
+                new CompassIdentity(UUID.randomUUID(), "a")));
+        fixture.locks().handleShiftLeft(fixture.player());
+
+        verify(fixture.messages(), never()).message(fixture.player(), "compass.teammate-on-chat");
+        verify(fixture.renderer(), never()).accept(any(Player.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void leftClickIgnoresSharedClickCooldown() {
         Fixture fixture = fixture(List.of(
                 new CompassCandidate(UUID.randomUUID(), "a", 10.0, 10.0),
