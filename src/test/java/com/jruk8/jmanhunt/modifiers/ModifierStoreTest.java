@@ -133,6 +133,19 @@ class ModifierStoreTest {
     }
 
     @Test
+    void toggleListenersHearFlipsOnly() {
+        List<String> heard = new ArrayList<>();
+        store.addToggleListener(heard::add);
+
+        assertTrue(store.setEnabled("bare", true));
+        assertTrue(store.setEnabled("bare", true));
+        assertTrue(store.setEnabled("beef", false));
+        assertFalse(store.setEnabled("missing", true));
+
+        assertEquals(List.of("bare", "beef"), heard);
+    }
+
+    @Test
     void setEnabledRoundtripsAndPersists() {
         assertTrue(store.setEnabled("bare", true));
         assertTrue(store.isEnabled("bare"));

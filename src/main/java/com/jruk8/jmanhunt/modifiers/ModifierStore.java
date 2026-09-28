@@ -34,6 +34,7 @@ public final class ModifierStore {
     private final Logger log;
     private final Set<String> warnedItems = new HashSet<>();
     private final Set<String> warnedBehaviorKeys = new HashSet<>();
+    private final List<Consumer<String>> toggleListeners = new ArrayList<>();
 
     public ModifierStore(ModifiersConfig config, Logger log) {
         this.config = config;
@@ -402,17 +403,29 @@ public final class ModifierStore {
         return entry != null && entry.isEnabled();
     }
 
+    /** Subscribes to global modifier toggles; notified only on actual flips. */
+    public void addToggleListener(Consumer<String> listener) {
+        toggleListeners.add(listener);
+    }
+
     /**
      * Sets enabled and saves. Returns false when the modifier is unknown;
      * save failures only log since the in-memory value already applied.
+     * Listeners hear only genuine flips, never redundant re-sets.
      */
     public boolean setEnabled(String name, boolean value) {
         ModifierEntry entry = config.getModifiers().get(name);
         if (entry == null) {
             return false;
         }
+        boolean changed = entry.isEnabled() != value;
         entry.setEnabled(value);
         save();
+        if (changed) {
+            for (Consumer<String> listener : List.copyOf(toggleListeners)) {
+                listener.accept(name);
+            }
+        }
         return true;
     }
 

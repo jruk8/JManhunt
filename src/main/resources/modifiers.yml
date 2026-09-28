@@ -360,7 +360,7 @@ modifiers:
             - "give <p> sponge 24"
             - "give <p> golden_hoe 1"
   # Two new permanent hearts on every kill (plus a heal and a feed),
-  # stacking up to ten extra hearts. Cleanup removes the effects.
+  # stacking up to 30 hearts total. Cleanup restores the baseline.
   get-stronger-on-kill:
     enabled: false
     meta:

@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -257,5 +258,19 @@ class OverrideServiceTest {
         overrides.setModifierOverride(3, "beef", false);
 
         assertEquals(Set.of(9, 3), overrides.overrideLobbyIds());
+    }
+
+    @Test
+    void toggleListenersHearEffectiveFlipsOnly() {
+        List<String> heard = new ArrayList<>();
+        overrides.addToggleListener(heard::add);
+
+        assertTrue(overrides.setModifierOverride(0, "beef", false));
+        assertTrue(overrides.setModifierOverride(0, "beef", false));
+        assertTrue(overrides.setModifierOverride(0, "beef", true));
+        assertTrue(overrides.clearModifierOverride(0, "beef"));
+        assertFalse(overrides.clearModifierOverride(0, "beef"));
+
+        assertEquals(List.of("beef", "beef"), heard);
     }
 }

@@ -133,10 +133,12 @@ class TagStatsFlagsTest {
         Fixture fixture = new Fixture();
         fixture.playerValues.put("Steve|health", "19.5");
         fixture.playerValues.put("Steve|hunger", "14");
+        fixture.playerValues.put("Steve|max-health", "24");
         fixture.playerValues.put("Steve|mobs-killed", "3");
         fixture.playerValues.put("Steve|achievements-gained", "0");
         assertEquals("19.5", fixture.replace("<pstat:Steve,health>"));
         assertEquals("14", fixture.replace("<pstat:\"Steve\",\"HUNGER\">"));
+        assertEquals("24", fixture.replace("<pstat:<p>,Max-Health>"));
         assertEquals("3", fixture.replace("<pstat:<p>,Mobs-Killed>"));
         assertEquals("0", fixture.replace("<pstat:Steve,achievements-gained>"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
@@ -158,7 +160,7 @@ class TagStatsFlagsTest {
         assertEquals("", fixture.replace("<gstat:duration,daytime>"));
         assertEquals("", fixture.replace("<gstat:uptime>"));
         assertEquals(4, fixture.warnings.size());
-        assertTrue(fixture.warnings.get(1).contains("health, hunger, mobs-killed"),
+        assertTrue(fixture.warnings.get(1).contains("health, hunger, max-health, mobs-killed"),
                 fixture.warnings.toString());
         assertTrue(fixture.warnings.get(3).contains("duration, daytime"),
                 fixture.warnings.toString());

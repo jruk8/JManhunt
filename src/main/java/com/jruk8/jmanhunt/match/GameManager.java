@@ -19,6 +19,7 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -511,6 +512,11 @@ public final class GameManager implements MatchControl {
     /** Runs a deferred match-end wipe for a rejoiner when one is pending. */
     public boolean applyPendingEndWipe(Player player) {
         return stateCommands.applyPendingEndWipe(player);
+    }
+
+    /** Reconciles live matches with toggled modifiers. */
+    public void syncModifierToggles(Collection<String> names) {
+        stateCommands.syncModifierToggles(names);
     }
     public Set<String> settingNames() { return configService.settingNames(); }
     public boolean getSetting(String setting) { return configService.getBoolean(setting, false); }

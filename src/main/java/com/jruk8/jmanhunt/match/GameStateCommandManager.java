@@ -100,25 +100,109 @@ public final class GameStateCommandManager {
 
     public void runConsoleCleanup(long matchId) {
         for (String name : intervals.enabledModifiers(matchId)) {
-            ModifierTagScope scope = ModifierTagScope.executor(null, plugin.logger()::warning);
-            for (int index : configService.behaviorIndexes(name)) {
-                runCommandList(configService.commandList(name, index, "console-cleanup"), null,
-                        tagContext(name, null, scope, matchId, List.of()),
-                        TagContext.Provenance.of(name, index, "console-cleanup"));
-            }
+            runConsoleCleanup(name, matchId);
+        }
+    }
+
+    /** Console cleanup for one modifier; reused by toggle sync. */
+    void runConsoleCleanup(String name, long matchId) {
+        ModifierTagScope scope = ModifierTagScope.executor(null, plugin.logger()::warning);
+        for (int index : configService.behaviorIndexes(name)) {
+            runCommandList(configService.commandList(name, index, "console-cleanup"), null,
+                    tagContext(name, null, scope, matchId, List.of()),
+                    TagContext.Provenance.of(name, index, "console-cleanup"));
         }
     }
 
     public void runPlayerCleanup(long matchId, List<Player> participants) {
         for (String name : intervals.enabledModifiers(matchId)) {
-            for (int index : configService.behaviorIndexes(name)) {
-                for (Player player : participants) {
-                    runCommandList(configService.commandList(name, index, "player-cleanup"), player,
-                            tagContext(name, player, matchScope(player, participants), matchId, List.of()),
-                            TagContext.Provenance.of(name, index, "player-cleanup"));
-                }
+            runPlayerCleanup(name, matchId, participants);
+        }
+    }
+
+    /** Player cleanup for one modifier; reused by toggle sync. */
+    void runPlayerCleanup(String name, long matchId, List<Player> participants) {
+        for (int index : configService.behaviorIndexes(name)) {
+            for (Player player : participants) {
+                runCommandList(configService.commandList(name, index, "player-cleanup"), player,
+                        tagContext(name, player, matchScope(player, participants), matchId, List.of()),
+                        TagContext.Provenance.of(name, index, "player-cleanup"));
             }
         }
+    }
+
+    /**
+     * Reconciles live matches with toggled modifiers. Newly effective
+     * modifiers activate: ON_START fires honoring delays and INTERVAL
+     * chains restart from fresh config. Newly ineffective ones run
+     * cleanup once; their interval tasks self-cancel at next firing.
+     * Ending matches are skipped: teardown owns their end state.
+     */
+    public void syncModifierToggles(Collection<String> names) {
+        for (GameInstance instance : game.liveInstances()) {
+            if (instance.ending()) {
+                continue;
+            }
+            long matchId = instance.matchId();
+            Integer lobby = game.lobbyOf(matchId);
+            List<String> activating = new ArrayList<>();
+            for (String name : names) {
+                if (plugin.overrides().modifierEnabled(lobby, name)) {
+                    activating.add(name);
+                } else {
+                    runModifierCleanup(name, matchId);
+                }
+            }
+            if (!instance.begun()) {
+                for (String name : activating) {
+                    firePreStartModifier(name, matchId);
+                }
+                continue;
+            }
+            if (activating.stream().anyMatch(this::hasIntervalBehavior)) {
+                intervals.cancelIntervalChains(matchId);
+                intervals.scheduleIntervalModifiers(matchId);
+            }
+            for (String name : activating) {
+                fireModifierStart(name, matchId);
+            }
+        }
+    }
+
+    /** Cleanup commands for one modifier against a live match roster. */
+    private void runModifierCleanup(String name, long matchId) {
+        runConsoleCleanup(name, matchId);
+        runPlayerCleanup(name, matchId, game.onlineParticipants(matchId));
+    }
+
+    /** All ON_START behaviors of one modifier; the prestart already passed. */
+    private void fireModifierStart(String name, long matchId) {
+        for (int index : configService.behaviorIndexes(name)) {
+            if (ModifierTriggers.runsOn(configService.runsOn(name, index), "ON_START")) {
+                runModifierCommands(name, index, matchId, List.of());
+            }
+        }
+    }
+
+    /** Non-deferred ON_START behaviors, mirroring match-start dispatch. */
+    private void firePreStartModifier(String name, long matchId) {
+        for (int index : configService.behaviorIndexes(name)) {
+            if (ModifierTriggers.runsOn(configService.runsOn(name, index), "ON_START")
+                    && !afterPrestart(name, index)) {
+                runModifierCommands(name, index, matchId, List.of());
+            }
+        }
+    }
+
+    /** True when any behavior of the modifier runs on a live INTERVAL. */
+    private boolean hasIntervalBehavior(String name) {
+        for (int index : configService.behaviorIndexes(name)) {
+            if (ModifierTriggers.runsOn(configService.runsOn(name, index), "INTERVAL")
+                    && configService.intervalSeconds(name, index) >= 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

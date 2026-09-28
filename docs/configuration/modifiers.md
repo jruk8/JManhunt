@@ -454,6 +454,7 @@ match- or world-wide ones. Keys match case-blindly:
 | --- | --- |
 | `<pstat:<p>,health>` | The player's health, normally 0-20. |
 | `<pstat:Steve,hunger>` | The player's hunger, 0-20. |
+| `<pstat:<p>,max-health>` | The player's effective max health, normally 20. |
 | `<pstat:Steve,mobs-killed>` | Mobs the player killed this match. |
 | `<pstat:Steve,achievements-gained>` | Non-recipe advancements earned this match. |
 | `<gstat:duration>` | Whole seconds since the match began. |
@@ -724,20 +725,25 @@ and `speedrunner-gapple-on-low-hp`.
 
 ### Get Stronger On Kill
 
-Runs on every mob kill and every respawn. Each kill raises the
-killer's session kill counter first, so the player list reads a
-fresh number:
+Runs on every player kill (executor: the killer) and every respawn
+(executor: the respawner). The kill is recorded before the commands
+run, so the session kill total they read is already fresh.
 
-1. `<lflag:amplifier, <clamp:<placeholder:jmanhunt_game_kills_this_session>-1, 0, 9>>`
-   stashes session kills minus one (first kill is amplifier 0) for the run.
-2. `health_boost` with that amplifier grants two extra hearts per level,
-   permanently until cleanup.
-3. `instant_health` with the same amplifier heals on the spot.
-4. `saturation` with a hunger-based amplifier feeds as well.
+Each run works in half-hearts, with two tunables at the top of the
+player list: `maxhp` (60: total cap, i.e. 30 hearts) and `step`
+(4: gain per kill, i.e. 2 hearts):
 
-Death wipes effects, so the respawn trigger re-applies the same stack
-from the still-current session counter. The player cleanup clears all
-three effects at match end.
+1. `<pflag:basehp>` caches the player's baseline max health the
+   first time the modifier runs for them.
+2. `target` is baseline plus step times session kills, capped at
+   `maxhp`, and `minecraft:max_health` base is set to it.
+3. `instant_health` heals 2 hearts on the spot, even at the cap.
+4. `saturation` refills only the hunger points actually missing.
+
+The respawn trigger re-applies the same computed target from the
+still-current session counter, so a killer who dies keeps their
+earned hearts. Player cleanup restores each cached baseline, and
+leaves players the modifier never ran for untouched.
 
 ### Gapple On Low HP
 

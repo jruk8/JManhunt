@@ -82,6 +82,15 @@ public final class IntervalDispatcher {
      */
     public void startIntervalModifiers(long matchId) {
         cancelIntervalModifiers(matchId);
+        scheduleIntervalModifiers(matchId);
+    }
+
+    /**
+     * Schedules interval chains without cancelling first. Used with
+     * {@link #cancelIntervalChains(long)} when pending delayed
+     * dispatches must survive the restart.
+     */
+    void scheduleIntervalModifiers(long matchId) {
         for (String name : enabledModifiers(matchId)) {
             for (int index : configService.behaviorIndexes(name)) {
                 if (!ModifierTriggers.runsOn(configService.runsOn(name, index), "INTERVAL")) {
@@ -126,6 +135,22 @@ public final class IntervalDispatcher {
         for (long matchId : List.copyOf(intervalEngines.keySet())) {
             cancelIntervalModifiers(matchId);
         }
+    }
+
+    /**
+     * Cancels one match's interval chains but keeps pending delayed
+     * dispatches and the generation, so in-flight trigger output
+     * survives a mid-match restart. Same-thread calls are atomic
+     * with task execution, so explicit cancels leave no orphans.
+     */
+    void cancelIntervalChains(long matchId) {
+        IntervalEngine engine = engine(matchId);
+        for (BukkitTask task : engine.tasks) {
+            task.cancel();
+        }
+        engine.tasks.clear();
+        engine.executors.clear();
+        engine.consoleChained.clear();
     }
 
     /** Drops delayed modifier commands that never fired, e.g. at match end. */

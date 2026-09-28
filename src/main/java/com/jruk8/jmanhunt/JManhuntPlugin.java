@@ -23,6 +23,7 @@ import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.lobby.LobbyProtectionService;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.RolePadService;
+import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.TeamChatService;
 import com.jruk8.jmanhunt.match.listeners.PlayerCombatListener;
@@ -237,6 +238,8 @@ public final class JManhuntPlugin extends JavaPlugin {
                 configService, worldEngine, winConditionEngine, lobbyService);
         compass.setGameManager(game);
         worldEngine.setMatchRunningSupplier(game::isActive);
+        modifierStore.addToggleListener(name -> game.syncModifierToggles(List.of(name)));
+        overrideService.addToggleListener(name -> game.syncModifierToggles(List.of(name)));
         setupListeners();
     }
 
@@ -585,7 +588,26 @@ public final class JManhuntPlugin extends JavaPlugin {
             game.stateCommands().cancelAllIntervalModifiers();
         }
         reloadSettingsListeners();
+        restartLiveIntervals();
         logger().info("JManhunt has been reloaded.");
+    }
+
+    /**
+     * Restarts interval modifiers for begun, non-ending matches after a
+     * reload, replacing the cancelled schedulers with fresh ones that
+     * read fresh config. Unbegun matches arm at begin and ending
+     * matches stay quiet for teardown.
+     */
+    private void restartLiveIntervals() {
+        if (game == null) {
+            return;
+        }
+        for (GameInstance instance : game.liveInstances()) {
+            if (!instance.begun() || instance.ending()) {
+                continue;
+            }
+            game.stateCommands().startIntervalModifiers(instance.matchId());
+        }
     }
 
     /** Reloads lobby, tutorial, GUI, and dev-data content configs. */

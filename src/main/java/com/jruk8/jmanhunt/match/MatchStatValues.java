@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 
 /**
@@ -39,6 +40,8 @@ public final class MatchStatValues implements StatValues {
         return switch (key) {
             case "health" -> Optional.of(TagMath.formatNumber(player.getHealth()));
             case "hunger" -> Optional.of(Integer.toString(player.getFoodLevel()));
+            case "max-health" -> Optional.of(TagMath.formatNumber(
+                    player.getAttribute(Attribute.MAX_HEALTH).getValue()));
             case "mobs-killed", "achievements-gained" ->
                     Optional.of(Integer.toString(counter(player.getUniqueId(), key)));
             default -> Optional.empty();

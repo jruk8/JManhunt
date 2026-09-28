@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.function.Consumer;
 import org.bukkit.configuration.ConfigurationSection;
 
 /**
@@ -27,6 +28,7 @@ public final class OverrideService {
     private ConfigService config;
     private final LobbyConfig lobbies;
     private final Runnable saver;
+    private final List<Consumer<String>> toggleListeners = new ArrayList<>();
 
     /**
      * @param config globals plus registry reads for validation
@@ -272,12 +274,21 @@ public final class OverrideService {
      * Forces one modifier's enabled flag. False when the id is unknown;
      * unknown lobby entries are created on demand.
      */
+    /** Subscribes to effective modifier flips; notified only on actual flips. */
+    public void addToggleListener(Consumer<String> listener) {
+        toggleListeners.add(listener);
+    }
+
     public boolean setModifierOverride(int lobbyId, String id, boolean value) {
         if (id == null || !config.modifierNames().contains(id)) {
             return false;
         }
+        boolean before = modifierEnabled(lobbyId, id);
         entryForWrite(lobbyId).getOverrides().getModifiers().put(id, value);
         saver.run();
+        if (modifierEnabled(lobbyId, id) != before) {
+            notifyToggle(id);
+        }
         return true;
     }
 
@@ -287,12 +298,23 @@ public final class OverrideService {
         if (entry == null || entry.getOverrides() == null || id == null) {
             return false;
         }
+        boolean before = modifierEnabled(lobbyId, id);
         boolean removed = entry.getOverrides().getModifiers().remove(id) != null;
         if (removed) {
             pruneEntryIfEmpty(lobbyId);
             saver.run();
+            if (modifierEnabled(lobbyId, id) != before) {
+                notifyToggle(id);
+            }
         }
         return removed;
+    }
+
+    /** Notifies toggle listeners of one modifier's effective flip. */
+    private void notifyToggle(String id) {
+        for (Consumer<String> listener : List.copyOf(toggleListeners)) {
+            listener.accept(id);
+        }
     }
 
     /**
