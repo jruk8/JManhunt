@@ -91,14 +91,18 @@ settings:
       enabled: true
       kills: 3
       window-seconds: 90.0
-      punishment: KILL
+      first-punishment: GEAR-WIPE
+      kill-on-second-time: true
       monitored-roles:
         - SPEEDRUNNER
 ```
 
-`KILL` slays the camper through a normal death; `GEAR-WIPE` instead clears
-their armor, offhand, and main hand. One kill before the limit, the
-killer gets a private warning naming their victim.
+The first offense applies `first-punishment`: `KILL` slays the camper
+through a normal death, while `GEAR-WIPE` instead clears their armor,
+offhand, and main hand. With `kill-on-second-time` on, any further
+offense in the same match kills the camper no matter what the first
+punishment was. One kill before the limit, the killer gets a private
+warning naming their victim.
 
 `monitored-roles` lists which attacker roles the guard punishes:
 `SPEEDRUNNER`, `HUNTER`, or both. An empty list switches the guard

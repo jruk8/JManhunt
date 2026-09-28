@@ -68,6 +68,32 @@ class SpawnCampServiceTest {
     }
 
     @Test
+    void offensesCountPerAttackerAcrossVictimsAndMatches() {
+        AtomicLong clock = new AtomicLong(1_000L);
+        SpawnCampService service = new SpawnCampService(null, null, clock::get);
+        UUID attacker = UUID.randomUUID();
+        UUID other = UUID.randomUUID();
+
+        assertEquals(1, service.recordOffense(1L, attacker));
+        assertEquals(2, service.recordOffense(1L, attacker));
+        assertEquals(1, service.recordOffense(1L, other));
+        assertEquals(1, service.recordOffense(2L, attacker));
+    }
+
+    @Test
+    void clearMatchDropsOffenses() {
+        AtomicLong clock = new AtomicLong(1_000L);
+        SpawnCampService service = new SpawnCampService(null, null, clock::get);
+        UUID attacker = UUID.randomUUID();
+
+        service.recordOffense(1L, attacker);
+        service.recordOffense(2L, attacker);
+        service.clearMatch(1L);
+        assertEquals(1, service.recordOffense(1L, attacker));
+        assertEquals(2, service.recordOffense(2L, attacker));
+    }
+
+    @Test
     void punishmentParsesWithKillFallback() {
         assertEquals(SpawnCampService.Punishment.GEAR_WIPE,
                 SpawnCampService.Punishment.parse("GEAR-WIPE"));

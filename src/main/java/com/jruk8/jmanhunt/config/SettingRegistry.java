@@ -655,8 +655,9 @@ public final class SettingRegistry {
         entries.add(bool("settings.server.anti-spawn-camp.enabled", true));
         entries.add(intVal("settings.server.anti-spawn-camp.kills", 3, 1, null));
         entries.add(floatVal("settings.server.anti-spawn-camp.window-seconds", 90.0, 0.0, null));
-        entries.add(optionAliases("settings.server.anti-spawn-camp.punishment", "KILL",
+        entries.add(optionAliases("settings.server.anti-spawn-camp.first-punishment", "GEAR-WIPE",
                 Map.of("gear_wipe", "GEAR-WIPE"), "KILL", "GEAR-WIPE"));
+        entries.add(bool("settings.server.anti-spawn-camp.kill-on-second-time", true));
         entries.add(bool("settings.server.status.show-win-conditions", false));
         entries.add(bool("settings.server.status.show-elapsed-time", false));
         entries.add(bool("settings.server.status.show-modifiers", false));

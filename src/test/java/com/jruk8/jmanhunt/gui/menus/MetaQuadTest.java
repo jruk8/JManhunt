@@ -1,22 +1,38 @@
 package com.jruk8.jmanhunt.gui.menus;
 
+import com.jruk8.jmanhunt.command.ModifiersCommand;
+import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
+import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
+import com.jruk8.jmanhunt.message.SoundService;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Meta quad layout over a fake target: name, description, live icon,
@@ -146,5 +162,29 @@ class MetaQuadTest {
         assertNotNull(author.metaTweak());
 
         assertEquals(Material.PAPER, menu.buttonAt(22).material());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void idRenameMessageShowsIdNotDisplayName() {
+        SettingDialog dialogs = mock(SettingDialog.class);
+        MetaQuad quad = new MetaQuad(messages, mock(SoundService.class),
+                mock(GuiService.class), dialogs);
+        Menu menu = quad.menu(target(), null, id -> null);
+        Player player = mock(Player.class);
+        when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+
+        menu.buttonAt(10).rightAction().accept(player);
+
+        ArgumentCaptor<Consumer<String>> submit = ArgumentCaptor.forClass(Consumer.class);
+        verify(dialogs).prompt(eq(player), anyString(), eq("pack"), anyList(),
+                submit.capture(), any(Runnable.class));
+        submit.getValue().accept("new-pack");
+
+        ArgumentCaptor<Component> sent = ArgumentCaptor.forClass(Component.class);
+        verify(player).sendMessage(sent.capture());
+        String text = textOf(sent.getValue());
+        assertTrue(text.contains("new-pack"), text);
+        assertFalse(text.contains("Pack"), text);
     }
 }

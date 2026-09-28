@@ -6,7 +6,7 @@ import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.QuadPanel;
-import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
+import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierFieldEdits;
@@ -29,10 +29,10 @@ public final class MetaQuad {
     private final MessageService messages;
     private final SoundService sounds;
     private final GuiService gui;
-    private final SettingDialogs dialogs;
+    private final SettingDialog dialogs;
 
     public MetaQuad(MessageService messages, SoundService sounds,
-            GuiService gui, SettingDialogs dialogs) {
+            GuiService gui, SettingDialog dialogs) {
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
@@ -151,7 +151,7 @@ public final class MetaQuad {
                     }
                     target.rename(parsed.value());
                     messages.message(player, "modifiers.edit-id-changed",
-                            Map.of("name", target.displayName(parsed.value())));
+                            Map.of("name", parsed.value()));
                     sounds.playNeutralSound(player);
                     gui.navigate(player, reopenMeta.apply(parsed.value()));
                 },

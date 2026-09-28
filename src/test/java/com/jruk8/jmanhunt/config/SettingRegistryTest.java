@@ -121,7 +121,7 @@ class SettingRegistryTest {
     @Test
     void optionAliasesCanonicalize() {
         assertEquals("GEAR-WIPE",
-                validate("settings.server.anti-spawn-camp.punishment", "gear_wipe").value());
+                validate("settings.server.anti-spawn-camp.first-punishment", "gear_wipe").value());
         assertEquals("postgres", validate("statistics.type", "Postgres").value());
     }
 

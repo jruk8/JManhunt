@@ -17,12 +17,13 @@ import java.util.function.LongSupplier;
 
 /**
  * Rolling anti-spawn-camp guard: too many kills by one attacker on the
- * same victim inside the window punishes the camper, either by killing
- * them or by wiping their armor, offhand, and main hand. Every
- * punishment is broadcast server-wide.
+ * same victim inside the window punishes the camper with the first
+ * punishment (a gear wipe by default); a repeat offense kills them
+ * outright when kill-on-second-time is on. Every punishment is
+ * broadcast server-wide.
  */
 public final class SpawnCampService {
-    /** Punishment for spawn camping, from settings.server.anti-spawn-camp.punishment. */
+    /** Punishment for spawn camping, from settings.server.anti-spawn-camp.first-punishment. */
     public enum Punishment {
         KILL,
         GEAR_WIPE;
@@ -39,9 +40,13 @@ public final class SpawnCampService {
     private record KillKey(long matchId, UUID attacker, UUID victim) {
     }
 
+    private record OffenseKey(long matchId, UUID attacker) {
+    }
+
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final Map<KillKey, Deque<Long>> kills = new HashMap<>();
+    private final Map<OffenseKey, Integer> offenses = new HashMap<>();
     private final Set<UUID> quietPunishment = new HashSet<>();
     private final Set<String> warnedRoles = new HashSet<>();
     private final LongSupplier clock;
@@ -100,9 +105,15 @@ public final class SpawnCampService {
             }
             return;
         }
-        Punishment punishment = Punishment.parse(
-                plugin.configService().getString("settings.server.anti-spawn-camp.punishment", "KILL"));
-        if (punishment == Punishment.GEAR_WIPE) {
+        Punishment first = Punishment.parse(plugin.configService()
+                .getString("settings.server.anti-spawn-camp.first-punishment", "GEAR-WIPE"));
+        boolean killOnSecond = plugin.configService()
+                .getBoolean("settings.server.anti-spawn-camp.kill-on-second-time", true);
+        int offense = recordOffense(matchId, attacker.getUniqueId());
+        if (offense >= 2 && killOnSecond) {
+            quietKill(attacker);
+            broadcast("game.spawncamp-kill", attacker, victim, count);
+        } else if (first == Punishment.GEAR_WIPE) {
             wipeGear(attacker);
             broadcast("game.spawncamp-gear-wipe", attacker, victim, count);
         } else {
@@ -171,9 +182,18 @@ public final class SpawnCampService {
         return count >= 1 && count == limit - 1;
     }
 
+    /**
+     * Records a punishment and returns the attacker's offense count
+     * for the match, across all victims. Exposed for tests.
+     */
+    int recordOffense(long matchId, UUID attacker) {
+        return offenses.merge(new OffenseKey(matchId, attacker), 1, Integer::sum);
+    }
+
     /** Drops all tracking for a finished match. */
     public void clearMatch(long matchId) {
         kills.keySet().removeIf(key -> key.matchId() == matchId);
+        offenses.keySet().removeIf(key -> key.matchId() == matchId);
     }
 
     private void wipeGear(Player player) {

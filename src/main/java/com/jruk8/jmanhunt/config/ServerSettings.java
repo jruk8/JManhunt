@@ -155,12 +155,21 @@ public class ServerSettings extends OkaeriConfig {
         })
         private double windowSeconds = 90.0;
 
+        @CustomKey("first-punishment")
         @Comment({
-                "Punishment: KILL slays the camper, GEAR-WIPE clears their armor,",
+                "First punishment: KILL slays the camper, GEAR-WIPE clears their armor,",
                 "offhand, and main hand.",
-                "Default: KILL"
+                "Default: GEAR-WIPE"
         })
-        private String punishment = "KILL";
+        private String firstPunishment = "GEAR-WIPE";
+
+        @CustomKey("kill-on-second-time")
+        @Comment({
+                "When true, a repeat offense kills the camper regardless of",
+                "first-punishment.",
+                "Default: true"
+        })
+        private boolean killOnSecondTime = true;
 
         @CustomKey("monitored-roles")
         @Comment({
@@ -194,8 +203,20 @@ public class ServerSettings extends OkaeriConfig {
             this.windowSeconds = windowSeconds;
         }
 
-        public String getPunishment() {
-            return punishment;
+        public String getFirstPunishment() {
+            return firstPunishment;
+        }
+
+        public void setFirstPunishment(String firstPunishment) {
+            this.firstPunishment = firstPunishment;
+        }
+
+        public boolean isKillOnSecondTime() {
+            return killOnSecondTime;
+        }
+
+        public void setKillOnSecondTime(boolean killOnSecondTime) {
+            this.killOnSecondTime = killOnSecondTime;
         }
 
         public List<String> getMonitoredRoles() {
@@ -204,10 +225,6 @@ public class ServerSettings extends OkaeriConfig {
 
         public void setMonitoredRoles(List<String> monitoredRoles) {
             this.monitoredRoles = monitoredRoles;
-        }
-
-        public void setPunishment(String punishment) {
-            this.punishment = punishment;
         }
     }
 

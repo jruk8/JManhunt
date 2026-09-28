@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
+import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -35,7 +36,7 @@ public final class FieldPrompts {
      * @param clearable blank input clears the field instead of submitting
      * @param submit receives the raw text (or null when cleared)
      */
-    public static void prompt(SettingDialogs dialogs, GuiService gui,
+    public static void prompt(SettingDialog dialogs, GuiService gui,
             MessageService messages, SoundService sounds,
             Player player, Supplier<Menu> reopen, String title, String current,
             boolean clearable, Submit submit) {
