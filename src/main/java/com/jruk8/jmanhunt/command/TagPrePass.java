@@ -27,6 +27,26 @@ final class TagPrePass {
     }
 
     /**
+     * Resolves outermost def spans, right to left. Bodies store
+     * verbatim: nested tags inside wait for a call to evaluate them,
+     * so this must run before loops, ifs, and list mutators.
+     */
+    static String resolveDefSpans(String command, TagContext context) {
+        List<TagLoops.LoopSpan> spans = TagFunctions.findDefSpans(command);
+        if (spans.isEmpty()) {
+            return command;
+        }
+        spans.sort((first, second) -> Integer.compare(second.start(), first.start()));
+        StringBuilder result = new StringBuilder(command);
+        for (TagLoops.LoopSpan span : spans) {
+            String tag = command.substring(span.start(), span.end());
+            String resolved = TagFunctions.define(tag, span.args(), context);
+            result.replace(span.start(), span.end(), resolved);
+        }
+        return result.toString();
+    }
+
+    /**
      * Resolves outermost loop spans, right to left. Nested loops wait
      * for the body evaluation of their enclosing loop, which recurses
      * through the evaluation chain per iteration.
@@ -46,7 +66,12 @@ final class TagPrePass {
         return result.toString();
     }
 
-    /** Resolves if-spans without nested ifs, right to left. */
+    /**
+     * Resolves if-spans without nested ifs, right to left, with lazy
+     * branches: only the condition and the chosen branch evaluate.
+     * Spans nesting another if still wait for the inner span, so an
+     * if nested in a dead branch resolves eagerly as before.
+     */
     static String resolveIfSpans(String command, TagContext context, TagLoops.Evaluator eval) {
         List<TagExpressions.IfSpan> ready = new ArrayList<>();
         for (TagExpressions.IfSpan span : TagExpressions.findIfSpans(command)) {
@@ -60,12 +85,50 @@ final class TagPrePass {
         ready.sort((first, second) -> Integer.compare(second.start(), first.start()));
         StringBuilder result = new StringBuilder(command);
         for (TagExpressions.IfSpan span : ready) {
-            String args = eval.evaluate(span.args());
-            String resolved = TagExpressions.ifEval(command.substring(span.start(), span.end()),
-                    args, context);
+            String resolved = ifLazy(command.substring(span.start(), span.end()),
+                    span.args(), context, eval);
             result.replace(span.start(), span.end(), resolved);
         }
         return result.toString();
+    }
+
+    /**
+     * Lazy {@code <if>} for spans with nested tags: splits the raw args
+     * first, evaluates the condition, then evaluates only the chosen
+     * branch. The unselected branch never runs, which is what lets
+     * recursive calls terminate on a base case; eager evaluation
+     * would recurse through the dead branch first. Innermost ifs
+     * (no nested tags) keep the eager path, where eager and lazy
+     * coincide.
+     */
+    private static String ifLazy(String tag, String args, TagContext context, TagLoops.Evaluator eval) {
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() < 2 || parts.size() > 3) {
+            context.scope().warn("Tag <if> needs a condition plus one or two branches: " + tag);
+            return "";
+        }
+        Optional<String> condition = CommandPlaceholders.parsePickItem(eval.evaluate(parts.get(0)));
+        if (condition.isEmpty() || condition.get().isBlank()) {
+            context.scope().warn("Tag <if> has malformed branches: " + tag);
+            return "";
+        }
+        boolean result;
+        try {
+            result = TagExpressions.evalCondition(condition.get(), context.scope()::warn, tag);
+        } catch (TagExpressions.ExprException failed) {
+            context.scope().warn("Tag <if> " + failed.getMessage() + ": " + tag);
+            return "";
+        }
+        if (!result && parts.size() < 3) {
+            return "";
+        }
+        String branch = result ? parts.get(1) : parts.get(2);
+        Optional<String> picked = CommandPlaceholders.parsePickItem(eval.evaluate(branch));
+        if (picked.isEmpty()) {
+            context.scope().warn("Tag <if> has malformed branches: " + tag);
+            return "";
+        }
+        return picked.get();
     }
 
     /**

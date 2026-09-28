@@ -41,8 +41,8 @@ public final class CommandSyntax {
                 "loseplayer", "win", "args", "list.append", "list.get", "list.set", "list.remove",
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
                 "active-players", "plocation", "prole", "distance",
-                "floor", "ceil", "round", "abs", "sign",
-                "while", "for", "i");
+                "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt", "root",
+                "while", "for", "i", "def");
     }
 
     /**
@@ -247,14 +247,23 @@ public final class CommandSyntax {
             case "active-players" -> activePlayersError(name, args);
             case "plocation", "prole" -> playerNameError(name, args);
             case "distance" -> topLevelArityError(name, args, 2, "<distance:loc1,loc2>");
-            case "floor" -> topLevelArityError(name, args, 1, "<floor:x>");
-            case "ceil" -> topLevelArityError(name, args, 1, "<ceil:x>");
-            case "round" -> topLevelArityError(name, args, 1, "<round:x>");
-            case "abs" -> topLevelArityError(name, args, 1, "<abs:x>");
-            case "sign" -> topLevelArityError(name, args, 1, "<sign:x>");
+            case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" -> mathUnaryError(name, args);
+            case "root" -> topLevelArityError(name, args, 2, "<root:x,n>");
             case "while", "for" -> loopError(name, args);
+            case "def" -> defError(name, args);
             default -> Optional.empty();
         };
+    }
+
+    private static Optional<String> defError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <def> needs a name and a body like <def:double,x+x,x>.");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() < 2 || parts.get(0).isBlank()) {
+            return Optional.of("Tag <def> needs a name and a body like <def:double,x+x,x>.");
+        }
+        return Optional.empty();
     }
 
     private static void collectWarnings(String body, List<String> found) {
@@ -419,6 +428,11 @@ public final class CommandSyntax {
             }
         }
         return Optional.empty();
+    }
+
+    /** Single-number math tags share one example shape. */
+    private static Optional<String> mathUnaryError(String name, String args) {
+        return topLevelArityError(name, args, 1, "<" + name + ":x>");
     }
 
     /**

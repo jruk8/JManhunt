@@ -193,6 +193,15 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <floor:7/2> <ceil:1> <round:2> <abs:0> <sign:3> x").isEmpty());
         assertTrue(CommandSyntax.error("say <range:5> <range:1,5> <range:5,0,-1> x").isEmpty());
         assertTrue(CommandSyntax.error("say <while:true,x> <for:[a,b],x> <i> x").isEmpty());
+    }
+
+    @Test
+    void functionAndRootTagArityPasses() {
+        assertTrue(CommandSyntax.error("say <sqrt:9> <cbrt:8> <root:16,4> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <def:double,x+x,x> <double:2> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <def:name> x").isPresent());
+        assertTrue(CommandSyntax.error("say <sqrt:1,2> x").isPresent());
+        assertTrue(CommandSyntax.error("say <root:4> x").isPresent());
         assertTrue(CommandSyntax.error("say <if:\"<if:1==1,y,n> == y\",\"Y\"> done").isEmpty());
     }
 

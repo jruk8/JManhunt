@@ -75,11 +75,14 @@ public final class TagContext {
     private final TagBackends backends;
     private final List<String> eventArgs;
     private final Map<String, String> localFlags;
+    private final Map<String, TagFunctions.Definition> functions = new HashMap<>();
     private final Deque<String> loopItems;
     private final Consumer<String> loopLimit;
     private final BiConsumer<String, String> roleMessage;
     private final RoleSoundSink roleSound;
     private Provenance provenance;
+    private int stepBudget = TagLoops.LOOP_LIMIT;
+    private boolean limitFired;
 
     private TagContext(ModifierTagScope scope, String containerId,
             Consumer<String> globalMessage, Consumer<String> playerMessage,
@@ -224,6 +227,31 @@ public final class TagContext {
         return localFlags;
     }
 
+    /** This run's {@code <def>} table, discarded after dispatch like lflag. */
+    public Map<String, TagFunctions.Definition> functions() {
+        return functions;
+    }
+
+    /** Restores the per-line step budget; evaluation entry calls this per line. */
+    public void resetStepBudget() {
+        stepBudget = TagLoops.LOOP_LIMIT;
+        limitFired = false;
+    }
+
+    /**
+     * Consumes one shared line step (a loop iteration or a function
+     * call); false once exhausted. Monotonic within the line: loop
+     * exits and returns never refund, so recursion cannot launder
+     * the budget.
+     */
+    public boolean tryConsumeStep() {
+        if (stepBudget <= 0) {
+            return false;
+        }
+        stepBudget--;
+        return true;
+    }
+
     /** Match roster reads for roster tags. */
     public RosterValues roster() {
         return backends.roster();
@@ -259,8 +287,16 @@ public final class TagContext {
         return loopItems.isEmpty() ? Optional.empty() : Optional.of(loopItems.peek());
     }
 
-    /** Fires the loop-limit response behind an over-step loop. */
+    /**
+     * Fires the loop-limit response behind an over-step loop or call.
+     * Once per line: cascading failures still resolve "null" each, but
+     * the match hears about the line only once.
+     */
     public void loopLimitExceeded(String detail) {
+        if (limitFired) {
+            return;
+        }
+        limitFired = true;
         loopLimit.accept(detail);
     }
 

@@ -233,6 +233,45 @@ class TagExpressionsTest {
     }
 
     @Test
+    void rootsEvaluate() {
+        Fixture fixture = new Fixture();
+        assertEquals("3", replace(fixture, "<sqrt:9>"));
+        assertEquals(TagMath.formatNumber(Math.sqrt(2)), replace(fixture, "<sqrt:2>"));
+        assertEquals("0", replace(fixture, "<sqrt:0>"));
+        assertEquals("3", replace(fixture, "<cbrt:27>"));
+        assertEquals("-2", replace(fixture, "<cbrt:-8>"));
+        assertEquals("2", replace(fixture, "<root:16,4>"));
+        assertEquals("3", replace(fixture, "<root:27,3>"));
+        assertEquals("-2", replace(fixture, "<root:-8,3>"));
+        assertEquals(TagMath.formatNumber(Math.pow(8, 1 / 2.5)), replace(fixture, "<root:8,2.5>"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void rootsRejectBadShapes() {
+        Fixture fixture = new Fixture();
+        assertEquals("null", replace(fixture, "<sqrt:-1>"));
+        assertEquals("null", replace(fixture, "<sqrt:abc>"));
+        assertEquals("null", replace(fixture, "<sqrt:1,2>"));
+        assertEquals("0", replace(fixture, "<root:-16,4>"));
+        assertEquals("0", replace(fixture, "<root:5,0>"));
+        assertEquals("0", replace(fixture, "<root:-8,2.5>"));
+        assertEquals("0", replace(fixture, "<root:0,-1>"));
+        assertEquals("0", replace(fixture, "<root:abc,2>"));
+        assertEquals("0", replace(fixture, "<root:4>"));
+        assertEquals(9, fixture.warnings.size());
+    }
+
+    @Test
+    void ifSkipsDeadBranch() {
+        Fixture fixture = new Fixture();
+        assertEquals("ok", replace(fixture, "<if:\"1 == 2\",<gmessage:bad>,ok>"));
+        assertEquals("ok", replace(fixture, "<if:\"1 == 1\",ok,<gmessage:bad>>"));
+        assertTrue(fixture.globalMessages.isEmpty(), fixture.globalMessages.toString());
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
     void roleMessageAndSoundUseRoleSinks() {
         List<String> warnings = new ArrayList<>();
         List<String> roleMessages = new ArrayList<>();

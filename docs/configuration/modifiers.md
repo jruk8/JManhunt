@@ -337,9 +337,12 @@ creator editor validates them as you type:
 | `<distance:[0,0,0],[3,4,0]>` | Blocks between two spots: `5`. |
 | `<floor:2.7>` | `2`; `<ceil:2.3>` is `3`, `<round:2.5>` is `3`. |
 | `<abs:-4>` | `4`; `<sign:-4>` is `-1` (`0` and `1` for the rest). |
+| `<sqrt:9>` | `3`; `<cbrt:-8>` is `-2`. |
+| `<root:16,4>` | `2`, the nth root of `x`. |
 | `<for:[a,b],...>` | Repeats the body per item with the item behind `<i>` (see Loops). |
 | `<while:1==1,...>` | Repeats the body while the condition holds (see Loops). |
 | `<i>` | The innermost for-loop item, else `null`. |
+| `<def:double,x+x,x>` | Defines the run-local function `double` (see Functions). |
 | `<rflag:hunter,boost>` | The flag of the named role (see Flags). |
 | `<rmessage:hunter,push!>` | Tells the named role only. |
 | `<rsound:hunter,block.note_block.pling>` | Plays for the named role only. |
@@ -349,7 +352,11 @@ creator editor validates them as you type:
 argument is not a number. `<floor>`, `<ceil>`, `<round>`, `<abs>`,
 and `<sign>` also accept math (`<floor:7/2>` is `3`), round halves
 up, and yield `null` with a warning when the argument is not a
-number.
+number. `<sqrt:x>` and `<cbrt:x>` follow the same one-arg rules
+(`<sqrt:-1>` is `null` with a warning; cube roots accept
+negatives). `<root:x,n>` follows the two-arg rules: bad shapes, a
+zero index, and even roots of negatives yield `0` with a warning,
+while odd roots of negatives work (`<root:-8,3>` is `-2`).
 
 ### Event args
 
@@ -394,6 +401,11 @@ and `not not x` cancels out:
 Like `and` / `or`, `not` matches case-blindly and needs whitespace
 after it, which keeps words like `notable` plain text. A `not` with
 no comparison behind it warns and yields nothing.
+
+Only the condition and the chosen branch evaluate: tags in the dead
+branch never run. Quote comparisons holding literal `<` or `>`
+(`"7 <= 5"`), or use the word operators, so the tag scanner does not
+mistake them for tags.
 
 Ordering needs whole numbers. Each side compares as a number when it
 parses as math, otherwise as text. Word operators need a
@@ -530,11 +542,45 @@ lt 3`); anything else warns and the whole tag becomes `null`.
 Two tripwires keep loops honest. A for loop over a flag reference
 snapshots the flag and cancels to `null` with a warning when the
 body changes it mid-loop (literals cannot change, so they never
-cancel). And every loop stops at 1000 steps: past that the match is
-cancelled, the console logs the modifier, behavior, list, and line,
-and the players are told to contact the administrator. Quote
-literal `<` and `>` inside loop bodies so the tag scanner does not
-mistake them for tags.
+cancel). And every line gets 1000 shared steps, split between loop
+iterations and function calls: past that the tag becomes `null`,
+the match is cancelled, the console logs the modifier, behavior,
+list, and line, and the players are told to contact the
+administrator. Quote literal `<` and `>` inside loop bodies so the
+tag scanner does not mistake them for tags.
+
+### Functions
+
+`<def:name,body,params...>` defines a run-local function; the body
+stores verbatim and never evaluates at definition time. Calling
+`<name:args...>` substitutes each param with its arg, then evaluates
+the body like any command line, so calls nest and recurse:
+
+```yaml
+- '<def:double,x+x,x>'
+- 'say <double:21>'
+- '<def:countdown,<if:n le 0,done,<countdown:n-1>>,n>'
+- 'say <countdown:3>'
+```
+
+This says `42`, then `done`. Names are case-insensitive, use
+letters, digits, and `_`, and must not collide with builtin tags
+(redefining one warns and is ignored). All params are optional:
+missing args bind `null` with no warning, while extra args warn and
+are ignored. Params substitute as bare case-sensitive tokens
+outside quotes, in one pass, so an arg holding a param name is
+never re-substituted; quoted text is left alone. Like every tag,
+substitution is textual: math bodies should parenthesize params
+(`(B)**2` rather than `B**2`) so negative args bind as one value,
+and bare math still needs no-space runs. Definitions live and die
+with the run like `<lflag>`, and the creator editor warns on calls
+it cannot see defined (unknown tags still resolve at runtime).
+
+Recursion terminates through `<if>` base cases, since dead
+branches never run. Every call costs one of the line's 1000 shared
+steps, and the budget never refunds: leaving a loop cannot launder
+steps back, so runaway recursion always ends at the limit above
+instead of crashing the server.
 
 ### Placeholders
 

@@ -11,16 +11,18 @@ import java.util.Optional;
  * of its list with the item behind {@code <i>}. Bodies run for side
  * effects and their text is discarded; success resolves to
  * {@code ""}. A for loop whose source flag moves mid-loop cancels to
- * {@code "null"}, and any loop past {@link #LOOP_LIMIT} steps fires
- * the context loop-limit sink (the manager logs, tells the match,
- * and cancels it) and resolves to {@code "null"}. Nested loops
- * recurse through body evaluation like {@code <if>} spans, with no
- * separate depth counter; each nesting level gets a fresh tag-pass
- * budget. No Bukkit types.
+ * {@code "null"}. Every iteration consumes one shared line step from
+ * the context budget ({@link #LOOP_LIMIT} per line, split with
+ * function calls); exhaustion fires the context loop-limit sink (the
+ * manager logs, tells the match, and cancels it) and resolves to
+ * {@code "null"}. Nested loops recurse through body evaluation like
+ * {@code <if>} spans, with no separate depth counter; each nesting
+ * level gets a fresh tag-pass budget, but steps never refund. No
+ * Bukkit types.
  */
 public final class TagLoops {
 
-    /** Hard step cap for while and for loops; past it the match cancels. */
+    /** Hard per-line step cap shared by loops and function calls; past it the match cancels. */
     public static final int LOOP_LIMIT = 1000;
 
     /** One balanced loop span: offsets, op, and raw args. */
@@ -41,6 +43,14 @@ public final class TagLoops {
      * runs them fresh. Unbalanced spans are skipped.
      */
     public static List<LoopSpan> findLoopSpans(String line) {
+        return findOpSpans(line, name -> name.equals("while") || name.equals("for"));
+    }
+
+    /**
+     * Outermost balanced spans for the matching ops. Shared with def
+     * spans, which need the same outermost-first extraction.
+     */
+    static List<LoopSpan> findOpSpans(String line, java.util.function.Predicate<String> matches) {
         List<LoopSpan> spans = new ArrayList<>();
         int index = 0;
         while (index < line.length()) {
@@ -48,7 +58,7 @@ public final class TagLoops {
             if (open < 0) {
                 break;
             }
-            LoopSpan span = loopSpanAt(line, open);
+            LoopSpan span = loopSpanAt(line, open, matches);
             if (span != null) {
                 spans.add(span);
             }
@@ -70,7 +80,8 @@ public final class TagLoops {
         return outer;
     }
 
-    private static LoopSpan loopSpanAt(String line, int open) {
+    private static LoopSpan loopSpanAt(String line, int open,
+            java.util.function.Predicate<String> matches) {
         int cursor = open + 1;
         while (cursor < line.length() && Character.isWhitespace(line.charAt(cursor))) {
             cursor++;
@@ -80,7 +91,7 @@ public final class TagLoops {
             rootEnd++;
         }
         String name = line.substring(cursor, rootEnd).toLowerCase(Locale.ROOT);
-        if (!name.equals("while") && !name.equals("for")) {
+        if (!matches.test(name)) {
             return null;
         }
         cursor = rootEnd;
@@ -119,8 +130,8 @@ public final class TagLoops {
 
     private static String runWhile(String tag, String condition, String body,
             TagContext context, Evaluator eval) {
-        for (int step = 0; ; step++) {
-            if (step >= LOOP_LIMIT) {
+        for (;;) {
+            if (!context.tryConsumeStep()) {
                 limitExceeded(tag, "while", context);
                 return "null";
             }
@@ -169,7 +180,7 @@ public final class TagLoops {
         }
         List<String> items = TagLists.parse(resolved);
         for (int step = 0; step < items.size(); step++) {
-            if (step >= LOOP_LIMIT) {
+            if (!context.tryConsumeStep()) {
                 limitExceeded(tag, "for", context);
                 return "null";
             }

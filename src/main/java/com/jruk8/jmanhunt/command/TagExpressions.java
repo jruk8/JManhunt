@@ -53,9 +53,43 @@ public final class TagExpressions {
             case "ceil" -> Math.ceil(num.number());
             case "round" -> Math.floor(num.number() + 0.5);
             case "abs" -> Math.abs(num.number());
+            case "sqrt" -> Math.sqrt(num.number());
+            case "cbrt" -> Math.cbrt(num.number());
             default -> Math.signum(num.number());
         };
+        if (Double.isNaN(result)) {
+            context.scope().warn("Tag <" + op + "> has no real result for this input: " + tag);
+            return "null";
+        }
         return TagMath.formatNumber(result);
+    }
+
+    /**
+     * Real nth root of value, or empty when none exists: a zero
+     * index, or a negative value under a non-odd-integer index.
+     * Indexes 2 and 3 use sqrt/cbrt directly for exact results.
+     */
+    private static Optional<Double> rootOf(double value, double index) {
+        if (index == 0.0 || Double.isNaN(index) || Double.isInfinite(index)) {
+            return Optional.empty();
+        }
+        if (index == 2.0) {
+            return value < 0 ? Optional.empty() : Optional.of(Math.sqrt(value));
+        }
+        if (index == 3.0) {
+            return Optional.of(Math.cbrt(value));
+        }
+        if (value < 0) {
+            if (index != Math.floor(index) || Math.abs(index) > 1e15) {
+                return Optional.empty();
+            }
+            long whole = (long) index;
+            if (whole % 2 == 0) {
+                return Optional.empty();
+            }
+            return Optional.of(-Math.pow(-value, 1.0 / index));
+        }
+        return Optional.of(Math.pow(value, 1.0 / index));
     }
 
     /**
@@ -447,6 +481,14 @@ public final class TagExpressions {
             result = Math.min(numbers.get(0), numbers.get(1));
         } else if (name.equals("clamp")) {
             result = Math.min(Math.max(numbers.get(0), numbers.get(1)), numbers.get(2));
+        } else if (name.equals("root")) {
+            Optional<Double> root = rootOf(numbers.get(0), numbers.get(1));
+            if (root.isEmpty() || !Double.isFinite(root.get())) {
+                context.scope().warn("Tag <root> needs a real result: no zero index, "
+                        + "no even root of a negative: " + tag);
+                return "0";
+            }
+            result = root.get();
         }
         return TagMath.formatNumber(result);
     }

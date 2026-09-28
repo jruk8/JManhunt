@@ -90,6 +90,7 @@ public final class CommandPlaceholders {
      */
     public static String replace(String command, String playerName, double x, double y, double z,
             TagContext context) {
+        context.resetStepBudget();
         String parsed = convertSelectors(command);
         parsed = evaluateTags(parsed, playerName, context);
         parsed = applyMath(parsed, context);
@@ -391,11 +392,12 @@ public final class CommandPlaceholders {
     }
 
     /**
-     * Inside-out tag evaluation; unknown tags survive untouched. Loops
-     * resolve first each pass so their bodies (with {@code <i>} and
-     * per-iteration conditions) stay frozen for the loop protocol
-     * instead of pre-resolving. If-tags go next because their
-     * conditions may hold bare {@code < > <= >=} that the plain
+     * Inside-out tag evaluation; unknown tags survive untouched. Defs
+     * resolve first each pass so their bodies store verbatim instead
+     * of pre-resolving. Loops go next so their bodies (with
+     * {@code <i>} and per-iteration conditions) stay frozen for the
+     * loop protocol instead of pre-resolving. If-tags go next because
+     * their conditions may hold bare {@code < > <= >=} that the plain
      * innermost scan cannot see. Mutating list tags with flag
      * references resolve last so they can write back before the
      * reference itself resolves to a value.
@@ -404,7 +406,8 @@ public final class CommandPlaceholders {
         String current = command;
         TagLoops.Evaluator eval = fragment -> evaluateTags(fragment, playerName, context);
         for (int pass = 0; pass < MAX_TAG_PASSES; pass++) {
-            String stepped = TagPrePass.resolveLoopSpans(current, context, eval);
+            String stepped = TagPrePass.resolveDefSpans(current, context);
+            stepped = TagPrePass.resolveLoopSpans(stepped, context, eval);
             stepped = TagPrePass.resolveIfSpans(stepped, context, eval);
             stepped = TagPrePass.resolveListSpans(stepped, context, eval);
             boolean changed = !stepped.equals(current);
@@ -413,7 +416,7 @@ public final class CommandPlaceholders {
             if (matcher.find()) {
                 StringBuffer result = new StringBuffer();
                 do {
-                    String resolved = resolveTag(matcher.group(1), playerName, context);
+                    String resolved = resolveTag(matcher.group(1), playerName, context, eval);
                     if (!resolved.equals(matcher.group(0))) {
                         changed = true;
                     }
@@ -431,7 +434,8 @@ public final class CommandPlaceholders {
         return current;
     }
 
-    private static String resolveTag(String body, String playerName, TagContext context) {
+    private static String resolveTag(String body, String playerName, TagContext context,
+            TagLoops.Evaluator eval) {
         ModifierTagScope scope = context.scope();
         String tag = "<" + body + ">";
         int separator = body.indexOf(':');
@@ -456,7 +460,7 @@ public final class CommandPlaceholders {
             case "lflag" -> TagFlags.local(tag, args, context);
             case "rflag" -> TagFlags.role(tag, args, context);
             case "placeholder" -> TagPlaceholders.resolve(tag, args, context);
-            case "min", "max", "clamp" -> TagExpressions.minMaxClamp(tag, name, args, context);
+            case "min", "max", "clamp", "root" -> TagExpressions.minMaxClamp(tag, name, args, context);
             case "if" -> TagExpressions.ifEval(tag, args, context);
             case "gmessage", "pmessage", "rmessage" -> TagSinks.message(tag, name, args, context);
             case "gsound", "psound", "rsound" -> TagSinks.sound(tag, name, args, context);
@@ -471,9 +475,9 @@ public final class CommandPlaceholders {
             case "plocation" -> TagLocations.plocation(tag, args, context);
             case "prole" -> TagRoster.role(tag, args, context);
             case "distance" -> TagLocations.distance(tag, args, context);
-            case "floor", "ceil", "round", "abs", "sign" ->
+            case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" ->
                     TagExpressions.mathUnary(tag, name, args, context);
-            default -> tag;
+            default -> TagFunctions.call(tag, name, args, context, eval);
         };
     }
 
