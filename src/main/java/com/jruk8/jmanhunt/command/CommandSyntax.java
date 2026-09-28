@@ -42,7 +42,7 @@ public final class CommandSyntax {
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
                 "active-players", "plocation", "prole", "distance",
                 "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt", "root",
-                "while", "for", "i", "def");
+                "while", "for", "i", "def", "run");
     }
 
     /**

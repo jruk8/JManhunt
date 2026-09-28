@@ -447,8 +447,7 @@ public final class CommandPlaceholders {
             case "random-item" -> randomItem();
             case "random-num" -> randomNumber(args, scope, tag);
             case "random-pick" -> randomPick(args, scope, tag);
-            case "random-player", "all-players", "all-fanout" ->
-                    scopeTag(tag, name, args, playerName, context);
+            case "random-player", "all-players", "all-fanout" -> scopeTag(tag, name, args, playerName, context);
             // Handled separately by withDuration before evaluation.
             case "duration" -> tag;
             case "id" -> context.containerId();
@@ -477,6 +476,7 @@ public final class CommandPlaceholders {
             case "distance" -> TagLocations.distance(tag, args, context);
             case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" ->
                     TagExpressions.mathUnary(tag, name, args, context);
+            case "run" -> TagRun.run(tag, args, context);
             default -> TagFunctions.call(tag, name, args, context, eval);
         };
     }

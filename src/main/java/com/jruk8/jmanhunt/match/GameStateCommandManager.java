@@ -315,7 +315,23 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                 eventArgs, detail -> loopLimitExceeded(detail, matchId),
                 (role, text) -> sendRoleMessage(name, matchId, scope, role, text),
                 (role, soundId, pitch, volume) -> playRoleSound(name, matchId, scope, role,
-                        soundId, pitch, volume));
+                        soundId, pitch, volume),
+                (line, provenance) -> runTagCommand(line, provenance));
+    }
+
+    /**
+     * {@code <run>} sink: dispatches one evaluated line from the
+     * console with the blacklist enforced, like a command list
+     * entry. A hit only skips that line, never the outer list.
+     */
+    private void runTagCommand(String line, String provenance) {
+        Collection<String> blocked = configService.getStringList(BLACKLISTED_COMMANDS_PATH);
+        if (CommandSyntax.isBlockedCommand(line, blocked)) {
+            plugin.logger().severe("Blocked blacklisted modifier command '"
+                    + line + "' at " + provenance + ".");
+            return;
+        }
+        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line);
     }
 
     /**

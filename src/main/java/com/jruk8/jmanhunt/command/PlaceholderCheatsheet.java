@@ -76,6 +76,7 @@ public final class PlaceholderCheatsheet {
             Map.entry("for", new String[]{"<for:[a,b],...>", "walks a list item by item"}),
             Map.entry("i", new String[]{"<i>", "innermost for item, else null"}),
             Map.entry("def", new String[]{"<def:double,x+x,x>", "run-local function"}),
+            Map.entry("run", new String[]{"<run:say hi>", "runs a console command, empty"}),
             Map.entry("rflag", new String[]{"<rflag:hunter,boost>", "flag of the named role"}),
             Map.entry("rmessage", new String[]{"<rmessage:hunter,push!>", "tells the named role"}),
             Map.entry("rsound", new String[]{"<rsound:hunter,id>", "plays for the named role"}));

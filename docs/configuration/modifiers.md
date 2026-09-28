@@ -95,7 +95,8 @@ The available command lists are:
 - `commands.player`: runs for every participating player.
 - `commands.hunter`: runs only for hunters.
 - `commands.speedrunner`: runs only for speedrunners.
-- `commands.console`: runs once from the console.
+- `commands.console`: runs once from the console on every trigger
+  firing, no matter which player or role caused the event.
 - `commands.console-cleanup`: runs from the console when the match ends.
 - `commands.player-cleanup`: runs for every participating player when the
   match ends.
@@ -105,8 +106,11 @@ with `/`.
 
 The role-specific lists (`hunter`/`speedrunner`) only run when the executing
 player actually has that role. For example, if a hunter enters the Nether and
-only a `speedrunner` block is configured, that block does not run. Console
-commands run in parallel regardless of any player's role.
+only a `speedrunner` block is configured, that block does not run. The
+`console` list has no such filter: it runs once per trigger firing for
+every event the behavior matches (every kill, Nether/End enter,
+advancement, and respawn), regardless of the involved player's role.
+Only a `chance` below `1.0` can skip it; see Success Chance.
 
 # Blacklisted Commands
 
@@ -365,6 +369,7 @@ creator editor validates them as you type:
 | `<while:1==1,...>` | Repeats the body while the condition holds (see Loops). |
 | `<i>` | The innermost for-loop item, else `null`. |
 | `<def:double,x+x,x>` | Defines the run-local function `double` (see Functions). |
+| `<run:say hi>` | Runs `say hi` from the console like a command list entry; the tag leaves nothing behind. |
 | `<rflag:hunter,boost>` | The flag of the named role (see Flags). |
 | `<rmessage:hunter,push!>` | Tells the named role only. |
 | `<rsound:hunter,block.note_block.pling>` | Plays for the named role only. |
@@ -391,7 +396,7 @@ A missing index yields `null`; a non-numeric index warns and yields
 | `ON_START` | None: every index is `null`. |
 | `INTERVAL` | `0`: the seconds actually waited for this firing. |
 | `ON_MOB_KILLED` | `0`: the killed mob's entity type name (e.g. `ZOMBIE`). |
-| `ON_PLAYER_KILLS`, `ON_HUNTER_KILLS`, `ON_SPEEDRUNNER_KILLS` | `0`: the exact name of the killed player. |
+| `ON_PLAYER_KILLS`, `ON_HUNTER_KILLS`, `ON_SPEEDRUNNER_KILLS` | `0`: the exact name of the killer. `1`: the exact name of the killed player. |
 | `ON_NETHER_ENTER`, `ON_END_ENTER`, `ON_FIRST_NETHER_ENTER`, `ON_FIRST_END_ENTER` | `0`: the origin world name, `1`: the destination world name. |
 | `ON_EVERY_ADVANCEMENT` | `0`: the advancement's namespaced key (e.g. `minecraft:nether/root`). |
 | `ON_RESPAWN`, `ON_SPEEDRUNNER_RESPAWN`, `ON_HUNTER_RESPAWN` | `0`: the death location as one list, `[x, y, z, pitch, yaw, dimension]`. |
@@ -547,15 +552,21 @@ spawn. Bad shapes warn and stop the line.
 
 `<for:list,body>` walks a list with each item behind `<i>`, and
 `<while:condition,body>` repeats while its condition holds. Bodies
-run for side effects (flag writes, messages, sounds) and any text
-they produce is discarded; both loops leave nothing behind on
-success:
+run for side effects (flag writes, messages, sounds, `<run>`
+commands) and any text they produce is discarded; both loops leave
+nothing behind on success:
 
 ```yaml
 - '<gflag:out,[]>'
 - '<for:<range:3>,<list.append:<gflag:out>,item<i>>>'
 - 'say <gflag:out>'
+- '<for:<active-players:HUNTER>,<run:effect give <i> minecraft:glowing 10>>'
 ```
+
+This says `[item0, item1, item2]`, then gives every hunter ten
+seconds of glowing: `<run:>` dispatches its evaluated body from
+the console per iteration, with the blacklist enforced and `exit`
+holding no special meaning inside it.
 
 This says `[item0, item1, item2]`. Nested loops work, with `<i>`
 always reading the innermost item; outside any for loop `<i>` is a
