@@ -12,13 +12,13 @@ import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.player.PlayerResetService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
 import org.bukkit.GameRule;
 import org.bukkit.GameRules;
 import org.bukkit.World;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,6 +44,7 @@ public final class GameStateCommandManager {
     private final SoundService sounds;
     private final GameManager game;
     private final IntervalDispatcher intervals;
+    private final PlayerResetService resets;
     private final Set<UUID> pendingEndWipes = new HashSet<>();
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
@@ -57,6 +58,7 @@ public final class GameStateCommandManager {
         this.game = game;
         this.intervals = new IntervalDispatcher(plugin, configService, game, playerStates,
                 this::dispatchModifier);
+        this.resets = new PlayerResetService(plugin.overrides());
     }
 
     public void runStart(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId) {
@@ -529,17 +531,9 @@ public final class GameStateCommandManager {
                 gameruleRestored(phase, lastMatch, disabled)));
     }
 
-    /**
-     * True when the end phase wipes participant inventories for the
-     * lobby: the game-rules bundle is on and RESET_PLAYERS_STATS is set.
-     */
+    /** True when the end phase wipes participant inventories for the lobby. */
     public boolean endWipeEnabled(int lobbyId) {
-        if (!plugin.overrides().getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
-            return false;
-        }
-        List<String> rules = plugin.overrides().getStringList(lobbyId,
-                MatchConfig.GameRules.RULES_PATH);
-        return MatchConfig.GameRules.isRuleEnabled(rules, "RESET_PLAYERS_STATS");
+        return resets.endWipeEnabled(lobbyId);
     }
 
     private void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
@@ -721,12 +715,9 @@ public final class GameStateCommandManager {
         return true;
     }
 
-    /**
-     * Full match-end style wipe for one player: inventory, vitals, and
-     * advancements. Used by auto-leave so a removed player restarts clean.
-     */
+    /** Full match-end style wipe for one player. */
     public void resetPlayer(Player player) {
-        resetPlayerStats(player, true, true);
+        resets.resetPlayer(player);
     }
 
     /**
@@ -749,32 +740,8 @@ public final class GameStateCommandManager {
         return true;
     }
 
-    /**
-     * Vitals-only reset for one player: no inventory clear, no advancement
-     * wipe. Used by voluntary leave after the leaver's gear has dropped.
-     */
+    /** Vitals-only reset for one player. */
     public void resetVitals(Player player) {
-        resetPlayerStats(player, false, false);
-    }
-
-    private void resetPlayerStats(Player player, boolean clearInventory, boolean wipeAdvancements) {
-        if (clearInventory) {
-            player.getInventory().clear();
-        }
-        player.setLevel(0);
-        player.setExp(0.0f);
-        player.clearActivePotionEffects();
-        player.getAttribute(Attribute.MAX_HEALTH).setBaseValue(20.0);
-        player.setHealth(20.0);
-        player.setFoodLevel(20);
-        if (wipeAdvancements) {
-            clearAdvancements(player);
-        }
-    }
-
-    private void clearAdvancements(Player player) {
-        Bukkit.advancementIterator().forEachRemaining(advancement ->
-                player.getAdvancementProgress(advancement).getAwardedCriteria().forEach(criteria ->
-                        player.getAdvancementProgress(advancement).revokeCriteria(criteria)));
+        resets.resetVitals(player);
     }
 }

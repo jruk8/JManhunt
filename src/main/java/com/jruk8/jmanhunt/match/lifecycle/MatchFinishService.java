@@ -8,6 +8,7 @@ import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.LeaveDestination;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.player.PlayerResetService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpectatorTravelService;
@@ -24,7 +25,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -219,7 +219,7 @@ public final class MatchFinishService {
         Role before = playerStates.role(player);
         if (instance.begun() && before.isParticipant()) {
             if (dropGear) {
-                dropAllGear(player);
+                PlayerResetService.dropAllGear(player);
                 stateCommands.resetVitals(player);
             } else {
                 stateCommands.resetPlayer(player);
@@ -339,34 +339,6 @@ public final class MatchFinishService {
         messages.message(player, "game.auto-left-bounds", Map.of());
         leaveMatch(instance, List.of(player), false);
         return true;
-    }
-
-    /** Drops a player's full gear at their feet, death style. */
-    private static void dropAllGear(Player player) {
-        Location at = player.getLocation();
-        World world = at.getWorld();
-        if (world == null) {
-            return;
-        }
-        for (ItemStack item : player.getInventory().getContents()) {
-            dropStack(world, at, item);
-        }
-        for (ItemStack item : player.getInventory().getArmorContents()) {
-            dropStack(world, at, item);
-        }
-        dropStack(world, at, player.getInventory().getItemInOffHand());
-        player.getInventory().clear();
-        player.getInventory().setHelmet(null);
-        player.getInventory().setChestplate(null);
-        player.getInventory().setLeggings(null);
-        player.getInventory().setBoots(null);
-        player.getInventory().setItemInOffHand(null);
-    }
-
-    private static void dropStack(World world, Location at, ItemStack item) {
-        if (item != null && !item.getType().isAir()) {
-            world.dropItemNaturally(at, item);
-        }
     }
 
     /** Ends the match when exactly one is live; a no-op otherwise. */

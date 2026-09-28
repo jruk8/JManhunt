@@ -38,10 +38,7 @@ public final class CompassManager {
     /** Last accepted refresh click per holder; right-clicks only. */
     private final Map<UUID, Long> lastClick = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
-    /** Last rounded distance per holder and tracking key plus target. */
-    private final Map<UUID, Map<String, Long>> lastRoundedDistances = new HashMap<>();
-    /** Blink revert generation per holder; stale reverts never land. */
-    private final Map<UUID, Long> deltaGenerations = new HashMap<>();
+    private final CompassDeltaRenderer deltas;
     /** Analysis press-time holder spots, consumed by one resolution. */
     private final Map<UUID, Location> analysisSpots = new HashMap<>();
     /** Analysis press-time target spots per holder, consumed by one resolution. */
@@ -60,6 +57,7 @@ public final class CompassManager {
                 compassActionbars, this::refreshCompass, this::resolveClickRefresh,
                 this::renderFromCache, this::beginAnalysisSpot, cache, lastClick);
         this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
+        this.deltas = new CompassDeltaRenderer(plugin, messages, compassActionbars);
     }
 
     /** Wires the game after construction so targets resolve within one match. */
@@ -131,8 +129,7 @@ public final class CompassManager {
                 .forEach(p -> {
                     if (isVanillaSpectator(p)) {
                         compassActionbars.remove(p.getUniqueId());
-                        lastRoundedDistances.remove(p.getUniqueId());
-                        deltaGenerations.remove(p.getUniqueId());
+                        deltas.forget(p.getUniqueId());
                         return;
                     }
                     p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
@@ -453,9 +450,8 @@ public final class CompassManager {
         setLodestone(item, spot);
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
-        putTrackingBar(holder, key, pick.name(),
-                distanceRender(holder, key, pick.id(), resolutionSpot(holder).distance(spot)),
-                Map.of());
+        deltas.putTrackingBar(holder, lobbyOf(holder), key, pick.name(), pick.id(),
+                resolutionSpot(holder).distance(spot), Map.of());
     }
 
     /** Reasonless Bad Signal for uncached switch targets, by spec. */
@@ -492,10 +488,8 @@ public final class CompassManager {
         setLodestone(item, target.getLocation());
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
-        putTrackingBar(holder, key, target.getName(),
-                distanceRender(holder, key, pick.id(),
-                        resolutionSpot(holder).distance(target.getLocation())),
-                Map.of());
+        deltas.putTrackingBar(holder, lobbyOf(holder), key, target.getName(), pick.id(),
+                resolutionSpot(holder).distance(target.getLocation()), Map.of());
         return true;
     }
 
@@ -514,94 +508,9 @@ public final class CompassManager {
         holder.getInventory().setItem(slot, item);
         String reason = seen != null ? "Another Dimension" : "Log-Out";
         String key = trackingKey(holder, locked, true);
-        putTrackingBar(holder, key, pick.name(),
-                distanceRender(holder, key, pick.id(), resolutionSpot(holder).distance(location)),
-                Map.of("reason", reason));
+        deltas.putTrackingBar(holder, lobbyOf(holder), key, pick.name(), pick.id(),
+                resolutionSpot(holder).distance(location), Map.of("reason", reason));
         return true;
-    }
-
-    /** Rendered distance plus its plain form and whether it blinked. */
-    private record DistanceRender(String text, String plain, boolean blinked) {
-    }
-
-    /**
-     * Distance substitution for one tracking actionbar: the plain rounded
-     * meters, or the delta triangle format when the target moved enough
-     * since this holder last saw it under the same tracking key. BLINK
-     * mode flags the render so the bar reverts to plain shortly after.
-     */
-    private DistanceRender distanceRender(Player holder, String trackingKey, UUID targetId,
-            double distance) {
-        long rounded = Math.round(distance);
-        String plain = String.valueOf(rounded);
-        DistanceRender plainRender = new DistanceRender(plain, plain, false);
-        if (!Double.isFinite(distance) || distance < 0.0) {
-            return plainRender;
-        }
-        Integer lobby = lobbyOf(holder);
-        String base = "settings.compass.actionbar.show-distance-delta.";
-        if (!plugin.overrides().getBoolean(lobby, base + "enabled", true)) {
-            return plainRender;
-        }
-        String historyKey = trackingKey + "|" + targetId;
-        Map<String, Long> history =
-                lastRoundedDistances.computeIfAbsent(holder.getUniqueId(), ignored -> new HashMap<>());
-        Long previous = history.get(historyKey);
-        double maxDistance = plugin.overrides().getDouble(lobby, base + "max-distance", 200.0);
-        double minDelta = plugin.overrides().getDouble(lobby, base + "min-delta-to-show", 5.0);
-        DistanceDelta.Kind kind = DistanceDelta.of(previous, rounded, maxDistance, minDelta);
-        history.put(historyKey, rounded);
-        if (kind == DistanceDelta.Kind.SAME) {
-            return plainRender;
-        }
-        boolean hold = DistanceDelta.Mode.parse(
-                plugin.overrides().getString(lobby, base + "mode", "BLINK")) == DistanceDelta.Mode.HOLD;
-        long blinkTicks = blinkDelayTicks(plugin.overrides()
-                .getDouble(lobby, base + "blink-duration-seconds", 0.6));
-        boolean blink = !hold && blinkTicks > 0;
-        if (!hold && !blink) {
-            return plainRender;
-        }
-        String formatted = kind == DistanceDelta.Kind.FURTHER
-                ? plugin.overrides().getString(lobby, base + "further-format", "<green>▲{distance}")
-                : plugin.overrides().getString(lobby, base + "closer-format", "<red>▼{distance}");
-        return new DistanceRender(formatted.replace("{distance}", plain), plain, blink);
-    }
-
-    /**
-     * Stores one tracking actionbar, scheduling the plain revert for
-     * blinked deltas. The revert only lands when no newer render
-     * replaced it and the holder is still online.
-     */
-    private void putTrackingBar(Player holder, String key, String playerName, DistanceRender render,
-            Map<String, String> extra) {
-        Map<String, String> slots = new HashMap<>(extra);
-        slots.put("player", playerName);
-        slots.put("distance", render.text());
-        compassActionbars.put(holder.getUniqueId(), component(key, slots));
-        if (!render.blinked()) {
-            return;
-        }
-        slots.put("distance", render.plain());
-        Component plainBar = component(key, slots);
-        UUID id = holder.getUniqueId();
-        long generation = deltaGenerations.merge(id, 1L, Long::sum);
-        long delayTicks = blinkDelayTicks(plugin.overrides().getDouble(lobbyOf(holder),
-                "settings.compass.actionbar.show-distance-delta.blink-duration-seconds", 0.6));
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (deltaGenerations.getOrDefault(id, 0L) != generation) {
-                return;
-            }
-            if (Bukkit.getPlayer(id) == null) {
-                return;
-            }
-            compassActionbars.put(id, plainBar);
-        }, Math.max(1L, delayTicks));
-    }
-
-    /** Blink revert delay in ticks, never negative. Pure for tests. */
-    static long blinkDelayTicks(double seconds) {
-        return Math.max(0L, Math.round(Math.max(0.0, seconds) * 20.0));
     }
 
     private void showNoTarget(Player holder, ItemStack item, int slot, String targetRoleString) {
@@ -690,8 +599,7 @@ public final class CompassManager {
 
     public void removeCompasses(Player player) {
         items.removeCompasses(player);
-        lastRoundedDistances.remove(player.getUniqueId());
-        deltaGenerations.remove(player.getUniqueId());
+        deltas.forget(player.getUniqueId());
         analysisSpots.remove(player.getUniqueId());
         analysisTargets.remove(player.getUniqueId());
     }

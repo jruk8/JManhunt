@@ -11,7 +11,6 @@ import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.bukkit.NamespacedKey;

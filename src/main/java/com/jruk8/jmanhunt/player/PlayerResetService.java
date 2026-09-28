@@ -1,0 +1,103 @@
+package com.jruk8.jmanhunt.player;
+
+import com.jruk8.jmanhunt.config.MatchConfig;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import java.util.List;
+
+/**
+ * Leave and match-end player cleanup: full wipes, vitals resets, and
+ * death-style gear drops. Owns the end-wipe rule check behind the
+ * game-rules bundle.
+ */
+public final class PlayerResetService {
+
+    private final OverrideService overrides;
+
+    public PlayerResetService(OverrideService overrides) {
+        this.overrides = overrides;
+    }
+
+    /**
+     * True when the end phase wipes participant inventories for the
+     * lobby: the game-rules bundle is on and RESET_PLAYERS_STATS is set.
+     */
+    public boolean endWipeEnabled(int lobbyId) {
+        if (!overrides.getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
+            return false;
+        }
+        List<String> rules = overrides.getStringList(lobbyId,
+                MatchConfig.GameRules.RULES_PATH);
+        return MatchConfig.GameRules.isRuleEnabled(rules, "RESET_PLAYERS_STATS");
+    }
+
+    /**
+     * Full match-end style wipe for one player: inventory, vitals, and
+     * advancements. Used by auto-leave so a removed player restarts clean.
+     */
+    public void resetPlayer(Player player) {
+        resetPlayerStats(player, true, true);
+    }
+
+    /**
+     * Vitals-only reset for one player: no inventory clear, no advancement
+     * wipe. Used by voluntary leave after the leaver's gear has dropped.
+     */
+    public void resetVitals(Player player) {
+        resetPlayerStats(player, false, false);
+    }
+
+    /** Drops a player's full gear at their feet, death style. */
+    public static void dropAllGear(Player player) {
+        Location at = player.getLocation();
+        World world = at.getWorld();
+        if (world == null) {
+            return;
+        }
+        for (ItemStack item : player.getInventory().getContents()) {
+            dropStack(world, at, item);
+        }
+        for (ItemStack item : player.getInventory().getArmorContents()) {
+            dropStack(world, at, item);
+        }
+        dropStack(world, at, player.getInventory().getItemInOffHand());
+        player.getInventory().clear();
+        player.getInventory().setHelmet(null);
+        player.getInventory().setChestplate(null);
+        player.getInventory().setLeggings(null);
+        player.getInventory().setBoots(null);
+        player.getInventory().setItemInOffHand(null);
+    }
+
+    private void resetPlayerStats(Player player, boolean clearInventory, boolean wipeAdvancements) {
+        if (clearInventory) {
+            player.getInventory().clear();
+        }
+        player.setLevel(0);
+        player.setExp(0.0f);
+        player.clearActivePotionEffects();
+        player.getAttribute(Attribute.MAX_HEALTH).setBaseValue(20.0);
+        player.setHealth(20.0);
+        player.setFoodLevel(20);
+        if (wipeAdvancements) {
+            clearAdvancements(player);
+        }
+    }
+
+    private static void dropStack(World world, Location at, ItemStack item) {
+        if (item != null && !item.getType().isAir()) {
+            world.dropItemNaturally(at, item);
+        }
+    }
+
+    private void clearAdvancements(Player player) {
+        Bukkit.advancementIterator().forEachRemaining(advancement ->
+                player.getAdvancementProgress(advancement).getAwardedCriteria().forEach(criteria ->
+                        player.getAdvancementProgress(advancement).revokeCriteria(criteria)));
+    }
+}

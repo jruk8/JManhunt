@@ -27,10 +27,10 @@ class CompassManagerTest {
 
     @Test
     void blinkDelayRoundsToTicks() {
-        assertEquals(12L, CompassManager.blinkDelayTicks(0.6));
-        assertEquals(0L, CompassManager.blinkDelayTicks(0.0));
-        assertEquals(0L, CompassManager.blinkDelayTicks(-1.0));
-        assertEquals(20L, CompassManager.blinkDelayTicks(1.0));
+        assertEquals(12L, CompassDeltaRenderer.blinkDelayTicks(0.6));
+        assertEquals(0L, CompassDeltaRenderer.blinkDelayTicks(0.0));
+        assertEquals(0L, CompassDeltaRenderer.blinkDelayTicks(-1.0));
+        assertEquals(20L, CompassDeltaRenderer.blinkDelayTicks(1.0));
     }
 
     @Test
