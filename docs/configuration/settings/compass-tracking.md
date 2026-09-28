@@ -346,37 +346,48 @@ with a gray Bad signal readout when conditions are bad. The master
 `enabled` switch defaults to off, so the signal is always good until
 you opt in.
 
-Each sub-option watches one thing:
+Each sub-option watches one thing (all default to off):
 
 - `light-level`: fails in the dark, with separate sky and block light
-  minimums. Only applies in the overworld.
+  minimums. Only applies in the overworld. `interfere-when` picks
+  whether one unmet minimum is enough (`ONE_UNMET`) or both must be
+  unmet (`BOTH_UNMET`, the default).
 - `underground`: fails under too many solid blocks overhead. Glass,
   leaves, and other non-whole blocks do not count unless you turn
   `ignore-transparent` off.
-- `underwater`: fails under too much water or lava overhead. Works
-  like `underground` but counts fluid blocks.
+- `underwater`: fails under too much water overhead, but only while
+  the feet block itself is water. Works like `underground` but
+  counts fluid blocks above the feet.
 - `altitude`: fails outside a min/max height band.
-- `weather`: fails during the listed weather (storm, rain, clear).
+- `weather`: fails during the listed weather (`STORM`, `RAIN`,
+  `CLEAR`). Pick the values from the in-game checklist.
 - `biome`: fails in the listed biomes, written as full keys like
   `minecraft:desert`.
+- `movement`: fails when the refresher moved past `threshold-blocks`
+  (default 0.2) from their press spot. Only fires on the analysis
+  path, since instant refreshes have no gap to move in.
 - `line-of-sight`: fails based on whether the holder can see the
   target. One eye-to-eye ray is checked; glass and leaves never block
-  it. `interfere-when` picks the failing side (`VISIBLE` by default,
-  `NOT_VISIBLE` for the opposite), and `max-ray-distance` (default
-  300) caps the ray: past it, there is no line of sight. Only live
-  targets in the same world are checked.
+  it. `interfere-when` picks the failing side (`NOT_VISIBLE` by
+  default, `VISIBLE` for the opposite), and `max-ray-distance`
+  (default 300) caps the ray: past it, there is no line of sight.
+  Only live targets in the same world are checked.
 
-Three extra knobs shape the failure: `required-to-fail` sets how many
-options must agree before the compass fails (default 1), `two-way`
-checks the target's spot as well as the holder's, and
-`chance-to-bypass` gives a bad signal a random chance to track anyway.
-Locked targets can fail too. The nearby and out-of-range readouts
-consult interference as well; only the no-target readout never does.
+Every option except `line-of-sight` has its own `two-way` flag
+(default off). With two-way on, the target's press-time spot must
+pass the check too; with it off, only the holder's spot is checked.
+Each side counts its own failures against `required-to-fail`
+(default 1), and `chance-to-bypass` gives a bad signal a random
+chance to track anyway. Locked targets can fail too. The nearby and
+out-of-range readouts consult interference as well; only the no-target
+readout never does.
 
 With `show-reason-in-actionbar` (default on), a bad signal names its
 cause: `:( Bad signal (underground)`. When several options fail at
-once, the most recently found one shows. The names come from the
-`compass.signal-reason` messages and can be reworded there.
+once, the most recently found one shows; the holder side wins ties.
+Target-side failures are prefixed: `:( Bad signal (target weather)`.
+The names come from the `compass.signal-reason` messages and can be
+reworded there.
 
 ## WorldEdit Navwand
 

@@ -35,4 +35,16 @@ public interface ModifierDialog {
      */
     void openGameRules(Player player, List<String> current,
             Consumer<Set<String>> onSubmit, Runnable reopen);
+
+    /**
+     * Opens the Interfere During checkbox dialog: one checkbox per
+     * weather bucket, initialled from the live list.
+     *
+     * @param player clicking player
+     * @param current live weather entries, matched case-insensitively
+     * @param onSubmit receives the checked buckets set, in known order
+     * @param reopen rebuilds the menu Submit and Cancel return to
+     */
+    void openInterfereDuring(Player player, List<String> current,
+            Consumer<Set<String>> onSubmit, Runnable reopen);
 }

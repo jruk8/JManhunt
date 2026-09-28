@@ -326,7 +326,7 @@ public final class SettingRegistry {
         int count = 0;
         String base = "settings.compass.signal-interference.";
         for (String option : List.of("light-level", "underground", "underwater",
-                "altitude", "weather", "biome", "line-of-sight")) {
+                "altitude", "weather", "biome", "movement", "line-of-sight")) {
             if (Boolean.TRUE.equals(lookup.apply(base + option + ".enabled"))) {
                 count++;
             }
@@ -598,26 +598,35 @@ public final class SettingRegistry {
         entries.add(bool("settings.compass.signal-interference.enabled", false));
         entries.add(intDynamic("settings.compass.signal-interference.required-to-fail", 1, 1,
                 SettingDescriptor.DynamicBound.ENABLED_OPTION_COUNT));
-        entries.add(bool("settings.compass.signal-interference.two-way", false));
         entries.add(floatVal("settings.compass.signal-interference.chance-to-bypass", 0.0, 0.0, 1.0));
         entries.add(bool("settings.compass.signal-interference.show-reason-in-actionbar", true));
         entries.add(bool("settings.compass.signal-interference.light-level.enabled", false));
         entries.add(intVal("settings.compass.signal-interference.light-level.min-sky-light", 10, 0, 15));
         entries.add(intVal("settings.compass.signal-interference.light-level.min-block-light", 5, 0, 15));
-        entries.add(option("settings.compass.signal-interference.light-level.interfere-when", "ONE_UNMET",
+        entries.add(option("settings.compass.signal-interference.light-level.interfere-when", "BOTH_UNMET",
                 "ONE_UNMET", "BOTH_UNMET"));
-        entries.add(bool("settings.compass.signal-interference.underground.enabled", true));
+        entries.add(bool("settings.compass.signal-interference.light-level.two-way", false));
+        entries.add(bool("settings.compass.signal-interference.underground.enabled", false));
         entries.add(intVal("settings.compass.signal-interference.underground.max-blocks-above", 3, 1, 380));
         entries.add(bool("settings.compass.signal-interference.underground.ignore-transparent", true));
-        entries.add(bool("settings.compass.signal-interference.underwater.enabled", true));
+        entries.add(bool("settings.compass.signal-interference.underground.two-way", false));
+        entries.add(bool("settings.compass.signal-interference.underwater.enabled", false));
         entries.add(intVal("settings.compass.signal-interference.underwater.max-blocks-above", 2, 1, 380));
+        entries.add(bool("settings.compass.signal-interference.underwater.two-way", false));
         entries.add(bool("settings.compass.signal-interference.altitude.enabled", false));
         entries.add(intVal("settings.compass.signal-interference.altitude.min-y", -20, -64, 319));
         entries.add(intVal("settings.compass.signal-interference.altitude.max-y", 120, -64, 319));
+        entries.add(bool("settings.compass.signal-interference.altitude.two-way", false));
         entries.add(bool("settings.compass.signal-interference.weather.enabled", false));
+        entries.add(bool("settings.compass.signal-interference.weather.two-way", false));
         entries.add(bool("settings.compass.signal-interference.biome.enabled", false));
+        entries.add(bool("settings.compass.signal-interference.biome.two-way", false));
+        entries.add(bool("settings.compass.signal-interference.movement.enabled", false));
+        entries.add(floatVal("settings.compass.signal-interference.movement.threshold-blocks",
+                0.2, 0.0, null));
+        entries.add(bool("settings.compass.signal-interference.movement.two-way", false));
         entries.add(bool("settings.compass.signal-interference.line-of-sight.enabled", false));
-        entries.add(option("settings.compass.signal-interference.line-of-sight.interfere-when", "VISIBLE",
+        entries.add(option("settings.compass.signal-interference.line-of-sight.interfere-when", "NOT_VISIBLE",
                 "VISIBLE", "NOT_VISIBLE"));
         entries.add(intVal("settings.compass.signal-interference.line-of-sight.max-ray-distance",
                 300, 1, 1000));

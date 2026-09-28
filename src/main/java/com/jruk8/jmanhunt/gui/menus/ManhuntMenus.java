@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.config.SettingRegistry;
+import com.jruk8.jmanhunt.config.SignalInterferenceSettings;
 import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiConfig;
 import com.jruk8.jmanhunt.gui.GuiService;
@@ -598,26 +599,37 @@ public final class ManhuntMenus {
     }
 
     /**
-     * List open action: the game-rules enum array opens the checkbox
-     * dialog, every other list opens the index-based list menu.
+     * List open action: the game-rules and weather enum arrays open
+     * checkbox dialogs, every other list opens the index-based list
+     * menu.
      */
     private Consumer<Player> openList(Function<Player, Menu> menu, String path,
             Supplier<Menu> caller) {
-        if (!MatchConfig.GameRules.RULES_PATH.equals(path)) {
-            return open(menu);
+        if (MatchConfig.GameRules.RULES_PATH.equals(path)) {
+            return player -> {
+                Integer lobby = gui.overrideLobby(player);
+                List<String> current = overrides.getStringList(lobby, path);
+                modifierDialogs.openGameRules(player, current,
+                        checked -> applyChecklist(player, lobby, path,
+                                new ArrayList<>(checked), caller),
+                        () -> gui.navigate(player, caller.get()));
+            };
         }
-        return player -> {
-            Integer lobby = gui.overrideLobby(player);
-            List<String> current = overrides.getStringList(lobby, path);
-            modifierDialogs.openGameRules(player, current,
-                    checked -> applyGameRules(player, lobby, path,
-                            new ArrayList<>(checked), caller),
-                    () -> gui.navigate(player, caller.get()));
-        };
+        if (SignalInterferenceSettings.Weather.INTERFERE_DURING_PATH.equals(path)) {
+            return player -> {
+                Integer lobby = gui.overrideLobby(player);
+                List<String> current = overrides.getStringList(lobby, path);
+                modifierDialogs.openInterfereDuring(player, current,
+                        checked -> applyChecklist(player, lobby, path,
+                                new ArrayList<>(checked), caller),
+                        () -> gui.navigate(player, caller.get()));
+            };
+        }
+        return open(menu);
     }
 
-    /** Persists the checked game rules, globally or as a lobby override. */
-    private void applyGameRules(Player player, Integer lobby, String path,
+    /** Persists a checked enum list, globally or as a lobby override. */
+    private void applyChecklist(Player player, Integer lobby, String path,
             List<String> checked, Supplier<Menu> caller) {
         ConfigService.SetOutcome outcome = lobby == null
                 ? config.setList(path, checked)

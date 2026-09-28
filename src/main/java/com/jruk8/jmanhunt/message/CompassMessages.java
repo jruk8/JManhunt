@@ -99,6 +99,8 @@ public class CompassMessages extends OkaeriConfig {
             "underwater", "underwater",
             "altitude", "altitude",
             "weather", "weather",
-            "biome", "biome",
-            "line-of-sight", "line of sight"));
+            "biome", "wrong biome",
+            "moved", "moved",
+            "line-of-sight", "line of sight",
+            "line-of-sight-hidden", "no line of sight"));
 }

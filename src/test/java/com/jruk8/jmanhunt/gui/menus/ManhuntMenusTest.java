@@ -54,6 +54,7 @@ class ManhuntMenusTest {
     private MessageService messages;
     private StatsManager stats;
     private ManhuntMenus menus;
+    private ModifierDialog modifierDialogs;
     private Player viewer;
 
     @BeforeEach
@@ -85,10 +86,11 @@ class ManhuntMenusTest {
         when(overrides.effectiveRaw(any(), anyString()))
                 .thenAnswer(invocation -> config.getValue(invocation.getArgument(1)));
         stats = mock(StatsManager.class);
+        modifierDialogs = mock(ModifierDialog.class);
         menus = new ManhuntMenus(config, overrides, guiData, messages,
                 mock(SoundService.class), gui, mock(SettingDialog.class),
                 mock(SettingFeedback.class), stats,
-                mock(ModifierMenus.class), mock(ModifierDialog.class));
+                mock(ModifierMenus.class), modifierDialogs);
     }
 
     @Test
@@ -207,6 +209,25 @@ class ManhuntMenusTest {
         assertEquals(1, shown.stream()
                 .filter(button -> button.material() == Material.STICK).count());
         assertNotNull(list.parent());
+    }
+
+    @Test
+    void weatherListButtonOpensInterfereDuringChecklist() {
+        String path = "settings.compass.signal-interference.weather.interfere-during";
+        when(config.getStringList(path)).thenReturn(List.of("STORM"));
+
+        Menu section = menus.sectionMenu(viewer,
+                "settings.compass.signal-interference.weather",
+                () -> menus.settingsMenu(viewer));
+        MenuButton button = findButton(section, "Interfere During");
+
+        assertNotNull(button);
+        button.action().accept(viewer);
+
+        ArgumentCaptor<List<String>> current = ArgumentCaptor.forClass(List.class);
+        verify(modifierDialogs).openInterfereDuring(eq(viewer), current.capture(),
+                any(), any());
+        assertEquals(List.of("STORM"), current.getValue());
     }
 
     @Test

@@ -354,8 +354,11 @@ public final class CompassManager {
      */
     private boolean renderCompassPick(Player holder, ItemStack item, int slot, CompassPick pick,
             String targetRoleString, boolean locked) {
-        Optional<String> reason = pick.kind() == CompassPick.Kind.NONE
-                ? Optional.empty() : signal.reasonForPick(holder, resolutionSpot(holder), pick);
+        Location spot = resolutionSpot(holder);
+        Location targetPress = analysisTargets
+                .getOrDefault(holder.getUniqueId(), Map.of()).get(pick.id());
+        Optional<SignalInterference.Reason> reason = pick.kind() == CompassPick.Kind.NONE
+                ? Optional.empty() : signal.reasonForPick(holder, spot, targetPress, pick);
         if (reason.isPresent()) {
             showBadSignal(holder, item, slot, reason.get());
             return false;
@@ -608,16 +611,26 @@ public final class CompassManager {
                 Map.of("role", targetRoleString)));
     }
 
-    private void showBadSignal(Player holder, ItemStack item, int slot, String reason) {
+    private void showBadSignal(Player holder, ItemStack item, int slot,
+            SignalInterference.Reason reason) {
         spinNeedle(item, holder);
         holder.getInventory().setItem(slot, item);
         if (plugin.overrides().getBoolean(lobbyOf(holder),
                 "settings.compass.signal-interference.show-reason-in-actionbar", true)) {
             compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-reason-actionbar",
-                    Map.of("reason", messages.string("compass.signal-reason." + reason, reason))));
+                    Map.of("reason", reasonText(reason))));
             return;
         }
         compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-actionbar"));
+    }
+
+    /**
+     * Display text for one interference reason: the signal-reason
+     * message for the option id, prefixed for target-side failures.
+     */
+    private String reasonText(SignalInterference.Reason reason) {
+        String text = messages.string("compass.signal-reason." + reason.id(), reason.id());
+        return reason.targetSide() ? "target " + text : text;
     }
 
     /**

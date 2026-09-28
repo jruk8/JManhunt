@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.gui.dialog;
 
+import com.jruk8.jmanhunt.compass.SignalInterference;
 import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
@@ -29,7 +30,8 @@ import org.bukkit.plugin.Plugin;
  * Native client dialogs for modifier editing.
  *
  * <p>Runs On shows one checkbox per known trigger, initialled from the
- * live list; Game Rules shows one checkbox per known game-state rule.
+ * live list; Game Rules shows one checkbox per known game-state rule,
+ * and Interfere During one per weather bucket.
  * Submit reports the checked set, plays neutral, and reopens the
  * caller; Cancel reopens silently. Reopens run through the scheduler
  * so the dialog close never swallows the returning menu. Opening plays
@@ -65,6 +67,20 @@ public final class ModifierDialogs implements ModifierDialog {
         openChecklist(player, MatchConfig.GameRules.KNOWN,
                 "manhunt-gui.game-rules-title", "Game Rules",
                 "manhunt-gui.game-rules-hint", "Tick the game-state rules this server applies.",
+                current, onSubmit, reopen);
+    }
+
+    @Override
+    public void openInterfereDuring(Player player, List<String> current,
+            Consumer<Set<String>> onSubmit, Runnable reopen) {
+        List<String> known = new ArrayList<>();
+        for (SignalInterference.Weather bucket : SignalInterference.Weather.values()) {
+            known.add(bucket.name());
+        }
+        openChecklist(player, known,
+                "manhunt-gui.interfere-during-title", "Interfere During",
+                "manhunt-gui.interfere-during-hint",
+                "Tick the weather that interferes with tracking.",
                 current, onSubmit, reopen);
     }
 

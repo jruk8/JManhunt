@@ -39,8 +39,9 @@ public final class SignalInterference {
 
     /**
      * One evaluated spot: light levels, whether the world is an overworld,
-     * solid and fluid blocks strictly above the feet, feet Y, weather, and
-     * the block biome key such as "minecraft:desert" (lowercased).
+     * solid and fluid blocks strictly above the feet, feet Y, weather, the
+     * block biome key such as "minecraft:desert" (lowercased), blocks moved
+     * since the refresh started, and whether the feet block is water.
      */
     public record Snapshot(
             int skyLight,
@@ -50,50 +51,68 @@ public final class SignalInterference {
             int fluidBlocksAbove,
             int blockY,
             Weather weather,
-            String biomeKey) {
+            String biomeKey,
+            double movedBlocks,
+            boolean feetInWater) {
         public Snapshot {
             biomeKey = biomeKey == null ? "" : biomeKey.toLowerCase(Locale.ROOT);
         }
     }
 
     /**
+     * Display reason for a bad signal: the failing option id plus
+     * whether the target side (rather than the holder side) failed.
+     */
+    public record Reason(String id, boolean targetSide) {
+    }
+
+    /**
      * Resolved interference config values. The compact constructor clamps
      * every range (light 0-15, cover and fluid 1-380, Y -64-319, ray
-     * 1-1000, bypass 0-1), normalizes the altitude endpoints so min <=
-     * max, defaults a missing interfere-when to ONE_UNMET and a missing
-     * line-of-sight mode to VISIBLE, and lowercases the biome list.
-     * Required-to-fail is clamped against the enabled count at verdict
-     * time instead, since this record does not count enablers.
+     * 1-1000, bypass 0-1, movement threshold at 0), normalizes the
+     * altitude endpoints so min <= max, defaults a missing interfere-when
+     * to BOTH_UNMET and a missing line-of-sight mode to NOT_VISIBLE, and
+     * lowercases the biome list. Required-to-fail is clamped against the
+     * enabled count at verdict time instead, since this record does not
+     * count enablers.
      */
     public record Config(
             boolean lightEnabled,
             int minSkyLight,
             int minBlockLight,
             InterfereWhen interfereWhen,
+            boolean lightTwoWay,
             boolean undergroundEnabled,
             int maxBlocksAbove,
+            boolean undergroundTwoWay,
             boolean underwaterEnabled,
             int maxFluidAbove,
+            boolean underwaterTwoWay,
             boolean altitudeEnabled,
             int minY,
             int maxY,
+            boolean altitudeTwoWay,
             boolean weatherEnabled,
             Set<Weather> interfereDuring,
+            boolean weatherTwoWay,
             boolean biomeEnabled,
             Set<String> interfereIn,
+            boolean biomeTwoWay,
+            boolean movementEnabled,
+            double thresholdBlocks,
+            boolean movementTwoWay,
             boolean losEnabled,
             InterfereWhenVisible losWhen,
             int losMaxDistance,
             int requiredToFail,
-            boolean twoWay,
             double chanceToBypass) {
         public Config {
             minSkyLight = clamp(minSkyLight, 0, 15);
             minBlockLight = clamp(minBlockLight, 0, 15);
-            interfereWhen = interfereWhen == null ? InterfereWhen.ONE_UNMET : interfereWhen;
+            interfereWhen = interfereWhen == null ? InterfereWhen.BOTH_UNMET : interfereWhen;
             maxBlocksAbove = clamp(maxBlocksAbove, 1, 380);
             maxFluidAbove = clamp(maxFluidAbove, 1, 380);
-            losWhen = losWhen == null ? InterfereWhenVisible.VISIBLE : losWhen;
+            losWhen = losWhen == null ? InterfereWhenVisible.NOT_VISIBLE : losWhen;
             losMaxDistance = clamp(losMaxDistance, 1, 1000);
             minY = clamp(minY, -64, 319);
             maxY = clamp(maxY, -64, 319);
@@ -112,6 +131,7 @@ public final class SignalInterference {
                 }
             }
             interfereIn = Set.copyOf(biomes);
+            thresholdBlocks = Math.max(0.0, thresholdBlocks);
             chanceToBypass = Math.min(1.0, Math.max(0.0, chanceToBypass));
         }
 
@@ -123,7 +143,9 @@ public final class SignalInterference {
     /**
      * True when the holder's tracking fails with a bad signal. The
      * line-of-sight verdict is relational, so the caller raycasts it and
-     * passes it in; null skips the option. Pure.
+     * passes it in; null skips the option. Each side counts its own
+     * failures against required-to-fail: the holder side across every
+     * enabled option, the target side across options with two-way on. Pure.
      */
     public static boolean badSignal(Snapshot holder, Snapshot target, Config config, double roll,
             Boolean hasLineOfSight) {
@@ -132,9 +154,9 @@ public final class SignalInterference {
             return false;
         }
         int required = Math.min(enabled, Math.max(1, config.requiredToFail()));
-        boolean bad = interferingCount(holder, config, hasLineOfSight) >= required
-                || (config.twoWay() && target != null
-                        && interferingCount(target, config, hasLineOfSight) >= required);
+        boolean bad = interferingCount(holder, config, hasLineOfSight, false) >= required
+                || (target != null
+                        && interferingCount(target, config, hasLineOfSight, true) >= required);
         if (!bad) {
             return false;
         }
@@ -148,10 +170,10 @@ public final class SignalInterference {
 
     /**
      * Display reason for a bad signal: the most recently found failing
-     * option id, or empty when the signal is good. The holder side wins
+     * option, or empty when the signal is good. The holder side wins
      * ties, matching the verdict short-circuit. Pure.
      */
-    public static Optional<String> lastReason(Snapshot holder, Snapshot target,
+    public static Optional<Reason> lastReason(Snapshot holder, Snapshot target,
             Config config, double roll, Boolean hasLineOfSight) {
         int enabled = enabledCount(config);
         if (enabled == 0) {
@@ -159,54 +181,67 @@ public final class SignalInterference {
         }
         int required = Math.min(enabled, Math.max(1, config.requiredToFail()));
         List<String> holderReasons =
-                interferingReasons(holder, config, hasLineOfSight);
-        List<String> targetReasons = config.twoWay() && target != null
-                ? interferingReasons(target, config, hasLineOfSight)
+                interferingReasons(holder, config, hasLineOfSight, false);
+        List<String> targetReasons = target != null
+                ? interferingReasons(target, config, hasLineOfSight, true)
                 : List.of();
         boolean bad = holderReasons.size() >= required || targetReasons.size() >= required;
         if (!bad || roll < config.chanceToBypass()) {
             return Optional.empty();
         }
-        List<String> guilty =
-                holderReasons.size() >= required ? holderReasons : targetReasons;
-        return Optional.of(guilty.get(guilty.size() - 1));
+        if (holderReasons.size() >= required) {
+            return Optional.of(new Reason(holderReasons.get(holderReasons.size() - 1), false));
+        }
+        return Optional.of(new Reason(targetReasons.get(targetReasons.size() - 1), true));
     }
 
     /** Enabled sub-options reporting interference at one spot. Pure. */
-    static int interferingCount(Snapshot snapshot, Config config, Boolean hasLineOfSight) {
-        return interferingReasons(snapshot, config, hasLineOfSight).size();
+    static int interferingCount(Snapshot snapshot, Config config, Boolean hasLineOfSight,
+            boolean targetSide) {
+        return interferingReasons(snapshot, config, hasLineOfSight, targetSide).size();
     }
 
-    /** Ids of the enabled sub-options interfering at one spot, in check order. Pure. */
+    /**
+     * Ids of the enabled sub-options interfering at one spot, in check
+     * order. Target-side evaluation only considers options with two-way
+     * on; line of sight has no two-way flag and never counts there. Pure.
+     */
     static List<String> interferingReasons(Snapshot snapshot, Config config,
-            Boolean hasLineOfSight) {
+            Boolean hasLineOfSight, boolean targetSide) {
         List<String> reasons = new ArrayList<>();
-        if (config.lightEnabled()
+        if (config.lightEnabled() && (!targetSide || config.lightTwoWay())
                 && lightInterferes(snapshot, config.minSkyLight(),
                         config.minBlockLight(), config.interfereWhen())) {
             reasons.add("light-level");
         }
-        if (config.undergroundEnabled()
+        if (config.undergroundEnabled() && (!targetSide || config.undergroundTwoWay())
                 && undergroundInterferes(snapshot.solidBlocksAbove(), config.maxBlocksAbove())) {
             reasons.add("underground");
         }
-        if (config.underwaterEnabled()
-                && underwaterInterferes(snapshot.fluidBlocksAbove(), config.maxFluidAbove())) {
+        if (config.underwaterEnabled() && (!targetSide || config.underwaterTwoWay())
+                && underwaterInterferes(snapshot, config.maxFluidAbove())) {
             reasons.add("underwater");
         }
-        if (config.altitudeEnabled()
+        if (config.altitudeEnabled() && (!targetSide || config.altitudeTwoWay())
                 && altitudeInterferes(snapshot.blockY(), config.minY(), config.maxY())) {
             reasons.add("altitude");
         }
-        if (config.weatherEnabled() && weatherInterferes(snapshot.weather(), config.interfereDuring())) {
+        if (config.weatherEnabled() && (!targetSide || config.weatherTwoWay())
+                && weatherInterferes(snapshot.weather(), config.interfereDuring())) {
             reasons.add("weather");
         }
-        if (config.biomeEnabled() && biomeInterferes(snapshot.biomeKey(), config.interfereIn())) {
+        if (config.biomeEnabled() && (!targetSide || config.biomeTwoWay())
+                && biomeInterferes(snapshot.biomeKey(), config.interfereIn())) {
             reasons.add("biome");
         }
-        if (config.losEnabled() && hasLineOfSight != null
+        if (config.movementEnabled() && (!targetSide || config.movementTwoWay())
+                && movementInterferes(snapshot.movedBlocks(), config.thresholdBlocks())) {
+            reasons.add("moved");
+        }
+        if (!targetSide && config.losEnabled() && hasLineOfSight != null
                 && losInterferes(hasLineOfSight, config.losWhen())) {
-            reasons.add("line-of-sight");
+            reasons.add(config.losWhen() == InterfereWhenVisible.VISIBLE
+                    ? "line-of-sight" : "line-of-sight-hidden");
         }
         return reasons;
     }
@@ -229,6 +264,9 @@ public final class SignalInterference {
             count++;
         }
         if (config.biomeEnabled()) {
+            count++;
+        }
+        if (config.movementEnabled()) {
             count++;
         }
         if (config.losEnabled()) {
@@ -257,9 +295,17 @@ public final class SignalInterference {
         return solidBlocksAbove > maxBlocksAbove;
     }
 
-    /** Water interferes when fluid blocks above exceed the maximum. Pure. */
-    public static boolean underwaterInterferes(int fluidBlocksAbove, int maxFluidAbove) {
-        return fluidBlocksAbove > maxFluidAbove;
+    /**
+     * Water interferes only with water feet: the feet block must be
+     * water, and the fluid blocks above must exceed the maximum. Pure.
+     */
+    public static boolean underwaterInterferes(Snapshot snapshot, int maxFluidAbove) {
+        return snapshot.feetInWater() && snapshot.fluidBlocksAbove() > maxFluidAbove;
+    }
+
+    /** Movement interferes past the threshold, in blocks. Pure. */
+    public static boolean movementInterferes(double movedBlocks, double thresholdBlocks) {
+        return movedBlocks > thresholdBlocks;
     }
 
     /**

@@ -39,23 +39,23 @@ final class CompassSignalService {
      * live targets get a line-of-sight reading.
      */
     boolean badSignalForPick(Player holder, CompassPick pick) {
-        return reasonForPick(holder, holder.getLocation(), pick).isPresent();
+        return reasonForPick(holder, holder.getLocation(), null, pick).isPresent();
     }
 
     /** Spot-aware verdict: the holder reads from their resolution spot. */
     boolean badSignalForPick(Player holder, Location holderSpot, CompassPick pick) {
-        return reasonForPick(holder, holderSpot, pick).isPresent();
+        return reasonForPick(holder, holderSpot, null, pick).isPresent();
     }
 
     /**
-     * Failing interference option id for a resolved pick, or empty when
+     * Failing interference option for a resolved pick, or empty when
      * the signal is good. Sightings use their recorded location; every
      * live kind uses the player's location, or none when they logged out
      * between selection and this check. Only live targets get a
      * line-of-sight reading.
      */
-    Optional<String> reasonForPick(Player holder, CompassPick pick) {
-        return reasonForPick(holder, holder.getLocation(), pick);
+    Optional<SignalInterference.Reason> reasonForPick(Player holder, CompassPick pick) {
+        return reasonForPick(holder, holder.getLocation(), null, pick);
     }
 
     /**
@@ -63,38 +63,44 @@ final class CompassSignalService {
      * spot (press-time while analyzing, live otherwise) instead of
      * their current location.
      */
-    Optional<String> reasonForPick(Player holder, Location holderSpot, CompassPick pick) {
+    Optional<SignalInterference.Reason> reasonForPick(Player holder, Location holderSpot,
+            CompassPick pick) {
+        return reasonForPick(holder, holderSpot, null, pick);
+    }
+
+    /**
+     * Full verdict with a target press spot: target-side checks compare
+     * the press-time spot (when present) instead of the moved-to spot,
+     * and movement measures both sides against their press spots.
+     */
+    Optional<SignalInterference.Reason> reasonForPick(Player holder, Location holderSpot,
+            Location targetPress, CompassPick pick) {
         SignalInterference.Config interference = interferenceConfig(lobbyOf(holder));
         Location target = null;
         Player seen = null;
+        Location press = null;
         if (pick.kind() == CompassPick.Kind.TRACK_SIGHTING) {
             target = playerStates.sightings().getOrDefault(pick.id(), Map.of())
                     .get(holderSpot.getWorld().getUID());
         } else if (pick.id() != null) {
             seen = Bukkit.getPlayer(pick.id());
             target = seen == null ? null : seen.getLocation();
+            press = targetPress;
         }
         Boolean sight = interference.losEnabled()
                 ? lineOfSight(holder, holderSpot, seen, interference) : null;
-        return reason(holder, holderSpot, target, interference, sight);
+        return reason(holder, holderSpot, target, press, interference, sight);
     }
 
     /**
-     * True when signal interference fails this tracking attempt: the
-     * holder's spot (and, with two-way, the target's spot) resolves to a
-     * bad signal that the bypass roll does not save.
+     * Failing interference option for one tracking attempt, or empty
+     * when the signal is good or the bypass roll saves it. Movement
+     * measures each side against its press spot; target-side checks
+     * read the press spot whenever one is known.
      */
-    private boolean badSignal(Player holder, Location holderSpot, Location target,
-            SignalInterference.Config interference, Boolean hasLineOfSight) {
-        return reason(holder, holderSpot, target, interference, hasLineOfSight).isPresent();
-    }
-
-    /**
-     * Failing interference option id for one tracking attempt, or empty
-     * when the signal is good or the bypass roll saves it.
-     */
-    private Optional<String> reason(Player holder, Location holderSpot, Location target,
-            SignalInterference.Config interference, Boolean hasLineOfSight) {
+    private Optional<SignalInterference.Reason> reason(Player holder, Location holderSpot,
+            Location target, Location targetPress, SignalInterference.Config interference,
+            Boolean hasLineOfSight) {
         Integer lobby = lobbyOf(holder);
         if (!plugin.overrides().getBoolean(lobby,
                 "settings.compass.signal-interference.enabled", false)) {
@@ -102,10 +108,24 @@ final class CompassSignalService {
         }
         boolean ignoreTransparent = plugin.overrides().getBoolean(lobby,
                 "settings.compass.signal-interference.underground.ignore-transparent", true);
-        SignalInterference.Snapshot targetSnapshot = interference.twoWay()
-                ? targetSnapshot(target, ignoreTransparent) : null;
-        return SignalInterference.lastReason(signalSnapshot(holderSpot, ignoreTransparent),
+        double holderMoved = movedBlocks(holderSpot, holder.getLocation());
+        SignalInterference.Snapshot targetSnapshot = targetSnapshot(target, targetPress,
+                ignoreTransparent);
+        return SignalInterference.lastReason(
+                signalSnapshot(holderSpot, ignoreTransparent, holderMoved),
                 targetSnapshot, interference, ThreadLocalRandom.current().nextDouble(), hasLineOfSight);
+    }
+
+    /**
+     * Blocks moved between two spots: 0 when either spot is missing,
+     * fail-closed huge when the worlds differ or are unknown. Pure.
+     */
+    static double movedBlocks(Location from, Location to) {
+        if (from == null || to == null || from.getWorld() == null || to.getWorld() == null
+                || !from.getWorld().equals(to.getWorld())) {
+            return from == null || to == null ? 0.0 : Double.MAX_VALUE;
+        }
+        return from.distance(to);
     }
 
     /**
@@ -144,22 +164,30 @@ final class CompassSignalService {
                 overrides.getInt(lobby, base + "light-level.min-sky-light", 10),
                 overrides.getInt(lobby, base + "light-level.min-block-light", 5),
                 when,
+                overrides.getBoolean(lobby, base + "light-level.two-way", false),
                 overrides.getBoolean(lobby, base + "underground.enabled", false),
                 overrides.getInt(lobby, base + "underground.max-blocks-above", 3),
-                overrides.getBoolean(lobby, base + "underwater.enabled", true),
+                overrides.getBoolean(lobby, base + "underground.two-way", false),
+                overrides.getBoolean(lobby, base + "underwater.enabled", false),
                 overrides.getInt(lobby, base + "underwater.max-blocks-above", 2),
+                overrides.getBoolean(lobby, base + "underwater.two-way", false),
                 overrides.getBoolean(lobby, base + "altitude.enabled", false),
                 overrides.getInt(lobby, base + "altitude.min-y", -20),
                 overrides.getInt(lobby, base + "altitude.max-y", 120),
+                overrides.getBoolean(lobby, base + "altitude.two-way", false),
                 overrides.getBoolean(lobby, base + "weather.enabled", false),
                 during,
+                overrides.getBoolean(lobby, base + "weather.two-way", false),
                 overrides.getBoolean(lobby, base + "biome.enabled", false),
                 new HashSet<>(overrides.getStringList(lobby, base + "biome.interfere-in")),
+                overrides.getBoolean(lobby, base + "biome.two-way", false),
+                overrides.getBoolean(lobby, base + "movement.enabled", false),
+                overrides.getDouble(lobby, base + "movement.threshold-blocks", 0.2),
+                overrides.getBoolean(lobby, base + "movement.two-way", false),
                 overrides.getBoolean(lobby, base + "line-of-sight.enabled", false),
                 losWhen,
                 overrides.getInt(lobby, base + "line-of-sight.max-ray-distance", 300),
                 overrides.getInt(lobby, base + "required-to-fail", 1),
-                overrides.getBoolean(lobby, base + "two-way", false),
                 overrides.getDouble(lobby, base + "chance-to-bypass", 0.0));
     }
 
@@ -176,32 +204,33 @@ final class CompassSignalService {
         return during;
     }
 
-    /** Parses the light-level interfere-when mode, defaulting to ONE_UNMET. */
+    /** Parses the light-level interfere-when mode, defaulting to BOTH_UNMET. */
     private SignalInterference.InterfereWhen lightInterfereWhen(Integer lobby, String base) {
         try {
             String raw = plugin.overrides()
-                    .getString(lobby, base + "light-level.interfere-when", "ONE_UNMET");
+                    .getString(lobby, base + "light-level.interfere-when", "BOTH_UNMET");
             return SignalInterference.InterfereWhen.valueOf(
-                    (raw == null ? "ONE_UNMET" : raw).trim().toUpperCase(Locale.ROOT));
+                    (raw == null ? "BOTH_UNMET" : raw).trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            return SignalInterference.InterfereWhen.ONE_UNMET;
+            return SignalInterference.InterfereWhen.BOTH_UNMET;
         }
     }
 
-    /** Parses the line-of-sight interfere-when mode, defaulting to VISIBLE. */
+    /** Parses the line-of-sight interfere-when mode, defaulting to NOT_VISIBLE. */
     private SignalInterference.InterfereWhenVisible losInterfereWhen(Integer lobby, String base) {
         try {
             String raw = plugin.overrides()
-                    .getString(lobby, base + "line-of-sight.interfere-when", "VISIBLE");
+                    .getString(lobby, base + "line-of-sight.interfere-when", "NOT_VISIBLE");
             return SignalInterference.InterfereWhenVisible.valueOf(
-                    (raw == null ? "VISIBLE" : raw).trim().toUpperCase(Locale.ROOT));
+                    (raw == null ? "NOT_VISIBLE" : raw).trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            return SignalInterference.InterfereWhenVisible.VISIBLE;
+            return SignalInterference.InterfereWhenVisible.NOT_VISIBLE;
         }
     }
 
     /** Signal snapshot for a spot, read from its feet block. */
-    private SignalInterference.Snapshot signalSnapshot(Location location, boolean ignoreTransparent) {
+    private SignalInterference.Snapshot signalSnapshot(Location location, boolean ignoreTransparent,
+            double movedBlocks) {
         Block block = location.getBlock();
         World world = block.getWorld();
         SignalInterference.Weather weather;
@@ -220,20 +249,25 @@ final class CompassSignalService {
                 fluidBlocksAbove(block),
                 block.getY(),
                 weather,
-                block.getBiome().getKey().toString());
+                block.getBiome().getKey().toString(),
+                movedBlocks,
+                block.getType() == Material.WATER);
     }
 
     /**
-     * Target-side snapshot for two-way checks, or null when the spot's
-     * chunk is not loaded. An unloaded sighting never fails the target
-     * side, so refreshes never force chunk loads.
+     * Target-side snapshot for two-way checks: the press-time spot when
+     * one is known, else the live spot. Null when no spot is known or
+     * its chunk is not loaded, so unloaded sightings never fail the
+     * target side and refreshes never force chunk loads.
      */
-    private SignalInterference.Snapshot targetSnapshot(Location target, boolean ignoreTransparent) {
-        if (target == null || target.getWorld() == null
-                || !target.getWorld().isChunkLoaded(target.getBlockX() >> 4, target.getBlockZ() >> 4)) {
+    private SignalInterference.Snapshot targetSnapshot(Location live, Location press,
+            boolean ignoreTransparent) {
+        Location spot = press != null ? press : live;
+        if (spot == null || spot.getWorld() == null
+                || !spot.getWorld().isChunkLoaded(spot.getBlockX() >> 4, spot.getBlockZ() >> 4)) {
             return null;
         }
-        return signalSnapshot(target, ignoreTransparent);
+        return signalSnapshot(spot, ignoreTransparent, movedBlocks(press, live));
     }
 
     /** Blocks strictly above the feet block, capped for cheap reads. */

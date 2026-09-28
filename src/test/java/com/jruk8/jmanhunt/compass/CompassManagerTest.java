@@ -107,6 +107,28 @@ class CompassManagerTest {
     }
 
     @Test
+    void movedBlocksMeasuresSameWorldDistance() {
+        World world = mock(World.class);
+        Location from = new Location(world, 0.0, 64.0, 0.0);
+        Location to = new Location(world, 3.0, 64.0, 4.0);
+
+        assertEquals(5.0, CompassSignalService.movedBlocks(from, to), 1e-9);
+    }
+
+    @Test
+    void movedBlocksIsZeroWithoutSpotsAndHugeAcrossWorlds() {
+        Location spot = new Location(mock(World.class), 0.0, 64.0, 0.0);
+        Location other = new Location(mock(World.class), 0.0, 64.0, 0.0);
+        Location nowhere = new Location(null, 0.0, 64.0, 0.0);
+
+        assertEquals(0.0, CompassSignalService.movedBlocks(null, null), 1e-9);
+        assertEquals(0.0, CompassSignalService.movedBlocks(null, spot), 1e-9);
+        assertEquals(0.0, CompassSignalService.movedBlocks(spot, null), 1e-9);
+        assertEquals(Double.MAX_VALUE, CompassSignalService.movedBlocks(spot, other), 0.0);
+        assertEquals(Double.MAX_VALUE, CompassSignalService.movedBlocks(spot, nowhere), 0.0);
+    }
+
+    @Test
     void compassKeysFollowRoleWithLegacyFallback() {
         assertEquals("compass.hunter-name", CompassItemService.compassNameKey(Role.HUNTER));
         assertEquals("compass.speedrunner-name", CompassItemService.compassNameKey(Role.SPEEDRUNNER));

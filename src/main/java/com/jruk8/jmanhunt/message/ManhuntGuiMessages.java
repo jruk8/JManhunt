@@ -47,6 +47,12 @@ public class ManhuntGuiMessages extends OkaeriConfig {
     @CustomKey("game-rules-hint")
     private String gameRulesHint = "Tick the game-state rules this server applies.";
 
+    @CustomKey("interfere-during-title")
+    private String interfereDuringTitle = "Interfere During";
+
+    @CustomKey("interfere-during-hint")
+    private String interfereDuringHint = "Tick the weather that interferes with tracking.";
+
     @CustomKey("setting-value")
     private String settingValue = "Value: <white>{value}";
 
