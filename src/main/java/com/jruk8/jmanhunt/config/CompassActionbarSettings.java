@@ -49,12 +49,12 @@ public class CompassActionbarSettings extends OkaeriConfig {
         private boolean enabled = true;
 
         @CustomKey("further-format")
-        @Comment("Format when the rounded distance grew. Default: <green>▲{distance}m")
-        private String furtherFormat = "<green>▲{distance}m";
+        @Comment("Format when the rounded distance grew. Default: <green>▲{distance}")
+        private String furtherFormat = "<green>▲{distance}";
 
         @CustomKey("closer-format")
-        @Comment("Format when the rounded distance shrank. Default: <red>▼{distance}m")
-        private String closerFormat = "<red>▼{distance}m";
+        @Comment("Format when the rounded distance shrank. Default: <red>▼{distance}")
+        private String closerFormat = "<red>▼{distance}";
 
         @CustomKey("max-distance")
         @Comment({

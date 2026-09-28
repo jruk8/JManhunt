@@ -452,7 +452,7 @@ match- or world-wide ones. Keys match case-blindly:
 
 | Tag | Meaning |
 | --- | --- |
-| `<pstat:"<p>",health>` | The player's health, normally 0-20. |
+| `<pstat:<p>,health>` | The player's health, normally 0-20. |
 | `<pstat:Steve,hunger>` | The player's hunger, 0-20. |
 | `<pstat:Steve,mobs-killed>` | Mobs the player killed this match. |
 | `<pstat:Steve,achievements-gained>` | Non-recipe advancements earned this match. |

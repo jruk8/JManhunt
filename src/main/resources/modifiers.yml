@@ -375,17 +375,23 @@ modifiers:
           - ON_RESPAWN
         commands:
           player:
-            # Session kills so far, minus one, clamped to 0-9: the effect
-            # amplifier for this kill. Needs an executor, like all placeholders.
-            - "<lflag:amplifier, <clamp:<placeholder:jmanhunt_game_kills_this_session>-1, 0, 9>>"
-            - "effect give <p> minecraft:health_boost infinite <lflag:amplifier> true"
-            - "effect give <p> minecraft:instant_health 1 <lflag:amplifier> true"
-            # Saturation amplifier follows hunger minus one, clamped to 0-19.
-            - "effect give <p> minecraft:saturation 1 <clamp:<pstat:<p>,hunger>-1, 0, 19> true"
+            # SETTINGS (in half-hearts): total max health cap, and gain per kill.
+            - "<lflag:maxhp,60>"
+            - "<lflag:step,4>"
+            # Cache the baseline the first time this runs for a player.
+            - "<pflag:basehp,<pflag:basehp> ?? <pstat:<p>,max-health>>"
+            # Baseline + step per kill, capped at maxhp (0 kills = baseline).
+            - "<lflag:target,<min:<pflag:basehp>+<lflag:step>*<placeholder:jmanhunt_game_kills_this_session>,<lflag:maxhp>>>"
+            - "attribute <p> minecraft:max_health base set <lflag:target>"
+            # Always heals 2 hearts, even at the cap.
+            - "effect give <p> minecraft:instant_health 1 0 true"
+            # Missing hunger points (0 if already full).
+            - "<lflag:missing,<clamp:20-<pstat:<p>,hunger>,0,20>>"
+            # Only feed if something is missing.
+            - "<if:'<lflag:missing> lt 1','exit','effect give <p> minecraft:saturation 1 <clamp:<lflag:missing>-1,0,19> true'>"
           player-cleanup:
-            - "effect clear <p> minecraft:health_boost"
-            - "effect clear <p> minecraft:instant_health"
-            - "effect clear <p> minecraft:saturation"
+            # Nothing cached means this never ran for the player, so leave their max health alone.
+            - "<if:'<pflag:basehp> == null','exit','attribute <p> minecraft:max_health base set <pflag:basehp>'>"
   # A golden apple for weak speedrunners, at most every five minutes.
   # The flag stamps the last give; exit skips the rest while cooling down.
   speedrunner-gapple-on-low-hp:
@@ -401,7 +407,7 @@ modifiers:
           - INTERVAL
         options:
           interval-settings:
-            interval: 3
+            interval: 2.0
         commands:
           speedrunner:
             - '<if:"<pstat:<p>,health> le 7 and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 gt 300","give <p> golden_apple","exit">'
@@ -416,6 +422,7 @@ presets:
       name: "Vanilla+"
       description: "Light extras that can help balance Manhunts"
       item: GRASS_BLOCK
+      author: JManhunt
     modifiers:
       - everyone-gets-beef
       - regen-on-kill
@@ -425,6 +432,7 @@ presets:
       name: "Speedrunner Buffs"
       description: "Buffs for speedrunners, pressure on hunters"
       item: SUGAR
+      author: JManhunt
     modifiers:
       - speedrunners-speed-potion
       - hunter-start-debuffs
@@ -434,6 +442,7 @@ presets:
       name: "Chaos Mode"
       description: "Random mobs, random items, gear dice"
       item: TNT
+      author: JManhunt
     modifiers:
       - random-mob-spawner
       - random-item-giver
