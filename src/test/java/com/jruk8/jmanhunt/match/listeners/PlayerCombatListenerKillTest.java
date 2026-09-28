@@ -52,6 +52,7 @@ class PlayerCombatListenerKillTest {
         Player killer = mock(Player.class);
         UUID killerId = UUID.randomUUID();
         when(killer.getUniqueId()).thenReturn(killerId);
+        when(killer.getName()).thenReturn("Steve");
         players.setRole(killer, Role.HUNTER);
         when(game.instanceOf(killerId)).thenReturn(Optional.of(instance));
         PlayerCombatListener listener = new PlayerCombatListener(plugin, players, game,
@@ -97,9 +98,9 @@ class PlayerCombatListenerKillTest {
         fixture.listener().onEntityDeath(event);
 
         verify(fixture.commands()).runEventModifiers(
-                eq("ON_PLAYER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
+                eq("ON_PLAYER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Steve", "Alex")));
         verify(fixture.commands()).runEventModifiers(
-                eq("ON_HUNTER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
+                eq("ON_HUNTER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Steve", "Alex")));
         verify(fixture.commands(), never()).runEventModifiers(eq("ON_SPEEDRUNNER_KILLS"), any(),
                 anyLong(), anyList());
         verify(fixture.commands(), never()).runEventModifiers(eq("ON_MOB_KILLED"), any(), anyLong(),
@@ -125,9 +126,9 @@ class PlayerCombatListenerKillTest {
         fixture.listener().onEntityDeath(event);
 
         verify(fixture.commands()).runEventModifiers(
-                eq("ON_PLAYER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
+                eq("ON_PLAYER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Steve", "Alex")));
         verify(fixture.commands()).runEventModifiers(
-                eq("ON_SPEEDRUNNER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
+                eq("ON_SPEEDRUNNER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Steve", "Alex")));
         verify(fixture.commands(), never()).runEventModifiers(eq("ON_HUNTER_KILLS"), any(),
                 anyLong(), anyList());
         verify(fixture.commands(), never()).runEventModifiers(eq("ON_MOB_KILLED"), any(), anyLong(),

@@ -212,6 +212,29 @@ class TagFunctionsTest {
     }
 
     @Test
+    void infiniteRecursionOnTinyStackReportsLoopLimit() throws Exception {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+        context.setProvenance(TagContext.Provenance.of("boom", 0, "console").withLine(1));
+        assertEquals("", fixture.replace("<def:boom,<boom>>", context));
+
+        String[] result = new String[1];
+        // A thread with an explicit tiny stack overflows before the
+        // step budget trips; JVMs that ignore the size still pass
+        // through the budget path with identical assertions.
+        Thread eval = new Thread(null, () -> result[0] = fixture.replace("<boom>", context),
+                "tiny-stack-eval", 256 * 1024L);
+        eval.start();
+        eval.join(30_000);
+
+        assertEquals("null", result[0]);
+        assertEquals(1, fixture.loopLimits.size());
+        String detail = fixture.loopLimits.get(0);
+        assertTrue(detail.contains("boom"), detail);
+        assertTrue(detail.contains("1000"), detail);
+    }
+
+    @Test
     void loopPlusRecursionSharesOneBudget() {
         Fixture fixture = new Fixture();
         TagContext context = fixture.context();

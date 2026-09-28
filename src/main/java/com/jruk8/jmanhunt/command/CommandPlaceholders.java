@@ -92,7 +92,15 @@ public final class CommandPlaceholders {
             TagContext context) {
         context.resetStepBudget();
         String parsed = convertSelectors(command);
-        parsed = evaluateTags(parsed, playerName, context);
+        try {
+            parsed = evaluateTags(parsed, playerName, context);
+        } catch (StackOverflowError exhausted) {
+            // Small stacks can overflow before the step budget trips;
+            // report it as the same loop limit, once per line.
+            context.loopLimitExceeded("Stack exhausted evaluating " + command + " before "
+                    + TagLoops.LOOP_LIMIT + " steps at " + context.provenance().describe());
+            return "null";
+        }
         parsed = applyMath(parsed, context);
         if (playerName != null) {
             parsed = resolveTildes(parsed, x, y, z);

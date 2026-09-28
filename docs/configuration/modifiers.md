@@ -360,7 +360,7 @@ creator editor validates them as you type:
 | `<active-players:HUNTER>` | Eligible hunters as a list, like `[Alex, Bo]`. |
 | `<prole:Alex>` | `HUNTER` or `SPEEDRUNNER` for Alex, else `null`. |
 | `<plocation:Alex>` | Alex's spot as `[x, y, z, pitch, yaw, dimension]`. |
-| `<distance:[0,0,0],[3,4,0]>` | Blocks between two spots: `5`. |
+| `<distance:[0,0,0],[3,4,0]>` | Blocks between two spots: `5`. Full location lists in different dimensions yield `null`. |
 | `<floor:2.7>` | `2`; `<ceil:2.3>` is `3`, `<round:2.5>` is `3`. |
 | `<abs:-4>` | `4`; `<sign:-4>` is `-1` (`0` and `1` for the rest). |
 | `<sqrt:9>` | `3`; `<cbrt:-8>` is `-2`. |

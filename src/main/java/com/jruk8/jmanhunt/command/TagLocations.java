@@ -57,8 +57,10 @@ public final class TagLocations {
     /**
      * {@code <distance:loc1,loc2>}: 3D Euclidean distance on x, y, z
      * only (extra elements ignored, so full primitives work;
-     * pitch/yaw/dimension ignored, including cross-dimension pairs).
-     * Non-lists and non-numeric coords warn plus {@code "null"}.
+     * pitch/yaw ignored). Two full primitives in different
+     * dimensions warn plus {@code "null"}; short lists carry no
+     * dimension and always compare. Non-lists and non-numeric
+     * coords warn plus {@code "null"}.
      */
     static String distance(String tag, String args, TagContext context) {
         List<String> parts = TagLists.splitTopLevel(args);
@@ -73,10 +75,31 @@ public final class TagLocations {
             context.scope().warn("Tag <distance> needs numeric x, y, z in both lists: " + tag);
             return "null";
         }
+        Optional<String> firstDimension = dimension(parts.get(0));
+        Optional<String> secondDimension = dimension(parts.get(1));
+        if (firstDimension.isPresent() && secondDimension.isPresent()
+                && !firstDimension.get().equals(secondDimension.get())) {
+            context.scope().warn("Tag <distance> needs both locations in the same dimension, got '"
+                    + firstDimension.get() + "' and '" + secondDimension.get() + "': " + tag);
+            return "null";
+        }
         double dx = first.get()[0] - second.get()[0];
         double dy = first.get()[1] - second.get()[1];
         double dz = first.get()[2] - second.get()[2];
         return TagMath.formatNumber(Math.sqrt(dx * dx + dy * dy + dz * dz));
+    }
+
+    /** Sixth list item (dimension); empty when the list is not a full primitive. */
+    private static Optional<String> dimension(String segment) {
+        Optional<String> item = CommandPlaceholders.parsePickItem(segment);
+        if (item.isEmpty()) {
+            return Optional.empty();
+        }
+        List<String> elements = TagLists.parse(item.get());
+        if (elements.size() < 6) {
+            return Optional.empty();
+        }
+        return Optional.of(elements.get(5).strip());
     }
 
     /** First three list items as doubles; empty when missing or non-numeric. */

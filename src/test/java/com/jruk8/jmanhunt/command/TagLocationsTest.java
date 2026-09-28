@@ -85,9 +85,29 @@ class TagLocationsTest {
         assertEquals("10", CommandPlaceholders.replace(
                 "<distance:[0,0,0],[0,10,0]>", "Steve", 0, 0, 0, context));
         assertEquals("5", CommandPlaceholders.replace(
-                "<distance:[0, 0, 0, 0, 0, world],[3, 4, 0, 90, 12, world_nether]>",
+                "<distance:[0, 0, 0, 0, 0, world],[3, 4, 0, 90, 12, world]>",
+                "Steve", 0, 0, 0, context));
+        assertEquals("5", CommandPlaceholders.replace(
+                "<distance:[0, 0, 0, 0, 0, world],[3, 4, 0]>",
                 "Steve", 0, 0, 0, context));
         assertTrue(warnings.isEmpty(), warnings.toString());
+    }
+
+    @Test
+    void distanceRejectsCrossDimensionPairs() {
+        List<String> warnings = new ArrayList<>();
+        TagContext context = TagContext.run(
+                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add),
+                "locs", warnings::add, warnings::add,
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                (player, reason) -> { }, (role, reason) -> { },
+                7L, TagBackends.inert());
+
+        assertEquals("null", CommandPlaceholders.replace(
+                "<distance:[0, 0, 0, 0, 0, world],[3, 4, 0, 90, 12, world_nether]>",
+                "Steve", 0, 0, 0, context));
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).contains("same dimension"), warnings.toString());
     }
 
     @Test
