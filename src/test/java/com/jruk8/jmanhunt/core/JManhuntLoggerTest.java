@@ -73,7 +73,7 @@ class JManhuntLoggerTest {
         RecordingSink sink = sink();
         JManhuntLogger logger = logger(Logger.getAnonymousLogger(), new DebugService(), sink);
 
-        logger.debug("debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.INFO, "debug.cell-fetched", Map.of("value", "7"));
 
         assertTrue(sink.console().isEmpty());
         assertTrue(sink.players().isEmpty());
@@ -84,18 +84,58 @@ class JManhuntLoggerTest {
         RecordingSink sink = sink();
         DebugService debug = new DebugService();
         UUID player = UUID.randomUUID();
-        debug.setConsoleEnabled(true);
-        debug.setPlayerEnabled(player, true);
+        debug.setConsoleLevel(DebugLevel.INFO);
+        debug.setPlayerLevel(player, DebugLevel.INFO);
         MessageService messages = messages();
         JManhuntLogger logger = new JManhuntLogger(Logger.getAnonymousLogger(), debug, messages, sink);
 
-        logger.debug("debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.INFO, "debug.cell-fetched", Map.of("value", "7"));
 
         assertEquals(1, sink.console().size());
-        assertEquals("[D] value 7.", plain(sink.console().get(0)));
+        assertEquals("[INFO] [D] value 7.", plain(sink.console().get(0)));
         assertEquals(List.of(player), sink.players());
         assertEquals(1, sink.playerLines().size());
-        assertEquals("[D] value 7.", plain(sink.playerLines().get(0)));
+        assertEquals("[INFO] [D] value 7.", plain(sink.playerLines().get(0)));
+    }
+
+    @Test
+    void debugTagsEachLevel() {
+        RecordingSink sink = sink();
+        DebugService debug = new DebugService();
+        debug.setConsoleLevel(DebugLevel.INFO);
+        JManhuntLogger logger = logger(Logger.getAnonymousLogger(), debug, sink);
+
+        logger.debug(DebugLevel.WARN, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.SEVERE, "debug.cell-fetched", Map.of("value", "7"));
+
+        assertEquals(2, sink.console().size());
+        assertEquals("[WARN] [D] value 7.", plain(sink.console().get(0)));
+        assertEquals("[SEVERE] [D] value 7.", plain(sink.console().get(1)));
+    }
+
+    @Test
+    void debugFiltersPerRecipientLevel() {
+        RecordingSink sink = sink();
+        DebugService debug = new DebugService();
+        UUID severePlayer = UUID.randomUUID();
+        UUID infoPlayer = UUID.randomUUID();
+        debug.setConsoleLevel(DebugLevel.WARN);
+        debug.setPlayerLevel(severePlayer, DebugLevel.SEVERE);
+        debug.setPlayerLevel(infoPlayer, DebugLevel.INFO);
+        JManhuntLogger logger = logger(Logger.getAnonymousLogger(), debug, sink);
+
+        logger.debug(DebugLevel.INFO, "debug.cell-fetched", Map.of("value", "7"));
+        assertTrue(sink.console().isEmpty());
+        assertEquals(List.of(infoPlayer), sink.players());
+
+        logger.debug(DebugLevel.WARN, "debug.cell-fetched", Map.of("value", "7"));
+        assertEquals(1, sink.console().size());
+        assertEquals(List.of(infoPlayer, infoPlayer), sink.players());
+
+        logger.debug(DebugLevel.SEVERE, "debug.cell-fetched", Map.of("value", "7"));
+        assertEquals(2, sink.console().size());
+        assertEquals(4, sink.players().size());
+        assertTrue(sink.players().contains(severePlayer));
     }
 
     private static String plain(Component component) {

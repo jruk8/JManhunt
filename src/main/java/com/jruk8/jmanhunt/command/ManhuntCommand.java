@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SettingType;
 import com.jruk8.jmanhunt.config.DurationFormat;
+import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialogs;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
@@ -199,7 +200,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 {"/manhunt modifiers [setmod|setpreset]", "browse or toggle gameplay modifiers"},
                 {"/manhunt override <lobby> <settings|modifiers|clear> ...", "view or change per-lobby overrides"},
                 {"/manhunt worldengine", "manage lobbies or teleport players"},
-                {"/manhunt debug [on|off]", "toggle debug output"},
+                {"/manhunt debug [INFO|WARN|SEVERE]", "toggle or set debug level"},
                 {"/manhunt challenges", "show Challenges addon info"},
                 {"/manhunt dev schem <pos1|pos2|save|load|list>", "dev schematic tools"},
                 {"/manhunt reload", "reload files"}};
@@ -2092,19 +2093,27 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean debug(CommandSender sender, String[] args) {
-        boolean enabled;
         if (args.length == 1) {
-            enabled = toggleDebug(sender);
-        } else if (args.length == 2 && args[1].equalsIgnoreCase("on")) {
-            enabled = setDebug(sender, true);
-        } else if (args.length == 2 && args[1].equalsIgnoreCase("off")) {
-            enabled = setDebug(sender, false);
-        } else {
-            return message(sender, "manhunt.debug-usage");
+            Optional<DebugLevel> now = toggleDebug(sender);
+            if (now.isEmpty()) {
+                message(sender, "manhunt.debug-disabled");
+            } else {
+                message(sender, "manhunt.debug-enabled", Map.of("level", now.get().name()));
+            }
+            neutralSound(sender);
+            return true;
         }
-        message(sender, enabled ? "manhunt.debug-enabled" : "manhunt.debug-disabled");
-        neutralSound(sender);
-        return true;
+        if (args.length == 2) {
+            DebugLevel level = DebugLevel.parse(args[1]);
+            if (level == null) {
+                return message(sender, "manhunt.debug-usage");
+            }
+            setDebug(sender, level);
+            message(sender, "manhunt.debug-enabled", Map.of("level", level.name()));
+            neutralSound(sender);
+            return true;
+        }
+        return message(sender, "manhunt.debug-usage");
     }
 
     /** Developer tools. Only schem exists for now; usage covers the rest. */
@@ -2119,18 +2128,18 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return modifiersCmd.execute(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
     }
 
-    private boolean toggleDebug(CommandSender sender) {
+    private Optional<DebugLevel> toggleDebug(CommandSender sender) {
         if (sender instanceof Player player) {
             return debugService.togglePlayer(player.getUniqueId());
         }
         return debugService.toggleConsole();
     }
 
-    private boolean setDebug(CommandSender sender, boolean enabled) {
+    private DebugLevel setDebug(CommandSender sender, DebugLevel level) {
         if (sender instanceof Player player) {
-            return debugService.setPlayerEnabled(player.getUniqueId(), enabled);
+            return debugService.setPlayerLevel(player.getUniqueId(), level);
         }
-        return debugService.setConsoleEnabled(enabled);
+        return debugService.setConsoleLevel(level);
     }
 
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
@@ -2388,7 +2397,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return partial(args[3], devSchem.schematicNames());
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
-            return partial(args[1], List.of("on", "off"));
+            return partial(args[1], List.of("INFO", "WARN", "SEVERE"));
         }
         return null;
     }

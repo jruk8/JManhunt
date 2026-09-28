@@ -272,7 +272,7 @@ class SettingRegistryTest {
 
     @Test
     void topCategoriesAreAlphabetical() {
-        assertEquals(List.of("advanced", "debug", "settings", "statistics",
+        assertEquals(List.of("advanced", "settings", "statistics",
                 "update-checker", "world-engine"), SettingRegistry.topCategories());
     }
 

@@ -84,7 +84,7 @@ class ConfigDrillTest {
 
     @Test
     void topLevelChildrenAreRegistryCategories() {
-        assertEquals(List.of("advanced", "debug", "settings", "statistics",
+        assertEquals(List.of("advanced", "settings", "statistics",
                 "update-checker", "world-engine"), ManhuntCommand.drillChildren(List.of(), noLists()));
     }
 

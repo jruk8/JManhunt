@@ -401,7 +401,7 @@ public class ManhuntMessages extends OkaeriConfig {
     private String lobbyWorldengineRequired = "{prefix}<red>Enable the world engine to use multiple lobbies.";
 
     @CustomKey("debug-enabled")
-    private String debugEnabled = "{prefix}<green>Debug mode enabled.";
+    private String debugEnabled = "{prefix}<green>Debug output enabled ({level}).";
 
     @CustomKey("debug-disabled")
     private String debugDisabled = "{prefix}<yellow>Debug mode disabled.";
@@ -514,7 +514,7 @@ public class ManhuntMessages extends OkaeriConfig {
     private String configUsage = "{prefix}<yellow>Usage: /manhunt config <category> <key...> [value]";
 
     @CustomKey("debug-usage")
-    private String debugUsage = "{prefix}<yellow>Usage: /manhunt debug [on|off]";
+    private String debugUsage = "{prefix}<yellow>Usage: /manhunt debug [INFO|WARN|SEVERE]";
 
     @CustomKey("worldengine-lobbyconfig-usage")
     private String worldengineLobbyconfigUsage = "{prefix}<yellow>Usage: /manhunt worldengine lobbyconfig " +

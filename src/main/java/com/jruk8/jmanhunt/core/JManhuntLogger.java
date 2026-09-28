@@ -41,22 +41,26 @@ public final class JManhuntLogger {
         console.fine(message);
     }
 
-    /** Sends a debug.* message to every debug recipient; silent when none exist. */
-    public void debug(String key) {
-        debug(key, Map.of());
+    /** Sends a debug.* message to recipients whose level shows it; silent when none exist. */
+    public void debug(DebugLevel level, String key) {
+        debug(level, key, Map.of());
     }
 
-    /** Sends a debug.* message to every debug recipient; silent when none exist. */
-    public void debug(String key, Map<String, String> values) {
+    /** Sends a debug.* message to recipients whose level shows it; silent when none exist. */
+    public void debug(DebugLevel level, String key, Map<String, String> values) {
         if (!debug.hasRecipients()) {
             return;
         }
-        Component rendered = messages.component(key, values);
-        if (debug.isConsoleEnabled()) {
+        Component rendered = Component.text("[" + level.name() + "] ")
+                .append(messages.component(key, values));
+        DebugLevel consoleLevel = debug.consoleLevel();
+        if (consoleLevel != null && consoleLevel.shows(level)) {
             sink.sendToConsole(rendered);
         }
-        for (UUID playerId : debug.debugPlayerIds()) {
-            sink.sendToPlayer(playerId, rendered);
+        for (Map.Entry<UUID, DebugLevel> entry : debug.playerLevels().entrySet()) {
+            if (entry.getValue().shows(level)) {
+                sink.sendToPlayer(entry.getKey(), rendered);
+            }
         }
     }
 }

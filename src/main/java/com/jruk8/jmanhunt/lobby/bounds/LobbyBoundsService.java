@@ -135,7 +135,7 @@ public final class LobbyBoundsService implements Listener {
      * pending lobby and dev schem corners.
      */
     private void showBoundsParticles() {
-        if (debug.debugPlayerIds().isEmpty()) {
+        if (debug.playerLevels().isEmpty()) {
             return;
         }
         Map<Integer, LobbyBounds.Bound> bounds = boundsByLobby();
@@ -143,7 +143,7 @@ public final class LobbyBoundsService implements Listener {
         ids.sort(Integer::compareTo);
         double radiusSquared = LobbyBoundsPalette.CHECK_RADIUS_BLOCKS * LobbyBoundsPalette.CHECK_RADIUS_BLOCKS;
         String lobbyWorld = lobbyWorldName.get();
-        for (UUID playerId : debug.debugPlayerIds()) {
+        for (UUID playerId : debug.playerLevels().keySet()) {
             Player player = Bukkit.getPlayer(playerId);
             if (player == null) {
                 continue;

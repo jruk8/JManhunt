@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.world.end;
 
+import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.world.DimensionWorlds;
 import com.jruk8.jmanhunt.world.FileUtils;
@@ -165,7 +166,7 @@ public final class EndCellManager {
         String name = pool.get(chosen);
         reservations.put(matchId, name);
         persistReservation(matchId, name);
-        plugin.logger().debug("debug.end-cell-reserved",
+        plugin.logger().debug(DebugLevel.INFO, "debug.end-cell-reserved",
                 Map.of("cell", name, "id", String.valueOf(matchId)));
         World world = loadDimension(name);
         if (world == null) {
@@ -203,7 +204,7 @@ public final class EndCellManager {
         }
         reservations.remove(matchId);
         dropReservation(matchId);
-        plugin.logger().debug("debug.end-cell-reset", Map.of("cell", name));
+        plugin.logger().debug(DebugLevel.INFO, "debug.end-cell-reset", Map.of("cell", name));
         return true;
     }
 
@@ -221,7 +222,7 @@ public final class EndCellManager {
         Set<Long> assigned = assignedNumbers(config.endBaseName());
         Set<Long> free = new TreeSet<>(pool.keySet());
         free.removeAll(assigned);
-        plugin.logger().debug("debug.end-pool-scan", Map.of(
+        plugin.logger().debug(DebugLevel.INFO, "debug.end-pool-scan", Map.of(
                 "container", container.getAbsolutePath(),
                 "entries", String.valueOf(entries.size()),
                 "pool", describe(pool.keySet()),
@@ -274,7 +275,7 @@ public final class EndCellManager {
             return OptionalLong.empty();
         }
         long n = nextN(pool.keySet());
-        plugin.logger().debug("debug.end-cell-topup", Map.of(
+        plugin.logger().debug(DebugLevel.INFO, "debug.end-cell-topup", Map.of(
                 "cell", poolName(config.endBaseName(), n),
                 "pool", describe(pool.keySet())));
         if (generateDimension(config, n, seed.getAsLong()) == null) {
@@ -377,7 +378,7 @@ public final class EndCellManager {
         boolean loaded = Bukkit.getWorld(name) != null;
         boolean folder = loaded
                 || DimensionWorlds.unloadedFolder(worldContainer(), config.worldName(), name).isDirectory();
-        plugin.logger().debug("debug.end-cell-create-attempt", Map.of(
+        plugin.logger().debug(DebugLevel.INFO, "debug.end-cell-create-attempt", Map.of(
                 "cell", name,
                 "loaded", String.valueOf(loaded),
                 "folder", String.valueOf(folder)));
@@ -389,7 +390,7 @@ public final class EndCellManager {
             plugin.logger().warning("Could not generate end dimension " + name + ".");
             return null;
         }
-        plugin.logger().debug("debug.end-cell-created", Map.of("cell", name));
+        plugin.logger().debug(DebugLevel.INFO, "debug.end-cell-created", Map.of("cell", name));
         return created;
     }
 
@@ -425,7 +426,7 @@ public final class EndCellManager {
             plugin.logger().warning("Failed to delete end dimension " + name + ": " + exception.getMessage());
             return false;
         }
-        plugin.logger().debug("debug.end-cell-pruned", Map.of("cell", name));
+        plugin.logger().debug(DebugLevel.INFO, "debug.end-cell-pruned", Map.of("cell", name));
         return true;
     }
 

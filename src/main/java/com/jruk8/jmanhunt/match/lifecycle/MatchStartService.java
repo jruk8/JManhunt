@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
+import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
 import com.jruk8.jmanhunt.api.events.JMatchStartEvent;
@@ -170,7 +171,7 @@ public final class MatchStartService {
         applyStartState(instance, participants, spectators, lobbyId);
         publishMatchStart(instance, participants, spectators, lobbyId, matchCell);
         beginMatchPlay(instance);
-        plugin.logger().debug("debug.match-start",
+        plugin.logger().debug(DebugLevel.INFO, "debug.match-start",
                 Map.of("lobby", String.valueOf(lobbyId), "index", GameManager.cellString(instance)));
         return true;
     }

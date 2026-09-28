@@ -164,7 +164,12 @@ allocation or chunk generation. See
 
 ## Debug Output
 
-`/manhunt debug [on|off]` toggles terse lifecycle lines (cell fetches,
-buffer fills, match starts and ends, end-cell operations, border mode
-changes, and portal reroutes) for yourself, or for the console when run
-from it. `debug.enabled` in `config.yml` sets the console default.
+`/manhunt debug [INFO|WARN|SEVERE]` sets the level of the terse
+lifecycle lines (cell fetches, buffer fills, match starts and ends,
+end-cell operations, border mode changes, and portal reroutes) for
+yourself, or for the console when run from it. Bare `/manhunt debug`
+toggles output on at INFO or off. Each line carries its level tag:
+`[INFO]` for routine flow, `[WARN]` for degraded paths such as lobby
+fallbacks, `[SEVERE]` for failures needing admin attention. SEVERE
+shows only severe lines, WARN adds warnings, INFO shows all. Nothing
+persists across restarts; there is no config default.

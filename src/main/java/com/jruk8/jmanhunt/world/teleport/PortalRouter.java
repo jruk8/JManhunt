@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.world.teleport;
 
+import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.JManhuntPlugin;
@@ -77,7 +78,7 @@ public final class PortalRouter implements Listener {
             return;
         }
         event.setTo(new Location(to.getWorld(), inside[0], to.getY(), inside[1], to.getYaw(), to.getPitch()));
-        plugin.logger().debug("debug.portal-reroute",
+        plugin.logger().debug(DebugLevel.INFO, "debug.portal-reroute",
                 Map.of("player", player.getName(), "cell", String.valueOf(cell)));
     }
 
@@ -93,7 +94,7 @@ public final class PortalRouter implements Listener {
                 return;
             }
             event.setTo(root.get());
-            plugin.logger().debug("debug.portal-reroute",
+            plugin.logger().debug(DebugLevel.INFO, "debug.portal-reroute",
                     Map.of("player", player.getName(), "cell", String.valueOf(cell)));
         } else if (fromWorld.getEnvironment() == World.Environment.NORMAL) {
             Optional<World> end = worldEngine.assignMatchEndWorld(instance.matchId());
@@ -107,7 +108,7 @@ public final class PortalRouter implements Listener {
                 to.setWorld(end.get());
             }
             event.setTo(to);
-            plugin.logger().debug("debug.portal-reroute",
+            plugin.logger().debug(DebugLevel.INFO, "debug.portal-reroute",
                     Map.of("player", player.getName(), "cell", end.get().getName()));
         }
     }

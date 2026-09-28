@@ -66,14 +66,6 @@ public class JManhuntConfig extends OkaeriConfig {
     private UpdateCheckerConfig updateChecker = new UpdateCheckerConfig();
 
     @Comment({
-            "Debug output for pinpointing laggy configuration, such as cell fetches and",
-            "game starts. Toggled at runtime per player or for the console with",
-            "/manhunt debug. This value is only the default applied on restart.",
-            "Default: false"
-    })
-    private DebugConfig debug = new DebugConfig();
-
-    @Comment({
             "Persistent career statistics. SQLite is local and requires no setup. Use",
             "PostgreSQL when several JManhunt servers should share the same statistics.",
             "If you are upgrading from an older version, rename your existing jmanhunt.db",
@@ -127,14 +119,6 @@ public class JManhuntConfig extends OkaeriConfig {
 
     public void setUpdateChecker(UpdateCheckerConfig updateChecker) {
         this.updateChecker = updateChecker;
-    }
-
-    public DebugConfig getDebug() {
-        return debug;
-    }
-
-    public void setDebug(DebugConfig debug) {
-        this.debug = debug;
     }
 
     public StatisticsConfig getStatistics() {

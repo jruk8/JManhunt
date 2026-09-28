@@ -444,7 +444,6 @@ public final class SettingRegistry {
         entries.add(bool("update-checker.releases.major", true));
         entries.add(bool("update-checker.releases.minor", true));
         entries.add(bool("update-checker.releases.hotfix", false));
-        entries.add(bool("debug.enabled", false));
     }
 
     private static void addStatisticsEntries(List<SettingDescriptor> entries) {

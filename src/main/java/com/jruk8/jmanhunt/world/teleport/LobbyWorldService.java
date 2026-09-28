@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.world.teleport;
 
+import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
@@ -206,7 +207,7 @@ public final class LobbyWorldService {
         }
         int fallback = tps.keySet().stream().min(Integer::compare).orElseThrow();
         if (logFallback) {
-            plugin.logger().debug("debug.lobby-fallback", Map.of(
+            plugin.logger().debug(DebugLevel.WARN, "debug.lobby-fallback", Map.of(
                     "lobby", String.valueOf(lobbyId), "fallback", String.valueOf(fallback)));
         }
         return toLobbyLocation(lobbyWorld, tps.get(fallback));
@@ -245,7 +246,7 @@ public final class LobbyWorldService {
         if (lobby != null) {
             return lobby;
         }
-        plugin.logger().debug("debug.lobby-missing", Map.of("lobby", String.valueOf(lobbyId)));
+        plugin.logger().debug(DebugLevel.SEVERE, "debug.lobby-missing", Map.of("lobby", String.valueOf(lobbyId)));
         if (!announce) {
             return null;
         }

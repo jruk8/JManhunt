@@ -190,7 +190,6 @@ public final class JManhuntPlugin extends JavaPlugin {
         setupEngineState();
         stats = new StatsManager(this, messages, statistics);
         stats.loadLobbySessionsAsync();
-        debugService.resetToDefaults(configService.getBoolean("debug.enabled", false));
         guiService = new GuiService(sounds);
         tutorialService = new TutorialService(tutorialConfigs.getTutorialConfig(),
                 new JManhuntTutorialMessenger(messages),

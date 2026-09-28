@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
+import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.api.events.JMatchCancelEvent;
 import com.jruk8.jmanhunt.api.events.JMatchEndEvent;
@@ -461,7 +462,7 @@ public final class MatchFinishService {
         stats.clearMatch(teardownId);
         flagStore.clearMatch(teardownId);
         store.removeInstance(teardownId);
-        plugin.logger().debug("debug.match-end", Map.of("index", GameManager.cellString(instance)));
+        plugin.logger().debug(DebugLevel.INFO, "debug.match-end", Map.of("index", GameManager.cellString(instance)));
         worldEngine.prepareNextCell();
         autostart.updateAutostartState();
     }
