@@ -40,6 +40,12 @@ public final class CompassManager {
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
     /** Last rounded distance per holder and tracking key plus target. */
     private final Map<UUID, Map<String, Long>> lastRoundedDistances = new HashMap<>();
+    /** Blink revert generation per holder; stale reverts never land. */
+    private final Map<UUID, Long> deltaGenerations = new HashMap<>();
+    /** Analysis press-time holder spots, consumed by one resolution. */
+    private final Map<UUID, Location> analysisSpots = new HashMap<>();
+    /** Analysis press-time target spots per holder, consumed by one resolution. */
+    private final Map<UUID, Map<UUID, Location>> analysisTargets = new HashMap<>();
     private GameManager game;
 
     public CompassManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
@@ -52,7 +58,7 @@ public final class CompassManager {
         this.signal = new CompassSignalService(plugin, playerStates);
         this.locks = new CompassLockService(plugin, playerStates, sounds, messages, targets,
                 compassActionbars, this::refreshCompass, this::resolveClickRefresh,
-                this::renderFromCache, cache, lastClick);
+                this::renderFromCache, this::beginAnalysisSpot, cache, lastClick);
         this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
     }
 
@@ -72,7 +78,10 @@ public final class CompassManager {
         if (active) {
             // The automatic clock only: holders refreshed less than an
             // interval ago keep their fresh target. Right-clicks stamp
-            // this clock too, so each click restarts the interval.
+            // this clock too, so each click restarts the interval. The
+            // caller ticks fast (every few ticks); per-holder gating
+            // keeps each interval strict instead of quantizing everyone
+            // to one shared beat.
             long now = System.currentTimeMillis();
             Bukkit.getOnlinePlayers().stream()
                     .filter(p -> role(p).isParticipant())
@@ -82,17 +91,14 @@ public final class CompassManager {
                     .forEach(holder -> {
                         UUID id = holder.getUniqueId();
                         Integer lobby = lobbyOf(holder);
-                        long intervalMs = (long) (plugin.overrides().getDouble(lobby,
-                                "settings.compass.refresh-interval", 10.0) * 1000);
-                        if (!shouldRefresh(now, lastAutoRefresh.getOrDefault(id, 0L), intervalMs)) {
+                        double intervalSeconds = plugin.overrides().getDouble(lobby,
+                                "settings.compass.refresh-interval", 10.0);
+                        if (!autoRefreshDue(now, lastAutoRefresh.getOrDefault(id, 0L),
+                                intervalSeconds)) {
                             return;
                         }
                         lastAutoRefresh.put(id, now);
-                        if (locks.analyzeEnabled(lobby, true)) {
-                            locks.startAnalysis(holder, false);
-                        } else {
-                            refreshCompass(holder);
-                        }
+                        refreshCompass(holder);
                     });
         }
     }
@@ -100,6 +106,18 @@ public final class CompassManager {
     /** True when the cooldown has elapsed since the last refresh. Pure for tests. */
     static boolean shouldRefresh(long nowMillis, long lastMillis, long cooldownMs) {
         return nowMillis - lastMillis >= cooldownMs;
+    }
+
+    /**
+     * True when a holder is due for an automatic refresh: a negative
+     * interval disables it, otherwise the full interval must have
+     * elapsed since the last automatic or click refresh. Pure for tests.
+     */
+    static boolean autoRefreshDue(long nowMillis, long lastMillis, double intervalSeconds) {
+        if (intervalSeconds < 0.0) {
+            return false;
+        }
+        return shouldRefresh(nowMillis, lastMillis, (long) (intervalSeconds * 1000));
     }
 
     public void showHeldActionbars(boolean active) {
@@ -114,6 +132,7 @@ public final class CompassManager {
                     if (isVanillaSpectator(p)) {
                         compassActionbars.remove(p.getUniqueId());
                         lastRoundedDistances.remove(p.getUniqueId());
+                        deltaGenerations.remove(p.getUniqueId());
                         return;
                     }
                     p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
@@ -171,6 +190,65 @@ public final class CompassManager {
      * false so click callers can play the failure sound instead.
      */
     boolean refreshCompassOutcome(Player holder) {
+        UUID id = holder.getUniqueId();
+        // Analysis resolutions consume the press-time snapshots; every
+        // other path renders from live positions.
+        boolean analysis = analysisSpots.containsKey(id);
+        try {
+            return refreshCompassResolved(holder);
+        } finally {
+            if (analysis) {
+                analysisSpots.remove(id);
+                analysisTargets.remove(id);
+            }
+        }
+    }
+
+    /**
+     * Snapshots the analysis press: the holder's spot plus every
+     * candidate's spot, so the delayed resolution compares
+     * press-time positions instead of moved ones.
+     */
+    private void beginAnalysisSpot(Player holder) {
+        UUID id = holder.getUniqueId();
+        analysisSpots.put(id, holder.getLocation().clone());
+        if (game == null) {
+            return;
+        }
+        Optional<GameInstance> match = game.instanceOf(id);
+        if (match.isEmpty()) {
+            return;
+        }
+        int cap = CompassCache.clampMaxTargets(plugin.overrides()
+                .getInt(lobbyOf(holder), "settings.compass.left-click.max-targets", 5));
+        Map<UUID, Location> spots = new HashMap<>();
+        for (CompassSnapshot snap : targets.collectSnapshots(holder, Role.HUNTER, match.get(), cap)) {
+            spots.put(snap.id(), snap.location());
+        }
+        for (CompassSnapshot snap : targets.collectSnapshots(holder, Role.SPEEDRUNNER, match.get(), cap)) {
+            spots.put(snap.id(), snap.location());
+        }
+        analysisTargets.put(id, spots);
+    }
+
+    /**
+     * Cached holder spot when one is pending for this resolution and
+     * still in the holder's world, else the live location. A world
+     * change mid-analysis voids the cache. Pure for tests.
+     */
+    static Location effectiveSpot(Location cached, Location live) {
+        if (cached != null && cached.getWorld() != null && cached.getWorld().equals(live.getWorld())) {
+            return cached;
+        }
+        return live;
+    }
+
+    /** Resolution spot for one holder: press-time when analyzing, live otherwise. */
+    private Location resolutionSpot(Player holder) {
+        return effectiveSpot(analysisSpots.get(holder.getUniqueId()), holder.getLocation());
+    }
+
+    private boolean refreshCompassResolved(Player holder) {
         Optional<RefreshSlot> slot = refreshSlot(holder);
         if (slot.isEmpty()) {
             return false;
@@ -277,7 +355,7 @@ public final class CompassManager {
     private boolean renderCompassPick(Player holder, ItemStack item, int slot, CompassPick pick,
             String targetRoleString, boolean locked) {
         Optional<String> reason = pick.kind() == CompassPick.Kind.NONE
-                ? Optional.empty() : signal.reasonForPick(holder, pick);
+                ? Optional.empty() : signal.reasonForPick(holder, resolutionSpot(holder), pick);
         if (reason.isPresent()) {
             showBadSignal(holder, item, slot, reason.get());
             return false;
@@ -372,11 +450,9 @@ public final class CompassManager {
         setLodestone(item, spot);
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
-        compassActionbars.put(holder.getUniqueId(), component(
-                key,
-                Map.of("player", pick.name(),
-                        "distance",
-                        distanceText(holder, key, pick.id(), holder.getLocation().distance(spot)))));
+        putTrackingBar(holder, key, pick.name(),
+                distanceRender(holder, key, pick.id(), resolutionSpot(holder).distance(spot)),
+                Map.of());
     }
 
     /** Reasonless Bad Signal for uncached switch targets, by spec. */
@@ -413,12 +489,10 @@ public final class CompassManager {
         setLodestone(item, target.getLocation());
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
-        compassActionbars.put(holder.getUniqueId(), component(
-                key,
-                Map.of("player", target.getName(),
-                        "distance",
-                        distanceText(holder, key, pick.id(),
-                                holder.getLocation().distance(target.getLocation())))));
+        putTrackingBar(holder, key, target.getName(),
+                distanceRender(holder, key, pick.id(),
+                        resolutionSpot(holder).distance(target.getLocation())),
+                Map.of());
         return true;
     }
 
@@ -437,31 +511,34 @@ public final class CompassManager {
         holder.getInventory().setItem(slot, item);
         String reason = seen != null ? "Another Dimension" : "Log-Out";
         String key = trackingKey(holder, locked, true);
-        compassActionbars.put(holder.getUniqueId(), component(
-                key,
-                Map.of("player", pick.name(),
-                        "distance",
-                        distanceText(holder, key, pick.id(),
-                                holder.getLocation().distance(location)),
-                        "reason", reason)));
+        putTrackingBar(holder, key, pick.name(),
+                distanceRender(holder, key, pick.id(), resolutionSpot(holder).distance(location)),
+                Map.of("reason", reason));
         return true;
+    }
+
+    /** Rendered distance plus its plain form and whether it blinked. */
+    private record DistanceRender(String text, String plain, boolean blinked) {
     }
 
     /**
      * Distance substitution for one tracking actionbar: the plain rounded
      * meters, or the delta triangle format when the target moved enough
-     * since this holder last saw it under the same tracking key.
+     * since this holder last saw it under the same tracking key. BLINK
+     * mode flags the render so the bar reverts to plain shortly after.
      */
-    private String distanceText(Player holder, String trackingKey, UUID targetId, double distance) {
+    private DistanceRender distanceRender(Player holder, String trackingKey, UUID targetId,
+            double distance) {
         long rounded = Math.round(distance);
         String plain = String.valueOf(rounded);
+        DistanceRender plainRender = new DistanceRender(plain, plain, false);
         if (!Double.isFinite(distance) || distance < 0.0) {
-            return plain;
+            return plainRender;
         }
         Integer lobby = lobbyOf(holder);
         String base = "settings.compass.actionbar.show-distance-delta.";
         if (!plugin.overrides().getBoolean(lobby, base + "enabled", true)) {
-            return plain;
+            return plainRender;
         }
         String historyKey = trackingKey + "|" + targetId;
         Map<String, Long> history =
@@ -471,15 +548,57 @@ public final class CompassManager {
         double minDelta = plugin.overrides().getDouble(lobby, base + "min-delta-to-show", 5.0);
         DistanceDelta.Kind kind = DistanceDelta.of(previous, rounded, maxDistance, minDelta);
         history.put(historyKey, rounded);
-        return switch (kind) {
-            case FURTHER -> plugin.overrides()
-                    .getString(lobby, base + "further-format", "<green>▲{distance}m")
-                    .replace("{distance}", plain);
-            case CLOSER -> plugin.overrides()
-                    .getString(lobby, base + "closer-format", "<red>▼{distance}m")
-                    .replace("{distance}", plain);
-            case SAME -> plain;
-        };
+        if (kind == DistanceDelta.Kind.SAME) {
+            return plainRender;
+        }
+        boolean hold = DistanceDelta.Mode.parse(
+                plugin.overrides().getString(lobby, base + "mode", "BLINK")) == DistanceDelta.Mode.HOLD;
+        long blinkTicks = blinkDelayTicks(plugin.overrides()
+                .getDouble(lobby, base + "blink-duration-seconds", 0.6));
+        boolean blink = !hold && blinkTicks > 0;
+        if (!hold && !blink) {
+            return plainRender;
+        }
+        String formatted = kind == DistanceDelta.Kind.FURTHER
+                ? plugin.overrides().getString(lobby, base + "further-format", "<green>▲{distance}")
+                : plugin.overrides().getString(lobby, base + "closer-format", "<red>▼{distance}");
+        return new DistanceRender(formatted.replace("{distance}", plain), plain, blink);
+    }
+
+    /**
+     * Stores one tracking actionbar, scheduling the plain revert for
+     * blinked deltas. The revert only lands when no newer render
+     * replaced it and the holder is still online.
+     */
+    private void putTrackingBar(Player holder, String key, String playerName, DistanceRender render,
+            Map<String, String> extra) {
+        Map<String, String> slots = new HashMap<>(extra);
+        slots.put("player", playerName);
+        slots.put("distance", render.text());
+        compassActionbars.put(holder.getUniqueId(), component(key, slots));
+        if (!render.blinked()) {
+            return;
+        }
+        slots.put("distance", render.plain());
+        Component plainBar = component(key, slots);
+        UUID id = holder.getUniqueId();
+        long generation = deltaGenerations.merge(id, 1L, Long::sum);
+        long delayTicks = blinkDelayTicks(plugin.overrides().getDouble(lobbyOf(holder),
+                "settings.compass.actionbar.show-distance-delta.blink-duration-seconds", 0.6));
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (deltaGenerations.getOrDefault(id, 0L) != generation) {
+                return;
+            }
+            if (Bukkit.getPlayer(id) == null) {
+                return;
+            }
+            compassActionbars.put(id, plainBar);
+        }, Math.max(1L, delayTicks));
+    }
+
+    /** Blink revert delay in ticks, never negative. Pure for tests. */
+    static long blinkDelayTicks(double seconds) {
+        return Math.max(0L, Math.round(Math.max(0.0, seconds) * 20.0));
     }
 
     private void showNoTarget(Player holder, ItemStack item, int slot, String targetRoleString) {
@@ -559,6 +678,9 @@ public final class CompassManager {
     public void removeCompasses(Player player) {
         items.removeCompasses(player);
         lastRoundedDistances.remove(player.getUniqueId());
+        deltaGenerations.remove(player.getUniqueId());
+        analysisSpots.remove(player.getUniqueId());
+        analysisTargets.remove(player.getUniqueId());
     }
 
     public boolean isCompass(ItemStack item) {
@@ -605,8 +727,8 @@ public final class CompassManager {
         // cooldown runs after the refresh. Left and shift-left clicks use
         // their own throttles and never touch this cooldown.
         lastAutoRefresh.put(player.getUniqueId(), now);
-        if (locks.analyzeEnabled(lobby, false)) {
-            locks.startAnalysis(player, true);
+        if (locks.analyzeEnabled(lobby)) {
+            locks.startAnalysis(player);
             return;
         }
         lastClick.put(player.getUniqueId(), now);

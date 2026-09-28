@@ -55,6 +55,8 @@ final class CompassLockService {
     private final Consumer<Player> clickResolver;
     /** Cache-only render for accepted clicks; never fetches or refreshes. */
     private final Consumer<Player> cacheRenderer;
+    /** Press-time snapshot hook, run once when an analysis starts. */
+    private final Consumer<Player> analysisStarter;
     /** Location snapshots written by refresh events, read by clicks. */
     private final CompassCache cache;
     /** Manual left-click target locks: holder id -> locked target id. */
@@ -75,7 +77,8 @@ final class CompassLockService {
     CompassLockService(JManhuntPlugin plugin, PlayerStateStore playerStates, SoundService sounds,
             MessageService messages, CompassTargetService targets,
             Map<UUID, Component> actionbars, Consumer<Player> refresher,
-            Consumer<Player> clickResolver, Consumer<Player> cacheRenderer, CompassCache cache,
+            Consumer<Player> clickResolver, Consumer<Player> cacheRenderer,
+            Consumer<Player> analysisStarter, CompassCache cache,
             Map<UUID, Long> sharedClicks) {
         this.plugin = plugin;
         this.playerStates = playerStates;
@@ -86,6 +89,7 @@ final class CompassLockService {
         this.refresher = refresher;
         this.clickResolver = clickResolver;
         this.cacheRenderer = cacheRenderer;
+        this.analysisStarter = analysisStarter;
         this.cache = cache;
         this.sharedClicks = sharedClicks;
     }
@@ -428,19 +432,19 @@ final class CompassLockService {
     }
 
     /**
-     * Purposeful analysis lag before a refresh resolves: shows
-     * "Analyzing...", ticks the analysis sound on the configured interval,
-     * waits out the jittered delay, then refreshes. No second analysis
-     * starts while one runs. Click-initiated runs stamp the shared click
-     * cooldown at resolution, so the full cooldown runs after the refresh;
-     * they close with the outcome click sound (refresh or failure) while
-     * automatic runs stay silent at the end.
+     * Purposeful analysis lag before a right-click refresh resolves:
+     * shows "Analyzing...", ticks the analysis sound on the configured
+     * interval, waits out the jittered delay, then refreshes. No second
+     * analysis starts while one runs. Runs stamp the shared click
+     * cooldown at resolution, so the full cooldown runs after the
+     * refresh, and close with the outcome click sound.
      */
-    void startAnalysis(Player holder, boolean fromClick) {
+    void startAnalysis(Player holder) {
         UUID id = holder.getUniqueId();
         if (!analyzing.add(id)) {
             return;
         }
+        analysisStarter.accept(holder);
         long generation = generations.merge(id, 1L, Long::sum);
         Integer lobby = lobbyOf(holder);
         double effectiveDelay = jitteredDelay(
@@ -465,10 +469,8 @@ final class CompassLockService {
         long delayTicks = analyzeDelayTicks(effectiveDelay);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             analyzing.remove(id);
-            if (fromClick) {
-                sharedClicks.put(id, System.currentTimeMillis());
-            }
-            if (fromClick && holder.isOnline()) {
+            sharedClicks.put(id, System.currentTimeMillis());
+            if (holder.isOnline()) {
                 clickResolver.accept(holder);
             } else {
                 refresher.accept(holder);
@@ -676,8 +678,7 @@ final class CompassLockService {
                 + soundId + "\"");
     }
 
-    boolean analyzeEnabled(Integer lobby, boolean auto) {
-        return plugin.overrides().getBoolean(lobby, auto
-                ? "settings.compass.analysis.auto" : "settings.compass.analysis.right-click", false);
+    boolean analyzeEnabled(Integer lobby) {
+        return plugin.overrides().getBoolean(lobby, "settings.compass.analysis.enabled", false);
     }
 }

@@ -111,6 +111,9 @@ drop-on-death:
 
 Under `settings.compass.refresh-interval`, you can configure how often the
 compass should refresh its target. Set to -1 to disable automatic refreshing.
+Each holder runs their own interval: two players who clicked at different
+times refresh at different times, and a holder who just joined refreshes
+on the next tick.
 
 ```yaml
 refresh-interval: 10.0        # in seconds
@@ -211,10 +214,12 @@ actionbar:
   refresh-ticks: 1
   show-distance-delta:
     enabled: true
-    further-format: "<green>▲{distance}m"
-    closer-format: "<red>▼{distance}m"
+    further-format: "<green>▲{distance}"
+    closer-format: "<red>▼{distance}"
     max-distance: 200.0
     min-delta-to-show: 5.0
+    mode: BLINK
+    blink-duration-seconds: 0.6
 ```
 
 `show-distance-delta` colors the distance by movement since the last
@@ -224,7 +229,12 @@ any refresh where the rounded distance did not change, renders the
 plain white distance. Deltas only show within `max-distance` meters,
 and only when the change reaches `min-delta-to-show` meters, so
 small wobbles far away do not clutter the screen. Both formats
-support `{distance}` and MiniMessage.
+support `{distance}` and MiniMessage (the bar itself adds the `m`).
+
+`mode` picks how long the triangle stays: `HOLD` keeps it until the
+next refresh, `BLINK` shows it for `blink-duration-seconds`, then
+reverts to the plain white distance. A blink of `0` skips the
+triangle entirely.
 
 ## Chat Messages
 
@@ -249,28 +259,31 @@ a dimension you are not in. There is nothing to configure.
 
 ## Analysis Delay
 
-Under `settings.compass.analysis`, a refresh can take a purposeful moment to
-resolve instead of answering instantly. While analyzing, the actionbar reads
-`Analyzing...`, no second refresh can start, and compass clicks are
-ignored until it resolves. The automatic clock stamps when the analysis
-starts, but the shared click cooldown stamps when it resolves, so the
-full cooldown always runs after the refresh:
+Under `settings.compass.analysis`, a right-click refresh can take a
+purposeful moment to resolve instead of answering instantly. Analysis
+is strictly right-click only: automatic interval refreshes always
+resolve at once. While analyzing, the actionbar reads `Analyzing...`,
+no second refresh can start, and compass clicks are ignored until it
+resolves. The automatic clock stamps when the analysis starts, but
+the shared click cooldown stamps when it resolves, so the full
+cooldown always runs after the refresh. Interference checks and the
+distance math use your position from when you pressed analyze, not
+where you moved to during the delay:
 
 ```yaml
-analyze:
-  right-click: false
-  auto: false
+analysis:
+  enabled: false
   delay-seconds: 1.0
   delay-deviation-seconds: 0.0
 ```
 
-`right-click` covers manual refreshes, `auto` covers interval refreshes;
-enable either or both. `delay-seconds` is how long each analysis takes,
-and `delay-deviation-seconds` adds a random plus-or-minus jitter per
+`delay-seconds` is how long each analysis takes, and
+`delay-deviation-seconds` adds a random plus-or-minus jitter per
 analysis (capped at the delay, `0` for none).
 `sound-interval-seconds` ticks the analysis sound while it runs (rounded
-to whole ticks, at least one, at most 3 seconds). A click analysis ends
-with the refresh click sound; automatic analyses resolve silently.
+to whole ticks, at least one, at most 3 seconds). An analysis ends
+with the refresh click sound on success, or the failure sound when
+the needle lands on nothing trackable.
 
 ### Analysis Debuffs
 

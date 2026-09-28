@@ -28,4 +28,14 @@ class DistanceDeltaTest {
         assertEquals(DistanceDelta.Kind.SAME, DistanceDelta.of(10L, 201L, 200.0, 5.0));
         assertEquals(DistanceDelta.Kind.FURTHER, DistanceDelta.of(10L, 200L, 200.0, 5.0));
     }
+
+    @Test
+    void modeParsesWithBlinkFallback() {
+        assertEquals(DistanceDelta.Mode.HOLD, DistanceDelta.Mode.parse("HOLD"));
+        assertEquals(DistanceDelta.Mode.HOLD, DistanceDelta.Mode.parse(" hold "));
+        assertEquals(DistanceDelta.Mode.BLINK, DistanceDelta.Mode.parse("BLINK"));
+        assertEquals(DistanceDelta.Mode.BLINK, DistanceDelta.Mode.parse("blink"));
+        assertEquals(DistanceDelta.Mode.BLINK, DistanceDelta.Mode.parse("banana"));
+        assertEquals(DistanceDelta.Mode.BLINK, DistanceDelta.Mode.parse(null));
+    }
 }

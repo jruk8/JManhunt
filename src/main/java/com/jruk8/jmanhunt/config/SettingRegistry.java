@@ -574,8 +574,7 @@ public final class SettingRegistry {
 
     private static void addCompassAnalysisEntries(List<SettingDescriptor> entries) {
         String root = "settings.compass.analysis.";
-        entries.add(bool(root + "right-click", false));
-        entries.add(bool(root + "auto", false));
+        entries.add(bool(root + "enabled", false));
         entries.add(floatVal(root + "delay-seconds", 1.0, 0.0, null));
         entries.add(floatVal(root + "delay-deviation-seconds", 0.0, 0.0, null));
         entries.add(floatVal(root + "sound-interval-seconds", 0.5, 0.05, 3.0));
@@ -587,10 +586,12 @@ public final class SettingRegistry {
         String root = "settings.compass.actionbar.";
         entries.add(intVal(root + "refresh-ticks", 1, 1, null));
         entries.add(bool(root + "show-distance-delta.enabled", true));
-        entries.add(string(root + "show-distance-delta.further-format", "<green>▲{distance}m"));
-        entries.add(string(root + "show-distance-delta.closer-format", "<red>▼{distance}m"));
+        entries.add(string(root + "show-distance-delta.further-format", "<green>▲{distance}"));
+        entries.add(string(root + "show-distance-delta.closer-format", "<red>▼{distance}"));
         entries.add(floatVal(root + "show-distance-delta.max-distance", 200.0, 0.0, null));
         entries.add(floatVal(root + "show-distance-delta.min-delta-to-show", 5.0, 0.0, null));
+        entries.add(option(root + "show-distance-delta.mode", "BLINK", "HOLD", "BLINK"));
+        entries.add(floatVal(root + "show-distance-delta.blink-duration-seconds", 0.6, 0.0, null));
     }
 
     private static void addSignalInterferenceEntries(List<SettingDescriptor> entries) {

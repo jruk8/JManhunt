@@ -72,6 +72,22 @@ public class CompassActionbarSettings extends OkaeriConfig {
         })
         private double minDeltaToShow = 5.0;
 
+        @Comment({
+                "How long the delta shows: HOLD keeps the triangle until",
+                "the next refresh, BLINK shows it briefly, then reverts",
+                "to the plain white distance.",
+                "Default: BLINK"
+        })
+        private String mode = "BLINK";
+
+        @CustomKey("blink-duration-seconds")
+        @Comment({
+                "Seconds a BLINK delta stays visible before reverting to",
+                "the plain white distance. 0 shows plain immediately.",
+                "Default: 0.6"
+        })
+        private double blinkDurationSeconds = 0.6;
+
         public boolean isEnabled() {
             return enabled;
         }
@@ -110,6 +126,22 @@ public class CompassActionbarSettings extends OkaeriConfig {
 
         public void setMinDeltaToShow(double minDeltaToShow) {
             this.minDeltaToShow = minDeltaToShow;
+        }
+
+        public String getMode() {
+            return mode;
+        }
+
+        public void setMode(String mode) {
+            this.mode = mode;
+        }
+
+        public double getBlinkDurationSeconds() {
+            return blinkDurationSeconds;
+        }
+
+        public void setBlinkDurationSeconds(double blinkDurationSeconds) {
+            this.blinkDurationSeconds = blinkDurationSeconds;
         }
     }
 }

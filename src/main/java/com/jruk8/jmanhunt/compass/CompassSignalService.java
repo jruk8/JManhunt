@@ -39,7 +39,12 @@ final class CompassSignalService {
      * live targets get a line-of-sight reading.
      */
     boolean badSignalForPick(Player holder, CompassPick pick) {
-        return reasonForPick(holder, pick).isPresent();
+        return reasonForPick(holder, holder.getLocation(), pick).isPresent();
+    }
+
+    /** Spot-aware verdict: the holder reads from their resolution spot. */
+    boolean badSignalForPick(Player holder, Location holderSpot, CompassPick pick) {
+        return reasonForPick(holder, holderSpot, pick).isPresent();
     }
 
     /**
@@ -50,18 +55,28 @@ final class CompassSignalService {
      * line-of-sight reading.
      */
     Optional<String> reasonForPick(Player holder, CompassPick pick) {
+        return reasonForPick(holder, holder.getLocation(), pick);
+    }
+
+    /**
+     * Spot-aware verdict: interference reads the holder's resolution
+     * spot (press-time while analyzing, live otherwise) instead of
+     * their current location.
+     */
+    Optional<String> reasonForPick(Player holder, Location holderSpot, CompassPick pick) {
         SignalInterference.Config interference = interferenceConfig(lobbyOf(holder));
         Location target = null;
         Player seen = null;
         if (pick.kind() == CompassPick.Kind.TRACK_SIGHTING) {
             target = playerStates.sightings().getOrDefault(pick.id(), Map.of())
-                    .get(holder.getWorld().getUID());
+                    .get(holderSpot.getWorld().getUID());
         } else if (pick.id() != null) {
             seen = Bukkit.getPlayer(pick.id());
             target = seen == null ? null : seen.getLocation();
         }
-        Boolean sight = interference.losEnabled() ? lineOfSight(holder, seen, interference) : null;
-        return reason(holder, target, interference, sight);
+        Boolean sight = interference.losEnabled()
+                ? lineOfSight(holder, holderSpot, seen, interference) : null;
+        return reason(holder, holderSpot, target, interference, sight);
     }
 
     /**
@@ -69,16 +84,16 @@ final class CompassSignalService {
      * holder's spot (and, with two-way, the target's spot) resolves to a
      * bad signal that the bypass roll does not save.
      */
-    private boolean badSignal(Player holder, Location target, SignalInterference.Config interference,
-            Boolean hasLineOfSight) {
-        return reason(holder, target, interference, hasLineOfSight).isPresent();
+    private boolean badSignal(Player holder, Location holderSpot, Location target,
+            SignalInterference.Config interference, Boolean hasLineOfSight) {
+        return reason(holder, holderSpot, target, interference, hasLineOfSight).isPresent();
     }
 
     /**
      * Failing interference option id for one tracking attempt, or empty
      * when the signal is good or the bypass roll saves it.
      */
-    private Optional<String> reason(Player holder, Location target,
+    private Optional<String> reason(Player holder, Location holderSpot, Location target,
             SignalInterference.Config interference, Boolean hasLineOfSight) {
         Integer lobby = lobbyOf(holder);
         if (!plugin.overrides().getBoolean(lobby,
@@ -89,22 +104,27 @@ final class CompassSignalService {
                 "settings.compass.signal-interference.underground.ignore-transparent", true);
         SignalInterference.Snapshot targetSnapshot = interference.twoWay()
                 ? targetSnapshot(target, ignoreTransparent) : null;
-        return SignalInterference.lastReason(signalSnapshot(holder.getLocation(), ignoreTransparent),
+        return SignalInterference.lastReason(signalSnapshot(holderSpot, ignoreTransparent),
                 targetSnapshot, interference, ThreadLocalRandom.current().nextDouble(), hasLineOfSight);
     }
 
     /**
-     * Eye-to-eye sight from the holder to a live target, or null when no
-     * ray applies: no target, another world, or a target the holder
-     * cannot share a world with.
+     * Eye-to-eye sight from the holder's resolution spot to a live
+     * target, or null when no ray applies: no target, another world,
+     * or a target the spot cannot share a world with.
      */
-    private Boolean lineOfSight(Player holder, Player target, SignalInterference.Config interference) {
-        if (target == null || !target.getWorld().equals(holder.getWorld())) {
+    private Boolean lineOfSight(Player holder, Location holderSpot, Player target,
+            SignalInterference.Config interference) {
+        if (target == null || holderSpot.getWorld() == null
+                || !target.getWorld().equals(holderSpot.getWorld())) {
             return null;
         }
-        Location from = holder.getEyeLocation();
+        Location liveFeet = holder.getLocation();
+        Location liveEye = holder.getEyeLocation();
+        Location from = holderSpot.clone().add(liveEye.getX() - liveFeet.getX(),
+                liveEye.getY() - liveFeet.getY(), liveEye.getZ() - liveFeet.getZ());
         Location to = target.getEyeLocation();
-        World world = holder.getWorld();
+        World world = holderSpot.getWorld();
         boolean clear = rayClear(from.getX(), from.getY(), from.getZ(), to.getX(), to.getY(), to.getZ(),
                 interference.losMaxDistance(),
                 (x, y, z) -> y >= world.getMinHeight() && y < world.getMaxHeight()

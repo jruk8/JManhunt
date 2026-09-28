@@ -473,7 +473,7 @@ class CompassLockServiceTest {
         CompassLockService locks = new CompassLockService(plugin, playerStates,
                 sounds, messages, targets,
                 new HashMap<>(), refresher, mock(Consumer.class), renderer,
-                new CompassCache(), sharedClicks);
+                ignored -> { }, new CompassCache(), sharedClicks);
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
                 messages, targets, sharedClicks, playerStates);
@@ -532,7 +532,7 @@ class CompassLockServiceTest {
         CompassLockService locks = new CompassLockService(plugin, playerStates,
                 sounds, messages, targets,
                 new HashMap<>(), refresher, mock(Consumer.class), renderer,
-                new CompassCache(), sharedClicks);
+                ignored -> { }, new CompassCache(), sharedClicks);
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
                 messages, targets, sharedClicks, playerStates);

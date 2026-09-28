@@ -14,6 +14,23 @@ public final class DistanceDelta {
         SAME
     }
 
+    /**
+     * Delta display mode: HOLD keeps the triangle until the next
+     * refresh, BLINK shows it briefly, then reverts to plain white.
+     */
+    public enum Mode {
+        HOLD,
+        BLINK;
+
+        /** Parses case-insensitively; unknown values fall back to BLINK. */
+        public static Mode parse(String raw) {
+            if (raw != null && raw.trim().equalsIgnoreCase("HOLD")) {
+                return HOLD;
+            }
+            return BLINK;
+        }
+    }
+
     private DistanceDelta() {
     }
 

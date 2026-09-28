@@ -2,11 +2,14 @@ package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class CompassManagerTest {
 
@@ -20,6 +23,46 @@ class CompassManagerTest {
     @Test
     void zeroScrollCooldownNeverThrottles() {
         assertTrue(CompassManager.shouldRefresh(10_000L, 10_000L, 0L));
+    }
+
+    @Test
+    void blinkDelayRoundsToTicks() {
+        assertEquals(12L, CompassManager.blinkDelayTicks(0.6));
+        assertEquals(0L, CompassManager.blinkDelayTicks(0.0));
+        assertEquals(0L, CompassManager.blinkDelayTicks(-1.0));
+        assertEquals(20L, CompassManager.blinkDelayTicks(1.0));
+    }
+
+    @Test
+    void autoRefreshDueNeedsFullInterval() {
+        assertTrue(CompassManager.autoRefreshDue(10_000L, 0L, 10.0));
+        assertFalse(CompassManager.autoRefreshDue(9_999L, 0L, 10.0));
+        assertTrue(CompassManager.autoRefreshDue(13_000L, 3_000L, 10.0));
+        assertFalse(CompassManager.autoRefreshDue(12_999L, 3_000L, 10.0));
+    }
+
+    @Test
+    void autoRefreshDueNegativeDisables() {
+        assertFalse(CompassManager.autoRefreshDue(10_000L, 0L, -1.0));
+        assertFalse(CompassManager.autoRefreshDue(Long.MAX_VALUE, 0L, -1.0));
+    }
+
+    @Test
+    void effectiveSpotPrefersCachedSameWorldSpot() {
+        World world = mock(World.class);
+        Location cached = new Location(world, 1.0, 64.0, 1.0);
+        Location live = new Location(world, 9.0, 64.0, 9.0);
+
+        assertSame(cached, CompassManager.effectiveSpot(cached, live));
+        assertSame(live, CompassManager.effectiveSpot(null, live));
+    }
+
+    @Test
+    void effectiveSpotFallsBackAcrossWorlds() {
+        Location cached = new Location(mock(World.class), 1.0, 64.0, 1.0);
+        Location live = new Location(mock(World.class), 9.0, 64.0, 9.0);
+
+        assertSame(live, CompassManager.effectiveSpot(cached, live));
     }
 
     @Test

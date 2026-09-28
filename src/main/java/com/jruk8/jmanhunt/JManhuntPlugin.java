@@ -385,12 +385,12 @@ public final class JManhuntPlugin extends JavaPlugin {
     }
 
     private void setupScheduling() {
-        double refreshInterval = configService.getDouble("settings.compass.refresh-interval", 10.0);
-        if (refreshInterval != -1.0) {
-            long ticks = Math.max(1L, Math.round(refreshInterval * 20.0));
-            Bukkit.getScheduler().runTaskTimer(this,
-                    () -> compass.refreshAllCompasses(game.isActive()), ticks, ticks);
-        }
+        // Fast shared ticker: per-holder gating inside refreshAllCompasses
+        // keeps each automatic interval strict (a slow shared beat would
+        // quantize every holder to the same refresh moments). A -1
+        // interval disables automatic refresh per lobby in the gate.
+        Bukkit.getScheduler().runTaskTimer(this,
+                () -> compass.refreshAllCompasses(game.isActive()), 5L, 5L);
         long actionbarTicks = Math.max(1L,
                 configService.getInt("settings.compass.actionbar.refresh-ticks", 1));
         BukkitTask actionbars = Bukkit.getScheduler().runTaskTimer(this,

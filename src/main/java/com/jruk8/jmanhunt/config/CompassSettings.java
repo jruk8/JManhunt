@@ -229,18 +229,11 @@ public class CompassSettings extends OkaeriConfig {
     @SuppressWarnings("FieldMayBeFinal")
     public static class Analysis extends OkaeriConfig {
 
-        @CustomKey("right-click")
         @Comment({
-                "Applies to right-click refreshes.",
+                "Analysis runs on right-click refreshes only.",
                 "Default: false"
         })
-        private boolean rightClick = false;
-
-        @Comment({
-                "Applies to automatic (interval) refreshes.",
-                "Default: false"
-        })
-        private boolean auto = false;
+        private boolean enabled = false;
 
         @CustomKey("delay-seconds")
         @Comment({
@@ -274,20 +267,12 @@ public class CompassSettings extends OkaeriConfig {
         })
         private Debuffs debuffs = new Debuffs();
 
-        public boolean isRightClick() {
-            return rightClick;
+        public boolean isEnabled() {
+            return enabled;
         }
 
-        public void setRightClick(boolean rightClick) {
-            this.rightClick = rightClick;
-        }
-
-        public boolean isAuto() {
-            return auto;
-        }
-
-        public void setAuto(boolean auto) {
-            this.auto = auto;
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
 
         public double getDelaySeconds() {
