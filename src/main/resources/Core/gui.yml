@@ -23,6 +23,7 @@ categories:
   match/win-conditions/speedrunner/survive-time: ENCHANTED_GOLDEN_APPLE
   match/autostart/broadcast-requirements: OAK_SIGN
   match/autostart/minimums: CAULDRON
+  match/autostart/maximums: OBSIDIAN
   match/game-boosts/nether-structures: NETHER_BRICKS
   match/game-boosts/overworld-structures: MOSSY_COBBLESTONE
   match/game-boosts/disable-brutes: GOLDEN_AXE
@@ -107,6 +108,7 @@ descriptions:
   "settings.match.autostart": "Begin matches automatically once queues fill up."
   "settings.match.autostart.broadcast-requirements": "Nudge queued players about missing roles."
   "settings.match.autostart.minimums": "Queued players needed before autostart fires."
+  "settings.match.autostart.maximums": "Queued players allowed before autostart refuses."
   "settings.match.game-boosts": "Bump structure rates and barter luck for runners."
   "settings.match.game-boosts.nether-structures": "Boost fortress and bastion generation."
   "settings.match.game-boosts.overworld-structures": "Boost overworld structure generation."
@@ -192,6 +194,8 @@ descriptions:
   "settings.match.autostart.countdown-seconds": "Wait before auto-starting; 0 starts at once."
   "settings.match.autostart.minimums.hunter": "Queued hunters needed before autostart can begin."
   "settings.match.autostart.minimums.speedrunner": "Queued speedrunners needed before autostart can begin."
+  "settings.match.autostart.maximums.hunter": "Queued hunters allowed before autostart refuses."
+  "settings.match.autostart.maximums.speedrunner": "Queued speedrunners allowed before autostart refuses."
   "settings.match.autostart.broadcast-requirements.enabled": "Tell queued players how many more are needed."
   "settings.match.autostart.broadcast-requirements.interval-seconds": "Seconds between shortfall broadcasts."
   "settings.match.start-on-speedrunner-damage.enabled": "Start only after a speedrunner hits a hunter."
@@ -264,6 +268,7 @@ descriptions:
   "settings.compass.actionbar.show-distance-delta.min-delta-to-show": "Smallest delta that shows colors."
   "settings.compass.actionbar.show-distance-delta.mode": "HOLD keeps the delta; BLINK flashes it."
   "settings.compass.actionbar.show-distance-delta.blink-duration-seconds": "Seconds a blink stays visible."
+  "settings.compass.actionbar.show-distance-delta.reverse-on-hunter": "Hunters see green on closer."
   "settings.compass.signal-interference.enabled": "Master switch for signal interference."
   "settings.compass.signal-interference.required-to-fail": "Failed checks needed to jam tracking."
   "settings.compass.signal-interference.chance-to-bypass": "Chance to ignore interference."

@@ -12,6 +12,9 @@ settings:
     minimums:
       hunter: 1
       speedrunner: 1
+    maximums:
+      hunter: -1
+      speedrunner: -1
     broadcast-requirements:
       enabled: false
       interval-seconds: 60
@@ -20,17 +23,21 @@ settings:
 Autostart triggers once each role reaches its `minimums` queued players
 (one hunter and one speedrunner by default; hard minimum 1 per role).
 Each lobby runs its own countdown and starts its own match;
-see [Concurrent Matches](../../multi-instance.md). Minimums only gate
+see [Concurrent Matches](../../multi-instance.md). Minimums and
+maximums (`-1` disables a role, the default for both) only gate
 autostart: manual `/manhunt start` keeps its own
-one-hunter-one-speedrunner check.
+one-hunter-one-speedrunner check. If a minimum sits above its maximum,
+the queue can never become eligible.
 
 While a lobby sits below its minimums, enabling
 `broadcast-requirements` tells its queued hunters and speedrunners what
 is still missing every `interval-seconds` (`none`, `afk`, and spectator
 members are not nagged), for example "The game needs *two* more Hunters
-and *one* more Speedrunner to begin." Whenever someone new joins the
-teams, the timer restarts, so the message never fires instantly on
-assignment.
+and *one* more Speedrunner to begin." When a role sits above its
+maximum, the nag names the excess instead ("Too many queued to begin:
+*two* extra Hunters."), and that message wins when both apply.
+Whenever someone new joins the teams, the timer restarts, so the
+message never fires instantly on assignment.
 
 ## Countdown
 

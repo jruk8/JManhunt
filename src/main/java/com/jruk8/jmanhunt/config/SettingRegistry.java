@@ -499,6 +499,8 @@ public final class SettingRegistry {
         entries.add(intVal("settings.match.autostart.countdown-seconds", 45, 0, null));
         entries.add(intVal("settings.match.autostart.minimums.hunter", 1, 1, null));
         entries.add(intVal("settings.match.autostart.minimums.speedrunner", 1, 1, null));
+        entries.add(intVal("settings.match.autostart.maximums.hunter", -1, -1, null));
+        entries.add(intVal("settings.match.autostart.maximums.speedrunner", -1, -1, null));
         entries.add(bool("settings.match.autostart.broadcast-requirements.enabled", false));
         entries.add(intVal("settings.match.autostart.broadcast-requirements.interval-seconds", 60, 1, null));
         entries.add(bool("settings.match.start-on-speedrunner-damage.enabled", true));
@@ -592,6 +594,7 @@ public final class SettingRegistry {
         entries.add(floatVal(root + "show-distance-delta.min-delta-to-show", 5.0, 0.0, null));
         entries.add(option(root + "show-distance-delta.mode", "BLINK", "HOLD", "BLINK"));
         entries.add(floatVal(root + "show-distance-delta.blink-duration-seconds", 0.6, 0.0, null));
+        entries.add(bool(root + "show-distance-delta.reverse-on-hunter", true));
     }
 
     private static void addSignalInterferenceEntries(List<SettingDescriptor> entries) {

@@ -165,11 +165,19 @@ public final class AutostartService {
     }
 
     private boolean isEligibleToStart(Lobby lobby) {
-        return shortfallFor(lobby).isEmpty();
+        return autostartEligible(shortfallFor(lobby), overfillFor(lobby));
     }
 
-    /** Per-role shortfall of a lobby's online members against the autostart minimums. */
-    private Map<Role, Integer> shortfallFor(Lobby lobby) {
+    /**
+     * True when a lobby may autostart: no role below its minimum and
+     * no role above its maximum. Pure for tests.
+     */
+    public static boolean autostartEligible(Map<Role, Integer> missing, Map<Role, Integer> excess) {
+        return missing.isEmpty() && excess.isEmpty();
+    }
+
+    /** Online hunters then speedrunners queued in a lobby, as {hunters, speedrunners}. */
+    private int[] countQueuedRoles(Lobby lobby) {
         int hunters = 0;
         int speedrunners = 0;
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -182,11 +190,27 @@ public final class AutostartService {
                 speedrunners++;
             }
         }
-        return autostartShortfall(hunters, speedrunners,
+        return new int[] {hunters, speedrunners};
+    }
+
+    /** Per-role shortfall of a lobby's online members against the autostart minimums. */
+    private Map<Role, Integer> shortfallFor(Lobby lobby) {
+        int[] counts = countQueuedRoles(lobby);
+        return autostartShortfall(counts[0], counts[1],
                 plugin.overrides().getInt(lobby.id(),
                         "settings.match.autostart.minimums.hunter", 1),
                 plugin.overrides().getInt(lobby.id(),
                         "settings.match.autostart.minimums.speedrunner", 1));
+    }
+
+    /** Per-role overfill of a lobby's online members against the autostart maximums. */
+    private Map<Role, Integer> overfillFor(Lobby lobby) {
+        int[] counts = countQueuedRoles(lobby);
+        return autostartOverfill(counts[0], counts[1],
+                plugin.overrides().getInt(lobby.id(),
+                        "settings.match.autostart.maximums.hunter", -1),
+                plugin.overrides().getInt(lobby.id(),
+                        "settings.match.autostart.maximums.speedrunner", -1));
     }
 
     /**
@@ -206,6 +230,23 @@ public final class AutostartService {
             missing.put(Role.SPEEDRUNNER, needSpeedrunners - speedrunners);
         }
         return missing;
+    }
+
+    /**
+     * Roles with more queued players than the autostart maximums,
+     * mapped to the excess count. A negative maximum disables that
+     * role. Empty means no role is over its maximum. Pure for tests.
+     */
+    public static Map<Role, Integer> autostartOverfill(int hunters, int speedrunners,
+            int maxHunters, int maxSpeedrunners) {
+        Map<Role, Integer> excess = new EnumMap<>(Role.class);
+        if (maxHunters >= 0 && hunters > maxHunters) {
+            excess.put(Role.HUNTER, hunters - maxHunters);
+        }
+        if (maxSpeedrunners >= 0 && speedrunners > maxSpeedrunners) {
+            excess.put(Role.SPEEDRUNNER, speedrunners - maxSpeedrunners);
+        }
+        return excess;
     }
 
     /**
@@ -255,10 +296,11 @@ public final class AutostartService {
             return;
         }
         Map<Role, Integer> missing = shortfallFor(lobby.get());
+        Map<Role, Integer> excess = overfillFor(lobby.get());
         List<Player> recipients = messaging.lobbyRecipients(lobbyId).stream()
                 .filter(player -> receivesShortfall(playerStates.role(player)))
                 .toList();
-        if (missing.isEmpty() || recipients.isEmpty()) {
+        if ((missing.isEmpty() && excess.isEmpty()) || recipients.isEmpty()) {
             lastShortfallBroadcast.remove(lobbyId);
             return;
         }
@@ -267,8 +309,19 @@ public final class AutostartService {
             return;
         }
         lastShortfallBroadcast.put(lobbyId, now);
+        sendRequirementNag(recipients, missing, excess);
+    }
+
+    /** Sends the too-many nag when overfilled, else the needs-more nag. */
+    private void sendRequirementNag(List<Player> recipients,
+            Map<Role, Integer> missing, Map<Role, Integer> excess) {
+        if (!excess.isEmpty()) {
+            messages.sendTo(recipients, "manhunt.autostart-too-many",
+                    Map.of("details", countDetails(excess, "extra")));
+            return;
+        }
         messages.sendTo(recipients, "manhunt.autostart-needs-more",
-                Map.of("details", shortfallDetails(missing)));
+                Map.of("details", countDetails(missing, "more")));
     }
 
     /** Online hunters and speedrunners of a lobby, for nag seeding. */
@@ -302,15 +355,15 @@ public final class AutostartService {
         return lastBroadcast == null || now - lastBroadcast >= intervalSeconds * 1000L;
     }
 
-    /** "two more Hunters and one more Speedrunner" for a shortfall, role-colored. */
-    private String shortfallDetails(Map<Role, Integer> missing) {
+    /** "two more Hunters and one more Speedrunner" for a role count map, role-colored. */
+    private String countDetails(Map<Role, Integer> counts, String middle) {
         List<String> parts = new ArrayList<>();
         for (Role role : List.of(Role.HUNTER, Role.SPEEDRUNNER)) {
-            Integer need = missing.get(role);
-            if (need == null) {
+            Integer count = counts.get(role);
+            if (count == null) {
                 continue;
             }
-            parts.add(shortfallPart(NumberWords.word(need), messages.roleName(role), need));
+            parts.add(countPart(NumberWords.word(count), messages.roleName(role), count, middle));
         }
         return String.join(" and ", parts);
     }
@@ -329,7 +382,23 @@ public final class AutostartService {
      * separator or the sentence tail. Pure for tests.
      */
     public static String shortfallPart(String countWord, String coloredRoleName, int need) {
-        return "<white>" + countWord + "</white> more " + coloredRoleName + (need == 1 ? "" : "s")
-                + "<yellow>";
+        return countPart(countWord, coloredRoleName, need, "more");
+    }
+
+    /**
+     * One "two extra Hunters" overfill fragment, same coloring rules
+     * as the shortfall fragment. Pure for tests.
+     */
+    public static String overfillPart(String countWord, String coloredRoleName, int excess) {
+        return countPart(countWord, coloredRoleName, excess, "extra");
+    }
+
+    /**
+     * One role-count fragment with a caller-chosen middle word ("more"
+     * for shortfalls, "extra" for overfills). Pure for tests.
+     */
+    public static String countPart(String countWord, String coloredRoleName, int count, String middle) {
+        return "<white>" + countWord + "</white> " + middle + " " + coloredRoleName
+                + (count == 1 ? "" : "s") + "<yellow>";
     }
 }

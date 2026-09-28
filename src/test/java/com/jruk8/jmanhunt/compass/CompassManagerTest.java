@@ -34,6 +34,26 @@ class CompassManagerTest {
     }
 
     @Test
+    void deltaReverseNeedsHunterAndToggle() {
+        assertTrue(CompassDeltaRenderer.deltaReverse(Role.HUNTER, true));
+        assertFalse(CompassDeltaRenderer.deltaReverse(Role.HUNTER, false));
+        assertFalse(CompassDeltaRenderer.deltaReverse(Role.SPEEDRUNNER, true));
+        assertFalse(CompassDeltaRenderer.deltaReverse(Role.NONE, true));
+    }
+
+    @Test
+    void deltaFormatSwapsOnlyWhenReversed() {
+        assertEquals("<red>▼", CompassDeltaRenderer.deltaFormat(
+                DistanceDelta.Kind.FURTHER, "<green>▲", "<red>▼", true));
+        assertEquals("<green>▲", CompassDeltaRenderer.deltaFormat(
+                DistanceDelta.Kind.CLOSER, "<green>▲", "<red>▼", true));
+        assertEquals("<green>▲", CompassDeltaRenderer.deltaFormat(
+                DistanceDelta.Kind.FURTHER, "<green>▲", "<red>▼", false));
+        assertEquals("<red>▼", CompassDeltaRenderer.deltaFormat(
+                DistanceDelta.Kind.CLOSER, "<green>▲", "<red>▼", false));
+    }
+
+    @Test
     void autoRefreshDueNeedsFullInterval() {
         assertTrue(CompassManager.autoRefreshDue(10_000L, 0L, 10.0));
         assertFalse(CompassManager.autoRefreshDue(9_999L, 0L, 10.0));

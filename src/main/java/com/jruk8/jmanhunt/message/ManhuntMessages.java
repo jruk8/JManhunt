@@ -107,6 +107,9 @@ public class ManhuntMessages extends OkaeriConfig {
     @CustomKey("autostart-needs-more")
     private String autostartNeedsMore = "{prefix}<yellow>The game needs {details} to begin.";
 
+    @CustomKey("autostart-too-many")
+    private String autostartTooMany = "{prefix}<yellow>Too many queued to begin: {details}.";
+
     @CustomKey("waiting-for-damage")
     private String waitingForDamage = "{prefix}<yellow>A speedrunner must hit a hunter within " +
             "<white>{seconds}s</white> to start the game.";

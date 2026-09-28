@@ -220,6 +220,7 @@ actionbar:
     min-delta-to-show: 5.0
     mode: BLINK
     blink-duration-seconds: 0.6
+    reverse-on-hunter: true
 ```
 
 `show-distance-delta` colors the distance by movement since the last
@@ -230,6 +231,9 @@ plain white distance. Deltas only show within `max-distance` meters,
 and only when the change reaches `min-delta-to-show` meters, so
 small wobbles far away do not clutter the screen. Both formats
 support `{distance}` and MiniMessage (the bar itself adds the `m`).
+With `reverse-on-hunter` (default true), hunters see the two formats
+swapped, green on closer and red on further, so approaching the prey
+reads as progress; speedrunners always see the unswapped formats.
 
 `mode` picks how long the triangle stays: `HOLD` keeps it until the
 next refresh, `BLINK` shows it for `blink-duration-seconds`, then

@@ -88,6 +88,14 @@ public class CompassActionbarSettings extends OkaeriConfig {
         })
         private double blinkDurationSeconds = 0.6;
 
+        @CustomKey("reverse-on-hunter")
+        @Comment({
+                "Swap the delta formats for hunters: green on closer,",
+                "red on further.",
+                "Default: true"
+        })
+        private boolean reverseOnHunter = true;
+
         public boolean isEnabled() {
             return enabled;
         }
@@ -142,6 +150,14 @@ public class CompassActionbarSettings extends OkaeriConfig {
 
         public void setBlinkDurationSeconds(double blinkDurationSeconds) {
             this.blinkDurationSeconds = blinkDurationSeconds;
+        }
+
+        public boolean isReverseOnHunter() {
+            return reverseOnHunter;
+        }
+
+        public void setReverseOnHunter(boolean reverseOnHunter) {
+            this.reverseOnHunter = reverseOnHunter;
         }
     }
 }

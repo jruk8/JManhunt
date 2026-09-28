@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -41,9 +42,9 @@ final class CompassDeltaRenderer {
      * revert for blinked deltas. The revert only lands when no newer
      * render replaced it and the holder is still online.
      */
-    void putTrackingBar(Player holder, Integer lobby, String key, String playerName,
+    void putTrackingBar(Player holder, Role holderRole, Integer lobby, String key, String playerName,
             UUID targetId, double distance, Map<String, String> extra) {
-        DistanceRender render = distanceRender(holder, lobby, key, targetId, distance);
+        DistanceRender render = distanceRender(holder, holderRole, lobby, key, targetId, distance);
         Map<String, String> slots = new HashMap<>(extra);
         slots.put("player", playerName);
         slots.put("distance", render.text());
@@ -80,8 +81,8 @@ final class CompassDeltaRenderer {
      * since this holder last saw it under the same tracking key. BLINK
      * mode flags the render so the bar reverts to plain shortly after.
      */
-    private DistanceRender distanceRender(Player holder, Integer lobby, String trackingKey,
-            UUID targetId, double distance) {
+    private DistanceRender distanceRender(Player holder, Role holderRole, Integer lobby,
+            String trackingKey, UUID targetId, double distance) {
         long rounded = Math.round(distance);
         String plain = String.valueOf(rounded);
         DistanceRender plainRender = new DistanceRender(plain, plain, false);
@@ -111,10 +112,33 @@ final class CompassDeltaRenderer {
         if (!hold && !blink) {
             return plainRender;
         }
-        String formatted = kind == DistanceDelta.Kind.FURTHER
-                ? plugin.overrides().getString(lobby, base + "further-format", "<green>▲{distance}")
-                : plugin.overrides().getString(lobby, base + "closer-format", "<red>▼{distance}");
+        boolean reverse = deltaReverse(holderRole,
+                plugin.overrides().getBoolean(lobby, base + "reverse-on-hunter", true));
+        String formatted = deltaFormat(kind,
+                plugin.overrides().getString(lobby, base + "further-format", "<green>▲{distance}"),
+                plugin.overrides().getString(lobby, base + "closer-format", "<red>▼{distance}"),
+                reverse);
         return new DistanceRender(formatted.replace("{distance}", plain), plain, blink);
+    }
+
+    /**
+     * True when the holder sees swapped delta formats: hunters with
+     * the reverse toggle on. Holder role alone decides. Pure for tests.
+     */
+    static boolean deltaReverse(Role holderRole, boolean reverseOnHunter) {
+        return holderRole == Role.HUNTER && reverseOnHunter;
+    }
+
+    /**
+     * Picks the further or closer format for a delta kind, swapped
+     * when reversed. Pure for tests.
+     */
+    static String deltaFormat(DistanceDelta.Kind kind, String furtherFormat,
+            String closerFormat, boolean reverse) {
+        if (kind == DistanceDelta.Kind.FURTHER) {
+            return reverse ? closerFormat : furtherFormat;
+        }
+        return reverse ? furtherFormat : closerFormat;
     }
 
     /** Blink revert delay in ticks, never negative. Pure for tests. */

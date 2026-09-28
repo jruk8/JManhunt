@@ -124,6 +124,14 @@ public class MatchSettings extends OkaeriConfig {
         })
         private Minimums minimums = new Minimums();
 
+        @Comment({
+                "Maximum queued players per role before autostart refuses",
+                "to begin. Only applies to autostart; manual start keeps",
+                "its own checks. -1 disables per role.",
+                "Default: -1 hunter, -1 speedrunner"
+        })
+        private Maximums maximums = new Maximums();
+
         @CustomKey("broadcast-requirements")
         @Comment({
                 "Shortfall broadcasts telling queued players how many more of",
@@ -156,6 +164,14 @@ public class MatchSettings extends OkaeriConfig {
             this.minimums = minimums;
         }
 
+        public Maximums getMaximums() {
+            return maximums;
+        }
+
+        public void setMaximums(Maximums maximums) {
+            this.maximums = maximums;
+        }
+
         public BroadcastRequirements getBroadcastRequirements() {
             return broadcastRequirements;
         }
@@ -169,6 +185,29 @@ public class MatchSettings extends OkaeriConfig {
         public static class Minimums extends OkaeriConfig {
             private int hunter = 1;
             private int speedrunner = 1;
+
+            public int getHunter() {
+                return hunter;
+            }
+
+            public void setHunter(int hunter) {
+                this.hunter = hunter;
+            }
+
+            public int getSpeedrunner() {
+                return speedrunner;
+            }
+
+            public void setSpeedrunner(int speedrunner) {
+                this.speedrunner = speedrunner;
+            }
+        }
+
+        /** Maximum queued players per role; -1 disables per role. */
+        @SuppressWarnings("FieldMayBeFinal")
+        public static class Maximums extends OkaeriConfig {
+            private int hunter = -1;
+            private int speedrunner = -1;
 
             public int getHunter() {
                 return hunter;

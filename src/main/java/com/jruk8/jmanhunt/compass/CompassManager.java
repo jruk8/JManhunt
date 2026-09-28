@@ -450,7 +450,7 @@ public final class CompassManager {
         setLodestone(item, spot);
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
-        deltas.putTrackingBar(holder, lobbyOf(holder), key, pick.name(), pick.id(),
+        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
                 resolutionSpot(holder).distance(spot), Map.of());
     }
 
@@ -488,7 +488,7 @@ public final class CompassManager {
         setLodestone(item, target.getLocation());
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
-        deltas.putTrackingBar(holder, lobbyOf(holder), key, target.getName(), pick.id(),
+        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, target.getName(), pick.id(),
                 resolutionSpot(holder).distance(target.getLocation()), Map.of());
         return true;
     }
@@ -508,7 +508,7 @@ public final class CompassManager {
         holder.getInventory().setItem(slot, item);
         String reason = seen != null ? "Another Dimension" : "Log-Out";
         String key = trackingKey(holder, locked, true);
-        deltas.putTrackingBar(holder, lobbyOf(holder), key, pick.name(), pick.id(),
+        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
                 resolutionSpot(holder).distance(location), Map.of("reason", reason));
         return true;
     }
