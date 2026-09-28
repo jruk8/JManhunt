@@ -31,7 +31,8 @@ public final class SettingRegistry {
             "settings.server.team-chat.prefixes",
             "settings.server.anti-spawn-camp.monitored-roles",
             "world-engine.spawnpoint-algorithm.spawn-close-to-structure.structures",
-            "advanced.advanced-match-controls.game-rules.rules");
+            "advanced.advanced-match-controls.game-rules.rules",
+            "advanced.misc.interop.blacklisted-modifier-commands");
 
     private SettingRegistry() {
     }

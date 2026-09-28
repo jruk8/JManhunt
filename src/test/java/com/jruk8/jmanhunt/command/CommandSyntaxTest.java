@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CommandSyntaxTest {
@@ -298,5 +299,47 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("  exit  ").isEmpty());
         assertTrue(CommandSyntax.error("exit give <p> apple").isPresent());
         assertTrue(CommandSyntax.unknownRoot("exit", Set.of("give")).isEmpty());
+    }
+
+    @Test
+    void commandRootStripsSlashesNamespacesAndCase() {
+        assertEquals("give", CommandSyntax.commandRoot("give Steve apple"));
+        assertEquals("give", CommandSyntax.commandRoot("/give Steve apple"));
+        assertEquals("give", CommandSyntax.commandRoot("  //GIVE Steve apple  "));
+        assertEquals("give", CommandSyntax.commandRoot("minecraft:give Steve apple"));
+        assertEquals("give", CommandSyntax.commandRoot("/Minecraft:GIVE Steve apple"));
+        assertEquals("", CommandSyntax.commandRoot(""));
+        assertEquals("", CommandSyntax.commandRoot("   "));
+        assertEquals("", CommandSyntax.commandRoot("/"));
+    }
+
+    @Test
+    void everyDefaultBlacklistedCommandIsBlocked() {
+        List<String> blocked = List.of("op", "deop", "stop", "restart", "reload", "luckperms",
+                "lp", "permissions", "ban", "kick", "whitelist", "execute");
+        for (String root : blocked) {
+            assertTrue(CommandSyntax.isBlockedCommand(root + " Steve", blocked), root);
+            assertTrue(CommandSyntax.isBlockedCommand("/" + root + " Steve", blocked), root);
+            assertTrue(CommandSyntax.isBlockedCommand(root.toUpperCase() + " Steve", blocked),
+                    root);
+            assertTrue(CommandSyntax.isBlockedCommand("minecraft:" + root + " Steve", blocked),
+                    root);
+        }
+    }
+
+    @Test
+    void blacklistPassesUnrelatedBlankAndNull() {
+        List<String> blocked = List.of("op", "stop");
+        assertFalse(CommandSyntax.isBlockedCommand("give Steve apple", blocked));
+        assertFalse(CommandSyntax.isBlockedCommand("stopped the presses", blocked));
+        assertFalse(CommandSyntax.isBlockedCommand("open sesame", blocked));
+        assertFalse(CommandSyntax.isBlockedCommand("", blocked));
+        assertFalse(CommandSyntax.isBlockedCommand("   ", blocked));
+        assertFalse(CommandSyntax.isBlockedCommand("stop", List.of()));
+        assertFalse(CommandSyntax.isBlockedCommand("stop", null));
+        assertFalse(CommandSyntax.isBlockedCommand(null, blocked));
+        assertTrue(CommandSyntax.isBlockedCommand("/OP Steve", List.of("/Op")));
+        assertTrue(CommandSyntax.isBlockedCommand("stop now", List.of("minecraft:stop")));
+        assertTrue(CommandSyntax.isBlockedCommand("minecraft:stop now", List.of("stop")));
     }
 }

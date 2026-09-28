@@ -180,6 +180,7 @@ descriptions:
   "advanced.misc.interop": "Advanced server interop toggles."
   "advanced.misc.interop.disable-worldedit-navwand": "Block WorldEdit compass teleports."
   "advanced.misc.interop.validate-modifier-editor-commands": "Reject bad roots and give items in the editor."
+  "advanced.misc.interop.blacklisted-modifier-commands": "Command roots modifiers may never dispatch."
   "settings.server.anti-spawn-camp": "Punish farming kills on one victim."
   "settings.server.status": "Pick which lines status commands show."
   "settings.server.team-chat": "Prefixed chat for match teammates."

@@ -670,6 +670,34 @@ public final class CommandSyntax {
     }
 
     /**
+     * Dispatch-style root of a command line: first whitespace token
+     * with slashes and any namespace prefix stripped, lowercased.
+     * Blank lines have no root. Pure for tests.
+     */
+    public static String commandRoot(String command) {
+        return rootName(firstToken(command));
+    }
+
+    /**
+     * True when the line's root names a blocked command. Both sides
+     * normalize through {@link #commandRoot}, so list entries like
+     * {@code /Op} or {@code minecraft:stop} still match. Blank lines
+     * and null lists never match. Pure for tests.
+     */
+    public static boolean isBlockedCommand(String command, Collection<String> blocked) {
+        String root = commandRoot(command);
+        if (root.isEmpty() || blocked == null) {
+            return false;
+        }
+        for (String entry : blocked) {
+            if (entry != null && root.equals(commandRoot(entry))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Closest candidate within two edits, or null when none is close
      * or the best distance ties. Exact matches are skipped: they are
      * the item itself under a predicate the caller already rejected.

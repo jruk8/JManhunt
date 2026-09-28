@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
+import com.jruk8.jmanhunt.command.CommandSyntax;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.command.TagContext;
@@ -20,6 +21,7 @@ import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Executes game rules and modifiers at match state transitions. */
 public final class GameStateCommandManager {
+    /** Config path of the modifier command blacklist. */
+    private static final String BLACKLISTED_COMMANDS_PATH =
+            "advanced.misc.interop.blacklisted-modifier-commands";
+
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
     private final ConfigService configService;
@@ -548,6 +554,7 @@ public final class GameStateCommandManager {
      */
     void runCommandList(List<String> commands, Player player, TagContext context,
             TagContext.Provenance base) {
+        Collection<String> blocked = configService.getStringList(BLACKLISTED_COMMANDS_PATH);
         for (int lineIndex = 0; lineIndex < commands.size(); lineIndex++) {
             String command = commands.get(lineIndex);
             context.setProvenance(base.withLine(lineIndex));
@@ -575,7 +582,9 @@ public final class GameStateCommandManager {
                         context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
                         continue;
                     }
-                    dispatchModifierLine(parsed, context);
+                    if (!dispatchModifierLine(parsed, context, blocked)) {
+                        return;
+                    }
                 }
             } catch (Exception e) {
                 plugin.logger().severe("Failed to run command '%s'. Skipping..".formatted(command));
@@ -585,19 +594,30 @@ public final class GameStateCommandManager {
     }
 
     /**
-     * Dispatches one parsed modifier line as console. A line that
-     * resolved to pure {@code "null"} warns with the source line and
-     * never dispatches.
+     * Dispatches one parsed modifier line as console, false when the
+     * line names a blacklisted command: the hit logs severe and the
+     * caller aborts the rest of the list. A line that resolved to
+     * pure {@code "null"} warns with the source line and never
+     * dispatches, like blank lines.
      */
-    private void dispatchModifierLine(String parsed, TagContext context) {
+    private boolean dispatchModifierLine(String parsed, TagContext context,
+            Collection<String> blocked) {
         Optional<String> dispatchable = TagExpressions.dispatchableLine(parsed);
         if (dispatchable.isPresent() && TagExpressions.isPureNull(dispatchable.get())) {
             plugin.logger().warning("Skipping command that resolved to pure \"null\" at "
                     + context.provenance().describe() + ".");
-            return;
+            return true;
+        }
+        if (dispatchable.isPresent()
+                && CommandSyntax.isBlockedCommand(dispatchable.get(), blocked)) {
+            plugin.logger().severe("Blocked blacklisted modifier command '"
+                    + dispatchable.get() + "' at " + context.provenance().describe()
+                    + "; aborting the command list.");
+            return false;
         }
         dispatchable.ifPresent(line ->
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line));
+        return true;
     }
 
     /**

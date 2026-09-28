@@ -227,6 +227,62 @@ class GameStateCommandManagerTest {
     }
 
     @Test
+    void blacklistedLineAbortsListWithSevere() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        JManhuntLogger logger = mock(JManhuntLogger.class);
+        when(plugin.logger()).thenReturn(logger);
+        ConfigService config = mock(ConfigService.class);
+        when(config.getStringList(anyString())).thenReturn(List.of("stop"));
+        MessageService messages = mock(MessageService.class);
+        GameStateCommandManager manager = new GameStateCommandManager(plugin,
+                new PlayerStateStore(), config, messages,
+                mock(SoundService.class), mock(GameManager.class));
+        List<String> warnings = new ArrayList<>();
+        TagContext context = TagContext.run(
+                ModifierTagScope.executor("Steve", warnings::add), "halt",
+                text -> messages.broadcastText(text), text -> { },
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                (player, reason) -> { }, (role, reason) -> { },
+                7L, TagBackends.inert());
+
+        manager.runCommandList(List.of("stop", "<gmessage:after>"), null, context,
+                TagContext.Provenance.of("halt", 0, "console"));
+
+        verify(logger).severe(argThat(line -> line != null && line.contains("blacklisted")
+                && line.contains("'stop'") && line.contains("aborting")
+                && line.contains(
+                        "modifier 'halt', behavior 0, list 'console', line 0 (0-based)")));
+        verify(messages, never()).broadcastText(anyString());
+    }
+
+    @Test
+    void blacklistedLineKeepsMatchRunning() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        JManhuntLogger logger = mock(JManhuntLogger.class);
+        when(plugin.logger()).thenReturn(logger);
+        OverrideService overrides = mock(OverrideService.class);
+        when(plugin.overrides()).thenReturn(overrides);
+        when(overrides.modifierEnabled(any(), eq("halt"))).thenReturn(true);
+        ConfigService config = mock(ConfigService.class);
+        when(config.modifierNames()).thenReturn(java.util.Set.of("halt"));
+        when(config.behaviorIndexes("halt")).thenReturn(List.of(0));
+        when(config.commandList("halt", 0, "console-cleanup")).thenReturn(List.of("stop"));
+        when(config.getStringList(anyString())).thenReturn(List.of("stop"));
+        GameManager game = mock(GameManager.class);
+        when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
+        when(game.flagStore()).thenReturn(new FlagStore());
+        MessageService messages = mock(MessageService.class);
+        GameStateCommandManager manager = new GameStateCommandManager(plugin,
+                new PlayerStateStore(), config, messages,
+                mock(SoundService.class), game);
+
+        manager.runConsoleCleanup(7L);
+
+        verify(logger).severe(argThat(line -> line != null && line.contains("blacklisted")));
+        verify(game, never()).cancel(any(GameInstance.class));
+    }
+
+    @Test
     void runawayLoopCancelsMatchWithProvenance() {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         JManhuntLogger logger = mock(JManhuntLogger.class);
@@ -382,5 +438,18 @@ class GameStateCommandManagerTest {
         assertEquals(8, ((List<String>) rules).size());
         assertTrue(((List<String>) rules).contains("DISABLE_PILLAGER_PATROLS"));
         assertFalse(((List<String>) rules).contains("DISABLE_COMMAND_FEEDBACK"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void schemaBlacklistDefaults() {
+        Object blocked = ConfigPathMapper.get(new JManhuntConfig(),
+                "advanced.misc.interop.blacklisted-modifier-commands");
+
+        assertTrue(blocked instanceof List, "blacklist must be a list");
+        assertEquals(12, ((List<String>) blocked).size());
+        assertTrue(((List<String>) blocked).contains("op"));
+        assertTrue(((List<String>) blocked).contains("execute"));
+        assertTrue(((List<String>) blocked).contains("whitelist"));
     }
 }

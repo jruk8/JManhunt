@@ -103,6 +103,23 @@ player actually has that role. For example, if a hunter enters the Nether and
 only a `speedrunner` block is configured, that block does not run. Console
 commands run in parallel regardless of any player's role.
 
+# Blacklisted Commands
+
+Some commands are too dangerous for modifiers to dispatch. The
+`advanced.misc.interop.blacklisted-modifier-commands` list in `config.yml`
+names command roots that never run, no matter which list holds them
+(`console`, `player`, `hunter`, `speedrunner`, or either cleanup list).
+
+Matching uses the first token of the resolved line with slashes and any
+`namespace:` prefix stripped, case-insensitively, so `stop`, `/Stop`, and
+`minecraft:stop` all match a `stop` entry. When a line hits the blacklist,
+the plugin logs an error naming the command and its source line, then skips
+the rest of that command list. The match itself keeps running.
+
+Defaults: `op`, `deop`, `stop`, `restart`, `reload`, `luckperms`, `lp`,
+`permissions`, `ban`, `kick`, `whitelist`, `execute`. Empty the list to
+disable the blacklist entirely.
+
 # Run Timing
 
 Under `runs-on`, you configure when the commands

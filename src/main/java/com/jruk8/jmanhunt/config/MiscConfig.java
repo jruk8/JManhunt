@@ -3,6 +3,8 @@ package com.jruk8.jmanhunt.config;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Power-user toggles that rarely need changing. */
 @SuppressWarnings("FieldMayBeFinal")
@@ -62,6 +64,27 @@ public class MiscConfig extends OkaeriConfig {
 
         public void setValidateModifierEditorCommands(boolean validateModifierEditorCommands) {
             this.validateModifierEditorCommands = validateModifierEditorCommands;
+        }
+
+        @CustomKey("blacklisted-modifier-commands")
+        @Comment({
+                "Command roots modifiers may never dispatch, matched against the",
+                "first token with slashes and namespace prefixes stripped,",
+                "case-insensitively. A hit logs an error and aborts the rest",
+                "of the command list; the match keeps running.",
+                "Default: op, deop, stop, restart, reload, luckperms, lp,",
+                "permissions, ban, kick, whitelist, execute"
+        })
+        private List<String> blacklistedModifierCommands = new ArrayList<>(List.of("op", "deop",
+                "stop", "restart", "reload", "luckperms", "lp", "permissions", "ban", "kick",
+                "whitelist", "execute"));
+
+        public List<String> getBlacklistedModifierCommands() {
+            return blacklistedModifierCommands;
+        }
+
+        public void setBlacklistedModifierCommands(List<String> blacklistedModifierCommands) {
+            this.blacklistedModifierCommands = blacklistedModifierCommands;
         }
     }
 
