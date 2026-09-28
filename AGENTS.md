@@ -18,7 +18,8 @@ Project guidance for AI coding agents working on the JManhunt repository.
 
 ## Configuration
 
-- Default configuration belongs in `src/main/resources/`.
+- Config, message, and sound defaults live in their Okaeri schema classes; data-folder files generate from schema on first run.
+- Authored content files (`modifiers.yml`, `Core/*.yml`, `settings/*.json`) belong in `src/main/resources/` and are the source of truth for their data.
 - Runtime configuration belongs in the plugin data folder.
 - Never hardcode paths.
 

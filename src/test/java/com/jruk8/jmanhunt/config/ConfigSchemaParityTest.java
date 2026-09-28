@@ -1,31 +1,25 @@
 package com.jruk8.jmanhunt.config;
 
-import com.jruk8.jmanhunt.message.MessagesConfig;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.CustomKey;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Three-way parity between the Okaeri schema, the setting registry,
- * and the bundled yml files: every editable scalar is registered with
- * the schema default, every schema leaf is reachable, and the bundled
- * files carry exactly the schema defaults.
+ * Two-way parity between the Okaeri schema and the setting registry:
+ * every editable scalar is registered with the schema default and
+ * every schema leaf is reachable. The data-folder files generate
+ * from the schema, so no bundled copy exists to compare against.
  */
 class ConfigSchemaParityTest {
 
@@ -76,81 +70,6 @@ class ConfigSchemaParityTest {
         }
         for (String path : SettingRegistry.listPaths()) {
             assertTrue(walk.lists().contains(path), "registry list missing in schema: " + path);
-        }
-    }
-
-    @Test
-    void bundledConfigMatchesSchemaDefaults() throws Exception {
-        YamlConfiguration yaml = bundled("config.yml");
-        SchemaWalk walk = walk(new JManhuntConfig());
-        for (Map.Entry<String, Object> leaf : walk.leaves().entrySet()) {
-            assertTrue(yaml.contains(leaf.getKey()), "missing in bundled config: " + leaf.getKey());
-            assertEquals(normalize(leaf.getValue()), normalize(yaml.get(leaf.getKey())),
-                    "value mismatch: " + leaf.getKey());
-        }
-        for (String path : walk.lists()) {
-            List<String> expected = new ArrayList<>();
-            for (Object entry : (List<?>) ConfigPathMapper.get(new JManhuntConfig(), path)) {
-                expected.add(String.valueOf(entry));
-            }
-            assertEquals(expected, yaml.getStringList(path), "list mismatch: " + path);
-        }
-        for (String path : yaml.getKeys(true)) {
-            if (yaml.isConfigurationSection(path)) {
-                continue;
-            }
-            Object value = yaml.get(path);
-            if (value instanceof List) {
-                assertTrue(SettingRegistry.isListPath(path), "unregistered yaml list: " + path);
-            } else {
-                assertTrue(SettingRegistry.byPath(path) != null || EXCLUDED_SCALARS.contains(path),
-                        "unregistered yaml leaf: " + path);
-            }
-        }
-    }
-
-    @Test
-    void bundledSoundsMatchSchemaDefaults() throws Exception {
-        YamlConfiguration yaml = bundled("sounds.yml");
-        SchemaWalk walk = walk(new SoundsConfig());
-        for (Map.Entry<String, Object> leaf : walk.leaves().entrySet()) {
-            assertTrue(yaml.contains(leaf.getKey()), "missing in bundled sounds: " + leaf.getKey());
-            assertEquals(normalize(leaf.getValue()), normalize(yaml.get(leaf.getKey())),
-                    "value mismatch: " + leaf.getKey());
-        }
-        for (String path : yaml.getKeys(true)) {
-            if (!yaml.isConfigurationSection(path)) {
-                assertTrue(walk.leaves().containsKey(path), "unregistered sounds leaf: " + path);
-            }
-        }
-    }
-
-    @Test
-    void bundledMessagesMatchSchemaDefaults() throws Exception {
-        YamlConfiguration yaml = bundled("messages.yml");
-        SchemaWalk walk = walk(new MessagesConfig());
-        for (Map.Entry<String, Object> leaf : walk.leaves().entrySet()) {
-            assertTrue(yaml.contains(leaf.getKey()), "missing in bundled messages: " + leaf.getKey());
-            assertEquals(normalize(leaf.getValue()), normalize(yaml.get(leaf.getKey())),
-                    "value mismatch: " + leaf.getKey());
-        }
-        for (String path : walk.lists()) {
-            List<String> expected = new ArrayList<>();
-            for (Object entry : (List<?>) ConfigPathMapper.get(new MessagesConfig(), path)) {
-                expected.add(String.valueOf(entry));
-            }
-            assertEquals(expected, yaml.getStringList(path), "list mismatch: " + path);
-        }
-        for (String path : yaml.getKeys(true)) {
-            if (yaml.isConfigurationSection(path)) {
-                continue;
-            }
-            Object value = yaml.get(path);
-            if (value instanceof List) {
-                assertTrue(walk.lists().contains(path), "unregistered messages list: " + path);
-            } else {
-                assertTrue(walk.leaves().containsKey(path), "unregistered messages leaf: " + path);
-            }
         }
     }
 
@@ -219,12 +138,4 @@ class ConfigSchemaParityTest {
         }
     }
 
-    private static YamlConfiguration bundled(String name) throws Exception {
-        try (InputStream stream = Objects.requireNonNull(
-                ConfigSchemaParityTest.class.getClassLoader().getResourceAsStream(name),
-                "missing test resource: " + name)) {
-            return YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(stream, StandardCharsets.UTF_8));
-        }
-    }
 }

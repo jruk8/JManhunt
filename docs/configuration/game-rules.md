@@ -5,8 +5,8 @@
 match end when enabled, and can be browsed and toggled in-game with
 `/manhunt config`, which shows one checkbox per rule.
 
-All examples are the default config settings. Refer to the latest
-version of `config.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
+All examples are the default config settings. A fresh `config.yml` with
+every default and comment generates in the plugin data folder on first run.
 
 ```yaml
 advanced:

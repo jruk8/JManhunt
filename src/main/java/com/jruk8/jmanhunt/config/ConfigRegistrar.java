@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Creates and reloads the Okaeri root and sounds stores. The bundled
- * yml files seed the data folder on first run; every load writes
- * missing defaults with comments and drops orphaned keys, so old
- * settings paths and the former inline sounds block vanish on upgrade.
+ * Creates and reloads the Okaeri root and sounds stores. Both files
+ * generate from schema on first run; every load writes missing
+ * defaults with comments and drops orphaned keys, so old settings
+ * paths and the former inline sounds block vanish on upgrade.
  */
 public final class ConfigRegistrar {
 
@@ -32,8 +32,6 @@ public final class ConfigRegistrar {
     }
 
     public void register() {
-        seed("config.yml");
-        seed("sounds.yml");
         List<String> stale = staleBlocks(new File(plugin.getDataFolder(), "config.yml"));
         if (!stale.isEmpty()) {
             plugin.getLogger().warning("config.yml still has retired blocks ("
@@ -98,13 +96,6 @@ public final class ConfigRegistrar {
             }
         }
         return stale;
-    }
-
-    private void seed(String name) {
-        File file = new File(plugin.getDataFolder(), name);
-        if (!file.exists()) {
-            plugin.saveResource(name, false);
-        }
     }
 
     private void load(OkaeriConfig config, String name) {

@@ -1,9 +1,11 @@
 package com.jruk8.jmanhunt.message;
 
+import eu.okaeri.configs.ConfigManager;
+import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
@@ -14,8 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MessagesStyleTest {
 
     @Test
-    void statusBlockHasOnePrefixAtTop() throws Exception {
-        YamlConfiguration messages = loadBundledMessages();
+    void statusBlockHasOnePrefixAtTop() {
+        YamlConfiguration messages = loadSchemaMessages();
 
         String header = messages.getString("manhunt.status-header", "");
         assertEquals(1, count(header, "{prefix}"));
@@ -27,16 +29,16 @@ class MessagesStyleTest {
     }
 
     @Test
-    void statLinesHaveNoPrefix() throws Exception {
-        YamlConfiguration messages = loadBundledMessages();
+    void statLinesHaveNoPrefix() {
+        YamlConfiguration messages = loadSchemaMessages();
 
         assertFalse(messages.getString("game.stat-header", "").contains("{prefix}"));
         assertFalse(messages.getString("game.stat-entry", "").contains("{prefix}"));
     }
 
     @Test
-    void winBlockKeysHaveNoPrefixAndReasonSlots() throws Exception {
-        YamlConfiguration messages = loadBundledMessages();
+    void winBlockKeysHaveNoPrefixAndReasonSlots() {
+        YamlConfiguration messages = loadSchemaMessages();
 
         for (String key : List.of("game.hunters-win", "game.speedrunners-win",
                 "game.hunters-title", "game.speedrunners-title")) {
@@ -48,8 +50,8 @@ class MessagesStyleTest {
     }
 
     @Test
-    void cancelAndCellIndexKeysExist() throws Exception {
-        YamlConfiguration messages = loadBundledMessages();
+    void cancelAndCellIndexKeysExist() {
+        YamlConfiguration messages = loadSchemaMessages();
 
         assertTrue(messages.getString("game.cancelled", "").contains("{prefix}"));
         assertFalse(messages.getString("game.cancelled-title", "").contains("{prefix}"));
@@ -58,14 +60,14 @@ class MessagesStyleTest {
                 "manhunt.worldengine-cellindex-get", "manhunt.worldengine-cellindex-set",
                 "manhunt.worldengine-cellindex-invalid",
                 "manhunt.worldengine-cellindex-unavailable")) {
-            assertTrue(messages.getString(key, null) != null, key);
+            assertFalse(messages.getString(key, "").isBlank(), key);
         }
         assertFalse(messages.contains("messages-version"));
     }
 
     @Test
-    void modifiersKeysExist() throws Exception {
-        YamlConfiguration messages = loadBundledMessages();
+    void modifiersKeysExist() {
+        YamlConfiguration messages = loadSchemaMessages();
 
         for (String key : List.of("modifiers.usage", "modifiers.setmod-usage",
                 "modifiers.setpreset-usage", "modifiers.unknown-modifier",
@@ -75,7 +77,7 @@ class MessagesStyleTest {
                 "modifiers.list-entry-off", "modifiers.list-presets-header",
                 "modifiers.list-empty", "modifiers.edit-id-changed",
                 "modifiers.loop-limit")) {
-            assertTrue(messages.getString(key, null) != null, key);
+            assertFalse(messages.getString(key, "").isBlank(), key);
         }
         String announced = messages.getString("modifiers.toggle-announced", "");
         assertTrue(announced.contains("{player}"), "toggle-announced needs {player}");
@@ -84,8 +86,8 @@ class MessagesStyleTest {
     }
 
     @Test
-    void lobbyChangeKeysExistWithSlots() throws Exception {
-        YamlConfiguration messages = loadBundledMessages();
+    void lobbyChangeKeysExistWithSlots() {
+        YamlConfiguration messages = loadSchemaMessages();
 
         for (String key : List.of("manhunt.lobby-left", "manhunt.lobby-joined")) {
             String value = messages.getString(key, "");
@@ -101,8 +103,8 @@ class MessagesStyleTest {
     }
 
     @Test
-    void guiKeysExistAndCarryNoPrefix() throws Exception {
-        YamlConfiguration messages = loadBundledMessages();
+    void guiKeysExistAndCarryNoPrefix() {
+        YamlConfiguration messages = loadSchemaMessages();
 
         for (String key : List.of("modifiers-gui.title-main", "modifiers-gui.title-modifiers",
                 "modifiers-gui.title-presets", "modifiers-gui.to-modifiers",
@@ -112,8 +114,8 @@ class MessagesStyleTest {
                 "modifiers-gui.toggle-all", "modifiers-gui.toggle-all-modifiers-lore",
                 "modifiers-gui.toggle-all-presets-lore",
                 "modifiers-gui.state-on", "modifiers-gui.state-off")) {
-            String value = messages.getString(key, null);
-            assertTrue(value != null, key);
+            String value = messages.getString(key, "");
+            assertFalse(value.isBlank(), key);
             assertFalse(value.contains("{prefix}"), key);
         }
         for (String key : List.of("modifiers-gui.toggle-all-modifiers-lore",
@@ -129,8 +131,8 @@ class MessagesStyleTest {
     }
 
     @Test
-    void intervalSkipKeyCarriesModifierPlayerAndWhy() throws Exception {
-        YamlConfiguration messages = loadBundledMessages();
+    void intervalSkipKeyCarriesModifierPlayerAndWhy() {
+        YamlConfiguration messages = loadSchemaMessages();
 
         String value = messages.getString("debug.interval-skip", "");
         assertTrue(value.contains("{modifier}"), "interval-skip needs {modifier}");
@@ -140,9 +142,10 @@ class MessagesStyleTest {
 
     @Test
     void bundledResourcesContainNoEmDashes() throws Exception {
-        assertFalse(rawResource("config.yml").contains("\u2014"), "config.yml");
-        assertFalse(rawResource("messages.yml").contains("\u2014"), "messages.yml");
-        assertFalse(rawResource("sounds.yml").contains("\u2014"), "sounds.yml");
+        assertFalse(rawResource("modifiers.yml").contains("\u2014"), "modifiers.yml");
+        assertFalse(rawResource("Core/gui.yml").contains("\u2014"), "Core/gui.yml");
+        assertFalse(rawResource("Core/tutorial.yml").contains("\u2014"), "Core/tutorial.yml");
+        assertFalse(rawResource("Core/dev.yml").contains("\u2014"), "Core/dev.yml");
     }
 
     private static int count(String text, String token) {
@@ -155,13 +158,15 @@ class MessagesStyleTest {
         return found;
     }
 
-    private static YamlConfiguration loadBundledMessages() throws Exception {
-        try (InputStream stream = Objects.requireNonNull(
-                MessagesStyleTest.class.getClassLoader().getResourceAsStream("messages.yml"),
-                "missing test resource: messages.yml")) {
-            return YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(stream, StandardCharsets.UTF_8));
-        }
+    /**
+     * Schema defaults rendered through Okaeri exactly as first-run
+     * generation writes them. No Bukkit serdes: messages are plain
+     * strings, so the configurer alone suffices.
+     */
+    private static YamlConfiguration loadSchemaMessages() {
+        MessagesConfig config = ConfigManager.create(MessagesConfig.class,
+                it -> it.withConfigurer(new YamlBukkitConfigurer()));
+        return YamlConfiguration.loadConfiguration(new StringReader(config.saveToString()));
     }
 
     private static String rawResource(String name) throws Exception {

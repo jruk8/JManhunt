@@ -14,7 +14,9 @@ import eu.okaeri.configs.annotation.Header;
  */
 @SuppressWarnings("FieldMayBeFinal")
 @Header({
-        "JManhunt messages.",
+        "JManhunt messages. Missing entries are added automatically on load and",
+        "unknown entries are removed. An explicitly empty string disables that",
+        "message wherever it would be sent.",
         "",
         "Placeholders: {prefix}, {player}, {role}, {distance}, {world},",
         "{winner}, {stat}, {value}, {effect}, {seconds}, {rank-color}.",

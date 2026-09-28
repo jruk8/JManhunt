@@ -6,7 +6,9 @@ import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.StatValues;
 import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.command.TagContext;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -14,15 +16,10 @@ import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Location;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -364,17 +361,14 @@ class GameStateCommandManagerTest {
     }
 
     @Test
-    void bundledConfigRulesListDefaults() throws Exception {
-        try (InputStream stream = Objects.requireNonNull(
-                getClass().getClassLoader().getResourceAsStream("config.yml"),
-                "missing test resource: config.yml")) {
-            YamlConfiguration config = YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(stream, StandardCharsets.UTF_8));
-            List<String> rules = config.getStringList(
-                    "advanced.advanced-match-controls.game-rules.rules");
-            assertEquals(8, rules.size());
-            assertTrue(rules.contains("DISABLE_PILLAGER_PATROLS"));
-            assertFalse(rules.contains("DISABLE_COMMAND_FEEDBACK"));
-        }
+    @SuppressWarnings("unchecked")
+    void schemaRulesListDefaults() {
+        Object rules = ConfigPathMapper.get(new JManhuntConfig(),
+                "advanced.advanced-match-controls.game-rules.rules");
+
+        assertTrue(rules instanceof List, "rules must be a list");
+        assertEquals(8, ((List<String>) rules).size());
+        assertTrue(((List<String>) rules).contains("DISABLE_PILLAGER_PATROLS"));
+        assertFalse(((List<String>) rules).contains("DISABLE_COMMAND_FEEDBACK"));
     }
 }

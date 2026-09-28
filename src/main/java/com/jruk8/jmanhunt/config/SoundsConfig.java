@@ -27,9 +27,15 @@ public class SoundsConfig extends OkaeriConfig {
     private int soundsVersion = 4;
 
     private Game game = new Game();
+    @Comment({
+            "Per-role sounds for the start-of-match role announcement. Each participant",
+            "hears their own role's sound."
+    })
     private Announce announce = new Announce();
+    @Comment("Compass interaction sounds.")
     private Compass compass = new Compass();
     private Ui ui = new Ui();
+    @Comment("Chat sounds.")
     private Chat chat = new Chat();
 
     public int getSoundsVersion() {

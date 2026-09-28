@@ -7,10 +7,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 
 /**
- * Creates and reloads the Okaeri messages store. The bundled
- * messages.yml seeds the data folder on first run; every load
- * writes missing defaults and drops orphaned keys (including
- * the retired messages-version), so no migration step exists.
+ * Creates and reloads the Okaeri messages store. The file generates
+ * from schema on first run; every load writes missing defaults and
+ * drops orphaned keys (including the retired messages-version), so
+ * no migration step exists.
  */
 public final class MessagesRegistrar {
 
@@ -23,9 +23,6 @@ public final class MessagesRegistrar {
 
     public void register() {
         File file = new File(plugin.getDataFolder(), "messages.yml");
-        if (!file.exists()) {
-            plugin.saveResource("messages.yml", false);
-        }
         this.messages = ConfigManager.create(MessagesConfig.class, it -> {
             it.withConfigurer(new YamlBukkitConfigurer(), new SerdesBukkit());
             it.withBindFile(file);

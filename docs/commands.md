@@ -234,8 +234,7 @@ as `child: value`. Non-editable branches never surface:
 ```
 
 Setting names are matched case-insensitively. When tab-completing a value,
-non-boolean settings suggest the **default value from the bundled default
-config**.
+non-boolean settings suggest the **setting's default value**.
 
 When `settings.server.announce-config-changes` is enabled, every
 successful change is announced to all online players except the one who

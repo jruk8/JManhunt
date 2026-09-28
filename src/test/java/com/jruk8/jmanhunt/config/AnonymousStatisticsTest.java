@@ -1,20 +1,21 @@
 package com.jruk8.jmanhunt.config;
 
 import com.jruk8.jmanhunt.command.ManhuntCommand;
+import eu.okaeri.configs.ConfigManager;
+import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import org.junit.jupiter.api.Test;
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import org.junit.jupiter.api.io.TempDir;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.Objects;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for the {@code send-anonymous-statistics} toggle: it sits at the
- * very top of the bundled config and stays hidden from the in-game
+ * very top of the generated config and stays hidden from the in-game
  * configuration command.
  *
  * <p>Deliberately Mockito-free: the plugin class extends Bukkit's
@@ -24,20 +25,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AnonymousStatisticsTest {
 
     @Test
-    void toggleSitsDirectlyBelowConfigVersion() throws Exception {
-        List<String> lines = new ArrayList<>();
-        try (InputStream stream = resource("config.yml");
-             BufferedReader reader = new BufferedReader(
-                     new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                lines.add(line);
-            }
-        }
+    void toggleSitsDirectlyBelowConfigVersion(@TempDir Path folder) throws Exception {
+        // Rendered through Okaeri exactly as first-run generation writes
+        // it. No Bukkit serdes and no load-back: both need a running
+        // server, and the written file is all the order check needs.
+        File file = folder.resolve("config.yml").toFile();
+        JManhuntConfig config = ConfigManager.create(JManhuntConfig.class, it -> {
+            it.withConfigurer(new YamlBukkitConfigurer());
+            it.withBindFile(file);
+        });
+        config.saveDefaults();
+        List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
 
         int versionIndex = indexOfKey(lines, "config-version:");
         int toggleIndex = indexOfKey(lines, "send-anonymous-statistics:");
-        assertTrue(versionIndex >= 0, "bundled config must define config-version");
+        assertTrue(versionIndex >= 0, "generated config must define config-version");
         assertTrue(toggleIndex > versionIndex,
                 "send-anonymous-statistics must come after config-version");
 
@@ -71,12 +73,6 @@ class AnonymousStatisticsTest {
         }
         assertFalse(ManhuntCommand.drillChildren(List.of(), path -> null)
                 .contains("send-anonymous-statistics"));
-    }
-
-    private static InputStream resource(String name) {
-        return Objects.requireNonNull(
-                AnonymousStatisticsTest.class.getClassLoader().getResourceAsStream(name),
-                "missing test resource: " + name);
     }
 
     private static int indexOfKey(List<String> lines, String key) {

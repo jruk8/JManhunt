@@ -8,8 +8,8 @@ one world file, which is:
 - very performant (new cells preload in the background)
 - supports up to half a billion cells (games) on just one world file
 
-All command examples are the default config settings. Refer to the latest 
-version of `config.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
+All command examples are the default config settings. A fresh `config.yml`
+with every default and comment generates in the plugin data folder on first run.
 
 Settings for the world engine are categorized under `world-engine`:
 

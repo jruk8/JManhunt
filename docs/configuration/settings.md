@@ -4,8 +4,8 @@
 off to keep the game simple for new users. However, everything included is fully functional
 and designed to enhance the experience.
 
-All command examples are the default config settings. Refer to the latest
-version of `config.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/config.yml).
+All command examples are the default config settings. A fresh `config.yml`
+with every default and comment generates in the plugin data folder on first run.
 
 This section is split into focused pages:
 

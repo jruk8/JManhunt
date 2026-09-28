@@ -91,11 +91,11 @@ public class MatchConfig extends OkaeriConfig {
     public static class GameRules extends OkaeriConfig {
 
         /** Config path of the rules enum array. */
-        public static final String RULES_PATH =
+        public static final transient String RULES_PATH =
                 "advanced.advanced-match-controls.game-rules.rules";
 
         /** Known rule keys, in display order. */
-        public static final List<String> KNOWN = List.of(
+        public static final transient List<String> KNOWN = List.of(
                 "AUTO_SET_GAMEMODE",
                 "RESET_PLAYERS_STATS",
                 "DISABLE_LOCATOR_BAR",
@@ -107,7 +107,7 @@ public class MatchConfig extends OkaeriConfig {
                 "DISABLE_WANDERING_TRADER");
 
         /** Rules enabled by default: all but DISABLE_COMMAND_FEEDBACK. */
-        public static final List<String> DEFAULT_RULES = List.of(
+        public static final transient List<String> DEFAULT_RULES = List.of(
                 "AUTO_SET_GAMEMODE",
                 "RESET_PLAYERS_STATS",
                 "DISABLE_LOCATOR_BAR",
