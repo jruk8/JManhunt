@@ -561,8 +561,7 @@ final class CompassLockService {
                     context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
                     continue;
                 }
-                TagExpressions.dispatchableLine(parsed).ifPresent(line ->
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line));
+                dispatchDebuffLine(parsed, context);
             } catch (Exception exception) {
                 plugin.logger().severe(
                         "Failed to run analysis debuff command '" + command + "'. Skipping..");
@@ -574,6 +573,22 @@ final class CompassLockService {
     /** Stamps the debuff line provenance for loop-limit diagnostics. */
     private static void stampProvenance(TagContext context, int lineIndex) {
         context.setProvenance(TagContext.Provenance.of("debuffs", -1, "debuffs").withLine(lineIndex));
+    }
+
+    /**
+     * Dispatches one parsed debuff line as console. A line that
+     * resolved to pure {@code "null"} warns with the source line and
+     * never dispatches.
+     */
+    private void dispatchDebuffLine(String parsed, TagContext context) {
+        Optional<String> dispatchable = TagExpressions.dispatchableLine(parsed);
+        if (dispatchable.isPresent() && TagExpressions.isPureNull(dispatchable.get())) {
+            plugin.logger().warning("Skipping command that resolved to pure \"null\" at "
+                    + context.provenance().describe() + ".");
+            return;
+        }
+        dispatchable.ifPresent(line ->
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line));
     }
 
     /** Shared player debuffs plus the holder's own role list. */
@@ -612,7 +627,10 @@ final class CompassLockService {
                 },
                 (target, reason) -> scope.warn("Tag <loseplayer> only works in modifiers: skipped."),
                 (role, reason) -> scope.warn("Tag <win> only works in modifiers: skipped."),
-                matchId, backends, List.of(), detail -> loopLimitExceeded(detail, matchId));
+                matchId, backends, List.of(), detail -> loopLimitExceeded(detail, matchId),
+                text -> scope.warn("Tag <rmessage> only works in modifiers: skipped."),
+                (soundId, pitch, volume) ->
+                        scope.warn("Tag <rsound> only works in modifiers: skipped."));
     }
 
     /**

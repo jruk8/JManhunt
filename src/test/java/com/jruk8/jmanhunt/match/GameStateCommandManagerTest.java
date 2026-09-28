@@ -12,6 +12,8 @@ import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
+import com.jruk8.jmanhunt.player.Role;
+import org.bukkit.Location;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -199,6 +202,34 @@ class GameStateCommandManagerTest {
     }
 
     @Test
+    void pureNullLinesWarnWithProvenanceAndSkipDispatch() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        JManhuntLogger logger = mock(JManhuntLogger.class);
+        when(plugin.logger()).thenReturn(logger);
+        GameStateCommandManager manager = new GameStateCommandManager(plugin,
+                new PlayerStateStore(), mock(ConfigService.class), mock(MessageService.class),
+                mock(SoundService.class), mock(GameManager.class));
+        List<String> warnings = new ArrayList<>();
+        TagContext context = TagContext.run(
+                ModifierTagScope.executor("Steve", warnings::add), "null-probe",
+                text -> { }, text -> { },
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                (player, reason) -> { }, (role, reason) -> { },
+                7L, TagBackends.inert());
+
+        // <i> outside any loop is a silent null, so the line resolves to
+        // pure "null": warn with the source line and skip the dispatcher
+        // (dispatching would crash on the missing server in this test).
+        manager.runCommandList(List.of("<gmessage:warm>", "<i>"), null, context,
+                TagContext.Provenance.of("null-probe", 1, "console"));
+
+        assertTrue(warnings.isEmpty(), warnings.toString());
+        verify(logger).warning(argThat(line -> line != null && line.contains("pure \"null\"")
+                && line.contains(
+                        "modifier 'null-probe', behavior 1, list 'console', line 1 (0-based)")));
+    }
+
+    @Test
     void runawayLoopCancelsMatchWithProvenance() {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         JManhuntLogger logger = mock(JManhuntLogger.class);
@@ -233,6 +264,86 @@ class GameStateCommandManagerTest {
         verify(messages).sendText(eq(player), argThat(text -> text != null
                 && text.contains("step limit") && text.contains("administrator")));
         verify(game).cancel(instance);
+    }
+
+    @Test
+    void roleTagsReachOnlyExecutorRole() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        JManhuntLogger logger = mock(JManhuntLogger.class);
+        when(plugin.logger()).thenReturn(logger);
+        OverrideService overrides = mock(OverrideService.class);
+        when(plugin.overrides()).thenReturn(overrides);
+        when(overrides.modifierEnabled(any(), eq("herald"))).thenReturn(true);
+        ConfigService config = mock(ConfigService.class);
+        when(config.modifierNames()).thenReturn(java.util.Set.of("herald"));
+        when(config.behaviorIndexes("herald")).thenReturn(List.of(0));
+        when(config.commandList("herald", 0, "player-cleanup"))
+                .thenReturn(List.of("<rmessage:go team>", "<rsound:block.note_block.pling,1,1>"));
+        PlayerStateStore playerStates = mock(PlayerStateStore.class);
+        Player hunter = mock(Player.class);
+        Player mate = mock(Player.class);
+        Player runner = mock(Player.class);
+        when(hunter.getLocation()).thenReturn(mock(Location.class));
+        when(playerStates.role(any(Player.class))).thenReturn(Role.HUNTER);
+        when(playerStates.role(runner)).thenReturn(Role.SPEEDRUNNER);
+        GameManager game = mock(GameManager.class);
+        GameInstance instance = mock(GameInstance.class);
+        when(game.instance(7L)).thenReturn(Optional.of(instance));
+        when(game.onlineAssignedPlayers(instance)).thenReturn(List.of(hunter, mate, runner));
+        when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
+        when(game.flagStore()).thenReturn(new FlagStore());
+        MessageService messages = mock(MessageService.class);
+        when(messages.string(anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+        SoundService sounds = mock(SoundService.class);
+        when(sounds.isValidSound(anyString())).thenReturn(true);
+        GameStateCommandManager manager = new GameStateCommandManager(plugin,
+                playerStates, config, messages, sounds, game);
+
+        manager.runPlayerCleanup(7L, List.of(hunter));
+
+        verify(messages).sendText(hunter, "go team");
+        verify(messages).sendText(mate, "go team");
+        verify(messages, never()).sendText(eq(runner), anyString());
+        verify(sounds).playCustomSound(hunter, "block.note_block.pling", 1.0f, 1.0f);
+        verify(sounds).playCustomSound(mate, "block.note_block.pling", 1.0f, 1.0f);
+        verify(sounds, never()).playCustomSound(eq(runner), anyString(), anyFloat(), anyFloat());
+    }
+
+    @Test
+    void roleTagsWithoutRunnerExecutorWarn() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        JManhuntLogger logger = mock(JManhuntLogger.class);
+        when(plugin.logger()).thenReturn(logger);
+        OverrideService overrides = mock(OverrideService.class);
+        when(plugin.overrides()).thenReturn(overrides);
+        when(overrides.modifierEnabled(any(), eq("herald"))).thenReturn(true);
+        ConfigService config = mock(ConfigService.class);
+        when(config.modifierNames()).thenReturn(java.util.Set.of("herald"));
+        when(config.behaviorIndexes("herald")).thenReturn(List.of(0));
+        when(config.commandList("herald", 0, "console-cleanup"))
+                .thenReturn(List.of("<rmessage:hi>"));
+        when(config.commandList("herald", 0, "player-cleanup"))
+                .thenReturn(List.of("<rsound:block.note_block.pling>"));
+        PlayerStateStore playerStates = mock(PlayerStateStore.class);
+        Player watcher = mock(Player.class);
+        when(watcher.getLocation()).thenReturn(mock(Location.class));
+        when(playerStates.role(watcher)).thenReturn(Role.SPECTATOR);
+        GameManager game = mock(GameManager.class);
+        when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
+        when(game.flagStore()).thenReturn(new FlagStore());
+        MessageService messages = mock(MessageService.class);
+        GameStateCommandManager manager = new GameStateCommandManager(plugin,
+                playerStates, config, messages, mock(SoundService.class), game);
+
+        manager.runConsoleCleanup(7L);
+        manager.runPlayerCleanup(7L, List.of(watcher));
+
+        verify(logger).warning(argThat(line -> line != null
+                && line.contains("<rmessage> needs an executor player")));
+        verify(logger).warning(argThat(line -> line != null
+                && line.contains("<rsound> needs a hunter or speedrunner executor")));
+        verify(messages, never()).sendText(any(Player.class), anyString());
     }
 
     @Test

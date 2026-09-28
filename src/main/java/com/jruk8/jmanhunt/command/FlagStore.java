@@ -2,16 +2,18 @@ package com.jruk8.jmanhunt.command;
 
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
 /**
- * Match-scoped flag storage behind {@code <gflag>} and
- * {@code <pflag>}. Both maps key per match id so concurrent matches
- * never share flags; teardown drops the whole match. Player keys
- * arrive already suffixed ({@code name-Player}); callers build the
- * suffix from the executor. In-memory only: a reload or restart
- * wipes every flag. No Bukkit types.
+ * Match-scoped flag storage behind {@code <gflag>},
+ * {@code <pflag>}, and {@code <rflag>}. Every map keys per match id
+ * so concurrent matches never share flags; teardown drops the whole
+ * match. Player keys arrive already suffixed ({@code name-Player})
+ * and role keys already prefixed ({@code ROLE:name}); callers build
+ * both from the executor. In-memory only: a reload or restart wipes
+ * every flag. No Bukkit types.
  */
 public final class FlagStore {
 
@@ -20,6 +22,7 @@ public final class FlagStore {
 
     private final Map<Long, Map<String, String>> globals = new HashMap<>();
     private final Map<Long, Map<String, String>> players = new HashMap<>();
+    private final Map<Long, Map<String, String>> roles = new HashMap<>();
 
     /** One global flag, or {@link #UNSET} when nothing was set. */
     public String global(long matchId, String key) {
@@ -41,6 +44,16 @@ public final class FlagStore {
         set(players, matchId, key, value);
     }
 
+    /** One role flag by prefixed key, or {@link #UNSET}. */
+    public String role(long matchId, String key) {
+        return get(roles, matchId, key);
+    }
+
+    /** Stores one role flag by prefixed key. */
+    public void setRole(long matchId, String key, String value) {
+        set(roles, matchId, key, value);
+    }
+
     /**
      * Drops every player flag whose suffix names this player. Names
      * match exactly, like the keys themselves.
@@ -59,10 +72,11 @@ public final class FlagStore {
         }
     }
 
-    /** Drops every flag of one match: globals and players alike. */
+    /** Drops every flag of one match: globals, players, and roles. */
     public void clearMatch(long matchId) {
         globals.remove(matchId);
         players.remove(matchId);
+        roles.remove(matchId);
     }
 
     private static String get(Map<Long, Map<String, String>> outer, long matchId, String key) {
@@ -89,6 +103,30 @@ public final class FlagStore {
     public static String suffixFor(ModifierTagScope scope) {
         String executor = scope.executorName();
         return executor == null ? consoleSuffix() : executor;
+    }
+
+    /** Key joining a role flag name to its owning upper-case role. */
+    public static String roleKey(String role, String name) {
+        return role + ":" + name;
+    }
+
+    /**
+     * Executor role for role-scoped tags: the executor's team when it
+     * is HUNTER or SPEEDRUNNER, else empty (console, unknown, or
+     * other roles like spectator).
+     */
+    public static Optional<String> executorRole(ModifierTagScope scope) {
+        String executor = scope.executorName();
+        if (executor == null) {
+            return Optional.empty();
+        }
+        return scope.participants().stream()
+                .filter(candidate -> candidate.name().equals(executor))
+                .map(ModifierTagScope.Participant::team)
+                .filter(team -> team.equalsIgnoreCase("HUNTER")
+                        || team.equalsIgnoreCase("SPEEDRUNNER"))
+                .map(team -> team.toUpperCase(Locale.ROOT))
+                .findFirst();
     }
 
     /** Validates one flag name: trimmed, non-blank, quotes parsed. */

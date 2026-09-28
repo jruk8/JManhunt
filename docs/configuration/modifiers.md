@@ -340,6 +340,9 @@ creator editor validates them as you type:
 | `<for:[a,b],...>` | Repeats the body per item with the item behind `<i>` (see Loops). |
 | `<while:1==1,...>` | Repeats the body while the condition holds (see Loops). |
 | `<i>` | The innermost for-loop item, else `null`. |
+| `<rflag:boost>` | The flag of the executing player's role (see Flags). |
+| `<rmessage:push!>` | Tells the executing player's role only. |
+| `<rsound:block.note_block.pling>` | Plays for the executing player's role only. |
 
 `<min>`, `<max>`, and `<clamp>` accept math in their arguments
 (`<min:8+5,10>` is `10`) and yield `0` with a console warning when an
@@ -378,11 +381,19 @@ on the win screen.
 ### Conditions
 
 `<if>` compares with `==`, `!=`, `lt`, `le`, `gt`, `ge` and joins
-parts with `and` / `or` (`and` binds tighter, case does not matter):
+parts with `and` / `or` (`and` binds tighter, case does not matter).
+Leading `not` words flip one comparison and bind tightest of all,
+so `not a == b and c == d` reads as `(not (a == b)) and (c == d)`,
+and `not not x` cancels out:
 
 ```yaml
 - 'say <if:"1 == 1 and 2 lt 3 or 4 == 5","y","n">'
+- 'say <if:"not <pstat:<p>,health> le 6","healthy","heal!">'
 ```
+
+Like `and` / `or`, `not` matches case-blindly and needs whitespace
+after it, which keeps words like `notable` plain text. A `not` with
+no comparison behind it warns and yields nothing.
 
 Ordering needs whole numbers. Each side compares as a number when it
 parses as math, otherwise as text. Word operators need a
@@ -434,10 +445,14 @@ may hold spaces inside quotes.
 | --- | --- | --- |
 | `<gflag:name,value>` | Whole match | Dies with the match. |
 | `<pflag:name,value>` | Executing player (`-CONSOLE` for console lists) | Flushed when the player leaves, is eliminated, or disconnects for good; dies with the match. |
+| `<rflag:name,value>` | Executing player's role (`HUNTER` or `SPEEDRUNNER`) | Dies with the match; player removal leaves role flags alone. |
 | `<lflag:name,value>` | This run only | Set in an early line, read in a later line, discarded after. |
 
 `<pflag:"cooldown",<gstat:"duration">>` stamps a cooldown;
-`<pflag:"cooldown">` reads it back.
+`<pflag:"cooldown">` reads it back. `<rflag>` follows the executor:
+hunters and speedrunners keep independent values under the same
+name. Console lists and spectators read `null` and warn on writes,
+since no runner role owns the flag.
 
 Flags are modifier-agnostic on purpose: any modifier can read what
 another wrote. For a strictly private flag, namespace the name with
@@ -539,6 +554,13 @@ A lone `exit` line stops the command list: later lines never run. It is
 checked after tags expand, so `<if:"1 == 2","exit","say hi">` skips
 the rest only when the branch hits. `exit` with anything else on its
 line is skipped with a warning.
+
+### Null lines
+
+A line that resolves to exactly `null` (lowercase, nothing else on
+it) is never dispatched: the console logs a warning naming the
+modifier, behavior, list, and line instead. Anything else holding
+`null` runs as usual.
 
 ## Relative Coordinates
 

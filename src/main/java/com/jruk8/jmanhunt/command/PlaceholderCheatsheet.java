@@ -70,7 +70,10 @@ public final class PlaceholderCheatsheet {
             Map.entry("range", new String[]{"<range:1,5>", "[1, 2, 3, 4], python style"}),
             Map.entry("while", new String[]{"<while:1==1,...>", "repeats while true"}),
             Map.entry("for", new String[]{"<for:[a,b],...>", "walks a list item by item"}),
-            Map.entry("i", new String[]{"<i>", "innermost for item, else null"}));
+            Map.entry("i", new String[]{"<i>", "innermost for item, else null"}),
+            Map.entry("rflag", new String[]{"<rflag:name>", "flag of the executor role"}),
+            Map.entry("rmessage", new String[]{"<rmessage:text>", "tells the executor role"}),
+            Map.entry("rsound", new String[]{"<rsound:id>", "plays for the executor role"}));
 
     private PlaceholderCheatsheet() {
     }

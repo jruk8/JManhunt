@@ -84,7 +84,7 @@ public final class TagLists {
     }
 
     private static final Pattern FLAG_REF = Pattern.compile(
-            "<\\s*(gflag|pflag|lflag)\\s*:\\s*([^<>]+)\\s*>", Pattern.CASE_INSENSITIVE);
+            "<\\s*(gflag|pflag|lflag|rflag)\\s*:\\s*([^<>]+)\\s*>", Pattern.CASE_INSENSITIVE);
 
     /**
      * Matches one pre-split segment against a verbatim flag reference.

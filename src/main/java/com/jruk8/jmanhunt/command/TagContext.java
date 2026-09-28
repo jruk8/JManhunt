@@ -72,6 +72,8 @@ public final class TagContext {
     private final Map<String, String> localFlags;
     private final Deque<String> loopItems;
     private final Consumer<String> loopLimit;
+    private final Consumer<String> roleMessage;
+    private final SoundSink roleSound;
     private Provenance provenance;
 
     private TagContext(ModifierTagScope scope, String containerId,
@@ -79,7 +81,8 @@ public final class TagContext {
             SoundSink globalSound, SoundSink playerSound,
             BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
             long matchId, TagBackends backends, List<String> eventArgs,
-            Map<String, String> localFlags, Consumer<String> loopLimit) {
+            Map<String, String> localFlags, Consumer<String> loopLimit,
+            Consumer<String> roleMessage, SoundSink roleSound) {
         this.scope = scope;
         this.containerId = containerId;
         this.globalMessage = globalMessage;
@@ -94,6 +97,8 @@ public final class TagContext {
         this.localFlags = localFlags;
         this.loopItems = new ArrayDeque<>();
         this.loopLimit = loopLimit;
+        this.roleMessage = roleMessage;
+        this.roleSound = roleSound;
         this.provenance = Provenance.of(containerId, -1, "");
     }
 
@@ -131,7 +136,7 @@ public final class TagContext {
     /**
      * Full run context with a loop-limit sink behind over-step
      * {@code <while>} and {@code <for>} loops: managers log, tell
-     * the match, and cancel it.
+     * the match, and cancel it. Role tags stay silent.
      */
     public static TagContext run(ModifierTagScope scope, String containerId,
             Consumer<String> globalMessage, Consumer<String> playerMessage,
@@ -139,9 +144,26 @@ public final class TagContext {
             BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
             long matchId, TagBackends backends, List<String> eventArgs,
             Consumer<String> loopLimit) {
+        return run(scope, containerId, globalMessage, playerMessage,
+                globalSound, playerSound, losePlayer, winMatch,
+                matchId, backends, eventArgs, loopLimit,
+                text -> { }, (id, pitch, volume) -> { });
+    }
+
+    /**
+     * Full run context with role sinks behind {@code <rmessage>} and
+     * {@code <rsound>}: managers reach the executor role members.
+     */
+    public static TagContext run(ModifierTagScope scope, String containerId,
+            Consumer<String> globalMessage, Consumer<String> playerMessage,
+            SoundSink globalSound, SoundSink playerSound,
+            BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
+            long matchId, TagBackends backends, List<String> eventArgs,
+            Consumer<String> loopLimit, Consumer<String> roleMessage, SoundSink roleSound) {
         return new TagContext(scope, containerId, globalMessage, playerMessage,
                 globalSound, playerSound, losePlayer, winMatch,
-                matchId, backends, List.copyOf(eventArgs), new HashMap<>(), loopLimit);
+                matchId, backends, List.copyOf(eventArgs), new HashMap<>(), loopLimit,
+                roleMessage, roleSound);
     }
 
     /** Full context for one modifier or debuff dispatch. */
@@ -150,7 +172,8 @@ public final class TagContext {
             SoundSink globalSound, SoundSink playerSound) {
         return new TagContext(scope, containerId, globalMessage, playerMessage,
                 globalSound, playerSound, (player, reason) -> { }, (role, reason) -> { },
-                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { });
+                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { },
+                text -> { }, (id, pitch, volume) -> { });
     }
 
     /** Inert context for scope-only callers: empty id, silent sinks. */
@@ -158,7 +181,8 @@ public final class TagContext {
         return new TagContext(scope, "", text -> { }, text -> { },
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                 (player, reason) -> { }, (role, reason) -> { },
-                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { });
+                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { },
+                text -> { }, (id, pitch, volume) -> { });
     }
 
     public ModifierTagScope scope() {
@@ -242,12 +266,22 @@ public final class TagContext {
         playerMessage.accept(text);
     }
 
+    /** Sends one message to the executor role members. */
+    public void sendRoleMessage(String text) {
+        roleMessage.accept(text);
+    }
+
     public void playGlobalSound(String soundId, float pitch, float volume) {
         globalSound.play(soundId, pitch, volume);
     }
 
     public void playPlayerSound(String soundId, float pitch, float volume) {
         playerSound.play(soundId, pitch, volume);
+    }
+
+    /** Plays one sound for the executor role members. */
+    public void playRoleSound(String soundId, float pitch, float volume) {
+        roleSound.play(soundId, pitch, volume);
     }
 
     /** Eliminates one player by name, behind {@code <loseplayer>}. */

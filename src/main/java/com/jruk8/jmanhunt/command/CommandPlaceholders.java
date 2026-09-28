@@ -454,11 +454,12 @@ public final class CommandPlaceholders {
             case "gflag" -> TagFlags.global(tag, args, context);
             case "pflag" -> TagFlags.player(tag, args, context);
             case "lflag" -> TagFlags.local(tag, args, context);
+            case "rflag" -> TagFlags.role(tag, args, context);
             case "placeholder" -> TagPlaceholders.resolve(tag, args, context);
             case "min", "max", "clamp" -> TagExpressions.minMaxClamp(tag, name, args, context);
             case "if" -> TagExpressions.ifEval(tag, args, context);
-            case "gmessage", "pmessage" -> TagExpressions.message(tag, name, args, context);
-            case "gsound", "psound" -> TagExpressions.sound(tag, name, args, context);
+            case "gmessage", "pmessage", "rmessage" -> TagSinks.message(tag, name, args, context);
+            case "gsound", "psound", "rsound" -> TagSinks.sound(tag, name, args, context);
             case "loseplayer" -> TagExpressions.loseplayer(tag, args, context);
             case "win" -> TagExpressions.win(tag, args, context);
             case "args" -> TagArgs.resolve(tag, args, context);

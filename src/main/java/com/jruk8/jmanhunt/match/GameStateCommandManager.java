@@ -271,7 +271,75 @@ public final class GameStateCommandManager {
                 matchId, new TagBackends(game.matchStatValues(matchId), game.flagStore(),
                         new PlaceholderPass(plugin.placeholderValues()),
                         new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId)),
-                eventArgs, detail -> loopLimitExceeded(detail, matchId));
+                eventArgs, detail -> loopLimitExceeded(detail, matchId),
+                text -> sendRoleMessage(name, executor, matchId, scope, text),
+                (soundId, pitch, volume) -> playRoleSound(name, executor, matchId, scope,
+                        soundId, pitch, volume));
+    }
+
+    /**
+     * {@code <rmessage>} sink: tells every online assigned player of
+     * the executor role, formatted like {@code <pmessage>}.
+     */
+    private void sendRoleMessage(String name, Player executor, long matchId,
+            ModifierTagScope scope, String text) {
+        roleMembers("rmessage", name, executor, matchId, scope).ifPresent(members -> {
+            String formatted = formatEngineMessage(text);
+            for (Player member : members) {
+                messages.sendText(member, formatted);
+            }
+        });
+    }
+
+    /**
+     * {@code <rsound>} sink: plays for every online assigned player
+     * of the executor role. Unknown ids skip like engine sounds.
+     */
+    private void playRoleSound(String name, Player executor, long matchId,
+            ModifierTagScope scope, String soundId, float pitch, float volume) {
+        Optional<List<Player>> members = roleMembers("rsound", name, executor, matchId, scope);
+        if (members.isEmpty()) {
+            return;
+        }
+        if (!sounds.isValidSound(soundId)) {
+            plugin.logger().warning("modifier \"" + name
+                    + "\" tried playing invalid sound \"" + soundId + "\"");
+            return;
+        }
+        for (Player member : members.get()) {
+            sounds.playCustomSound(member, soundId, pitch, volume);
+        }
+    }
+
+    /**
+     * Online assigned players sharing the executor role behind role
+     * tags, else empty with the reason warned. Console and
+     * non-runner executors cannot address a role.
+     */
+    private Optional<List<Player>> roleMembers(String tag, String name, Player executor,
+            long matchId, ModifierTagScope scope) {
+        if (executor == null) {
+            scope.warn("Tag <" + tag + "> needs an executor player: skipped in '" + name + "'.");
+            return Optional.empty();
+        }
+        Role role = playerStates.role(executor);
+        if (role != Role.HUNTER && role != Role.SPEEDRUNNER) {
+            scope.warn("Tag <" + tag + "> needs a hunter or speedrunner executor: skipped in '"
+                    + name + "'.");
+            return Optional.empty();
+        }
+        Optional<GameInstance> instance = game.instance(matchId);
+        if (instance.isEmpty()) {
+            scope.warn("Tag <" + tag + "> needs a live match: skipped in '" + name + "'.");
+            return Optional.empty();
+        }
+        List<Player> members = new ArrayList<>();
+        for (Player member : game.onlineAssignedPlayers(instance.get())) {
+            if (playerStates.role(member) == role) {
+                members.add(member);
+            }
+        }
+        return Optional.of(members);
     }
 
     /**
@@ -516,14 +584,29 @@ public final class GameStateCommandManager {
                         context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
                         continue;
                     }
-                    TagExpressions.dispatchableLine(parsed).ifPresent(line ->
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line));
+                    dispatchModifierLine(parsed, context);
                 }
             } catch (Exception e) {
                 plugin.logger().severe("Failed to run command '%s'. Skipping..".formatted(command));
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Dispatches one parsed modifier line as console. A line that
+     * resolved to pure {@code "null"} warns with the source line and
+     * never dispatches.
+     */
+    private void dispatchModifierLine(String parsed, TagContext context) {
+        Optional<String> dispatchable = TagExpressions.dispatchableLine(parsed);
+        if (dispatchable.isPresent() && TagExpressions.isPureNull(dispatchable.get())) {
+            plugin.logger().warning("Skipping command that resolved to pure \"null\" at "
+                    + context.provenance().describe() + ".");
+            return;
+        }
+        dispatchable.ifPresent(line ->
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line));
     }
 
     /**

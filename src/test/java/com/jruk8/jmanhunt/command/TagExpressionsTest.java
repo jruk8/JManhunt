@@ -79,6 +79,31 @@ class TagExpressionsTest {
     }
 
     @Test
+    void ifNotNegatesWithTightestBinding() {
+        Fixture fixture = new Fixture();
+        assertEquals("y", replace(fixture, "<if:\"not true == false\",\"y\",\"n\">"));
+        assertEquals("n", replace(fixture, "<if:\"not true == true\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"NOT 1 == 2\",\"y\",\"n\">"));
+        assertEquals("n", replace(fixture, "<if:\"not not 1 == 2\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"not 8 lt 7\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"not 8 gt 7\",\"n\",\"y\">"));
+        assertEquals("n", replace(fixture, "<if:\"not 1 == 1 and 2 == 2\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"not 1 == 2 and 2 == 2\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"1 == 2 or not 3 == 4\",\"y\",\"n\">"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void ifNotNeedsWordBoundariesAndAnOperand() {
+        Fixture fixture = new Fixture();
+        assertEquals("y", replace(fixture, "<if:\"notable == notable\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"knot == knot\",\"y\",\"n\">"));
+        assertEquals("", replace(fixture, "<if:\"not\",\"y\",\"n\">"));
+        assertEquals("", replace(fixture, "<if:\"1 == 1 and not\",\"y\",\"n\">"));
+        assertEquals(2, fixture.warnings.size());
+    }
+
+    @Test
     void ifEvaluatesNestedTagsFirst() {
         Fixture fixture = new Fixture();
         assertEquals("yes", replace(fixture, "<if:\"<random-num:5,5> == 5\",\"yes\",\"no\">"));
@@ -208,6 +233,29 @@ class TagExpressionsTest {
     }
 
     @Test
+    void roleMessageAndSoundUseRoleSinks() {
+        List<String> warnings = new ArrayList<>();
+        List<String> roleMessages = new ArrayList<>();
+        List<String> roleSounds = new ArrayList<>();
+        TagContext context = TagContext.run(
+                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
+                "beef", warnings::add, warnings::add,
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                (player, reason) -> { }, (role, reason) -> { },
+                7L, TagBackends.inert(), List.of(), detail -> { },
+                roleMessages::add,
+                (id, pitch, volume) -> roleSounds.add(id + ":" + pitch + ":" + volume));
+
+        assertEquals("", CommandPlaceholders.replace("<rmessage:hi>", "Steve", 0, 0, 0, context));
+        assertEquals("", CommandPlaceholders.replace(
+                "<rsound:block.stone.break,0.5,2>", "Steve", 0, 0, 0, context));
+        assertEquals("", CommandPlaceholders.replace("<rsound:block.stone.break>", "Steve", 0, 0, 0, context));
+        assertEquals(List.of("hi"), roleMessages);
+        assertEquals(List.of("block.stone.break:0.5:2.0", "block.stone.break:1.0:1.0"), roleSounds);
+        assertTrue(warnings.isEmpty(), warnings.toString());
+    }
+
+    @Test
     void messagesSendThroughSinksAndReturnEmpty() {
         Fixture fixture = new Fixture();
         assertEquals("say  done", replace(fixture, "say <gmessage:\"hi\"> done"));
@@ -330,6 +378,17 @@ class TagExpressionsTest {
         assertEquals("say hi", TagExpressions.dispatchableLine("say hi").orElseThrow());
         assertEquals("say hi", TagExpressions.dispatchableLine("/say hi").orElseThrow());
         assertEquals("say hi", TagExpressions.dispatchableLine("  say hi  ").orElseThrow());
+    }
+
+    @Test
+    void isPureNullMatchesExactLowercaseNull() {
+        assertTrue(TagExpressions.isPureNull("null"));
+        assertTrue(TagExpressions.isPureNull("  null  "));
+        assertFalse(TagExpressions.isPureNull("NULL"));
+        assertFalse(TagExpressions.isPureNull("Null"));
+        assertFalse(TagExpressions.isPureNull("null x"));
+        assertFalse(TagExpressions.isPureNull(""));
+        assertFalse(TagExpressions.isPureNull("say null"));
     }
 
     @Test

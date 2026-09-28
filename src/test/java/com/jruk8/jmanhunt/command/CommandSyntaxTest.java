@@ -160,8 +160,12 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <pmessage:yo> done").isEmpty());
         assertTrue(CommandSyntax.error("say <gsound:block.stone.break> done").isEmpty());
         assertTrue(CommandSyntax.error("say <psound:block.stone.break,0.5,2> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <rmessage:yo> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <rsound:block.stone.break,0.5,2> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"1 == 1\",\"y\",\"n\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"7 le 5\",\"y\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <if:\"not 1 == 2 and 2 == 2\",\"y\",\"n\"> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <if:\"not not 1 == 1\",\"y\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"<random-num:1,6> == 5\",\"y\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"<flag:a> == <flag:a>\",\"y\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <loseplayer:Alex> done").isEmpty());
@@ -203,6 +207,7 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <gflag:phase,one> done").isEmpty());
         assertTrue(CommandSyntax.error("say <pflag:\"cooldown\",732> done").isEmpty());
         assertTrue(CommandSyntax.error("say <lflag:x> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <rflag:phase,one> done").isEmpty());
         assertTrue(CommandSyntax.error("say <placeholder:jmanhunt_game_kills_this_session> done")
                 .isEmpty());
         assertTrue(CommandSyntax.error("say <placeholder:\"some_key\"> done").isEmpty());
@@ -254,8 +259,12 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <gmessage> done").isPresent());
         assertTrue(CommandSyntax.error("say <gsound> done").isPresent());
         assertTrue(CommandSyntax.error("say <psound:a,b,c,d> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rmessage> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rsound:a,b,c,d> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rflag> done").isPresent());
         assertTrue(CommandSyntax.error("say <if:\"1 == 1\"> done").isPresent());
         assertTrue(CommandSyntax.error("say <if:\"abc\",\"y\"> done").isPresent());
+        assertTrue(CommandSyntax.error("say <if:\"not\",\"y\"> done").isPresent());
         assertTrue(CommandSyntax.error("say <if:\"7<=7\",\"y\"> done").isPresent());
         assertTrue(CommandSyntax.error("say <if:\"7 <=7\",\"y\"> done").isPresent());
         assertTrue(CommandSyntax.error("say <if:\"<flag:a>\",\"y\"> done").isPresent());

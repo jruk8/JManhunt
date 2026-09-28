@@ -4,12 +4,12 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Flag tags behind {@code <gflag>}, {@code <pflag>}, and
- * {@code <lflag>}. One value arg sets, none gets; a get of an unset
- * flag yields {@code null} so {@code ??} can catch it. Sets return
- * empty like the other side-effect tags. Names match exactly;
- * global and player flags need a live match while local flags only
- * need their run.
+ * Flag tags behind {@code <gflag>}, {@code <pflag>},
+ * {@code <rflag>}, and {@code <lflag>}. One value arg sets, none
+ * gets; a get of an unset flag yields {@code null} so {@code ??} can
+ * catch it. Sets return empty like the other side-effect tags. Names
+ * match exactly; global, player, and role flags need a live match
+ * while local flags only need their run.
  */
 public final class TagFlags {
 
@@ -30,6 +30,24 @@ public final class TagFlags {
                         .setPlayer(matchId, FlagStore.playerKey(key, suffix), value),
                 key -> context.flagStore().player(context.matchId(),
                         FlagStore.playerKey(key, suffix)));
+    }
+
+    /**
+     * Resolves {@code <rflag:name>} and {@code <rflag:name,value>},
+     * scoped to the executor role. A console or other-role executor
+     * reads {@code null} and warns on writes.
+     */
+    static String role(String tag, String args, TagContext context) {
+        return flag(tag, args, context, "rflag",
+                (matchId, key, value) -> FlagStore.executorRole(context.scope()).ifPresentOrElse(
+                        role -> context.flagStore().setRole(matchId,
+                                FlagStore.roleKey(role, key), value),
+                        () -> context.scope().warn(
+                                "Tag <rflag> needs a hunter or speedrunner executor: " + tag)),
+                key -> FlagStore.executorRole(context.scope())
+                        .map(role -> context.flagStore().role(context.matchId(),
+                                FlagStore.roleKey(role, key)))
+                        .orElse(FlagStore.UNSET));
     }
 
     /** Resolves {@code <lflag:name>} and {@code <lflag:name,value>}. */
@@ -60,6 +78,7 @@ public final class TagFlags {
         return switch (kind) {
             case "gflag" -> global(tag, name, context);
             case "pflag" -> player(tag, name, context);
+            case "rflag" -> role(tag, name, context);
             default -> local(tag, name, context);
         };
     }
@@ -84,6 +103,17 @@ public final class TagFlags {
                     String suffix = FlagStore.suffixFor(context.scope());
                     context.flagStore().setPlayer(context.matchId(),
                             FlagStore.playerKey(name, suffix), value);
+                }
+            }
+            case "rflag" -> {
+                if (context.matchId() == TagContext.NO_MATCH) {
+                    context.scope().warn("Tag <rflag> needs a live match: " + tag);
+                } else {
+                    FlagStore.executorRole(context.scope()).ifPresentOrElse(
+                            role -> context.flagStore().setRole(context.matchId(),
+                                    FlagStore.roleKey(role, name), value),
+                            () -> context.scope().warn(
+                                    "Tag <rflag> needs a hunter or speedrunner executor: " + tag));
                 }
             }
             default -> context.localFlags().put(name, value);
