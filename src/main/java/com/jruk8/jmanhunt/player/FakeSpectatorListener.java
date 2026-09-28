@@ -15,7 +15,9 @@ import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 
 /** Fake spectator protections plus disconnect-safe join and quit handling. */
 public final class FakeSpectatorListener implements Listener {
@@ -85,6 +87,18 @@ public final class FakeSpectatorListener implements Listener {
     @EventHandler public void onInteract(PlayerInteractEvent event) {
         if (fakes.isFakeSpectator(event.getPlayer())
                 && event.getAction() != Action.RIGHT_CLICK_AIR) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler public void onPortal(PlayerPortalEvent event) {
+        if (event.isCancelled()) {
+            return;
+        }
+        PlayerTeleportEvent.TeleportCause cause = event.getCause();
+        if ((cause == PlayerTeleportEvent.TeleportCause.NETHER_PORTAL
+                || cause == PlayerTeleportEvent.TeleportCause.END_PORTAL)
+                && fakes.isFakeSpectator(event.getPlayer())) {
             event.setCancelled(true);
         }
     }

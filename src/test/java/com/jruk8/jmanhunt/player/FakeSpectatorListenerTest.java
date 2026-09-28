@@ -12,6 +12,7 @@ import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import java.util.Optional;
 import java.util.UUID;
+import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -25,7 +26,9 @@ import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.junit.jupiter.api.Test;
 
@@ -194,5 +197,46 @@ class FakeSpectatorListenerTest {
 
         verify(melee).setCancelled(true);
         verify(shot).setCancelled(true);
+    }
+
+    @Test
+    void cancelsNetherAndEndPortalsForFakes() {
+        Fixture fixture = fixture();
+        fake(fixture);
+        Location from = mock(Location.class);
+        Location to = mock(Location.class);
+        PlayerPortalEvent nether = new PlayerPortalEvent(fixture.player(), from, to,
+                PlayerTeleportEvent.TeleportCause.NETHER_PORTAL);
+        PlayerPortalEvent end = new PlayerPortalEvent(fixture.player(), from, to,
+                PlayerTeleportEvent.TeleportCause.END_PORTAL);
+
+        FakeSpectatorListener listener = listener(fixture);
+        listener.onPortal(nether);
+        listener.onPortal(end);
+
+        assertTrue(nether.isCancelled());
+        assertTrue(end.isCancelled());
+    }
+
+    @Test
+    void allowsOtherPortalCausesAndNonFakes() {
+        Fixture fixture = fixture();
+        fake(fixture);
+        Location from = mock(Location.class);
+        Location to = mock(Location.class);
+        PlayerPortalEvent gateway = new PlayerPortalEvent(fixture.player(), from, to,
+                PlayerTeleportEvent.TeleportCause.END_GATEWAY);
+
+        listener(fixture).onPortal(gateway);
+
+        assertFalse(gateway.isCancelled());
+
+        Fixture plain = fixture();
+        PlayerPortalEvent nether = new PlayerPortalEvent(plain.player(), from, to,
+                PlayerTeleportEvent.TeleportCause.NETHER_PORTAL);
+
+        listener(plain).onPortal(nether);
+
+        assertFalse(nether.isCancelled());
     }
 }

@@ -72,6 +72,7 @@ class FakeSpectatorServiceTest {
         verify(fixture.watched()).setFlying(false);
         verify(fixture.watched()).setAllowFlight(false);
         verify(fixture.watched()).setCollidable(true);
+        verify(fixture.watched()).setFallDistance(0F);
         verify(fixture.watched()).setGameMode(GameMode.SURVIVAL);
         verify(fixture.viewer()).showPlayer(fixture.plugin(), fixture.watched());
     }

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.gui.menus.SpectatorMenus;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -17,12 +18,16 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.junit.jupiter.api.Test;
 
 /** Spectator toolbar dispatch without a Bukkit server. */
@@ -157,5 +162,133 @@ class SpectatorToolbarListenerTest {
         fixture.listener().onDrop(dropEvent);
 
         assertFalse(dropEvent.isCancelled());
+    }
+
+    private InventoryClickEvent click(Fixture fixture, ClickType type) {
+        InventoryClickEvent event = mock(InventoryClickEvent.class);
+        when(event.getWhoClicked()).thenReturn(fixture.player());
+        when(event.getClick()).thenReturn(type);
+        return event;
+    }
+
+    @Test
+    void numberKeySwapWithToolbarHotbarItemCancels() {
+        Fixture fixture = fixture();
+        ItemStack toolbarStack = mock(ItemStack.class);
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(fixture.player().getInventory()).thenReturn(inventory);
+        when(inventory.getItem(8)).thenReturn(toolbarStack);
+        when(fixture.toolbar().isToolbarItem(toolbarStack)).thenReturn(true);
+        InventoryClickEvent event = click(fixture, ClickType.NUMBER_KEY);
+        when(event.getHotbarButton()).thenReturn(8);
+
+        fixture.listener().onInventoryClick(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void swapOffhandWithToolbarOffhandCancels() {
+        Fixture fixture = fixture();
+        ItemStack toolbarStack = mock(ItemStack.class);
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(fixture.player().getInventory()).thenReturn(inventory);
+        when(inventory.getItemInOffHand()).thenReturn(toolbarStack);
+        when(fixture.toolbar().isToolbarItem(toolbarStack)).thenReturn(true);
+        InventoryClickEvent event = click(fixture, ClickType.SWAP_OFFHAND);
+
+        fixture.listener().onInventoryClick(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void clicksIntoOwnInventoryCancel() {
+        Fixture fixture = fixture();
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(fixture.player().getInventory()).thenReturn(inventory);
+        InventoryClickEvent event = click(fixture, ClickType.LEFT);
+        when(event.getClickedInventory()).thenReturn(inventory);
+
+        fixture.listener().onInventoryClick(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void menuTopClickWithPlainItemsPasses() {
+        Fixture fixture = fixture();
+        when(fixture.player().getInventory()).thenReturn(mock(PlayerInventory.class));
+        InventoryClickEvent event = click(fixture, ClickType.LEFT);
+        when(event.getClickedInventory()).thenReturn(mock(Inventory.class));
+
+        fixture.listener().onInventoryClick(event);
+
+        verify(event, never()).setCancelled(true);
+    }
+
+    @Test
+    void swapHandsCancelsOnlyWhenDeployed() {
+        Fixture fixture = fixture();
+        ItemStack main = mock(ItemStack.class);
+        ItemStack off = mock(ItemStack.class);
+        PlayerSwapHandItemsEvent deployed =
+                new PlayerSwapHandItemsEvent(fixture.player(), main, off);
+
+        fixture.listener().onSwapHands(deployed);
+
+        assertTrue(deployed.isCancelled());
+
+        when(fixture.toolbar().isDeployed(fixture.player())).thenReturn(false);
+        PlayerSwapHandItemsEvent loose =
+                new PlayerSwapHandItemsEvent(fixture.player(), main, off);
+
+        fixture.listener().onSwapHands(loose);
+
+        assertFalse(loose.isCancelled());
+    }
+
+    @Test
+    void dragTouchingOwnInventoryCancels() {
+        Fixture fixture = fixture();
+        InventoryDragEvent event = mock(InventoryDragEvent.class);
+        when(event.getWhoClicked()).thenReturn(fixture.player());
+        Inventory top = mock(Inventory.class);
+        when(top.getSize()).thenReturn(27);
+        when(event.getInventory()).thenReturn(top);
+        when(event.getRawSlots()).thenReturn(Set.of(5, 30));
+
+        fixture.listener().onInventoryDrag(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void dragWithToolbarCursorCancels() {
+        Fixture fixture = fixture();
+        ItemStack toolbarStack = mock(ItemStack.class);
+        when(fixture.toolbar().isToolbarItem(toolbarStack)).thenReturn(true);
+        InventoryDragEvent event = mock(InventoryDragEvent.class);
+        when(event.getWhoClicked()).thenReturn(fixture.player());
+        when(event.getCursor()).thenReturn(toolbarStack);
+
+        fixture.listener().onInventoryDrag(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void dragConfinedToMenuTopPasses() {
+        Fixture fixture = fixture();
+        InventoryDragEvent event = mock(InventoryDragEvent.class);
+        when(event.getWhoClicked()).thenReturn(fixture.player());
+        Inventory top = mock(Inventory.class);
+        when(top.getSize()).thenReturn(27);
+        when(event.getInventory()).thenReturn(top);
+        when(event.getRawSlots()).thenReturn(Set.of(0, 5));
+
+        fixture.listener().onInventoryDrag(event);
+
+        verify(event, never()).setCancelled(true);
     }
 }

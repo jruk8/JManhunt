@@ -131,6 +131,9 @@ public final class PlayerRespawnListener implements Listener {
         else {
             player.teleport(player.getWorld().getSpawnLocation());
         }
+        // The fake-spectator fall before the revive must not convert
+        // into damage on arrival.
+        player.setFallDistance(0F);
         if (playerStates.role(player).isParticipant()) {
             compass.giveCompass(player);
             compass.refreshCompass(player);

@@ -21,6 +21,7 @@ While active, the following are cancelled for the spectator:
 - Block clicks and physical triggers (doors, buttons, pressure plates).
 - Dealing damage, by melee or by projectile.
 - Picking up items from the ground.
+- Entering nether or end portals.
 
 Hotbar items stay usable through right-click air, since the player is in
 adventure gamemode rather than true spectator.
@@ -61,6 +62,11 @@ restored on exit, on quit, and after a crash; toolbar items left behind
 by a crash are discarded on the next join. Only the `spectator` role
 gets the toolbar: headstart holds, death watches, and `NONE` watchers
 keep their own inventories.
+
+While the toolbar is out, the hotbar is locked: offhand swaps, number
+keys, drags, drops, and clicks into the player's own inventory are all
+cancelled, so toolbar buttons cannot move. The browser menus still
+work, since they only use their own top half.
 
 ### Layout
 

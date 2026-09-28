@@ -6,11 +6,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.PlayerInventory;
 /** Spectator toolbar clicks, lock breaks, crash recovery, and item guards. */
 public final class SpectatorToolbarListener implements Listener {
     private final SpectatorToolbarService toolbar;
@@ -71,8 +76,63 @@ public final class SpectatorToolbarListener implements Listener {
             return;
         }
         if (toolbar.isToolbarItem(event.getCurrentItem())
-                || toolbar.isToolbarItem(event.getCursor())) {
+                || toolbar.isToolbarItem(event.getCursor())
+                || isToolbarQuickSwap(event, player)) {
+            event.setCancelled(true);
+            return;
+        }
+        if (touchesOwnInventory(event, player)) {
             event.setCancelled(true);
         }
+    }
+
+    @EventHandler public void onSwapHands(PlayerSwapHandItemsEvent event) {
+        if (toolbar.isDeployed(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)
+                || !toolbar.isDeployed(player)) {
+            return;
+        }
+        if (toolbar.isToolbarItem(event.getCursor())) {
+            event.setCancelled(true);
+            return;
+        }
+        int topSize = event.getInventory().getSize();
+        for (int rawSlot : event.getRawSlots()) {
+            if (rawSlot >= topSize) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    /**
+     * True when a keyboard shortcut would move a toolbar item: the hotbar
+     * slot behind a number key, or the offhand behind the swap key, holds
+     * a toolbar button.
+     */
+    private boolean isToolbarQuickSwap(InventoryClickEvent event, Player player) {
+        PlayerInventory inventory = player.getInventory();
+        if (event.getClick() == ClickType.NUMBER_KEY && event.getHotbarButton() >= 0) {
+            return toolbar.isToolbarItem(inventory.getItem(event.getHotbarButton()));
+        }
+        if (event.getClick() == ClickType.SWAP_OFFHAND) {
+            return toolbar.isToolbarItem(inventory.getItemInOffHand());
+        }
+        return false;
+    }
+
+    /**
+     * True when the click lands in the player's own inventory (the bottom
+     * half, or the whole crafting view). Menu tops are never ours: the
+     * menu service owns those clicks.
+     */
+    private boolean touchesOwnInventory(InventoryClickEvent event, Player player) {
+        Inventory clicked = event.getClickedInventory();
+        return clicked != null && clicked.equals(player.getInventory());
     }
 }

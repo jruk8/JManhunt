@@ -79,6 +79,9 @@ public final class FakeSpectatorService {
         player.setFlying(false);
         player.setAllowFlight(false);
         player.setCollidable(true);
+        // Falling distance gathered while flying must not survive the
+        // exit: it would land as fall damage on the next touchdown.
+        player.setFallDistance(0F);
         player.setGameMode(GameMode.SURVIVAL);
         for (Player viewer : onlinePlayers.get()) {
             if (!viewer.getUniqueId().equals(id)) {
