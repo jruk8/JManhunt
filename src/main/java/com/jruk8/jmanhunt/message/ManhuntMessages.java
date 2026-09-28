@@ -40,16 +40,16 @@ public class ManhuntMessages extends OkaeriConfig {
     private String spectatorsLine = "\n{role-color-spectator}👁 Spectators: <gray>{value}";
 
     @CustomKey("status-win-speedrunners")
-    private String statusWinSpeedrunners = "\n{role-color-speedrunner}Speedrunners <gray>🏆 on: <white>{conditions}";
+    private String statusWinSpeedrunners = "\n{role-color-speedrunner}Speedrunners <white>🏆 on: <gray>{conditions}";
 
     @CustomKey("status-win-hunters")
-    private String statusWinHunters = "\n{role-color-hunter}Hunters <gray>🏆 on: <white>{conditions}";
+    private String statusWinHunters = "\n{role-color-hunter}Hunters <white>🏆 on: <gray>{conditions}";
 
     @CustomKey("status-modifiers")
     private String statusModifiers = "\n<white>Modifiers: <gray>{modifiers}";
 
     @CustomKey("status-elapsed")
-    private String statusElapsed = "\n<gray>Elapsed: <white>{duration}";
+    private String statusElapsed = "\n<white>Elapsed: <gray>{duration}";
 
     @CustomKey("status-ids")
     private String statusIds = "\n<gray>{value}";
