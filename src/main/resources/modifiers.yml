@@ -371,7 +371,7 @@ modifiers:
     behavior:
       0:
         runs-on:
-          - ON_MOB_KILL
+          - ON_PLAYER_KILL
           - ON_RESPAWN
         commands:
           player:
@@ -392,7 +392,7 @@ modifiers:
     enabled: false
     meta:
       name: "Gapple On Low HP"
-      description: "A golden apple at low health, at most every 5 minutes"
+      description: "A golden apple for low HP runners, at most every 5 minutes"
       item: GOLDEN_APPLE
       author: JManhunt
     behavior:
