@@ -6,6 +6,7 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -56,6 +57,42 @@ class TagExpressionsTest {
         assertEquals("y", replace(fixture, "<if:\"8+5 == 13\",\"y\",\"n\">"));
         assertEquals("y", replace(fixture, "<if:\"(2+3)*4 == 20\",\"y\",\"n\">"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void ifOrdersDecimals() {
+        Fixture fixture = new Fixture();
+        assertEquals("y", replace(fixture, "<if:\"7.5 le 7.5\",\"y\",\"n\">"));
+        assertEquals("n", replace(fixture, "<if:\"7.5 lt 7.5\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"7.5 gt 7\",\"y\",\"n\">"));
+        assertEquals("n", replace(fixture, "<if:\"7.5 lt 7\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"7 ge 7.5\",\"n\",\"y\">"));
+        assertEquals("y", replace(fixture, "<if:\"-2.5 lt -2\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"-2.5 gt -3\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture, "<if:\"7.0 le 7\",\"y\",\"n\">"));
+        assertEquals("y", replace(fixture,
+                "<if:\"7.5 le 7.5 and '500.5-100 ?? -1' gt 300\",\"y\",\"n\">"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void ifOrderingRejectsTextAndNonFiniteNumbers() throws TagExpressions.ExprException {
+        Fixture fixture = new Fixture();
+        assertEquals("", replace(fixture, "<if:\"<flag:a> gt 1\",\"y\",\"n\">"));
+        assertEquals("", replace(fixture, "<if:\"1 le <flag:b>\",\"y\",\"n\">"));
+        assertEquals(2, fixture.warnings.size());
+        assertTrue(fixture.warnings.get(0).contains("ordering comparisons need numbers"),
+                fixture.warnings.toString());
+
+        assertEquals(7.5, TagExpressions.orderNumber(new TagMath.Value.Num(7.5)));
+        assertEquals(7.0, TagExpressions.orderNumber(new TagMath.Value.Num(7.0)));
+        assertThrows(TagExpressions.ExprException.class,
+                () -> TagExpressions.orderNumber(new TagMath.Value.Num(Double.NaN)));
+        assertThrows(TagExpressions.ExprException.class,
+                () -> TagExpressions.orderNumber(
+                        new TagMath.Value.Num(Double.POSITIVE_INFINITY)));
+        assertThrows(TagExpressions.ExprException.class,
+                () -> TagExpressions.orderNumber(new TagMath.Value.Text("x")));
     }
 
     @Test
@@ -162,9 +199,8 @@ class TagExpressionsTest {
         Fixture fixture = new Fixture();
         assertEquals("", replace(fixture, "<if:\"1 == 1\">"));
         assertEquals("", replace(fixture, "<if:\"abc\",\"y\">"));
-        assertEquals("", replace(fixture, "<if:\"2.5 gt 1\",\"y\",\"n\">"));
         assertEquals("", replace(fixture, "<if:\"1 == 1\",\"a\",\"b\",\"c\">"));
-        assertEquals(4, fixture.warnings.size());
+        assertEquals(3, fixture.warnings.size());
     }
 
     @Test

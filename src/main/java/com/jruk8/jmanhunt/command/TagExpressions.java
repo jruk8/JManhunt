@@ -346,8 +346,8 @@ public final class TagExpressions {
 
     private static boolean orderValue(TagMath.Value left, TagMath.Value right, String operator)
             throws ExprException {
-        long leftNumber = wholeNumber(left);
-        long rightNumber = wholeNumber(right);
+        double leftNumber = orderNumber(left);
+        double rightNumber = orderNumber(right);
         return switch (operator) {
             case ">" -> leftNumber > rightNumber;
             case "<" -> leftNumber < rightNumber;
@@ -357,12 +357,15 @@ public final class TagExpressions {
         };
     }
 
-    private static long wholeNumber(TagMath.Value value) throws ExprException {
-        if (value instanceof TagMath.Value.Num number && number.number() == Math.floor(number.number())
-                && Double.isFinite(number.number())) {
-            return (long) number.number();
+    /**
+     * The double behind an ordering operand. Any finite number works;
+     * text, null, NaN, and infinities throw. Pure for tests.
+     */
+    static double orderNumber(TagMath.Value value) throws ExprException {
+        if (value instanceof TagMath.Value.Num number && Double.isFinite(number.number())) {
+            return number.number();
         }
-        throw new ExprException("ordering comparisons need whole numbers");
+        throw new ExprException("ordering comparisons need numbers");
     }
 
     private static String displayValue(TagMath.Value value) {

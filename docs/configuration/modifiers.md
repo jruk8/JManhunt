@@ -429,7 +429,8 @@ branch never run. Quote comparisons holding literal `<` or `>`
 (`"7 <= 5"`), or use the word operators, so the tag scanner does not
 mistake them for tags.
 
-Ordering needs whole numbers. Each side compares as a number when it
+Ordering compares decimals as well as whole numbers (`7.5 gt 7`
+holds, `7.5 le 7.5` holds). Each side compares as a number when it
 parses as math, otherwise as text. Word operators need a
 non-letter-or-digit boundary on each side (spaces work, so does the
 edge of the condition), which keeps them distinct from tag brackets:
