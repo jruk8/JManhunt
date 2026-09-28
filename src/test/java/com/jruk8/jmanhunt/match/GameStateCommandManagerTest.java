@@ -60,18 +60,18 @@ class GameStateCommandManagerTest {
                 ModifierTriggers.normalizeTrigger("ON_FIRST_NETHER_ENTER"));
         assertEquals("ON_FIRST_END_ENTER",
                 ModifierTriggers.normalizeTrigger("ON_FIRST_END_ENTER"));
-        assertEquals("ON_MOB_KILL",
-                ModifierTriggers.normalizeTrigger("ON_MOB_KILL"));
-        assertEquals("ON_PLAYER_KILL",
-                ModifierTriggers.normalizeTrigger("ON_PLAYER_KILL"));
+        assertEquals("ON_MOB_KILLED",
+                ModifierTriggers.normalizeTrigger("ON_MOB_KILLED"));
+        assertEquals("ON_PLAYER_KILLS",
+                ModifierTriggers.normalizeTrigger("ON_PLAYER_KILLS"));
     }
 
     @Test
     void killTriggersSplitMobAndPlayer() {
-        assertTrue(ModifierTriggers.KNOWN.contains("ON_MOB_KILL"));
-        assertTrue(ModifierTriggers.KNOWN.contains("ON_PLAYER_KILL"));
-        assertTrue(ModifierTriggers.KNOWN.indexOf("ON_MOB_KILL")
-                < ModifierTriggers.KNOWN.indexOf("ON_PLAYER_KILL"));
+        assertTrue(ModifierTriggers.KNOWN.contains("ON_MOB_KILLED"));
+        assertTrue(ModifierTriggers.KNOWN.contains("ON_PLAYER_KILLS"));
+        assertTrue(ModifierTriggers.KNOWN.indexOf("ON_MOB_KILLED")
+                < ModifierTriggers.KNOWN.indexOf("ON_PLAYER_KILLS"));
     }
 
     @Test

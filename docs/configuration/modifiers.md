@@ -134,10 +134,10 @@ Under `runs-on`, you configure when the commands
 | --- | --- |
 | `ON_START` | Once when the match starts (runs for all participants) |
 | `INTERVAL` | On a fixed interval that starts counting when the game begins |
-| `ON_MOB_KILL` | When a participating player kills a mob or other non-player entity (never players) |
-| `ON_PLAYER_KILL` | When a participating player kills another player |
-| `ON_HUNTER_KILL` | When a hunter kills a player |
-| `ON_SPEEDRUNNER_KILL` | When a speedrunner kills a player |
+| `ON_MOB_KILLED` | When a participating player kills a mob or other non-player entity (never players) |
+| `ON_PLAYER_KILLS` | When a participating player kills another player |
+| `ON_HUNTER_KILLS` | When a hunter kills a player |
+| `ON_SPEEDRUNNER_KILLS` | When a speedrunner kills a player |
 | `ON_NETHER_ENTER` | When a participating player enters the Nether (once per player per match) |
 | `ON_END_ENTER` | When a participating player enters the End (once per player per match) |
 | `ON_FIRST_NETHER_ENTER` | When the first participating player enters the Nether (once per match) |
@@ -148,7 +148,7 @@ Under `runs-on`, you configure when the commands
 | `ON_HUNTER_RESPAWN` | When a hunter respawns (only the executing player) |
 
 If `runs-on` is omitted, the modifier defaults to `ON_START`.
-To count every kill, enable both `ON_MOB_KILL` and `ON_PLAYER_KILL`.
+To count every kill, enable both `ON_MOB_KILLED` and `ON_PLAYER_KILLS`.
 
 Except for `ON_START`, every event trigger runs the `player`, `hunter`, and
 `speedrunner` commands only for the specific player involved in the event.
@@ -390,8 +390,8 @@ A missing index yields `null`; a non-numeric index warns and yields
 | --- | --- |
 | `ON_START` | None: every index is `null`. |
 | `INTERVAL` | `0`: the seconds actually waited for this firing. |
-| `ON_MOB_KILL` | `0`: the killed mob's entity type name (e.g. `ZOMBIE`). |
-| `ON_PLAYER_KILL`, `ON_HUNTER_KILL`, `ON_SPEEDRUNNER_KILL` | `0`: the exact name of the killed player. |
+| `ON_MOB_KILLED` | `0`: the killed mob's entity type name (e.g. `ZOMBIE`). |
+| `ON_PLAYER_KILLS`, `ON_HUNTER_KILLS`, `ON_SPEEDRUNNER_KILLS` | `0`: the exact name of the killed player. |
 | `ON_NETHER_ENTER`, `ON_END_ENTER`, `ON_FIRST_NETHER_ENTER`, `ON_FIRST_END_ENTER` | `0`: the origin world name, `1`: the destination world name. |
 | `ON_EVERY_ADVANCEMENT` | `0`: the advancement's namespaced key (e.g. `minecraft:nether/root`). |
 | `ON_RESPAWN`, `ON_SPEEDRUNNER_RESPAWN`, `ON_HUNTER_RESPAWN` | `0`: the death location as one list, `[x, y, z, pitch, yaw, dimension]`. |

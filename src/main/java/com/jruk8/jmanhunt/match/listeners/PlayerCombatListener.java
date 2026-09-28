@@ -461,12 +461,12 @@ public final class PlayerCombatListener implements Listener {
                 playerStates.role(killer.getUniqueId()));
         if (victimIsPlayer) {
             List<String> eventArgs = List.of(event.getEntity().getName());
-            game.stateCommands().runEventModifiers("ON_PLAYER_KILL", killer, matchId, eventArgs);
-            Role victimRole = playerStates.role(event.getEntity().getUniqueId());
-            if (victimRole == Role.HUNTER) {
-                game.stateCommands().runEventModifiers("ON_HUNTER_KILL", killer, matchId, eventArgs);
-            } else if (victimRole == Role.SPEEDRUNNER) {
-                game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_KILL", killer, matchId,
+            game.stateCommands().runEventModifiers("ON_PLAYER_KILLS", killer, matchId, eventArgs);
+            Role killerRole = playerStates.role(killer.getUniqueId());
+            if (killerRole == Role.HUNTER) {
+                game.stateCommands().runEventModifiers("ON_HUNTER_KILLS", killer, matchId, eventArgs);
+            } else if (killerRole == Role.SPEEDRUNNER) {
+                game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_KILLS", killer, matchId,
                         eventArgs);
             }
         }
@@ -475,7 +475,7 @@ public final class PlayerCombatListener implements Listener {
     private void handleMobKill(GameInstance match, Player killer, Entity victim) {
         Role killerRole = playerStates.role(killer);
         stats.recordMobKill(match.matchId(), killer.getUniqueId(), killerRole);
-        game.stateCommands().runEventModifiers("ON_MOB_KILL", killer, match.matchId(),
+        game.stateCommands().runEventModifiers("ON_MOB_KILLED", killer, match.matchId(),
                 List.of(victim.getType().name()));
         // Mob kills only matter for the kill-mob win conditions.
         Integer lobby = match.originLobbyId();

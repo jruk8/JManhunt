@@ -73,16 +73,16 @@ class PlayerCombatListenerKillTest {
 
         fixture.listener().onEntityDeath(event);
 
-        verify(fixture.commands()).runEventModifiers(eq("ON_MOB_KILL"), eq(fixture.killer()), eq(7L),
+        verify(fixture.commands()).runEventModifiers(eq("ON_MOB_KILLED"), eq(fixture.killer()), eq(7L),
                 eq(List.of("ZOMBIE")));
-        verify(fixture.commands(), never()).runEventModifiers(eq("ON_PLAYER_KILL"), any(), anyLong(),
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_PLAYER_KILLS"), any(), anyLong(),
                 anyList());
         verify(fixture.commands(), never()).runEventModifiers(eq("ON_EVERY_KILL"), any(), anyLong(),
                 anyList());
     }
 
     @Test
-    void playerKillDispatchesPlayerKillOnly() {
+    void hunterKillDispatchesPlayerAndHunterKills() {
         Fixture fixture = fixture();
         Player victim = mock(Player.class);
         UUID victimId = UUID.randomUUID();
@@ -97,10 +97,40 @@ class PlayerCombatListenerKillTest {
         fixture.listener().onEntityDeath(event);
 
         verify(fixture.commands()).runEventModifiers(
-                eq("ON_PLAYER_KILL"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
-        verify(fixture.commands(), never()).runEventModifiers(eq("ON_MOB_KILL"), any(), anyLong(),
+                eq("ON_PLAYER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
+        verify(fixture.commands()).runEventModifiers(
+                eq("ON_HUNTER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_SPEEDRUNNER_KILLS"), any(),
+                anyLong(), anyList());
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_MOB_KILLED"), any(), anyLong(),
                 anyList());
         verify(fixture.commands(), never()).runEventModifiers(eq("ON_EVERY_KILL"), any(), anyLong(),
+                anyList());
+    }
+
+    @Test
+    void speedrunnerKillDispatchesPlayerAndSpeedrunnerKills() {
+        Fixture fixture = fixture();
+        fixture.players().setRole(fixture.killer(), Role.SPEEDRUNNER);
+        Player victim = mock(Player.class);
+        UUID victimId = UUID.randomUUID();
+        when(victim.getUniqueId()).thenReturn(victimId);
+        when(victim.getName()).thenReturn("Alex");
+        when(victim.getKiller()).thenReturn(fixture.killer());
+        fixture.players().setRole(victim, Role.HUNTER);
+        when(fixture.game().instanceOf(victimId)).thenReturn(Optional.of(fixture.instance()));
+        EntityDeathEvent event = mock(EntityDeathEvent.class);
+        when(event.getEntity()).thenReturn(victim);
+
+        fixture.listener().onEntityDeath(event);
+
+        verify(fixture.commands()).runEventModifiers(
+                eq("ON_PLAYER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
+        verify(fixture.commands()).runEventModifiers(
+                eq("ON_SPEEDRUNNER_KILLS"), eq(fixture.killer()), eq(7L), eq(List.of("Alex")));
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_HUNTER_KILLS"), any(),
+                anyLong(), anyList());
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_MOB_KILLED"), any(), anyLong(),
                 anyList());
     }
 }

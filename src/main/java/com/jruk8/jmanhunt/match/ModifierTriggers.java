@@ -18,10 +18,10 @@ public final class ModifierTriggers {
     public static final List<String> KNOWN = List.of(
             "ON_START",
             "INTERVAL",
-            "ON_MOB_KILL",
-            "ON_PLAYER_KILL",
-            "ON_HUNTER_KILL",
-            "ON_SPEEDRUNNER_KILL",
+            "ON_MOB_KILLED",
+            "ON_PLAYER_KILLS",
+            "ON_HUNTER_KILLS",
+            "ON_SPEEDRUNNER_KILLS",
             "ON_NETHER_ENTER",
             "ON_END_ENTER",
             "ON_FIRST_NETHER_ENTER",
@@ -55,9 +55,11 @@ public final class ModifierTriggers {
     /**
      * Canonicalizes a {@code runs-on} trigger name. Currently this only trims
      * surrounding whitespace; unknown keys (including the removed legacy
-     * {@code ON_FIRST_ENTER_NETHER} / {@code ON_FIRST_ENTER_END} aliases
-     * and the removed {@code ON_EVERY_KILL} trigger) pass through
-     * unchanged and therefore never match an event.
+     * {@code ON_FIRST_ENTER_NETHER} / {@code ON_FIRST_ENTER_END} aliases,
+     * the removed {@code ON_EVERY_KILL} trigger, and the removed
+     * pre-verb {@code ON_MOB_KILL} / {@code ON_PLAYER_KILL} /
+     * {@code ON_HUNTER_KILL} / {@code ON_SPEEDRUNNER_KILL} names) pass
+     * through unchanged and therefore never match an event.
      */
     static String normalizeTrigger(String trigger) {
         if (trigger == null) {
