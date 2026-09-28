@@ -72,8 +72,8 @@ public final class MatchStatValues implements StatValues {
     /** Whole elapsed gameplay seconds, or empty without the match. */
     private Optional<String> duration() {
         return store.instance(matchId)
-                .map(instance -> Long.toString(Math.max(0L,
-                        (System.currentTimeMillis() - instance.startedAtMillis()) / 1000L)));
+                .map(instance -> Long.toString(
+                        instance.elapsedSeconds(System.currentTimeMillis())));
     }
 
     /** Main world clock in ticks, or empty with no worlds loaded. */

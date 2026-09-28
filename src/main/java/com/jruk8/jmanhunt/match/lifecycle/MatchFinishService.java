@@ -85,12 +85,15 @@ public final class MatchFinishService {
         this.flagStore = flagStore;
         this.elimination = new MatchEliminationService(plugin, playerStates, compass, store,
                 messaging, flagStore, this::finishIfBucketEmpty);
-        // Pseudo-border guard for concurrent matches; idle unless at least two
-        // matches run with the engine border on. The spectator travel limit
-        // rides the same one-second tick.
+        // One-second tick: pseudo-border guard, spectator travel limit,
+        // and the elapsed-time cache (ended matches ignore the refresh).
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             enforcePseudoBorders();
             enforceSpectatorTravel();
+            long now = System.currentTimeMillis();
+            for (GameInstance instance : store.liveInstances()) {
+                instance.refreshElapsedCache(now);
+            }
         }, 20L, 20L);
     }
 
@@ -389,6 +392,7 @@ public final class MatchFinishService {
             }
             return;
         }
+        instance.refreshElapsedCache(System.currentTimeMillis());
         instance.setEnding(true);
         gameEndListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(
@@ -524,6 +528,7 @@ public final class MatchFinishService {
         if (!instance.active()) {
             return;
         }
+        instance.refreshElapsedCache(System.currentTimeMillis());
         instance.setEnding(true);
         gameEndListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchCancelEvent(instance.matchId()));
@@ -564,6 +569,7 @@ public final class MatchFinishService {
             }
             return;
         }
+        instance.refreshElapsedCache(System.currentTimeMillis());
         instance.setEnding(true);
         gameEndListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchCancelEvent(instance.matchId()));

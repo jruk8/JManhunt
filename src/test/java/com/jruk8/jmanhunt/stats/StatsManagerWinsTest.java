@@ -19,6 +19,26 @@ class StatsManagerWinsTest {
     }
 
     @Test
+    void spectatorSlicesNeverFold() {
+        StatsManager manager = manager();
+        UUID spectator = join(manager, 1L, Role.SPECTATOR);
+        manager.matchStats(1L, spectator).orElseThrow().kills = 5;
+        UUID outsider = join(manager, 1L, Role.NONE);
+        manager.matchStats(1L, outsider).orElseThrow().kills = 3;
+        UUID hunter = join(manager, 1L, Role.HUNTER);
+        manager.matchStats(1L, hunter).orElseThrow().hunterKills = 2;
+
+        manager.completeMatch(1L, Role.HUNTER);
+
+        assertEquals(0, manager.career(spectator).kills);
+        assertEquals(0, manager.career(spectator).sessions);
+        assertEquals(0, manager.career(outsider).kills);
+        assertEquals(0, manager.career(outsider).sessions);
+        assertEquals(2, manager.career(hunter).hunterKills);
+        assertEquals(1, manager.career(hunter).sessions);
+    }
+
+    @Test
     void speedrunnerWinCreditsOnlySpeedrunners() {
         StatsManager manager = manager();
         UUID hunter = join(manager, 1L, Role.HUNTER);

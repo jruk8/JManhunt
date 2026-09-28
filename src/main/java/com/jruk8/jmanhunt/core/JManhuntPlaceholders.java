@@ -113,7 +113,8 @@ public final class JManhuntPlaceholders {
         Optional<GameInstance> match = resolveLobbyInstance(lobbyKey.lobbyId());
         return switch (lobbyKey.base()) {
             case "game_duration" -> match
-                    .map(instance -> String.valueOf(System.currentTimeMillis() - instance.startedAtMillis()))
+                    .map(instance -> String.valueOf(
+                            instance.elapsedMillis(System.currentTimeMillis())))
                     .orElse("-1");
             case "game_speedrunners_remaining" -> String.valueOf(
                     match.map(game::activeRunnerCount).orElse(0));

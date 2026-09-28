@@ -41,6 +41,7 @@ public final class GameInstance {
     private boolean runnerUnlimitedAnnounced;
     private boolean hunterUnlimitedAnnounced;
     private Location startCenter;
+    private long cachedElapsedMillis;
 
 
     public GameInstance(long matchId, int originLobbyId, OptionalLong cellIndex, long startedAtMillis) {
@@ -242,9 +243,28 @@ public final class GameInstance {
         this.hunterUnlimitedAnnounced = announced;
     }
 
-    /** Whole seconds between match start and the given moment. */
+    /** Elapsed millis between match start and the given moment; frozen once the match ends. */
+    public long elapsedMillis(long nowMillis) {
+        if (ending) {
+            return cachedElapsedMillis;
+        }
+        return Math.max(0L, nowMillis - startedAtMillis);
+    }
+
+    /** Whole seconds between match start and the given moment; frozen once the match ends. */
     public long elapsedSeconds(long nowMillis) {
-        return Math.max(0L, (nowMillis - startedAtMillis) / 1000L);
+        return elapsedMillis(nowMillis) / 1000L;
+    }
+
+    /**
+     * Caches the current elapsed millis so the end intermission reads a
+     * frozen clock. Ignored once the match ends; the end paths stamp
+     * the exact value right before setting the flag.
+     */
+    public void refreshElapsedCache(long nowMillis) {
+        if (!ending) {
+            cachedElapsedMillis = Math.max(0L, nowMillis - startedAtMillis);
+        }
     }
 
     /**

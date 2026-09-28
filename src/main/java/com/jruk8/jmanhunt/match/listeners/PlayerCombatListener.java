@@ -8,6 +8,7 @@ import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
+import com.jruk8.jmanhunt.stats.Stats;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import org.bukkit.Bukkit;
@@ -83,9 +84,15 @@ public final class PlayerCombatListener implements Listener {
         // messages would double every announcement.
         event.setDeathMessage(null);
         GameInstance instance = match.get();
-        stats.recordDeath(player.getUniqueId());
-        stats.getOrCreate(instance.matchId(), player.getUniqueId()).deaths++;
         Role role = playerStates.role(player);
+        if (role.isParticipant()) {
+            stats.recordDeath(player.getUniqueId());
+            Stats deathSlice = stats.getOrCreate(instance.matchId(), player.getUniqueId());
+            deathSlice.deaths++;
+            if (deathSlice.role == Role.NONE) {
+                deathSlice.role = role;
+            }
+        }
         // Spawncamp punishment kills re-enter here synchronously: their state
         // changes run intact, but the punishment broadcast already said it.
         boolean quiet = plugin.spawnCamp().isQuietPunishment(player.getUniqueId());
@@ -183,7 +190,11 @@ public final class PlayerCombatListener implements Listener {
         game.flagStore().removePlayer(matchId, player.getName());
         Player finalKiller = player.getKiller();
         if (finalKiller != null && playerStates.role(finalKiller.getUniqueId()) == Role.HUNTER) {
-            stats.getOrCreate(matchId, finalKiller.getUniqueId()).finalKills++;
+            Stats finalSlice = stats.getOrCreate(matchId, finalKiller.getUniqueId());
+            finalSlice.finalKills++;
+            if (finalSlice.role == Role.NONE) {
+                finalSlice.role = Role.HUNTER;
+            }
         }
         Bukkit.getScheduler().runTask(plugin, () -> plugin.fakeSpectators().enable(player));
         if (!quiet) {
@@ -298,15 +309,20 @@ public final class PlayerCombatListener implements Listener {
                 || !(byEntity.getDamager() instanceof Player attacker)) {
             return;
         }
+        Role attackerRole = playerStates.role(attacker);
         if (victimMatch.isEmpty() || !victimMatch.get().begun() || !sameMatch(victimMatch.get(), attacker)
-                || !playerStates.role(attacker).isParticipant()
+                || !attackerRole.isParticipant()
                 || !playerStates.role(victim).isParticipant()) {
             return;
         }
         if (blockFriendlyFire(event, attacker, victim)) {
             return;
         }
-        stats.getOrCreate(victimMatch.get().matchId(), attacker.getUniqueId()).damage += event.getFinalDamage();
+        Stats damageSlice = stats.getOrCreate(victimMatch.get().matchId(), attacker.getUniqueId());
+        damageSlice.damage += event.getFinalDamage();
+        if (damageSlice.role == Role.NONE) {
+            damageSlice.role = attackerRole;
+        }
     }
 
     /** Credits a speedrunner who finishes a hunter out of lives. */
@@ -314,7 +330,11 @@ public final class PlayerCombatListener implements Listener {
         Player hunterKiller = victim.getKiller();
         if (hunterKiller != null
                 && playerStates.role(hunterKiller.getUniqueId()) == Role.SPEEDRUNNER) {
-            stats.getOrCreate(matchId, hunterKiller.getUniqueId()).finalKills++;
+            Stats finalSlice = stats.getOrCreate(matchId, hunterKiller.getUniqueId());
+            finalSlice.finalKills++;
+            if (finalSlice.role == Role.NONE) {
+                finalSlice.role = Role.SPEEDRUNNER;
+            }
         }
     }
 
@@ -453,11 +473,11 @@ public final class PlayerCombatListener implements Listener {
     }
 
     private void handleMobKill(GameInstance match, Player killer, Entity victim) {
-        stats.recordMobKill(match.matchId(), killer.getUniqueId());
+        Role killerRole = playerStates.role(killer);
+        stats.recordMobKill(match.matchId(), killer.getUniqueId(), killerRole);
         game.stateCommands().runEventModifiers("ON_MOB_KILL", killer, match.matchId(),
                 List.of(victim.getType().name()));
         // Mob kills only matter for the kill-mob win conditions.
-        Role killerRole = playerStates.role(killer);
         Integer lobby = match.originLobbyId();
         if (killerRole == Role.SPEEDRUNNER
                 && winConditionEngine.mobMatches(lobby, victim.getType(), Role.SPEEDRUNNER)) {
@@ -502,7 +522,7 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         long matchId = match.get().matchId();
-        stats.recordAdvancement(matchId, player.getUniqueId());
+        stats.recordAdvancement(matchId, player.getUniqueId(), playerStates.role(player));
         game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId,
                 List.of(event.getAdvancement().getKey().toString()));
         Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);

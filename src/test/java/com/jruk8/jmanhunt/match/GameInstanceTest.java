@@ -80,6 +80,36 @@ class GameInstanceTest {
     }
 
     @Test
+    void elapsedMillisCountsFromStartWhileLive() {
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+
+        assertEquals(0L, instance.elapsedMillis(1_000L));
+        assertEquals(61_500L, instance.elapsedMillis(62_500L));
+        assertEquals(0L, instance.elapsedMillis(500L));
+    }
+
+    @Test
+    void elapsedFreezesOnceEnding() {
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+        instance.refreshElapsedCache(62_500L);
+        instance.setEnding(true);
+
+        assertEquals(61_500L, instance.elapsedMillis(200_000L));
+        assertEquals(61L, instance.elapsedSeconds(200_000L));
+    }
+
+    @Test
+    void refreshAfterEndingIsIgnored() {
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+        instance.refreshElapsedCache(5_000L);
+        instance.setEnding(true);
+        instance.refreshElapsedCache(200_000L);
+
+        assertEquals(4_000L, instance.elapsedMillis(300_000L));
+        assertEquals(4L, instance.elapsedSeconds(300_000L));
+    }
+
+    @Test
     void lobbyTagShowsSublobbyWhenMinted() {
         GameInstance direct = new GameInstance(1L, 2, OptionalLong.empty(), 1_000L);
         GameInstance sublobbed = new GameInstance(2L, 2, OptionalLong.empty(), 1_000L);

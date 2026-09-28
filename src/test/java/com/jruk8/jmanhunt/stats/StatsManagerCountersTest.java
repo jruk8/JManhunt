@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.stats;
 
+import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,9 +18,9 @@ class StatsManagerCountersTest {
         StatsManager manager = manager();
         UUID id = UUID.randomUUID();
 
-        manager.recordMobKill(7L, id);
-        manager.recordMobKill(7L, id);
-        manager.recordAdvancement(7L, id);
+        manager.recordMobKill(7L, id, Role.HUNTER);
+        manager.recordMobKill(7L, id, Role.HUNTER);
+        manager.recordAdvancement(7L, id, Role.HUNTER);
 
         Stats slice = manager.matchStats(7L, id).orElseThrow();
         assertEquals(2, slice.mobsKilled);
@@ -32,11 +33,32 @@ class StatsManagerCountersTest {
     void clearMatchDropsCounters() {
         StatsManager manager = manager();
         UUID id = UUID.randomUUID();
-        manager.recordMobKill(7L, id);
+        manager.recordMobKill(7L, id, Role.HUNTER);
 
         manager.clearMatch(7L);
 
         assertTrueMissing(manager, 7L, id);
+    }
+
+    @Test
+    void spectatorsRecordNothing() {
+        StatsManager manager = manager();
+        UUID id = UUID.randomUUID();
+
+        manager.recordMobKill(7L, id, Role.SPECTATOR);
+        manager.recordAdvancement(7L, id, Role.NONE);
+
+        assertTrueMissing(manager, 7L, id);
+    }
+
+    @Test
+    void recordersStampFirstSeenRole() {
+        StatsManager manager = manager();
+        UUID id = UUID.randomUUID();
+
+        manager.recordMobKill(7L, id, Role.HUNTER);
+
+        assertEquals(Role.HUNTER, manager.matchStats(7L, id).orElseThrow().role);
     }
 
     private static void assertTrueMissing(StatsManager manager, long matchId, UUID id) {

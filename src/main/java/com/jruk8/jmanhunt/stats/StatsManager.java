@@ -113,6 +113,9 @@ public final class StatsManager {
         }
         Stats slice = getOrCreate(matchId, killerId);
         slice.kills++;
+        if (slice.role == Role.NONE) {
+            slice.role = killerRole;
+        }
         if (killerRole.opposite() == victimRole) {
             if (killerRole == Role.HUNTER) {
                 slice.hunterKills++;
@@ -124,19 +127,35 @@ public final class StatsManager {
 
     /**
      * Credits one mob kill to the killer's match slice. Match-only:
-     * career totals never see it. Pure apart from the slice lookup,
-     * so unit tests cover it directly.
+     * career totals never see it. Non-participants record nothing.
+     * Pure apart from the slice lookup, so unit tests cover it
+     * directly.
      */
-    public void recordMobKill(long matchId, UUID killerId) {
-        getOrCreate(matchId, killerId).mobsKilled++;
+    public void recordMobKill(long matchId, UUID killerId, Role killerRole) {
+        if (!killerRole.isParticipant()) {
+            return;
+        }
+        Stats slice = getOrCreate(matchId, killerId);
+        slice.mobsKilled++;
+        if (slice.role == Role.NONE) {
+            slice.role = killerRole;
+        }
     }
 
     /**
      * Credits one advancement to the player's match slice. Callers
      * filter recipe unlocks out; match-only like mob kills.
+     * Non-participants record nothing.
      */
-    public void recordAdvancement(long matchId, UUID playerId) {
-        getOrCreate(matchId, playerId).achievementsGained++;
+    public void recordAdvancement(long matchId, UUID playerId, Role role) {
+        if (!role.isParticipant()) {
+            return;
+        }
+        Stats slice = getOrCreate(matchId, playerId);
+        slice.achievementsGained++;
+        if (slice.role == Role.NONE) {
+            slice.role = role;
+        }
     }
 
     /** Records a career death for the given player (persisted with the next match save). */
@@ -155,6 +174,11 @@ public final class StatsManager {
         long now = System.currentTimeMillis();
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
         for (Map.Entry<UUID, Stats> entry : slice.entrySet()) {
+            // Career statistics accrue for in-match players only:
+            // spectator and outsider slices never fold.
+            if (!entry.getValue().role.isParticipant()) {
+                continue;
+            }
             foldMatchStats(entry.getKey(), entry.getValue(), now, winner);
         }
         // The slice stays until teardown clears it so the end-of-match screen,
@@ -319,6 +343,7 @@ public final class StatsManager {
             }
             var ranked = slice.values().stream()
                     .sorted(Comparator.comparingDouble((Stats stat) -> stat.value(statistic)).reversed())
+                    .filter(stat -> stat.role.isParticipant())
                     .filter(stat -> stat.appliesTo(statistic))
                     .filter(stat -> stat.value(statistic) > 0).limit(3).toList();
             if (ranked.isEmpty()) {
@@ -352,6 +377,9 @@ public final class StatsManager {
     private void updateProgression(long matchId) {
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
         for (Stats stat : slice.values()) {
+            if (!stat.role.isParticipant()) {
+                continue;
+            }
             Player player = Bukkit.getPlayer(stat.uuid);
             if (player == null) {
                 continue;

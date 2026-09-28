@@ -470,15 +470,15 @@ public final class MatchStartService {
         prestart.beginHeadstarts(instance);
     }
 
-    /** Fresh per-match stat row for one participant. */
+    /** Fresh per-match stat row for one participant; spectators never get one. */
     private void initMatchStats(long matchId, Player player) {
+        if (!playerStates.role(player).isParticipant()) { return; }
         Stats playerStats = stats.getOrCreate(matchId, player.getUniqueId());
         playerStats.player = player.getName();
         playerStats.uuid = player.getUniqueId();
         playerStats.role = playerStates.role(player);
         playerStats.matchStartedAt = System.currentTimeMillis();
     }
-
     /** Configured starting lives for a role. -1 means unlimited. */
     private int livesFor(Integer lobby, Role role) {
         return switch (role) {

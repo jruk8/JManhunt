@@ -17,7 +17,9 @@ A win is only credited to participants on the winning side: when the
 speedrunners win, only speedrunners gain `total_wins` and
 `total_wins_as_speedrunner`; when the hunters win, only hunters gain
 `total_wins` and `total_wins_as_hunter`. `total_wins` is always the sum of the
-two role-specific win counts.
+two role-specific win counts. Match statistics and the end screen cover
+in-match hunters and speedrunners only: spectators never accrue, and the
+match clock freezes when the match ends.
 
 ## Database
 
