@@ -63,6 +63,8 @@ public final class MatchFinishService {
     private final FlagStore flagStore;
     private final MatchEliminationService elimination;
     private final List<Consumer<GameInstance>> gameEndListeners = new ArrayList<>();
+    /** Enforcement cadence in ticks: rubber-band, travel cap, elapsed cache. */
+    private static final long ENFORCE_PERIOD_TICKS = 5L;
 
     public MatchFinishService(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
             CompassManager compass, StatsManager stats, GameStateCommandManager stateCommands,
@@ -85,7 +87,7 @@ public final class MatchFinishService {
         this.flagStore = flagStore;
         this.elimination = new MatchEliminationService(plugin, playerStates, compass, store,
                 messaging, flagStore, this::finishIfBucketEmpty);
-        // One-second tick: pseudo-border guard, spectator travel limit,
+        // Quarter-second tick: pseudo-border guard, spectator travel limit,
         // and the elapsed-time cache (ended matches ignore the refresh).
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             enforcePseudoBorders();
@@ -94,7 +96,7 @@ public final class MatchFinishService {
             for (GameInstance instance : store.liveInstances()) {
                 instance.refreshElapsedCache(now);
             }
-        }, 20L, 20L);
+        }, ENFORCE_PERIOD_TICKS, ENFORCE_PERIOD_TICKS);
     }
 
     public void addGameEndListener(Consumer<GameInstance> listener) {
@@ -640,11 +642,10 @@ public final class MatchFinishService {
                 if (plugin.fakeSpectators().isFakeSpectator(player)) {
                     continue;
                 }
-                World.Environment environment = player.getWorld().getEnvironment();
-                if (environment != World.Environment.NETHER && environment != World.Environment.NORMAL) {
+                if (!worldEngine.isBorderedWorld(player.getWorld())) {
                     continue;
                 }
-                boolean nether = environment == World.Environment.NETHER;
+                boolean nether = player.getWorld().getEnvironment() == World.Environment.NETHER;
                 Location location = player.getLocation();
                 double outside = bounds.outsideBy(location.getX(), location.getZ(), nether);
                 if (outside <= 0.0) {
@@ -657,7 +658,8 @@ public final class MatchFinishService {
                             location.getYaw(), location.getPitch()));
                 }
                 if (outside > config.damageBuffer() && config.damageAmount() > 0.0) {
-                    player.damage(config.damageAmount());
+                    // damage.amount stays per-second across cadence changes.
+                    player.damage(config.damageAmount() * ENFORCE_PERIOD_TICKS / 20.0);
                 }
             }
         }

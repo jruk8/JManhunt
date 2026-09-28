@@ -88,7 +88,8 @@ public final class GameManager implements MatchControl {
         this.matchStart = new MatchStartService(plugin, messages, sounds, playerStates, compass, stats,
                 stateCommands, configService, worldEngine, lobbies, store, messaging, timeLimits,
                 prestart, autostart, matchFinish);
-        this.pseudoborderParticles = new PseudoborderParticleService(plugin, configService, store);
+        this.pseudoborderParticles = new PseudoborderParticleService(plugin, configService, store,
+                worldEngine);
 
         // assign events
         configService.onChange("settings.match.autostart.enabled", (oldValue, newValue) -> updateAutostartState());

@@ -249,6 +249,21 @@ public final class WorldEngineService implements SettingsListener {
     }
 
     /**
+     * True when pseudo-border walls render and bite in a world: NORMAL
+     * or NETHER environment, never the lobby world.
+     */
+    public boolean isBorderedWorld(World world) {
+        return borderedWorld(world.getEnvironment(), isLobbyWorld(world));
+    }
+
+    /** Pure core of isBorderedWorld, for tests. */
+    static boolean borderedWorld(World.Environment environment, boolean lobbyWorld) {
+        boolean supported = environment == World.Environment.NORMAL
+                || environment == World.Environment.NETHER;
+        return supported && !lobbyWorld;
+    }
+
+    /**
      * Heals and feeds one lobby-world occupant per the lobby care toggles.
      * No-op anywhere else.
      */

@@ -26,7 +26,8 @@ Every match with borders on is confined by its own pseudo-border:
 players outside their cell are pulled back in and take
 `damage.amount` past `damage.buffer`, with the start diameter applying
 until their match begins (when the start border is enabled).
-Spectators bypass it entirely. With borders off, participants outside
+Spectators bypass it entirely. Neither enforcement nor rendering ever
+applies in the lobby world. With borders off, participants outside
 their cell are removed from the match with a notice instead
 (auto-leave). See [Concurrent Matches](../../multi-instance.md). The
 walls render as particle grids; see

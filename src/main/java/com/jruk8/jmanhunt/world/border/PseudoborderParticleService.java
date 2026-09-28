@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
+import com.jruk8.jmanhunt.world.WorldEngineService;
 import com.jruk8.jmanhunt.world.cell.CellBounds;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -30,13 +31,16 @@ public final class PseudoborderParticleService {
     private final JManhuntPlugin plugin;
     private final ConfigService configService;
     private final MatchStore store;
+    private final WorldEngineService worldEngine;
     /** Shared clock: ticks since enable, driving both pulse modes. */
     private long tick;
 
-    public PseudoborderParticleService(JManhuntPlugin plugin, ConfigService configService, MatchStore store) {
+    public PseudoborderParticleService(JManhuntPlugin plugin, ConfigService configService, MatchStore store,
+            WorldEngineService worldEngine) {
         this.plugin = plugin;
         this.configService = configService;
         this.store = store;
+        this.worldEngine = worldEngine;
         Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
     }
 
@@ -82,10 +86,10 @@ public final class PseudoborderParticleService {
     private void renderForPlayer(Player player, CellBounds bounds, PseudoborderConfig particles,
             Particle.DustOptions dust, Color color) {
         World world = player.getWorld();
-        boolean nether = world.getEnvironment() == World.Environment.NETHER;
-        if (!nether && world.getEnvironment() != World.Environment.NORMAL) {
+        if (!worldEngine.isBorderedWorld(world)) {
             return;
         }
+        boolean nether = world.getEnvironment() == World.Environment.NETHER;
         double scale = nether ? NETHER_SCALE : 1.0;
         BorderBox box = BorderBox.forCell(bounds.centerX(), bounds.centerZ(), bounds.halfSize(), scale);
         Location at = player.getLocation();
