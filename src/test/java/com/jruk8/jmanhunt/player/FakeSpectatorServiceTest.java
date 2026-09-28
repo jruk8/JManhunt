@@ -147,6 +147,33 @@ class FakeSpectatorServiceTest {
     }
 
     @Test
+    void clearDanglingKeepsCreativeFlight() {
+        Fixture fixture = fixture();
+        when(fixture.watched().getGameMode()).thenReturn(GameMode.CREATIVE);
+
+        fixture.fakes().clearDanglingState(fixture.watched());
+
+        verify(fixture.watched(), never()).setFlying(false);
+        verify(fixture.watched(), never()).setAllowFlight(false);
+        verify(fixture.viewer()).showPlayer(fixture.plugin(), fixture.watched());
+    }
+
+    @Test
+    void disableKeepsCreativeFlight() {
+        Fixture fixture = fixture();
+        fixture.fakes().enable(fixture.watched());
+        when(fixture.watched().getGameMode()).thenReturn(GameMode.CREATIVE);
+
+        fixture.fakes().disable(fixture.watched());
+
+        assertFalse(fixture.fakes().isFakeSpectator(fixture.watched()));
+        verify(fixture.watched(), never()).setFlying(false);
+        verify(fixture.watched(), never()).setAllowFlight(false);
+        verify(fixture.watched()).setCollidable(true);
+        verify(fixture.viewer()).showPlayer(fixture.plugin(), fixture.watched());
+    }
+
+    @Test
     void spectatorRoleNeverEnablesFakeMode() {
         Fixture fixture = fixture();
 

@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -31,8 +32,10 @@ import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -451,5 +454,63 @@ class GameStateCommandManagerTest {
         assertTrue(((List<String>) blocked).contains("op"));
         assertTrue(((List<String>) blocked).contains("execute"));
         assertTrue(((List<String>) blocked).contains("whitelist"));
+    }
+
+    private static GameStateCommandManager wipeManager(JManhuntPlugin plugin) {
+        return new GameStateCommandManager(plugin,
+                new PlayerStateStore(), mock(ConfigService.class), mock(MessageService.class),
+                mock(SoundService.class), mock(GameManager.class));
+    }
+
+    @Test
+    void pendingEndWipeRunsOnce() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        GameStateCommandManager manager = spy(wipeManager(plugin));
+        Player player = mock(Player.class);
+        UUID playerId = UUID.randomUUID();
+        when(player.getUniqueId()).thenReturn(playerId);
+        doNothing().when(manager).resetPlayer(player);
+
+        manager.markPendingEndWipe(List.of(playerId));
+
+        assertTrue(manager.applyPendingEndWipe(player));
+        verify(manager).resetPlayer(player);
+        assertFalse(manager.applyPendingEndWipe(player));
+    }
+
+    @Test
+    void pendingEndWipeAbsentRunsNothing() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        GameStateCommandManager manager = wipeManager(plugin);
+        Player player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+
+        assertFalse(manager.applyPendingEndWipe(player));
+        verify(player, never()).getInventory();
+    }
+
+    @Test
+    void endWipeEnabledNeedsBundleAndRule() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        OverrideService overrides = mock(OverrideService.class);
+        when(plugin.overrides()).thenReturn(overrides);
+        GameStateCommandManager manager = wipeManager(plugin);
+        when(overrides.getBoolean(3, "advanced.advanced-match-controls.game-rules.enabled", true))
+                .thenReturn(true);
+        when(overrides.getStringList(eq(3), anyString()))
+                .thenReturn(List.of("RESET_PLAYERS_STATS"));
+
+        assertTrue(manager.endWipeEnabled(3));
+
+        when(overrides.getStringList(eq(3), anyString())).thenReturn(List.of());
+        assertFalse(manager.endWipeEnabled(3));
+
+        when(overrides.getBoolean(3, "advanced.advanced-match-controls.game-rules.enabled", true))
+                .thenReturn(false);
+        when(overrides.getStringList(eq(3), anyString()))
+                .thenReturn(List.of("RESET_PLAYERS_STATS"));
+        assertFalse(manager.endWipeEnabled(3));
     }
 }

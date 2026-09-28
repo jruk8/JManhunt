@@ -28,6 +28,7 @@ import org.bukkit.inventory.ItemStack;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -473,6 +474,7 @@ public final class MatchFinishService {
         stateCommands.runEnd(teardownId, participants, spectators, instance.originLobbyId(), lastMatch);
         scatterEngineOffEnd(instance, participants);
         worldEngine.onMatchEnd(participants, spectators, instance.originLobbyId(), teardownId);
+        markOfflineEndWipes(instance);
         if (plugin.overrides().getBoolean(instance.originLobbyId(),
                 "settings.players.roles.reset-on-game-end.enabled", true)) {
             playerStates.resetRoles(instance.assignedPlayerIds());
@@ -488,6 +490,28 @@ public final class MatchFinishService {
         plugin.logger().debug("debug.match-end", Map.of("index", GameManager.cellString(instance)));
         worldEngine.prepareNextCell();
         autostart.updateAutostartState();
+    }
+
+    /**
+     * Defers the match-end wipe for assigned participants who are
+     * offline at teardown; they get wiped on rejoin instead. Must run
+     * before roles reset, while roles still identify participants.
+     */
+    private void markOfflineEndWipes(GameInstance instance) {
+        if (!stateCommands.endWipeEnabled(instance.originLobbyId())) {
+            return;
+        }
+        Set<UUID> online = new HashSet<>();
+        for (Player onlinePlayer : store.onlineAssignedPlayers(instance)) {
+            online.add(onlinePlayer.getUniqueId());
+        }
+        List<UUID> offline = new ArrayList<>();
+        for (UUID assigned : instance.assignedPlayerIds()) {
+            if (!online.contains(assigned) && playerStates.role(assigned).isParticipant()) {
+                offline.add(assigned);
+            }
+        }
+        stateCommands.markPendingEndWipe(offline);
     }
 
     /**

@@ -23,9 +23,12 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /** Executes game rules and modifiers at match state transitions. */
@@ -41,6 +44,7 @@ public final class GameStateCommandManager {
     private final SoundService sounds;
     private final GameManager game;
     private final IntervalDispatcher intervals;
+    private final Set<UUID> pendingEndWipes = new HashSet<>();
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
                                    ConfigService configService, MessageService messages,
@@ -441,6 +445,19 @@ public final class GameStateCommandManager {
                 gameruleRestored(phase, lastMatch, disabled)));
     }
 
+    /**
+     * True when the end phase wipes participant inventories for the
+     * lobby: the game-rules bundle is on and RESET_PLAYERS_STATS is set.
+     */
+    public boolean endWipeEnabled(int lobbyId) {
+        if (!plugin.overrides().getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
+            return false;
+        }
+        List<String> rules = plugin.overrides().getStringList(lobbyId,
+                MatchConfig.GameRules.RULES_PATH);
+        return MatchConfig.GameRules.isRuleEnabled(rules, "RESET_PLAYERS_STATS");
+    }
+
     private void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
                             boolean lastMatch) {
         if (!plugin.overrides().getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
@@ -448,7 +465,7 @@ public final class GameStateCommandManager {
         }
         List<String> rules = plugin.overrides().getStringList(lobbyId,
                 MatchConfig.GameRules.RULES_PATH);
-        if (MatchConfig.GameRules.isRuleEnabled(rules, "RESET_PLAYERS_STATS")) {
+        if (endWipeEnabled(lobbyId)) {
             participants.forEach(this::resetPlayer);
         }
         if (MatchConfig.GameRules.isRuleEnabled(rules, "AUTO_SET_GAMEMODE")) {
@@ -626,6 +643,26 @@ public final class GameStateCommandManager {
      */
     public void resetPlayer(Player player) {
         resetPlayerStats(player, true, true);
+    }
+
+    /**
+     * Defers the match-end wipe for players who are offline at
+     * teardown. Memory only: matches never survive a restart anyway.
+     */
+    public void markPendingEndWipe(Collection<UUID> playerIds) {
+        pendingEndWipes.addAll(playerIds);
+    }
+
+    /**
+     * Runs a deferred match-end wipe for a rejoiner. Returns true
+     * when a wipe was pending and ran.
+     */
+    public boolean applyPendingEndWipe(Player player) {
+        if (!pendingEndWipes.remove(player.getUniqueId())) {
+            return false;
+        }
+        resetPlayer(player);
+        return true;
     }
 
     /**

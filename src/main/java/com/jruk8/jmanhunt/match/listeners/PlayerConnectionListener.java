@@ -62,6 +62,9 @@ public final class PlayerConnectionListener implements Listener {
         var player = event.getPlayer();
         worldEngine.careFor(player);
         playerStates.resetRolesIfAbsent(player);
+        // A match that ended while they were offline left a deferred
+        // wipe behind: run it before anything else reads their state.
+        game.applyPendingEndWipe(player);
         // Repair scoreboard teams in case roles and teams drifted apart.
         plugin.roleTeams().sync(player);
         lobbies.assignDefault(player.getUniqueId());
@@ -142,8 +145,32 @@ public final class PlayerConnectionListener implements Listener {
                     handleDisconnect(player, Role.HUNTER, match.get().matchId());
                 }
             }
+            cancelIfAbandoned(match.get(), player.getUniqueId());
         }
         game.updateAutostartState();
+    }
+
+    /**
+     * Cancels the match the moment its last active participant
+     * disconnects: no waiting on reconnect grace or the time limit.
+     * Spectators and eliminated players never keep a match alive. The
+     * quitter still counts as online during the quit event, so they
+     * are excluded from the check.
+     */
+    private void cancelIfAbandoned(GameInstance instance, UUID quitterId) {
+        if (!instance.active()) {
+            return;
+        }
+        boolean anyoneElse = game.onlineActivePlayers(instance).stream()
+                .anyMatch(other -> !other.getUniqueId().equals(quitterId));
+        if (anyoneElse) {
+            return;
+        }
+        for (UUID assigned : instance.assignedPlayerIds()) {
+            cancelDisconnectTask(disconnectTasks, assigned);
+            disconnects.clear(assigned);
+        }
+        game.cancel(instance, true);
     }
 
     private void handleDisconnect(Player player, Role role, long matchId) {

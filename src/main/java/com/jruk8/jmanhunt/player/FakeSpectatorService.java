@@ -70,14 +70,14 @@ public final class FakeSpectatorService {
 
     /**
      * Disables fake spectator mode and restores normal state. Always
-     * restores (survival, grounded, collidable, visible) so call sites
-     * can swap their survival restores for this unconditionally.
+     * restores (survival, collidable, visible) so call sites can swap
+     * their survival restores for this unconditionally; flight is
+     * grounded unless the player is in creative mode.
      */
     public void disable(Player player) {
         UUID id = player.getUniqueId();
         actives.remove(id);
-        player.setFlying(false);
-        player.setAllowFlight(false);
+        stopFlightUnlessCreative(player);
         player.setCollidable(true);
         // Falling distance gathered while flying must not survive the
         // exit: it would land as fall damage on the next touchdown.
@@ -121,15 +121,27 @@ public final class FakeSpectatorService {
     /**
      * Clears joiner-side dangling state after a disconnect or crash:
      * persisted flight flags plus visibility to everyone online.
+     * Creative players keep their flight.
      */
     public void clearDanglingState(Player joiner) {
-        joiner.setFlying(false);
-        joiner.setAllowFlight(false);
+        stopFlightUnlessCreative(joiner);
         for (Player viewer : onlinePlayers.get()) {
             if (!viewer.getUniqueId().equals(joiner.getUniqueId())) {
                 viewer.showPlayer(plugin, joiner);
             }
         }
+    }
+
+    /**
+     * Grounds the player unless they are in creative mode, where
+     * flight is inherent and must never be stripped by cleanup.
+     */
+    private static void stopFlightUnlessCreative(Player player) {
+        if (player.getGameMode() == GameMode.CREATIVE) {
+            return;
+        }
+        player.setFlying(false);
+        player.setAllowFlight(false);
     }
 
     /** True when the player is in fake spectator mode. Null-safe. */

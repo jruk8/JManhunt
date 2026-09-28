@@ -507,6 +507,11 @@ public final class GameManager implements MatchControl {
     }
 
     public GameStateCommandManager stateCommands() { return stateCommands; }
+
+    /** Runs a deferred match-end wipe for a rejoiner when one is pending. */
+    public boolean applyPendingEndWipe(Player player) {
+        return stateCommands.applyPendingEndWipe(player);
+    }
     public Set<String> settingNames() { return configService.settingNames(); }
     public boolean getSetting(String setting) { return configService.getBoolean(setting, false); }
     public Object getSettingValue(String setting) { return configService.getValue(setting); }
