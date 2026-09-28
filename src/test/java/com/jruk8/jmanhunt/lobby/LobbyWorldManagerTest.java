@@ -3,8 +3,6 @@ package com.jruk8.jmanhunt.lobby;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import java.io.File;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -83,13 +81,6 @@ class LobbyWorldManagerTest {
         assertFalse(LobbyWorldManager.namesClash("jmh_lobby", "world"));
         assertFalse(LobbyWorldManager.namesClash(null, "world"));
         assertFalse(LobbyWorldManager.namesClash("jmh-lobby", null));
-    }
-
-    @Test
-    void folderCountsAsExistingWorld(@TempDir File container) {
-        assertTrue(new File(container, "jmh-lobby").mkdir());
-        assertTrue(LobbyWorldManager.folderExists(container, "jmh-lobby"));
-        assertFalse(LobbyWorldManager.folderExists(container, "missing"));
     }
 
     @Test

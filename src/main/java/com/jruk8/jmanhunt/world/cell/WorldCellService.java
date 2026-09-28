@@ -56,8 +56,8 @@ public final class WorldCellService {
      * Teleports participants to the next match cell. Returns the used cell
      * index, or empty when the engine is off, the world is missing, or no
      * valid cell could be allocated. No vanilla border is ever set:
-     * concurrent matches confine by pseudo-border rubber-band, and lone
-     * matches by auto-leave.
+     * matches confine by pseudo-border rubber-band, or by auto-leave
+     * when borders are off.
      */
     public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
             int lobbyId) {

@@ -1,12 +1,12 @@
 package com.jruk8.jmanhunt.lobby.world;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.world.DimensionWorlds;
 import org.bukkit.Bukkit;
 import org.bukkit.Difficulty;
 import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.WorldCreator;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
@@ -64,16 +64,9 @@ public final class LobbyWorldManager {
 
     /** True when a world with the lobby name is loaded or has a folder waiting. */
     public boolean lobbyWorldExists() {
-        String name = lobbyWorldName();
-        if (Bukkit.getWorld(name) != null) {
-            return true;
-        }
-        return folderExists(plugin.getServer().getWorldContainer(), name);
-    }
-
-    /** Folder check for an unloaded leftover world. Pure for tests. */
-    public static boolean folderExists(File container, String name) {
-        return new File(container, name).isDirectory();
+        return DimensionWorlds.exists(plugin.getServer().getWorldContainer(),
+                plugin.configService().getString("world-engine.world-name", "world"),
+                lobbyWorldName());
     }
 
     /**
@@ -119,13 +112,15 @@ public final class LobbyWorldManager {
         if (loaded != null) {
             return Optional.of(new LobbyWorld(loaded, false, false));
         }
-        boolean fresh = !new File(plugin.getServer().getWorldContainer(), name).isDirectory();
-        WorldCreator creator = new WorldCreator(name);
-        creator.generator(new VoidChunkGenerator());
-        creator.generateStructures(false);
+        File container = plugin.getServer().getWorldContainer();
+        String gameWorld = plugin.configService().getString("world-engine.world-name", "world");
+        boolean fresh = !DimensionWorlds.folderExists(container, gameWorld, name);
         World world;
         try {
-            world = creator.createWorld();
+            world = DimensionWorlds.loadOrCreate(name, creator -> {
+                creator.generator(new VoidChunkGenerator());
+                creator.generateStructures(false);
+            });
         } catch (Exception exception) {
             plugin.logger().warning("Could not create lobby world " + name + ": " + exception.getMessage());
             return Optional.empty();

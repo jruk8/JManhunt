@@ -478,7 +478,7 @@ public class WorldEngineConfig extends OkaeriConfig {
         })
         private StartBorder startBorder = new StartBorder();
 
-        @Comment("Pseudoborder wall particles for concurrent matches.")
+        @Comment("Pseudoborder wall particles for every match.")
         private WorldEngineParticles particles = new WorldEngineParticles();
 
         public boolean isEnabled() {
@@ -565,16 +565,6 @@ public class WorldEngineConfig extends OkaeriConfig {
             })
             private int radius = 10;
 
-            @CustomKey("fadeout-time")
-            @Comment({
-                    "Time in seconds for the start border to animate expanding to",
-                    "cell size when the game begins.",
-                    "Set to 0 or -1 to skip the animation and snap to cell size",
-                    "immediately.",
-                    "Default: 5"
-            })
-            private int fadeoutTime = 5;
-
             public boolean isEnabled() {
                 return enabled;
             }
@@ -589,14 +579,6 @@ public class WorldEngineConfig extends OkaeriConfig {
 
             public void setRadius(int radius) {
                 this.radius = radius;
-            }
-
-            public int getFadeoutTime() {
-                return fadeoutTime;
-            }
-
-            public void setFadeoutTime(int fadeoutTime) {
-                this.fadeoutTime = fadeoutTime;
             }
         }
 

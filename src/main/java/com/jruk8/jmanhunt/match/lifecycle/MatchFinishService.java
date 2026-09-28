@@ -12,7 +12,6 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpectatorTravelService;
 import com.jruk8.jmanhunt.stats.StatsManager;
-import com.jruk8.jmanhunt.world.border.BorderMode;
 import com.jruk8.jmanhunt.world.cell.CellBounds;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
@@ -295,8 +294,9 @@ public final class MatchFinishService {
     /**
      * Removes a begun-match participant standing outside their cell or in
      * the lobby world, with a reason notice. The End is skipped like the
-     * border enforcement, and concurrent matches confine by rubber-band
-     * instead. Returns true when the player was removed.
+     * border enforcement, and matches with borders on confine by
+     * rubber-band instead, so this only confines when borders are off.
+     * Returns true when the player was removed.
      */
     public boolean autoLeaveIfOutside(Player player, Location at) {
         Optional<GameInstance> match = store.instanceOf(player.getUniqueId());
@@ -323,14 +323,15 @@ public final class MatchFinishService {
         if (!config.enabled() || instance.cellIndex().isEmpty()) {
             return false;
         }
-        if (config.worldBorderEnabled() && store.instances().size() >= 2) {
-            // Concurrent matches confine by rubber-band instead; lone
-            // matches set no vanilla border, so auto-leave confines them.
+        if (config.worldBorderEnabled()) {
+            // Pseudo-borders confine by rubber-band instead; auto-leave
+            // only confines matches running with borders off.
             return false;
         }
         boolean nether = environment == World.Environment.NETHER;
         CellBounds bounds = CellBounds.forCell(instance.cellIndex().getAsLong(),
-                config.cellSize(), config.startBorderDiameter(), !instance.begun());
+                config.cellSize(), config.startBorderDiameter(),
+                config.useStartBorder(instance.begun()));
         if (bounds.contains(at.getX(), at.getZ(), nether)) {
             return false;
         }
@@ -486,7 +487,6 @@ public final class MatchFinishService {
         store.removeInstance(teardownId);
         plugin.logger().debug("debug.match-end", Map.of("index", GameManager.cellString(instance)));
         worldEngine.prepareNextCell();
-        logBorderMode();
         autostart.updateAutostartState();
     }
 
@@ -620,28 +620,15 @@ public final class MatchFinishService {
                 .map(p -> (Player) p).toList();
     }
 
-    /** Logs the active border mode; silent when borders cannot apply. */
-    public void logBorderMode() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
-        if (!config.enabled() || !config.worldBorderEnabled()) {
-            return;
-        }
-        plugin.logger().debug("debug.border-mode",
-                Map.of("mode", BorderMode.resolve(store.instances().size(), true, true).name()));
-    }
-
     /**
-     * Confines concurrent matches to their cells: players outside their
-     * cell are rubber-banded back in and take border damage past the damage
-     * buffer. Spectators bypass it like the vanilla border. The End is
-     * skipped: end dimensions are assigned one per match, so no sharing
-     * needs confining; if that ever changes, the recovery helper below
-     * already gives non-Nether worlds the surface treatment.
+     * Confines every match to its cell: players outside their cell are
+     * rubber-banded back in and take border damage past the damage
+     * buffer. Spectators bypass it. The End is skipped: end dimensions
+     * are assigned one per match, so no sharing needs confining; if
+     * that ever changes, the recovery helper below already gives
+     * non-Nether worlds the surface treatment.
      */
     private void enforcePseudoBorders() {
-        if (store.instances().size() < 2) {
-            return;
-        }
         WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         if (!config.enabled() || !config.worldBorderEnabled()) {
             return;
@@ -651,7 +638,8 @@ public final class MatchFinishService {
                 continue;
             }
             CellBounds bounds = CellBounds.forCell(instance.cellIndex().getAsLong(),
-                    config.cellSize(), config.startBorderDiameter(), !instance.begun());
+                    config.cellSize(), config.startBorderDiameter(),
+                    config.useStartBorder(instance.begun()));
             for (Player player : store.onlineActivePlayers(instance)) {
                 if (plugin.fakeSpectators().isFakeSpectator(player)) {
                     continue;

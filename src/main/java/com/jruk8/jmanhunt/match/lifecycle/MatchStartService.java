@@ -161,12 +161,6 @@ public final class MatchStartService {
         List<Player> spectators = lobbyNonePlayers(lobby.get());
         participants.forEach(lobbies::restoreCollisions); // match wins; fakes re-disable below
         spectators.forEach(lobbies::restoreCollisions);
-        // A second match drops any vanilla border: concurrent matches
-        // are confined by per-instance pseudo-borders instead. Lone
-        // matches set no vanilla border; auto-leave confines them.
-        if (!store.isEmpty()) {
-            worldEngine.clearInstanceBorders();
-        }
         OptionalLong matchCell = worldEngine.onMatchStart(participants, spectators, lobbyId);
         GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell,
                 assignees, spectators);
@@ -178,7 +172,6 @@ public final class MatchStartService {
         beginMatchPlay(instance);
         plugin.logger().debug("debug.match-start",
                 Map.of("lobby", String.valueOf(lobbyId), "index", GameManager.cellString(instance)));
-        finishService.logBorderMode();
         return true;
     }
 
@@ -458,7 +451,6 @@ public final class MatchStartService {
         }
         messaging.sendToInstance(instance, "manhunt.started-by-damage", Map.of());
         messaging.playInstanceNeutral(instance);
-        worldEngine.onBeginGame();
         beginGameListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JGameBeginEvent(instance.matchId()));
         // AFTER pre-start-order modifiers waited out the pre-start window;

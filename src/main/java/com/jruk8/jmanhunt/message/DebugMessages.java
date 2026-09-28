@@ -53,9 +53,6 @@ public class DebugMessages extends OkaeriConfig {
     private String endCellCreateAttempt = "{debug-prefix}<gray>End dimension create: <white>{cell} " +
             "<gray>already-loaded=<white>{loaded} <gray>folder-exists=<white>{folder}<gray>.";
 
-    @CustomKey("border-mode")
-    private String borderMode = "{debug-prefix}<gray>Border mode: <white>{mode}<gray>.";
-
     @CustomKey("portal-reroute")
     private String portalReroute = "{debug-prefix}<gray>Rerouted <white>{player} <gray>to <white>{cell}<gray>.";
 

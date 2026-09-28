@@ -1,10 +1,9 @@
 package com.jruk8.jmanhunt.world.cell;
 
 /**
- * Rectangular bounds of one world-engine cell, mirroring the real world
- * border geometry (center on the cell origin, size as diameter) so the
- * pseudo-border guard confines exactly what the border would. The Nether
- * uses the same 1/8 scaling as the border sync.
+ * Rectangular bounds of one world-engine cell (center on the cell
+ * origin, size as diameter): the single box the pseudo-border guard
+ * confines and the wall particles render. The Nether uses 1/8 scaling.
  */
 public final class CellBounds {
     private final double centerX;

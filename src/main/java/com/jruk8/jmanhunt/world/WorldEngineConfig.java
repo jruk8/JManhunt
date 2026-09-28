@@ -20,13 +20,11 @@ public record WorldEngineConfig(
         double damageAmount,
         boolean startBorderEnabled,
         int startBorderRadius,
-        int startBorderFadeoutTime,
         String endBaseName,
         int endBuffer) {
     private static final int DEFAULT_CELL_SIZE = 10_000;
     private static final int MAX_CELL_SIZE = 50_000;
     private static final int DEFAULT_START_BORDER_RADIUS = 10;
-    private static final int DEFAULT_START_BORDER_FADEOUT_TIME = 5;
     private static final double DEFAULT_DAMAGE_BUFFER = 5.0;
     private static final double DEFAULT_DAMAGE_AMOUNT = 1.0;
     private static final String DEFAULT_END_BASE_NAME = "jmh_end";
@@ -84,7 +82,6 @@ public record WorldEngineConfig(
         String startBorderBase = borderBase + "start-border.";
         boolean startBorderEnabled = config.getBoolean(startBorderBase + "enabled", false);
         int startBorderRadius = config.getInt(startBorderBase + "radius", DEFAULT_START_BORDER_RADIUS);
-        int startBorderFadeoutTime = config.getInt(startBorderBase + "fadeout-time", DEFAULT_START_BORDER_FADEOUT_TIME);
         EndSettings end = endSettings(config, base);
         return new WorldEngineConfig(
                 config.getBoolean(base + "enabled", false),
@@ -103,7 +100,6 @@ public record WorldEngineConfig(
                 damageAmount,
                 startBorderEnabled,
                 startBorderRadius,
-                startBorderFadeoutTime,
                 end.baseName(),
                 end.buffer()
         );
@@ -115,7 +111,7 @@ public record WorldEngineConfig(
      * The radius is the larger of the configured start-border radius and
      * tp-spread-radius + 1 (so players never spawn outside the border).
      * A configured radius of -1 means use tp-spread-radius + 1 only.
-     * The diameter is radius * 2 (Bukkit's WorldBorder.setSize takes diameter).
+     * Sizes are diameters: radius * 2.
      *
      * @param tpSpreadRadius the tp-spread-radius value
      * @param startBorderRadius the configured start-border radius (-1 = use spread only)
@@ -150,12 +146,14 @@ public record WorldEngineConfig(
     }
 
     /**
-     * Returns true if the fadeout animation should be skipped (instant snap).
-     * Both 0 and -1 mean no animation.
+     * Returns true while an unbegun match should confine to the start
+     * diameter: the start border must be switched on, not merely unbegun.
+     * Enforcement and particles share this so both use the same box.
      *
-     * @return true if the border should snap to cell size immediately
+     * @param begun whether the match has begun
+     * @return true if the start diameter applies
      */
-    public boolean skipFadeout() {
-        return startBorderFadeoutTime <= 0;
+    public boolean useStartBorder(boolean begun) {
+        return !begun && startBorderActive();
     }
 }

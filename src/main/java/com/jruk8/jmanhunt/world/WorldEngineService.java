@@ -23,7 +23,6 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.function.BooleanSupplier;
-import com.jruk8.jmanhunt.world.border.WorldBorderService;
 import com.jruk8.jmanhunt.world.cell.WorldCellService;
 import com.jruk8.jmanhunt.world.teleport.LobbyWorldService;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
@@ -38,7 +37,6 @@ public final class WorldEngineService implements SettingsListener {
     private final EndResetManager endResetManager;
     private final EndCellManager endCells;
     private final WorldCellService cells;
-    private final WorldBorderService borders;
     private final MatchTeleportService teleport;
     private final LobbyWorldService lobbyWorlds;
 
@@ -51,7 +49,6 @@ public final class WorldEngineService implements SettingsListener {
         this.overworldStructuresDatapackManager = new OverworldStructuresDatapackManager(plugin);
         this.endResetManager = new EndResetManager(plugin);
         this.endCells = new EndCellManager(plugin, engineState);
-        this.borders = new WorldBorderService(plugin, configService);
         this.cells = new WorldCellService(plugin, engineState, endCells, playerStates);
         this.lobbyWorlds = new LobbyWorldService(plugin, messages);
         this.teleport = new MatchTeleportService(plugin, lobbyWorlds);
@@ -108,16 +105,7 @@ public final class WorldEngineService implements SettingsListener {
         return cells.bufferedCellIndexes();
     }
 
-    /**
-     * Called when the game actually begins (via speedrunner damage or force start).
-     * If the start-border is active, expands it to the full cell size.
-     */
-    public void onBeginGame() {
-        borders.onBeginGame();
-    }
-
     public void onMatchEnd(List<Player> participants, List<Player> spectators, int lobbyId, long matchId) {
-        borders.clearInstanceBorders();
         WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
         if (!config.enabled()) {
             return;
@@ -154,21 +142,6 @@ public final class WorldEngineService implements SettingsListener {
             spectator.teleport(lobby);
             spectator.setRespawnLocation(lobby, true);
         }
-        borders.clearWorldBorder(lobby.getWorld());
-    }
-
-    /** Clears real borders and start-border state, e.g. when matches go concurrent. */
-    public void clearInstanceBorders() {
-        borders.clearInstanceBorders();
-    }
-
-    /**
-     * Applies the real world border for one cell, e.g. when concurrency
-     * drops back to a single match. Honors the start-border phase for
-     * matches that have not begun yet.
-     */
-    public void applyInstanceBorder(long cellIndex, boolean begun) {
-        borders.applyInstanceBorder(cellIndex, begun);
     }
 
     public boolean teleportToLobby(List<Player> targets, int lobbyId) {

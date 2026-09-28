@@ -124,4 +124,35 @@ class WorldEngineConfigTest {
         // Both are equal (10 == 9 + 1) → use 10
         assertEquals(20, WorldEngineConfig.calculateStartBorderDiameter(9, 10));
     }
+
+    @Test
+    void useStartBorderNeedsUnbegunAndEnabled() {
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "world-engine.world-border.enabled", true);
+        ConfigPathMapper.set(root, "world-engine.world-border.start-border.enabled", true);
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+
+        assertTrue(config.useStartBorder(false));
+        assertFalse(config.useStartBorder(true));
+    }
+
+    @Test
+    void useStartBorderOffWhenStartBorderDisabled() {
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "world-engine.world-border.enabled", true);
+        ConfigPathMapper.set(root, "world-engine.world-border.start-border.enabled", false);
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+
+        assertFalse(config.useStartBorder(false));
+    }
+
+    @Test
+    void useStartBorderOffWhenBorderDisabled() {
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "world-engine.world-border.enabled", false);
+        ConfigPathMapper.set(root, "world-engine.world-border.start-border.enabled", true);
+        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+
+        assertFalse(config.useStartBorder(false));
+    }
 }

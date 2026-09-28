@@ -687,7 +687,6 @@ public final class SettingRegistry {
         entries.add(floatVal("world-engine.world-border.damage.amount", 1.0, 0.0, null));
         entries.add(bool("world-engine.world-border.start-border.enabled", true));
         entries.add(intVal("world-engine.world-border.start-border.radius", 10, null, null));
-        entries.add(intVal("world-engine.world-border.start-border.fadeout-time", 5, -1, null));
         entries.add(option("world-engine.world-border.particles.type", "DUST",
                 "DUST", "SMOKE", "LARGE_SMOKE", "HEART", "HAPPY_VILLAGER", "ANGRY_VILLAGER",
                 "WITCH", "FIREWORK", "FLASH", "FLAME", "SMALL_FLAME", "EFFECT",

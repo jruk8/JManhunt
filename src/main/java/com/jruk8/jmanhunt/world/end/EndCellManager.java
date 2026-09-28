@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.world.end;
 
 import com.jruk8.jmanhunt.config.EngineStateRepository;
+import com.jruk8.jmanhunt.world.DimensionWorlds;
 import com.jruk8.jmanhunt.world.FileUtils;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.JManhuntPlugin;
@@ -8,7 +9,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
@@ -343,29 +343,8 @@ public final class EndCellManager {
     private List<String> poolDirs(WorldEngineConfig config) {
         List<String> dirs = new ArrayList<>(containerDirs());
         dirs.addAll(loadedPoolWorlds(config.endBaseName()));
-        dirs.addAll(dimensionDirs(config.worldName()));
+        dirs.addAll(DimensionWorlds.dimensionDirs(worldContainer(), config.worldName()));
         return dirs;
-    }
-
-    /** Folders under the main level's dimensions dir, or empty. */
-    private List<String> dimensionDirs(String worldName) {
-        File dimensions = new File(worldContainer(), worldName + "/dimensions/minecraft");
-        String[] entries = dimensions.list((dir, name) -> new File(dir, name).isDirectory());
-        return entries == null ? List.of() : Arrays.asList(entries);
-    }
-
-    /**
-     * Locates an unloaded pool world's folder: container root first,
-     * then the main level's dimensions dir. Returns the dimensions
-     * candidate when neither exists (deleting it is a no-op). Pure
-     * core for tests; loaded worlds report their own folder instead.
-     */
-    static File unloadedPoolFolder(File container, String worldName, String name) {
-        File root = new File(container, name);
-        if (root.isDirectory()) {
-            return root;
-        }
-        return new File(container, worldName + "/dimensions/minecraft/" + name);
     }
 
     /** Sorted comma list for debug lines, or (empty). Pure for tests. */
@@ -388,13 +367,8 @@ public final class EndCellManager {
 
     /** Loads a pool member, or returns it when already loaded. */
     private World loadDimension(String name) {
-        World loaded = Bukkit.getWorld(name);
-        if (loaded != null) {
-            return loaded;
-        }
-        WorldCreator creator = new WorldCreator(name);
-        creator.environment(World.Environment.THE_END);
-        return creator.createWorld();
+        return DimensionWorlds.loadOrCreate(name,
+                creator -> creator.environment(World.Environment.THE_END));
     }
 
     /** Generates a fresh pool member with its deterministic seed. Null when creation fails. */
@@ -402,15 +376,15 @@ public final class EndCellManager {
         String name = poolName(config.endBaseName(), n);
         boolean loaded = Bukkit.getWorld(name) != null;
         boolean folder = loaded
-                || unloadedPoolFolder(worldContainer(), config.worldName(), name).isDirectory();
+                || DimensionWorlds.unloadedFolder(worldContainer(), config.worldName(), name).isDirectory();
         plugin.logger().debug("debug.end-cell-create-attempt", Map.of(
                 "cell", name,
                 "loaded", String.valueOf(loaded),
                 "folder", String.valueOf(folder)));
-        WorldCreator creator = new WorldCreator(name);
-        creator.environment(World.Environment.THE_END);
-        creator.seed(EndSeedHasher.initialSeed(seed, n));
-        World created = creator.createWorld();
+        World created = DimensionWorlds.loadOrCreate(name, creator -> {
+            creator.environment(World.Environment.THE_END);
+            creator.seed(EndSeedHasher.initialSeed(seed, n));
+        });
         if (created == null) {
             plugin.logger().warning("Could not generate end dimension " + name + ".");
             return null;
@@ -444,7 +418,7 @@ public final class EndCellManager {
             Bukkit.unloadWorld(loaded, false);
         }
         File target = liveFolder != null ? liveFolder
-                : unloadedPoolFolder(worldContainer(), config.worldName(), name);
+                : DimensionWorlds.unloadedFolder(worldContainer(), config.worldName(), name);
         try {
             FileUtils.deleteRecursively(target);
         } catch (IOException exception) {
@@ -518,10 +492,11 @@ public final class EndCellManager {
             plugin.logger().warning("Failed to clean end data at " + name + ": " + exception.getMessage());
             return false;
         }
-        WorldCreator creator = new WorldCreator(name);
-        creator.environment(World.Environment.THE_END);
-        creator.seed(newSeed);
-        if (creator.createWorld() == null) {
+        World recreated = DimensionWorlds.loadOrCreate(name, creator -> {
+            creator.environment(World.Environment.THE_END);
+            creator.seed(newSeed);
+        });
+        if (recreated == null) {
             plugin.logger().warning("Could not recreate end world " + name + " after reset.");
             return false;
         }

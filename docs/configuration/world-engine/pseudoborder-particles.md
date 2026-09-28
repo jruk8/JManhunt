@@ -1,9 +1,9 @@
 # Pseudoborder Particles
 
-When matches run concurrently, each match is confined by a per-instance
-pseudoborder instead of the real world border. These walls render as
-particle grids so players can see their cell edges. Only the four walls
-render; cells are unbounded vertically, so there is no floor or ceiling.
+Every match with borders on is confined by a per-instance
+pseudoborder. These walls render as particle grids so players can see
+their cell edges. Only the four walls render; cells are unbounded
+vertically, so there is no floor or ceiling.
 
 ```yaml
 world-engine:

@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Renders the concurrent-match pseudoborder walls as particles. Each tick,
+ * Renders every match's pseudoborder walls as particles. Each tick,
  * every active match player sees a grid patch on each wall within render
  * radius of their own cell box: the same box the enforcement guard
  * confines, so rendering never moves or resizes anything. Walls thin with
@@ -43,9 +43,6 @@ public final class PseudoborderParticleService {
 
     private void tick() {
         tick++;
-        if (store.instances().size() < 2) {
-            return;
-        }
         WorldEngineConfig engine = WorldEngineConfig.fromConfig(configService);
         if (!engine.enabled() || !engine.worldBorderEnabled()) {
             return;
@@ -62,7 +59,8 @@ public final class PseudoborderParticleService {
                 continue;
             }
             CellBounds bounds = CellBounds.forCell(instance.cellIndex().getAsLong(),
-                    engine.cellSize(), engine.startBorderDiameter(), !instance.begun());
+                    engine.cellSize(), engine.startBorderDiameter(),
+                    engine.useStartBorder(instance.begun()));
             for (Player player : store.onlineActivePlayers(instance)) {
                 if (plugin.fakeSpectators().isFakeSpectator(player)) {
                     continue;
