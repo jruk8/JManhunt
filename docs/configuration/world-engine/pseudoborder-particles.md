@@ -10,7 +10,7 @@ world-engine:
   world-border:
     particles:
       type: DUST
-      particle-spacing: 2
+      particle-spacing: 1
       color: "#de7766"
       render-radius: 10.0
       pulse-mode: INTERVAL
@@ -21,37 +21,28 @@ world-engine:
       max-particles-per-player: 1000
 ```
 
-`type` is the wall particle shape: `DUST`, `SMOKE`, `LARGE_SMOKE`,
-`HEART`, `HAPPY_VILLAGER`, `ANGRY_VILLAGER`, `WITCH`, `FIREWORK`,
-`FLASH`, `FLAME`, `SMALL_FLAME`, `EFFECT`, `INSTANT_EFFECT`, `PORTAL`,
-`END_ROD`, `NOTE`, `SOUL`, or `ENCHANT`. Default: `DUST`.
+`type` is the wall particle shape: `DUST`, `HEART`, `HAPPY_VILLAGER`,
+`ANGRY_VILLAGER`, `WITCH`, `FLAME`, `SMALL_FLAME`, `EFFECT`,
+`INSTANT_EFFECT`, `PORTAL`, `END_ROD`, `NOTE`, or `SOUL`. Default:
+`DUST`.
 
 `particle-spacing` is the blocks between adjacent grid vertices on each
 wall, 1 to 8. 1 is the tightest grid (most detail, most expensive) and 8
 is the loosest.
 
 `color` is the wall color as a hex value, with or without a leading `#`,
-and applies to the `DUST` type only. Invalid values fall back to the
-default brand color.
+and applies to the `DUST`, `EFFECT`, and `INSTANT_EFFECT` types only.
+Invalid values fall back to the default brand color.
 
 `render-radius` is how close, in perpendicular blocks from a wall, a
 player must be before that wall starts rendering. 0 disables the walls.
-
-## Distance Thinning
-
-Walls fade in with approach. At the render-radius edge only about 30
-percent of a wall's vertices show; the share grows linearly to 100
-percent against the wall. Each vertex draws a stable random number from
-its coordinates, so approaching players only ever gain vertices and
-nothing flickers off.
 
 ## Pulse Modes
 
 Exactly one pulse mode is active. `INTERVAL` blinks every wall in sync:
 `interval` is the seconds between blinks, 0 to 3, where 0 shows every
-tick (not recommended, lag). Looking away slows the blink, from the
-configured interval straight at the wall up to double at 30 degrees off
-and beyond.
+tick (not recommended, lag). The cadence is identical whatever
+direction the player looks.
 
 `SINE_WAVE` sweeps a traveling band across each wall instead.
 `wave-direction-angle` is the travel direction in degrees,

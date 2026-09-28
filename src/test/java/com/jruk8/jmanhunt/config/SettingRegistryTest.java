@@ -163,7 +163,7 @@ class SettingRegistryTest {
 
     @Test
     void pseudoborderParticleDefaultsMatchBundledConfig() {
-        assertEquals("2", SettingRegistry
+        assertEquals("1", SettingRegistry
                 .byPath("world-engine.world-border.particles.particle-spacing").defaultValue());
         assertEquals("#de7766", SettingRegistry
                 .byPath("world-engine.world-border.particles.color").defaultValue());

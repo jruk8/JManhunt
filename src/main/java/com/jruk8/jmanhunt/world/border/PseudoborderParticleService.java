@@ -12,7 +12,6 @@ import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
-import org.bukkit.util.Vector;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,9 +19,9 @@ import java.util.List;
  * Renders every match's pseudoborder walls as particles. Each tick,
  * every active match player sees a grid patch on each wall within render
  * radius of their own cell box: the same box the enforcement guard
- * confines, so rendering never moves or resizes anything. Walls thin with
- * distance, pulse on the configured mode, and spread a per-player
- * budget evenly across every visible wall.
+ * confines, so rendering never moves or resizes anything. Walls show
+ * every vertex at any distance, pulse on the configured mode, and
+ * spread a per-player budget evenly across every visible wall.
  */
 public final class PseudoborderParticleService {
     private static final float PARTICLE_SIZE = 1.0f;
@@ -51,8 +50,9 @@ public final class PseudoborderParticleService {
         if (particles.renderRadius() <= 0.0) {
             return;
         }
+        Color color = particleColor(particles);
         Particle.DustOptions dust = particles.type().usesDustOptions()
-                ? new Particle.DustOptions(particleColor(particles), PARTICLE_SIZE)
+                ? new Particle.DustOptions(color, PARTICLE_SIZE)
                 : null;
         for (GameInstance instance : store.liveInstances()) {
             if (instance.cellIndex().isEmpty()) {
@@ -65,7 +65,7 @@ public final class PseudoborderParticleService {
                 if (plugin.fakeSpectators().isFakeSpectator(player)) {
                     continue;
                 }
-                renderForPlayer(player, bounds, particles, dust);
+                renderForPlayer(player, bounds, particles, dust, color);
             }
         }
     }
@@ -76,12 +76,11 @@ public final class PseudoborderParticleService {
     }
 
     /**
-     * Gathers one player's wall vertices post-thinning and post-dedup,
-     * spreads the budget across every visible wall, then applies the
-     * pulse gate to the survivors.
+     * Gathers one player's wall vertices, spreads the budget across
+     * every visible wall, then applies the pulse gate to the survivors.
      */
     private void renderForPlayer(Player player, CellBounds bounds, PseudoborderConfig particles,
-            Particle.DustOptions dust) {
+            Particle.DustOptions dust, Color color) {
         World world = player.getWorld();
         boolean nether = world.getEnvironment() == World.Environment.NETHER;
         if (!nether && world.getEnvironment() != World.Environment.NORMAL) {
@@ -95,30 +94,25 @@ public final class PseudoborderParticleService {
             List<BorderGrid.BorderVertex> vertices = BorderGrid.verticesForPlane(plane, box,
                     at.getX(), at.getY(), at.getZ(), particles.particleSpacing(),
                     particles.renderRadius(), world.getMinHeight(), world.getMaxHeight());
-            if (vertices.isEmpty()) {
-                continue;
-            }
-            double fraction = BorderParticles.thinningFraction(
-                    vertices.get(0).planeDistance(), particles.renderRadius());
-            for (BorderGrid.BorderVertex vertex : vertices) {
-                if (BorderParticles.hash01(vertex.x(), vertex.y(), vertex.z()) < fraction) {
-                    candidates.add(vertex);
-                }
-            }
+            candidates.addAll(vertices);
         }
         if (candidates.isEmpty()) {
             return;
         }
         List<BorderGrid.BorderVertex> shown =
                 BorderGrid.spreadBudget(candidates, particles.maxParticlesPerPlayer());
-        Vector look = at.getDirection();
-        double[] angles = {Double.NaN, Double.NaN, Double.NaN, Double.NaN};
+        double[] tint = particles.type().colorOffsets()
+                ? BorderParticles.colorOffsets(color)
+                : null;
         for (BorderGrid.BorderVertex vertex : shown) {
-            if (!pulseVisible(vertex, look, angles, particles)) {
+            if (!pulseVisible(vertex, particles)) {
                 continue;
             }
             if (dust != null) {
                 player.spawnParticle(Particle.DUST, vertex.x(), vertex.y(), vertex.z(), 1, dust);
+            } else if (tint != null) {
+                player.spawnParticle(particles.type().particle(),
+                        vertex.x(), vertex.y(), vertex.z(), 0, tint[0], tint[1], tint[2], 1);
             } else {
                 player.spawnParticle(particles.type().particle(),
                         vertex.x(), vertex.y(), vertex.z(), 1);
@@ -126,18 +120,13 @@ public final class PseudoborderParticleService {
         }
     }
 
-    /** Pulse gate for one budgeted vertex; INTERVAL angles memoize per wall. */
-    private boolean pulseVisible(BorderGrid.BorderVertex vertex, Vector look,
-            double[] angles, PseudoborderConfig particles) {
+    /** Pulse gate for one budgeted vertex. */
+    private boolean pulseVisible(BorderGrid.BorderVertex vertex, PseudoborderConfig particles) {
         if (particles.pulseMode() == PulseMode.SINE_WAVE) {
             double phase = BorderParticles.wavePhase(vertex.u(), vertex.v(),
                     particles.waveDirectionAngle(), particles.waveLength());
             return BorderParticles.waveVisible(phase, particles.waveSpeedHz(), tick);
         }
-        int plane = vertex.plane().index();
-        if (Double.isNaN(angles[plane])) {
-            angles[plane] = BorderParticles.viewingAngleDegrees(look.getX(), look.getZ(), vertex.plane());
-        }
-        return BorderParticles.intervalVisible(tick, particles.intervalSeconds(), angles[plane]);
+        return BorderParticles.intervalVisible(tick, particles.intervalSeconds());
     }
 }

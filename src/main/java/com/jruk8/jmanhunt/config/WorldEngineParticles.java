@@ -9,10 +9,9 @@ import eu.okaeri.configs.annotation.CustomKey;
 public class WorldEngineParticles extends OkaeriConfig {
 
     @Comment({
-            "Wall particle type: DUST, SMOKE, LARGE_SMOKE, HEART,",
-            "HAPPY_VILLAGER, ANGRY_VILLAGER, WITCH, FIREWORK, FLASH,",
-            "FLAME, SMALL_FLAME, EFFECT, INSTANT_EFFECT, PORTAL, END_ROD,",
-            "NOTE, SOUL, or ENCHANT.",
+            "Wall particle type: DUST, HEART, HAPPY_VILLAGER,",
+            "ANGRY_VILLAGER, WITCH, FLAME, SMALL_FLAME, EFFECT,",
+            "INSTANT_EFFECT, PORTAL, END_ROD, NOTE, or SOUL.",
             "Default: DUST"
     })
     private String type = "DUST";
@@ -22,9 +21,9 @@ public class WorldEngineParticles extends OkaeriConfig {
             "Blocks between adjacent grid vertices on each wall.",
             "1 is the tightest grid (most detail, most expensive),",
             "8 is the loosest. Minimum: 1. Maximum: 8.",
-            "Default: 2"
+            "Default: 1"
     })
-    private int particleSpacing = 2;
+    private int particleSpacing = 1;
 
     @Comment({
             "Wall color as a hex value, with or without a leading #.",

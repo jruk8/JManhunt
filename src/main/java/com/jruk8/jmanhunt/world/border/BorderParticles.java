@@ -2,14 +2,8 @@ package com.jruk8.jmanhunt.world.border;
 
 import org.bukkit.Color;
 
-/** Pure pseudoborder particle math: thinning, hashes, and pulse gates. */
+/** Pure pseudoborder particle math: pulse gates and color helpers. */
 public final class BorderParticles {
-    /** Shown fraction at the render-radius edge; ramps to 1.0 up close. */
-    public static final double EDGE_FRACTION = 0.3;
-    /** Viewing angle past which the interval pulse stays at its slowest. */
-    public static final double FALLOFF_ANGLE_DEGREES = 30.0;
-    /** Slowest interval as a multiple of the configured one. */
-    public static final double FALLOFF_FACTOR = 2.0;
     private static final double TICKS_PER_SECOND = 20.0;
     private static final double SECONDS_PER_TICK = 0.05;
 
@@ -17,64 +11,24 @@ public final class BorderParticles {
     }
 
     /**
-     * Shown fraction for a wall at a perpendicular distance: 1.0 against
-     * the wall, lerping down to 0.3 at the render radius edge.
+     * Wall color as unit RGB offsets for the count-0 color protocol,
+     * one double per channel in [0,1].
      */
-    public static double thinningFraction(double distance, double radius) {
-        if (radius <= 0.0 || distance <= 0.0) {
-            return 1.0;
-        }
-        if (distance >= radius) {
-            return EDGE_FRACTION;
-        }
-        return EDGE_FRACTION + (1.0 - EDGE_FRACTION) * (1.0 - distance / radius);
+    public static double[] colorOffsets(Color color) {
+        return new double[] {color.getRed() / 255.0, color.getGreen() / 255.0,
+                color.getBlue() / 255.0};
     }
 
     /**
-     * Stable value in [0,1) for a vertex from its exact world
-     * coordinates. A vertex renders while the hash sits below the current
-     * thinning fraction, so approaching players only ever gain vertices.
+     * INTERVAL gate: visible on pulse ticks of the configured interval,
+     * identical whatever direction the player looks. An interval of 0
+     * shows every tick.
      */
-    public static double hash01(double x, double y, double z) {
-        long mixed = Double.doubleToLongBits(x) * 0x9E3779B97F4A7C15L
-                ^ Double.doubleToLongBits(y) * 0xBF58476D1CE4E5B9L
-                ^ Double.doubleToLongBits(z) * 0x94D049BB133111EBL;
-        return (splitmix64(mixed) >>> 11) * 0x1p-53;
-    }
-
-    /**
-     * SplitMix64 (Steele, Lea, and Flood, public domain): one cheap
-     * avalanche mix so adjacent vertices scatter across [0,1).
-     */
-    private static long splitmix64(long value) {
-        long state = value + 0x9E3779B97F4A7C15L;
-        state = (state ^ (state >>> 30)) * 0xBF58476D1CE4E5B9L;
-        state = (state ^ (state >>> 27)) * 0x94D049BB133111EBL;
-        return state ^ (state >>> 31);
-    }
-
-    /**
-     * Angle in degrees between the look direction and the wall normal, 0
-     * looking straight at the wall to 90 looking along it.
-     */
-    public static double viewingAngleDegrees(double lookX, double lookZ, BorderPlane plane) {
-        double dot = Math.abs(plane.xFixed() ? lookX : lookZ);
-        return Math.toDegrees(Math.acos(Math.clamp(dot, 0.0, 1.0)));
-    }
-
-    /**
-     * INTERVAL gate: visible on pulse ticks of the angle-adjusted
-     * interval, which lerps from the configured interval looking straight
-     * at the wall to twice that at 30 degrees off and beyond. An
-     * interval of 0 shows every tick.
-     */
-    public static boolean intervalVisible(long tick, double intervalSeconds, double angleDegrees) {
+    public static boolean intervalVisible(long tick, double intervalSeconds) {
         if (intervalSeconds <= 0.0) {
             return true;
         }
-        double factor = 1.0 + (FALLOFF_FACTOR - 1.0)
-                * Math.min(Math.max(angleDegrees, 0.0) / FALLOFF_ANGLE_DEGREES, 1.0);
-        long period = Math.max(1L, Math.round(intervalSeconds * factor * TICKS_PER_SECOND));
+        long period = Math.max(1L, Math.round(intervalSeconds * TICKS_PER_SECOND));
         return tick % period == 0;
     }
 

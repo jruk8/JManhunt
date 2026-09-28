@@ -23,7 +23,7 @@ class PseudoborderConfigTest {
         PseudoborderConfig config = PseudoborderConfig.fromConfig(service(new JManhuntConfig()));
 
         assertEquals(PseudoBorderParticle.DUST, config.type());
-        assertEquals(2, config.particleSpacing());
+        assertEquals(1, config.particleSpacing());
         assertEquals("#de7766", config.colorHex());
         assertEquals(10.0, config.renderRadius(), 0.0);
         assertEquals(PulseMode.INTERVAL, config.pulseMode());

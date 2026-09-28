@@ -22,7 +22,7 @@ public record PseudoborderConfig(
         String base = "world-engine.world-border.particles.";
         return new PseudoborderConfig(
                 PseudoBorderParticle.parse(config.getString(base + "type", "DUST")),
-                Math.clamp(config.getInt(base + "particle-spacing", 2), 1, 8),
+                Math.clamp(config.getInt(base + "particle-spacing", 1), 1, 8),
                 config.getString(base + "color", DEFAULT_COLOR_HEX),
                 Math.max(0.0, config.getDouble(base + "render-radius", 10.0)),
                 PulseMode.parse(config.getString(base + "pulse-mode", "INTERVAL")),

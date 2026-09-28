@@ -700,10 +700,10 @@ public final class SettingRegistry {
         entries.add(bool("world-engine.world-border.start-border.enabled", true));
         entries.add(intVal("world-engine.world-border.start-border.radius", 10, null, null));
         entries.add(option("world-engine.world-border.particles.type", "DUST",
-                "DUST", "SMOKE", "LARGE_SMOKE", "HEART", "HAPPY_VILLAGER", "ANGRY_VILLAGER",
-                "WITCH", "FIREWORK", "FLASH", "FLAME", "SMALL_FLAME", "EFFECT",
-                "INSTANT_EFFECT", "PORTAL", "END_ROD", "NOTE", "SOUL", "ENCHANT"));
-        entries.add(intVal("world-engine.world-border.particles.particle-spacing", 2, 1, 8));
+                "DUST", "HEART", "HAPPY_VILLAGER", "ANGRY_VILLAGER", "WITCH",
+                "FLAME", "SMALL_FLAME", "EFFECT", "INSTANT_EFFECT", "PORTAL",
+                "END_ROD", "NOTE", "SOUL"));
+        entries.add(intVal("world-engine.world-border.particles.particle-spacing", 1, 1, 8));
         entries.add(string("world-engine.world-border.particles.color", "#de7766"));
         entries.add(floatVal("world-engine.world-border.particles.render-radius", 10.0, 0.0, null));
         entries.add(option("world-engine.world-border.particles.pulse-mode", "INTERVAL",
