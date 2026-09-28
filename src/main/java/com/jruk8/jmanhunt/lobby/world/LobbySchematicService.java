@@ -13,6 +13,7 @@ import org.bukkit.util.BlockVector;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -21,13 +22,18 @@ import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 
 /**
  * Applies lobby presets during fresh lobby-world generation: pastes the
- * preset's vanilla .nbt with its midpoint at 0,64,0, then runs the
+ * preset's bundled schematic with its midpoint at 0,64,0, then runs the
  * preset's console commands. A missing or unreadable schematic warns
- * and leaves void; commands still run.
+ * and leaves void; commands still run. Preset pastes read only the
+ * bundled resources; the data-folder schematics dir is the dev
+ * authoring workspace.
  */
 public final class LobbySchematicService {
     /** Structure midpoint height; X/Z center on the origin. */
     static final int PASTE_MID_Y = 64;
+
+    /** Bundled schematic resources, below the jar root. */
+    static final String BUNDLED_DIR = "dev/lobby-schematics";
 
     private final JManhuntPlugin plugin;
 
@@ -49,7 +55,7 @@ public final class LobbySchematicService {
         pasteNbt(world, name);
     }
 
-    /** Directory holding lobby schematics, bundles and legacy .nbt alike, created on demand. */
+    /** Dev authoring dir for saved schematics, created on demand. */
     public File schematicDir() {
         File dir = new File(plugin.getDataFolder(), "settings/world-engine/lobby-schematics");
         dir.mkdirs();
@@ -57,8 +63,8 @@ public final class LobbySchematicService {
     }
 
     /**
-     * Pastes a named .nbt from the schematics dir with its midpoint at
-     * 0,64,0. Warns and returns false when the file is missing or the
+     * Pastes a named bundled schematic with its midpoint at 0,64,0.
+     * Warns and returns false when the resource is missing or the
      * paste fails.
      */
     public boolean pasteNbt(World world, String name) {
@@ -66,61 +72,116 @@ public final class LobbySchematicService {
     }
 
     /**
-     * Pastes a named schematic from the schematics dir centered on the
-     * given midpoint's block, in the given world. A .jmhlobby bundle
-     * wins over a same-named legacy .nbt; bundles also build their
-     * bounds and teleports into the lobby config when the paste lands
-     * in the lobby world. Warns and returns false when the file is
+     * Pastes a named bundled schematic centered on the given
+     * midpoint's block, in the given world. A .jmhlobby bundle wins
+     * over a same-named legacy .nbt; bundles also build their bounds
+     * and teleports into the lobby config when the paste lands in the
+     * lobby world. Warns and returns false when the resource is
      * missing or the paste fails.
      */
     public boolean pasteNbt(World world, String name, Location midpoint) {
-        File bundle = new File(schematicDir(), name + JmhLobbyService.BUNDLE_SUFFIX);
-        if (bundle.isFile()) {
-            return pasteBundle(world, name, midpoint, bundle);
+        String bundleName = name + JmhLobbyService.BUNDLE_SUFFIX;
+        byte[] bundle = bundledBytes(bundleName);
+        if (bundle != null) {
+            return pasteBundleBytes(world, bundleName, midpoint, bundle);
         }
-        File file = new File(schematicDir(), name + ".nbt");
-        if (!file.isFile()) {
+        String nbtName = name + ".nbt";
+        byte[] nbt = bundledBytes(nbtName);
+        if (nbt == null) {
             plugin.logger().warning("Lobby schematic '" + name
-                    + ".nbt' is missing from settings/world-engine/lobby-schematics/; leaving void.");
+                    + "' is missing from the bundled dev/lobby-schematics/; leaving void.");
             return false;
+        }
+        return pasteNbtBytes(world, nbtName, midpoint, nbt);
+    }
+
+    /**
+     * Dev paste of one explicit schematic file from the authoring dir:
+     * bundles build their bounds and teleports like preset pastes.
+     * Warns and returns false when the file is missing or the paste
+     * fails.
+     */
+    public boolean pasteFile(World world, File file, Location midpoint) {
+        if (!file.isFile()) {
+            plugin.logger().warning("Lobby schematic '" + file.getName()
+                    + "' is missing from settings/world-engine/lobby-schematics/.");
+            return false;
+        }
+        if (file.getName().endsWith(JmhLobbyService.BUNDLE_SUFFIX)) {
+            JmhLobbyBundle unbundled;
+            try {
+                unbundled = new JmhLobbyService(plugin).readBundle(file);
+            } catch (IOException unreadable) {
+                plugin.logger().warning("Could not read lobby bundle '" + file.getName()
+                        + "': " + unreadable.getMessage());
+                return false;
+            }
+            return pasteParsedBundle(world, file.getName(), midpoint, unbundled);
         }
         Structure structure;
         try {
             structure = Bukkit.getStructureManager().loadStructure(file);
         } catch (IOException unreadable) {
-            plugin.logger().warning(
-                    "Could not load lobby schematic '" + file.getName() + "': " + unreadable.getMessage());
+            plugin.logger().warning("Could not load lobby schematic '" + file.getName()
+                    + "': " + unreadable.getMessage());
             return false;
         }
-        BlockVector size = structure.getSize();
-        Location corner = cornerFor(world, midpoint, size);
+        return placeStructure(world, file.getName(), midpoint, structure);
+    }
+
+    /** One bundled resource's bytes, or null when it is missing or unreadable. */
+    private byte[] bundledBytes(String file) {
+        try (InputStream in = plugin.getResource(BUNDLED_DIR + "/" + file)) {
+            return in == null ? null : in.readAllBytes();
+        } catch (IOException unreadable) {
+            plugin.logger().warning("Could not read bundled lobby schematic '" + file
+                    + "': " + unreadable.getMessage());
+            return null;
+        }
+    }
+
+    /** Pastes bundled bundle bytes under their resource name. */
+    private boolean pasteBundleBytes(World world, String fileName, Location midpoint,
+            byte[] bytes) {
+        JmhLobbyBundle unbundled;
         try {
-            structure.place(corner, true, StructureRotation.NONE, Mirror.NONE, 0, 1.0f,
-                    ThreadLocalRandom.current());
-        } catch (RuntimeException failed) {
-            plugin.logger().warning(
-                    "Could not paste lobby schematic '" + file.getName() + "': " + failed.getMessage());
+            unbundled = new JmhLobbyService(plugin).readBundle(bytes);
+        } catch (IOException unreadable) {
+            plugin.logger().warning("Could not read lobby bundle '" + fileName
+                    + "': " + unreadable.getMessage());
             return false;
         }
-        return true;
+        return pasteParsedBundle(world, fileName, midpoint, unbundled);
+    }
+
+    /** Pastes bundled .nbt bytes under their resource name. */
+    private boolean pasteNbtBytes(World world, String fileName, Location midpoint,
+            byte[] bytes) {
+        Path staging = null;
+        Structure structure;
+        try {
+            staging = Files.createTempFile("jmh-schem-load", ".nbt");
+            Files.write(staging, bytes);
+            structure = Bukkit.getStructureManager().loadStructure(staging.toFile());
+        } catch (IOException unreadable) {
+            plugin.logger().warning("Could not load lobby schematic '" + fileName
+                    + "': " + unreadable.getMessage());
+            return false;
+        } finally {
+            deleteQuietly(staging);
+        }
+        return placeStructure(world, fileName, midpoint, structure);
     }
 
     /**
-     * Pastes a .jmhlobby bundle: the structure first, then its bounds
-     * and teleports into the lobby config when the paste lands in the
-     * lobby world. Pastes elsewhere place blocks only, since lobby
-     * entries are lobby-world coordinates.
+     * Pastes a parsed .jmhlobby bundle: the structure first, then its
+     * bounds and teleports into the lobby config when the paste lands
+     * in the lobby world. Pastes elsewhere place blocks only, since
+     * lobby entries are lobby-world coordinates.
      */
-    private boolean pasteBundle(World world, String name, Location midpoint, File bundle) {
+    private boolean pasteParsedBundle(World world, String fileName, Location midpoint,
+            JmhLobbyBundle unbundled) {
         JmhLobbyService lobbies = new JmhLobbyService(plugin);
-        JmhLobbyBundle unbundled;
-        try {
-            unbundled = lobbies.readBundle(bundle);
-        } catch (IOException unreadable) {
-            plugin.logger().warning(
-                    "Could not read lobby bundle '" + bundle.getName() + "': " + unreadable.getMessage());
-            return false;
-        }
         Path staging = null;
         Structure structure;
         try {
@@ -128,30 +189,40 @@ public final class LobbySchematicService {
             Files.write(staging, unbundled.nbt());
             structure = Bukkit.getStructureManager().loadStructure(staging.toFile());
         } catch (IOException unreadable) {
-            plugin.logger().warning("Could not load lobby schematic '" + bundle.getName()
+            plugin.logger().warning("Could not load lobby schematic '" + fileName
                     + "': " + unreadable.getMessage());
             return false;
         } finally {
             deleteQuietly(staging);
         }
         Location corner = cornerFor(world, midpoint, structure.getSize());
-        try {
-            structure.place(corner, true, StructureRotation.NONE, Mirror.NONE, 0, 1.0f,
-                    ThreadLocalRandom.current());
-        } catch (RuntimeException failed) {
-            plugin.logger().warning(
-                    "Could not paste lobby schematic '" + bundle.getName() + "': " + failed.getMessage());
+        if (!placeStructure(world, fileName, midpoint, structure)) {
             return false;
         }
         if (!world.getName().equals(lobbies.lobbyWorldName())) {
-            plugin.logger().info("Pasted lobby bundle '" + bundle.getName()
+            plugin.logger().info("Pasted lobby bundle '" + fileName
                     + "' outside the lobby world; skipping its bounds and teleports.");
             return true;
         }
         JmhLobbyService.BuiltCounts built = lobbies.buildIntoLobbyConfig(unbundled,
                 corner.getBlockX(), corner.getBlockY(), corner.getBlockZ());
         plugin.logger().info("Built " + built.bounds() + " bounds and " + built.teleports()
-                + " teleports into the lobby config from '" + bundle.getName() + "'.");
+                + " teleports into the lobby config from '" + fileName + "'.");
+        return true;
+    }
+
+    /** Places one loaded structure centered on the midpoint's block. */
+    private boolean placeStructure(World world, String fileName, Location midpoint,
+            Structure structure) {
+        Location corner = cornerFor(world, midpoint, structure.getSize());
+        try {
+            structure.place(corner, true, StructureRotation.NONE, Mirror.NONE, 0, 1.0f,
+                    ThreadLocalRandom.current());
+        } catch (RuntimeException failed) {
+            plugin.logger().warning("Could not paste lobby schematic '" + fileName
+                    + "': " + failed.getMessage());
+            return false;
+        }
         return true;
     }
 

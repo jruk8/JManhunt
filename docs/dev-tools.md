@@ -7,9 +7,12 @@
 ## Schematic Tools
 
 `/manhunt dev schem` saves and loads lobby schematics in
-`JManhunt/settings/world-engine/lobby-schematics/`, the same directory
-the [lobby presets](configuration/world-engine.md#lobby-presets) read
-from. Requires `jmanhunt.command.dev.schem` (default: op).
+`JManhunt/settings/world-engine/lobby-schematics/`. The
+[lobby presets](configuration/world-engine.md#lobby-presets) do not
+read that directory: they paste only the bundled
+`dev/lobby-schematics/` resources, so ship a finished preset by
+copying its file there and rebuilding. Requires
+`jmanhunt.command.dev.schem` (default: op).
 
 ```text
 /manhunt dev schem pos1

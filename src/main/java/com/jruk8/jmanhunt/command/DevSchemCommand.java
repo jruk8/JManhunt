@@ -34,7 +34,8 @@ import java.util.stream.Collectors;
  * Developer schematic tools ({@code /manhunt dev schem ...}). Corners are
  * the executing player's feet block when pos1/pos2 runs. Saved files land
  * in the lobby-schematics dir so devs can author default lobby presets;
- * loads paste centered on the executing player's feet. Not for production
+ * ship one by copying it into dev/lobby-schematics and rebuilding.
+ * Loads paste centered on the executing player's feet. Not for production
  * use: its only safety rail is the overwrite rerun on bundle loads.
  */
 public final class DevSchemCommand {
@@ -232,8 +233,10 @@ public final class DevSchemCommand {
             return true;
         }
         // World agnostic: pastes into whatever world the player stands in,
-        // centered on their feet.
-        if (schematics.pasteNbt(player.getWorld(), name, player.getLocation())) {
+        // centered on their feet. Reads the authoring dir, like the rest
+        // of the dev tools; preset pastes read the bundled resources.
+        File file = bundle.isFile() ? bundle : legacy;
+        if (schematics.pasteFile(player.getWorld(), file, player.getLocation())) {
             pendingLoads.remove(player.getUniqueId());
             messages.message(sender, "dev.pasted", Map.of("name", name));
         } else {

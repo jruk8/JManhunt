@@ -1,10 +1,18 @@
 package com.jruk8.jmanhunt.lobby;
 
+import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.util.BlockVector;
 import org.junit.jupiter.api.Test;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
 
 class LobbySchematicServiceTest {
@@ -43,5 +51,22 @@ class LobbySchematicServiceTest {
         assertEquals(-4, corner.getBlockX());
         assertEquals(60, corner.getBlockY());
         assertEquals(-5, corner.getBlockZ());
+    }
+
+    @Test
+    void bundledPresetsShipInTheJar() {
+        for (String name : List.of("empty-lobby", "default-lobby", "advanced-lobby")) {
+            assertNotNull(getClass().getResourceAsStream(
+                    "/dev/lobby-schematics/" + name + ".jmhlobby"), name);
+        }
+    }
+
+    @Test
+    void missingBundledSchematicWarnsAndFails() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+
+        assertFalse(new LobbySchematicService(plugin)
+                .pasteNbt(mock(World.class), "no-such-lobby"));
     }
 }

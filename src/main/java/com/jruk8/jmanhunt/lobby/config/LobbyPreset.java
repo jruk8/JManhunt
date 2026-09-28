@@ -4,8 +4,8 @@ import java.util.Optional;
 
 /**
  * Lobby-world generation preset. Every preset pastes only: no block is
- * ever built in code, so each preset needs its .nbt in
- * settings/world-engine/lobby-schematics/.
+ * ever built in code, so each preset needs its schematic in the bundled
+ * dev/lobby-schematics/.
  */
 public enum LobbyPreset {
     EMPTY,

@@ -20,9 +20,9 @@ public class DevConfig extends OkaeriConfig {
 
     @CustomKey("lobby-presets")
     @Comment({
-            "Per-preset generation. schematic is a vanilla structure-block .nbt in",
-            "JManhunt/settings/world-engine/lobby-schematics/, pasted with its",
-            "midpoint at 0,64,0. commands run as console after the paste and before",
+            "Per-preset generation. schematic is a bundled dev/lobby-schematics/",
+            "entry (.jmhlobby wins over .nbt), pasted with its midpoint at",
+            "0,64,0. commands run as console after the paste and before",
             "the first teleport lands ({world} and {preset} are substituted).",
             "Do not touch unless you know what you are doing."
     })

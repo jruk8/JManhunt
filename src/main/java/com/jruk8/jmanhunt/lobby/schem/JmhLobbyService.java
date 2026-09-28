@@ -166,7 +166,12 @@ public final class JmhLobbyService {
 
     /** Reads a bundle file back. */
     public JmhLobbyBundle readBundle(File file) throws IOException {
-        return JmhLobbyCodec.read(Files.readAllBytes(file.toPath()));
+        return readBundle(Files.readAllBytes(file.toPath()));
+    }
+
+    /** Reads bundled bytes back, for jar-resource pastes. */
+    public JmhLobbyBundle readBundle(byte[] bytes) throws IOException {
+        return JmhLobbyCodec.read(bytes);
     }
 
     /**
