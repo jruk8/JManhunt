@@ -79,7 +79,10 @@ public final class TagLists {
     record OpResult(String text, List<String> writeBack) {
     }
 
-    /** A verbatim flag reference (`{@code <gflag:name>}` and siblings). */
+    /**
+     * A verbatim flag reference (`{@code <gflag:name>}` and siblings).
+     * Role references carry the full store key (`{@code ROLE:name}`).
+     */
     record FlagRef(String kind, String name) {
     }
 
@@ -96,11 +99,33 @@ public final class TagLists {
         if (!match.matches()) {
             return Optional.empty();
         }
+        String kind = match.group(1).toLowerCase(Locale.ROOT);
+        if (kind.equals("rflag")) {
+            return roleFlagRef(match.group(2));
+        }
         Optional<String> name = FlagStore.parseName(match.group(2));
         if (name.isEmpty()) {
             return Optional.empty();
         }
-        return Optional.of(new FlagRef(match.group(1).toLowerCase(Locale.ROOT), name.get()));
+        return Optional.of(new FlagRef(kind, name.get()));
+    }
+
+    /**
+     * Matches a verbatim {@code <rflag:role,name>} reference. Bad
+     * roles or names are not references, so the span applies purely
+     * and the inner tag warns through the normal path.
+     */
+    private static Optional<FlagRef> roleFlagRef(String args) {
+        List<String> parts = splitTopLevel(args);
+        if (parts.size() != 2) {
+            return Optional.empty();
+        }
+        Optional<String> role = FlagStore.canonicalRole(parts.get(0));
+        Optional<String> name = FlagStore.parseName(parts.get(1));
+        if (role.isEmpty() || name.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new FlagRef("rflag", FlagStore.roleKey(role.get(), name.get())));
     }
 
     /**

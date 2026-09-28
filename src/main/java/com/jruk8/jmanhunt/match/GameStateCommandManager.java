@@ -272,18 +272,18 @@ public final class GameStateCommandManager {
                         new PlaceholderPass(plugin.placeholderValues()),
                         new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId)),
                 eventArgs, detail -> loopLimitExceeded(detail, matchId),
-                text -> sendRoleMessage(name, executor, matchId, scope, text),
-                (soundId, pitch, volume) -> playRoleSound(name, executor, matchId, scope,
+                (role, text) -> sendRoleMessage(name, matchId, scope, role, text),
+                (role, soundId, pitch, volume) -> playRoleSound(name, matchId, scope, role,
                         soundId, pitch, volume));
     }
 
     /**
      * {@code <rmessage>} sink: tells every online assigned player of
-     * the executor role, formatted like {@code <pmessage>}.
+     * the named role, formatted like {@code <pmessage>}.
      */
-    private void sendRoleMessage(String name, Player executor, long matchId,
-            ModifierTagScope scope, String text) {
-        roleMembers("rmessage", name, executor, matchId, scope).ifPresent(members -> {
+    private void sendRoleMessage(String name, long matchId, ModifierTagScope scope,
+            String role, String text) {
+        roleMembers("rmessage", name, matchId, scope, role).ifPresent(members -> {
             String formatted = formatEngineMessage(text);
             for (Player member : members) {
                 messages.sendText(member, formatted);
@@ -293,11 +293,11 @@ public final class GameStateCommandManager {
 
     /**
      * {@code <rsound>} sink: plays for every online assigned player
-     * of the executor role. Unknown ids skip like engine sounds.
+     * of the named role. Unknown ids skip like engine sounds.
      */
-    private void playRoleSound(String name, Player executor, long matchId,
-            ModifierTagScope scope, String soundId, float pitch, float volume) {
-        Optional<List<Player>> members = roleMembers("rsound", name, executor, matchId, scope);
+    private void playRoleSound(String name, long matchId, ModifierTagScope scope,
+            String role, String soundId, float pitch, float volume) {
+        Optional<List<Player>> members = roleMembers("rsound", name, matchId, scope, role);
         if (members.isEmpty()) {
             return;
         }
@@ -312,22 +312,13 @@ public final class GameStateCommandManager {
     }
 
     /**
-     * Online assigned players sharing the executor role behind role
-     * tags, else empty with the reason warned. Console and
-     * non-runner executors cannot address a role.
+     * Online assigned players of the named role behind role tags,
+     * else empty with the reason warned. The tag layer validates the
+     * role, like {@code <win>}.
      */
-    private Optional<List<Player>> roleMembers(String tag, String name, Player executor,
-            long matchId, ModifierTagScope scope) {
-        if (executor == null) {
-            scope.warn("Tag <" + tag + "> needs an executor player: skipped in '" + name + "'.");
-            return Optional.empty();
-        }
-        Role role = playerStates.role(executor);
-        if (role != Role.HUNTER && role != Role.SPEEDRUNNER) {
-            scope.warn("Tag <" + tag + "> needs a hunter or speedrunner executor: skipped in '"
-                    + name + "'.");
-            return Optional.empty();
-        }
+    private Optional<List<Player>> roleMembers(String tag, String name, long matchId,
+            ModifierTagScope scope, String role) {
+        Role target = Role.valueOf(role);
         Optional<GameInstance> instance = game.instance(matchId);
         if (instance.isEmpty()) {
             scope.warn("Tag <" + tag + "> needs a live match: skipped in '" + name + "'.");
@@ -335,7 +326,7 @@ public final class GameStateCommandManager {
         }
         List<Player> members = new ArrayList<>();
         for (Player member : game.onlineAssignedPlayers(instance.get())) {
-            if (playerStates.role(member) == role) {
+            if (playerStates.role(member) == target) {
                 members.add(member);
             }
         }

@@ -25,6 +25,11 @@ public final class TagContext {
         void play(String soundId, float pitch, float volume);
     }
 
+    /** Plays one sound for the members of the named upper-case role. */
+    public interface RoleSoundSink {
+        void play(String role, String soundId, float pitch, float volume);
+    }
+
     /**
      * Where one tag line comes from: the modifier id, the behavior
      * index in that modifier, the command list name, and the 0-based
@@ -72,8 +77,8 @@ public final class TagContext {
     private final Map<String, String> localFlags;
     private final Deque<String> loopItems;
     private final Consumer<String> loopLimit;
-    private final Consumer<String> roleMessage;
-    private final SoundSink roleSound;
+    private final BiConsumer<String, String> roleMessage;
+    private final RoleSoundSink roleSound;
     private Provenance provenance;
 
     private TagContext(ModifierTagScope scope, String containerId,
@@ -82,7 +87,7 @@ public final class TagContext {
             BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
             long matchId, TagBackends backends, List<String> eventArgs,
             Map<String, String> localFlags, Consumer<String> loopLimit,
-            Consumer<String> roleMessage, SoundSink roleSound) {
+            BiConsumer<String, String> roleMessage, RoleSoundSink roleSound) {
         this.scope = scope;
         this.containerId = containerId;
         this.globalMessage = globalMessage;
@@ -147,19 +152,20 @@ public final class TagContext {
         return run(scope, containerId, globalMessage, playerMessage,
                 globalSound, playerSound, losePlayer, winMatch,
                 matchId, backends, eventArgs, loopLimit,
-                text -> { }, (id, pitch, volume) -> { });
+                (role, text) -> { }, (role, id, pitch, volume) -> { });
     }
 
     /**
      * Full run context with role sinks behind {@code <rmessage>} and
-     * {@code <rsound>}: managers reach the executor role members.
+     * {@code <rsound>}: managers reach the named role members.
      */
     public static TagContext run(ModifierTagScope scope, String containerId,
             Consumer<String> globalMessage, Consumer<String> playerMessage,
             SoundSink globalSound, SoundSink playerSound,
             BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
             long matchId, TagBackends backends, List<String> eventArgs,
-            Consumer<String> loopLimit, Consumer<String> roleMessage, SoundSink roleSound) {
+            Consumer<String> loopLimit, BiConsumer<String, String> roleMessage,
+            RoleSoundSink roleSound) {
         return new TagContext(scope, containerId, globalMessage, playerMessage,
                 globalSound, playerSound, losePlayer, winMatch,
                 matchId, backends, List.copyOf(eventArgs), new HashMap<>(), loopLimit,
@@ -173,7 +179,7 @@ public final class TagContext {
         return new TagContext(scope, containerId, globalMessage, playerMessage,
                 globalSound, playerSound, (player, reason) -> { }, (role, reason) -> { },
                 NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { },
-                text -> { }, (id, pitch, volume) -> { });
+                (role, text) -> { }, (role, id, pitch, volume) -> { });
     }
 
     /** Inert context for scope-only callers: empty id, silent sinks. */
@@ -182,7 +188,7 @@ public final class TagContext {
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                 (player, reason) -> { }, (role, reason) -> { },
                 NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { },
-                text -> { }, (id, pitch, volume) -> { });
+                (role, text) -> { }, (role, id, pitch, volume) -> { });
     }
 
     public ModifierTagScope scope() {
@@ -266,9 +272,12 @@ public final class TagContext {
         playerMessage.accept(text);
     }
 
-    /** Sends one message to the executor role members. */
-    public void sendRoleMessage(String text) {
-        roleMessage.accept(text);
+    /**
+     * Sends one message to the named role members. The role is the
+     * canonical upper-case name.
+     */
+    public void sendRoleMessage(String role, String text) {
+        roleMessage.accept(role, text);
     }
 
     public void playGlobalSound(String soundId, float pitch, float volume) {
@@ -279,9 +288,12 @@ public final class TagContext {
         playerSound.play(soundId, pitch, volume);
     }
 
-    /** Plays one sound for the executor role members. */
-    public void playRoleSound(String soundId, float pitch, float volume) {
-        roleSound.play(soundId, pitch, volume);
+    /**
+     * Plays one sound for the named role members. The role is the
+     * canonical upper-case name.
+     */
+    public void playRoleSound(String role, String soundId, float pitch, float volume) {
+        roleSound.play(role, soundId, pitch, volume);
     }
 
     /** Eliminates one player by name, behind {@code <loseplayer>}. */

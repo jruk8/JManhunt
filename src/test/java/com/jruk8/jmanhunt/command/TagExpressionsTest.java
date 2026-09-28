@@ -243,16 +243,32 @@ class TagExpressionsTest {
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                 (player, reason) -> { }, (role, reason) -> { },
                 7L, TagBackends.inert(), List.of(), detail -> { },
-                roleMessages::add,
-                (id, pitch, volume) -> roleSounds.add(id + ":" + pitch + ":" + volume));
+                (role, text) -> roleMessages.add(role + ":" + text),
+                (role, id, pitch, volume) ->
+                        roleSounds.add(role + ":" + id + ":" + pitch + ":" + volume));
 
-        assertEquals("", CommandPlaceholders.replace("<rmessage:hi>", "Steve", 0, 0, 0, context));
+        assertEquals("", CommandPlaceholders.replace("<rmessage:hunter,hi>", "Steve", 0, 0, 0, context));
         assertEquals("", CommandPlaceholders.replace(
-                "<rsound:block.stone.break,0.5,2>", "Steve", 0, 0, 0, context));
-        assertEquals("", CommandPlaceholders.replace("<rsound:block.stone.break>", "Steve", 0, 0, 0, context));
-        assertEquals(List.of("hi"), roleMessages);
-        assertEquals(List.of("block.stone.break:0.5:2.0", "block.stone.break:1.0:1.0"), roleSounds);
+                "<rsound:speedrunner,block.stone.break,0.5,2>", "Steve", 0, 0, 0, context));
+        assertEquals("", CommandPlaceholders.replace("<rsound:HUNTER,block.stone.break>", "Steve", 0, 0, 0, context));
+        assertEquals("", CommandPlaceholders.replace("<rmessage:speedrunner,\"a, b\">", "Steve", 0, 0, 0, context));
+        assertEquals(List.of("HUNTER:hi", "SPEEDRUNNER:a, b"), roleMessages);
+        assertEquals(List.of("SPEEDRUNNER:block.stone.break:0.5:2.0", "HUNTER:block.stone.break:1.0:1.0"), roleSounds);
         assertTrue(warnings.isEmpty(), warnings.toString());
+    }
+
+    @Test
+    void roleTagsWarnOnBadRoleAndArity() {
+        Fixture fixture = new Fixture();
+        assertEquals("", replace(fixture, "<rmessage:banana,hi>"));
+        assertEquals("", replace(fixture, "<rsound:spectator,block.stone.break>"));
+        assertEquals("", replace(fixture, "<rmessage:hi>"));
+        assertEquals("", replace(fixture, "<rsound:hunter>"));
+        assertEquals(4, fixture.warnings.size());
+        assertTrue(fixture.warnings.get(0).contains("needs HUNTER or SPEEDRUNNER"));
+        assertTrue(fixture.warnings.get(1).contains("needs HUNTER or SPEEDRUNNER"));
+        assertTrue(fixture.warnings.get(2).contains("needs a role and a text"));
+        assertTrue(fixture.warnings.get(3).contains("needs a role plus an id"));
     }
 
     @Test

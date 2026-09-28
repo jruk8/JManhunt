@@ -263,8 +263,23 @@ class GameStateCommandManagerTest {
         verify(game).cancel(instance);
     }
 
-    @Test
-    void roleTagsReachOnlyExecutorRole() {
+    private static final class RoleTagHarness {
+        final GameStateCommandManager manager;
+        final MessageService messages;
+        final SoundService sounds;
+        final JManhuntLogger logger;
+
+        RoleTagHarness(GameStateCommandManager manager, MessageService messages,
+                SoundService sounds, JManhuntLogger logger) {
+            this.manager = manager;
+            this.messages = messages;
+            this.sounds = sounds;
+            this.logger = logger;
+        }
+    }
+
+    private static RoleTagHarness roleTagHarness(PlayerStateStore playerStates, GameManager game,
+            List<String> playerLines, List<String> consoleLines) {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         JManhuntLogger logger = mock(JManhuntLogger.class);
         when(plugin.logger()).thenReturn(logger);
@@ -274,8 +289,18 @@ class GameStateCommandManagerTest {
         ConfigService config = mock(ConfigService.class);
         when(config.modifierNames()).thenReturn(java.util.Set.of("herald"));
         when(config.behaviorIndexes("herald")).thenReturn(List.of(0));
-        when(config.commandList("herald", 0, "player-cleanup"))
-                .thenReturn(List.of("<rmessage:go team>", "<rsound:block.note_block.pling,1,1>"));
+        when(config.commandList("herald", 0, "player-cleanup")).thenReturn(playerLines);
+        when(config.commandList("herald", 0, "console-cleanup")).thenReturn(consoleLines);
+        when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
+        when(game.flagStore()).thenReturn(new FlagStore());
+        MessageService messages = mock(MessageService.class);
+        SoundService sounds = mock(SoundService.class);
+        return new RoleTagHarness(new GameStateCommandManager(plugin, playerStates, config,
+                messages, sounds, game), messages, sounds, logger);
+    }
+
+    @Test
+    void roleTagsReachOnlyNamedRole() {
         PlayerStateStore playerStates = mock(PlayerStateStore.class);
         Player hunter = mock(Player.class);
         Player mate = mock(Player.class);
@@ -287,60 +312,47 @@ class GameStateCommandManagerTest {
         GameInstance instance = mock(GameInstance.class);
         when(game.instance(7L)).thenReturn(Optional.of(instance));
         when(game.onlineAssignedPlayers(instance)).thenReturn(List.of(hunter, mate, runner));
-        when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
-        when(game.flagStore()).thenReturn(new FlagStore());
-        MessageService messages = mock(MessageService.class);
-        when(messages.string(anyString(), anyString()))
+        RoleTagHarness harness = roleTagHarness(playerStates, game,
+                List.of("<rmessage:hunter,go team>",
+                        "<rsound:speedrunner,block.note_block.pling,1,1>"),
+                List.of("<rmessage:speedrunner,from console>"));
+        when(harness.messages.string(anyString(), anyString()))
                 .thenAnswer(invocation -> invocation.getArgument(1));
-        SoundService sounds = mock(SoundService.class);
-        when(sounds.isValidSound(anyString())).thenReturn(true);
-        GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                playerStates, config, messages, sounds, game);
+        when(harness.sounds.isValidSound(anyString())).thenReturn(true);
 
-        manager.runPlayerCleanup(7L, List.of(hunter));
+        harness.manager.runPlayerCleanup(7L, List.of(hunter));
+        harness.manager.runConsoleCleanup(7L);
 
-        verify(messages).sendText(hunter, "go team");
-        verify(messages).sendText(mate, "go team");
-        verify(messages, never()).sendText(eq(runner), anyString());
-        verify(sounds).playCustomSound(hunter, "block.note_block.pling", 1.0f, 1.0f);
-        verify(sounds).playCustomSound(mate, "block.note_block.pling", 1.0f, 1.0f);
-        verify(sounds, never()).playCustomSound(eq(runner), anyString(), anyFloat(), anyFloat());
+        verify(harness.messages).sendText(hunter, "go team");
+        verify(harness.messages).sendText(mate, "go team");
+        verify(harness.messages, never()).sendText(eq(runner), eq("go team"));
+        verify(harness.messages).sendText(runner, "from console");
+        verify(harness.messages, never()).sendText(eq(hunter), eq("from console"));
+        verify(harness.sounds, never()).playCustomSound(eq(hunter), anyString(), anyFloat(),
+                anyFloat());
+        verify(harness.sounds, never()).playCustomSound(eq(mate), anyString(), anyFloat(),
+                anyFloat());
+        verify(harness.sounds).playCustomSound(runner, "block.note_block.pling", 1.0f, 1.0f);
     }
 
     @Test
-    void roleTagsWithoutRunnerExecutorWarn() {
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        JManhuntLogger logger = mock(JManhuntLogger.class);
-        when(plugin.logger()).thenReturn(logger);
-        OverrideService overrides = mock(OverrideService.class);
-        when(plugin.overrides()).thenReturn(overrides);
-        when(overrides.modifierEnabled(any(), eq("herald"))).thenReturn(true);
-        ConfigService config = mock(ConfigService.class);
-        when(config.modifierNames()).thenReturn(java.util.Set.of("herald"));
-        when(config.behaviorIndexes("herald")).thenReturn(List.of(0));
-        when(config.commandList("herald", 0, "console-cleanup"))
-                .thenReturn(List.of("<rmessage:hi>"));
-        when(config.commandList("herald", 0, "player-cleanup"))
-                .thenReturn(List.of("<rsound:block.note_block.pling>"));
+    void roleTagsWithBadRoleWarn() {
         PlayerStateStore playerStates = mock(PlayerStateStore.class);
         Player watcher = mock(Player.class);
         when(watcher.getLocation()).thenReturn(mock(Location.class));
         when(playerStates.role(watcher)).thenReturn(Role.SPECTATOR);
-        GameManager game = mock(GameManager.class);
-        when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
-        when(game.flagStore()).thenReturn(new FlagStore());
-        MessageService messages = mock(MessageService.class);
-        GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                playerStates, config, messages, mock(SoundService.class), game);
+        RoleTagHarness harness = roleTagHarness(playerStates, mock(GameManager.class),
+                List.of("<rsound:spectator,block.note_block.pling>"),
+                List.of("<rmessage:banana,hi>"));
 
-        manager.runConsoleCleanup(7L);
-        manager.runPlayerCleanup(7L, List.of(watcher));
+        harness.manager.runConsoleCleanup(7L);
+        harness.manager.runPlayerCleanup(7L, List.of(watcher));
 
-        verify(logger).warning(argThat(line -> line != null
-                && line.contains("<rmessage> needs an executor player")));
-        verify(logger).warning(argThat(line -> line != null
-                && line.contains("<rsound> needs a hunter or speedrunner executor")));
-        verify(messages, never()).sendText(any(Player.class), anyString());
+        verify(harness.logger).warning(argThat(line -> line != null
+                && line.contains("<rmessage> needs HUNTER or SPEEDRUNNER")));
+        verify(harness.logger).warning(argThat(line -> line != null
+                && line.contains("<rsound> needs HUNTER or SPEEDRUNNER")));
+        verify(harness.messages, never()).sendText(any(Player.class), anyString());
     }
 
     @Test

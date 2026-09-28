@@ -221,12 +221,15 @@ public final class CommandSyntax {
             case "id", "i" -> noArgsError(name, args);
             case "min", "max" -> arityError(name, args, 2, "two numbers");
             case "clamp" -> arityError(name, args, 3, "a value plus low and high");
-            case "gmessage", "pmessage", "rmessage" -> arityError(name, args, 1, "one text");
-            case "gsound", "psound", "rsound" -> soundError(name, args);
+            case "gmessage", "pmessage" -> arityError(name, args, 1, "one text");
+            case "rmessage" -> RoleTagSyntax.messageError(name, args);
+            case "gsound", "psound" -> soundError(name, args);
+            case "rsound" -> RoleTagSyntax.soundError(name, args);
             case "if" -> ifError(args);
             case "pstat" -> statError(name, args, 1, TagStats.PSTAT_KEYS);
             case "gstat" -> statError(name, args, 0, TagStats.GSTAT_KEYS);
-            case "gflag", "pflag", "lflag", "rflag" -> flagError(name, args);
+            case "gflag", "pflag", "lflag" -> flagError(name, args);
+            case "rflag" -> RoleTagSyntax.flagError(name, args);
             case "placeholder" -> arityError(name, args, 1, "one key");
             case "loseplayer" -> loseplayerError(name, args);
             case "win" -> winError(name, args);

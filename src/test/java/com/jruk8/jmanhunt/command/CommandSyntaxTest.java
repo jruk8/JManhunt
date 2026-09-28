@@ -160,8 +160,8 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <pmessage:yo> done").isEmpty());
         assertTrue(CommandSyntax.error("say <gsound:block.stone.break> done").isEmpty());
         assertTrue(CommandSyntax.error("say <psound:block.stone.break,0.5,2> done").isEmpty());
-        assertTrue(CommandSyntax.error("say <rmessage:yo> done").isEmpty());
-        assertTrue(CommandSyntax.error("say <rsound:block.stone.break,0.5,2> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <rmessage:hunter,yo> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <rsound:hunter,block.stone.break,0.5,2> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"1 == 1\",\"y\",\"n\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"7 le 5\",\"y\"> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"not 1 == 2 and 2 == 2\",\"y\",\"n\"> done").isEmpty());
@@ -207,7 +207,8 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <gflag:phase,one> done").isEmpty());
         assertTrue(CommandSyntax.error("say <pflag:\"cooldown\",732> done").isEmpty());
         assertTrue(CommandSyntax.error("say <lflag:x> done").isEmpty());
-        assertTrue(CommandSyntax.error("say <rflag:phase,one> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <rflag:hunter,phase> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <rflag:hunter,phase,one> done").isEmpty());
         assertTrue(CommandSyntax.error("say <placeholder:jmanhunt_game_kills_this_session> done")
                 .isEmpty());
         assertTrue(CommandSyntax.error("say <placeholder:\"some_key\"> done").isEmpty());
@@ -270,6 +271,16 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <if:\"<flag:a>\",\"y\"> done").isPresent());
         assertTrue(CommandSyntax.error("say <if:\"<papi:x==y>\",\"y\"> done").isPresent());
         assertTrue(CommandSyntax.error("say <if:\"7 <= 5\" done").isPresent());
+    }
+
+    @Test
+    void roleTagShapeFails() {
+        assertTrue(CommandSyntax.error("say <rmessage:yo> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rmessage:banana,yo> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rsound:hunter,a,b,c,d> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rsound:banana,a> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rflag:phase> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rflag:banana,phase> done").isPresent());
     }
 
     @Test

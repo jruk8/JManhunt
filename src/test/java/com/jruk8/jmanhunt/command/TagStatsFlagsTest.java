@@ -52,22 +52,8 @@ class TagStatsFlagsTest {
             return replace(command, "Steve", 7L);
         }
 
-        TagContext roleContext(String executor) {
-            List<ModifierTagScope.Participant> party = List.of(
-                    new ModifierTagScope.Participant("Steve", "HUNTER"),
-                    new ModifierTagScope.Participant("Alex", "SPEEDRUNNER"),
-                    new ModifierTagScope.Participant("Sam", "SPECTATOR"));
-            return TagContext.run(
-                    ModifierTagScope.match(executor, party, new Random(3), warnings::add),
-                    "gear-dice", warnings::add, warnings::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(backend, flags, (text, name) -> text, RosterValues.inert()));
-        }
-
         String replaceAs(String command, String executor) {
-            TagContext context = roleContext(executor);
-            return CommandPlaceholders.replace(command, executor, 0, 0, 0, context);
+            return replace(command, executor, 7L);
         }
     }
 
@@ -84,43 +70,51 @@ class TagStatsFlagsTest {
     }
 
     @Test
-    void rflagPartitionsByExecutorRole() {
+    void rflagPartitionsByNamedRole() {
         Fixture fixture = new Fixture();
 
-        assertEquals("", fixture.replaceAs("<rflag:k,hv>", "Steve"));
-        assertEquals("", fixture.replaceAs("<rflag:k,sv>", "Alex"));
-        assertEquals("hv", fixture.replaceAs("<rflag:k>", "Steve"));
-        assertEquals("sv", fixture.replaceAs("<rflag:k>", "Alex"));
+        assertEquals("", fixture.replaceAs("<rflag:hunter,k,hv>", "Steve"));
+        assertEquals("", fixture.replaceAs("<rflag:speedrunner,k,sv>", "Alex"));
+        assertEquals("hv", fixture.replaceAs("<rflag:HUNTER,k>", "Sam"));
+        assertEquals("sv", fixture.replaceAs("<rflag:speedrunner,k>", null));
         assertEquals("hv", fixture.flags.role(7L, "HUNTER:k"));
         assertEquals("sv", fixture.flags.role(7L, "SPEEDRUNNER:k"));
-        assertEquals("null", fixture.replaceAs("<rflag:missing>", "Steve"));
+        assertEquals("null", fixture.replaceAs("<rflag:hunter,missing>", "Steve"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }
 
     @Test
-    void rflagConsoleAndOtherRolesMiss() {
+    void rflagInvalidRoleWarns() {
         Fixture fixture = new Fixture();
 
-        assertEquals("null", fixture.replaceAs("<rflag:k>", null));
-        assertEquals("", fixture.replaceAs("<rflag:k,v>", null));
-        assertEquals("null", fixture.replaceAs("<rflag:k>", "Sam"));
-        assertEquals("", fixture.replaceAs("<rflag:k,v>", "Sam"));
-        assertEquals("null", fixture.replaceAs("<rflag:k>", "Nobody"));
-        assertEquals("", fixture.replaceAs("<rflag:k,v>", "Nobody"));
+        assertEquals("null", fixture.replaceAs("<rflag:banana,k>", "Steve"));
+        assertEquals("", fixture.replaceAs("<rflag:spectator,k,v>", "Steve"));
+        assertEquals("", fixture.replaceAs("<rflag:k>", "Steve"));
         assertEquals(3, fixture.warnings.size());
-        assertTrue(fixture.warnings.stream().allMatch(line ->
-                line.contains("hunter or speedrunner executor")), fixture.warnings.toString());
+        assertTrue(fixture.warnings.get(0).contains("needs HUNTER or SPEEDRUNNER"));
+        assertTrue(fixture.warnings.get(1).contains("needs HUNTER or SPEEDRUNNER"));
+        assertTrue(fixture.warnings.get(2).contains("needs a role, a name"));
+    }
+
+    @Test
+    void rflagMatchLessGetMissesAndSetWarns() {
+        Fixture fixture = new Fixture();
+
+        assertEquals("null", fixture.replace("<rflag:hunter,k>", "Steve", TagContext.NO_MATCH));
+        assertEquals("", fixture.replace("<rflag:hunter,k,v>", "Steve", TagContext.NO_MATCH));
+        assertEquals(1, fixture.warnings.size());
+        assertTrue(fixture.warnings.get(0).contains("needs a live match"));
     }
 
     @Test
     void rflagClearMatchDropsRolesButNotPlayerRemoval() {
         Fixture fixture = new Fixture();
 
-        assertEquals("", fixture.replaceAs("<rflag:k,hv>", "Steve"));
+        assertEquals("", fixture.replaceAs("<rflag:hunter,k,hv>", "Steve"));
         fixture.flags.removePlayer(7L, "Steve");
-        assertEquals("hv", fixture.replaceAs("<rflag:k>", "Steve"));
+        assertEquals("hv", fixture.replaceAs("<rflag:hunter,k>", "Steve"));
         fixture.flags.clearMatch(7L);
-        assertEquals("null", fixture.replaceAs("<rflag:k>", "Steve"));
+        assertEquals("null", fixture.replaceAs("<rflag:hunter,k>", "Steve"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }
 
@@ -128,9 +122,9 @@ class TagStatsFlagsTest {
     void rflagRefWritesBackThroughPrePass() {
         Fixture fixture = new Fixture();
 
-        assertEquals("", fixture.replaceAs("<rflag:nums,[a]>", "Steve"));
-        assertEquals("", fixture.replaceAs("<list.append:<rflag:nums>,b>", "Steve"));
-        assertEquals("[a, b]", fixture.replaceAs("<rflag:nums>", "Steve"));
+        assertEquals("", fixture.replaceAs("<rflag:hunter,nums,[a]>", "Steve"));
+        assertEquals("", fixture.replaceAs("<list.append:<rflag:hunter,nums>,b>", "Steve"));
+        assertEquals("[a, b]", fixture.replaceAs("<rflag:hunter,nums>", "Steve"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }
 

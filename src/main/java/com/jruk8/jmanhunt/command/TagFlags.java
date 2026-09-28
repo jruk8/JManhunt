@@ -33,21 +33,44 @@ public final class TagFlags {
     }
 
     /**
-     * Resolves {@code <rflag:name>} and {@code <rflag:name,value>},
-     * scoped to the executor role. A console or other-role executor
-     * reads {@code null} and warns on writes.
+     * Resolves {@code <rflag:role,name>} and
+     * {@code <rflag:role,name,value>}, scoped to the named role. Bad
+     * role or name warns; gets read {@code null}, sets skip.
      */
     static String role(String tag, String args, TagContext context) {
-        return flag(tag, args, context, "rflag",
-                (matchId, key, value) -> FlagStore.executorRole(context.scope()).ifPresentOrElse(
-                        role -> context.flagStore().setRole(matchId,
-                                FlagStore.roleKey(role, key), value),
-                        () -> context.scope().warn(
-                                "Tag <rflag> needs a hunter or speedrunner executor: " + tag)),
-                key -> FlagStore.executorRole(context.scope())
-                        .map(role -> context.flagStore().role(context.matchId(),
-                                FlagStore.roleKey(role, key)))
-                        .orElse(FlagStore.UNSET));
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() < 2 || parts.size() > 3) {
+            context.scope().warn("Tag <rflag> needs a role, a name, plus an optional value: "
+                    + tag);
+            return "";
+        }
+        boolean get = parts.size() == 2;
+        if (context.matchId() == TagContext.NO_MATCH) {
+            if (!get) {
+                context.scope().warn("Tag <rflag> needs a live match: " + tag);
+            }
+            return get ? FlagStore.UNSET : "";
+        }
+        Optional<String> role = FlagStore.parseRole(tag, "rflag", parts.get(0), context.scope());
+        if (role.isEmpty()) {
+            return get ? FlagStore.UNSET : "";
+        }
+        Optional<String> name = FlagStore.parseName(parts.get(1));
+        if (name.isEmpty()) {
+            context.scope().warn("Tag <rflag> needs a name: " + tag);
+            return get ? FlagStore.UNSET : "";
+        }
+        String key = FlagStore.roleKey(role.get(), name.get());
+        if (get) {
+            return context.flagStore().role(context.matchId(), key);
+        }
+        Optional<String> value = CommandPlaceholders.parsePickItem(parts.get(2));
+        if (value.isEmpty()) {
+            context.scope().warn("Tag <rflag> has a malformed value: " + tag);
+            return "";
+        }
+        context.flagStore().setRole(context.matchId(), key, value.get());
+        return "";
     }
 
     /** Resolves {@code <lflag:name>} and {@code <lflag:name,value>}. */
@@ -75,10 +98,13 @@ public final class TagFlags {
      */
     static String loadFlag(String kind, String name, TagContext context) {
         String tag = "<" + kind + ":" + name + ">";
+        if (kind.equals("rflag")) {
+            return context.matchId() == TagContext.NO_MATCH ? FlagStore.UNSET
+                    : context.flagStore().role(context.matchId(), name);
+        }
         return switch (kind) {
             case "gflag" -> global(tag, name, context);
             case "pflag" -> player(tag, name, context);
-            case "rflag" -> role(tag, name, context);
             default -> local(tag, name, context);
         };
     }
@@ -109,11 +135,7 @@ public final class TagFlags {
                 if (context.matchId() == TagContext.NO_MATCH) {
                     context.scope().warn("Tag <rflag> needs a live match: " + tag);
                 } else {
-                    FlagStore.executorRole(context.scope()).ifPresentOrElse(
-                            role -> context.flagStore().setRole(context.matchId(),
-                                    FlagStore.roleKey(role, name), value),
-                            () -> context.scope().warn(
-                                    "Tag <rflag> needs a hunter or speedrunner executor: " + tag));
+                    context.flagStore().setRole(context.matchId(), name, value);
                 }
             }
             default -> context.localFlags().put(name, value);

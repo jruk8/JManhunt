@@ -12,8 +12,9 @@ import java.util.Optional;
  * so concurrent matches never share flags; teardown drops the whole
  * match. Player keys arrive already suffixed ({@code name-Player})
  * and role keys already prefixed ({@code ROLE:name}); callers build
- * both from the executor. In-memory only: a reload or restart wipes
- * every flag. No Bukkit types.
+ * player keys from the executor and role keys from the named role.
+ * In-memory only: a reload or restart wipes every flag. No Bukkit
+ * types.
  */
 public final class FlagStore {
 
@@ -111,22 +112,30 @@ public final class FlagStore {
     }
 
     /**
-     * Executor role for role-scoped tags: the executor's team when it
-     * is HUNTER or SPEEDRUNNER, else empty (console, unknown, or
-     * other roles like spectator).
+     * Canonical role for role-scoped tags: HUNTER or SPEEDRUNNER,
+     * case-insensitive, quotes parsed. Anything else misses silently
+     * for reference detection.
      */
-    public static Optional<String> executorRole(ModifierTagScope scope) {
-        String executor = scope.executorName();
-        if (executor == null) {
+    public static Optional<String> canonicalRole(String raw) {
+        Optional<String> item = CommandPlaceholders.parsePickItem(raw);
+        String role = item.map(value -> value.strip().toUpperCase(Locale.ROOT)).orElse("");
+        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER")) {
             return Optional.empty();
         }
-        return scope.participants().stream()
-                .filter(candidate -> candidate.name().equals(executor))
-                .map(ModifierTagScope.Participant::team)
-                .filter(team -> team.equalsIgnoreCase("HUNTER")
-                        || team.equalsIgnoreCase("SPEEDRUNNER"))
-                .map(team -> team.toUpperCase(Locale.ROOT))
-                .findFirst();
+        return Optional.of(role);
+    }
+
+    /**
+     * Canonical role for one role tag arg, warning on anything but
+     * HUNTER or SPEEDRUNNER.
+     */
+    public static Optional<String> parseRole(String tag, String root, String raw,
+            ModifierTagScope scope) {
+        Optional<String> role = canonicalRole(raw);
+        if (role.isEmpty()) {
+            scope.warn("Tag <" + root + "> needs HUNTER or SPEEDRUNNER: " + tag);
+        }
+        return role;
     }
 
     /** Validates one flag name: trimmed, non-blank, quotes parsed. */

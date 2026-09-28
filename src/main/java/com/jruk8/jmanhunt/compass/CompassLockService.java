@@ -628,8 +628,8 @@ final class CompassLockService {
                 (target, reason) -> scope.warn("Tag <loseplayer> only works in modifiers: skipped."),
                 (role, reason) -> scope.warn("Tag <win> only works in modifiers: skipped."),
                 matchId, backends, List.of(), detail -> loopLimitExceeded(detail, matchId),
-                text -> scope.warn("Tag <rmessage> only works in modifiers: skipped."),
-                (soundId, pitch, volume) ->
+                (role, text) -> scope.warn("Tag <rmessage> only works in modifiers: skipped."),
+                (role, soundId, pitch, volume) ->
                         scope.warn("Tag <rsound> only works in modifiers: skipped."));
     }
 

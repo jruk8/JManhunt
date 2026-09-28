@@ -322,7 +322,7 @@ creator editor validates them as you type:
 | `<clamp:8,1,5>` | `8` clamped into `1..5`: `5`. |
 | `<id>` | The name of the modifier (or trigger) running the commands. |
 | `<gmessage:"hi">` | Sends `hi` to every participant; the tag itself leaves nothing behind. |
-| `<pmessage:yo>` | Sends `yo` to the executing player only. |
+| `<pmessage:yo>` | Sends `yo` to the executing player only. Message tags take literal preset text (MiniMessage), never `messages.yml` keys. |
 | `<gsound:block.stone.break>` | Plays the sound for every participant. |
 | `<psound:block.stone.break,0.5,2>` | Plays the sound for the executing player, with pitch `0.5` and volume `2` (both default to `1`). |
 | `<placeholder:jmanhunt_game_kills_this_session>` | Same placeholder as a tag, so math and conditions can use it. |
@@ -340,9 +340,9 @@ creator editor validates them as you type:
 | `<for:[a,b],...>` | Repeats the body per item with the item behind `<i>` (see Loops). |
 | `<while:1==1,...>` | Repeats the body while the condition holds (see Loops). |
 | `<i>` | The innermost for-loop item, else `null`. |
-| `<rflag:boost>` | The flag of the executing player's role (see Flags). |
-| `<rmessage:push!>` | Tells the executing player's role only. |
-| `<rsound:block.note_block.pling>` | Plays for the executing player's role only. |
+| `<rflag:hunter,boost>` | The flag of the named role (see Flags). |
+| `<rmessage:hunter,push!>` | Tells the named role only. |
+| `<rsound:hunter,block.note_block.pling>` | Plays for the named role only. |
 
 `<min>`, `<max>`, and `<clamp>` accept math in their arguments
 (`<min:8+5,10>` is `10`) and yield `0` with a console warning when an
@@ -445,14 +445,16 @@ may hold spaces inside quotes.
 | --- | --- | --- |
 | `<gflag:name,value>` | Whole match | Dies with the match. |
 | `<pflag:name,value>` | Executing player (`-CONSOLE` for console lists) | Flushed when the player leaves, is eliminated, or disconnects for good; dies with the match. |
-| `<rflag:name,value>` | Executing player's role (`HUNTER` or `SPEEDRUNNER`) | Dies with the match; player removal leaves role flags alone. |
+| `<rflag:role,name,value>` | Named role (`hunter` or `speedrunner`) | Dies with the match; player removal leaves role flags alone. |
 | `<lflag:name,value>` | This run only | Set in an early line, read in a later line, discarded after. |
 
 `<pflag:"cooldown",<gstat:"duration">>` stamps a cooldown;
-`<pflag:"cooldown">` reads it back. `<rflag>` follows the executor:
-hunters and speedrunners keep independent values under the same
-name. Console lists and spectators read `null` and warn on writes,
-since no runner role owns the flag.
+`<pflag:"cooldown">` reads it back. `<rflag>` names its role up
+front: `<rflag:hunter,boost>` and `<rflag:speedrunner,boost>` keep
+independent values under the same name. The role is `hunter` or
+`speedrunner` (any case); anything else warns, reads `null`, and
+skips writes. Role flags need no executor, so console lists can use
+them too.
 
 Flags are modifier-agnostic on purpose: any modifier can read what
 another wrote. For a strictly private flag, namespace the name with

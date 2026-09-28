@@ -71,9 +71,9 @@ public final class PlaceholderCheatsheet {
             Map.entry("while", new String[]{"<while:1==1,...>", "repeats while true"}),
             Map.entry("for", new String[]{"<for:[a,b],...>", "walks a list item by item"}),
             Map.entry("i", new String[]{"<i>", "innermost for item, else null"}),
-            Map.entry("rflag", new String[]{"<rflag:name>", "flag of the executor role"}),
-            Map.entry("rmessage", new String[]{"<rmessage:text>", "tells the executor role"}),
-            Map.entry("rsound", new String[]{"<rsound:id>", "plays for the executor role"}));
+            Map.entry("rflag", new String[]{"<rflag:hunter,boost>", "flag of the named role"}),
+            Map.entry("rmessage", new String[]{"<rmessage:hunter,push!>", "tells the named role"}),
+            Map.entry("rsound", new String[]{"<rsound:hunter,id>", "plays for the named role"}));
 
     private PlaceholderCheatsheet() {
     }
