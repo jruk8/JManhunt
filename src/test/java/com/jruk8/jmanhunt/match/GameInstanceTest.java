@@ -119,4 +119,16 @@ class GameInstanceTest {
         assertEquals("L2", direct.lobbyTag());
         assertEquals("L2-0", sublobbed.lobbyTag());
     }
+
+    @Test
+    void modifierToggleMarksFireOncePerName() {
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+
+        assertTrue(instance.markModifierStarted("m"));
+        assertFalse(instance.markModifierStarted("m"));
+        assertTrue(instance.markModifierStarted("other"));
+        assertTrue(instance.markModifierCleaned("m"));
+        assertFalse(instance.markModifierCleaned("m"));
+        assertTrue(instance.markModifierCleaned("other"));
+    }
 }

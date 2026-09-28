@@ -282,9 +282,9 @@ public class ServerSettings extends OkaeriConfig {
         @Comment({
                 "Show lobby and game ids as L{lobby}|G{game}.",
                 "Useful for debugging.",
-                "Default: true"
+                "Default: false"
         })
-        private boolean showIds = true;
+        private boolean showIds = false;
 
         public boolean isShowIds() {
             return showIds;

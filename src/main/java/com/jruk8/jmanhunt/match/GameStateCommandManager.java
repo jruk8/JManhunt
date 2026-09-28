@@ -32,7 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 /** Executes game rules and modifiers at match state transitions. */
-public final class GameStateCommandManager {
+public final class GameStateCommandManager implements ModifierToggleService.Commands {
     /** Config path of the modifier command blacklist. */
     private static final String BLACKLISTED_COMMANDS_PATH =
             "advanced.misc.interop.blacklisted-modifier-commands";
@@ -44,6 +44,7 @@ public final class GameStateCommandManager {
     private final SoundService sounds;
     private final GameManager game;
     private final IntervalDispatcher intervals;
+    private final ModifierToggleService toggles;
     private final PlayerResetService resets;
     private final Set<UUID> pendingEndWipes = new HashSet<>();
 
@@ -58,6 +59,7 @@ public final class GameStateCommandManager {
         this.game = game;
         this.intervals = new IntervalDispatcher(plugin, configService, game, playerStates,
                 this::dispatchModifier);
+        this.toggles = new ModifierToggleService(plugin, configService, game, intervals, this);
         this.resets = new PlayerResetService(plugin.overrides());
     }
 
@@ -90,10 +92,6 @@ public final class GameStateCommandManager {
     }
 
     /** True when the modifier defers its ON_START sequence past the pre-start hit. */
-    private boolean afterPrestart(String name, int index) {
-        return ModifierTriggers.runsAfterPrestart(configService.preStartOrder(name, index));
-    }
-
     public void runEnd(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
                        boolean lastMatch) {
         intervals.cancelPendingDelayed(matchId);
@@ -133,78 +131,25 @@ public final class GameStateCommandManager {
         }
     }
 
-    /**
-     * Reconciles live matches with toggled modifiers. Newly effective
-     * modifiers activate: ON_START fires honoring delays and INTERVAL
-     * chains restart from fresh config. Newly ineffective ones run
-     * cleanup once; their interval tasks self-cancel at next firing.
-     * Ending matches are skipped: teardown owns their end state.
-     */
+    /** Reconciles live matches with toggled modifiers; see ModifierToggleService. */
     public void syncModifierToggles(Collection<String> names) {
-        for (GameInstance instance : game.liveInstances()) {
-            if (instance.ending()) {
-                continue;
-            }
-            long matchId = instance.matchId();
-            Integer lobby = game.lobbyOf(matchId);
-            List<String> activating = new ArrayList<>();
-            for (String name : names) {
-                if (plugin.overrides().modifierEnabled(lobby, name)) {
-                    activating.add(name);
-                } else {
-                    runModifierCleanup(name, matchId);
-                }
-            }
-            if (!instance.begun()) {
-                for (String name : activating) {
-                    firePreStartModifier(name, matchId);
-                }
-                continue;
-            }
-            if (activating.stream().anyMatch(this::hasIntervalBehavior)) {
-                intervals.cancelIntervalChains(matchId);
-                intervals.scheduleIntervalModifiers(matchId);
-            }
-            for (String name : activating) {
-                fireModifierStart(name, matchId);
-            }
-        }
+        toggles.syncModifierToggles(names);
     }
 
-    /** Cleanup commands for one modifier against a live match roster. */
-    private void runModifierCleanup(String name, long matchId) {
+    @Override
+    public void fireBehavior(String name, int index, long matchId) {
+        runModifierCommands(name, index, matchId, List.of());
+    }
+
+    @Override
+    public void cleanModifier(String name, long matchId, List<Player> roster) {
         runConsoleCleanup(name, matchId);
-        runPlayerCleanup(name, matchId, game.onlineParticipants(matchId));
+        runPlayerCleanup(name, matchId, roster);
     }
 
-    /** All ON_START behaviors of one modifier; the prestart already passed. */
-    private void fireModifierStart(String name, long matchId) {
-        for (int index : configService.behaviorIndexes(name)) {
-            if (ModifierTriggers.runsOn(configService.runsOn(name, index), "ON_START")) {
-                runModifierCommands(name, index, matchId, List.of());
-            }
-        }
-    }
-
-    /** Non-deferred ON_START behaviors, mirroring match-start dispatch. */
-    private void firePreStartModifier(String name, long matchId) {
-        for (int index : configService.behaviorIndexes(name)) {
-            if (ModifierTriggers.runsOn(configService.runsOn(name, index), "ON_START")
-                    && !afterPrestart(name, index)) {
-                runModifierCommands(name, index, matchId, List.of());
-            }
-        }
-    }
-
-    /** True when any behavior of the modifier runs on a live INTERVAL. */
-    private boolean hasIntervalBehavior(String name) {
-        for (int index : configService.behaviorIndexes(name)) {
-            if (ModifierTriggers.runsOn(configService.runsOn(name, index), "INTERVAL")
-                    && configService.intervalSeconds(name, index) >= 0) {
-                return true;
-            }
-        }
-        return false;
+    @Override
+    public boolean afterPrestart(String name, int index) {
+        return ModifierTriggers.runsAfterPrestart(configService.preStartOrder(name, index));
     }
 
     /**

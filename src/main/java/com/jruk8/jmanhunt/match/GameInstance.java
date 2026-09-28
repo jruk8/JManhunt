@@ -42,6 +42,10 @@ public final class GameInstance {
     private boolean hunterUnlimitedAnnounced;
     private Location startCenter;
     private long cachedElapsedMillis;
+    /** Modifiers already ON_START-fired by mid-match toggles this match. */
+    private final Set<String> toggleStartedModifiers = new HashSet<>();
+    /** Modifiers already cleaned by mid-match toggles this match. */
+    private final Set<String> toggleCleanedModifiers = new HashSet<>();
 
 
     public GameInstance(long matchId, int originLobbyId, OptionalLong cellIndex, long startedAtMillis) {
@@ -146,6 +150,22 @@ public final class GameInstance {
 
     public boolean ending() {
         return ending;
+    }
+
+    /**
+     * Marks one modifier ON_START-fired by a mid-match toggle. Returns
+     * false when it already fired this match (repeat toggle to skip).
+     */
+    public boolean markModifierStarted(String name) {
+        return toggleStartedModifiers.add(name);
+    }
+
+    /**
+     * Marks one modifier cleaned by a mid-match toggle. Returns false
+     * when it already cleaned this match (repeat toggle to skip).
+     */
+    public boolean markModifierCleaned(String name) {
+        return toggleCleanedModifiers.add(name);
     }
 
     public void setEnding(boolean ending) {

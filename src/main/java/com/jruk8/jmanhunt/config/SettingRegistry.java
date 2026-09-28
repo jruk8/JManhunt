@@ -671,7 +671,7 @@ public final class SettingRegistry {
         entries.add(bool("settings.server.status.show-win-conditions", false));
         entries.add(bool("settings.server.status.show-elapsed-time", false));
         entries.add(bool("settings.server.status.show-modifiers", false));
-        entries.add(bool("settings.server.status.show-ids", true));
+        entries.add(bool("settings.server.status.show-ids", false));
         entries.add(bool("settings.server.team-chat.enabled", true));
         entries.add(bool("settings.server.team-chat.spectators-see", true));
     }

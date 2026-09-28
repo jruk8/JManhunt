@@ -164,7 +164,7 @@ its player count. Four extras can be toggled under
 (`show-win-conditions`), the running time (`show-elapsed-time`), the
 enabled modifiers (`show-modifiers`, hidden when none are enabled, listed
 by configured display name), and a gray `L{lobby}|G{game}` tag
-(`show-ids`, on by default).
+(`show-ids`, off by default).
 
 ## Lobby and Game Worlds
 

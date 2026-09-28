@@ -34,6 +34,11 @@ You can also flip `enabled` in `modifiers.yml` directly, then run
 `/manhunt reload`. When creating a modifier, copy the structure of an existing
 one. Currently only manual YAML file editing is supported for creation.
 
+Mid-match toggles apply live, but each modifier fires its start
+commands at most once and runs its cleanup commands at most once per
+match, so repeated toggling never duplicates rewards. Repeat toggles
+are skipped with a console warning.
+
 # Behaviors
 
 Under `modifiers.<name>.behavior`, a modifier holds one behavior per
