@@ -104,8 +104,9 @@ the default.
 the teleported-to player: every 5 ticks, a locked spectator farther
 than `tp-distance` (default 25 blocks, minimum 1) is teleported back
 to the target, and the actionbar shows who is followed. Moving around
-never breaks the lock; shifting exits the follow with a chat message
-and a neutral sound. The target going offline, dying, changing role,
+never breaks the lock; double-shifting within half a second exits the
+follow with a chat message and a neutral sound (the first shift is
+silent). The target going offline, dying, changing role,
 or leaving the match also exits the follow with feedback. With
 lock-on disabled, teleports still confirm in chat but never follow,
 so the actionbar stays empty.

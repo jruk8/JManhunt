@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.player;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -115,8 +116,19 @@ class SpectatorToolbarListenerTest {
     }
 
     @Test
-    void sneakExitsFollow() {
+    void firstSneakTapStaysSilent() {
         Fixture fixture = fixture();
+        when(fixture.toolbar().registerSneak(any(), anyLong())).thenReturn(false);
+
+        fixture.listener().onSneak(new PlayerToggleSneakEvent(fixture.player(), true));
+
+        verify(fixture.toolbar(), never()).exitFollow(any());
+    }
+
+    @Test
+    void pairCompletingSneakExitsFollow() {
+        Fixture fixture = fixture();
+        when(fixture.toolbar().registerSneak(any(), anyLong())).thenReturn(true);
 
         fixture.listener().onSneak(new PlayerToggleSneakEvent(fixture.player(), true));
 
@@ -129,6 +141,7 @@ class SpectatorToolbarListenerTest {
 
         fixture.listener().onSneak(new PlayerToggleSneakEvent(fixture.player(), false));
 
+        verify(fixture.toolbar(), never()).registerSneak(any(), anyLong());
         verify(fixture.toolbar(), never()).exitFollow(any());
     }
 

@@ -51,6 +51,9 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     /** Fallback layout when the configured one is not 9 characters. */
     public static final String DEFAULT_LAYOUT = "cp######b";
 
+    /** Double-shift pair window for follow exit, in milliseconds. */
+    public static final long SNEAK_PAIR_WINDOW_MILLIS = 500L;
+
     /** Hotbar button kind. */
     public enum ToolbarButton {
         LOBBIES,
@@ -92,6 +95,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     private final NamespacedKey toolbarKey;
     private final Map<UUID, InventorySnapshot> snapshots = new HashMap<>();
     private final Map<UUID, UUID> locks = new HashMap<>();
+    private final Map<UUID, Long> lastSneaks = new HashMap<>();
 
     public SpectatorToolbarService(OverrideService overrides, MessageService messages,
             SoundService sounds, PlayerStateStore playerStates, FakeSpectatorService fakes,
@@ -192,6 +196,29 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     /** Drops the spectator's lock silently. */
     public void clearLock(UUID spectatorId) {
         locks.remove(spectatorId);
+        lastSneaks.remove(spectatorId);
+    }
+
+    /**
+     * Registers a sneak tap for double-shift follow exit: true when this
+     * tap lands within the pair window of the previous tap, completing
+     * the pair. First taps, expired taps, and backwards-clock taps
+     * return false and stamp the new first tap. Stamps are single-use,
+     * and expired stamps prune on every tap so the map stays small.
+     */
+    public boolean registerSneak(UUID spectatorId, long nowMillis) {
+        lastSneaks.entrySet().removeIf(
+                entry -> nowMillis - entry.getValue() > SNEAK_PAIR_WINDOW_MILLIS);
+        Long previous = lastSneaks.get(spectatorId);
+        if (previous != null) {
+            long gap = nowMillis - previous;
+            if (gap >= 0 && gap <= SNEAK_PAIR_WINDOW_MILLIS) {
+                lastSneaks.remove(spectatorId);
+                return true;
+            }
+        }
+        lastSneaks.put(spectatorId, nowMillis);
+        return false;
     }
 
     /**
@@ -199,6 +226,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
      * clears the follow actionbar. False when not following anyone.
      */
     public boolean exitFollow(Player spectator) {
+        lastSneaks.remove(spectator.getUniqueId());
         UUID targetId = locks.remove(spectator.getUniqueId());
         if (targetId == null) {
             return false;

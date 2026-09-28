@@ -15,7 +15,7 @@ public class ChatMessages extends OkaeriConfig {
             "escaped text. No {prefix} on purpose: it stays readable."
     })
     private String teamChatFormat =
-            "<gray>[{role}<gray>] <white>{player}: {rolecolor}{message}";
+            "<gray>@team [{role}<gray>] <white>{player}: {rolecolor}{message}";
 
     @CustomKey("team-chat-usage")
     private String teamChatUsage =

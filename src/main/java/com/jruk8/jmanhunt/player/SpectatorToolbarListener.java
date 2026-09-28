@@ -58,7 +58,11 @@ public final class SpectatorToolbarListener implements Listener {
     }
 
     @EventHandler public void onSneak(PlayerToggleSneakEvent event) {
-        if (event.isSneaking()) {
+        // First tap only stamps the time (silent); the pair-completing
+        // second tap exits the follow with the usual feedback.
+        if (event.isSneaking()
+                && toolbar.registerSneak(event.getPlayer().getUniqueId(),
+                        System.currentTimeMillis())) {
             toolbar.exitFollow(event.getPlayer());
         }
     }

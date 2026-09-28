@@ -62,7 +62,7 @@ public class SpectatorMessages extends OkaeriConfig {
     private String nowSpectating = "{prefix}<green>Now spectating [{role}<green>] <white>{player}";
 
     @CustomKey("following-actionbar")
-    private String followingActionbar = "<gray>Following [{role}<gray>] <white>{player} <gray>• shift to exit";
+    private String followingActionbar = "<gray>Following [{role}<gray>] <white>{player} <gray>• double-shift to exit";
 
     @CustomKey("follow-exited")
     private String followExited = "{prefix}<gray>Stopped following <white>{player}<gray>.";

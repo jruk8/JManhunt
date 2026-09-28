@@ -140,4 +140,58 @@ class SpectatorToolbarServiceTest {
 
         assertEquals(null, toolbar.lockedTarget(spectator));
     }
+
+    @Test
+    void sneakPairCompletesWithinWindow() {
+        SpectatorToolbarService toolbar = toolbar(
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        UUID spectator = UUID.randomUUID();
+
+        assertFalse(toolbar.registerSneak(spectator, 1000L));
+        assertTrue(toolbar.registerSneak(spectator, 1500L));
+    }
+
+    @Test
+    void sneakPairIsSingleUse() {
+        SpectatorToolbarService toolbar = toolbar(
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        UUID spectator = UUID.randomUUID();
+        toolbar.registerSneak(spectator, 1000L);
+        assertTrue(toolbar.registerSneak(spectator, 1200L));
+
+        assertFalse(toolbar.registerSneak(spectator, 1300L));
+    }
+
+    @Test
+    void expiredSneakStartsNewPair() {
+        SpectatorToolbarService toolbar = toolbar(
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        UUID spectator = UUID.randomUUID();
+        toolbar.registerSneak(spectator, 1000L);
+
+        assertFalse(toolbar.registerSneak(spectator, 1501L));
+        assertTrue(toolbar.registerSneak(spectator, 1600L));
+    }
+
+    @Test
+    void backwardsClockSneakStaysFirstTap() {
+        SpectatorToolbarService toolbar = toolbar(
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        UUID spectator = UUID.randomUUID();
+        toolbar.registerSneak(spectator, 1000L);
+
+        assertFalse(toolbar.registerSneak(spectator, 900L));
+    }
+
+    @Test
+    void sneakPairsArePerSpectator() {
+        SpectatorToolbarService toolbar = toolbar(
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        toolbar.registerSneak(first, 1000L);
+
+        assertFalse(toolbar.registerSneak(second, 1100L));
+        assertTrue(toolbar.registerSneak(first, 1200L));
+    }
 }
