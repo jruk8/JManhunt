@@ -1,9 +1,16 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.modifiers.ModifierStore;
+import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Material;
@@ -17,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
+import java.util.logging.Logger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -172,6 +180,30 @@ class CompassItemTest {
         when(inventory.getItem(anyInt())).thenReturn(occupied);
         assertEquals(-1,
                 CompassItemService.findAvailableSlot(inventory, CompassItemService.DEFAULT_SLOT));
+    }
+
+    @Test
+    void givenToTogglesResolveFromConfig() {
+        JManhuntConfig root = new JManhuntConfig();
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ConfigService configService = new ConfigService(root,
+                new ModifierStore(new ModifiersConfig(), log));
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.overrides()).thenReturn(
+                new OverrideService(configService, new LobbyConfig(), () -> { }));
+        CompassItemService items = new CompassItemService(plugin, mock(MessageService.class),
+                mock(PlayerStateStore.class), new NamespacedKey("jmanhunt", "hunters_compass"));
+
+        assertTrue(items.shouldReceiveCompass(null, Role.HUNTER));
+        assertFalse(items.shouldReceiveCompass(null, Role.SPEEDRUNNER));
+        assertFalse(items.shouldReceiveCompass(null, Role.SPECTATOR));
+
+        ConfigPathMapper.set(root, "settings.compass.given-to.speedrunners", true);
+        ConfigPathMapper.set(root, "settings.compass.given-to.hunters", false);
+
+        assertTrue(items.shouldReceiveCompass(null, Role.SPEEDRUNNER));
+        assertFalse(items.shouldReceiveCompass(null, Role.HUNTER));
     }
 
     private static CompassItemService service(Role role, UUID uuid, Optional<GameInstance> match) {

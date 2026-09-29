@@ -45,9 +45,16 @@ final class CompassItemService {
     }
 
     boolean shouldReceiveCompass(Integer lobby, Role role) {
-        return plugin.overrides()
-                .getBoolean(lobby, "settings.compass.given-to." + role.name().toLowerCase(Locale.ROOT),
-                        role == Role.HUNTER);
+        String key = switch (role) {
+            case HUNTER -> "hunters";
+            case SPEEDRUNNER -> "speedrunners";
+            default -> null;
+        };
+        if (key == null) {
+            return false;
+        }
+        return plugin.overrides().getBoolean(lobby, "settings.compass.given-to." + key,
+                role == Role.HUNTER);
     }
 
     private static final Set<String> PLACEABLE_SUFFIXES =
