@@ -185,7 +185,8 @@ public class ManhuntMessages extends OkaeriConfig {
     private String notActive = "{prefix}<yellow>No match is active.";
 
     @CustomKey("reload-success")
-    private String reloadSuccess = "{prefix}<green>Reloaded config.yml, messages.yml, and settings.";
+    private String reloadSuccess = "{prefix}<green>Reloaded config.yml, messages.yml, and settings in "
+            + "<white>{elapsed}ms</white>.";
 
     @CustomKey("setting-invalid")
     private String settingInvalid = "{prefix}<red>Unknown setting.";

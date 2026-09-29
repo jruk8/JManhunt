@@ -46,7 +46,7 @@ class RolePadServiceTest {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         ConfigService config = mock(ConfigService.class);
         when(plugin.configService()).thenReturn(config);
-        when(config.getBoolean("world-engine.role-pads.enabled", true)).thenReturn(true);
+        when(config.getBoolean("advanced.lobbies.role-pads.enabled", true)).thenReturn(true);
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
         when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore playerStates = mock(PlayerStateStore.class);
@@ -73,7 +73,7 @@ class RolePadServiceTest {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         ConfigService config = mock(ConfigService.class);
         when(plugin.configService()).thenReturn(config);
-        when(config.getBoolean("world-engine.role-pads.enabled", true)).thenReturn(true);
+        when(config.getBoolean("advanced.lobbies.role-pads.enabled", true)).thenReturn(true);
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
         when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore playerStates = mock(PlayerStateStore.class);

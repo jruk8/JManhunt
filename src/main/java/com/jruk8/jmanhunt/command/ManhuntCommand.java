@@ -283,6 +283,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                         }
                         setup(skipped);
                     }));
+            sounds.playNeutralSound(player);
             return true;
         }
         plugin.guiService().open(player, menus.rootMenu(player));
@@ -2072,11 +2073,13 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean reload(CommandSender sender) {
+        long started = System.nanoTime();
         plugin.reload();
         game.validateLobbyWorldName();
-        boolean result = message(sender, "manhunt.reload-success");
+        long elapsed = (System.nanoTime() - started) / 1_000_000L;
+        message(sender, "manhunt.reload-success", Map.of("elapsed", String.valueOf(elapsed)));
         neutralSound(sender);
-        return result;
+        return true;
     }
 
     private boolean debug(CommandSender sender, String[] args) {

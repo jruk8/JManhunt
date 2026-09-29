@@ -140,7 +140,8 @@ or below disable that side's delay entirely.
 # Role Announcement
 
 Under `settings.announce-roles`, every participant is told their own role the
-moment a match starts, in chat and as a title. Both are toggled independently:
+moment a match starts, in chat and as a title, with a sound. All three are
+toggled independently:
 
 ```yaml
 settings:
@@ -152,6 +153,8 @@ settings:
       fade-in-seconds: 0.5
       stay-seconds: 3.0
       fade-out-seconds: 0.5
+    sounds:
+      enabled: true
 ```
 
 The announcement runs inside match start after the match status is shown,
@@ -164,8 +167,9 @@ The title shows `manhunt.role-announce-title` (`Role: {role}` by default) with a
 per-role subtitle from `messages.yml`, and follows the configured fade, stay,
 and fade-out times. Each role also hears its own sound
 (`sounds.announce.hunter`, `sounds.announce.speedrunner`, and
-`sounds.announce.spectator`), toggled per role like any other sound. When
-both chat and title are disabled, no announcement plays at all.
+`sounds.announce.spectator`), toggled per role like any other sound and
+gated as a group by `sounds.enabled`. When both chat and title are
+disabled, no announcement plays at all.
 
 # Match End Delay
 

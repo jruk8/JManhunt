@@ -79,7 +79,7 @@ public final class RolePadService implements Listener {
     }
 
     private void check(Player player) {
-        if (!plugin.configService().getBoolean("world-engine.role-pads.enabled", true)) {
+        if (!plugin.configService().getBoolean("advanced.lobbies.role-pads.enabled", true)) {
             return;
         }
         if (!player.getWorld().getName().equals(lobbyWorldName.get())) {
@@ -135,7 +135,7 @@ public final class RolePadService implements Listener {
     }
 
     private void matchPad(Map<Material, Role> pads, String key, Role role) {
-        String raw = plugin.configService().getString("world-engine.role-pads.blocks." + key, "");
+        String raw = plugin.configService().getString("advanced.lobbies.role-pads.blocks." + key, "");
         Material material = parsePadMaterial(raw);
         if (material == null) {
             if (raw != null && !raw.isBlank() && warnedMaterials.add(key)) {
@@ -225,7 +225,7 @@ public final class RolePadService implements Listener {
 
     /** True when pads assign roles quietly. */
     private boolean padSilent() {
-        return plugin.configService().getBoolean("world-engine.role-pads.silent-role-assignment", false);
+        return plugin.configService().getBoolean("advanced.lobbies.role-pads.silent-role-assignment", false);
     }
 
     private boolean capAllows(Optional<Lobby> lobby, Role role) {

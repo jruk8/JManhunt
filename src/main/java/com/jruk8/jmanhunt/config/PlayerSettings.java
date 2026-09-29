@@ -32,9 +32,9 @@ public class PlayerSettings extends OkaeriConfig {
     @CustomKey("announce-roles")
     @Comment({
             "Announces each participant's role when a match starts, in chat and/or as a",
-            "title. Both are toggled independently; when both are off, no announcement",
-            "(including sounds) plays.",
-            "Default: both enabled"
+            "title, with a sound. All three are toggled independently; when chat",
+            "and title are both off, no announcement plays at all.",
+            "Default: all enabled"
     })
     private AnnounceRoles announceRoles = new AnnounceRoles();
 
@@ -470,6 +470,7 @@ public class PlayerSettings extends OkaeriConfig {
 
         private Toggle chat = new Toggle(true);
         private Title title = new Title();
+        private Toggle sounds = new Toggle(true);
 
         public Toggle getChat() {
             return chat;
@@ -477,6 +478,14 @@ public class PlayerSettings extends OkaeriConfig {
 
         public void setChat(Toggle chat) {
             this.chat = chat;
+        }
+
+        public Toggle getSounds() {
+            return sounds;
+        }
+
+        public void setSounds(Toggle sounds) {
+            this.sounds = sounds;
         }
 
         public Title getTitle() {

@@ -478,9 +478,8 @@ public final class MatchStartService {
      * Tells each participant their own role when a match starts. This runs
      * inside {@link #start()} after the match status is shown, but still
      * before the pre-start window opens, so it always plays before any damage
-     * can occur. Non-participants are skipped. Sounds play as part of the
-     * announcement: when both chat and title are disabled, nothing plays at
-     * all.
+     * can occur. Non-participants are skipped. Sounds toggle separately:
+     * when both chat and title are disabled, nothing plays at all.
      */
     private void announceRoles(int lobbyId, List<Player> players, List<Player> spectators) {
         boolean chat = plugin.overrides()
@@ -490,6 +489,8 @@ public final class MatchStartService {
         if (!chat && !title) {
             return;
         }
+        boolean soundsEnabled = plugin.overrides()
+                .getBoolean(lobbyId, "settings.players.announce-roles.sounds.enabled", true);
         long fadeIn = toMillis(plugin.overrides()
                 .getDouble(lobbyId, "settings.players.announce-roles.title.fade-in-seconds", 0.5));
         long stay = toMillis(plugin.overrides()
@@ -514,14 +515,18 @@ public final class MatchStartService {
                         messages.component("manhunt.role-announce-title", values),
                         messages.component(subtitleKey), times));
             }
-            sounds.playSound(player, playerRole == Role.HUNTER ? "announce.hunter" : "announce.speedrunner");
+            if (soundsEnabled) {
+                sounds.playSound(player,
+                        playerRole == Role.HUNTER ? "announce.hunter" : "announce.speedrunner");
+            }
         }
         for (Player spectator : spectators) {
-            announceSpectator(spectator, chat, title, times);
+            announceSpectator(spectator, chat, title, times, soundsEnabled);
         }
     }
 
-    private void announceSpectator(Player spectator, boolean chat, boolean title, Title.Times times) {
+    private void announceSpectator(Player spectator, boolean chat, boolean title, Title.Times times,
+            boolean soundsEnabled) {
         if (playerStates.role(spectator) != Role.SPECTATOR) {
             return;
         }
@@ -534,7 +539,9 @@ public final class MatchStartService {
                     messages.component("manhunt.role-announce-title", values),
                     messages.component("manhunt.role-announce-subtitle-spectator"), times));
         }
-        sounds.playSound(spectator, "announce.spectator");
+        if (soundsEnabled) {
+            sounds.playSound(spectator, "announce.spectator");
+        }
     }
 
     private static long toMillis(double seconds) {

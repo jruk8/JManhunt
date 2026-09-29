@@ -89,6 +89,7 @@ categories:
   players/announce-roles: JUKEBOX
   players/announce-roles/chat: PAPER
   players/announce-roles/title: OAK_HANGING_SIGN
+  players/announce-roles/sounds: MUSIC_DISC_13
   players/spectator: ECHO_SHARD
   players/spectator/toolbar: BLAZE_ROD
   players/spectator/travel: LEAD
@@ -108,8 +109,8 @@ categories:
   advanced/lobbies/queue-caps: DROPPER
   advanced/misc: COMPARATOR
   world-engine: BEACON
-  world-engine/role-pads: HEAVY_WEIGHTED_PRESSURE_PLATE
-  world-engine/role-pads/blocks: GRAY_CONCRETE
+  advanced/lobbies/role-pads: HEAVY_WEIGHTED_PRESSURE_PLATE
+  advanced/lobbies/role-pads/blocks: GRAY_CONCRETE
   world-engine/spawnpoint-algorithm: RESPAWN_ANCHOR
   world-engine/spawnpoint-algorithm/spawn-close-to-structure: BRICKS
   world-engine/preloading: BARREL
@@ -197,6 +198,7 @@ descriptions:
   "settings.players.announce-roles": "Reveal roles when the match starts."
   "settings.players.announce-roles.chat": "List roles in chat at match start."
   "settings.players.announce-roles.title": "Flash roles as a title at match start."
+  "settings.players.announce-roles.sounds": "Play sounds with the role reveal."
   "settings.players.friendly-fire": "Whether teammates can hurt each other."
   "settings.players.invulnerability": "Keep non-fighters safe from damage."
   "settings.players.invulnerability.none-players": "Protect players without a role."
@@ -376,6 +378,7 @@ descriptions:
   "settings.players.invulnerability.none-players.enabled": "Spectators stay invulnerable."
   "settings.players.invulnerability.on-game-end.enabled": "Protect everyone when a match ends."
   "settings.players.announce-roles.chat.enabled": "Announce roles in chat at match start."
+  "settings.players.announce-roles.sounds.enabled": "Play a sound with the role reveal."
   "settings.players.announce-roles.title.enabled": "Announce roles as a title at match start."
   "settings.players.announce-roles.title.fade-in-seconds": "Title fade-in time in seconds."
   "settings.players.announce-roles.title.stay-seconds": "Title stay time in seconds."
@@ -408,8 +411,8 @@ descriptions:
   "advanced.advanced-match-controls.disconnect-handling.hunter": "Reconnect rules for hunters."
   "advanced.lobbies.bounds": "Walk-in boxes that join and exit lobbies."
   "advanced.lobbies.queue-caps": "Per-role queue caps for each lobby."
-  "world-engine.role-pads": "Lobby blocks that assign roles when stood on."
-  "world-engine.role-pads.blocks": "Concrete block mapped to each role."
+  "advanced.lobbies.role-pads": "Lobby blocks that assign roles when stood on."
+  "advanced.lobbies.role-pads.blocks": "Concrete block mapped to each role."
   "world-engine.spawnpoint-algorithm": "Validated per-player spawn selection."
   "world-engine.spawnpoint-algorithm.spawn-close-to-structure": "Keep cells near listed structures."
   "world-engine.preloading": "Console commands plus a ready-cell buffer."
@@ -438,13 +441,13 @@ descriptions:
   "advanced.lobbies.lobby-world-name": "Lobby world name; missing worlds generate."
   "world-engine.enabled": "Master switch for the grid engine."
   "world-engine.world-name": "Game world holding the spiral cells."
-  "world-engine.role-pads.enabled": "Standing on pads assigns roles."
-  "world-engine.role-pads.silent-role-assignment": "Pads assign without message or sound."
-  "world-engine.role-pads.blocks.speedrunner": "Pad block for speedrunners."
-  "world-engine.role-pads.blocks.hunter": "Pad block for hunters."
-  "world-engine.role-pads.blocks.afk": "Pad block for AFK players."
-  "world-engine.role-pads.blocks.spectator": "Pad block for spectators."
-  "world-engine.role-pads.blocks.none": "Pad block for NONE players."
+  "advanced.lobbies.role-pads.enabled": "Standing on pads assigns roles."
+  "advanced.lobbies.role-pads.silent-role-assignment": "Pads assign without message or sound."
+  "advanced.lobbies.role-pads.blocks.speedrunner": "Pad block for speedrunners."
+  "advanced.lobbies.role-pads.blocks.hunter": "Pad block for hunters."
+  "advanced.lobbies.role-pads.blocks.afk": "Pad block for AFK players."
+  "advanced.lobbies.role-pads.blocks.spectator": "Pad block for spectators."
+  "advanced.lobbies.role-pads.blocks.none": "Pad block for NONE players."
   "world-engine.cell-size": "Spiral cell size in blocks; max 50000."
   "world-engine.tp-spread-radius": "Spawn spread around each cell center."
   "world-engine.spawnpoint-algorithm.enabled": "Use validated spawns over plain ones."

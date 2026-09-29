@@ -145,10 +145,10 @@ public final class LobbyWorldManager {
 
     /**
      * Safe defaults for a fresh lobby world: peaceful difficulty, frozen
-     * time and weather, and no mob, trader, phantom, patrol, or griefing
-     * activity. Generation-only: later loads never touch these again.
-     * Refuses game-world names outright, so a lobby misconfiguration can
-     * never freeze time and weather where matches run.
+     * time and weather, no locator bar, and no mob, trader, phantom,
+     * patrol, or griefing activity. Generation-only: later loads never
+     * touch these again. Refuses game-world names outright, so a lobby
+     * misconfiguration can never freeze time and weather where matches run.
      */
     private void applyLobbyDefaults(World world) {
         String gameWorldName = plugin.configService().getString("world-engine.world-name", "world");
@@ -160,6 +160,7 @@ public final class LobbyWorldManager {
         world.setDifficulty(Difficulty.PEACEFUL);
         world.setGameRule(GameRules.ADVANCE_TIME, false);
         world.setGameRule(GameRules.ADVANCE_WEATHER, false);
+        world.setGameRule(GameRules.LOCATOR_BAR, false);
         world.setGameRule(GameRules.SPAWN_MOBS, false);
         world.setGameRule(GameRules.SPAWN_WANDERING_TRADERS, false);
         world.setGameRule(GameRules.SPAWN_PHANTOMS, false);

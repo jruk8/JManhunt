@@ -569,6 +569,7 @@ public final class SettingRegistry {
         entries.add(bool("settings.players.spectator.travel.enabled", true));
         entries.add(floatVal("settings.players.spectator.travel.max-distance", 125.0, 0.0, null));
         entries.add(bool("settings.players.announce-roles.chat.enabled", true));
+        entries.add(bool("settings.players.announce-roles.sounds.enabled", true));
         entries.add(bool("settings.players.announce-roles.title.enabled", true));
         entries.add(floatVal("settings.players.announce-roles.title.fade-in-seconds", 0.5, 0.0, null));
         entries.add(floatVal("settings.players.announce-roles.title.stay-seconds", 3.0, 0.0, null));
@@ -596,13 +597,13 @@ public final class SettingRegistry {
         entries.add(restart(bool("world-engine.enabled", false)));
         entries.add(string("world-engine.world-name", "world"));
 
-        entries.add(bool("world-engine.role-pads.enabled", true));
-        entries.add(bool("world-engine.role-pads.silent-role-assignment", false));
-        entries.add(string("world-engine.role-pads.blocks.speedrunner", "LIME_CONCRETE"));
-        entries.add(string("world-engine.role-pads.blocks.hunter", "RED_CONCRETE"));
-        entries.add(string("world-engine.role-pads.blocks.afk", "YELLOW_CONCRETE"));
-        entries.add(string("world-engine.role-pads.blocks.spectator", "LIGHT_GRAY_CONCRETE"));
-        entries.add(string("world-engine.role-pads.blocks.none", "GRAY_CONCRETE"));
+        entries.add(bool("advanced.lobbies.role-pads.enabled", true));
+        entries.add(bool("advanced.lobbies.role-pads.silent-role-assignment", false));
+        entries.add(string("advanced.lobbies.role-pads.blocks.speedrunner", "LIME_CONCRETE"));
+        entries.add(string("advanced.lobbies.role-pads.blocks.hunter", "RED_CONCRETE"));
+        entries.add(string("advanced.lobbies.role-pads.blocks.afk", "YELLOW_CONCRETE"));
+        entries.add(string("advanced.lobbies.role-pads.blocks.spectator", "LIGHT_GRAY_CONCRETE"));
+        entries.add(string("advanced.lobbies.role-pads.blocks.none", "GRAY_CONCRETE"));
         entries.add(intVal("world-engine.cell-size", 10000, 1, 50000));
         entries.add(intDynamic("world-engine.tp-spread-radius", 5, 0,
                 SettingDescriptor.DynamicBound.CELL_HALF));

@@ -16,16 +16,6 @@ public class WorldEngineConfig extends OkaeriConfig {
     @CustomKey("world-name")
     private String worldName = "world";
 
-    @CustomKey("role-pads")
-    @Comment({
-            "Stand-on role pads. A player in the lobby world inside a listed block's",
-            "XZ cell and at most 4 blocks above it is assigned the mapped role,",
-            "like setplayer. Material names are Bukkit Material names.",
-            "Default: true",
-            "Lobby-world blocks that assign roles when stood on."
-    })
-    private RolePads rolePads = new RolePads();
-
     @CustomKey("cell-size")
     @Comment({
             "Lobby teleport points and boundary boxes live in",
@@ -85,14 +75,6 @@ public class WorldEngineConfig extends OkaeriConfig {
         this.worldName = worldName;
     }
 
-    public RolePads getRolePads() {
-        return rolePads;
-    }
-
-    public void setRolePads(RolePads rolePads) {
-        this.rolePads = rolePads;
-    }
-
     public int getCellSize() {
         return cellSize;
     }
@@ -139,98 +121,6 @@ public class WorldEngineConfig extends OkaeriConfig {
 
     public void setEnd(End end) {
         this.end = end;
-    }
-
-    /** Stand-on role pads. */
-    @SuppressWarnings("FieldMayBeFinal")
-    public static class RolePads extends OkaeriConfig {
-        private boolean enabled = true;
-
-        @CustomKey("silent-role-assignment")
-        @Comment({
-                "When true, pads assign roles quietly: no role message, no sound,",
-                "and no role-change announcement. Teleports still happen.",
-                "Default: false"
-        })
-        private boolean silentRoleAssignment = false;
-
-        @CustomKey("blocks")
-        @Comment("Concrete block per role.")
-        private RolePadBlocks blocks = new RolePadBlocks();
-
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public boolean isSilentRoleAssignment() {
-            return silentRoleAssignment;
-        }
-
-        public void setSilentRoleAssignment(boolean silentRoleAssignment) {
-            this.silentRoleAssignment = silentRoleAssignment;
-        }
-
-        public RolePadBlocks getBlocks() {
-            return blocks;
-        }
-
-        public void setBlocks(RolePadBlocks blocks) {
-            this.blocks = blocks;
-        }
-
-        /** Block per role, as Bukkit Material names. */
-        @SuppressWarnings("FieldMayBeFinal")
-        public static class RolePadBlocks extends OkaeriConfig {
-            private String speedrunner = "LIME_CONCRETE";
-            private String hunter = "RED_CONCRETE";
-            private String afk = "YELLOW_CONCRETE";
-            private String spectator = "LIGHT_GRAY_CONCRETE";
-            private String none = "GRAY_CONCRETE";
-
-            public String getSpeedrunner() {
-                return speedrunner;
-            }
-
-            public void setSpeedrunner(String speedrunner) {
-                this.speedrunner = speedrunner;
-            }
-
-            public String getHunter() {
-                return hunter;
-            }
-
-            public void setHunter(String hunter) {
-                this.hunter = hunter;
-            }
-
-            public String getAfk() {
-                return afk;
-            }
-
-            public void setAfk(String afk) {
-                this.afk = afk;
-            }
-
-            public String getSpectator() {
-                return spectator;
-            }
-
-            public void setSpectator(String spectator) {
-                this.spectator = spectator;
-            }
-
-            public String getNone() {
-                return none;
-            }
-
-            public void setNone(String none) {
-                this.none = none;
-            }
-        }
     }
 
     /** Validated spawnpoint algorithm. */
