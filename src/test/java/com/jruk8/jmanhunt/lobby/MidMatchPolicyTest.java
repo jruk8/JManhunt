@@ -73,4 +73,24 @@ class MidMatchPolicyTest {
         assertFalse(MidMatchPolicy.JOIN_ANY.usesSubLobbies());
         assertFalse(MidMatchPolicy.JOIN_SPECTATORS.usesSubLobbies());
     }
+
+    @Test
+    void onlySublobbyPoliciesWithEngineOnAllowConcurrentStart() {
+        for (MidMatchPolicy policy : MidMatchPolicy.values()) {
+            assertEquals(policy.usesSubLobbies(),
+                    policy.allowsConcurrentStart(true), policy.name());
+            assertFalse(policy.allowsConcurrentStart(false), policy.name());
+        }
+    }
+
+    @Test
+    void queueMessageKeyNamesSublobbyQueueUnderSublobbyPolicies() {
+        assertEquals("manhunt.setplayer-queued-sublobby",
+                MidMatchPolicy.SUBLOBBY.queueMessageKey());
+        assertEquals("manhunt.setplayer-queued-sublobby",
+                MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS.queueMessageKey());
+        assertEquals("manhunt.setplayer-held", MidMatchPolicy.HOLD.queueMessageKey());
+        assertEquals("manhunt.setplayer-held", MidMatchPolicy.JOIN_ANY.queueMessageKey());
+        assertEquals("manhunt.setplayer-held", MidMatchPolicy.JOIN_SPECTATORS.queueMessageKey());
+    }
 }

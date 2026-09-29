@@ -92,7 +92,7 @@ public final class AutostartService {
 
     private void updateAutostartState(int lobbyId) {
         Optional<Lobby> lobby = lobbies.get(lobbyId);
-        if (lobby.isEmpty() || store.instanceForLobby(lobbyId).isPresent()
+        if (lobby.isEmpty() || liveMatchBlocks(lobbyId)
                 || !isEligibleToStart(lobby.get())) {
             cancelAutostartCountdown(lobbyId, true);
             return;
@@ -121,7 +121,7 @@ public final class AutostartService {
         // Eligible covered these seconds already; ticks announce the rest.
         countdown.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             Optional<Lobby> tickLobby = lobbies.get(lobbyId);
-            if (store.instanceForLobby(lobbyId).isPresent() || tickLobby.isEmpty()
+            if (liveMatchBlocks(lobbyId) || tickLobby.isEmpty()
                     || !isEligibleToStart(tickLobby.get())) {
                 cancelAutostartCountdown(lobbyId, true);
                 return;
@@ -143,6 +143,16 @@ public final class AutostartService {
         messaging.sendToLobby(lobbyId, "manhunt.autostart-countdown",
                 Map.of("seconds", String.valueOf(remainingSeconds)));
         messaging.playLobbySound(lobbyId, "game.autostart-countdown");
+    }
+
+    /**
+     * True when a live lobby match blocks autostart: any live match
+     * except under sublobby policies with the world engine on, where a
+     * fresh queue may start the next child sublobby.
+     */
+    private boolean liveMatchBlocks(int lobbyId) {
+        return store.instanceForLobby(lobbyId).isPresent()
+                && !lobbies.midMatchPolicy().allowsConcurrentStart(lobbies.multiLobbyAllowed());
     }
 
     public void cancelAutostartCountdown(int lobbyId, boolean announce) {
@@ -182,6 +192,9 @@ public final class AutostartService {
         int speedrunners = 0;
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (!lobby.contains(player.getUniqueId())) {
+                continue;
+            }
+            if (store.isInLiveInstance(player.getUniqueId())) {
                 continue;
             }
             if (playerStates.role(player) == Role.HUNTER) {
@@ -282,7 +295,7 @@ public final class AutostartService {
         int intervalSeconds = Math.max(1, plugin.overrides().getInt(lobbyId,
                 "settings.match.autostart.broadcast-requirements.interval-seconds", 60));
         Optional<Lobby> lobby = lobbies.get(lobbyId);
-        if (lobby.isEmpty() || store.instanceForLobby(lobbyId).isPresent()
+        if (lobby.isEmpty() || liveMatchBlocks(lobbyId)
                 || autostartCountdowns.containsKey(lobbyId)) {
             lastShortfallBroadcast.remove(lobbyId);
             return;

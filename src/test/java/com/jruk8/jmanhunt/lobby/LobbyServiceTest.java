@@ -136,6 +136,18 @@ class LobbyServiceTest {
         assertEquals(2, lobbies.nextSubId(2));
     }
 
+    @Test
+    void midMatchPolicyParsesConfigWithSublobbyDefault() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        ConfigService config = mock(ConfigService.class);
+        when(plugin.configService()).thenReturn(config);
+        when(config.getString("advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"))
+                .thenReturn("hold");
+        LobbyService lobbies = new LobbyService(plugin);
+
+        assertEquals(MidMatchPolicy.HOLD, lobbies.midMatchPolicy());
+    }
+
     private static LobbyService service() {
         return new LobbyService(null);
     }

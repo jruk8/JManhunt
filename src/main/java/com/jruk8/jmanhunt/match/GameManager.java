@@ -212,8 +212,9 @@ public final class GameManager implements MatchControl {
 
     /**
      * Starts a match from the default lobby. False when starting is disabled
-     * (negative default), the lobby is missing or already running, or its
-     * queue lacks a hunter or a speedrunner.
+     * (negative default), the lobby is missing or blocked by a live match
+     * under the mid-match policy, or its queue lacks a hunter or a
+     * speedrunner.
      */
     public boolean start() {
         return matchStart.start();
@@ -222,9 +223,12 @@ public final class GameManager implements MatchControl {
     /**
      * Starts a match for one lobby's queued hunters and speedrunners. Other
      * lobbies keep queueing and their matches and countdowns are untouched.
+     * Under sublobby policies the new match becomes the next child
+     * sublobby even while siblings run.
      *
-     * @return false when the lobby is missing, already has a live match, or
-     *         its queue lacks a hunter or a speedrunner
+     * @return false when the lobby is missing, a live match blocks the
+     *         start under the mid-match policy, or its queue lacks a
+     *         hunter or a speedrunner
      */
     @Override
     public boolean start(int lobbyId) {

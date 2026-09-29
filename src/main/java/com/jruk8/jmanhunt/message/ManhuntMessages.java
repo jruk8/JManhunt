@@ -476,6 +476,14 @@ public class ManhuntMessages extends OkaeriConfig {
     private String setplayerHeldSummary = "{prefix}<yellow>{count} player(s) held for the next game (match in " +
             "progress).";
 
+    @CustomKey("setplayer-queued-sublobby")
+    private String setplayerQueuedSublobby = "{prefix}<yellow>You are queued as " +
+            "<white>{role}<yellow> for the next match.";
+
+    @CustomKey("setplayer-queued-sublobby-summary")
+    private String setplayerQueuedSublobbySummary = "{prefix}<yellow>{count} player(s) queued for the " +
+            "next sublobby.";
+
     @CustomKey("setplayer-joined")
     private String setplayerJoined = "{prefix}<green>Joined <white>{count}<green> player(s) to the running match " +
             "as <white>{role}<green>.";

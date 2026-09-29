@@ -131,6 +131,17 @@ class MessagesStyleTest {
     }
 
     @Test
+    void sublobbyQueueKeysExistWithSlots() {
+        YamlConfiguration messages = loadSchemaMessages();
+
+        String queued = messages.getString("manhunt.setplayer-queued-sublobby", "");
+        assertTrue(queued.contains("{role}"), "queued-sublobby needs {role}");
+        assertFalse(queued.contains("{lobby}"), "queued-sublobby must not name a lobby");
+        String summary = messages.getString("manhunt.setplayer-queued-sublobby-summary", "");
+        assertTrue(summary.contains("{count}"), "queued-sublobby-summary needs {count}");
+    }
+
+    @Test
     void intervalSkipKeyCarriesModifierPlayerAndWhy() {
         YamlConfiguration messages = loadSchemaMessages();
 

@@ -180,9 +180,7 @@ public final class RolePadService implements Listener {
             if (!lobbies.multiLobbyAllowed()) {
                 return;
             }
-            MidMatchPolicy policy = MidMatchPolicy.parse(
-                    plugin.configService().getString(
-                            "advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
+            MidMatchPolicy policy = lobbies.midMatchPolicy();
             GameInstance target = targetLobby.map(lobby ->
                     game.midMatchJoinTarget(policy, lobby.id(), live.get(), role)).orElse(live.get());
             if (policy.joinsMidMatch(role)
@@ -195,7 +193,7 @@ public final class RolePadService implements Listener {
             }
             setPadRole(player, role);
             if (!member && !padSilent()) {
-                messages.message(player, "manhunt.setplayer-held",
+                messages.message(player, policy.queueMessageKey(),
                         Map.of("role", messages.roleName(role)));
             }
             return;
@@ -234,7 +232,8 @@ public final class RolePadService implements Listener {
         }
         int count = 0;
         for (Player online : Bukkit.getOnlinePlayers()) {
-            if (playerStates.role(online) == role && lobby.get().contains(online.getUniqueId())) {
+            if (playerStates.role(online) == role && lobby.get().contains(online.getUniqueId())
+                    && game.instanceOf(online.getUniqueId()).isEmpty()) {
                 count++;
             }
         }

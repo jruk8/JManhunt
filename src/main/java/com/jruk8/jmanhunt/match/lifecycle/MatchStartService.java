@@ -9,7 +9,6 @@ import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
-import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.lobby.SubLobby;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -129,9 +128,12 @@ public final class MatchStartService {
     /**
      * Starts a match for one lobby's queued hunters and speedrunners. Other
      * lobbies keep queueing and their matches and countdowns are untouched.
+     * Under sublobby policies the new match becomes the next child
+     * sublobby even while siblings run.
      *
-     * @return false when the lobby is missing, already has a live match, or
-     *         its queue lacks a hunter or a speedrunner
+     * @return false when the lobby is missing, a live match blocks the
+     *         start under the mid-match policy, or its queue lacks a
+     *         hunter or a speedrunner
      */
     public boolean start(int lobbyId) {
         return start(lobbyId, null);
@@ -143,7 +145,7 @@ public final class MatchStartService {
      * wilderness point (console and autostart).
      */
     public boolean start(int lobbyId, Location surroundOrigin) {
-        if (store.instanceForLobby(lobbyId).isPresent()) {
+        if (liveMatchBlocks(lobbyId)) {
             return false;
         }
         Optional<Lobby> lobby = lobbies.get(lobbyId);
@@ -195,11 +197,22 @@ public final class MatchStartService {
         return lobbies.multiLobbyAllowed() ? lobbies.defaultLobbyId() : 0;
     }
 
-    /** Collects lobby participants, requiring at least one hunter and one speedrunner. */
+    /**
+     * True when a live lobby match blocks a new start: any live match
+     * except under sublobby policies with the world engine on, where the
+     * new match becomes the next child sublobby.
+     */
+    private boolean liveMatchBlocks(int lobbyId) {
+        return store.instanceForLobby(lobbyId).isPresent()
+                && !lobbies.midMatchPolicy().allowsConcurrentStart(lobbies.multiLobbyAllowed());
+    }
+
+    /** Collects queued lobby participants, excluding live matches. */
     private Optional<List<Player>> matchPlayers(Lobby resolved) {
         List<Player> players = Bukkit.getOnlinePlayers().stream()
                 .filter(p -> resolved.contains(p.getUniqueId())
-                        && playerStates.role(p).isParticipant())
+                        && playerStates.role(p).isParticipant()
+                        && !store.isInLiveInstance(p.getUniqueId()))
                 .map(p -> (Player) p).toList();
         boolean ready = players.stream().anyMatch(p -> playerStates.role(p) == Role.HUNTER)
                 && players.stream().anyMatch(p -> playerStates.role(p) == Role.SPEEDRUNNER);
@@ -231,10 +244,7 @@ public final class MatchStartService {
             List<UUID> assignees) {
         GameInstance instance = new GameInstance(currentMatchId, lobbyId, matchCell,
                 System.currentTimeMillis());
-        if (lobbies.multiLobbyAllowed()
-                && MidMatchPolicy.parse(configService
-                        .getString("advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"))
-                        .usesSubLobbies()) {
+        if (lobbies.multiLobbyAllowed() && lobbies.midMatchPolicy().usesSubLobbies()) {
             instance.setSubLobby(new SubLobby(lobbyId, lobbies.nextSubId(lobbyId)));
         }
         for (UUID playerId : assignees) {
@@ -627,7 +637,7 @@ public final class MatchStartService {
      * wilderness point (console).
      */
     public QuickStartOutcome quickStart(int speedrunnerPercent, int lobbyId, Location surroundOrigin) {
-        if (store.instanceForLobby(lobbyId).isPresent()) {
+        if (liveMatchBlocks(lobbyId)) {
             return new QuickStartOutcome(false);
         }
         Optional<Lobby> lobby = lobbies.get(lobbyId);
@@ -640,7 +650,8 @@ public final class MatchStartService {
         // conversion is needed, and NONEs always join the pool.
         List<Player> pool = Bukkit.getOnlinePlayers().stream()
                 .filter(p -> resolved.contains(p.getUniqueId())
-                        && playerStates.role(p) != Role.AFK && playerStates.role(p) != Role.SPECTATOR)
+                        && playerStates.role(p) != Role.AFK && playerStates.role(p) != Role.SPECTATOR
+                        && !store.isInLiveInstance(p.getUniqueId()))
                 .map(p -> (Player) p)
                 .toList();
         // Cancel any autostart countdown silently

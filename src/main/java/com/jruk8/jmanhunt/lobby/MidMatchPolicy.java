@@ -44,4 +44,22 @@ public enum MidMatchPolicy {
     public boolean usesSubLobbies() {
         return this == SUBLOBBY || this == SUBLOBBY_WITH_SPECTATORS;
     }
+
+    /**
+     * True when a lobby that already runs a match may start another one:
+     * sublobby policies with the world engine on, where the new match
+     * becomes the next child sublobby. Pure for tests.
+     */
+    public boolean allowsConcurrentStart(boolean multiLobbyAllowed) {
+        return multiLobbyAllowed && usesSubLobbies();
+    }
+
+    /**
+     * Held message key for a role that queues instead of joining: the
+     * sublobby queue line under sublobby policies, the in-progress line
+     * otherwise. Pure for tests.
+     */
+    public String queueMessageKey() {
+        return usesSubLobbies() ? "manhunt.setplayer-queued-sublobby" : "manhunt.setplayer-held";
+    }
 }

@@ -95,8 +95,14 @@ on; otherwise the in-match block stays.
 - `SUBLOBBY_WITH_SPECTATORS` (default) queues like `SUBLOBBY`, except
   spectators always join the oldest running sublobby (lowest number).
 
+Once a match exists, spectators join it instead of queueing under
+`SUBLOBBY_WITH_SPECTATORS`, `JOIN_SPECTATORS`, and `JOIN_ANY`. Queued
+sublobby players get a "queued for the next match" confirmation,
+never the in-progress line.
+
 Held players count against queue caps; joined players ignore them, like
-`game join`.
+`game join`. Queue counts (caps, autostart, and start rosters) only
+cover queued players: anyone already in a live match is excluded.
 
 ## Sublobbies
 
@@ -107,12 +113,14 @@ one. Sublobbies are numbered per lobby from zero and shown as
 `L{lobby-id}-{sublobby-id}` (so the first match in lobby 2 is `L2-0`);
 ids are never reused within a run.
 
-Sublobbies run one live match per parent lobby, exactly like direct
-hosting: the queue keeps gathering in the parent while its sublobby
-plays. `setplayer` into a live sublobby queues the role for the next
-one, and status output shows the tag (`L2-0|G5` in `status`,
-`L2-0|G5`-style entries in `status all`). Switch the policy to `HOLD`
-for plain direct hosting.
+A parent lobby may run several child sublobbies at once: the queue
+keeps gathering in the parent while its sublobbies play, and each
+`start` (manual, quickstart, or autostart) launches the next child
+from the queued players only. `setplayer` into a live sublobby queues
+the role for the next one, and status output shows the tag
+(`L2-0|G5` in `status`, `L2-0|G5`-style entries in `status all`).
+Switch the policy to `HOLD` for plain direct hosting with one match
+per lobby.
 
 ## Joining and Leaving a Running Match
 

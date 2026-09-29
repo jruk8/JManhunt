@@ -67,6 +67,15 @@ public final class LobbyService {
     }
 
     /**
+     * Mid-match setplayer policy, live-read so reloads apply. Single
+     * reader of the path; every policy consumer calls this.
+     */
+    public MidMatchPolicy midMatchPolicy() {
+        return MidMatchPolicy.parse(plugin.configService()
+                .getString("advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
+    }
+
+    /**
      * Assigns the default lobby; a negative default leaves the player
      * lobby-less. With the world engine off everyone is forced to lobby 0.
      */

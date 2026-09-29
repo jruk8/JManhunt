@@ -734,8 +734,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             leaveMatchToLobbyForSetPlayer(player, role, silent, live, tally);
             return;
         }
-        MidMatchPolicy policy = MidMatchPolicy.parse(
-                config.getString("advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
+        MidMatchPolicy policy = lobbies.midMatchPolicy();
         GameInstance target = targetLobby.map(lobby ->
                 game.midMatchJoinTarget(policy, lobby.id(), live, role)).orElse(live);
         if (policy.joinsMidMatch(role)
@@ -751,10 +750,20 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (member) {
             cancelMatchIfInvalid(sender, live);
         } else {
+            recordQueuedRole(player, role, silent, policy, tally);
+        }
+    }
+
+    /** Tallies a non-member queued under a live match and tells them where they wait. */
+    private void recordQueuedRole(Player player, Role role, boolean silent,
+            MidMatchPolicy policy, SetPlayerTally tally) {
+        if (policy.usesSubLobbies()) {
+            tally.queued++;
+        } else {
             tally.held++;
-            if (!silent && role != Role.AFK) {
-                message(player, "manhunt.setplayer-held", Map.of("role", messages.roleName(role)));
-            }
+        }
+        if (!silent && role != Role.AFK) {
+            message(player, policy.queueMessageKey(), Map.of("role", messages.roleName(role)));
         }
     }
 
@@ -836,6 +845,10 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (tally.held > 0) {
             message(sender, "manhunt.setplayer-held-summary", Map.of("count", String.valueOf(tally.held)));
         }
+        if (tally.queued > 0) {
+            message(sender, "manhunt.setplayer-queued-sublobby-summary",
+                    Map.of("count", String.valueOf(tally.queued)));
+        }
         for (Map.Entry<Integer, Set<Role>> entry : tally.cappedIn.entrySet()) {
             for (Role cappedRole : entry.getValue()) {
                 message(sender, "manhunt.lobby-full", Map.of("lobby", String.valueOf(entry.getKey()),
@@ -861,6 +874,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         int skipped;
         int joined;
         int held;
+        int queued;
         final Set<java.util.UUID> assigned = new HashSet<>();
         final Map<Integer, Set<Role>> cappedIn = new LinkedHashMap<>();
     }
@@ -1106,11 +1120,12 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return arg.equalsIgnoreCase("-notp");
     }
 
-    /** Online members of a lobby currently holding a role. */
+    /** Online queued members of a lobby holding a role, live matches excluded. */
     private int lobbyRoleCount(Lobby lobby, Role role) {
         int count = 0;
         for (Player online : Bukkit.getOnlinePlayers()) {
-            if (playerStates.role(online) == role && lobby.contains(online.getUniqueId())) {
+            if (playerStates.role(online) == role && lobby.contains(online.getUniqueId())
+                    && game.instanceOf(online.getUniqueId()).isEmpty()) {
                 count++;
             }
         }
@@ -1142,7 +1157,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
             return message(sender, "manhunt.lobby-worldengine-required");
         }
-        if (game.instanceForLobby(lobbyId).isPresent()) {
+        if (liveMatchBlocks(lobbyId)) {
             return message(sender, "manhunt.already-active");
         }
         Location surroundOrigin = sender instanceof Player executor ? executor.getLocation() : null;
@@ -1150,6 +1165,16 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return message(sender, "manhunt.start-invalid");
         }
         return true;
+    }
+
+    /**
+     * True when a live lobby match blocks a new start: any live match
+     * except under sublobby policies with the world engine on, where the
+     * new match becomes the next child sublobby.
+     */
+    private boolean liveMatchBlocks(int lobbyId) {
+        return game.instanceForLobby(lobbyId).isPresent()
+                && !lobbies.midMatchPolicy().allowsConcurrentStart(lobbies.multiLobbyAllowed());
     }
 
     /** Lobby a bare start targets: the sender's lobby, else the default. */
@@ -2857,7 +2882,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (lobbyId < 0) {
             return message(sender, "manhunt.quickstart-failed");
         }
-        if (game.instanceForLobby(lobbyId).isPresent()) {
+        if (liveMatchBlocks(lobbyId)) {
             return message(sender, "manhunt.already-active");
         }
         Location surroundOrigin = sender instanceof Player executor ? executor.getLocation() : null;
