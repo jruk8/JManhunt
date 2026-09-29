@@ -113,9 +113,11 @@ so the actionbar stays empty.
 
 ## Where spectators land
 
-Mid-match joins and the match browser land spectators on the same
-shared spawn pick, in this order (lobby spectators stay in the lobby
-when a match starts until they join it):
+Queued spectators join the match when it starts, under every lobby
+mode: they attach to the starting match with fake spectator mode, the
+toolbar, and the shared spawn pick below. Mid-match joins and the
+match browser land spectators on that same shared spawn pick, in this
+order:
 
 1. The online speedrunner with the highest progression (Got Iron
    outranks Got Wood), ties broken by name.

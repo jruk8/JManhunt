@@ -171,6 +171,7 @@ public final class MatchStartService {
         GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell, assignees);
         instance.setStartCenter(engineOffStartCenter(participants, surroundOrigin, matchCell));
         store.registerInstance(instance);
+        promoteQueuedSpectators(instance, lobby.get());
         stats.recordLobbySession(lobbyId);
         applyStartState(instance, participants, spectators, lobbyId);
         publishMatchStart(instance, participants, spectators, lobbyId, matchCell);
@@ -195,6 +196,25 @@ public final class MatchStartService {
     /** Lobby id used when a start has no other context; negative disables it. */
     public int defaultStartLobbyId() {
         return lobbies.multiLobbyAllowed() ? lobbies.defaultLobbyId() : 0;
+    }
+
+    /** Attaches queued spectators of a starting lobby to the new match, all policies. */
+    private void promoteQueuedSpectators(GameInstance instance, Lobby lobby) {
+        List<Player> queued = Bukkit.getOnlinePlayers().stream()
+                .filter(p -> lobby.contains(p.getUniqueId())
+                        && isQueuedSpectator(playerStates.role(p),
+                                store.isInLiveInstance(p.getUniqueId())))
+                .map(p -> (Player) p).toList();
+        joinPlayers(instance, queued, Role.SPECTATOR);
+    }
+
+    /**
+     * True when a lobby member queues as a spectator for a starting
+     * match: spectator role only, never participants, idlers, or AFK,
+     * and not already in a live match. Pure for tests.
+     */
+    static boolean isQueuedSpectator(Role role, boolean inLiveMatch) {
+        return role == Role.SPECTATOR && !inLiveMatch;
     }
 
     /**
