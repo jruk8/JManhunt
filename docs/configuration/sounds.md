@@ -10,7 +10,7 @@ Sounds are configured in `sounds.yml`:
 ui:
   neutral-sound:
     enabled: true
-    sound: block.note_block.pling
+    sound: block.spawner.fall
     pitch: 1.0
     volume: 1.0
   angry-sound:
@@ -44,10 +44,10 @@ Under `game`, each entry plays at a fixed moment in the match:
 
 - `autostart-countdown`: during the autostart countdown and the hunter spawn countdown.
 - `autostart-cancelled`: when an autostart countdown is cancelled.
-- `speedrunner-death`: when a speedrunner dies, by any means.
-- `hunter-death`: when a hunter dies, by any means.
-- `win-sound`: when the speedrunners win.
-- `fail-sound`: when the hunters win.
+- `speedrunner-death`: when a speedrunner dies, by any means. Defaults to `block.dried_ghast.ambient`.
+- `hunter-death`: when a hunter dies, by any means. Defaults to `item.spyglass.use`.
+- `win-sound`: when the speedrunners win. Defaults to `block.beacon.activate` at pitch 1.1.
+- `fail-sound`: when the hunters win. Defaults to `block.skulk_shrieker.break` at pitch 0.7, volume 0.9.
 - `cancelled-sound`: when a match is cancelled. Defaults to the hunters win sound.
 - `announce.hunter`: heard by each hunter when roles are announced.
 - `announce.speedrunner`: heard by each speedrunner when roles are announced.

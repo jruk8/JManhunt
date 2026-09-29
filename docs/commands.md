@@ -166,6 +166,21 @@ enabled modifiers (`show-modifiers`, hidden when none are enabled, listed
 by configured display name), and a gray `L{lobby}|G{game}` tag
 (`show-ids`, off by default).
 
+Each role line joins names Oxford style (`a, b, and c`; `a and b`) and
+truncates long rosters with `and n more`. The per-role caps live in
+`messages.yml` (`manhunt.status-limit-*`: 5 speedrunners, 10 hunters,
+2 AFK, 20 none, 5 spectators), along with the separators and
+templates. Permanently eliminated players move to the spectator role
+and are memorialized under their former role block: a dark-gray skull
+line shows the 3 most recent deaths (`manhunt.status-dead-line`,
+cap at `manhunt.status-limit-dead`), while the end-of-match
+leaderboard still lists them without skulls. Players waiting out a
+respawn delay carry an inline skull on their alive line instead.
+
+A match roster shows only that match's members (participants plus its
+spectators); lobby queues and queued spectators read in lobby status
+and join matches through `/manhunt game join`.
+
 ## Lobby and Game Worlds
 
 `/manhunt worldengine tpto lobbyworld [selector]` teleports to the lobby

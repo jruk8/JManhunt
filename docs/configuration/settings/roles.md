@@ -171,6 +171,10 @@ player returns.
 `lives` sets how many lives each role gets before that player is eliminated
 for the rest of the match. Set either value to `-1` for unlimited lives. By
 default, speedrunners get a single life while hunters have unlimited lives.
+Elimination moves the player to the spectator role: they can keep
+watching with the spectator toolbar, status shows them in the
+spectator roll call plus a skull memorial under their former role,
+and the end-of-match leaderboard still lists them without skulls.
 
 # Invulnerability
 

@@ -60,8 +60,8 @@ The `spectator` role also deploys a hotbar toolbar. The player's real
 inventory (contents, armor, and offhand) is snapshotted in memory and
 restored on exit, on quit, and after a crash; toolbar items left behind
 by a crash are discarded on the next join. Only the `spectator` role
-gets the toolbar: headstart holds, death watches, and `NONE` watchers
-keep their own inventories.
+gets the toolbar: headstart holds, death watches, respawn waits, and
+`NONE` watchers keep their own inventories.
 
 While the toolbar is out, the hotbar is locked: offhand swaps, number
 keys, drags, drops, and clicks into the player's own inventory are all
@@ -113,8 +113,9 @@ so the actionbar stays empty.
 
 ## Where spectators land
 
-Match starts, mid-match joins, and the match browser all land
-spectators on the same shared spawn pick, in this order:
+Mid-match joins and the match browser land spectators on the same
+shared spawn pick, in this order (lobby spectators stay in the lobby
+when a match starts until they join it):
 
 1. The online speedrunner with the highest progression (Got Iron
    outranks Got Wood), ties broken by name.

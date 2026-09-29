@@ -7,8 +7,8 @@ run `/manhunt start` manually.
 ```yaml
 settings:
   autostart:
-    enabled: false
-    countdown-seconds: 60
+    enabled: true
+    countdown-seconds: 30
     minimums:
       hunter: 1
       speedrunner: 1
@@ -41,9 +41,9 @@ message never fires instantly on assignment.
 
 ## Countdown
 
-`countdown-seconds` is how long JManhunt waits, once the queue becomes
-eligible, before running `/manhunt start` on its own. Set to `0` to start
-immediately with no countdown at all.
+`countdown-seconds` (default 30) is how long JManhunt waits, once the
+queue becomes eligible, before running `/manhunt start` on its own. Set
+to `0` to start immediately with no countdown at all.
 
 # Start on Speedrunner Damage
 

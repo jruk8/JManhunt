@@ -150,6 +150,7 @@ Under `runs-on`, you configure when the commands
 | `ON_RESPAWN` | When a player respawns (only the executing player) |
 | `ON_SPEEDRUNNER_RESPAWN` | When a speedrunner respawns (only the executing player) |
 | `ON_HUNTER_RESPAWN` | When a hunter respawns (only the executing player) |
+| `ON_DAMAGE_TAKEN` | When a player takes damage from any source (runs for the damaged player only) |
 
 If `runs-on` is omitted, the modifier defaults to `ON_START`.
 To count every kill, enable both `ON_MOB_KILLED` and `ON_PLAYER_KILLS`.
@@ -400,6 +401,7 @@ A missing index yields `null`; a non-numeric index warns and yields
 | `ON_NETHER_ENTER`, `ON_END_ENTER`, `ON_FIRST_NETHER_ENTER`, `ON_FIRST_END_ENTER` | `0`: the origin world name, `1`: the destination world name. |
 | `ON_EVERY_ADVANCEMENT` | `0`: the advancement's namespaced key (e.g. `minecraft:nether/root`). |
 | `ON_RESPAWN`, `ON_SPEEDRUNNER_RESPAWN`, `ON_HUNTER_RESPAWN` | `0`: the death location as one list, `[x, y, z, pitch, yaw, dimension]`. |
+| `ON_DAMAGE_TAKEN` | `0`: the damaged player's name. `1`: damage taken in half hearts. `2`: the damage dealer's name, or `null` for mobs and the environment. |
 
 ### Match control
 
@@ -488,6 +490,10 @@ may hold spaces inside quotes.
 | `<pflag:name,value>` | Executing player (`-CONSOLE` for console lists) | Flushed when the player leaves, is eliminated, or disconnects for good; dies with the match. |
 | `<rflag:role,name,value>` | Named role (`hunter` or `speedrunner`) | Dies with the match; player removal leaves role flags alone. |
 | `<lflag:name,value>` | This run only | Set in an early line, read in a later line, discarded after. |
+
+`<lf>`, `<pf>`, and `<gf>` are short aliases for `<lflag>`,
+`<pflag>`, and `<gflag>`; they behave identically everywhere,
+including flag references and the tag cheatsheet.
 
 `<pflag:"cooldown",<gstat:"duration">>` stamps a cooldown;
 `<pflag:"cooldown">` reads it back. `<rflag>` names its role up
@@ -608,8 +614,11 @@ never re-substituted; quoted text is left alone. Like every tag,
 substitution is textual: math bodies should parenthesize params
 (`(B)**2` rather than `B**2`) so negative args bind as one value,
 and bare math still needs no-space runs. Definitions live and die
-with the run like `<lflag>`, and the creator editor warns on calls
-it cannot see defined (unknown tags still resolve at runtime).
+with the run like `<lflag>`. The creator editor collects every
+`<def:name>` in the edited line's function scope, so calls to
+defined functions (including recursive self-calls and calls from
+other lines in the same scope) never warn; genuinely unknown tags
+still warn, and still resolve at runtime.
 
 Recursion terminates through `<if>` base cases, since dead
 branches never run. Every call costs one of the line's 1000 shared

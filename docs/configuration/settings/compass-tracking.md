@@ -73,6 +73,11 @@ Note that only `compass` points its needle at the tracked player. A
 `recovery_compass` always points at its holder's last death location, so it
 works as a match token while direction readout stays on the actionbar.
 
+Handed-out compasses land in the last hotbar slot (slot 9); when it is
+taken, the first free inventory slot is used instead, or the compass
+drops at the holder's feet when the inventory is full. Picked-up
+compasses never stack: every compass stays at amount 1.
+
 ## Compass Names
 
 Each role gets its own compass name and lore from `messages.yml`:
@@ -212,6 +217,7 @@ untouched, so lowering it redraws the same snapshot more often.
 ```yaml
 actionbar:
   refresh-ticks: 1
+  show-distance: true
   show-distance-delta:
     enabled: true
     further-format: "<green>▲{distance}"
@@ -239,6 +245,10 @@ reads as progress; speedrunners always see the unswapped formats.
 next refresh, `BLINK` shows it for `blink-duration-seconds`, then
 reverts to the plain white distance. A blink of `0` skips the
 triangle entirely.
+
+`show-distance` (default on) toggles the distance readout itself.
+With it off, the bar shows direction without any distance, delta
+triangle, or distance history.
 
 ## Chat Messages
 
@@ -347,10 +357,12 @@ out-of-range message.
 
 Under `settings.compass.signal-interference`, you can make tracking fail
 with a gray Bad signal readout when conditions are bad. The master
-`enabled` switch defaults to off, so the signal is always good until
-you opt in.
+`enabled` switch defaults to on, with only the `invisible` option
+on, so invisibility interferes out of the box while everything else
+stays opt-in.
 
-Each sub-option watches one thing (all default to off):
+Each sub-option watches one thing (all default to off except
+`invisible`):
 
 - `light-level`: fails in the dark, with separate sky and block light
   minimums. Only applies in the overworld. `interfere-when` picks
@@ -376,6 +388,9 @@ Each sub-option watches one thing (all default to off):
   default, `VISIBLE` for the opposite), and `max-ray-distance`
   (default 300) caps the ray: past it, there is no line of sight.
   Only live targets in the same world are checked.
+- `invisible`: fails when the watched side is under the invisibility
+  effect (on by default). `mode` picks the side: `TARGET` watches
+  the tracked target, `SELF` watches the holder.
 
 Every option except `line-of-sight` has its own `two-way` flag
 (default off). With two-way on, the target's press-time spot must
