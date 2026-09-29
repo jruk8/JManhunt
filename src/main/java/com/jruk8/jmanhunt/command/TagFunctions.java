@@ -36,7 +36,8 @@ public final class TagFunctions {
     private static final Set<String> BUILTINS = Set.of(
             "p", "random-mob", "random-item", "random-num", "random-pick",
             "random-player", "all-players", "all-fanout", "duration", "id", "i",
-            "pstat", "gstat", "gflag", "pflag", "lflag", "rflag", "placeholder",
+            "pstat", "gstat", "gflag", "gf", "pflag", "pf", "lflag", "lf", "rflag",
+            "placeholder",
             "min", "max", "clamp", "root", "if",
             "gmessage", "pmessage", "rmessage", "gsound", "psound", "rsound",
             "loseplayer", "win", "args",
@@ -47,6 +48,11 @@ public final class TagFunctions {
             "while", "for", "def", "run");
 
     private TagFunctions() {
+    }
+
+    /** True when the lowercase name is a builtin a def must not shadow. */
+    static boolean isBuiltin(String lowerName) {
+        return BUILTINS.contains(lowerName);
     }
 
     /** Outermost balanced def spans; nested defs wait for the enclosing body. */

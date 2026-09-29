@@ -111,6 +111,19 @@ class TagListOpsTest {
     }
 
     @Test
+    void mutatorsWriteBackThroughShortAliases() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+
+        assertEquals("", fixture.replace("<gf:nums,[]>", context));
+        assertEquals("", fixture.replace("<list.append:<gf:nums>,a>", context));
+        assertEquals("[a]", fixture.replace("<gflag:nums>", context));
+        assertEquals("", fixture.replace("<list.append:<gflag:nums>,b>", context));
+        assertEquals("[a, b]", fixture.replace("<gf:nums>", context));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
     void mutatorsWriteBackToFlags() {
         Fixture fixture = new Fixture();
         TagContext context = fixture.context();

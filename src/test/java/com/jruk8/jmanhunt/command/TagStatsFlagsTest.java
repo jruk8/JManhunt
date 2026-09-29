@@ -70,6 +70,20 @@ class TagStatsFlagsTest {
     }
 
     @Test
+    void shortFlagAliasesShareStorageWithFullNames() {
+        Fixture fixture = new Fixture();
+
+        assertEquals("", fixture.replace("<gf:nums,[1, 2]>"));
+        assertEquals("[1, 2]", fixture.replace("<gflag:nums>"));
+        assertEquals("", fixture.replace("<pflag:me,hi>"));
+        assertEquals("hi", fixture.replace("<pf:me>"));
+        TagContext local = fixture.context("Steve", 7L);
+        assertEquals("", CommandPlaceholders.replace("<lf:one,[a]>", "Steve", 0, 0, 0, local));
+        assertEquals("[a]", CommandPlaceholders.replace("<lflag:one>", "Steve", 0, 0, 0, local));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
     void rflagPartitionsByNamedRole() {
         Fixture fixture = new Fixture();
 

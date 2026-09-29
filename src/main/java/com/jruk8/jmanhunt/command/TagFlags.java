@@ -103,8 +103,8 @@ public final class TagFlags {
                     : context.flagStore().role(context.matchId(), name);
         }
         return switch (kind) {
-            case "gflag" -> global(tag, name, context);
-            case "pflag" -> player(tag, name, context);
+            case "gflag", "gf" -> global(tag, name, context);
+            case "pflag", "pf" -> player(tag, name, context);
             default -> local(tag, name, context);
         };
     }
@@ -115,14 +115,14 @@ public final class TagFlags {
      */
     static void storeFlag(String kind, String name, String value, String tag, TagContext context) {
         switch (kind) {
-            case "gflag" -> {
+            case "gflag", "gf" -> {
                 if (context.matchId() == TagContext.NO_MATCH) {
                     context.scope().warn("Tag <gflag> needs a live match: " + tag);
                 } else {
                     context.flagStore().setGlobal(context.matchId(), name, value);
                 }
             }
-            case "pflag" -> {
+            case "pflag", "pf" -> {
                 if (context.matchId() == TagContext.NO_MATCH) {
                     context.scope().warn("Tag <pflag> needs a live match: " + tag);
                 } else {

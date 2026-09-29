@@ -329,6 +329,50 @@ class CommandSyntaxTest {
     }
 
     @Test
+    void definedCallsNeverWarnAsUnknown() {
+        String line = "<def:fact,<fact:x>,x> <fact:5>";
+
+        assertEquals(List.of("Unknown tag '<fact:x>', left untouched at runtime.",
+                "Unknown tag '<fact:5>', left untouched at runtime."),
+                CommandSyntax.warnings(line));
+        assertTrue(CommandSyntax.warnings(line,
+                TagFunctionScope.definedFunctions(List.of(line))).isEmpty());
+    }
+
+    @Test
+    void definedFunctionsSpanLinesAndMirrorRuntime() {
+        Set<String> names = TagFunctionScope.definedFunctions(List.of(
+                "<def:Fact,<fact:x>,x>",
+                "say <fact:5>",
+                "<def:123,bad>",
+                "<def:if,shadow>"));
+
+        assertEquals(Set.of("fact"), names);
+        assertTrue(CommandSyntax.warnings("say <fact:5>", names).isEmpty());
+        assertTrue(CommandSyntax.warnings("say <FACT:5>", names).isEmpty());
+        assertEquals(1, CommandSyntax.warnings("say <bogus> <fact:5>", names).size());
+    }
+
+    @Test
+    void shortFlagAliasesValidate() {
+        assertTrue(CommandSyntax.error("say <gf:x> <pf:y> <lf:z>").isEmpty());
+        assertTrue(CommandSyntax.warnings("say <gf:x> <pf:y> <lf:z>").isEmpty());
+        assertTrue(CommandSyntax.error("say <gf:x,1,2>").isPresent());
+        assertTrue(TagFunctions.isBuiltin("gf"));
+        assertTrue(TagFunctions.isBuiltin("pf"));
+        assertTrue(TagFunctions.isBuiltin("lf"));
+    }
+
+    @Test
+    void functionScopeGroupsExecutorLists() {
+        assertEquals(List.of("player", "hunter", "speedrunner"),
+                TagFunctionScope.functionScopeLists("hunter"));
+        assertEquals(List.of("console"), TagFunctionScope.functionScopeLists("console"));
+        assertEquals(List.of("player-cleanup"),
+                TagFunctionScope.functionScopeLists("player-cleanup"));
+    }
+
+    @Test
     void blacklistPassesUnrelatedBlankAndNull() {
         List<String> blocked = List.of("op", "stop");
         assertFalse(CommandSyntax.isBlockedCommand("give Steve apple", blocked));

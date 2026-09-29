@@ -462,9 +462,9 @@ public final class CommandPlaceholders {
             case "i" -> context.loopItem().orElse("null");
             case "pstat" -> TagStats.player(tag, args, context);
             case "gstat" -> TagStats.global(tag, args, context);
-            case "gflag" -> TagFlags.global(tag, args, context);
-            case "pflag" -> TagFlags.player(tag, args, context);
-            case "lflag" -> TagFlags.local(tag, args, context);
+            case "gflag", "gf" -> TagFlags.global(tag, args, context);
+            case "pflag", "pf" -> TagFlags.player(tag, args, context);
+            case "lflag", "lf" -> TagFlags.local(tag, args, context);
             case "rflag" -> TagFlags.role(tag, args, context);
             case "placeholder" -> TagPlaceholders.resolve(tag, args, context);
             case "min", "max", "clamp", "root" -> TagExpressions.minMaxClamp(tag, name, args, context);

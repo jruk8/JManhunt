@@ -34,6 +34,7 @@ modifiers:
         # ON_RESPAWN - When a player respawns (only the executing player)
         # ON_SPEEDRUNNER_RESPAWN - When a speedrunner respawns (only the executing player)
         # ON_HUNTER_RESPAWN - When a hunter respawns (only the executing player)
+        # ON_DAMAGE_TAKEN - When a participant takes damage (only the executing player)
         # If omitted, defaults to ON_START.
         runs-on:
           - ON_START

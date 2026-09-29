@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.command.CommandValidation;
 import com.jruk8.jmanhunt.command.ModifiersCommand;
 import com.jruk8.jmanhunt.command.Ordinal;
 import com.jruk8.jmanhunt.command.PlaceholderCheatsheet;
+import com.jruk8.jmanhunt.command.TagFunctionScope;
 import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -204,10 +206,7 @@ public final class ModifierDetailMenus {
                             lines.set(index, raw);
                         }
                     });
-                    for (String warning : CommandSyntax.warnings(raw)) {
-                        messages.message(player, "modifiers.create-command-warning",
-                                Map.of("warning", warning));
-                    }
+                    warnForLine(player, raw, id, behavior, list);
                     List<String> fresh = store.commandList(id, behavior, list);
                     int position = index < 0
                             ? fresh.size() : Math.min(index + 1, Math.max(fresh.size(), 1));
@@ -217,6 +216,19 @@ public final class ModifierDetailMenus {
                     gui.navigate(player, self);
                 },
                 () -> gui.navigate(player, self));
+    }
+
+    /** Warns for one saved line with its function scope's defs in view. */
+    private void warnForLine(Player player, String raw, String id, int behavior, String list) {
+        List<String> scopeLines = new ArrayList<>();
+        for (String scopeList : TagFunctionScope.functionScopeLists(list)) {
+            scopeLines.addAll(store.commandList(id, behavior, scopeList));
+        }
+        Set<String> functions = TagFunctionScope.definedFunctions(scopeLines);
+        for (String warning : CommandSyntax.warnings(raw, functions)) {
+            messages.message(player, "modifiers.create-command-warning",
+                    Map.of("warning", warning));
+        }
     }
 
     private boolean validateCommands() {

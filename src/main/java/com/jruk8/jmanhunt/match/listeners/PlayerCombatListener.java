@@ -308,24 +308,53 @@ public final class PlayerCombatListener implements Listener {
             handlePreStartDamage(event, victim, victimMatch.get());
             return;
         }
-        if (!(event instanceof EntityDamageByEntityEvent byEntity)
-                || !(byEntity.getDamager() instanceof Player attacker)) {
+        handleBegunMatchDamage(event, victim, victimMatch);
+    }
+
+    /**
+     * Begun-match damage: friendly-fire cancels first, then the
+     * damage-taken event fires for any dealer kind, then same-match
+     * player hits accrue damage stats.
+     */
+    private void handleBegunMatchDamage(EntityDamageEvent event, Player victim,
+            Optional<GameInstance> victimMatch) {
+        Player attacker = null;
+        if (event instanceof EntityDamageByEntityEvent byEntity
+                && byEntity.getDamager() instanceof Player damager) {
+            attacker = damager;
+        }
+        boolean playerInvolved = attacker != null && victimMatch.isPresent()
+                && victimMatch.get().begun() && sameMatch(victimMatch.get(), attacker)
+                && playerStates.role(attacker).isParticipant()
+                && playerStates.role(victim).isParticipant();
+        if (playerInvolved && blockFriendlyFire(event, attacker, victim)) {
+            return;
+        }
+        if (victimMatch.isPresent() && victimMatch.get().begun()
+                && playerStates.role(victim).isParticipant()) {
+            fireDamageTaken(event, victim, victimMatch.get(), attacker);
+        }
+        if (!playerInvolved) {
             return;
         }
         Role attackerRole = playerStates.role(attacker);
-        if (victimMatch.isEmpty() || !victimMatch.get().begun() || !sameMatch(victimMatch.get(), attacker)
-                || !attackerRole.isParticipant()
-                || !playerStates.role(victim).isParticipant()) {
-            return;
-        }
-        if (blockFriendlyFire(event, attacker, victim)) {
-            return;
-        }
         Stats damageSlice = stats.getOrCreate(victimMatch.get().matchId(), attacker.getUniqueId());
         damageSlice.damage += event.getFinalDamage();
         if (damageSlice.role == Role.NONE) {
             damageSlice.role = attackerRole;
         }
+    }
+
+    /**
+     * Fires ON_DAMAGE_TAKEN on the victim: their name, the final
+     * damage in half hearts, and the dealer name, or "null" for
+     * mob and environment damage.
+     */
+    private void fireDamageTaken(EntityDamageEvent event, Player victim, GameInstance match,
+            Player attacker) {
+        game.stateCommands().runEventModifiers("ON_DAMAGE_TAKEN", victim, match.matchId(),
+                List.of(victim.getName(), String.valueOf(event.getFinalDamage()),
+                        attacker == null ? "null" : attacker.getName()));
     }
 
     /** Credits a speedrunner who finishes a hunter out of lives. */

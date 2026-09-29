@@ -355,7 +355,6 @@ public final class ModifierCreateArgs {
                         Map.of("list", list, "error", problem.get()));
             }
             commands.computeIfAbsent(list, ignored -> new ArrayList<>()).add(value);
-            warnings.addAll(CommandSyntax.warnings(value));
             return null;
         }
 
@@ -369,11 +368,33 @@ public final class ModifierCreateArgs {
             if (!preset && deviation != null && interval == null) {
                 return Result.fail("modifiers.create-deviation-range", Map.of("value", String.valueOf(deviation)));
             }
+            collectWarnings();
             return Result.ok(new Plan(preset, name, description, item, author,
                     List.copyOf(triggers), onStartOrder, interval, deviation,
                     intervalBehavior, chance, chanceBehavior, selection,
                     pickCount, pickBehavior, delay, Map.copyOf(commands), List.copyOf(members)),
                     List.copyOf(warnings));
+        }
+
+        /**
+         * Warns per line with the function scope's defs in view, so a
+         * call never warns for a function defined anywhere in its
+         * runtime group, whatever flag order the user typed.
+         */
+        private void collectWarnings() {
+            for (Map.Entry<String, List<String>> entry : commands.entrySet()) {
+                List<String> scopeLines = new ArrayList<>();
+                for (String scopeList : TagFunctionScope.functionScopeLists(entry.getKey())) {
+                    List<String> lines = commands.get(scopeList);
+                    if (lines != null) {
+                        scopeLines.addAll(lines);
+                    }
+                }
+                Set<String> functions = TagFunctionScope.definedFunctions(scopeLines);
+                for (String line : entry.getValue()) {
+                    warnings.addAll(CommandSyntax.warnings(line, functions));
+                }
+            }
         }
 
         private static Result checkEnum(String flag, String value, Set<String> valid) {

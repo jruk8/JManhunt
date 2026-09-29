@@ -218,6 +218,22 @@ class ModifierCreateArgsTest {
     }
 
     @Test
+    void definedCallsWarnNowhereInScope() {
+        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(new String[]{"modifier", "Foo",
+                "--player", "say <fact:5>", "--hunter", "<def:fact,<fact:x>,x>"}, KNOWN);
+        assertTrue(result.success());
+        assertTrue(result.warnings().isEmpty(), result.warnings().toString());
+    }
+
+    @Test
+    void consoleDefsStayOutOfPlayerScope() {
+        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(new String[]{"modifier", "Foo",
+                "--player", "say <fact:5>", "--console", "<def:fact,<fact:x>,x>"}, KNOWN);
+        assertTrue(result.success());
+        assertEquals(1, result.warnings().size());
+    }
+
+    @Test
     void greedyValuesKeepSpacesUntilNextFlag() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(new String[]{"modifier", "Foo",
                 "--console", "say hello brave world", "--chance", "0.5"}, KNOWN);

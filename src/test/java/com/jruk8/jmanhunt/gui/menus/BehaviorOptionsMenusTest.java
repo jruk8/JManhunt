@@ -144,6 +144,7 @@ class BehaviorOptionsMenusTest {
                 "» ON_RESPAWN",
                 "» ON_SPEEDRUNNER_RESPAWN",
                 "» ON_HUNTER_RESPAWN",
+                "» ON_DAMAGE_TAKEN",
                 "Default: ON_START",
                 "",
                 "Click to open",

@@ -36,8 +36,8 @@ public final class CommandSyntax {
         return List.of("p", "random-mob", "random-item", "random-num",
                 "random-pick", "random-player", "all-players", "id", "min",
                 "max", "clamp", "if", "gmessage", "pmessage", "gsound", "psound",
-                "pstat", "gstat", "gflag", "pflag", "lflag", "placeholder", "rflag",
-                "rmessage", "rsound",
+                "pstat", "gstat", "gflag", "gf", "pflag", "pf", "lflag", "lf", "placeholder",
+                "rflag", "rmessage", "rsound",
                 "loseplayer", "win", "args", "list.append", "list.get", "list.set", "list.remove",
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
                 "active-players", "plocation", "prole", "distance",
@@ -89,7 +89,7 @@ public final class CommandSyntax {
      * {@code < > <= >=}. Pass cap mirrors dispatch; anything deeper
      * stays for runtime to report.
      */
-    private static List<String> tagBodies(String command) {
+    static List<String> tagBodies(String command) {
         List<String> bodies = new ArrayList<>();
         String current = command;
         for (int pass = 0; pass < 25; pass++) {
@@ -201,12 +201,17 @@ public final class CommandSyntax {
      * all-players filters (dispatch falls back to the executor).
      */
     public static List<String> warnings(String command) {
+        return warnings(command, Set.of());
+    }
+
+    /** Warnings for one line; knownFunctions holds lowercase def names. */
+    public static List<String> warnings(String command, Collection<String> knownFunctions) {
         List<String> found = new ArrayList<>();
         if (command == null || command.isBlank() || error(command).isPresent()) {
             return found;
         }
         for (String body : tagBodies(command)) {
-            collectWarnings(body, found);
+            collectWarnings(body, found, knownFunctions);
         }
         return found;
     }
@@ -228,7 +233,7 @@ public final class CommandSyntax {
             case "if" -> ifError(args);
             case "pstat" -> statError(name, args, 1, TagStats.PSTAT_KEYS);
             case "gstat" -> statError(name, args, 0, TagStats.GSTAT_KEYS);
-            case "gflag", "pflag", "lflag" -> flagError(name, args);
+            case "gflag", "gf", "pflag", "pf", "lflag", "lf" -> flagError(name, args);
             case "rflag" -> RoleTagSyntax.flagError(name, args);
             case "placeholder" -> arityError(name, args, 1, "one key");
             case "loseplayer" -> loseplayerError(name, args);
@@ -266,11 +271,12 @@ public final class CommandSyntax {
         return Optional.empty();
     }
 
-    private static void collectWarnings(String body, List<String> found) {
+    private static void collectWarnings(String body, List<String> found,
+            Collection<String> knownFunctions) {
         int separator = body.indexOf(':');
         String name = (separator < 0 ? body : body.substring(0, separator)).trim().toLowerCase(Locale.ROOT);
         String args = separator < 0 ? null : body.substring(separator + 1);
-        if (!KNOWN_TAGS.contains(name)) {
+        if (!KNOWN_TAGS.contains(name) && !knownFunctions.contains(name)) {
             found.add("Unknown tag '<" + body.trim() + ">', left untouched at runtime.");
             return;
         }
