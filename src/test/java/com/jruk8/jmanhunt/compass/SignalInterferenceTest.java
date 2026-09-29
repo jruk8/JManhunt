@@ -31,8 +31,16 @@ class SignalInterferenceTest {
     private static SignalInterference.Snapshot spot(int sky, int block, boolean normal, int above,
             int fluids, int y, SignalInterference.Weather weather, String biome,
             double moved, boolean feetInWater, boolean invisible) {
+        return spot(sky, block, normal, above, fluids, y, weather, biome, moved, feetInWater,
+                invisible, 20.0, 20, 30);
+    }
+
+    private static SignalInterference.Snapshot spot(int sky, int block, boolean normal, int above,
+            int fluids, int y, SignalInterference.Weather weather, String biome,
+            double moved, boolean feetInWater, boolean invisible, double health, int hunger,
+            int expLevel) {
         return new SignalInterference.Snapshot(sky, block, normal, above, fluids, y, weather,
-                biome, moved, feetInWater, invisible);
+                biome, moved, feetInWater, invisible, health, hunger, expLevel);
     }
 
     private static SignalInterference.Snapshot clearSpot() {
@@ -66,7 +74,8 @@ class SignalInterferenceTest {
                 Set.of(SignalInterference.Weather.STORM, SignalInterference.Weather.RAIN),
                 weatherTwo, biome, Set.of("minecraft:desert", "minecraft:the_end"), biomeTwo,
                 movement, 0.2, movementTwo, los, losWhen, 300, false,
-                SignalInterference.InvisibleMode.TARGET, false, required, bypass);
+                SignalInterference.InvisibleMode.TARGET, false, false, 8, false,
+                false, 10, false, false, 5, false, required, bypass);
     }
 
     private static SignalInterference.Config invisibleConfig(
@@ -76,7 +85,19 @@ class SignalInterferenceTest {
                 false, 3, false, false, 2, false, false, -20, 120, false, false,
                 Set.of(), false, false, Set.of(), false, false, 0.2, false,
                 false, SignalInterference.InterfereWhenVisible.VISIBLE, 300,
-                true, mode, twoWay, 1, 0.0);
+                true, mode, twoWay, false, 8, false, false, 10, false, false, 5,
+                false, 1, 0.0);
+    }
+
+    private static SignalInterference.Config statsConfig(boolean health, boolean hunger,
+            boolean experience, boolean healthTwo, boolean hungerTwo, boolean expTwo) {
+        return new SignalInterference.Config(false, 10, 5,
+                SignalInterference.InterfereWhen.ONE_UNMET, false,
+                false, 3, false, false, 2, false, false, -20, 120, false, false,
+                Set.of(), false, false, Set.of(), false, false, 0.2, false,
+                false, SignalInterference.InterfereWhenVisible.VISIBLE, 300,
+                false, SignalInterference.InvisibleMode.TARGET, false, health, 8,
+                healthTwo, hunger, 10, hungerTwo, experience, 5, expTwo, 1, 0.0);
     }
 
     private static SignalInterference.Config withCounts(
@@ -90,8 +111,10 @@ class SignalInterferenceTest {
                 base.biomeEnabled(), base.interfereIn(), base.biomeTwoWay(),
                 base.movementEnabled(), base.thresholdBlocks(), base.movementTwoWay(),
                 base.losEnabled(), base.losWhen(), base.losMaxDistance(),
-                base.invisibleEnabled(), base.invisibleMode(), base.invisibleTwoWay(), required,
-                bypass);
+                base.invisibleEnabled(), base.invisibleMode(), base.invisibleTwoWay(),
+                base.healthEnabled(), base.minHealth(), base.healthTwoWay(),
+                base.hungerEnabled(), base.minHunger(), base.hungerTwoWay(),
+                base.expEnabled(), base.minExpLevel(), base.expTwoWay(), required, bypass);
     }
 
     private static SignalInterference.Config withModes(SignalInterference.Config base,
@@ -106,8 +129,10 @@ class SignalInterferenceTest {
                 base.biomeEnabled(), base.interfereIn(), base.biomeTwoWay(),
                 base.movementEnabled(), base.thresholdBlocks(), base.movementTwoWay(),
                 base.losEnabled(), losWhen, base.losMaxDistance(), base.invisibleEnabled(),
-                base.invisibleMode(), base.invisibleTwoWay(), base.requiredToFail(),
-                base.chanceToBypass());
+                base.invisibleMode(), base.invisibleTwoWay(), base.healthEnabled(),
+                base.minHealth(), base.healthTwoWay(), base.hungerEnabled(), base.minHunger(),
+                base.hungerTwoWay(), base.expEnabled(), base.minExpLevel(), base.expTwoWay(),
+                base.requiredToFail(), base.chanceToBypass());
     }
 
     @Test
@@ -399,8 +424,8 @@ class SignalInterferenceTest {
         biomes.add(null);
         SignalInterference.Config clamped = new SignalInterference.Config(true, 99, -9, null, true,
                 true, 999, true, true, 999, true, true, 200, -100, true, true, null, true,
-                true, biomes, true, true, -5.0, true, true, null, 9999, true, null, true, -3,
-                2.5);
+                true, biomes, true, true, -5.0, true, true, null, 9999, true, null, true,
+                true, 999, true, true, -5, true, true, 500, true, -3, 2.5);
 
         assertEquals(15, clamped.minSkyLight());
         assertEquals(0, clamped.minBlockLight());
@@ -415,7 +440,68 @@ class SignalInterferenceTest {
         assertEquals(SignalInterference.InterfereWhenVisible.NOT_VISIBLE, clamped.losWhen());
         assertEquals(1000, clamped.losMaxDistance());
         assertEquals(SignalInterference.InvisibleMode.TARGET, clamped.invisibleMode());
+        assertEquals(100, clamped.minHealth());
+        assertEquals(1, clamped.minHunger());
+        assertEquals(100, clamped.minExpLevel());
         assertEquals(1.0, clamped.chanceToBypass());
+    }
+
+    @Test
+    void playerStatsPredicatesCompareAgainstMinimums() {
+        assertTrue(SignalInterference.healthInterferes(7.5, 8));
+        assertFalse(SignalInterference.healthInterferes(8.0, 8));
+        assertTrue(SignalInterference.hungerInterferes(9, 10));
+        assertFalse(SignalInterference.hungerInterferes(10, 10));
+        assertTrue(SignalInterference.expInterferes(4, 5));
+        assertFalse(SignalInterference.expInterferes(5, 5));
+    }
+
+    @Test
+    void playerStatsFailHolderSideWithReasonIds() {
+        SignalInterference.Config stats = statsConfig(true, true, true, false, false, false);
+        SignalInterference.Snapshot weak = spot(15, 15, true, 0, 0, 64,
+                SignalInterference.Weather.CLEAR, "minecraft:plains", 0.0, false, false,
+                7.0, 9, 4);
+
+        assertTrue(SignalInterference.badSignal(weak, clearSpot(), stats, 0.0));
+        assertFalse(SignalInterference.badSignal(clearSpot(), clearSpot(), stats, 0.0));
+        Optional<SignalInterference.Reason> reason =
+                SignalInterference.lastReason(weak, clearSpot(), stats, 0.0, null);
+        assertTrue(reason.isPresent());
+        assertEquals("low-exp-level", reason.get().id());
+        assertFalse(reason.get().targetSide());
+    }
+
+    @Test
+    void playerStatsTwoWayChecksTargetSide() {
+        SignalInterference.Config oneWay = statsConfig(true, false, false, false, false, false);
+        SignalInterference.Config twoWay = statsConfig(true, false, false, true, false, false);
+        SignalInterference.Snapshot weak = spot(15, 15, true, 0, 0, 64,
+                SignalInterference.Weather.CLEAR, "minecraft:plains", 0.0, false, false,
+                7.0, 20, 30);
+
+        assertFalse(SignalInterference.badSignal(clearSpot(), weak, oneWay, 0.0));
+        assertTrue(SignalInterference.badSignal(clearSpot(), weak, twoWay, 0.0));
+        Optional<SignalInterference.Reason> reason =
+                SignalInterference.lastReason(clearSpot(), weak, twoWay, 0.0, null);
+        assertTrue(reason.isPresent());
+        assertEquals("low-health", reason.get().id());
+        assertTrue(reason.get().targetSide());
+    }
+
+    @Test
+    void playerStatsCountTowardRequiredToFail() {
+        SignalInterference.Config stats =
+                withCounts(statsConfig(true, true, false, false, false, false), 2, 0.0);
+        SignalInterference.Snapshot weak = spot(15, 15, true, 0, 0, 64,
+                SignalInterference.Weather.CLEAR, "minecraft:plains", 0.0, false, false,
+                7.0, 9, 30);
+        SignalInterference.Snapshot hungry = spot(15, 15, true, 0, 0, 64,
+                SignalInterference.Weather.CLEAR, "minecraft:plains", 0.0, false, false,
+                20.0, 9, 30);
+
+        assertTrue(SignalInterference.badSignal(weak, clearSpot(), stats, 0.0));
+        assertFalse(SignalInterference.badSignal(hungry, clearSpot(), stats, 0.0));
     }
 
     @Test

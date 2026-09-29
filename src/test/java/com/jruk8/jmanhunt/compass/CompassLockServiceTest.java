@@ -154,11 +154,11 @@ class CompassLockServiceTest {
 
     @Test
     void jitteredDelaySamplesWithinDeviation() {
-        assertEquals(3.0, CompassLockService.jitteredDelay(3.0, 0.0, 0.99));
-        assertEquals(2.0, CompassLockService.jitteredDelay(3.0, 1.0, 0.0));
-        assertEquals(4.0, CompassLockService.jitteredDelay(3.0, 1.0, 1.0), 0.000001);
-        assertEquals(0.0, CompassLockService.jitteredDelay(3.0, 9.0, 0.0));
-        assertEquals(0.0, CompassLockService.jitteredDelay(-2.0, 1.0, 0.5));
+        assertEquals(3.0, AnalysisTiming.jitteredDelay(3.0, 0.0, 0.99));
+        assertEquals(2.0, AnalysisTiming.jitteredDelay(3.0, 1.0, 0.0));
+        assertEquals(4.0, AnalysisTiming.jitteredDelay(3.0, 1.0, 1.0), 0.000001);
+        assertEquals(0.0, AnalysisTiming.jitteredDelay(3.0, 9.0, 0.0));
+        assertEquals(0.0, AnalysisTiming.jitteredDelay(-2.0, 1.0, 0.5));
     }
 
     @Test
@@ -456,7 +456,8 @@ class CompassLockServiceTest {
         CompassLockService locks = new CompassLockService(mock(JManhuntPlugin.class),
                 new PlayerStateStore(), mock(SoundService.class), mock(MessageService.class),
                 targets, new HashMap<>(), mock(Consumer.class), mock(Consumer.class),
-                mock(Consumer.class), ignored -> { }, cache, new HashMap<>());
+                mock(Consumer.class), ignored -> { }, cache, new HashMap<>(),
+                mock(AnalysisHost.class));
 
         CompassLockService.CachedCycle cycle = locks.buildCycle(player, mock(GameInstance.class),
                 Role.SPEEDRUNNER, 5);
@@ -511,7 +512,7 @@ class CompassLockServiceTest {
         CompassLockService locks = new CompassLockService(plugin, playerStates,
                 sounds, messages, targets,
                 new HashMap<>(), refresher, mock(Consumer.class), renderer,
-                ignored -> { }, new CompassCache(), sharedClicks);
+                ignored -> { }, new CompassCache(), sharedClicks, mock(AnalysisHost.class));
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
                 messages, targets, sharedClicks, playerStates);
@@ -570,9 +571,24 @@ class CompassLockServiceTest {
         CompassLockService locks = new CompassLockService(plugin, playerStates,
                 sounds, messages, targets,
                 new HashMap<>(), refresher, mock(Consumer.class), renderer,
-                ignored -> { }, new CompassCache(), sharedClicks);
+                ignored -> { }, new CompassCache(), sharedClicks, mock(AnalysisHost.class));
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
                 messages, targets, sharedClicks, playerStates);
+    }
+
+    @Test
+    void shortenedTicksKeepsFractionOfRemaining() {
+        assertEquals(30L, AnalysisTiming.shortenedTicks(100L, 0.3));
+        assertEquals(0L, AnalysisTiming.shortenedTicks(100L, 0.0));
+        assertEquals(100L, AnalysisTiming.shortenedTicks(100L, 1.0));
+        assertEquals(1L, AnalysisTiming.shortenedTicks(1L, 0.3));
+    }
+
+    @Test
+    void shortenedTicksClampsMultiplierAndRemaining() {
+        assertEquals(100L, AnalysisTiming.shortenedTicks(100L, 9.9));
+        assertEquals(0L, AnalysisTiming.shortenedTicks(100L, -2.0));
+        assertEquals(0L, AnalysisTiming.shortenedTicks(-5L, 0.3));
     }
 }

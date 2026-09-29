@@ -39,6 +39,13 @@ categories:
   compass/actions/manual/analysis: AMETHYST_SHARD
   compass/actions/manual/analysis/debuffs: POTION
   compass/actions/manual/analysis/debuffs/commands: COMMAND_BLOCK
+  compass/actions/manual/analysis/cost: NETHERITE_SCRAP
+  compass/actions/manual/analysis/cost/payment: DISPENSER
+  compass/actions/manual/analysis/cost/payment/saturation: HONEY_BOTTLE
+  compass/actions/manual/analysis/cost/payment/health: BEETROOT
+  compass/actions/manual/analysis/cost/payment/exp-level: LAPIS_LAZULI
+  compass/actions/manual/analysis/cost/poverty-behavior: COBWEB
+  compass/actions/manual/analysis/cancel-immediate: SHEARS
   compass/actions/target-cycling: STONE_BUTTON
   compass/actions/teammates: SPYGLASS
   compass/distance-limits: TIPPED_ARROW
@@ -56,6 +63,10 @@ categories:
   compass/signal-interference/altitude: ELYTRA
   compass/signal-interference/biome: GRASS_BLOCK
   compass/signal-interference/invisible: GLASS_BOTTLE
+  compass/signal-interference/player-stats: GOLDEN_CARROT
+  compass/signal-interference/player-stats/health: APPLE
+  compass/signal-interference/player-stats/hunger: COOKED_BEEF
+  compass/signal-interference/player-stats/experience: EXPERIENCE_BOTTLE
   compass/signal-interference/light-level: GLOWSTONE
   compass/signal-interference/line-of-sight: ENDER_EYE
   compass/signal-interference/movement: WIND_CHARGE
@@ -147,6 +158,13 @@ descriptions:
   "settings.compass.actions.manual.analysis": "Delayed analysis with tick sounds and commands."
   "settings.compass.actions.manual.analysis.debuffs": "Commands fired while analysis runs."
   "settings.compass.actions.manual.analysis.debuffs.commands": "Command lists for holders, runners, hunters."
+  "settings.compass.actions.manual.analysis.cost": "Charge holders for analyses."
+  "settings.compass.actions.manual.analysis.cost.payment": "One container per charge."
+  "settings.compass.actions.manual.analysis.cost.payment.saturation": "Hunger pool charge."
+  "settings.compass.actions.manual.analysis.cost.payment.health": "Health charge."
+  "settings.compass.actions.manual.analysis.cost.payment.exp-level": "Experience charge."
+  "settings.compass.actions.manual.analysis.cost.poverty-behavior": "When the holder cannot pay."
+  "settings.compass.actions.manual.analysis.cancel-immediate": "Shorten doomed analyses."
   "settings.compass.actions.target-cycling": "Cycle locked targets with left-click."
   "settings.compass.distance-limits": "Per-role tracking range limits."
   "settings.compass.distance-limits.hunter": "Range limits for hunter compasses."
@@ -163,6 +181,10 @@ descriptions:
   "settings.compass.signal-interference.altitude": "Jam tracking outside a height band."
   "settings.compass.signal-interference.biome": "Biomes that jam tracking."
   "settings.compass.signal-interference.invisible": "Invisibility that jams tracking."
+  "settings.compass.signal-interference.player-stats": "Health, hunger, and level jams."
+  "settings.compass.signal-interference.player-stats.health": "Low health jams tracking."
+  "settings.compass.signal-interference.player-stats.hunger": "Low hunger jams tracking."
+  "settings.compass.signal-interference.player-stats.experience": "Low exp level jams tracking."
   "settings.compass.signal-interference.light-level": "Light levels that jam tracking."
   "settings.compass.signal-interference.line-of-sight": "Block tracking without line of sight."
   "settings.compass.signal-interference.underground": "Jam tracking under too many blocks."
@@ -270,6 +292,19 @@ descriptions:
   "settings.compass.actions.manual.analysis.debuffs.commands.player": "Commands run for every analyzing holder."
   "settings.compass.actions.manual.analysis.debuffs.commands.speedrunner": "Extra commands for speedrunner holders."
   "settings.compass.actions.manual.analysis.debuffs.commands.hunter": "Extra commands for hunter holders."
+  "settings.compass.actions.manual.analysis.cost.enabled": "Analyses charge the holder."
+  "settings.compass.actions.manual.analysis.cost.cost-on": "Charge at INITIATE, SUCCESS, or both."
+  "settings.compass.actions.manual.analysis.cost.payment.saturation.enabled": "Charge the hunger pool."
+  "settings.compass.actions.manual.analysis.cost.payment.saturation.value": "Hunger pool points charged."
+  "settings.compass.actions.manual.analysis.cost.payment.health.enabled": "Charge health."
+  "settings.compass.actions.manual.analysis.cost.payment.health.value": "Health points charged."
+  "settings.compass.actions.manual.analysis.cost.payment.health.can-kill": "The charge can kill."
+  "settings.compass.actions.manual.analysis.cost.payment.exp-level.enabled": "Charge exp levels."
+  "settings.compass.actions.manual.analysis.cost.payment.exp-level.value": "Exp levels charged."
+  "settings.compass.actions.manual.analysis.cost.poverty-behavior.cancel-when-poor": "Abort when the holder cannot pay."
+  "settings.compass.actions.manual.analysis.cost.poverty-behavior.show-reason": "Name each lacking charge."
+  "settings.compass.actions.manual.analysis.cancel-immediate.enabled": "Doomed analyses finish early."
+  "settings.compass.actions.manual.analysis.cancel-immediate.time-multiplier": "Remaining time a doomed run keeps."
   "settings.compass.feedback.actionbar": "Actionbar push rate and distance delta."
   "settings.compass.feedback.actionbar.refresh-ticks": "Ticks between actionbar pushes."
   "settings.compass.feedback.actionbar.show-distance": "Show the distance on tracking bars."
@@ -304,6 +339,15 @@ descriptions:
   "settings.compass.signal-interference.invisible.enabled": "Invisibility can interfere."
   "settings.compass.signal-interference.invisible.mode": "Side whose invisibility interferes."
   "settings.compass.signal-interference.invisible.two-way": "Both sides must pass too."
+  "settings.compass.signal-interference.player-stats.health.enabled": "Low health can interfere."
+  "settings.compass.signal-interference.player-stats.health.min-health": "Minimum health points."
+  "settings.compass.signal-interference.player-stats.health.two-way": "Target health must pass too."
+  "settings.compass.signal-interference.player-stats.hunger.enabled": "Low hunger can interfere."
+  "settings.compass.signal-interference.player-stats.hunger.min-hunger": "Minimum hunger bar level."
+  "settings.compass.signal-interference.player-stats.hunger.two-way": "Target hunger must pass too."
+  "settings.compass.signal-interference.player-stats.experience.enabled": "Low exp level can interfere."
+  "settings.compass.signal-interference.player-stats.experience.min-exp-level": "Minimum exp level."
+  "settings.compass.signal-interference.player-stats.experience.two-way": "Target level must pass too."
   "settings.compass.signal-interference.movement.enabled": "Moving can interfere with tracking."
   "settings.compass.signal-interference.movement.threshold-blocks": "Blocks moved before interference."
   "settings.compass.signal-interference.movement.two-way": "Target movement must pass too."

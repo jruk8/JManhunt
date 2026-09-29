@@ -165,6 +165,31 @@ class CompassManagerTest {
     }
 
     @Test
+    void maxSoFarKeepsLongestSquaredDisplacement() {
+        World world = mock(World.class);
+        Location press = new Location(world, 0.0, 64.0, 0.0);
+        Location out = new Location(world, 3.0, 64.0, 4.0);
+        Location back = new Location(world, 1.0, 64.0, 0.0);
+
+        double grown = CompassSignalService.maxSoFar(0.0, press, out);
+        assertEquals(25.0, grown, 1e-9);
+        assertEquals(25.0, CompassSignalService.maxSoFar(grown, press, back), 1e-9);
+        assertEquals(100.0, CompassSignalService.maxSoFar(100.0, press, back), 1e-9);
+    }
+
+    @Test
+    void maxSoFarKeepsMaxWithoutPressAndVoidsAcrossWorlds() {
+        Location spot = new Location(mock(World.class), 0.0, 64.0, 0.0);
+        Location other = new Location(mock(World.class), 0.0, 64.0, 0.0);
+        Location nowhere = new Location(null, 0.0, 64.0, 0.0);
+
+        assertEquals(9.0, CompassSignalService.maxSoFar(9.0, null, spot), 1e-9);
+        assertEquals(Double.MAX_VALUE, CompassSignalService.maxSoFar(9.0, spot, null), 0.0);
+        assertEquals(Double.MAX_VALUE, CompassSignalService.maxSoFar(9.0, spot, other), 0.0);
+        assertEquals(Double.MAX_VALUE, CompassSignalService.maxSoFar(9.0, spot, nowhere), 0.0);
+    }
+
+    @Test
     void compassKeysFollowRoleWithLegacyFallback() {
         assertEquals("compass.hunter-name", CompassItemService.compassNameKey(Role.HUNTER));
         assertEquals("compass.speedrunner-name", CompassItemService.compassNameKey(Role.SPEEDRUNNER));

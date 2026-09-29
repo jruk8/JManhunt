@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -40,10 +41,7 @@ public final class CompassManager {
     private final Map<UUID, Long> lastClick = new HashMap<>();
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
     private final CompassDeltaRenderer deltas;
-    /** Analysis press-time holder spots, consumed by one resolution. */
-    private final Map<UUID, Location> analysisSpots = new HashMap<>();
-    /** Analysis press-time target spots per holder, consumed by one resolution. */
-    private final Map<UUID, Map<UUID, Location>> analysisTargets = new HashMap<>();
+    private final CompassAnalysisSessions sessions;
     private GameManager game;
 
     public CompassManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
@@ -54,10 +52,13 @@ public final class CompassManager {
         this.playerStates = playerStates;
         this.targets = new CompassTargetService(playerStates, plugin.fakeSpectators());
         this.signal = new CompassSignalService(plugin, playerStates);
+        this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
+        this.sessions = new CompassAnalysisSessions(plugin, messages, playerStates, targets,
+                signal, items, compassActionbars);
         this.locks = new CompassLockService(plugin, playerStates, sounds, messages, targets,
                 compassActionbars, this::refreshCompass, this::resolveClickRefresh,
-                this::renderFromCache, this::beginAnalysisSpot, cache, lastClick);
-        this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
+                this::renderFromCache, sessions::beginAnalysisSpot, cache, lastClick, sessions);
+        sessions.setLockService(locks);
         this.deltas = new CompassDeltaRenderer(plugin, messages, compassActionbars);
     }
 
@@ -66,6 +67,7 @@ public final class CompassManager {
         this.game = game;
         locks.setGameManager(game);
         items.setGameManager(game);
+        sessions.setGameManager(game);
     }
 
     /** Origin lobby of the holder's match, or null outside matches. */
@@ -213,43 +215,16 @@ public final class CompassManager {
         UUID id = holder.getUniqueId();
         // Analysis resolutions consume the press-time snapshots; every
         // other path renders from live positions.
-        boolean analysis = analysisSpots.containsKey(id);
+        boolean analysis = sessions.hasAnalysisSnapshots(id);
         try {
             return refreshCompassResolved(holder);
         } finally {
             if (analysis) {
-                analysisSpots.remove(id);
-                analysisTargets.remove(id);
+                sessions.cancelAnalysisSnapshots(id);
             }
         }
     }
 
-    /**
-     * Snapshots the analysis press: the holder's spot plus every
-     * candidate's spot, so the delayed resolution compares
-     * press-time positions instead of moved ones.
-     */
-    private void beginAnalysisSpot(Player holder) {
-        UUID id = holder.getUniqueId();
-        analysisSpots.put(id, holder.getLocation().clone());
-        if (game == null) {
-            return;
-        }
-        Optional<GameInstance> match = game.instanceOf(id);
-        if (match.isEmpty()) {
-            return;
-        }
-        int cap = CompassCache.clampMaxTargets(plugin.overrides()
-                .getInt(lobbyOf(holder), "settings.compass.actions.target-cycling.max-targets", 5));
-        Map<UUID, Location> spots = new HashMap<>();
-        for (CompassSnapshot snap : targets.collectSnapshots(holder, Role.HUNTER, match.get(), cap)) {
-            spots.put(snap.id(), snap.location());
-        }
-        for (CompassSnapshot snap : targets.collectSnapshots(holder, Role.SPEEDRUNNER, match.get(), cap)) {
-            spots.put(snap.id(), snap.location());
-        }
-        analysisTargets.put(id, spots);
-    }
 
     /**
      * Cached holder spot when one is pending for this resolution and
@@ -263,10 +238,6 @@ public final class CompassManager {
         return live;
     }
 
-    /** Resolution spot for one holder: press-time when analyzing, live otherwise. */
-    private Location resolutionSpot(Player holder) {
-        return effectiveSpot(analysisSpots.get(holder.getUniqueId()), holder.getLocation());
-    }
 
     private boolean refreshCompassResolved(Player holder) {
         Optional<RefreshSlot> slot = refreshSlot(holder);
@@ -285,7 +256,7 @@ public final class CompassManager {
                 target.instance(), holder.getLocation());
         CompassLockService.LockedTargets narrowed = locks.narrowToLock(holder.getUniqueId(),
                 opponents, sightings);
-        CompassPick pick = resolveCompassPick(target.instance().originLobbyId(),
+        CompassPick pick = resolveCompassPick(plugin.overrides(), target.instance().originLobbyId(),
                 target.holderRole(), narrowed.opponents(), narrowed.sightings());
         return renderCompassPick(holder, slot.get().item(), slot.get().slot(), pick,
                 target.targetRoleString(), narrowed.locked());
@@ -355,11 +326,10 @@ public final class CompassManager {
     }
 
     /** Resolves the compass pick for the narrowed targets. */
-    private CompassPick resolveCompassPick(Integer lobby, Role holderRole,
+    static CompassPick resolveCompassPick(OverrideService overrides, Integer lobby, Role holderRole,
             List<CompassCandidate> opponents, List<CompassSighting> sightings) {
         String roleBase = "settings.compass.distance-limits."
                 + holderRole.name().toLowerCase(Locale.ROOT) + ".";
-        var overrides = plugin.overrides();
         boolean nearbyEnabled = overrides.getBoolean(lobby, roleBase + "min-distance.enabled", true);
         double nearbyThreshold = overrides.getDouble(lobby, roleBase + "min-distance.distance", 25.0);
         double trackingDistance = overrides.getBoolean(lobby, roleBase + "max-distance.enabled", true)
@@ -375,13 +345,12 @@ public final class CompassManager {
      */
     private boolean renderCompassPick(Player holder, ItemStack item, int slot, CompassPick pick,
             String targetRoleString, boolean locked) {
-        Location spot = resolutionSpot(holder);
-        // Targetless picks (none, nearby, too far) carry a null id, and
-        // immutable maps reject null keys, so skip the lookup for them.
-        Location targetPress = pick.id() == null ? null
-                : analysisTargets.getOrDefault(holder.getUniqueId(), Map.of()).get(pick.id());
+        Location spot = sessions.resolutionSpot(holder);
+        Location targetPress = sessions.targetPressSpot(holder.getUniqueId(), pick.id());
+        double holderMoved = sessions.analysisMaxMoved(holder);
         Optional<SignalInterference.Reason> reason = pick.kind() == CompassPick.Kind.NONE
-                ? Optional.empty() : signal.reasonForPick(holder, spot, targetPress, pick);
+                ? Optional.empty()
+                : signal.reasonForPick(holder, spot, targetPress, pick, holderMoved);
         if (reason.isPresent()) {
             showBadSignal(holder, item, slot, reason.get());
             return false;
@@ -389,7 +358,7 @@ public final class CompassManager {
         return switch (pick.kind()) {
             case TRACK_PLAYER -> trackPlayer(holder, item, slot, pick, targetRoleString, locked);
             case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked,
-                    resolutionSpot(holder));
+                    sessions.resolutionSpot(holder));
             case NEARBY -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
@@ -433,7 +402,7 @@ public final class CompassManager {
                 locks.buildCycle(holder, target.instance(), target.targetRole(), maxTargets);
         CompassLockService.LockedTargets narrowed = locks.narrowToLockCached(holder.getUniqueId(),
                 cycle.cached(), cycle.sightings(), cycle.trackableIds());
-        CompassPick pick = resolveCompassPick(target.instance().originLobbyId(),
+        CompassPick pick = resolveCompassPick(plugin.overrides(), target.instance().originLobbyId(),
                 target.holderRole(), narrowed.opponents(), narrowed.sightings());
         renderCachedPick(holder, slot.get().item(), slot.get().slot(), pick,
                 target.targetRoleString(), narrowed.locked());
@@ -450,7 +419,7 @@ public final class CompassManager {
             case TRACK_PLAYER -> trackCachedPlayer(holder, item, slot, pick, locked);
             case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked,
                     effectiveSpot(cache.holderSpotFor(holder.getUniqueId()),
-                            resolutionSpot(holder)));
+                            sessions.resolutionSpot(holder)));
             case NEARBY -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
@@ -480,7 +449,7 @@ public final class CompassManager {
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
         Location origin = effectiveSpot(cache.holderSpotFor(holder.getUniqueId()),
-                resolutionSpot(holder));
+                sessions.resolutionSpot(holder));
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
                 origin.distance(spot), Map.of());
     }
@@ -520,7 +489,7 @@ public final class CompassManager {
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, target.getName(), pick.id(),
-                resolutionSpot(holder).distance(target.getLocation()), Map.of());
+                sessions.resolutionSpot(holder).distance(target.getLocation()), Map.of());
         return true;
     }
 
@@ -631,8 +600,7 @@ public final class CompassManager {
     public void removeCompasses(Player player) {
         items.removeCompasses(player);
         deltas.forget(player.getUniqueId());
-        analysisSpots.remove(player.getUniqueId());
-        analysisTargets.remove(player.getUniqueId());
+        sessions.cancelAnalysisSnapshots(player.getUniqueId());
     }
 
     public boolean isCompass(ItemStack item) {
@@ -678,11 +646,16 @@ public final class CompassManager {
         // With analysis, the stamp lands at resolution instead, so the full
         // cooldown runs after the refresh. Left and shift-left clicks use
         // their own throttles and never touch this cooldown.
-        lastAutoRefresh.put(player.getUniqueId(), now);
         if (locks.analyzeEnabled(lobby)) {
+            // Poor holders never start: no snapshot, no debuffs, no stamps.
+            if (!sessions.tryInitiateCost(player)) {
+                return;
+            }
+            lastAutoRefresh.put(player.getUniqueId(), now);
             locks.startAnalysis(player);
             return;
         }
+        lastAutoRefresh.put(player.getUniqueId(), now);
         lastClick.put(player.getUniqueId(), now);
         resolveClickRefresh(player);
     }

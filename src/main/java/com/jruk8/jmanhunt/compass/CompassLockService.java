@@ -25,6 +25,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,6 +58,8 @@ final class CompassLockService {
     private final Consumer<Player> cacheRenderer;
     /** Press-time snapshot hook, run once when an analysis starts. */
     private final Consumer<Player> analysisStarter;
+    /** Sampling hooks hosted by the facade: movement, doom, costs. */
+    private final AnalysisHost analysisHost;
     /** Location snapshots written by refresh events, read by clicks. */
     private final CompassCache cache;
     /** Manual left-click target locks: holder id -> locked target id. */
@@ -79,7 +82,7 @@ final class CompassLockService {
             Map<UUID, Component> actionbars, Consumer<Player> refresher,
             Consumer<Player> clickResolver, Consumer<Player> cacheRenderer,
             Consumer<Player> analysisStarter, CompassCache cache,
-            Map<UUID, Long> sharedClicks) {
+            Map<UUID, Long> sharedClicks, AnalysisHost analysisHost) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.sounds = sounds;
@@ -92,6 +95,7 @@ final class CompassLockService {
         this.analysisStarter = analysisStarter;
         this.cache = cache;
         this.sharedClicks = sharedClicks;
+        this.analysisHost = analysisHost;
     }
 
     /** Wires the game after construction; scroll and analysis need matches. */
@@ -437,10 +441,12 @@ final class CompassLockService {
     /**
      * Purposeful analysis lag before a right-click refresh resolves:
      * shows "Analyzing...", ticks the analysis sound on the configured
-     * interval, waits out the jittered delay, then refreshes. No second
-     * analysis starts while one runs. Runs stamp the shared click
-     * cooldown at resolution, so the full cooldown runs after the
-     * refresh, and close with the outcome click sound.
+     * interval, counts one repeating timer down, then refreshes. Each
+     * tick samples movement and requires the compass in the main hand;
+     * every tenth tick re-checks doom. No second analysis starts while
+     * one runs. Runs stamp the shared click cooldown at resolution, so
+     * the full cooldown runs after the refresh, and close with the
+     * outcome click sound.
      */
     void startAnalysis(Player holder) {
         UUID id = holder.getUniqueId();
@@ -450,51 +456,114 @@ final class CompassLockService {
         analysisStarter.accept(holder);
         long generation = generations.merge(id, 1L, Long::sum);
         Integer lobby = lobbyOf(holder);
-        double effectiveDelay = jitteredDelay(
-                plugin.overrides().getDouble(lobby, "settings.compass.actions.manual.analysis.delay-seconds", 1.0),
-                plugin.overrides()
-                        .getDouble(lobby, "settings.compass.actions.manual.analysis.delay-deviation-seconds", 0.0),
+        var overrides = plugin.overrides();
+        double effectiveDelay = AnalysisTiming.jitteredDelay(
+                overrides.getDouble(lobby,
+                        "settings.compass.actions.manual.analysis.delay-seconds", 6.0),
+                overrides.getDouble(lobby,
+                        "settings.compass.actions.manual.analysis.delay-deviation-seconds", 4.0),
                 ThreadLocalRandom.current().nextDouble());
+        double multiplier = cancelMultiplier(lobby);
+        if (analysisHost.analysisDoomed(holder)) {
+            effectiveDelay = effectiveDelay * multiplier;
+        }
         runAnalysisDebuffs(holder, effectiveDelay);
         actionbars.put(id, messages.component("compass.analyzing-actionbar"));
         sounds.playSound(holder, "compass.analysis");
-        long intervalTicks = analysisTickInterval(clampedSoundInterval(plugin.overrides()
-                .getDouble(lobby, "settings.compass.actions.manual.analysis.sound-interval-seconds", 0.5)));
+        long intervalTicks = AnalysisTiming.analysisTickInterval(clampedSoundInterval(overrides
+                .getDouble(lobby, "settings.compass.actions.manual.analysis.sound-interval-seconds",
+                        0.5)));
+        long[] remaining = {AnalysisTiming.analyzeDelayTicks(effectiveDelay)};
+        long[] elapsed = {0L};
+        boolean[] doomed = {false};
         Bukkit.getScheduler().runTaskTimer(plugin, task -> {
             if (!analyzing.contains(id) || generations.getOrDefault(id, 0L) != generation) {
                 task.cancel();
                 return;
             }
-            if (holder.isOnline()) {
-                sounds.playSound(holder, "compass.analysis");
+            if (tickAnalysisOnline(task, id, holder, remaining, elapsed, doomed, multiplier,
+                    intervalTicks)) {
+                return;
             }
-        }, intervalTicks, intervalTicks);
-        long delayTicks = analyzeDelayTicks(effectiveDelay);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            analyzing.remove(id);
-            sharedClicks.put(id, System.currentTimeMillis());
-            if (holder.isOnline()) {
-                clickResolver.accept(holder);
-            } else {
-                refresher.accept(holder);
+            remaining[0]--;
+            if (remaining[0] <= 0L) {
+                task.cancel();
+                resolveAnalysis(holder, id);
             }
-            boolean live = game != null && game.instanceOf(holder.getUniqueId()).isPresent();
-            if (!live || !playerStates.role(holder).isParticipant()) {
-                actionbars.remove(id);
-            }
-        }, delayTicks);
+        }, 1L, 1L);
     }
 
-    /**
-     * Jittered analysis delay: the deviation is clamped to the delay,
-     * then a uniform sample in delay +- deviation, never negative.
-     * Pure for tests; roll is a [0, 1) sample.
-     */
-    static double jitteredDelay(double delaySeconds, double deviationSeconds, double roll) {
-        double delay = Math.max(0.0, delaySeconds);
-        double deviation = Math.min(Math.max(0.0, deviationSeconds), delay);
-        return Math.max(0.0, delay + (roll * 2.0 - 1.0) * deviation);
+    /** One online analysis tick; true when the run ended inside it. */
+    private boolean tickAnalysisOnline(BukkitTask task, UUID id, Player holder, long[] remaining,
+            long[] elapsed, boolean[] doomed, double multiplier, long intervalTicks) {
+        if (!holder.isOnline()) {
+            return false;
+        }
+        analysisHost.sampleAnalysisMovement(holder);
+        if (!analysisHost.isMainhandCompass(holder)) {
+            cancelAnalysis(task, id, holder);
+            return true;
+        }
+        elapsed[0]++;
+        if (elapsed[0] % 10L == 0L) {
+            boolean nowDoomed = analysisHost.analysisDoomed(holder);
+            if (nowDoomed && !doomed[0]) {
+                remaining[0] = AnalysisTiming.shortenedTicks(remaining[0], multiplier);
+            }
+            doomed[0] = nowDoomed;
+        }
+        if (elapsed[0] % intervalTicks == 0L) {
+            sounds.playSound(holder, "compass.analysis");
+        }
+        return false;
     }
+
+    /** Cancels an in-flight analysis with a cancelled bad signal. Always on. */
+    private void cancelAnalysis(BukkitTask task, UUID id, Player holder) {
+        task.cancel();
+        analyzing.remove(id);
+        generations.merge(id, 1L, Long::sum);
+        sharedClicks.put(id, System.currentTimeMillis());
+        analysisHost.cancelAnalysisSnapshots(id);
+        actionbars.put(id, messages.component("compass.bad-signal-reason-actionbar",
+                Map.of("reason",
+                        messages.string("compass.signal-reason.cancelled", "cancelled"))));
+        if (holder.isOnline()) {
+            sounds.playSound(holder, "compass.failure");
+        }
+    }
+
+    /** Completes an in-flight analysis, charging SUCCESS costs first. */
+    private void resolveAnalysis(Player holder, UUID id) {
+        analyzing.remove(id);
+        sharedClicks.put(id, System.currentTimeMillis());
+        if (!analysisHost.trySuccessCost(holder)) {
+            analysisHost.cancelAnalysisSnapshots(id);
+            return;
+        }
+        if (holder.isOnline()) {
+            clickResolver.accept(holder);
+        } else {
+            refresher.accept(holder);
+        }
+        boolean live = game != null && game.instanceOf(holder.getUniqueId()).isPresent();
+        if (!live || !playerStates.role(holder).isParticipant()) {
+            actionbars.remove(id);
+        }
+    }
+
+
+    /** Cancel-immediate multiplier: 1.0 when the option is disabled. */
+    private double cancelMultiplier(Integer lobby) {
+        if (!plugin.overrides().getBoolean(lobby,
+                "settings.compass.actions.manual.analysis.cancel-immediate.enabled", true)) {
+            return 1.0;
+        }
+        double multiplier = plugin.overrides().getDouble(lobby,
+                "settings.compass.actions.manual.analysis.cancel-immediate.time-multiplier", 0.3);
+        return Math.min(1.0, Math.max(0.0, multiplier));
+    }
+
 
     /** Sound interval clamped to its registry bounds, for stale files. */
     static double clampedSoundInterval(double value) {
@@ -512,18 +581,7 @@ final class CompassLockService {
         return value;
     }
 
-    /** Analysis delay in ticks, at least one. Pure for tests. */
-    static long analyzeDelayTicks(double delaySeconds) {
-        return Math.max(1L, Math.round(delaySeconds * 20.0));
-    }
 
-    /**
-     * Analysis tick interval in ticks: seconds rounded to whole ticks
-     * (the game runs 20 ticks per second), at least one. Pure for tests.
-     */
-    static long analysisTickInterval(double intervalSeconds) {
-        return Math.max(1L, Math.round(intervalSeconds * 20.0));
-    }
 
     /**
      * Runs the configured analysis debuff commands for a participant
@@ -683,6 +741,6 @@ final class CompassLockService {
     }
 
     boolean analyzeEnabled(Integer lobby) {
-        return plugin.overrides().getBoolean(lobby, "settings.compass.actions.manual.analysis.enabled", false);
+        return plugin.overrides().getBoolean(lobby, "settings.compass.actions.manual.analysis.enabled", true);
     }
 }

@@ -100,6 +100,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
     })
     private Invisible invisible = new Invisible();
 
+    @CustomKey("player-stats")
+    @Comment({
+            "Health, hunger, and experience of the watched side.",
+            "Default: false"
+    })
+    private PlayerStatsSettings playerStats = new PlayerStatsSettings();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -202,6 +209,14 @@ public class SignalInterferenceSettings extends OkaeriConfig {
 
     public void setInvisible(Invisible invisible) {
         this.invisible = invisible;
+    }
+
+    public PlayerStatsSettings getPlayerStats() {
+        return playerStats;
+    }
+
+    public void setPlayerStats(PlayerStatsSettings playerStats) {
+        this.playerStats = playerStats;
     }
 
     /** Light-level interference. */
@@ -673,4 +688,5 @@ public class SignalInterferenceSettings extends OkaeriConfig {
             this.twoWay = twoWay;
         }
     }
+
 }

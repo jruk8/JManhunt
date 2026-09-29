@@ -298,9 +298,9 @@ where you moved to during the delay:
 actions:
   manual:
     analysis:
-      enabled: false
-      delay-seconds: 1.0
-      delay-deviation-seconds: 0.0
+      enabled: true
+      delay-seconds: 6.0
+      delay-deviation-seconds: 4.0
 ```
 
 `delay-seconds` is how long each analysis takes, and
@@ -310,6 +310,12 @@ analysis (capped at the delay, `0` for none).
 to whole ticks, at least one, at most 3 seconds). An analysis ends
 with the refresh click sound on success, or the failure sound when
 the needle lands on nothing trackable.
+
+The compass must stay in the main hand for the whole run: switching
+away cancels the analysis at once with a `Bad signal (cancelled)`
+readout and the failure sound. Movement interference measures the
+longest displacement reached at any point during the run, so moving
+out and back cannot hide.
 
 ### Analysis Debuffs
 
@@ -329,6 +335,60 @@ debuffs:
     speedrunner: []
     hunter:
       - "summon lightning_bolt ~ ~ ~"
+```
+
+### Analysis Cost
+
+Under `settings.compass.actions.manual.analysis.cost`, each analysis
+can charge the holder in hunger, health, and experience. `cost-on`
+lists when to charge: `INITIATE` at the press, `SUCCESS` at the
+resolution, or both. Each `payment` container toggles separately:
+
+```yaml
+cost:
+  enabled: false
+  cost-on:
+    - INITIATE
+  payment:
+    saturation:
+      enabled: true
+      value: 3
+    health:
+      enabled: true
+      value: 4
+      can-kill: true
+    exp-level:
+      enabled: true
+      value: 1
+  poverty-behavior:
+    cancel-when-poor: true
+    show-reason: true
+```
+
+Saturation drains from a 0-40 hunger pool: hidden saturation first,
+then the visible hunger bar. Health drains in health points (20 is
+full vanilla health); `can-kill` lets the charge kill, otherwise
+health never drops below half a heart. Experience drains whole
+levels. A holder who cannot pay aborts with a `Cost too high!`
+actionbar message when `cancel-when-poor` is on (never a chat
+message); `show-reason` names each lacking charge with the
+player-stat words (`low health`, `hungry`, `low exp level`). With
+cancelling off, the holder pays whatever they have. At `SUCCESS`,
+a poor holder's result is thrown away and the compass never updates.
+
+### Cancel Immediate
+
+Under `settings.compass.actions.manual.analysis.cancel-immediate`,
+an analysis that is already doomed finishes early instead of
+running the full delay. `time-multiplier` (0 to 1) keeps that
+fraction of the remaining time: `0` resolves at once, `1` leaves
+the duration untouched. Doom is checked at the press and every
+half second during the run.
+
+```yaml
+cancel-immediate:
+  enabled: true
+  time-multiplier: 0.3
 ```
 
 ## Tracking Distance
@@ -393,9 +453,10 @@ Each sub-option watches one thing (all default to off except
   `CLEAR`). Pick the values from the in-game checklist.
 - `biome`: fails in the listed biomes, written as full keys like
   `minecraft:desert`.
-- `movement`: fails when the refresher moved past `threshold-blocks`
-  (default 0.2) from their press spot. Only fires on the analysis
-  path, since instant refreshes have no gap to move in.
+- `movement`: fails when the refresher's longest displacement during
+  the run passes `threshold-blocks` (default 0.2) from their press
+  spot. Only fires on the analysis path, since instant refreshes
+  have no gap to move in.
 - `line-of-sight`: fails based on whether the holder can see the
   target. One eye-to-eye ray is checked; glass and leaves never block
   it. `interfere-when` picks the failing side (`NOT_VISIBLE` by
@@ -405,6 +466,12 @@ Each sub-option watches one thing (all default to off except
 - `invisible`: fails when the watched side is under the invisibility
   effect (on by default). `mode` picks the side: `TARGET` watches
   the tracked target, `SELF` watches the holder.
+- `player-stats`: fails when the watched side's stats run low.
+  `health` fails below `min-health` health points (default 8, where
+  20 is full vanilla health), `hunger` below `min-hunger` hunger
+  bar levels (default 10), and `experience` below `min-exp-level`
+  levels (default 5). Each has its own `two-way` flag like the
+  other options.
 
 Every option except `line-of-sight` has its own `two-way` flag
 (default off). With two-way on, the target's press-time spot must
@@ -421,6 +488,12 @@ once, the most recently found one shows; the holder side wins ties.
 Target-side failures are prefixed: `:( Bad signal (target weather)`.
 The names come from the `compass.signal-reason` messages and can be
 reworded there.
+
+Interference works best with automatic refreshes off
+(`actions.auto.enabled: false`), analysis on
+(`actions.manual.analysis.enabled: true`), and right-click refreshes
+on (`actions.manual.enabled: true`): instant refreshes leave no gap
+for movement, doom, or stat changes to matter.
 
 ## WorldEdit Navwand
 

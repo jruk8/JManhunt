@@ -83,20 +83,20 @@ class CompassItemTest {
 
     @Test
     void analyzeDelayTicksConvertsSeconds() {
-        assertEquals(20L, CompassLockService.analyzeDelayTicks(1.0));
-        assertEquals(10L, CompassLockService.analyzeDelayTicks(0.5));
-        assertEquals(1L, CompassLockService.analyzeDelayTicks(0.0));
-        assertEquals(1L, CompassLockService.analyzeDelayTicks(-2.0));
+        assertEquals(20L, AnalysisTiming.analyzeDelayTicks(1.0));
+        assertEquals(10L, AnalysisTiming.analyzeDelayTicks(0.5));
+        assertEquals(1L, AnalysisTiming.analyzeDelayTicks(0.0));
+        assertEquals(1L, AnalysisTiming.analyzeDelayTicks(-2.0));
     }
 
     @Test
     void analysisTickIntervalRoundsToWholeTicks() {
-        assertEquals(10L, CompassLockService.analysisTickInterval(0.5));
-        assertEquals(20L, CompassLockService.analysisTickInterval(1.0));
-        assertEquals(1L, CompassLockService.analysisTickInterval(0.07));
-        assertEquals(2L, CompassLockService.analysisTickInterval(0.08));
-        assertEquals(1L, CompassLockService.analysisTickInterval(0.0));
-        assertEquals(1L, CompassLockService.analysisTickInterval(-1.0));
+        assertEquals(10L, AnalysisTiming.analysisTickInterval(0.5));
+        assertEquals(20L, AnalysisTiming.analysisTickInterval(1.0));
+        assertEquals(1L, AnalysisTiming.analysisTickInterval(0.07));
+        assertEquals(2L, AnalysisTiming.analysisTickInterval(0.08));
+        assertEquals(1L, AnalysisTiming.analysisTickInterval(0.0));
+        assertEquals(1L, AnalysisTiming.analysisTickInterval(-1.0));
     }
 
     @Test

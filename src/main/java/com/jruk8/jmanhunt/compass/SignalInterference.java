@@ -43,12 +43,26 @@ public final class SignalInterference {
         SELF
     }
 
+    /** Resolved player-stats thresholds, spread into the config. */
+    public record StatThresholds(
+            boolean healthEnabled,
+            int minHealth,
+            boolean healthTwoWay,
+            boolean hungerEnabled,
+            int minHunger,
+            boolean hungerTwoWay,
+            boolean expEnabled,
+            int minExpLevel,
+            boolean expTwoWay) {
+    }
+
     /**
      * One evaluated spot: light levels, whether the world is an overworld,
      * solid and fluid blocks strictly above the feet, feet Y, weather, the
      * block biome key such as "minecraft:desert" (lowercased), blocks moved
-     * since the refresh started, whether the feet block is water, and
-     * whether the side's player is invisible.
+     * since the refresh started, whether the feet block is water, whether
+     * the side's player is invisible, and the side's health points,
+     * hunger bar level, and experience level.
      */
     public record Snapshot(
             int skyLight,
@@ -61,7 +75,10 @@ public final class SignalInterference {
             String biomeKey,
             double movedBlocks,
             boolean feetInWater,
-            boolean invisible) {
+            boolean invisible,
+            double health,
+            int hunger,
+            int expLevel) {
         public Snapshot {
             biomeKey = biomeKey == null ? "" : biomeKey.toLowerCase(Locale.ROOT);
         }
@@ -77,12 +94,13 @@ public final class SignalInterference {
     /**
      * Resolved interference config values. The compact constructor clamps
      * every range (light 0-15, cover and fluid 1-380, Y -64-319, ray
-     * 1-1000, bypass 0-1, movement threshold at 0), normalizes the
-     * altitude endpoints so min <= max, defaults a missing interfere-when
-     * to BOTH_UNMET and a missing line-of-sight mode to NOT_VISIBLE, and
-     * lowercases the biome list, and defaults a missing invisible mode
-     * to TARGET. Required-to-fail is clamped against the enabled count
-     * at verdict time instead, since this record does not count enablers.
+     * 1-1000, bypass 0-1, movement threshold at 0, health 1-100, hunger
+     * 1-20, exp level 1-100), normalizes the altitude endpoints so min
+     * <= max, defaults a missing interfere-when to BOTH_UNMET and a
+     * missing line-of-sight mode to NOT_VISIBLE, and lowercases the
+     * biome list, and defaults a missing invisible mode to TARGET.
+     * Required-to-fail is clamped against the enabled count at verdict
+     * time instead, since this record does not count enablers.
      */
     public record Config(
             boolean lightEnabled,
@@ -115,6 +133,15 @@ public final class SignalInterference {
             boolean invisibleEnabled,
             InvisibleMode invisibleMode,
             boolean invisibleTwoWay,
+            boolean healthEnabled,
+            int minHealth,
+            boolean healthTwoWay,
+            boolean hungerEnabled,
+            int minHunger,
+            boolean hungerTwoWay,
+            boolean expEnabled,
+            int minExpLevel,
+            boolean expTwoWay,
             int requiredToFail,
             double chanceToBypass) {
         public Config {
@@ -126,6 +153,9 @@ public final class SignalInterference {
             losWhen = losWhen == null ? InterfereWhenVisible.NOT_VISIBLE : losWhen;
             losMaxDistance = clamp(losMaxDistance, 1, 1000);
             invisibleMode = invisibleMode == null ? InvisibleMode.TARGET : invisibleMode;
+            minHealth = clamp(minHealth, 1, 100);
+            minHunger = clamp(minHunger, 1, 20);
+            minExpLevel = clamp(minExpLevel, 1, 100);
             minY = clamp(minY, -64, 319);
             maxY = clamp(maxY, -64, 319);
             if (minY > maxY) {
@@ -261,6 +291,28 @@ public final class SignalInterference {
                 && snapshot.invisible()) {
             reasons.add("invisible");
         }
+        reasons.addAll(statReasons(snapshot, config, targetSide));
+        return reasons;
+    }
+
+    /**
+     * Ids of the enabled player-stats sub-options interfering for one
+     * side, in health, hunger, experience order. Pure.
+     */
+    static List<String> statReasons(Snapshot snapshot, Config config, boolean targetSide) {
+        List<String> reasons = new ArrayList<>();
+        if (config.healthEnabled() && (!targetSide || config.healthTwoWay())
+                && healthInterferes(snapshot.health(), config.minHealth())) {
+            reasons.add("low-health");
+        }
+        if (config.hungerEnabled() && (!targetSide || config.hungerTwoWay())
+                && hungerInterferes(snapshot.hunger(), config.minHunger())) {
+            reasons.add("hungry");
+        }
+        if (config.expEnabled() && (!targetSide || config.expTwoWay())
+                && expInterferes(snapshot.expLevel(), config.minExpLevel())) {
+            reasons.add("low-exp-level");
+        }
         return reasons;
     }
 
@@ -302,6 +354,15 @@ public final class SignalInterference {
             count++;
         }
         if (config.invisibleEnabled()) {
+            count++;
+        }
+        if (config.healthEnabled()) {
+            count++;
+        }
+        if (config.hungerEnabled()) {
+            count++;
+        }
+        if (config.expEnabled()) {
             count++;
         }
         return count;
@@ -361,5 +422,20 @@ public final class SignalInterference {
     /** Biome interferes when the spot's key is listed. Pure. */
     public static boolean biomeInterferes(String biomeKey, Set<String> interfereIn) {
         return biomeKey != null && interfereIn.contains(biomeKey.toLowerCase(Locale.ROOT));
+    }
+
+    /** Health interferes below the minimum health points. Pure. */
+    public static boolean healthInterferes(double health, int minHealth) {
+        return health < minHealth;
+    }
+
+    /** Hunger interferes below the minimum hunger bar level. Pure. */
+    public static boolean hungerInterferes(int hunger, int minHunger) {
+        return hunger < minHunger;
+    }
+
+    /** Experience interferes below the minimum exp level. Pure. */
+    public static boolean expInterferes(int expLevel, int minExpLevel) {
+        return expLevel < minExpLevel;
     }
 }

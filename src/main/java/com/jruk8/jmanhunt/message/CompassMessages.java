@@ -77,6 +77,9 @@ public class CompassMessages extends OkaeriConfig {
     @CustomKey("bad-signal-reason-actionbar")
     private String badSignalReasonActionbar = "<gray>☹ Bad signal ({reason})";
 
+    @CustomKey("analysis-cost-too-high")
+    private String analysisCostTooHigh = "<gray>Cost too high!";
+
     @CustomKey("no-teammates")
     private String noTeammates = "{prefix}<yellow>You have no teammates to track.";
 
@@ -93,15 +96,19 @@ public class CompassMessages extends OkaeriConfig {
     private String lockedTargetDiedChat = "{prefix}<yellow>Locked-on target died.";
 
     @CustomKey("signal-reason")
-    private Map<String, String> signalReason = new LinkedHashMap<>(Map.of(
-            "light-level", "low light",
-            "underground", "underground",
-            "underwater", "underwater",
-            "altitude", "altitude",
-            "weather", "weather",
-            "biome", "wrong biome",
-            "moved", "moved",
-            "line-of-sight", "line of sight",
-            "line-of-sight-hidden", "no line of sight",
-            "invisible", "invisible"));
+    private Map<String, String> signalReason = new LinkedHashMap<>(Map.ofEntries(
+            Map.entry("light-level", "low light"),
+            Map.entry("underground", "underground"),
+            Map.entry("underwater", "underwater"),
+            Map.entry("altitude", "altitude"),
+            Map.entry("weather", "weather"),
+            Map.entry("biome", "wrong biome"),
+            Map.entry("moved", "moved"),
+            Map.entry("line-of-sight", "line of sight"),
+            Map.entry("line-of-sight-hidden", "no line of sight"),
+            Map.entry("invisible", "invisible"),
+            Map.entry("low-health", "low health"),
+            Map.entry("hungry", "hungry"),
+            Map.entry("low-exp-level", "low exp level"),
+            Map.entry("cancelled", "cancelled")));
 }
