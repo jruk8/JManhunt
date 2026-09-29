@@ -269,7 +269,7 @@ class ModifierMenusTest {
         GuiService gui = mock(GuiService.class);
         SoundService sounds = mock(SoundService.class);
         ConfigService service = new ConfigService(null, store);
-        ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds);
+        ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds, null);
         ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles,
                 null, null, null, null, null);
         Player player = mock(Player.class);
@@ -296,7 +296,7 @@ class ModifierMenusTest {
         GuiService gui = mock(GuiService.class);
         SoundService sounds = mock(SoundService.class);
         ConfigService service = new ConfigService(null, store);
-        ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds);
+        ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds, null);
         ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles,
                 null, null, null, null, null);
         Player player = mock(Player.class);
@@ -318,7 +318,7 @@ class ModifierMenusTest {
         GuiService gui = mock(GuiService.class);
         SoundService sounds = mock(SoundService.class);
         ConfigService service = new ConfigService(null, store);
-        ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds);
+        ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds, null);
         ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles,
                 null, null, null, null, null);
         Player player = mock(Player.class);

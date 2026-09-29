@@ -61,7 +61,7 @@ public final class TagMath {
     }
 
     /** Strips one balanced outer quote layer, else returns the text. */
-    static String unquote(String text) {
+    public static String unquote(String text) {
         if (text.length() >= 2) {
             char first = text.charAt(0);
             if ((first == '"' || first == '\'') && text.charAt(text.length() - 1) == first

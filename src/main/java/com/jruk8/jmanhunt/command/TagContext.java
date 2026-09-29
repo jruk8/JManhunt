@@ -285,6 +285,11 @@ public final class TagContext {
         return backends.roster();
     }
 
+    /** Named-player delivery behind {@code <pmessage>} and {@code <psound>}. */
+    public PlayerSinks playerSinks() {
+        return backends.players();
+    }
+
     /** This trigger's event args behind {@code <args:index>}. */
     public List<String> eventArgs() {
         return eventArgs;

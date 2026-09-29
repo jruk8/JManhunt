@@ -138,6 +138,42 @@ public final class TagLists {
         return apply(tag, op, splitTopLevel(args), context).text();
     }
 
+    /**
+     * Edit-time arity for the list ops: top-level split, quote
+     * hygiene, plus the per-op shape. Mirrors the runtime warns.
+     */
+    static Optional<String> opError(String name, String args) {
+        int arity = name.equals("list.set") ? 3 : name.equals("list.append")
+                || name.equals("list.get") || name.equals("list.remove")
+                || name.equals("list.contains") ? 2 : 1;
+        String example = switch (name) {
+            case "list.append" -> "<list.append:list,x>";
+            case "list.get" -> "<list.get:list,index>";
+            case "list.set" -> "<list.set:list,index,x>";
+            case "list.remove" -> "<list.remove:list,x>";
+            case "list.contains" -> "<list.contains:list,x>";
+            case "list.clear" -> "<list.clear:list>";
+            case "list.pop" -> "<list.pop:list>";
+            case "list.shuffle" -> "<list.shuffle:list>";
+            default -> "<len:list>";
+        };
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs " + arity + " args like " + example
+                    + ".");
+        }
+        List<String> parts = splitTopLevel(args);
+        if (parts.size() != arity) {
+            return Optional.of("Tag <" + name + "> needs " + arity + " args like " + example
+                    + ".");
+        }
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty() && !part.isBlank()) {
+                return Optional.of("Tag <" + name + "> mixes quotes.");
+            }
+        }
+        return Optional.empty();
+    }
+
     /** Largest list {@code <range>} builds before warning and capping. */
     static final int RANGE_LIMIT = 1000;
 

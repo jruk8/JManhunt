@@ -43,7 +43,7 @@ class ModifierToggleAllTest {
         addModifier(config, "b", true);
         ConfigService service = service(config);
         MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null);
+        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
         FakeSender sender = FakeSender.permitted();
 
         assertTrue(command.toggleAllModifiers(sender, List.of("a", "b"), true));
@@ -61,7 +61,7 @@ class ModifierToggleAllTest {
         addModifier(config, "a", false);
         ConfigService service = service(config);
         MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null);
+        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
         FakeSender sender = FakeSender.permitted();
 
         assertTrue(command.toggleAllModifiers(sender, List.of("a", "nope"), true));
@@ -78,7 +78,7 @@ class ModifierToggleAllTest {
         addModifier(config, "a", false);
         ConfigService service = service(config);
         MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null);
+        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
         FakeSender sender = FakeSender.denied();
 
         assertTrue(command.toggleAllModifiers(sender, List.of("a"), true));
@@ -97,7 +97,7 @@ class ModifierToggleAllTest {
         config.getPresets().put("pack", preset);
         ConfigService service = service(config);
         MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null);
+        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
         FakeSender sender = FakeSender.permitted();
 
         assertTrue(command.toggleAllPresets(sender, List.of("pack", "nope"), true));
@@ -118,7 +118,7 @@ class ModifierToggleAllTest {
         config.getPresets().put("pack", preset);
         ConfigService service = service(config);
         MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null);
+        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
         FakeSender sender = FakeSender.denied();
 
         assertTrue(command.toggleAllPresets(sender, List.of("pack"), true));

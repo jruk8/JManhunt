@@ -43,7 +43,7 @@ class TagRosterTest {
                     (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                     (player, reason) -> { }, (role, reason) -> { },
                     matchId, new TagBackends(StatValues.inert(), new FlagStore(),
-                            (text, name) -> text, roster));
+                            (text, name) -> text, roster, PlayerSinks.inert()));
         }
 
         String replace(String command, long matchId) {

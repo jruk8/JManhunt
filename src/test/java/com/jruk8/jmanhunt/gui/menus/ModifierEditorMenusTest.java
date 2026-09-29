@@ -6,8 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.jruk8.jmanhunt.command.ModifiersCommand;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
+import com.jruk8.jmanhunt.match.ModifierTestService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -29,8 +31,14 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ModifierEditorMenusTest {
 
@@ -89,7 +97,7 @@ class ModifierEditorMenusTest {
         messages.reload(new MessagesConfig());
         store = new ModifierStore(config, log);
         editor = new ModifierEditorMenus(store, messages, null, null, null, null, null, null);
-        detail = new ModifierDetailMenus(store, messages, null, null, null, null);
+        detail = new ModifierDetailMenus(store, messages, null, null, null, null, null);
     }
 
     @Test
@@ -165,10 +173,12 @@ class ModifierEditorMenusTest {
         assertEquals(Material.LIGHT_GRAY_CONCRETE, player.material());
         assertEquals("player", textOf(player.name()));
         assertTrue(player.glow());
-        assertEquals(2, player.lore().size());
+        assertEquals(3, player.lore().size());
         assertEquals(messages.nonItalic(messages.parse("<gray>Lines: <white>1")),
                 player.lore().get(0));
         assertEquals(plain("Click to open", NamedTextColor.GRAY), player.lore().get(1));
+        assertEquals(plain("Shift-left-click to test the list", NamedTextColor.GRAY),
+                player.lore().get(2));
 
         MenuButton speedrunner = menu.buttonAt(11);
         assertEquals(Material.LIME_CONCRETE, speedrunner.material());
@@ -224,5 +234,61 @@ class ModifierEditorMenusTest {
         Component rendered = messages.component("modifiers.edit-command-set", values);
         assertTrue(textOf(rendered)
                 .endsWith("2nd command for player set to give <p> <red>apple"));
+    }
+
+    @Test
+    void lineButtonsOfferShiftClickTest() {
+        Menu menu = detail.linesMenu("zebra", 0, "player", null);
+
+        MenuButton line = menu.window().visibleEntries().get(0);
+        assertEquals(Material.PAPER, line.material());
+        assertNotNull(line.shiftAction());
+        assertTrue(line.lore().stream().map(ModifierEditorMenusTest::textOf)
+                .anyMatch(text -> text.contains("Shift-left-click to test")));
+    }
+
+    @Test
+    void shiftClickTestDeniesWithoutPermission() {
+        Menu menu = detail.linesMenu("zebra", 0, "player", null);
+        Player viewer = mock(Player.class);
+        when(viewer.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(false);
+
+        menu.window().visibleEntries().get(0).shiftAction().accept(viewer);
+
+        verify(viewer).sendMessage(messages.component("command.no-permission"));
+    }
+
+    @Test
+    void shiftClickTestRunsTheLineThroughThePipeline() {
+        ModifierTestService service = mock(ModifierTestService.class);
+        when(service.roleFor(any(), eq("player"))).thenReturn("HUNTER");
+        ModifierTestService.TestResult result = new ModifierTestService.TestResult(12L, List.of(),
+                List.of(), List.of());
+        when(service.run(any(), eq("HUNTER"), eq(List.of("give <p> apple")))).thenReturn(result);
+        ModifiersCommand toggles = new ModifiersCommand(null, messages, null, null, null,
+                service);
+        ModifierDetailMenus wired = new ModifierDetailMenus(store, messages, null, null, null,
+                null, toggles);
+        Player viewer = mock(Player.class);
+        when(viewer.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+        when(viewer.getName()).thenReturn("Steve");
+
+        wired.linesMenu("zebra", 0, "player", null).window().visibleEntries().get(0)
+                .shiftAction().accept(viewer);
+
+        verify(service).roleFor(viewer, "player");
+        verify(service).run(viewer, "HUNTER", List.of("give <p> apple"));
+        verify(service).report(viewer, result);
+    }
+
+    @Test
+    void listPickerOffersWholeListTest() {
+        Menu menu = detail.commandsMenu("zebra", 0, null);
+
+        MenuButton playerList = menu.buttonAt(10);
+        assertNotNull(playerList.shiftAction());
+        assertTrue(playerList.lore().stream().map(ModifierEditorMenusTest::textOf)
+                .anyMatch(text -> text.contains("Shift-left-click to test the list")));
+        assertNull(menu.buttonAt(13).shiftAction());
     }
 }

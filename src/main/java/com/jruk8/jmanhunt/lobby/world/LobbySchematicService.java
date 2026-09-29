@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.lobby.world;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyBundle;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
 import org.bukkit.Bukkit;
@@ -248,7 +249,7 @@ public final class LobbySchematicService {
                 parsed = parsed.substring(1);
             }
             try {
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
+                QuietConsoleDispatch.dispatch(parsed);
             } catch (Exception exception) {
                 plugin.logger().severe(
                         "Failed to run lobby preset command '" + command + "'. Skipping..",

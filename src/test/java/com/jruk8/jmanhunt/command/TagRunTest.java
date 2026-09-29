@@ -27,7 +27,7 @@ class TagRunTest {
                 (role, reason) -> { },
                 7L,
                 new TagBackends(StatValues.inert(), new FlagStore(),
-                        (text, name) -> text, RosterValues.inert()),
+                        (text, name) -> text, RosterValues.inert(), PlayerSinks.inert()),
                 List.of(),
                 detail -> { },
                 (role, text) -> { },

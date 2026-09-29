@@ -23,7 +23,8 @@ class TagListOpsTest {
                     "lists", warnings::add, warnings::add,
                     (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                     (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), flags, (text, name) -> text, RosterValues.inert()));
+                    7L, new TagBackends(StatValues.inert(), flags, (text, name) -> text,
+                            RosterValues.inert(), PlayerSinks.inert()));
         }
 
         String replace(String command, TagContext context) {

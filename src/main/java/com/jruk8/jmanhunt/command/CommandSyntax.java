@@ -36,7 +36,7 @@ public final class CommandSyntax {
         return List.of("p", "random-mob", "random-item", "random-num",
                 "random-pick", "random-player", "all-players", "id", "min",
                 "max", "clamp", "if", "gmessage", "pmessage", "gsound", "psound",
-                "pstat", "gstat", "gflag", "gf", "pflag", "pf", "lflag", "lf", "placeholder",
+                "pstat", "gstat", "phasitem", "gflag", "gf", "pflag", "pf", "lflag", "lf", "placeholder",
                 "rflag", "rmessage", "rsound",
                 "loseplayer", "win", "args", "list.append", "list.get", "list.set", "list.remove",
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
@@ -226,28 +226,25 @@ public final class CommandSyntax {
             case "id", "i" -> noArgsError(name, args);
             case "min", "max" -> arityError(name, args, 2, "two numbers");
             case "clamp" -> arityError(name, args, 3, "a value plus low and high");
-            case "gmessage", "pmessage" -> arityError(name, args, 1, "one text");
+            case "gmessage" -> arityError(name, args, 1, "one text");
+            case "pmessage" -> arityError(name, args, 2, "a player and a text");
             case "rmessage" -> RoleTagSyntax.messageError(name, args);
-            case "gsound", "psound" -> soundError(name, args);
+            case "gsound" -> soundError(name, args);
+            case "psound" -> TagSinks.playerSoundError(name, args);
             case "rsound" -> RoleTagSyntax.soundError(name, args);
             case "if" -> ifError(args);
             case "pstat" -> statError(name, args, 1, TagStats.PSTAT_KEYS);
             case "gstat" -> statError(name, args, 0, TagStats.GSTAT_KEYS);
+            case "phasitem" -> TagItems.syntaxError(name, args);
             case "gflag", "gf", "pflag", "pf", "lflag", "lf" -> flagError(name, args);
             case "rflag" -> RoleTagSyntax.flagError(name, args);
             case "placeholder" -> arityError(name, args, 1, "one key");
             case "loseplayer" -> loseplayerError(name, args);
             case "win" -> winError(name, args);
             case "args" -> argsError(name, args);
-            case "list.append" -> topLevelArityError(name, args, 2, "<list.append:list,x>");
-            case "list.get" -> topLevelArityError(name, args, 2, "<list.get:list,index>");
-            case "list.set" -> topLevelArityError(name, args, 3, "<list.set:list,index,x>");
-            case "list.remove" -> topLevelArityError(name, args, 2, "<list.remove:list,x>");
-            case "list.contains" -> topLevelArityError(name, args, 2, "<list.contains:list,x>");
-            case "list.clear" -> topLevelArityError(name, args, 1, "<list.clear:list>");
-            case "list.pop" -> topLevelArityError(name, args, 1, "<list.pop:list>");
-            case "len" -> topLevelArityError(name, args, 1, "<len:list>");
-            case "list.shuffle" -> topLevelArityError(name, args, 1, "<list.shuffle:list>");
+            case "list.append", "list.get", "list.set", "list.remove", "list.contains",
+                    "list.clear", "list.pop", "len", "list.shuffle" ->
+                    TagLists.opError(name, args);
             case "range" -> rangeError(name, args);
             case "active-players" -> activePlayersError(name, args);
             case "plocation", "prole" -> playerNameError(name, args);

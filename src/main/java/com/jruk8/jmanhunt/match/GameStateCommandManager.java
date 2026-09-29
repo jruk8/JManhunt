@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.match;
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.CommandSyntax;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
+import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
 import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.command.TagExpressions;
@@ -311,7 +312,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                 (role, reason) -> winForRole(name, role, reason, scope, matchId),
                 matchId, new TagBackends(game.matchStatValues(matchId), game.flagStore(),
                         new PlaceholderPass(plugin.placeholderValues()),
-                        new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId)),
+                        new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId),
+                        NamedPlayerSinks.of(messages, sounds, plugin.logger()::warning, name)),
                 eventArgs, detail -> loopLimitExceeded(detail, matchId),
                 (role, text) -> sendRoleMessage(name, matchId, scope, role, text),
                 (role, soundId, pitch, volume) -> playRoleSound(name, matchId, scope, role,
@@ -324,14 +326,14 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      * console with the blacklist enforced, like a command list
      * entry. A hit only skips that line, never the outer list.
      */
-    private void runTagCommand(String line, String provenance) {
+    void runTagCommand(String line, String provenance) {
         Collection<String> blocked = configService.getStringList(BLACKLISTED_COMMANDS_PATH);
         if (CommandSyntax.isBlockedCommand(line, blocked)) {
             plugin.logger().severe("Blocked blacklisted modifier command '"
                     + line + "' at " + provenance + ".");
             return;
         }
-        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line);
+        QuietConsoleDispatch.dispatch(line);
     }
 
     /**
@@ -436,10 +438,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         game.finishLater(instance.get(), Role.valueOf(role), reason);
     }
 
-    private String formatEngineMessage(String text) {
-        String format = messages.string("modifiers.message-format", "{prefix}{message}");
-        return format.replace("{prefix}", messages.string("prefix", ""))
-                .replace("{message}", text);
+    String formatEngineMessage(String text) {
+        return NamedPlayerSinks.formatEngineMessage(messages, text);
     }
 
     /**
@@ -661,8 +661,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                     + "; aborting the command list.");
             return false;
         }
-        dispatchable.ifPresent(line ->
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line));
+        dispatchable.ifPresent(QuietConsoleDispatch::dispatch);
         return true;
     }
 

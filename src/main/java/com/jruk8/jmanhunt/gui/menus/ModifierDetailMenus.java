@@ -56,20 +56,24 @@ public final class ModifierDetailMenus {
     private final GuiService gui;
     private final SettingDialogs dialogs;
     private final BooleanSupplier commandValidation;
+    private final ModifiersCommand commands;
 
     /**
-     * @param store modifier reads and patches; sounds, gui, dialogs, and
-     *        commandValidation are only touched inside click actions, so
-     *        builders tolerate them as null (null validation means on)
+     * @param store modifier reads and patches; sounds, gui, dialogs,
+     *        commandValidation, and commands are only touched inside click
+     *        actions, so builders tolerate them as null (null validation
+     *        means on)
      */
     public ModifierDetailMenus(ModifierStore store, MessageService messages, SoundService sounds,
-            GuiService gui, SettingDialogs dialogs, BooleanSupplier commandValidation) {
+            GuiService gui, SettingDialogs dialogs, BooleanSupplier commandValidation,
+            ModifiersCommand commands) {
         this.store = store;
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
         this.dialogs = dialogs;
         this.commandValidation = commandValidation;
+        this.commands = commands;
     }
 
     /** Command list picker with live line counts. */
@@ -91,7 +95,10 @@ public final class ModifierDetailMenus {
                 lore.add("Lines: <white>" + count);
             }
             lore.add(text("editor-click-open", "Click to open"));
-            fixed.put(DISPLAY_SLOTS[index], EditorButtons.actionButton(messages,
+            if (count > 0) {
+                lore.add(text("commands-test-hint", "Shift-left-click to test the list"));
+            }
+            MenuButton button = EditorButtons.actionButton(messages,
                     DISPLAY_MATERIALS[index], list, lore, count > 0,
                     player -> {
                         if (denied(player)) {
@@ -99,7 +106,19 @@ public final class ModifierDetailMenus {
                         }
                         gui.navigate(player, linesMenu(id, behavior, list,
                                 () -> commandsMenu(id, behavior, self.parent())));
-                    }));
+                    });
+            if (count > 0) {
+                button = button.shiftAction(player -> {
+                    if (denied(player)) {
+                        return;
+                    }
+                    List<String> live = store.commandList(id, behavior, list);
+                    if (!live.isEmpty()) {
+                        commands.testList(player, list, live);
+                    }
+                });
+            }
+            fixed.put(DISPLAY_SLOTS[index], button);
         }
         fixed.put(22, new MenuButton(Material.PAPER,
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
@@ -140,7 +159,8 @@ public final class ModifierDetailMenus {
                     GuiTexts.name(messages, GuiTexts.truncate(lines.get(index), 32), "(blank)"),
                     GuiTexts.lore(messages, List.of(
                             text("editor-click-edit", "Click to edit"),
-                            text("lines-delete-hint", "Right-click to delete"))),
+                            text("lines-delete-hint", "Right-click to delete"),
+                            text("lines-test-hint", "Shift-left-click to test"))),
                     false, false,
                     player -> {
                         if (denied(player)) {
@@ -155,6 +175,12 @@ public final class ModifierDetailMenus {
                             return;
                         }
                         deleteLineConfirm(player, self, id, behavior, list, lineIndex);
+                    }).shiftAction(player -> {
+                        if (denied(player)) {
+                            return;
+                        }
+                        commands.testList(player, list,
+                                List.of(store.commandList(id, behavior, list).get(lineIndex)));
                     }).silent());
         }
         buttons.add(AddStick.button(messages,

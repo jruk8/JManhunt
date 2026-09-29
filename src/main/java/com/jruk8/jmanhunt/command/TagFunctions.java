@@ -36,7 +36,7 @@ public final class TagFunctions {
     private static final Set<String> BUILTINS = Set.of(
             "p", "random-mob", "random-item", "random-num", "random-pick",
             "random-player", "all-players", "all-fanout", "duration", "id", "i",
-            "pstat", "gstat", "gflag", "gf", "pflag", "pf", "lflag", "lf", "rflag",
+            "pstat", "gstat", "phasitem", "gflag", "gf", "pflag", "pf", "lflag", "lf", "rflag",
             "placeholder",
             "min", "max", "clamp", "root", "if",
             "gmessage", "pmessage", "rmessage", "gsound", "psound", "rsound",

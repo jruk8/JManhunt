@@ -21,13 +21,31 @@ class TagExpressionsTest {
         final List<String> playerMessages = new ArrayList<>();
         final List<String> globalSounds = new ArrayList<>();
         final List<String> playerSounds = new ArrayList<>();
-        final TagContext context = TagContext.of(
+        final List<String> namedMessages = new ArrayList<>();
+        final List<String> namedSounds = new ArrayList<>();
+        final PlayerSinks players = new PlayerSinks() {
+            @Override
+            public boolean message(String playerName, String text) {
+                namedMessages.add(playerName + ":" + text);
+                return true;
+            }
+
+            @Override
+            public boolean sound(String playerName, String soundId, float pitch, float volume) {
+                namedSounds.add(playerName + ":" + soundId + ":" + pitch + ":" + volume);
+                return true;
+            }
+        };
+        final TagContext context = TagContext.run(
                 ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
                 "beef",
                 globalMessages::add,
                 playerMessages::add,
                 (id, pitch, volume) -> globalSounds.add(id + ":" + pitch + ":" + volume),
-                (id, pitch, volume) -> playerSounds.add(id + ":" + pitch + ":" + volume));
+                (id, pitch, volume) -> playerSounds.add(id + ":" + pitch + ":" + volume),
+                (player, reason) -> { }, (role, reason) -> { },
+                TagContext.NO_MATCH, new TagBackends(StatValues.inert(), new FlagStore(),
+                        (text, name) -> text, RosterValues.inert(), players));
     }
 
     private static String replace(Fixture fixture, String command) {
@@ -351,8 +369,8 @@ class TagExpressionsTest {
         Fixture fixture = new Fixture();
         assertEquals("say  done", replace(fixture, "say <gmessage:\"hi\"> done"));
         assertEquals(List.of("hi"), fixture.globalMessages);
-        assertEquals("", replace(fixture, "<pmessage:yo>"));
-        assertEquals(List.of("yo"), fixture.playerMessages);
+        assertEquals("", replace(fixture, "<pmessage:Alex,yo>"));
+        assertEquals(List.of("Alex:yo"), fixture.namedMessages);
         assertEquals("", replace(fixture, "<gmessage:\"\">"));
         assertEquals(List.of("hi", ""), fixture.globalMessages);
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
@@ -362,13 +380,32 @@ class TagExpressionsTest {
     void soundsPlayThroughSinksWithDefaults() {
         Fixture fixture = new Fixture();
         assertEquals("", replace(fixture, "<gsound:block.stone.break>"));
-        assertEquals("", replace(fixture, "<psound:block.stone.break,0.5,2>"));
+        assertEquals("", replace(fixture, "<psound:Alex,block.stone.break,0.5,2>"));
         assertEquals(List.of("block.stone.break:1.0:1.0"), fixture.globalSounds);
-        assertEquals(List.of("block.stone.break:0.5:2.0"), fixture.playerSounds);
+        assertEquals(List.of("Alex:block.stone.break:0.5:2.0"), fixture.namedSounds);
+        assertEquals("", replace(fixture, "<psound:Alex,block.stone.break>"));
+        assertEquals(List.of("Alex:block.stone.break:0.5:2.0",
+                "Alex:block.stone.break:1.0:1.0"), fixture.namedSounds);
         assertEquals("", replace(fixture, "<gsound:block.stone.break,loud>"));
         assertEquals(1, fixture.warnings.size());
         assertEquals(List.of("block.stone.break:1.0:1.0", "block.stone.break:1.0:1.0"),
                 fixture.globalSounds);
+    }
+
+    @Test
+    void namedSinksWarnWhenOffline() {
+        List<String> warnings = new ArrayList<>();
+        TagContext context = TagContext.of(
+                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
+                "beef", warnings::add, warnings::add,
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { });
+        assertEquals("", CommandPlaceholders.replace("<pmessage:Alex,yo>", "Steve", 0, 0, 0,
+                context));
+        assertEquals("", CommandPlaceholders.replace("<psound:Alex,block.stone.break>", "Steve",
+                0, 0, 0, context));
+        assertEquals(2, warnings.size());
+        assertTrue(warnings.get(0).contains("is offline"));
+        assertTrue(warnings.get(1).contains("is offline"));
     }
 
     @Test

@@ -1,12 +1,15 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.command.RosterValues;
+import com.jruk8.jmanhunt.command.TagItems;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -82,11 +85,26 @@ public final class MatchRosterValues implements RosterValues {
 
     @Override
     public Optional<Location> locationOf(String playerName) {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (player.getName().equalsIgnoreCase(playerName)) {
-                return Optional.of(player.getLocation());
+        Player found = NamedPlayerSinks.onlinePlayer(playerName);
+        return found == null ? Optional.empty() : Optional.of(found.getLocation());
+    }
+
+    @Override
+    public Optional<Integer> countItem(String playerName, String materialKey) {
+        Player found = NamedPlayerSinks.onlinePlayer(playerName);
+        if (found == null) {
+            return Optional.empty();
+        }
+        Material material = Material.matchMaterial(TagItems.normalizeMaterialKey(materialKey));
+        if (material == null) {
+            return Optional.empty();
+        }
+        int count = 0;
+        for (ItemStack stack : found.getInventory().getStorageContents()) {
+            if (stack != null && stack.getType() == material) {
+                count += stack.getAmount();
             }
         }
-        return Optional.empty();
+        return Optional.of(count);
     }
 }

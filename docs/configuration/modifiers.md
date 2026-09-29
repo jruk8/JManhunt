@@ -349,9 +349,9 @@ creator editor validates them as you type:
 | `<clamp:8,1,5>` | `8` clamped into `1..5`: `5`. |
 | `<id>` | The name of the modifier (or trigger) running the commands. |
 | `<gmessage:"hi">` | Sends `hi` to every participant; the tag itself leaves nothing behind. |
-| `<pmessage:yo>` | Sends `yo` to the executing player only. Message tags take literal preset text (MiniMessage), never `messages.yml` keys. |
+| `<pmessage:Alex,yo>` | Sends `yo` to Alex only. Message tags take literal preset text (MiniMessage), never `messages.yml` keys. |
 | `<gsound:block.stone.break>` | Plays the sound for every participant. |
-| `<psound:block.stone.break,0.5,2>` | Plays the sound for the executing player, with pitch `0.5` and volume `2` (both default to `1`). |
+| `<psound:Alex,block.stone.break,0.5,2>` | Plays the sound for Alex, with pitch `0.5` and volume `2` (both default to `1`). |
 | `<placeholder:jmanhunt_game_kills_this_session>` | Same placeholder as a tag, so math and conditions can use it. |
 | `<loseplayer:Alex,fell>` | Eliminates Alex with the reason `fell`; the tag leaves nothing behind. |
 | `<win:HUNTER,trapped>` | Ends the match for the hunters with the reason `trapped`; the tag leaves nothing behind. |
@@ -360,6 +360,7 @@ creator editor validates them as you type:
 | `<range:1,5>` | The list `[1, 2, 3, 4]`, Python style (see Lists). |
 | `<active-players:HUNTER>` | Eligible hunters as a list, like `[Alex, Bo]`. |
 | `<prole:Alex>` | `HUNTER` or `SPEEDRUNNER` for Alex, else `null`. |
+| `<phasitem:Alex,golden_apple,2>` | `true` when Alex holds at least 2 golden apples, else `false` (the count is 1 when omitted). |
 | `<plocation:Alex>` | Alex's spot as `[x, y, z, pitch, yaw, dimension]`. |
 | `<distance:[0,0,0],[3,4,0]>` | Blocks between two spots: `5`. Full location lists in different dimensions yield `null`. |
 | `<floor:2.7>` | `2`; `<ceil:2.3>` is `3`, `<round:2.5>` is `3`. |
@@ -444,6 +445,14 @@ edge of the condition), which keeps them distinct from tag brackets:
 
 ```yaml
 - '<if:"<pstat:<p>,health> le 7 and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 gt 300","give <p> golden_apple","exit">'
+```
+
+An `<if>` without an else branch yields nothing when the condition
+fails, so a bare guard line aborts the list only on a hit. This
+first line skips the rest when the runner already holds a gapple:
+
+```yaml
+- '<if:"<phasitem:<p>,golden_apple> == true","exit">'
 ```
 
 Angle brackets are never comparisons: `<`, `>`, `<=`, and `>=` in a

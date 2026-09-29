@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.command;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
+import com.jruk8.jmanhunt.match.ModifierTestService;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -37,18 +38,23 @@ public final class ModifiersCommand {
     private final GuiService gui;
     private final Function<Player, Menu> mainMenu;
     private final SoundService sounds;
+    private final ModifierTestService testService;
 
     /**
      * @param gui menu opener, main menu factory, and sounds; all are only
      *        touched on the bare-player path, so tests may pass nulls
+     * @param testService dry-run pipeline behind test runs; only the test
+     *        path touches it, so tests for other paths may pass null
      */
     public ModifiersCommand(ConfigService config, MessageService messages,
-            GuiService gui, Function<Player, Menu> mainMenu, SoundService sounds) {
+            GuiService gui, Function<Player, Menu> mainMenu, SoundService sounds,
+            ModifierTestService testService) {
         this.config = config;
         this.messages = messages;
         this.gui = gui;
         this.mainMenu = mainMenu;
         this.sounds = sounds;
+        this.testService = testService;
     }
 
     /** Runs one modifiers action; args[0] is the action when present. */
@@ -68,6 +74,7 @@ public final class ModifiersCommand {
             case "export" -> exportCommand(sender, args);
             case "import" -> importCommand(sender, args);
             case "create" -> createCommand(sender, args);
+            case "test" -> testCommand(sender, args);
             default -> {
                 messages.message(sender, "modifiers.usage");
                 yield true;
@@ -397,6 +404,66 @@ public final class ModifiersCommand {
             sounds.playNeutralSound(player);
         }
         return true;
+    }
+
+    /**
+     * Parses the test role word; upper-case HUNTER or SPEEDRUNNER, null
+     * when anything else. Pure for tests.
+     */
+    static String parseTestRole(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String normalized = raw.trim().toUpperCase(Locale.ROOT);
+        if (normalized.equals("HUNTER") || normalized.equals("SPEEDRUNNER")) {
+            return normalized;
+        }
+        return null;
+    }
+
+    /**
+     * Dry-runs explicit lines for one player under one role with the
+     * result reported back. Used by the test command; the GUI uses
+     * {@link #testList} for whole command lists.
+     */
+    public boolean testCommands(Player player, String role, List<String> lines) {
+        if (!player.hasPermission(MODIFIERS_PERMISSION)) {
+            messages.message(player, "command.no-permission");
+            return true;
+        }
+        testService.report(player, testService.run(player, role, lines));
+        return true;
+    }
+
+    /**
+     * Dry-runs one command list for the viewing player: the test role
+     * follows the list audience. Used by the editor GUI test clicks.
+     */
+    public boolean testList(Player viewer, String list, List<String> lines) {
+        return testCommands(viewer, testService.roleFor(viewer, list), lines);
+    }
+
+    private boolean testCommand(CommandSender sender, String[] args) {
+        if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
+            messages.message(sender, "command.no-permission");
+            return true;
+        }
+        if (!(sender instanceof Player player)) {
+            messages.message(sender, "command.player-only");
+            return true;
+        }
+        if (args.length < 3 || parseTestRole(args[1]) == null) {
+            messages.message(sender, "modifiers.test-usage");
+            return true;
+        }
+        List<String> lines =
+                ModifierTestService.parseCommandLines(String.join(" ",
+                        Arrays.copyOfRange(args, 2, args.length)));
+        if (lines.isEmpty()) {
+            messages.message(sender, "modifiers.test-usage");
+            return true;
+        }
+        return testCommands(player, parseTestRole(args[1]), lines);
     }
 
     /** Creator name for new entries: player name, or CONSOLE. */

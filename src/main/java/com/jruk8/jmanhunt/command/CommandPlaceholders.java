@@ -462,6 +462,7 @@ public final class CommandPlaceholders {
             case "i" -> context.loopItem().orElse("null");
             case "pstat" -> TagStats.player(tag, args, context);
             case "gstat" -> TagStats.global(tag, args, context);
+            case "phasitem" -> TagItems.hasItem(tag, args, context);
             case "gflag", "gf" -> TagFlags.global(tag, args, context);
             case "pflag", "pf" -> TagFlags.player(tag, args, context);
             case "lflag", "lf" -> TagFlags.local(tag, args, context);
@@ -474,9 +475,8 @@ public final class CommandPlaceholders {
             case "loseplayer" -> TagExpressions.loseplayer(tag, args, context);
             case "win" -> TagExpressions.win(tag, args, context);
             case "args" -> TagArgs.resolve(tag, args, context);
-            case "list.append", "list.get", "list.set", "list.remove", "list.contains",
-                    "list.clear", "list.pop", "len", "list.shuffle" ->
-                    TagLists.resolve(tag, name, args, context);
+            case "list.append", "list.get", "list.set", "list.remove", "list.contains", "list.clear",
+                    "list.pop", "len", "list.shuffle" -> TagLists.resolve(tag, name, args, context);
             case "range" -> TagLists.range(tag, args, context);
             case "active-players" -> TagRoster.activePlayers(tag, args, context);
             case "plocation" -> TagLocations.plocation(tag, args, context);

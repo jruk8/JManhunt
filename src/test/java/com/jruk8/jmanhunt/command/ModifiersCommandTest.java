@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.command;
 
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.match.ModifierTestService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierCodec;
@@ -11,7 +12,9 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -19,6 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ModifiersCommandTest {
 
@@ -53,7 +61,8 @@ class ModifiersCommandTest {
         log.setUseParentHandlers(false);
         // Nulls are never touched: options read the store, messages unused.
         ModifiersCommand command = new ModifiersCommand(
-                new ConfigService(null, new ModifierStore(config, log)), null, null, null, null);
+                new ConfigService(null, new ModifierStore(config, log)), null, null, null, null,
+                null);
 
         assertEquals(List.of("Alpha", "mike", "zeta"), command.modifierNameOptions());
         assertEquals(List.of("apple", "zulu"), command.presetIdOptions());
@@ -133,7 +142,7 @@ class ModifiersCommandTest {
         ConfigService service = new ConfigService(null, new ModifierStore(config, log));
         MessageService messages = new MessageService();
         messages.reload(new MessagesConfig());
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null);
+        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
         FakeSender sender = FakeSender.denied();
         boolean before = service.modifierEnabled("beef");
 
@@ -162,7 +171,7 @@ class ModifiersCommandTest {
         ConfigService service = new ConfigService(null, new ModifierStore(config, log));
         MessageService messages = new MessageService();
         messages.reload(new MessagesConfig());
-        return new Fixture(new ModifiersCommand(service, messages, null, null, null),
+        return new Fixture(new ModifiersCommand(service, messages, null, null, null, null),
                 service, messages);
     }
 
@@ -173,5 +182,63 @@ class ModifiersCommandTest {
         meta.setItem("CHEST");
         preset.setMeta(meta);
         return preset;
+    }
+
+    @Test
+    void parseTestRoleAcceptsBothRoles() {
+        assertEquals("HUNTER", ModifiersCommand.parseTestRole("hunter"));
+        assertEquals("HUNTER", ModifiersCommand.parseTestRole("  HUNTER  "));
+        assertEquals("SPEEDRUNNER", ModifiersCommand.parseTestRole("Speedrunner"));
+    }
+
+    @Test
+    void parseTestRoleRejectsAnythingElse() {
+        assertNull(ModifiersCommand.parseTestRole("referee"));
+        assertNull(ModifiersCommand.parseTestRole(""));
+        assertNull(ModifiersCommand.parseTestRole(null));
+    }
+
+    @Test
+    void testFromConsoleNeedsAPlayer() {
+        Fixture fixture = fixture();
+        FakeSender sender = FakeSender.permitted();
+
+        assertTrue(fixture.command().execute(sender, new String[]{"test", "hunter", "say hi"}));
+
+        assertEquals(List.of(fixture.messages().component("command.player-only")),
+                sender.received());
+    }
+
+    @Test
+    void testWithBadRoleShowsUsage() {
+        Fixture fixture = fixture();
+        Player player = mock(Player.class);
+        when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+
+        assertTrue(fixture.command().execute(player, new String[]{"test", "referee", "say hi"}));
+
+        ArgumentCaptor<Component> sent = ArgumentCaptor.forClass(Component.class);
+        verify(player).sendMessage(sent.capture());
+        assertEquals(fixture.messages().component("modifiers.test-usage"), sent.getValue());
+    }
+
+    @Test
+    void testRunsThePipelineAndReports() {
+        Fixture fixture = fixture();
+        ModifierTestService service = mock(ModifierTestService.class);
+        ModifierTestService.TestResult result = new ModifierTestService.TestResult(12L, List.of(),
+                List.of(), List.of());
+        when(service.run(any(), eq("HUNTER"), eq(List.of("say hi")))).thenReturn(result);
+        ModifiersCommand command = new ModifiersCommand(fixture.service(), fixture.messages(),
+                null, null, null, service);
+        Player player = mock(Player.class);
+        when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+        when(player.getName()).thenReturn("Steve");
+
+        assertTrue(command.execute(player,
+                new String[]{"test", "hunter", "say", "hi"}));
+
+        verify(service).run(player, "HUNTER", List.of("say hi"));
+        verify(service).report(player, result);
     }
 }

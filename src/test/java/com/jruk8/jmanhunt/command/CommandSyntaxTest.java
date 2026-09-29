@@ -158,9 +158,10 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("give <p> apple <max:8,10>").isEmpty());
         assertTrue(CommandSyntax.error("give <p> apple <clamp:8,1,10>").isEmpty());
         assertTrue(CommandSyntax.error("say <gmessage:\"hi\"> done").isEmpty());
-        assertTrue(CommandSyntax.error("say <pmessage:yo> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <pmessage:Alex,yo> done").isEmpty());
         assertTrue(CommandSyntax.error("say <gsound:block.stone.break> done").isEmpty());
-        assertTrue(CommandSyntax.error("say <psound:block.stone.break,0.5,2> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <psound:Alex,block.stone.break,0.5,2> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <psound:Alex,block.stone.break> done").isEmpty());
         assertTrue(CommandSyntax.error("say <rmessage:hunter,yo> done").isEmpty());
         assertTrue(CommandSyntax.error("say <rsound:hunter,block.stone.break,0.5,2> done").isEmpty());
         assertTrue(CommandSyntax.error("say <if:\"1 == 1\",\"y\",\"n\"> done").isEmpty());
@@ -269,7 +270,8 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("give <p> apple <clamp:8,1>").isPresent());
         assertTrue(CommandSyntax.error("say <gmessage> done").isPresent());
         assertTrue(CommandSyntax.error("say <gsound> done").isPresent());
-        assertTrue(CommandSyntax.error("say <psound:a,b,c,d> done").isPresent());
+        assertTrue(CommandSyntax.error("say <pmessage:yo> done").isPresent());
+        assertTrue(CommandSyntax.error("say <psound:a,b,c,d,e> done").isPresent());
         assertTrue(CommandSyntax.error("say <rmessage> done").isPresent());
         assertTrue(CommandSyntax.error("say <rsound:a,b,c,d> done").isPresent());
         assertTrue(CommandSyntax.error("say <rflag> done").isPresent());

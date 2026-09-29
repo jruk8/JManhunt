@@ -23,6 +23,17 @@ public interface RosterValues {
     /** Online player location by case-insensitive name, or empty. */
     Optional<Location> locationOf(String playerName);
 
+    /**
+     * Storage-contents count of one material for an online player, or
+     * empty when the player is offline or the key resolves to
+     * nothing. The key arrives raw (any case, optional
+     * {@code minecraft:} prefix); live backends normalize through
+     * {@link TagItems#normalizeMaterialKey}. Defaults to empty.
+     */
+    default Optional<Integer> countItem(String playerName, String materialKey) {
+        return Optional.empty();
+    }
+
     /** Roster that resolves nothing. */
     static RosterValues inert() {
         return new RosterValues() {

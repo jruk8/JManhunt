@@ -319,6 +319,20 @@ spaces with no quoting needed:
 /manhunt modifiers create preset Chaos --member beef-party --member gear-dice
 ```
 
+Dry-run commands without a match with `test` (players only). Everything
+after the role runs through the real tag pipeline with mock stats
+(full health and hunger, fresh counters and clocks); gameplay commands
+like `give` still execute for real, and tag errors fail the run with
+the warning text. Bracketed input runs each element in order:
+
+```text
+/manhunt modifiers test hunter give <p> bread
+/manhunt modifiers test speedrunner ["<pmessage:<p>,ready>", "effect give <p> speed 5"]
+```
+
+In the modifier editor, shift-left-click a command line to test that
+line, or shift-left-click a command list to test the whole list.
+
 Modifier flags: `--desc`, `--item`, `--author`, repeatable
 `--trigger`, `--on-start`, `--interval`, `--deviation`,
 `--interval-scope`, `--chance`, `--chance-scope`, `--selection`,

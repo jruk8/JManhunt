@@ -29,15 +29,19 @@ public final class PlaceholderCheatsheet {
             Map.entry("if", new String[]{"<if:cond,then,else>", "branch on a condition"}),
             Map.entry("gmessage", new String[]{"<gmessage:text>", "broadcast text, returns empty"}),
             Map.entry("pmessage",
-                    new String[]{"<pmessage:text>", "message the executor, returns empty"}),
+                    new String[]{"<pmessage:player,text>", "message one player, returns empty"}),
             Map.entry("gsound",
                     new String[]{"<gsound:id,pitch,volume>", "sound for all, returns empty"}),
             Map.entry("psound",
-                    new String[]{"<psound:id,pitch,volume>", "sound for executor, returns empty"}),
+                    new String[]{"<psound:player,id,pitch,volume>",
+                            "sound for one player, returns empty"}),
             Map.entry("pstat",
                     new String[]{"<pstat:player,key>",
                             "health, hunger, max-health, mobs-killed, achievements"}),
             Map.entry("gstat", new String[]{"<gstat:key>", "duration seconds, daytime ticks"}),
+            Map.entry("phasitem",
+                    new String[]{"<phasitem:player,item,qty>",
+                            "true when the player holds qty, 1 when omitted"}),
             Map.entry("gflag", new String[]{"<gflag:name,value>", "match flag, get when no value"}),
             Map.entry("gf", new String[]{"<gf:name,value>", "alias of gflag"}),
             Map.entry("pflag",
@@ -113,8 +117,8 @@ public final class PlaceholderCheatsheet {
                 + "JMHS tags parse to text, then the full text runs as one command.</gray>");
         lines.add("<green>»</green> <white><p></white> "
                 + "<gray>the executing player, for inside other tags</gray>");
-        lines.add("<green>»</green> <white><pmessage:text></white> "
-                + "<gray>message the executor, parses to nothing</gray>");
+        lines.add("<green>»</green> <white><pmessage:<p>,text></white> "
+                + "<gray>message one player, parses to nothing</gray>");
         lines.add("<green>»</green> <white><random-player></white> "
                 + "<gray>random participant, @r outside tags</gray>");
         lines.add("<green>»</green> <white><random-num:min,max></white> "

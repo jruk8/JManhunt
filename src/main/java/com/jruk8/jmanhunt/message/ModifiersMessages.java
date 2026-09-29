@@ -16,7 +16,7 @@ public class ModifiersMessages extends OkaeriConfig {
 
     @CustomKey("usage")
     private String usage = "{prefix}<yellow>Usage: <white>/manhunt modifiers [setmod <name> " +
-            "<true|false>|setpreset <id> <true|false>]<yellow>.";
+            "<true|false>|setpreset <id> <true|false>|test <role> <commands>]<yellow>.";
 
     @CustomKey("setmod-usage")
     private String setmodUsage = "{prefix}<yellow>Usage: <white>/manhunt modifiers setmod <name> " +
@@ -160,4 +160,14 @@ public class ModifiersMessages extends OkaeriConfig {
 
     @CustomKey("edit-icon-set")
     private String editIconSet = "{prefix}<green>Icon set to <white>{material}<green>.";
+
+    @CustomKey("test-usage")
+    private String testUsage = "{prefix}<yellow>Usage: <white>/manhunt modifiers test " +
+            "<speedrunner|hunter> <commands><yellow>.";
+
+    @CustomKey("test-success")
+    private String testSuccess = "{prefix}<green>Test run finished in <white>{elapsed}ms<green>.";
+
+    @CustomKey("test-failure")
+    private String testFailure = "{prefix}<red>Test run failed: <white>{error}<red>.";
 }

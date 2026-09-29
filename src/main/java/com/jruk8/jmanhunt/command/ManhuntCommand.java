@@ -21,6 +21,7 @@ import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.match.ModifierTestService;
 import com.jruk8.jmanhunt.match.ModifierTriggers;
 import com.jruk8.jmanhunt.match.StatusRosterService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
@@ -133,7 +134,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.devSchem = new DevSchemCommand(plugin, messages);
         this.feedback = new SettingFeedback(messages, config, sounds);
         this.modifiersCmd = new ModifiersCommand(config, messages,
-                plugin.guiService(), viewer -> modifierMenus.mainMenu(viewer, null), sounds);
+                plugin.guiService(), viewer -> modifierMenus.mainMenu(viewer, null), sounds,
+                new ModifierTestService(game.stateCommands(), playerStates, messages, sounds));
         this.overrideCmd = new OverrideCommand(plugin.overrides(), config, messages,
                 feedback, sounds);
         this.setupService = new SetupService(plugin, game, messages, sounds, feedback);
@@ -2174,7 +2176,8 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     /** Tab completion for modifiers toggles. Null when inapplicable. */
     private List<String> completeModifiersTab(String[] args) {
         if (args.length == 2 && args[0].equalsIgnoreCase("modifiers")) {
-            return partial(args[1], List.of("setmod", "setpreset", "export", "import", "create"));
+            return partial(args[1],
+                    List.of("setmod", "setpreset", "export", "import", "create", "test"));
         }
         if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {
             if (args[1].equalsIgnoreCase("setmod")) {
@@ -2186,6 +2189,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             if (args[1].equalsIgnoreCase("export") || args[1].equalsIgnoreCase("import")
                     || args[1].equalsIgnoreCase("create")) {
                 return partial(args[2], List.of("modifier", "preset"));
+            }
+            if (args[1].equalsIgnoreCase("test")) {
+                return partial(args[2], List.of("speedrunner", "hunter"));
             }
             return null;
         }

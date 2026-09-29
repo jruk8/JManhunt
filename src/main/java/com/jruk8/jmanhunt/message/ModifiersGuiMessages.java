@@ -180,6 +180,9 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     @CustomKey("commands-title")
     private String commandsTitle = "Command Lists";
 
+    @CustomKey("commands-test-hint")
+    private String commandsTestHint = "Shift-left-click to test the list";
+
     @CustomKey("lines-title")
     private String linesTitle = "Commands: {list}";
 
@@ -194,6 +197,9 @@ public class ModifiersGuiMessages extends OkaeriConfig {
 
     @CustomKey("lines-delete-hint")
     private String linesDeleteHint = "Right-click to delete";
+
+    @CustomKey("lines-test-hint")
+    private String linesTestHint = "Shift-left-click to test";
 
     @CustomKey("lines-delete-title")
     private String linesDeleteTitle = "Delete this line?";

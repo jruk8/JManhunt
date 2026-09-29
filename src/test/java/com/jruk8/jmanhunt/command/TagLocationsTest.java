@@ -59,7 +59,7 @@ class TagLocationsTest {
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
                 (player, reason) -> { }, (role, reason) -> { },
                 7L, new TagBackends(StatValues.inert(), new FlagStore(),
-                        (text, name) -> text, roster));
+                        (text, name) -> text, roster, PlayerSinks.inert()));
 
         assertEquals("[100, 64, -30, 12, 90, world]",
                 CommandPlaceholders.replace("<plocation:Steve>", "Steve", 0, 0, 0, context));

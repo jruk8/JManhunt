@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.PlaceholderResolver;
+import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
 import com.jruk8.jmanhunt.command.RosterValues;
 import com.jruk8.jmanhunt.command.StatValues;
 import com.jruk8.jmanhunt.command.TagBackends;
@@ -16,6 +17,7 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.MatchRosterValues;
+import com.jruk8.jmanhunt.match.NamedPlayerSinks;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -650,8 +652,7 @@ final class CompassLockService {
                     + context.provenance().describe() + ".");
             return;
         }
-        dispatchable.ifPresent(line ->
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line));
+        dispatchable.ifPresent(QuietConsoleDispatch::dispatch);
     }
 
     /** Shared player debuffs plus the holder's own role list. */
@@ -677,7 +678,8 @@ final class CompassLockService {
                 : new PlaceholderPass(plugin.placeholderValues());
         RosterValues roster = game == null ? RosterValues.inert()
                 : new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId);
-        TagBackends backends = new TagBackends(stats, flags, placeholderPass, roster);
+        TagBackends backends = new TagBackends(stats, flags, placeholderPass, roster,
+                NamedPlayerSinks.of(messages, sounds, plugin.logger()::warning, "debuffs"));
         return TagContext.run(scope, "debuffs",
                 text -> messages.broadcastText(formatEngineMessage(text)),
                 text -> messages.sendText(holder, formatEngineMessage(text)),
@@ -720,9 +722,7 @@ final class CompassLockService {
     }
 
     private String formatEngineMessage(String text) {
-        String format = messages.string("modifiers.message-format", "{prefix}{message}");
-        return format.replace("{prefix}", messages.string("prefix", ""))
-                .replace("{message}", text);
+        return NamedPlayerSinks.formatEngineMessage(messages, text);
     }
 
     private void playGlobalSound(String soundId, float pitch, float volume) {
