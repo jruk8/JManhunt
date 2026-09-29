@@ -408,31 +408,27 @@ public final class CommandPlaceholders {
      * their conditions may hold bare {@code < > <= >=} that the plain
      * innermost scan cannot see. Mutating list tags with flag
      * references resolve last so they can write back before the
-     * reference itself resolves to a value.
+     * reference itself resolves to a value. Loops and ifs walk left
+     * to right with the strict-prefix plain window before each span
+     * resolved first, so earlier writes are visible later on the
+     * line; a final sweep resolves the remaining plain tags.
      */
     private static String evaluateTags(String command, String playerName, TagContext context) {
         String current = command;
         TagLoops.Evaluator eval = fragment -> evaluateTags(fragment, playerName, context);
         for (int pass = 0; pass < MAX_TAG_PASSES; pass++) {
             String stepped = TagPrePass.resolveDefSpans(current, context);
-            stepped = TagPrePass.resolveLoopSpans(stepped, context, eval);
-            stepped = TagPrePass.resolveIfSpans(stepped, context, eval);
+            stepped = walkLoops(stepped, playerName, context, eval);
+            stepped = walkIfs(stepped, playerName, context, eval);
             stepped = TagPrePass.resolveListSpans(stepped, context, eval);
             boolean changed = !stepped.equals(current);
             current = stepped;
-            Matcher matcher = INNER_TAG.matcher(current);
-            if (matcher.find()) {
-                StringBuffer result = new StringBuffer();
-                do {
-                    String resolved = resolveTag(matcher.group(1), playerName, context, eval);
-                    if (!resolved.equals(matcher.group(0))) {
-                        changed = true;
-                    }
-                    matcher.appendReplacement(result, Matcher.quoteReplacement(resolved));
-                } while (matcher.find());
-                matcher.appendTail(result);
-                current = result.toString();
+            String swept = resolvePlainWindow(current, 0, TagPrePass.protectionSpans(current),
+                    playerName, context, eval);
+            if (!swept.equals(current)) {
+                changed = true;
             }
+            current = swept;
             if (!changed) {
                 return current;
             }
@@ -440,6 +436,49 @@ public final class CommandPlaceholders {
         context.scope().warn(
                 "Stopped evaluating nested tags after " + MAX_TAG_PASSES + " passes: " + command);
         return current;
+    }
+
+    /** Loops walk with prefix windows over the current text. */
+    private static String walkLoops(String command, String playerName, TagContext context,
+            TagLoops.Evaluator eval) {
+        List<int[]> protections = TagPrePass.protectionSpans(command);
+        return TagPrePass.resolveLoopSpans(command, context, eval,
+                (gap, base) -> resolvePlainWindow(gap, base, protections, playerName,
+                        context, eval));
+    }
+
+    /** Ifs walk with prefix windows over the current text. */
+    private static String walkIfs(String command, String playerName, TagContext context,
+            TagLoops.Evaluator eval) {
+        List<int[]> protections = TagPrePass.protectionSpans(command);
+        return TagPrePass.resolveIfSpans(command, context, eval,
+                (gap, base) -> resolvePlainWindow(gap, base, protections, playerName,
+                        context, eval));
+    }
+
+    /**
+     * Resolves innermost tags in the window exactly like the plain
+     * scan, except matches covered by a protection span pass through.
+     * The base offset maps window positions onto the walked text.
+     */
+    static String resolvePlainWindow(String text, int baseOffset, List<int[]> protections,
+            String playerName, TagContext context, TagLoops.Evaluator eval) {
+        Matcher matcher = INNER_TAG.matcher(text);
+        if (!matcher.find()) {
+            return text;
+        }
+        StringBuffer result = new StringBuffer();
+        do {
+            String match = matcher.group(0);
+            String resolved = match;
+            if (!TagPrePass.covers(protections, baseOffset + matcher.start(),
+                    baseOffset + matcher.end())) {
+                resolved = resolveTag(matcher.group(1), playerName, context, eval);
+            }
+            matcher.appendReplacement(result, Matcher.quoteReplacement(resolved));
+        } while (matcher.find());
+        matcher.appendTail(result);
+        return result.toString();
     }
 
     private static String resolveTag(String body, String playerName, TagContext context,

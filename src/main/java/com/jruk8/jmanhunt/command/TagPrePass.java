@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,52 +30,110 @@ final class TagPrePass {
     }
 
     /**
-     * Resolves outermost def spans, right to left. Bodies store
-     * verbatim: nested tags inside wait for a call to evaluate them,
-     * so this must run before loops, ifs, and list mutators.
+     * Start/end pairs shielding plain-tag windows from span innards:
+     * outermost defs and loops, ready ifs (no nested if, so plain
+     * tags inside unready outers still resolve eagerly as before),
+     * and flag-ref mutators (pure mutators stay plain-phase).
+     * Computed fresh per walk on the current text.
+     */
+    static List<int[]> protectionSpans(String command) {
+        List<int[]> spans = new ArrayList<>();
+        for (TagLoops.LoopSpan span : TagFunctions.findDefSpans(command)) {
+            spans.add(new int[] {span.start(), span.end()});
+        }
+        for (TagLoops.LoopSpan span : TagLoops.findLoopSpans(command)) {
+            spans.add(new int[] {span.start(), span.end()});
+        }
+        for (TagExpressions.IfSpan span : TagExpressions.findIfSpans(command)) {
+            if (!TagExpressions.hasNestedIf(span.args())) {
+                spans.add(new int[] {span.start(), span.end()});
+            }
+        }
+        for (MutSpan span : readyMutatorSpans(command)) {
+            spans.add(new int[] {span.start(), span.end()});
+        }
+        return spans;
+    }
+
+    /** True when the match sits inside any protection span. */
+    static boolean covers(List<int[]> spans, int start, int end) {
+        for (int[] span : spans) {
+            if (start >= span[0] && end <= span[1]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Stitches ascending disjoint spans with gap-resolved text before
+     * each span; the gap function takes gap text plus its base offset.
+     * Strict-prefix gaps only: trailing text passes through for later
+     * groups and the sweep. Overlapping spans fail fast and loud.
+     */
+    private static <S> String stitch(String command, List<S> spans, ToIntFunction<S> startOf,
+            ToIntFunction<S> endOf, Function<S, String> resolve,
+            BiFunction<String, Integer, String> gap) {
+        spans.sort((first, second) ->
+                Integer.compare(startOf.applyAsInt(first), startOf.applyAsInt(second)));
+        StringBuilder out = new StringBuilder();
+        int cursor = 0;
+        for (S span : spans) {
+            int start = startOf.applyAsInt(span);
+            out.append(gap.apply(command.substring(cursor, start), cursor));
+            out.append(resolve.apply(span));
+            cursor = endOf.applyAsInt(span);
+        }
+        out.append(command.substring(cursor));
+        return out.toString();
+    }
+
+    /**
+     * Resolves outermost def spans, left to right, with identity
+     * gaps. Bodies store verbatim: nested tags inside wait for a
+     * call to evaluate them, so this must run before loops, ifs,
+     * and list mutators. Duplicate names are rightmost-wins.
      */
     static String resolveDefSpans(String command, TagContext context) {
         List<TagLoops.LoopSpan> spans = TagFunctions.findDefSpans(command);
         if (spans.isEmpty()) {
             return command;
         }
-        spans.sort((first, second) -> Integer.compare(second.start(), first.start()));
-        StringBuilder result = new StringBuilder(command);
-        for (TagLoops.LoopSpan span : spans) {
-            String tag = command.substring(span.start(), span.end());
-            String resolved = TagFunctions.define(tag, span.args(), context);
-            result.replace(span.start(), span.end(), resolved);
-        }
-        return result.toString();
+        return stitch(command, spans, TagLoops.LoopSpan::start, TagLoops.LoopSpan::end,
+                span -> TagFunctions.define(command.substring(span.start(), span.end()),
+                        span.args(), context),
+                (gap, base) -> gap);
     }
 
     /**
-     * Resolves outermost loop spans, right to left. Nested loops wait
-     * for the body evaluation of their enclosing loop, which recurses
-     * through the evaluation chain per iteration.
+     * Resolves outermost loop spans, left to right, resolving the
+     * strict-prefix plain window before each span through the gap
+     * function. Nested loops wait for the body evaluation of their
+     * enclosing loop, which recurses through the evaluation chain
+     * per iteration.
      */
-    static String resolveLoopSpans(String command, TagContext context, TagLoops.Evaluator eval) {
+    static String resolveLoopSpans(String command, TagContext context, TagLoops.Evaluator eval,
+            BiFunction<String, Integer, String> gap) {
         List<TagLoops.LoopSpan> spans = TagLoops.findLoopSpans(command);
         if (spans.isEmpty()) {
             return command;
         }
-        spans.sort((first, second) -> Integer.compare(second.start(), first.start()));
-        StringBuilder result = new StringBuilder(command);
-        for (TagLoops.LoopSpan span : spans) {
-            String tag = command.substring(span.start(), span.end());
-            String resolved = TagLoops.resolve(tag, span.op(), span.args(), context, eval);
-            result.replace(span.start(), span.end(), resolved);
-        }
-        return result.toString();
+        return stitch(command, spans, TagLoops.LoopSpan::start, TagLoops.LoopSpan::end,
+                span -> TagLoops.resolve(command.substring(span.start(), span.end()),
+                        span.op(), span.args(), context, eval),
+                gap);
     }
 
     /**
-     * Resolves if-spans without nested ifs, right to left, with lazy
-     * branches: only the condition and the chosen branch evaluate.
-     * Spans nesting another if still wait for the inner span, so an
-     * if nested in a dead branch resolves eagerly as before.
+     * Resolves if-spans without nested ifs, left to right, resolving
+     * the strict-prefix plain window before each span through the gap
+     * function, with lazy branches: only the condition and the chosen
+     * branch evaluate. Spans nesting another if still wait for the
+     * inner span, so an if nested in a dead branch resolves eagerly
+     * as before.
      */
-    static String resolveIfSpans(String command, TagContext context, TagLoops.Evaluator eval) {
+    static String resolveIfSpans(String command, TagContext context, TagLoops.Evaluator eval,
+            BiFunction<String, Integer, String> gap) {
         List<TagExpressions.IfSpan> ready = new ArrayList<>();
         for (TagExpressions.IfSpan span : TagExpressions.findIfSpans(command)) {
             if (!TagExpressions.hasNestedIf(span.args())) {
@@ -82,14 +143,10 @@ final class TagPrePass {
         if (ready.isEmpty()) {
             return command;
         }
-        ready.sort((first, second) -> Integer.compare(second.start(), first.start()));
-        StringBuilder result = new StringBuilder(command);
-        for (TagExpressions.IfSpan span : ready) {
-            String resolved = ifLazy(command.substring(span.start(), span.end()),
-                    span.args(), context, eval);
-            result.replace(span.start(), span.end(), resolved);
-        }
-        return result.toString();
+        return stitch(command, ready, TagExpressions.IfSpan::start, TagExpressions.IfSpan::end,
+                span -> ifLazy(command.substring(span.start(), span.end()), span.args(),
+                        context, eval),
+                gap);
     }
 
     /**
@@ -163,7 +220,11 @@ final class TagPrePass {
         return result.toString();
     }
 
-    /** Mutator spans holding no nested mutator span, rightmost first. */
+    /**
+     * Mutator spans holding no nested mutator span whose list arg is
+     * a verbatim flag reference, rightmost first. Pure mutators stay
+     * out so the plain scan still applies them.
+     */
     private static List<MutSpan> readyMutatorSpans(String command) {
         List<MutSpan> all = new ArrayList<>();
         Matcher opener = MUTATOR_OPEN.matcher(command);
@@ -183,11 +244,18 @@ final class TagPrePass {
                     break;
                 }
             }
-            if (!nested) {
+            if (!nested && hasFlagRef(command, span)) {
                 ready.add(span);
             }
         }
         ready.sort((first, second) -> Integer.compare(second.start(), first.start()));
         return ready;
+    }
+
+    /** True when the mutator span reads a verbatim flag reference. */
+    private static boolean hasFlagRef(String command, MutSpan span) {
+        String body = command.substring(span.start() + 1, span.end() - 1);
+        String args = body.substring(body.indexOf(':') + 1);
+        return TagLists.flagRef(TagLists.splitTopLevel(args).get(0)).isPresent();
     }
 }
