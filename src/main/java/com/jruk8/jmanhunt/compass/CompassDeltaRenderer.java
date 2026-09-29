@@ -52,7 +52,7 @@ final class CompassDeltaRenderer {
     void putTrackingBar(Player holder, Role holderRole, Integer lobby, String key, String playerName,
             UUID targetId, double distance, Map<String, String> extra) {
         boolean showDistance = plugin.overrides().getBoolean(lobby,
-                "settings.compass.actionbar.show-distance", true);
+                "settings.compass.feedback.actionbar.show-distance", true);
         DistanceRender render = showDistance
                 ? distanceRender(holder, holderRole, lobby, key, targetId, distance)
                 : new DistanceRender("", "", false);
@@ -72,7 +72,7 @@ final class CompassDeltaRenderer {
         UUID id = holder.getUniqueId();
         long generation = deltaGenerations.merge(id, 1L, Long::sum);
         long delayTicks = blinkDelayTicks(plugin.overrides().getDouble(lobby,
-                "settings.compass.actionbar.show-distance-delta.blink-duration-seconds", 0.6));
+                "settings.compass.feedback.actionbar.show-distance-delta.blink-duration-seconds", 0.6));
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (deltaGenerations.getOrDefault(id, 0L) != generation) {
                 return;
@@ -112,7 +112,7 @@ final class CompassDeltaRenderer {
         if (!Double.isFinite(distance) || distance < 0.0) {
             return plainRender;
         }
-        String base = "settings.compass.actionbar.show-distance-delta.";
+        String base = "settings.compass.feedback.actionbar.show-distance-delta.";
         if (!plugin.overrides().getBoolean(lobby, base + "enabled", true)) {
             return plainRender;
         }
@@ -120,7 +120,7 @@ final class CompassDeltaRenderer {
         Map<String, Long> history =
                 lastRoundedDistances.computeIfAbsent(holder.getUniqueId(), ignored -> new HashMap<>());
         Long previous = history.get(historyKey);
-        double maxDistance = plugin.overrides().getDouble(lobby, base + "max-distance", 200.0);
+        double maxDistance = plugin.overrides().getDouble(lobby, base + "max-distance", 500.0);
         double minDelta = plugin.overrides().getDouble(lobby, base + "min-delta-to-show", 5.0);
         DistanceDelta.Kind kind = DistanceDelta.of(previous, rounded, maxDistance, minDelta);
         history.put(historyKey, rounded);

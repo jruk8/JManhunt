@@ -26,7 +26,7 @@ class PseudoborderConfigTest {
         assertEquals(1, config.particleSpacing());
         assertEquals("#de7766", config.colorHex());
         assertEquals(10.0, config.renderRadius(), 0.0);
-        assertEquals(PulseMode.INTERVAL, config.pulseMode());
+        assertEquals(PulseMode.SINE_WAVE, config.pulseMode());
         assertEquals(0.5, config.intervalSeconds(), 0.0);
         assertEquals(0.0, config.waveDirectionAngle(), 0.0);
         assertEquals(8.0, config.waveLength(), 0.0);
@@ -41,7 +41,7 @@ class PseudoborderConfigTest {
         ConfigPathMapper.set(root, BASE + "particle-spacing", 4);
         ConfigPathMapper.set(root, BASE + "color", "#ffffff");
         ConfigPathMapper.set(root, BASE + "render-radius", 20.0);
-        ConfigPathMapper.set(root, BASE + "pulse-mode", "SINE_WAVE");
+        ConfigPathMapper.set(root, BASE + "pulse-mode", "INTERVAL");
         ConfigPathMapper.set(root, BASE + "interval", 1.5);
         ConfigPathMapper.set(root, BASE + "wave-direction-angle", 90.0);
         ConfigPathMapper.set(root, BASE + "wave-length", 16.0);
@@ -53,7 +53,7 @@ class PseudoborderConfigTest {
         assertEquals(4, config.particleSpacing());
         assertEquals("#ffffff", config.colorHex());
         assertEquals(20.0, config.renderRadius(), 0.0);
-        assertEquals(PulseMode.SINE_WAVE, config.pulseMode());
+        assertEquals(PulseMode.INTERVAL, config.pulseMode());
         assertEquals(1.5, config.intervalSeconds(), 0.0);
         assertEquals(90.0, config.waveDirectionAngle(), 0.0);
         assertEquals(16.0, config.waveLength(), 0.0);
@@ -76,7 +76,7 @@ class PseudoborderConfigTest {
 
         assertEquals(1, low.particleSpacing());
         assertEquals(0.0, low.renderRadius(), 0.0);
-        assertEquals(PulseMode.INTERVAL, low.pulseMode());
+        assertEquals(PulseMode.SINE_WAVE, low.pulseMode());
         assertEquals(3.0, low.intervalSeconds(), 0.0);
         assertEquals(360.0, low.waveDirectionAngle(), 0.0);
         assertEquals(2.0, low.waveLength(), 0.0);

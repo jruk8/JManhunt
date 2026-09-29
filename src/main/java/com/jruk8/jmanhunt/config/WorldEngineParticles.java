@@ -44,9 +44,9 @@ public class WorldEngineParticles extends OkaeriConfig {
     @Comment({
             "Pulse style: INTERVAL blinks every wall in sync,",
             "SINE_WAVE sweeps a traveling band across each wall.",
-            "Default: INTERVAL"
+            "Default: SINE_WAVE"
     })
-    private String pulseMode = "INTERVAL";
+    private String pulseMode = "SINE_WAVE";
 
     @Comment({
             "Seconds between INTERVAL blinks. 0 shows every tick",

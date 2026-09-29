@@ -199,8 +199,8 @@ class CompassItemTest {
         assertFalse(items.shouldReceiveCompass(null, Role.SPEEDRUNNER));
         assertFalse(items.shouldReceiveCompass(null, Role.SPECTATOR));
 
-        ConfigPathMapper.set(root, "settings.compass.given-to.speedrunners", true);
-        ConfigPathMapper.set(root, "settings.compass.given-to.hunters", false);
+        ConfigPathMapper.set(root, "settings.compass.obtaining.given-to.speedrunners", true);
+        ConfigPathMapper.set(root, "settings.compass.obtaining.given-to.hunters", false);
 
         assertTrue(items.shouldReceiveCompass(null, Role.SPEEDRUNNER));
         assertFalse(items.shouldReceiveCompass(null, Role.HUNTER));

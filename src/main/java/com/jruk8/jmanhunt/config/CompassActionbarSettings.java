@@ -76,9 +76,9 @@ public class CompassActionbarSettings extends OkaeriConfig {
         @Comment({
                 "Delta colors stop past this distance in meters; small",
                 "changes far away only clutter the screen.",
-                "Default: 200.0"
+                "Default: 500.0"
         })
-        private double maxDistance = 200.0;
+        private double maxDistance = 500.0;
 
         @CustomKey("min-delta-to-show")
         @Comment({

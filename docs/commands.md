@@ -215,7 +215,7 @@ rejected with an error naming what is allowed:
 Numerical settings accept their numeric value:
 
 ```text
-/manhunt config settings compass refresh-interval 5
+/manhunt config settings compass actions auto interval 5
 /manhunt config settings match win-conditions speedrunner survive-time time 1800
 /manhunt config world-engine cell-size 20000
 ```

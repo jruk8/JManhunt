@@ -25,7 +25,7 @@ public record PseudoborderConfig(
                 Math.clamp(config.getInt(base + "particle-spacing", 1), 1, 8),
                 config.getString(base + "color", DEFAULT_COLOR_HEX),
                 Math.max(0.0, config.getDouble(base + "render-radius", 10.0)),
-                PulseMode.parse(config.getString(base + "pulse-mode", "INTERVAL")),
+                PulseMode.parse(config.getString(base + "pulse-mode", "SINE_WAVE")),
                 Math.clamp(config.getDouble(base + "interval", 0.5), 0.0, 3.0),
                 Math.clamp(config.getDouble(base + "wave-direction-angle", 0.0), 0.0, 360.0),
                 Math.clamp(config.getDouble(base + "wave-length", 8.0), 2.0, 64.0),

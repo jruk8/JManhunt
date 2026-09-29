@@ -13,7 +13,7 @@ world-engine:
       particle-spacing: 1
       color: "#de7766"
       render-radius: 10.0
-      pulse-mode: INTERVAL
+      pulse-mode: SINE_WAVE
       interval: 0.5
       wave-direction-angle: 0.0
       wave-length: 8.0
@@ -39,17 +39,16 @@ player must be before that wall starts rendering. 0 disables the walls.
 
 ## Pulse Modes
 
-Exactly one pulse mode is active. `INTERVAL` blinks every wall in sync:
-`interval` is the seconds between blinks, 0 to 3, where 0 shows every
-tick (not recommended, lag). The cadence is identical whatever
-direction the player looks.
+Exactly one pulse mode is active. `SINE_WAVE` (the default) sweeps a
+traveling band across each wall. `wave-direction-angle` is the travel
+direction in degrees, counter-clockwise from the wall horizontal when
+facing the wall: 0 travels along the wall, 90 travels up.
+`wave-length` is the spatial period in blocks, 2 to 64. `wave-speed`
+is the temporal frequency in Hz, 0.05 to 3.0.
 
-`SINE_WAVE` sweeps a traveling band across each wall instead.
-`wave-direction-angle` is the travel direction in degrees,
-counter-clockwise from the wall horizontal when facing the wall: 0
-travels along the wall, 90 travels up. `wave-length` is the spatial
-period in blocks, 2 to 64. `wave-speed` is the temporal frequency in
-Hz, 0.05 to 3.0.
+`INTERVAL` blinks every wall in sync instead: `interval` is the seconds
+between blinks, 0 to 3, where 0 shows every tick (not recommended,
+lag). The cadence is identical whatever direction the player looks.
 
 ## Corners And Budget
 

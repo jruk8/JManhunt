@@ -403,7 +403,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         Bukkit.getScheduler().runTaskTimer(this,
                 () -> compass.refreshAllCompasses(game.isActive()), 5L, 5L);
         long actionbarTicks = Math.max(1L,
-                configService.getInt("settings.compass.actionbar.refresh-ticks", 1));
+                configService.getInt("settings.compass.feedback.actionbar.refresh-ticks", 1));
         BukkitTask actionbars = Bukkit.getScheduler().runTaskTimer(this,
                 () -> compass.showHeldActionbars(game.isActive()), 1L, actionbarTicks);
         Bukkit.getScheduler().runTaskTimer(this, game::broadcastAutostartShortfalls, 20L, 20L);

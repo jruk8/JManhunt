@@ -22,6 +22,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class CompassManager {
     private final JManhuntPlugin plugin;
@@ -96,10 +97,16 @@ public final class CompassManager {
                             return;
                         }
                         Integer lobby = lobbyOf(holder);
-                        double intervalSeconds = plugin.overrides().getDouble(lobby,
-                                "settings.compass.refresh-interval", 10.0);
+                        var overrides = plugin.overrides();
+                        boolean autoEnabled = overrides.getBoolean(lobby,
+                                "settings.compass.actions.auto.enabled", true);
+                        double intervalSeconds = overrides.getDouble(lobby,
+                                "settings.compass.actions.auto.interval", 10.0);
+                        double deviationSeconds = overrides.getDouble(lobby,
+                                "settings.compass.actions.auto.deviation", 0.0);
                         if (!autoRefreshDue(now, lastAutoRefresh.getOrDefault(id, 0L),
-                                intervalSeconds)) {
+                                autoEnabled, intervalSeconds, deviationSeconds,
+                                ThreadLocalRandom.current().nextDouble())) {
                             return;
                         }
                         lastAutoRefresh.put(id, now);
@@ -114,15 +121,21 @@ public final class CompassManager {
     }
 
     /**
-     * True when a holder is due for an automatic refresh: a negative
-     * interval disables it, otherwise the full interval must have
-     * elapsed since the last automatic or click refresh. Pure for tests.
+     * True when a holder is due for an automatic refresh: a disabled
+     * clock never fires, otherwise the jittered interval must have
+     * elapsed since the last automatic or click refresh. The roll
+     * stretches the interval by plus-or-minus the deviation, capped at
+     * the interval itself. Pure for tests.
      */
-    static boolean autoRefreshDue(long nowMillis, long lastMillis, double intervalSeconds) {
-        if (intervalSeconds < 0.0) {
+    static boolean autoRefreshDue(long nowMillis, long lastMillis, boolean enabled,
+            double intervalSeconds, double deviationSeconds, double roll) {
+        if (!enabled) {
             return false;
         }
-        return shouldRefresh(nowMillis, lastMillis, (long) (intervalSeconds * 1000));
+        double interval = Math.max(0.0, intervalSeconds);
+        double jitter = Math.min(Math.max(0.0, deviationSeconds), interval);
+        double effective = Math.max(0.0, interval + (roll * 2.0 - 1.0) * jitter);
+        return shouldRefresh(nowMillis, lastMillis, (long) (effective * 1000));
     }
 
     public void showHeldActionbars(boolean active) {
@@ -227,7 +240,7 @@ public final class CompassManager {
             return;
         }
         int cap = CompassCache.clampMaxTargets(plugin.overrides()
-                .getInt(lobbyOf(holder), "settings.compass.left-click.max-targets", 5));
+                .getInt(lobbyOf(holder), "settings.compass.actions.target-cycling.max-targets", 5));
         Map<UUID, Location> spots = new HashMap<>();
         for (CompassSnapshot snap : targets.collectSnapshots(holder, Role.HUNTER, match.get(), cap)) {
             spots.put(snap.id(), snap.location());
@@ -308,7 +321,7 @@ public final class CompassManager {
      */
     private void writeCache(Player holder, GameInstance instance) {
         int cap = CompassCache.clampMaxTargets(plugin.overrides()
-                .getInt(lobbyOf(holder), "settings.compass.left-click.max-targets", 5));
+                .getInt(lobbyOf(holder), "settings.compass.actions.target-cycling.max-targets", 5));
         cache.replace(holder.getUniqueId(), holder.getLocation().clone(),
                 targets.collectSnapshots(holder, Role.HUNTER, instance, cap),
                 targets.collectSnapshots(holder, Role.SPEEDRUNNER, instance, cap));
@@ -344,7 +357,8 @@ public final class CompassManager {
     /** Resolves the compass pick for the narrowed targets. */
     private CompassPick resolveCompassPick(Integer lobby, Role holderRole,
             List<CompassCandidate> opponents, List<CompassSighting> sightings) {
-        String roleBase = "settings.compass." + holderRole.name().toLowerCase(Locale.ROOT) + ".";
+        String roleBase = "settings.compass.distance-limits."
+                + holderRole.name().toLowerCase(Locale.ROOT) + ".";
         var overrides = plugin.overrides();
         boolean nearbyEnabled = overrides.getBoolean(lobby, roleBase + "min-distance.enabled", true);
         double nearbyThreshold = overrides.getDouble(lobby, roleBase + "min-distance.distance", 25.0);
@@ -414,7 +428,7 @@ public final class CompassManager {
         }
         RefreshMatch target = match.get();
         int maxTargets = CompassCache.clampMaxTargets(plugin.overrides()
-                .getInt(lobbyOf(holder), "settings.compass.left-click.max-targets", 5));
+                .getInt(lobbyOf(holder), "settings.compass.actions.target-cycling.max-targets", 5));
         CompassLockService.CachedCycle cycle =
                 locks.buildCycle(holder, target.instance(), target.targetRole(), maxTargets);
         CompassLockService.LockedTargets narrowed = locks.narrowToLockCached(holder.getUniqueId(),
@@ -643,7 +657,7 @@ public final class CompassManager {
         }
         Integer lobby = lobbyOf(player);
         if (!plugin.overrides()
-                .getBoolean(lobby, "settings.compass.right-click.refresh-on-right-click", false)) {
+                .getBoolean(lobby, "settings.compass.actions.manual.enabled", false)) {
             return;
         }
         if (plugin.fakeSpectators().isFakeSpectator(player)) {
@@ -654,7 +668,7 @@ public final class CompassManager {
         }
         long now = System.currentTimeMillis();
         long cooldownMs = (long) (plugin.overrides()
-                .getDouble(lobby, "settings.compass.click.click-cooldown", 3.0) * 1000);
+                .getDouble(lobby, "settings.compass.actions.manual.cooldown", 3.0) * 1000);
         if (!shouldRefresh(now, lastClick.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
             return;
         }

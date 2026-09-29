@@ -38,8 +38,8 @@ no actionbar, and no click behavior.
 
 ## Given to Roles
 
-Under `settings.compass.given-to`, you can configure which roles receive a
-compass when a match starts (and on respawn):
+Under `settings.compass.obtaining.given-to`, you can configure which roles
+receive a compass when a match starts (and on respawn):
 
 ```yaml
 given-to:
@@ -89,10 +89,10 @@ compass at all: the item is removed instead.
 
 ## Inventory Lock
 
-Under `settings.compass.inventory-lock`, you can configure whether the compass
-must stay in the player's inventory. This allows the player to change its slot
-but not drop it or put it to a container. Dropping on death is controlled by the
-[Drop on Death](#drop-on-death) setting.
+Under `settings.compass.must-be-inventory`, you can configure whether the
+compass must stay in the player's inventory. This allows the player to change
+its slot but not drop it or put it to a container. Dropping on death is
+controlled by the [Drop on Death](#drop-on-death) setting.
 
 ```yaml
 must-be-inventory:
@@ -101,9 +101,9 @@ must-be-inventory:
 
 ## Drop on Death
 
-Under `settings.compass.drop-on-death`, you can configure whether the compass
-is dropped on death. This is useful for allowing speedrunners to pick up the
-hunter's compass after death and track them.
+Under `settings.compass.obtaining.drop-on-death`, you can configure whether
+the compass is dropped on death. This is useful for allowing speedrunners to
+pick up the hunter's compass after death and track them.
 
 Only one compass may exist in the inventory at a time. Duplicate ones are removed.
 
@@ -114,35 +114,41 @@ drop-on-death:
 
 ## Refresh Time
 
-Under `settings.compass.refresh-interval`, you can configure how often the
-compass should refresh its target. Set to -1 to disable automatic refreshing.
-Each holder runs their own interval: two players who clicked at different
-times refresh at different times, and a holder who just joined refreshes
-on the next tick.
+Under `settings.compass.actions.auto`, you can configure how often the
+compass should refresh its target on its own. Set `enabled` to false to
+disable automatic refreshing. Each holder runs their own interval: two
+players who clicked at different times refresh at different times, and
+a holder who just joined refreshes on the next tick. `deviation` adds
+a random plus-or-minus jitter to the interval per refresh, capped at
+the interval itself.
 
 ```yaml
-refresh-interval: 10.0        # in seconds
+actions:
+  auto:
+    enabled: true
+    interval: 10.0        # in seconds
+    deviation: 0.0        # in seconds
 ```
 
-Under `settings.compass.right-click`, you can configure right-clicking the
-compass to refresh it. Right-clicks run on their own cooldown under
-`settings.compass.click` and apart from the automatic interval, so a
-fresh automatic refresh never blocks them; each click still restarts
-the automatic interval. Left-click and shift-left-click never touch
-this cooldown: they only browse the snapshot cache (see below).
-Deaths refresh immediately as well: when a target dies, every
-unlocked compass in the match re-resolves at once instead of waiting
-for the interval.
+Under `settings.compass.actions.manual`, you can configure right-clicking
+the compass to refresh it. Right-clicks run on their own `cooldown`
+and apart from the automatic interval, so a fresh automatic refresh
+never blocks them; each click still restarts the automatic interval.
+Left-click and shift-left-click never touch this cooldown: they only
+browse the snapshot cache (see below). Deaths refresh immediately as
+well: when a target dies, every unlocked compass in the match
+re-resolves at once instead of waiting for the interval.
 
 ```yaml
-right-click:
-  refresh-on-right-click: true
-click:
-  click-cooldown: 3.0      # in seconds
+actions:
+  manual:
+    enabled: true
+    cooldown: 3.0      # in seconds
 ```
 
-Under `settings.compass.left-click`, you can let holders left-click the
-compass to cycle a manual target lock through the nearest candidates:
+Under `settings.compass.actions.target-cycling`, you can let holders
+left-click the compass to cycle a manual target lock through the nearest
+candidates:
 cached opponents nearest-first, then last-seen locations
 nearest-first, then uncached players, up to `max-targets` total
 (minimum 1, maximum 20). While locked, the actionbar shows `LOCKED`
@@ -153,10 +159,11 @@ after the locked target left the candidate set. Only left-clicks on air or
 blocks cycle the lock; attacking an entity with the compass does not.
 
 ```yaml
-left-click:
-  enabled: true
-  max-targets: 5
-  scroll-cooldown: 0.5
+actions:
+  target-cycling:
+    enabled: true
+    max-targets: 5
+    scroll-cooldown: 0.5
 ```
 
 Every refresh snapshots the closest hunters plus the closest
@@ -179,18 +186,19 @@ plays a short click. You can change it under
 
 ## Teammate Tracking
 
-Under `settings.compass.teammates`, shift-left-clicking the compass
-toggles between tracking enemies and tracking teammates instead of
-cycling a lock. Teammate mode tracks same-role players with the same
+Under `settings.compass.actions.teammates`, shift-left-clicking the
+compass toggles between tracking enemies and tracking teammates instead
+of cycling a lock. Teammate mode tracks same-role players with the same
 distance limits and signal rules, and the actionbar reads `Tracking
 teammate ...`; toggling back returns to the other role. The toggle
 drops any manual lock and renders the current snapshot cache at once,
 without fetching or touching the refresh cooldown:
 
 ```yaml
-teammates:
-  enabled: true
-  switch-cooldown: 0.5
+actions:
+  teammates:
+    enabled: true
+    switch-cooldown: 0.5
 ```
 
 `switch-cooldown` is the seconds between accepted switches; switches
@@ -209,24 +217,25 @@ left-click.
 
 ## Actionbar
 
-Under `settings.compass.actionbar`, `refresh-ticks` sets how often the
-tracking actionbar is pushed to holders, in ticks (default 1, minimum
-1). This is frontend only: the tracking refresh interval is
+Under `settings.compass.feedback.actionbar`, `refresh-ticks` sets how
+often the tracking actionbar is pushed to holders, in ticks (default 1,
+minimum 1). This is frontend only: the tracking refresh interval is
 untouched, so lowering it redraws the same snapshot more often.
 
 ```yaml
-actionbar:
-  refresh-ticks: 1
-  show-distance: true
-  show-distance-delta:
-    enabled: true
-    further-format: "<green>▲{distance}"
-    closer-format: "<red>▼{distance}"
-    max-distance: 200.0
-    min-delta-to-show: 5.0
-    mode: BLINK
-    blink-duration-seconds: 0.6
-    reverse-on-hunter: true
+feedback:
+  actionbar:
+    refresh-ticks: 1
+    show-distance: true
+    show-distance-delta:
+      enabled: true
+      further-format: "<green>▲{distance}"
+      closer-format: "<red>▼{distance}"
+      max-distance: 500.0
+      min-delta-to-show: 5.0
+      mode: BLINK
+      blink-duration-seconds: 0.6
+      reverse-on-hunter: true
 ```
 
 `show-distance-delta` colors the distance by movement since the last
@@ -252,13 +261,14 @@ triangle, or distance history.
 
 ## Chat Messages
 
-Under `settings.compass.chat-messages`, compass actions can chat the
-holder: locking onto a target, switching teammate mode on and off,
-and the death of a locked target:
+Under `settings.compass.feedback.chat-messages`, compass actions can
+chat the holder: locking onto a target, switching teammate mode on and
+off, and the death of a locked target:
 
 ```yaml
-chat-messages:
-  enabled: true
+feedback:
+  chat-messages:
+    enabled: true
 ```
 
 The lines come from `compass.locked-chat`,
@@ -273,22 +283,24 @@ a dimension you are not in. There is nothing to configure.
 
 ## Analysis Delay
 
-Under `settings.compass.analysis`, a right-click refresh can take a
-purposeful moment to resolve instead of answering instantly. Analysis
-is strictly right-click only: automatic interval refreshes always
-resolve at once. While analyzing, the actionbar reads `Analyzing...`,
-no second refresh can start, and compass clicks are ignored until it
-resolves. The automatic clock stamps when the analysis starts, but
-the shared click cooldown stamps when it resolves, so the full
-cooldown always runs after the refresh. Interference checks and the
+Under `settings.compass.actions.manual.analysis`, a right-click refresh
+can take a purposeful moment to resolve instead of answering instantly.
+Analysis is strictly right-click only: automatic interval refreshes
+always resolve at once. While analyzing, the actionbar reads
+`Analyzing...`, no second refresh can start, and compass clicks are
+ignored until it resolves. The automatic clock stamps when the analysis
+starts, but the shared click cooldown stamps when it resolves, so the
+full cooldown always runs after the refresh. Interference checks and the
 distance math use your position from when you pressed analyze, not
 where you moved to during the delay:
 
 ```yaml
-analysis:
-  enabled: false
-  delay-seconds: 1.0
-  delay-deviation-seconds: 0.0
+actions:
+  manual:
+    analysis:
+      enabled: false
+      delay-seconds: 1.0
+      delay-deviation-seconds: 0.0
 ```
 
 `delay-seconds` is how long each analysis takes, and
@@ -301,12 +313,12 @@ the needle lands on nothing trackable.
 
 ### Analysis Debuffs
 
-Under `settings.compass.analysis.debuffs`, you can run console commands
-every time an analysis starts, in modifier style: `<p>` is the
-compass holder, `~` resolves against their location, and `<duration>` is
-the analysis delay in whole seconds (floored). The `player` list runs for
-every analyzing holder plus their own role list, and only participants
-are affected:
+Under `settings.compass.actions.manual.analysis.debuffs`, you can run
+console commands every time an analysis starts, in modifier style: `<p>`
+is the compass holder, `~` resolves against their location, and
+`<duration>` is the analysis delay in whole seconds (floored). The
+`player` list runs for every analyzing holder plus their own role list,
+and only participants are affected:
 
 ```yaml
 debuffs:
@@ -321,18 +333,20 @@ debuffs:
 
 ## Tracking Distance
 
-Each role gets its own tracking limits under `settings.compass.hunter` and
-`settings.compass.speedrunner`. The compass uses the block matching the
-role of the player holding it.
+Each role gets its own tracking limits under
+`settings.compass.distance-limits.hunter` and
+`settings.compass.distance-limits.speedrunner`. The compass uses the block
+matching the role of the player holding it.
 
 ```yaml
-hunter:
-  min-distance:
-    enabled: true
-    distance: 25.0
-  max-distance:
-    enabled: true
-    distance: -1.0
+distance-limits:
+  hunter:
+    min-distance:
+      enabled: true
+      distance: 25.0
+    max-distance:
+      enabled: true
+      distance: -1.0
 ```
 
 ### Minimum Distance
@@ -422,7 +436,7 @@ WorldEdit installed. Turn it off if you rely on the navwand.
    speedrunner.
 2. Lock a target with left-click, shift-left-click, and confirm the
    lock is gone and the mode flipped.
-3. Set `teammates.enabled` to false and confirm shift-left-click
+3. Set `actions.teammates.enabled` to false and confirm shift-left-click
    cycles locks exactly like left-click.
 4. End the match and confirm a new match starts in enemy mode.
 5. In spectator mode, shift-left-click and confirm nothing happens.

@@ -477,8 +477,8 @@ class CompassLockServiceTest {
     @SuppressWarnings("unchecked")
     private static Fixture fixture(List<CompassCandidate> opponents) {
         JManhuntConfig root = new JManhuntConfig();
-        ConfigPathMapper.set(root, "settings.compass.left-click.enabled", true);
-        ConfigPathMapper.set(root, "settings.compass.left-click.scroll-cooldown", 10.0);
+        ConfigPathMapper.set(root, "settings.compass.actions.target-cycling.enabled", true);
+        ConfigPathMapper.set(root, "settings.compass.actions.target-cycling.scroll-cooldown", 10.0);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
@@ -533,11 +533,11 @@ class CompassLockServiceTest {
     private static Fixture teammateFixture(List<CompassCandidate> opponents,
             boolean teammatesEnabled, Role role, double switchCooldown, boolean chatEnabled) {
         JManhuntConfig root = new JManhuntConfig();
-        ConfigPathMapper.set(root, "settings.compass.left-click.enabled", true);
-        ConfigPathMapper.set(root, "settings.compass.left-click.scroll-cooldown", 0.0);
-        ConfigPathMapper.set(root, "settings.compass.teammates.enabled", teammatesEnabled);
-        ConfigPathMapper.set(root, "settings.compass.teammates.switch-cooldown", switchCooldown);
-        ConfigPathMapper.set(root, "settings.compass.chat-messages.enabled", chatEnabled);
+        ConfigPathMapper.set(root, "settings.compass.actions.target-cycling.enabled", true);
+        ConfigPathMapper.set(root, "settings.compass.actions.target-cycling.scroll-cooldown", 0.0);
+        ConfigPathMapper.set(root, "settings.compass.actions.teammates.enabled", teammatesEnabled);
+        ConfigPathMapper.set(root, "settings.compass.actions.teammates.switch-cooldown", switchCooldown);
+        ConfigPathMapper.set(root, "settings.compass.feedback.chat-messages.enabled", chatEnabled);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,

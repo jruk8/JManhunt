@@ -12,9 +12,9 @@ class PulseModeTest {
     }
 
     @Test
-    void parseFallsBackToInterval() {
+    void parseFallsBackToSineWave() {
         assertEquals(PulseMode.INTERVAL, PulseMode.parse("INTERVAL"));
-        assertEquals(PulseMode.INTERVAL, PulseMode.parse("bogus"));
-        assertEquals(PulseMode.INTERVAL, PulseMode.parse(null));
+        assertEquals(PulseMode.SINE_WAVE, PulseMode.parse("bogus"));
+        assertEquals(PulseMode.SINE_WAVE, PulseMode.parse(null));
     }
 }

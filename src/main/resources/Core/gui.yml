@@ -30,12 +30,28 @@ categories:
   match/headstarts/hunter: CROSSBOW
   match/headstarts/speedrunner: RABBIT_FOOT
   compass: COMPASS
-  compass/given-to: CHEST
-  compass/analysis: AMETHYST_SHARD
-  compass/analysis/debuffs: POTION
-  compass/analysis/debuffs/commands: COMMAND_BLOCK
-  compass/actionbar: GLOW_INK_SAC
-  compass/actionbar/show-distance-delta: ARROW
+  compass/obtaining: TRAPPED_CHEST
+  compass/obtaining/given-to: CHEST
+  compass/obtaining/drop-on-death: HOPPER
+  compass/actions: TARGET
+  compass/actions/auto: OBSERVER
+  compass/actions/manual: OAK_BUTTON
+  compass/actions/manual/analysis: AMETHYST_SHARD
+  compass/actions/manual/analysis/debuffs: POTION
+  compass/actions/manual/analysis/debuffs/commands: COMMAND_BLOCK
+  compass/actions/target-cycling: STONE_BUTTON
+  compass/actions/teammates: SPYGLASS
+  compass/distance-limits: TIPPED_ARROW
+  compass/distance-limits/hunter: BOW
+  compass/distance-limits/hunter/max-distance: ENDER_PEARL
+  compass/distance-limits/hunter/min-distance: TRIPWIRE_HOOK
+  compass/distance-limits/speedrunner: LEATHER_BOOTS
+  compass/distance-limits/speedrunner/max-distance: SPECTRAL_ARROW
+  compass/distance-limits/speedrunner/min-distance: STRING
+  compass/feedback: ITEM_FRAME
+  compass/feedback/actionbar: GLOW_INK_SAC
+  compass/feedback/actionbar/show-distance-delta: ARROW
+  compass/feedback/chat-messages: NOTE_BLOCK
   compass/signal-interference: REDSTONE_TORCH
   compass/signal-interference/altitude: ELYTRA
   compass/signal-interference/biome: GRASS_BLOCK
@@ -46,19 +62,7 @@ categories:
   compass/signal-interference/underground: STONE
   compass/signal-interference/underwater: WATER_BUCKET
   compass/signal-interference/weather: LIGHTNING_ROD
-  compass/hunter: BOW
-  compass/hunter/max-distance: ENDER_PEARL
-  compass/hunter/min-distance: TRIPWIRE_HOOK
-  compass/speedrunner: LEATHER_BOOTS
-  compass/speedrunner/max-distance: SPECTRAL_ARROW
-  compass/speedrunner/min-distance: STRING
-  compass/drop-on-death: HOPPER
-  compass/click: TARGET
-  compass/left-click: STONE_BUTTON
-  compass/teammates: SPYGLASS
   compass/must-be-inventory: ENDER_CHEST
-  compass/right-click: OAK_BUTTON
-  compass/chat-messages: NOTE_BLOCK
   players: PLAYER_HEAD
   players/respawn: TOTEM_OF_UNDYING
   players/respawn/hunter: RED_BED
@@ -134,17 +138,27 @@ descriptions:
   "settings.match.win-conditions.speedrunner.reach-advancement": "Speedrunners win via an advancement."
   "settings.match.win-conditions.speedrunner.survive-time": "Speedrunners win by surviving."
   "settings.compass": "Tracking compass: who gets one and how it behaves."
-  "settings.compass.analysis": "Delayed analysis with tick sounds and commands."
-  "settings.compass.analysis.debuffs": "Commands fired while analysis runs."
-  "settings.compass.analysis.debuffs.commands": "Command lists for holders, runners, hunters."
-  "settings.compass.drop-on-death": "Whether the compass drops when its holder dies."
-  "settings.compass.given-to": "Which roles receive a tracking compass."
-  "settings.compass.hunter": "Range limits for hunter compasses."
-  "settings.compass.hunter.max-distance": "Cap on hunter tracking range."
-  "settings.compass.hunter.min-distance": "Hide targets too close to hunters."
-  "settings.compass.left-click": "Cycle locked targets with left-click."
+  "settings.compass.obtaining": "How holders get and keep their compass."
+  "settings.compass.obtaining.given-to": "Which roles receive a tracking compass."
+  "settings.compass.obtaining.drop-on-death": "Whether the compass drops when its holder dies."
+  "settings.compass.actions": "Automatic, manual, cycling, and teammate actions."
+  "settings.compass.actions.auto": "Scheduled automatic refreshes."
+  "settings.compass.actions.manual": "Right-click refreshes and their analysis."
+  "settings.compass.actions.manual.analysis": "Delayed analysis with tick sounds and commands."
+  "settings.compass.actions.manual.analysis.debuffs": "Commands fired while analysis runs."
+  "settings.compass.actions.manual.analysis.debuffs.commands": "Command lists for holders, runners, hunters."
+  "settings.compass.actions.target-cycling": "Cycle locked targets with left-click."
+  "settings.compass.distance-limits": "Per-role tracking range limits."
+  "settings.compass.distance-limits.hunter": "Range limits for hunter compasses."
+  "settings.compass.distance-limits.hunter.max-distance": "Cap on hunter tracking range."
+  "settings.compass.distance-limits.hunter.min-distance": "Hide targets too close to hunters."
+  "settings.compass.distance-limits.speedrunner": "Range limits for speedrunner compasses."
+  "settings.compass.distance-limits.speedrunner.max-distance": "Cap on speedrunner tracking range."
+  "settings.compass.distance-limits.speedrunner.min-distance": "Hide targets too close to speedrunners."
+  "settings.compass.feedback": "Actionbar, chat, and other compass feedback."
+  "settings.compass.feedback.chat-messages": "Chat the holder about compass actions."
+  "settings.compass.feedback.chat-messages.enabled": "Lock, switch, and died chat messages."
   "settings.compass.must-be-inventory": "Force the compass to stay in the inventory."
-  "settings.compass.right-click": "Refresh the target with right-click."
   "settings.compass.signal-interference": "Jam tracking by height, biome, light, and more."
   "settings.compass.signal-interference.altitude": "Jam tracking outside a height band."
   "settings.compass.signal-interference.biome": "Biomes that jam tracking."
@@ -154,14 +168,9 @@ descriptions:
   "settings.compass.signal-interference.underground": "Jam tracking under too many blocks."
   "settings.compass.signal-interference.underwater": "Jam tracking under too much water."
   "settings.compass.signal-interference.weather": "Weather that jams tracking."
-  "settings.compass.speedrunner": "Range limits for speedrunner compasses."
-  "settings.compass.teammates": "Track teammates with shift-left-click."
-  "settings.compass.teammates.enabled": "Shift-left toggles teammate tracking."
-  "settings.compass.teammates.switch-cooldown": "Seconds between teammate switches."
-  "settings.compass.chat-messages": "Chat the holder about compass actions."
-  "settings.compass.chat-messages.enabled": "Lock, switch, and died chat messages."
-  "settings.compass.speedrunner.max-distance": "Cap on speedrunner tracking range."
-  "settings.compass.speedrunner.min-distance": "Hide targets too close to speedrunners."
+  "settings.compass.actions.teammates": "Track teammates with shift-left-click."
+  "settings.compass.actions.teammates.enabled": "Shift-left toggles teammate tracking."
+  "settings.compass.actions.teammates.switch-cooldown": "Seconds between teammate switches."
   "settings.players": "Roles, respawns, damage rules, and announcements."
   "settings.players.announce-roles": "Reveal roles when the match starts."
   "settings.players.announce-roles.chat": "List roles in chat at match start."
@@ -232,46 +241,47 @@ descriptions:
   "settings.match.game-boosts.overworld-structures.enabled": "Boost overworld structure rates."
   "settings.match.game-boosts.disable-brutes.enabled": "Block natural piglin brute spawns."
   "settings.match.game-boosts.custom-piglin-barter": "Custom piglin barter odds for speedrunners."
-  "settings.compass.given-to.hunters": "Hunters receive a tracking compass."
-  "settings.compass.given-to.speedrunners": "Speedrunners receive a tracking compass."
+  "settings.compass.obtaining.given-to.hunters": "Hunters receive a tracking compass."
+  "settings.compass.obtaining.given-to.speedrunners": "Speedrunners receive a tracking compass."
   "settings.compass.item": "Item handed out as the tracking compass."
   "settings.compass.must-be-inventory.enabled": "Compass must stay in the inventory."
-  "settings.compass.drop-on-death.enabled": "Compass survives death as a dropped item."
-  "settings.compass.refresh-interval": "Seconds between retargets; -1 disables."
-  "settings.compass.right-click.refresh-on-right-click": "Right-click refreshes the compass target."
-  "settings.compass.click": "Cooldown for right-click compass refreshes."
-  "settings.compass.click.click-cooldown": "Seconds between accepted refresh clicks."
-  "settings.compass.left-click.enabled": "Left-click cycles locked compass targets."
-  "settings.compass.left-click.max-targets": "Most targets the lock can cycle through."
-  "settings.compass.left-click.scroll-cooldown": "Seconds between lock scrolls."
-  "settings.compass.hunter.max-distance.enabled": "Limit hunter compass range."
-  "settings.compass.hunter.max-distance.distance": "Hunter compass range; -1 is unlimited."
-  "settings.compass.hunter.min-distance.enabled": "Hide nearby targets from hunters."
-  "settings.compass.hunter.min-distance.distance": "Radius inside which targets hide."
-  "settings.compass.speedrunner.max-distance.enabled": "Limit speedrunner compass range."
-  "settings.compass.speedrunner.max-distance.distance": "Speedrunner compass range; -1 is unlimited."
-  "settings.compass.speedrunner.min-distance.enabled": "Hide nearby targets from speedrunners."
-  "settings.compass.speedrunner.min-distance.distance": "Radius inside which targets hide."
-  "settings.compass.analysis.enabled": "Analysis lag applies to right-click refreshes."
-  "settings.compass.analysis.delay-seconds": "Seconds the analysis takes to complete."
-  "settings.compass.analysis.delay-deviation-seconds": "Random jitter on the analysis delay."
-  "settings.compass.analysis.sound-interval-seconds": "Seconds between analysis tick sounds."
-  "settings.compass.analysis.debuffs.enabled": "Run commands when an analysis starts."
-  "settings.compass.analysis.debuffs.commands.player": "Commands run for every analyzing holder."
-  "settings.compass.analysis.debuffs.commands.speedrunner": "Extra commands for speedrunner holders."
-  "settings.compass.analysis.debuffs.commands.hunter": "Extra commands for hunter holders."
-  "settings.compass.actionbar": "Actionbar push rate and distance delta."
-  "settings.compass.actionbar.refresh-ticks": "Ticks between actionbar pushes."
-  "settings.compass.actionbar.show-distance": "Show the distance on tracking bars."
-  "settings.compass.actionbar.show-distance-delta": "Distance delta triangles."
-  "settings.compass.actionbar.show-distance-delta.enabled": "Show up/down triangles on distance."
-  "settings.compass.actionbar.show-distance-delta.further-format": "Format when the target got further."
-  "settings.compass.actionbar.show-distance-delta.closer-format": "Format when the target got closer."
-  "settings.compass.actionbar.show-distance-delta.max-distance": "Delta colors stop past this range."
-  "settings.compass.actionbar.show-distance-delta.min-delta-to-show": "Smallest delta that shows colors."
-  "settings.compass.actionbar.show-distance-delta.mode": "HOLD keeps the delta; BLINK flashes it."
-  "settings.compass.actionbar.show-distance-delta.blink-duration-seconds": "Seconds a blink stays visible."
-  "settings.compass.actionbar.show-distance-delta.reverse-on-hunter": "Hunters see green on closer."
+  "settings.compass.obtaining.drop-on-death.enabled": "Compass survives death as a dropped item."
+  "settings.compass.actions.auto.enabled": "Refresh on the automatic clock."
+  "settings.compass.actions.auto.interval": "Seconds between automatic retargets."
+  "settings.compass.actions.auto.deviation": "Random jitter on the auto interval."
+  "settings.compass.actions.manual.enabled": "Right-click refreshes the compass target."
+  "settings.compass.actions.manual.cooldown": "Seconds between accepted refresh clicks."
+  "settings.compass.actions.target-cycling.enabled": "Left-click cycles locked compass targets."
+  "settings.compass.actions.target-cycling.max-targets": "Most targets the lock can cycle through."
+  "settings.compass.actions.target-cycling.scroll-cooldown": "Seconds between lock scrolls."
+  "settings.compass.distance-limits.hunter.max-distance.enabled": "Limit hunter compass range."
+  "settings.compass.distance-limits.hunter.max-distance.distance": "Hunter compass range; -1 is unlimited."
+  "settings.compass.distance-limits.hunter.min-distance.enabled": "Hide nearby targets from hunters."
+  "settings.compass.distance-limits.hunter.min-distance.distance": "Radius inside which targets hide."
+  "settings.compass.distance-limits.speedrunner.max-distance.enabled": "Limit speedrunner compass range."
+  "settings.compass.distance-limits.speedrunner.max-distance.distance": "Speedrunner compass range; -1 is unlimited."
+  "settings.compass.distance-limits.speedrunner.min-distance.enabled": "Hide nearby targets from speedrunners."
+  "settings.compass.distance-limits.speedrunner.min-distance.distance": "Radius inside which targets hide."
+  "settings.compass.actions.manual.analysis.enabled": "Analysis lag applies to right-click refreshes."
+  "settings.compass.actions.manual.analysis.delay-seconds": "Seconds the analysis takes to complete."
+  "settings.compass.actions.manual.analysis.delay-deviation-seconds": "Random jitter on the analysis delay."
+  "settings.compass.actions.manual.analysis.sound-interval-seconds": "Seconds between analysis tick sounds."
+  "settings.compass.actions.manual.analysis.debuffs.enabled": "Run commands when an analysis starts."
+  "settings.compass.actions.manual.analysis.debuffs.commands.player": "Commands run for every analyzing holder."
+  "settings.compass.actions.manual.analysis.debuffs.commands.speedrunner": "Extra commands for speedrunner holders."
+  "settings.compass.actions.manual.analysis.debuffs.commands.hunter": "Extra commands for hunter holders."
+  "settings.compass.feedback.actionbar": "Actionbar push rate and distance delta."
+  "settings.compass.feedback.actionbar.refresh-ticks": "Ticks between actionbar pushes."
+  "settings.compass.feedback.actionbar.show-distance": "Show the distance on tracking bars."
+  "settings.compass.feedback.actionbar.show-distance-delta": "Distance delta triangles."
+  "settings.compass.feedback.actionbar.show-distance-delta.enabled": "Show up/down triangles on distance."
+  "settings.compass.feedback.actionbar.show-distance-delta.further-format": "Format when the target got further."
+  "settings.compass.feedback.actionbar.show-distance-delta.closer-format": "Format when the target got closer."
+  "settings.compass.feedback.actionbar.show-distance-delta.max-distance": "Delta colors stop past this range."
+  "settings.compass.feedback.actionbar.show-distance-delta.min-delta-to-show": "Smallest delta that shows colors."
+  "settings.compass.feedback.actionbar.show-distance-delta.mode": "HOLD keeps the delta; BLINK flashes it."
+  "settings.compass.feedback.actionbar.show-distance-delta.blink-duration-seconds": "Seconds a blink stays visible."
+  "settings.compass.feedback.actionbar.show-distance-delta.reverse-on-hunter": "Hunters see green on closer."
   "settings.compass.signal-interference.enabled": "Master switch for signal interference."
   "settings.compass.signal-interference.required-to-fail": "Failed checks needed to jam tracking."
   "settings.compass.signal-interference.chance-to-bypass": "Chance to ignore interference."

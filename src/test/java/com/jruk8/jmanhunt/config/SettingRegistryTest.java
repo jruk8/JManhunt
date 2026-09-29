@@ -50,11 +50,11 @@ class SettingRegistryTest {
 
     @Test
     void floatParsesAndRejectsNonNumericAndNonFinite() {
-        assertEquals(25.5, validate("settings.compass.analysis.delay-seconds", "25.5").value());
+        assertEquals(25.5, validate("settings.compass.actions.manual.analysis.delay-seconds", "25.5").value());
 
-        assertFalse(validate("settings.compass.analysis.delay-seconds", "oops").ok());
-        assertFalse(validate("settings.compass.analysis.delay-seconds", "NaN").ok());
-        assertFalse(validate("settings.compass.analysis.delay-seconds", "Infinity").ok());
+        assertFalse(validate("settings.compass.actions.manual.analysis.delay-seconds", "oops").ok());
+        assertFalse(validate("settings.compass.actions.manual.analysis.delay-seconds", "NaN").ok());
+        assertFalse(validate("settings.compass.actions.manual.analysis.delay-seconds", "Infinity").ok());
     }
 
     @Test
@@ -147,7 +147,7 @@ class SettingRegistryTest {
     @Test
     void compassActionbarRefreshTicksDefaultsToOne() {
         assertEquals("1", SettingRegistry
-                .byPath("settings.compass.actionbar.refresh-ticks").defaultValue());
+                .byPath("settings.compass.feedback.actionbar.refresh-ticks").defaultValue());
     }
 
     @Test
@@ -169,7 +169,7 @@ class SettingRegistryTest {
                 .byPath("world-engine.world-border.particles.color").defaultValue());
         assertEquals("10.0", SettingRegistry
                 .byPath("world-engine.world-border.particles.render-radius").defaultValue());
-        assertEquals("INTERVAL", SettingRegistry
+        assertEquals("SINE_WAVE", SettingRegistry
                 .byPath("world-engine.world-border.particles.pulse-mode").defaultValue());
         assertEquals("0.5", SettingRegistry
                 .byPath("world-engine.world-border.particles.interval").defaultValue());
@@ -249,8 +249,8 @@ class SettingRegistryTest {
                 SettingRegistry.byPath("settings.match.autostart.countdown-seconds"), (Double) null));
         assertEquals("at least 1", SettingRegistry.boundsText(
                 SettingRegistry.byPath("settings.match.autostart.minimums.hunter"), (Double) null));
-        assertEquals("-1 or at least 0", SettingRegistry.boundsText(
-                SettingRegistry.byPath("settings.compass.refresh-interval"), (Double) null));
+        assertEquals("at least 0", SettingRegistry.boundsText(
+                SettingRegistry.byPath("settings.compass.actions.auto.interval"), (Double) null));
         assertEquals("-1 or at least 5", SettingRegistry.boundsText(
                 SettingRegistry.byPath("settings.match.start-on-speedrunner-damage.delay-seconds"),
                 (Double) null));
@@ -258,13 +258,6 @@ class SettingRegistryTest {
 
     @Test
     void minusOneSentinelsAcceptOnlyExactNegativeOne() {
-        assertTrue(validate("settings.compass.refresh-interval", "-1").ok());
-        assertTrue(validate("settings.compass.refresh-interval", "5").ok());
-        var refreshBad = validate("settings.compass.refresh-interval", "-0.5");
-        assertFalse(refreshBad.ok());
-        assertEquals("manhunt.setting-out-of-range", refreshBad.errorKey());
-        assertEquals("-1 or at least 0", refreshBad.slots().get("bounds"));
-
         assertTrue(validate("settings.players.respawn.hunter.lives", "-1").ok());
         assertFalse(validate("settings.players.respawn.hunter.lives", "-2").ok());
         assertTrue(validate("advanced.advanced-match-controls.end-delay", "-5").ok());
@@ -282,11 +275,11 @@ class SettingRegistryTest {
         assertEquals(List.of("compass", "match", "players", "server"), settings.sections());
         assertEquals(List.of(), settings.leaves());
 
-        var givenTo = SettingRegistry.children("settings.compass.given-to");
+        var givenTo = SettingRegistry.children("settings.compass.obtaining.given-to");
         assertEquals(List.of(), givenTo.sections());
         assertEquals(List.of("hunters", "speedrunners"), givenTo.leaves());
 
-        var commands = SettingRegistry.children("settings.compass.analysis.debuffs.commands");
+        var commands = SettingRegistry.children("settings.compass.actions.manual.analysis.debuffs.commands");
         assertEquals(List.of("hunter", "player", "speedrunner"), commands.sections());
     }
 

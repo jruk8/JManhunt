@@ -30,9 +30,9 @@ class ConfigDrillTest {
     @Test
     void fullLeafPathResolvesWithEmptyRemainder() {
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                List.of("settings", "compass", "given-to", "hunters"), noLists());
+                List.of("settings", "compass", "obtaining", "given-to", "hunters"), noLists());
 
-        assertEquals("settings.compass.given-to.hunters", resolved.path());
+        assertEquals("settings.compass.obtaining.given-to.hunters", resolved.path());
         assertTrue(resolved.leaf());
         assertTrue(resolved.remainder().isEmpty());
     }
@@ -40,9 +40,9 @@ class ConfigDrillTest {
     @Test
     void trailingValueStaysAsRemainder() {
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                List.of("settings", "compass", "given-to", "hunters", "true"), noLists());
+                List.of("settings", "compass", "obtaining", "given-to", "hunters", "true"), noLists());
 
-        assertEquals("settings.compass.given-to.hunters", resolved.path());
+        assertEquals("settings.compass.obtaining.given-to.hunters", resolved.path());
         assertTrue(resolved.leaf());
         assertEquals(List.of("true"), resolved.remainder());
     }
@@ -76,9 +76,9 @@ class ConfigDrillTest {
     @Test
     void matchingIsCaseInsensitiveButCanonical() {
         DrillResolve resolved = ManhuntCommand.resolveDrill(
-                List.of("SETTINGS", "Compass", "Given-To", "HUNTERS"), noLists());
+                List.of("SETTINGS", "Compass", "Obtaining", "Given-To", "HUNTERS"), noLists());
 
-        assertEquals("settings.compass.given-to.hunters", resolved.path());
+        assertEquals("settings.compass.obtaining.given-to.hunters", resolved.path());
         assertTrue(resolved.leaf());
     }
 
@@ -93,7 +93,7 @@ class ConfigDrillTest {
         assertEquals(List.of("compass", "match", "players", "server"),
                 ManhuntCommand.drillChildren(List.of("settings"), noLists()));
         assertEquals(List.of("hunters", "speedrunners"), ManhuntCommand.drillChildren(
-                List.of("settings", "compass", "given-to"), noLists()));
+                List.of("settings", "compass", "obtaining", "given-to"), noLists()));
     }
 
     @Test
@@ -163,7 +163,7 @@ class ConfigDrillTest {
         assertEquals(List.of("compass", "match", "players", "server"), settings.sections());
         assertEquals(List.of(), settings.leaves());
 
-        var givenTo = SettingRegistry.children("settings.compass.given-to");
+        var givenTo = SettingRegistry.children("settings.compass.obtaining.given-to");
         assertEquals(List.of(), givenTo.sections());
         assertEquals(List.of("hunters", "speedrunners"), givenTo.leaves());
 

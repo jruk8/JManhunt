@@ -10,14 +10,8 @@ import java.util.List;
 @SuppressWarnings("FieldMayBeFinal")
 public class CompassSettings extends OkaeriConfig {
 
-    @CustomKey("given-to")
-    @Comment({
-            "Which roles receive a compass when a match starts (and on respawn).",
-            "Hunters track speedrunners; speedrunners track hunters.",
-            "Set both to false to disable the compass entirely.",
-            "Default: hunters true, speedrunners false"
-    })
-    private GivenTo givenTo = new GivenTo();
+    @Comment("How holders get and keep their compass.")
+    private Obtaining obtaining = new Obtaining();
 
     @CustomKey("item")
     @Comment({
@@ -42,49 +36,15 @@ public class CompassSettings extends OkaeriConfig {
     })
     private Toggle mustBeInventory = new Toggle(true);
 
-    @CustomKey("drop-on-death")
-    @Comment({
-            "When true, a compass survives a speedrunner's death as a normal dropped",
-            "item.",
-            "If a speedrunner gets ahold of the compass, they may track the hunters.",
-            "Default: true"
-    })
-    private Toggle dropOnDeath = new Toggle(true);
+    @Comment("Automatic, manual, cycling, and teammate actions.")
+    private Actions actions = new Actions();
 
-    @CustomKey("refresh-interval")
-    @Comment({
-            "Seconds between compass target/location refreshes. Set to -1 to disable",
-            "scheduled refreshes (in that case use right-click refresh or the compass",
-            "NEVER refreshes); right-click refreshes can still be used separately."
-    })
-    private double refreshInterval = 10.0;
-
-    @CustomKey("right-click")
-    private RightClick rightClick = new RightClick();
-
-    @Comment({
-            "Cooldown for right-click compass refreshes. Left-click and",
-            "shift-left-click use their own throttles and never touch this."
-    })
-    private Click click = new Click();
-
-    @CustomKey("left-click")
-    private LeftClick leftClick = new LeftClick();
-
-    @CustomKey("teammates")
-    private Teammates teammates = new Teammates();
-
-    @CustomKey("chat-messages")
-    private ChatMessages chatMessages = new ChatMessages();
-
+    @CustomKey("distance-limits")
     @Comment({
             "Per-role tracking distances. The holder's role picks which block",
             "applies. Manually locked targets obey the same limits."
     })
-    private Tracker hunter = new Tracker();
-
-    @Comment("Same as hunter, but for the opposite role.")
-    private Tracker speedrunner = new Tracker();
+    private DistanceLimits distanceLimits = new DistanceLimits();
 
     @CustomKey("signal-interference")
     @Comment({
@@ -95,22 +55,15 @@ public class CompassSettings extends OkaeriConfig {
     })
     private SignalInterferenceSettings signalInterference = new SignalInterferenceSettings();
 
-    @Comment({
-            "Purposeful lag before a compass refresh resolves, showing",
-            "\"Analyzing...\" while it runs. No second refresh starts mid-analysis,",
-            "and click cooldowns restart when the analysis ends."
-    })
-    private Analysis analysis = new Analysis();
+    @Comment("Actionbar, chat, and other compass feedback.")
+    private Feedback feedback = new Feedback();
 
-    @Comment("Actionbar push rate and distance delta.")
-    private CompassActionbarSettings actionbar = new CompassActionbarSettings();
-
-    public GivenTo getGivenTo() {
-        return givenTo;
+    public Obtaining getObtaining() {
+        return obtaining;
     }
 
-    public void setGivenTo(GivenTo givenTo) {
-        this.givenTo = givenTo;
+    public void setObtaining(Obtaining obtaining) {
+        this.obtaining = obtaining;
     }
 
     public String getItem() {
@@ -129,76 +82,20 @@ public class CompassSettings extends OkaeriConfig {
         this.mustBeInventory = mustBeInventory;
     }
 
-    public Toggle getDropOnDeath() {
-        return dropOnDeath;
+    public Actions getActions() {
+        return actions;
     }
 
-    public void setDropOnDeath(Toggle dropOnDeath) {
-        this.dropOnDeath = dropOnDeath;
+    public void setActions(Actions actions) {
+        this.actions = actions;
     }
 
-    public double getRefreshInterval() {
-        return refreshInterval;
+    public DistanceLimits getDistanceLimits() {
+        return distanceLimits;
     }
 
-    public void setRefreshInterval(double refreshInterval) {
-        this.refreshInterval = refreshInterval;
-    }
-
-    public RightClick getRightClick() {
-        return rightClick;
-    }
-
-    public void setRightClick(RightClick rightClick) {
-        this.rightClick = rightClick;
-    }
-
-    public Click getClick() {
-        return click;
-    }
-
-    public void setClick(Click click) {
-        this.click = click;
-    }
-
-    public LeftClick getLeftClick() {
-        return leftClick;
-    }
-
-    public void setLeftClick(LeftClick leftClick) {
-        this.leftClick = leftClick;
-    }
-
-    public Teammates getTeammates() {
-        return teammates;
-    }
-
-    public void setTeammates(Teammates teammates) {
-        this.teammates = teammates;
-    }
-
-    public ChatMessages getChatMessages() {
-        return chatMessages;
-    }
-
-    public void setChatMessages(ChatMessages chatMessages) {
-        this.chatMessages = chatMessages;
-    }
-
-    public Tracker getHunter() {
-        return hunter;
-    }
-
-    public void setHunter(Tracker hunter) {
-        this.hunter = hunter;
-    }
-
-    public Tracker getSpeedrunner() {
-        return speedrunner;
-    }
-
-    public void setSpeedrunner(Tracker speedrunner) {
-        this.speedrunner = speedrunner;
+    public void setDistanceLimits(DistanceLimits distanceLimits) {
+        this.distanceLimits = distanceLimits;
     }
 
     public SignalInterferenceSettings getSignalInterference() {
@@ -209,20 +106,247 @@ public class CompassSettings extends OkaeriConfig {
         this.signalInterference = signalInterference;
     }
 
-    public Analysis getAnalysis() {
-        return analysis;
+    public Feedback getFeedback() {
+        return feedback;
     }
 
-    public void setAnalysis(Analysis analysis) {
-        this.analysis = analysis;
+    public void setFeedback(Feedback feedback) {
+        this.feedback = feedback;
     }
 
-    public CompassActionbarSettings getActionbar() {
-        return actionbar;
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Obtaining extends OkaeriConfig {
+
+        @CustomKey("given-to")
+        @Comment({
+                "Which roles receive a compass when a match starts (and on respawn).",
+                "Hunters track speedrunners; speedrunners track hunters.",
+                "Set both to false to disable the compass entirely.",
+                "Default: hunters true, speedrunners false"
+        })
+        private GivenTo givenTo = new GivenTo();
+
+        @CustomKey("drop-on-death")
+        @Comment({
+                "When true, a compass survives a speedrunner's death as a normal dropped",
+                "item.",
+                "If a speedrunner gets ahold of the compass, they may track the hunters.",
+                "Default: true"
+        })
+        private Toggle dropOnDeath = new Toggle(true);
+
+        public GivenTo getGivenTo() {
+            return givenTo;
+        }
+
+        public void setGivenTo(GivenTo givenTo) {
+            this.givenTo = givenTo;
+        }
+
+        public Toggle getDropOnDeath() {
+            return dropOnDeath;
+        }
+
+        public void setDropOnDeath(Toggle dropOnDeath) {
+            this.dropOnDeath = dropOnDeath;
+        }
     }
 
-    public void setActionbar(CompassActionbarSettings actionbar) {
-        this.actionbar = actionbar;
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Actions extends OkaeriConfig {
+
+        @Comment("Scheduled automatic refreshes.")
+        private Auto auto = new Auto();
+
+        @Comment("Right-click manual refreshes and their analysis.")
+        private Manual manual = new Manual();
+
+        @CustomKey("target-cycling")
+        private LeftClick targetCycling = new LeftClick();
+
+        @CustomKey("teammates")
+        private Teammates teammates = new Teammates();
+
+        public Auto getAuto() {
+            return auto;
+        }
+
+        public void setAuto(Auto auto) {
+            this.auto = auto;
+        }
+
+        public Manual getManual() {
+            return manual;
+        }
+
+        public void setManual(Manual manual) {
+            this.manual = manual;
+        }
+
+        public LeftClick getTargetCycling() {
+            return targetCycling;
+        }
+
+        public void setTargetCycling(LeftClick targetCycling) {
+            this.targetCycling = targetCycling;
+        }
+
+        public Teammates getTeammates() {
+            return teammates;
+        }
+
+        public void setTeammates(Teammates teammates) {
+            this.teammates = teammates;
+        }
+
+        @SuppressWarnings("FieldMayBeFinal")
+        public static class Auto extends OkaeriConfig {
+
+            @Comment({"When true, the compass refreshes on its own clock.", "Default: true"})
+            private boolean enabled = true;
+
+            @CustomKey("interval")
+            @Comment({
+                    "Seconds between automatic target/location refreshes.",
+                    "Minimum: 0 (always due).",
+                    "Default: 10.0"
+            })
+            private double interval = 10.0;
+
+            @CustomKey("deviation")
+            @Comment({
+                    "Random plus-or-minus jitter applied to the interval per",
+                    "refresh. Capped at the interval itself.",
+                    "Minimum: 0. Maximum: the interval.",
+                    "Default: 0.0"
+            })
+            private double deviation = 0.0;
+
+            public boolean isEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(boolean enabled) {
+                this.enabled = enabled;
+            }
+
+            public double getInterval() {
+                return interval;
+            }
+
+            public void setInterval(double interval) {
+                this.interval = interval;
+            }
+
+            public double getDeviation() {
+                return deviation;
+            }
+
+            public void setDeviation(double deviation) {
+                this.deviation = deviation;
+            }
+        }
+
+        @SuppressWarnings("FieldMayBeFinal")
+        public static class Manual extends OkaeriConfig {
+
+            @Comment({
+                    "Optional refresh-on-right-click runs alongside automatic refreshes.",
+                    "Default: true"
+            })
+            private boolean enabled = true;
+
+            @CustomKey("cooldown")
+            @Comment({
+                    "Seconds between accepted refresh clicks. Set to -1 for no",
+                    "cooldown. Left-click and shift-left-click use their own",
+                    "throttles and never touch this.",
+                    "Default: 3.0"
+            })
+            private double cooldown = 3.0;
+
+            @Comment({
+                    "Purposeful lag before a compass refresh resolves, showing",
+                    "\"Analyzing...\" while it runs. No second refresh starts mid-analysis,",
+                    "and click cooldowns restart when the analysis ends."
+            })
+            private Analysis analysis = new Analysis();
+
+            public boolean isEnabled() {
+                return enabled;
+            }
+
+            public void setEnabled(boolean enabled) {
+                this.enabled = enabled;
+            }
+
+            public double getCooldown() {
+                return cooldown;
+            }
+
+            public void setCooldown(double cooldown) {
+                this.cooldown = cooldown;
+            }
+
+            public Analysis getAnalysis() {
+                return analysis;
+            }
+
+            public void setAnalysis(Analysis analysis) {
+                this.analysis = analysis;
+            }
+        }
+    }
+
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class DistanceLimits extends OkaeriConfig {
+
+        private Tracker hunter = new Tracker();
+
+        @Comment("Same as hunter, but for the opposite role.")
+        private Tracker speedrunner = new Tracker();
+
+        public Tracker getHunter() {
+            return hunter;
+        }
+
+        public void setHunter(Tracker hunter) {
+            this.hunter = hunter;
+        }
+
+        public Tracker getSpeedrunner() {
+            return speedrunner;
+        }
+
+        public void setSpeedrunner(Tracker speedrunner) {
+            this.speedrunner = speedrunner;
+        }
+    }
+
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Feedback extends OkaeriConfig {
+
+        @Comment("Actionbar push rate and distance delta.")
+        private CompassActionbarSettings actionbar = new CompassActionbarSettings();
+
+        @CustomKey("chat-messages")
+        private ChatMessages chatMessages = new ChatMessages();
+
+        public CompassActionbarSettings getActionbar() {
+            return actionbar;
+        }
+
+        public void setActionbar(CompassActionbarSettings actionbar) {
+            this.actionbar = actionbar;
+        }
+
+        public ChatMessages getChatMessages() {
+            return chatMessages;
+        }
+
+        public void setChatMessages(ChatMessages chatMessages) {
+            this.chatMessages = chatMessages;
+        }
     }
 
     /** Refresh analysis lag and debuffs. */
@@ -384,40 +508,6 @@ public class CompassSettings extends OkaeriConfig {
 
         public void setSpeedrunners(boolean speedrunners) {
             this.speedrunners = speedrunners;
-        }
-    }
-
-    /** Right-click refresh behavior. */
-    @SuppressWarnings("FieldMayBeFinal")
-    public static class RightClick extends OkaeriConfig {
-
-        @CustomKey("refresh-on-right-click")
-        @Comment("Optional refresh-on-right-click runs alongside interval refreshes.")
-        private boolean refreshOnRightClick = true;
-
-        public boolean isRefreshOnRightClick() {
-            return refreshOnRightClick;
-        }
-
-        public void setRefreshOnRightClick(boolean refreshOnRightClick) {
-            this.refreshOnRightClick = refreshOnRightClick;
-        }
-    }
-
-    /** Cooldown for right-click compass refreshes. */
-    @SuppressWarnings("FieldMayBeFinal")
-    public static class Click extends OkaeriConfig {
-
-        @CustomKey("click-cooldown")
-        @Comment("Seconds between accepted refresh clicks. Set to -1 for no cooldown.")
-        private double clickCooldown = 3.0;
-
-        public double getClickCooldown() {
-            return clickCooldown;
-        }
-
-        public void setClickCooldown(double clickCooldown) {
-            this.clickCooldown = clickCooldown;
         }
     }
 

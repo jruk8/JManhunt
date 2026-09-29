@@ -97,7 +97,7 @@ class ManhuntMenusTest {
     void listMenuRebuildsEntriesOnRefresh() {
         when(config.getStringList(anyString())).thenReturn(List.of("a"));
         Menu menu = menus.listMenu(viewer,
-                "settings.compass.analysis.debuffs.commands.player", () -> null);
+                "settings.compass.actions.manual.analysis.debuffs.commands.player", () -> null);
 
         assertEquals(2, menu.window().visibleEntries().size());
 

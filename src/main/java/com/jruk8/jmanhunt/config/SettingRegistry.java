@@ -22,9 +22,9 @@ public final class SettingRegistry {
     private static final Set<String> NAMES = Set.copyOf(BY_PATH.keySet());
     private static final Set<String> LIST_PATHS = Set.of(
             "advanced.advanced-match-controls.end-statistics",
-            "settings.compass.analysis.debuffs.commands.player",
-            "settings.compass.analysis.debuffs.commands.speedrunner",
-            "settings.compass.analysis.debuffs.commands.hunter",
+            "settings.compass.actions.manual.analysis.debuffs.commands.player",
+            "settings.compass.actions.manual.analysis.debuffs.commands.speedrunner",
+            "settings.compass.actions.manual.analysis.debuffs.commands.hunter",
             "settings.compass.signal-interference.weather.interfere-during",
             "settings.compass.signal-interference.biome.interfere-in",
             "world-engine.preloading.commands",
@@ -548,33 +548,35 @@ public final class SettingRegistry {
     }
 
     private static void addCompassEntries(List<SettingDescriptor> entries) {
-        entries.add(bool("settings.compass.given-to.hunters", true));
-        entries.add(bool("settings.compass.given-to.speedrunners", false));
+        entries.add(bool("settings.compass.obtaining.given-to.hunters", true));
+        entries.add(bool("settings.compass.obtaining.given-to.speedrunners", false));
         entries.add(string("settings.compass.item", "compass"));
         entries.add(bool("settings.compass.must-be-inventory.enabled", true));
-        entries.add(bool("settings.compass.drop-on-death.enabled", true));
-        entries.add(floatMinusOne("settings.compass.refresh-interval", 10.0, 0.0));
-        entries.add(bool("settings.compass.right-click.refresh-on-right-click", true));
-        entries.add(floatVal("settings.compass.click.click-cooldown", 3.0, -1.0, null));
-        entries.add(bool("settings.compass.left-click.enabled", true));
-        entries.add(intVal("settings.compass.left-click.max-targets", 5, 1, 20));
-        entries.add(floatVal("settings.compass.left-click.scroll-cooldown", 0.5, 0.0, null));
-        entries.add(bool("settings.compass.teammates.enabled", true));
-        entries.add(floatVal("settings.compass.teammates.switch-cooldown", 0.5, 0.0, null));
-        entries.add(bool("settings.compass.chat-messages.enabled", true));
-        entries.add(bool("settings.compass.hunter.min-distance.enabled", true));
-        entries.add(floatVal("settings.compass.hunter.min-distance.distance", 25.0, 0.0, null));
-        entries.add(bool("settings.compass.hunter.max-distance.enabled", true));
-        entries.add(floatVal("settings.compass.hunter.max-distance.distance", -1.0, -1.0, null));
-        entries.add(bool("settings.compass.speedrunner.min-distance.enabled", true));
-        entries.add(floatVal("settings.compass.speedrunner.min-distance.distance", 25.0, 0.0, null));
-        entries.add(bool("settings.compass.speedrunner.max-distance.enabled", true));
-        entries.add(floatVal("settings.compass.speedrunner.max-distance.distance", -1.0, -1.0, null));
+        entries.add(bool("settings.compass.obtaining.drop-on-death.enabled", true));
+        entries.add(bool("settings.compass.actions.auto.enabled", true));
+        entries.add(floatVal("settings.compass.actions.auto.interval", 10.0, 0.0, null));
+        entries.add(floatVal("settings.compass.actions.auto.deviation", 0.0, 0.0, null));
+        entries.add(bool("settings.compass.actions.manual.enabled", true));
+        entries.add(floatVal("settings.compass.actions.manual.cooldown", 3.0, -1.0, null));
+        entries.add(bool("settings.compass.actions.target-cycling.enabled", true));
+        entries.add(intVal("settings.compass.actions.target-cycling.max-targets", 5, 1, 20));
+        entries.add(floatVal("settings.compass.actions.target-cycling.scroll-cooldown", 0.5, 0.0, null));
+        entries.add(bool("settings.compass.actions.teammates.enabled", true));
+        entries.add(floatVal("settings.compass.actions.teammates.switch-cooldown", 0.5, 0.0, null));
+        entries.add(bool("settings.compass.feedback.chat-messages.enabled", true));
+        entries.add(bool("settings.compass.distance-limits.hunter.min-distance.enabled", true));
+        entries.add(floatVal("settings.compass.distance-limits.hunter.min-distance.distance", 25.0, 0.0, null));
+        entries.add(bool("settings.compass.distance-limits.hunter.max-distance.enabled", true));
+        entries.add(floatVal("settings.compass.distance-limits.hunter.max-distance.distance", -1.0, -1.0, null));
+        entries.add(bool("settings.compass.distance-limits.speedrunner.min-distance.enabled", true));
+        entries.add(floatVal("settings.compass.distance-limits.speedrunner.min-distance.distance", 25.0, 0.0, null));
+        entries.add(bool("settings.compass.distance-limits.speedrunner.max-distance.enabled", true));
+        entries.add(floatVal("settings.compass.distance-limits.speedrunner.max-distance.distance", -1.0, -1.0, null));
         addCompassAnalysisEntries(entries);
     }
 
     private static void addCompassAnalysisEntries(List<SettingDescriptor> entries) {
-        String root = "settings.compass.analysis.";
+        String root = "settings.compass.actions.manual.analysis.";
         entries.add(bool(root + "enabled", false));
         entries.add(floatVal(root + "delay-seconds", 1.0, 0.0, null));
         entries.add(floatVal(root + "delay-deviation-seconds", 0.0, 0.0, null));
@@ -584,13 +586,13 @@ public final class SettingRegistry {
     }
 
     private static void addCompassActionbarEntries(List<SettingDescriptor> entries) {
-        String root = "settings.compass.actionbar.";
+        String root = "settings.compass.feedback.actionbar.";
         entries.add(intVal(root + "refresh-ticks", 1, 1, null));
         entries.add(bool(root + "show-distance", true));
         entries.add(bool(root + "show-distance-delta.enabled", true));
         entries.add(string(root + "show-distance-delta.further-format", "<green>▲{distance}"));
         entries.add(string(root + "show-distance-delta.closer-format", "<red>▼{distance}"));
-        entries.add(floatVal(root + "show-distance-delta.max-distance", 200.0, 0.0, null));
+        entries.add(floatVal(root + "show-distance-delta.max-distance", 500.0, 0.0, null));
         entries.add(floatVal(root + "show-distance-delta.min-delta-to-show", 5.0, 0.0, null));
         entries.add(option(root + "show-distance-delta.mode", "BLINK", "HOLD", "BLINK"));
         entries.add(floatVal(root + "show-distance-delta.blink-duration-seconds", 0.6, 0.0, null));
@@ -713,7 +715,7 @@ public final class SettingRegistry {
         entries.add(intVal("world-engine.world-border.particles.particle-spacing", 1, 1, 8));
         entries.add(string("world-engine.world-border.particles.color", "#de7766"));
         entries.add(floatVal("world-engine.world-border.particles.render-radius", 10.0, 0.0, null));
-        entries.add(option("world-engine.world-border.particles.pulse-mode", "INTERVAL",
+        entries.add(option("world-engine.world-border.particles.pulse-mode", "SINE_WAVE",
                 "INTERVAL", "SINE_WAVE"));
         entries.add(floatVal("world-engine.world-border.particles.interval", 0.5, 0.0, 3.0));
         entries.add(floatVal("world-engine.world-border.particles.wave-direction-angle", 0.0, 0.0, 360.0));

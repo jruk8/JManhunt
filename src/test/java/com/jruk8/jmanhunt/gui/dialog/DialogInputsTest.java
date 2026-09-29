@@ -32,7 +32,7 @@ class DialogInputsTest {
         assertFalse(DialogInputs.useNumberRange(
                 SettingRegistry.byPath("settings.match.autostart.countdown-seconds")));
         assertFalse(DialogInputs.useNumberRange(
-                SettingRegistry.byPath("settings.compass.refresh-interval")));
+                SettingRegistry.byPath("settings.compass.actions.auto.interval")));
         assertFalse(DialogInputs.useNumberRange(
                 SettingRegistry.byPath("settings.compass.signal-interference.required-to-fail")));
         assertFalse(DialogInputs.useNumberRange(

@@ -81,7 +81,7 @@ class CompassDeltaRendererTest {
 
     private static Fixture fixture(boolean showDistance) {
         JManhuntConfig root = new JManhuntConfig();
-        ConfigPathMapper.set(root, "settings.compass.actionbar.show-distance", showDistance);
+        ConfigPathMapper.set(root, "settings.compass.feedback.actionbar.show-distance", showDistance);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,

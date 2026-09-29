@@ -55,16 +55,32 @@ class CompassManagerTest {
 
     @Test
     void autoRefreshDueNeedsFullInterval() {
-        assertTrue(CompassManager.autoRefreshDue(10_000L, 0L, 10.0));
-        assertFalse(CompassManager.autoRefreshDue(9_999L, 0L, 10.0));
-        assertTrue(CompassManager.autoRefreshDue(13_000L, 3_000L, 10.0));
-        assertFalse(CompassManager.autoRefreshDue(12_999L, 3_000L, 10.0));
+        assertTrue(CompassManager.autoRefreshDue(10_000L, 0L, true, 10.0, 0.0, 0.5));
+        assertFalse(CompassManager.autoRefreshDue(9_999L, 0L, true, 10.0, 0.0, 0.5));
+        assertTrue(CompassManager.autoRefreshDue(13_000L, 3_000L, true, 10.0, 0.0, 0.5));
+        assertFalse(CompassManager.autoRefreshDue(12_999L, 3_000L, true, 10.0, 0.0, 0.5));
     }
 
     @Test
-    void autoRefreshDueNegativeDisables() {
-        assertFalse(CompassManager.autoRefreshDue(10_000L, 0L, -1.0));
-        assertFalse(CompassManager.autoRefreshDue(Long.MAX_VALUE, 0L, -1.0));
+    void autoRefreshDueDisabledNeverFires() {
+        assertFalse(CompassManager.autoRefreshDue(10_000L, 0L, false, 10.0, 0.0, 0.5));
+        assertFalse(CompassManager.autoRefreshDue(Long.MAX_VALUE, 0L, false, 10.0, 0.0, 0.5));
+    }
+
+    @Test
+    void autoRefreshDueJittersWithinDeviation() {
+        assertTrue(CompassManager.autoRefreshDue(8_000L, 0L, true, 10.0, 2.0, 0.0));
+        assertFalse(CompassManager.autoRefreshDue(7_999L, 0L, true, 10.0, 2.0, 0.0));
+        assertFalse(CompassManager.autoRefreshDue(11_999L, 0L, true, 10.0, 2.0, 1.0));
+        assertTrue(CompassManager.autoRefreshDue(12_000L, 0L, true, 10.0, 2.0, 1.0));
+    }
+
+    @Test
+    void autoRefreshDueCapsDeviationAtInterval() {
+        assertTrue(CompassManager.autoRefreshDue(0L, 0L, true, 10.0, 99.0, 0.0));
+        assertFalse(CompassManager.autoRefreshDue(19_999L, 0L, true, 10.0, 99.0, 1.0));
+        assertTrue(CompassManager.autoRefreshDue(20_000L, 0L, true, 10.0, 99.0, 1.0));
+        assertTrue(CompassManager.autoRefreshDue(5_000L, 5_000L, true, 0.0, 0.0, 0.5));
     }
 
     @Test

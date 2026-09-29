@@ -54,7 +54,7 @@ final class CompassItemService {
         if (key == null) {
             return false;
         }
-        return plugin.overrides().getBoolean(lobby, "settings.compass.given-to." + key,
+        return plugin.overrides().getBoolean(lobby, "settings.compass.obtaining.given-to." + key,
                 role == Role.HUNTER);
     }
 
@@ -141,7 +141,7 @@ final class CompassItemService {
         ItemStack item = new ItemStack(material);
         applyCompassIdentity(item, playerStates.role(player));
         ItemMeta meta = item.getItemMeta();
-        if (plugin.overrides().getBoolean(lobby, "settings.compass.drop-on-death.enabled", false)) {
+        if (plugin.overrides().getBoolean(lobby, "settings.compass.obtaining.drop-on-death.enabled", false)) {
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         } else {
             meta.addEnchant(Enchantment.VANISHING_CURSE, 1, true);

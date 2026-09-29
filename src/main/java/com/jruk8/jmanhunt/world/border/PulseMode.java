@@ -9,11 +9,11 @@ public enum PulseMode {
     INTERVAL,
     SINE_WAVE;
 
-    /** Parses the pulse-mode key, defaulting to INTERVAL. */
+    /** Parses the pulse-mode key, defaulting to SINE_WAVE. */
     public static PulseMode parse(String raw) {
-        if (raw != null && raw.trim().equalsIgnoreCase("SINE_WAVE")) {
-            return SINE_WAVE;
+        if (raw != null && raw.trim().equalsIgnoreCase("INTERVAL")) {
+            return INTERVAL;
         }
-        return INTERVAL;
+        return SINE_WAVE;
     }
 }

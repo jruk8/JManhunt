@@ -232,7 +232,7 @@ nodes:
         next: "EXIT"
   compass_intro:
     question:
-      - "<#de666e>Hunters</#de666e> track <#74de66>speedrunners</#74de66> with the compass. Under <gray>settings.compass.given-to</gray> you can hand both roles one."
+      - "<#de666e>Hunters</#de666e> track <#74de66>speedrunners</#74de66> with the compass. Under <gray>settings.compass.obtaining.given-to</gray> you can hand both roles one."
       - "The compass has plenty of options. You can read about them in the config file."
     answers:
       - text: "What can the compass do other than the basic stuff?"
