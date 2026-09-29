@@ -167,7 +167,7 @@ public class SoundsConfig extends OkaeriConfig {
 
         @CustomKey("fail-sound")
         @Comment("Runs when hunters win")
-        private SoundEntry failSound = SoundEntry.of("block.skulk_shrieker.break", 0.7, 0.9);
+        private SoundEntry failSound = SoundEntry.of("block.sculk_shrieker.break", 0.7, 0.9);
 
         @CustomKey("cancelled-sound")
         @Comment("Runs when a match is canceled")
