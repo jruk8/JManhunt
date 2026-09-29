@@ -226,7 +226,7 @@ public final class BehaviorOptionsMenus {
                 },
                 () -> patch(id, entry -> ensurePickRandom(entry, index).setBehavior(null))));
         buttons.add(choiceRow(id, index, self, "pre-start",
-                store.preStartOrder(id, index), "IN_ORDER",
+                store.preStartOrder(id, index), "BEFORE",
                 ModifiedGlow.behaviorPreStart(store, id, index),
                 player -> cyclePreStart(player, id, index),
                 () -> patch(id, entry -> {
@@ -450,7 +450,7 @@ public final class BehaviorOptionsMenus {
                 onStart = new ModifierOnStart();
                 behavior.setOnStart(onStart);
             }
-            onStart.setPreStartOrder(cycle(store.preStartOrder(id, index), "IN_ORDER", "AFTER"));
+            onStart.setPreStartOrder(cycle(store.preStartOrder(id, index), "BEFORE", "AFTER"));
         });
         sounds.playNeutralSound(player);
     }

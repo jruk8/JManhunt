@@ -344,12 +344,12 @@ class BehaviorOptionsMenusTest {
         assertEquals(List.of(
                 "Whether ON_START fires before or after the pre-start window.",
                 "",
-                "Value: Default (IN_ORDER)",
+                "Value: Default (BEFORE)",
                 "Path: modifiers.zebra.behavior.0.on-start.pre-start-order",
                 "Type: Choice",
-                "» IN_ORDER",
+                "» BEFORE",
                 "» AFTER",
-                "Default: IN_ORDER",
+                "Default: BEFORE",
                 "",
                 "Click to cycle",
                 "Right-click to reset"), loreLines(menu.buttonAt(3)));
@@ -386,7 +386,7 @@ class BehaviorOptionsMenusTest {
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
         menus.executionMenu("zebra", 0, null).buttonAt(3).action().accept(player);
-        assertEquals("IN_ORDER", store.preStartOrder("zebra", 0));
+        assertEquals("BEFORE", store.preStartOrder("zebra", 0));
 
         menus.executionMenu("zebra", 0, null).buttonAt(3).action().accept(player);
         assertEquals("AFTER", store.preStartOrder("zebra", 0));

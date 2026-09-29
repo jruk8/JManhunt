@@ -13,6 +13,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import org.junit.jupiter.api.Test;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -83,6 +84,26 @@ class ModifiersCommandTest {
 
         assertTrue(fixture.service().modifierNames().contains("beef-2"));
         assertEquals("Beef 2", fixture.service().modifiers().metaName("beef-2"));
+        assertEquals(2, importer.received().size());
+        assertEquals(fixture.messages().component("modifiers.imported", Map.of("name", "Beef 2")),
+                importer.received().get(0));
+        assertEquals(fixture.messages().component("modifiers.import-duplicate",
+                Map.of("duplicate", "beef", "id", "beef-2")), importer.received().get(1));
+    }
+
+    @Test
+    void presetImportDuplicateIdWarnsWithNewId() {
+        Fixture fixture = fixture();
+        String payload = ModifierCodec.exportPreset("pack", preset("Pack"));
+        FakeSender sender = FakeSender.permitted();
+
+        assertTrue(fixture.command().execute(sender, new String[]{"import", "preset", payload}));
+        assertEquals(1, sender.received().size());
+
+        assertTrue(fixture.command().execute(sender, new String[]{"import", "preset", payload}));
+        assertEquals(3, sender.received().size());
+        assertEquals(fixture.messages().component("modifiers.import-duplicate",
+                Map.of("duplicate", "pack", "id", "pack-2")), sender.received().get(2));
     }
 
     @Test

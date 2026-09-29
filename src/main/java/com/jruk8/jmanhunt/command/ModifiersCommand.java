@@ -354,6 +354,10 @@ public final class ModifiersCommand {
                 ? config.modifiers().presetName(finalId)
                 : config.modifiers().metaName(finalId);
         messages.message(sender, "modifiers.imported", Map.of("name", name));
+        if (!finalId.equals(imported.id())) {
+            messages.message(sender, "modifiers.import-duplicate",
+                    Map.of("duplicate", imported.id(), "id", finalId));
+        }
         if (sender instanceof Player player) {
             sounds.playNeutralSound(player);
         }

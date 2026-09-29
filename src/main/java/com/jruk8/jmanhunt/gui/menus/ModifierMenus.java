@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.command.ModifiersCommand;
 import com.jruk8.jmanhunt.command.SettingFeedback;
+import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
@@ -118,7 +119,7 @@ public final class ModifierMenus {
     public Menu modifiersMenu(Player viewer, Supplier<Menu> parent) {
         return listMenu("title-modifiers",
                 columns -> modifierButtons(columns, viewer, () -> modifiersMenu(viewer, parent)),
-                () -> mainMenu(viewer, parent), () -> toggleAllModifiersButton(viewer),
+                () -> mainMenu(viewer, parent), self -> toggleAllModifiersButton(viewer, self),
                 self -> importButton(self, "modifier", "import-modifier",
                         "import-modifier-lore", "import-modifier-title"),
                 createButton(Material.WRITABLE_BOOK, "create-modifier", "Create Modifier",
@@ -141,7 +142,7 @@ public final class ModifierMenus {
     public Menu presetsMenu(Player viewer, Supplier<Menu> parent) {
         return listMenu("title-presets",
                 columns -> presetButtons(columns, viewer, () -> presetsMenu(viewer, parent)),
-                () -> mainMenu(viewer, parent), () -> toggleAllPresetsButton(viewer),
+                () -> mainMenu(viewer, parent), self -> toggleAllPresetsButton(viewer, self),
                 self -> importButton(self, "preset", "import-preset",
                         "import-preset-lore", "import-preset-title"),
                 createButton(Material.WRITABLE_BOOK, "create-preset", "Create Preset",
@@ -159,14 +160,14 @@ public final class ModifierMenus {
     }
 
     private Menu listMenu(String titleKey, Function<Integer, List<MenuButton>> content,
-            Supplier<Menu> parent, Supplier<MenuButton> toggleAll,
+            Supplier<Menu> parent, Function<Menu[], MenuButton> toggleAll,
             Function<Menu[], MenuButton> importButton, MenuButton create) {
         return PagedList.menu(GuiTexts.title(messages, text(titleKey, "Modifiers")), content,
                 parent, gui,
                 GuiTexts.name(messages, text("scroll-up", "Scroll up"), "Scroll up"),
                 GuiTexts.name(messages, text("scroll-down", "Scroll down"), "Scroll down"),
                 GuiTexts.name(messages, text("back", "Back"), "Back"),
-                self -> new PagedList.Chrome(create, toggleAll.get(), importButton.apply(self)));
+                self -> new PagedList.Chrome(create, toggleAll.apply(self), importButton.apply(self)));
     }
 
     /** Bottom-right import loom: prompts for a share string, then refreshes. */
@@ -209,7 +210,7 @@ public final class ModifierMenus {
                 false, false, action).silent();
     }
 
-    private MenuButton toggleAllModifiersButton(Player viewer) {
+    private MenuButton toggleAllModifiersButton(Player viewer, Menu[] self) {
         boolean allOn = allModifiersOn(lobbyOf(viewer));
         String loreText = text("toggle-all-modifiers-lore", "{total} modifiers")
                 .replace("{total}", String.valueOf(store.modifierNames().size()));
@@ -222,23 +223,32 @@ public final class ModifierMenus {
                         return;
                     }
                     Integer lobby = lobbyOf(player);
-                    if (lobby == null) {
-                        toggles.toggleAllModifiers(player,
-                                new ArrayList<>(store.modifierNames()),
-                                !allModifiersOn(null));
-                        sounds.playNeutralSound(player);
+                    boolean next = lobby == null
+                            ? !allModifiersOn(null) : !allModifiersOn(lobby);
+                    if (!next) {
+                        applyToggleAllModifiers(player, lobby, false);
                         return;
                     }
-                    boolean next = !allModifiersOn(lobby);
-                    for (String id : store.modifierNames()) {
-                        overrides.setModifierOverride(lobby, id, next);
-                    }
-                    feedback.overrideBulkSet(player, lobby, "modifiers",
-                            store.modifierNames().size(), next);
+                    confirmToggleAll(player, self, "modifiers",
+                            () -> applyToggleAllModifiers(player, lobby, true));
                 }).silent();
     }
 
-    private MenuButton toggleAllPresetsButton(Player viewer) {
+    private void applyToggleAllModifiers(Player player, Integer lobby, boolean next) {
+        if (lobby == null) {
+            toggles.toggleAllModifiers(player,
+                    new ArrayList<>(store.modifierNames()), next);
+            sounds.playNeutralSound(player);
+            return;
+        }
+        for (String id : store.modifierNames()) {
+            overrides.setModifierOverride(lobby, id, next);
+        }
+        feedback.overrideBulkSet(player, lobby, "modifiers",
+                store.modifierNames().size(), next);
+    }
+
+    private MenuButton toggleAllPresetsButton(Player viewer, Menu[] self) {
         boolean allOn = allPresetsOn(lobbyOf(viewer));
         String loreText = text("toggle-all-presets-lore", "{total} presets")
                 .replace("{total}", String.valueOf(store.presetNames().size()));
@@ -251,22 +261,50 @@ public final class ModifierMenus {
                         return;
                     }
                     Integer lobby = lobbyOf(player);
-                    if (lobby == null) {
-                        toggles.toggleAllPresets(player,
-                                new ArrayList<>(store.presetNames()),
-                                !allPresetsOn(null));
-                        sounds.playNeutralSound(player);
+                    boolean next = lobby == null
+                            ? !allPresetsOn(null) : !allPresetsOn(lobby);
+                    if (!next) {
+                        applyToggleAllPresets(player, lobby, false);
                         return;
                     }
-                    boolean next = !allPresetsOn(lobby);
-                    for (String id : store.presetNames()) {
-                        for (String member : store.presetMembers(id)) {
-                            overrides.setModifierOverride(lobby, member, next);
-                        }
-                    }
-                    feedback.overrideBulkSet(player, lobby, "presets",
-                            store.presetNames().size(), next);
+                    confirmToggleAll(player, self, "presets",
+                            () -> applyToggleAllPresets(player, lobby, true));
                 }).silent();
+    }
+
+    private void applyToggleAllPresets(Player player, Integer lobby, boolean next) {
+        if (lobby == null) {
+            toggles.toggleAllPresets(player,
+                    new ArrayList<>(store.presetNames()), next);
+            sounds.playNeutralSound(player);
+            return;
+        }
+        for (String id : store.presetNames()) {
+            for (String member : store.presetMembers(id)) {
+                overrides.setModifierOverride(lobby, member, next);
+            }
+        }
+        feedback.overrideBulkSet(player, lobby, "presets",
+                store.presetNames().size(), next);
+    }
+
+    /** Confirm panel before bulk-enabling; bulk-disabling applies immediately. */
+    private void confirmToggleAll(Player player, Menu[] self, String kind, Runnable apply) {
+        Menu confirm = ConfirmMenu.create(
+                GuiTexts.title(messages, text("toggle-all-confirm-title", "Turn all {kind} on?")
+                        .replace("{kind}", kind)),
+                Material.STRUCTURE_VOID, null,
+                GuiTexts.lore(messages, text("toggle-all-confirm-lore", "This enables every {kind}.")
+                        .replace("{kind}", kind)),
+                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                back -> gui.navigate(back, self[0]),
+                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                done -> {
+                    apply.run();
+                    gui.navigate(done, self[0]);
+                },
+                () -> self[0]);
+        gui.navigate(player, confirm);
     }
 
     private MenuButton linkButton(Material material, String nameKey, String loreKey,

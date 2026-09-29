@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jruk8.jmanhunt.command.ModifiersCommand;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
@@ -36,6 +37,7 @@ import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -260,6 +262,80 @@ class ModifierMenusTest {
 
         assertTrue(allOn.glow());
         assertEquals(List.of(plain("3 modifiers", NamedTextColor.GRAY)), allOn.lore());
+    }
+
+    @Test
+    void toggleAllOnAsksForConfirmationFirst() {
+        GuiService gui = mock(GuiService.class);
+        SoundService sounds = mock(SoundService.class);
+        ConfigService service = new ConfigService(null, store);
+        ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds);
+        ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles,
+                null, null, null, null, null);
+        Player player = mock(Player.class);
+        when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+
+        Menu list = live.modifiersMenu();
+        list.buttonAt(26).action().accept(player);
+
+        assertFalse(service.modifierEnabled("mike"));
+        ArgumentCaptor<Menu> shown = ArgumentCaptor.forClass(Menu.class);
+        verify(gui).navigate(eq(player), shown.capture());
+        Menu confirm = shown.getValue();
+        assertEquals(title("Turn all modifiers on?"), confirm.title());
+
+        confirm.buttonAt(ConfirmMenu.CONFIRM_SLOT).action().accept(player);
+
+        assertTrue(service.modifierEnabled("mike"));
+        assertTrue(service.modifierEnabled("apple"));
+        verify(sounds).playNeutralSound(player);
+    }
+
+    @Test
+    void toggleAllOffAppliesImmediatelyWithoutConfirm() {
+        GuiService gui = mock(GuiService.class);
+        SoundService sounds = mock(SoundService.class);
+        ConfigService service = new ConfigService(null, store);
+        ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds);
+        ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles,
+                null, null, null, null, null);
+        Player player = mock(Player.class);
+        when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+        store.setEnabled("mike", true);
+        store.setEnabled("apple", true);
+
+        live.modifiersMenu().buttonAt(26).action().accept(player);
+
+        assertFalse(service.modifierEnabled("zebra"));
+        assertFalse(service.modifierEnabled("mike"));
+        assertFalse(service.modifierEnabled("apple"));
+        verify(gui, never()).navigate(any(), any());
+        verify(sounds).playNeutralSound(player);
+    }
+
+    @Test
+    void toggleAllPresetsOnConfirmsAndCancelKeepsState() {
+        GuiService gui = mock(GuiService.class);
+        SoundService sounds = mock(SoundService.class);
+        ConfigService service = new ConfigService(null, store);
+        ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds);
+        ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles,
+                null, null, null, null, null);
+        Player player = mock(Player.class);
+        when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+
+        Menu list = live.presetsMenu();
+        list.buttonAt(26).action().accept(player);
+
+        ArgumentCaptor<Menu> shown = ArgumentCaptor.forClass(Menu.class);
+        verify(gui).navigate(eq(player), shown.capture());
+        Menu confirm = shown.getValue();
+        assertEquals(title("Turn all presets on?"), confirm.title());
+
+        confirm.buttonAt(ConfirmMenu.CANCEL_SLOT).action().accept(player);
+
+        assertFalse(service.modifierEnabled("apple"));
+        verify(sounds, never()).playNeutralSound(player);
     }
 
     @Test

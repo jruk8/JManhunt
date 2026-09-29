@@ -90,6 +90,10 @@ public class ModifiersMessages extends OkaeriConfig {
     @CustomKey("import-failed")
     private String importFailed = "{prefix}<red>That import string is invalid or corrupted.";
 
+    @CustomKey("import-duplicate")
+    private String importDuplicate = "{prefix}<yellow>Id <white>{duplicate}</white> was already taken, " +
+            "imported as <white>{id}</white>.";
+
     @CustomKey("create-usage")
     private String createUsage = "{prefix}<yellow>Usage: /manhunt modifiers create <modifier|preset> " +
             "<name> [flags...]\n{prefix}<gray>Modifier flags: --desc --item --author --trigger --on-start " +

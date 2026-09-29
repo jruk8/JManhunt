@@ -70,7 +70,7 @@ public final class ModifierOptionDescriptors {
                 "behavior.options.execution.pick-random.behavior");
         register("pre-start", "Pre-start order", Material.HOPPER,
                 "Whether ON_START fires before or after the pre-start window.",
-                Kind.CHOICE, null, List.of("IN_ORDER", "AFTER"), "IN_ORDER",
+                Kind.CHOICE, null, List.of("BEFORE", "AFTER"), "BEFORE",
                 "behavior.on-start.pre-start-order");
         register("chance", "Chance", Material.EXPERIENCE_BOTTLE,
                 "Probability the modifier runs at all, from 0 to 1.",
