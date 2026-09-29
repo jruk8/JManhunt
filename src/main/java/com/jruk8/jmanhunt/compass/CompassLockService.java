@@ -463,7 +463,7 @@ final class CompassLockService {
                 overrides.getDouble(lobby,
                         "settings.compass.actions.manual.analysis.delay-deviation-seconds", 4.0),
                 ThreadLocalRandom.current().nextDouble());
-        double multiplier = cancelMultiplier(lobby);
+        double multiplier = cancelEarlyMultiplier(lobby);
         if (analysisHost.analysisDoomed(holder)) {
             effectiveDelay = effectiveDelay * multiplier;
         }
@@ -553,14 +553,14 @@ final class CompassLockService {
     }
 
 
-    /** Cancel-immediate multiplier: 1.0 when the option is disabled. */
-    private double cancelMultiplier(Integer lobby) {
+    /** Cancel-early multiplier: 1.0 when the option is disabled. */
+    private double cancelEarlyMultiplier(Integer lobby) {
         if (!plugin.overrides().getBoolean(lobby,
-                "settings.compass.actions.manual.analysis.cancel-immediate.enabled", true)) {
+                "settings.compass.actions.manual.analysis.cancel-early.enabled", true)) {
             return 1.0;
         }
         double multiplier = plugin.overrides().getDouble(lobby,
-                "settings.compass.actions.manual.analysis.cancel-immediate.time-multiplier", 0.3);
+                "settings.compass.actions.manual.analysis.cancel-early.time-multiplier", 0.3);
         return Math.min(1.0, Math.max(0.0, multiplier));
     }
 

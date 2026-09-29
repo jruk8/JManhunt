@@ -45,7 +45,7 @@ categories:
   compass/actions/manual/analysis/cost/payment/health: BEETROOT
   compass/actions/manual/analysis/cost/payment/exp-level: LAPIS_LAZULI
   compass/actions/manual/analysis/cost/poverty-behavior: COBWEB
-  compass/actions/manual/analysis/cancel-immediate: SHEARS
+  compass/actions/manual/analysis/cancel-early: SHEARS
   compass/actions/target-cycling: STONE_BUTTON
   compass/actions/teammates: SPYGLASS
   compass/distance-limits: TIPPED_ARROW
@@ -164,7 +164,7 @@ descriptions:
   "settings.compass.actions.manual.analysis.cost.payment.health": "Health charge."
   "settings.compass.actions.manual.analysis.cost.payment.exp-level": "Experience charge."
   "settings.compass.actions.manual.analysis.cost.poverty-behavior": "When the holder cannot pay."
-  "settings.compass.actions.manual.analysis.cancel-immediate": "Shorten doomed analyses."
+  "settings.compass.actions.manual.analysis.cancel-early": "Shorten doomed analyses."
   "settings.compass.actions.target-cycling": "Cycle locked targets with left-click."
   "settings.compass.distance-limits": "Per-role tracking range limits."
   "settings.compass.distance-limits.hunter": "Range limits for hunter compasses."
@@ -303,8 +303,8 @@ descriptions:
   "settings.compass.actions.manual.analysis.cost.payment.exp-level.value": "Exp levels charged."
   "settings.compass.actions.manual.analysis.cost.poverty-behavior.cancel-when-poor": "Abort when the holder cannot pay."
   "settings.compass.actions.manual.analysis.cost.poverty-behavior.show-reason": "Name each lacking charge."
-  "settings.compass.actions.manual.analysis.cancel-immediate.enabled": "Doomed analyses finish early."
-  "settings.compass.actions.manual.analysis.cancel-immediate.time-multiplier": "Remaining time a doomed run keeps."
+  "settings.compass.actions.manual.analysis.cancel-early.enabled": "Doomed analyses finish early."
+  "settings.compass.actions.manual.analysis.cancel-early.time-multiplier": "Remaining time a doomed run keeps."
   "settings.compass.feedback.actionbar": "Actionbar push rate and distance delta."
   "settings.compass.feedback.actionbar.refresh-ticks": "Ticks between actionbar pushes."
   "settings.compass.feedback.actionbar.show-distance": "Show the distance on tracking bars."

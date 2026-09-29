@@ -56,13 +56,13 @@ public class CompassAnalysisSettings extends OkaeriConfig {
     })
     private Cost cost = new Cost();
 
-    @CustomKey("cancel-immediate")
+    @CustomKey("cancel-early")
     @Comment({
             "Shortens analyses that are already doomed to fail, so a bad",
             "signal lands sooner instead of after the full delay.",
             "Default: true"
     })
-    private CancelImmediate cancelImmediate = new CancelImmediate();
+    private CancelEarly cancelEarly = new CancelEarly();
 
     public boolean isEnabled() {
         return enabled;
@@ -112,12 +112,12 @@ public class CompassAnalysisSettings extends OkaeriConfig {
         this.cost = cost;
     }
 
-    public CancelImmediate getCancelImmediate() {
-        return cancelImmediate;
+    public CancelEarly getCancelEarly() {
+        return cancelEarly;
     }
 
-    public void setCancelImmediate(CancelImmediate cancelImmediate) {
-        this.cancelImmediate = cancelImmediate;
+    public void setCancelEarly(CancelEarly cancelEarly) {
+        this.cancelEarly = cancelEarly;
     }
 
     /** Analysis console commands. */
@@ -411,7 +411,7 @@ public class CompassAnalysisSettings extends OkaeriConfig {
 
     /** Shorter waits for doomed analyses. */
     @SuppressWarnings("FieldMayBeFinal")
-    public static class CancelImmediate extends OkaeriConfig {
+    public static class CancelEarly extends OkaeriConfig {
 
         @Comment({
                 "When true, an analysis that is already doomed finishes",

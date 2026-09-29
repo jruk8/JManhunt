@@ -376,9 +376,9 @@ player-stat words (`low health`, `hungry`, `low exp level`). With
 cancelling off, the holder pays whatever they have. At `SUCCESS`,
 a poor holder's result is thrown away and the compass never updates.
 
-### Cancel Immediate
+### Cancel Early
 
-Under `settings.compass.actions.manual.analysis.cancel-immediate`,
+Under `settings.compass.actions.manual.analysis.cancel-early`,
 an analysis that is already doomed finishes early instead of
 running the full delay. `time-multiplier` (0 to 1) keeps that
 fraction of the remaining time: `0` resolves at once, `1` leaves
@@ -386,7 +386,7 @@ the duration untouched. Doom is checked at the press and every
 half second during the run.
 
 ```yaml
-cancel-immediate:
+cancel-early:
   enabled: true
   time-multiplier: 0.3
 ```

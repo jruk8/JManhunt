@@ -56,7 +56,7 @@ private static void addCompassAnalysisEntries(List<SettingDescriptor> entries) {
     entries.add(floatVal(root + "sound-interval-seconds", 0.5, 0.05, 3.0));
     entries.add(bool(root + "debuffs.enabled", true));
     addAnalysisCostEntries(entries, root + "cost.");
-    addCancelImmediateEntries(entries, root + "cancel-immediate.");
+    addCancelEarlyEntries(entries, root + "cancel-early.");
     addCompassActionbarEntries(entries);
 }
 
@@ -73,7 +73,7 @@ private static void addAnalysisCostEntries(List<SettingDescriptor> entries, Stri
     entries.add(bool(root + "poverty-behavior.show-reason", true));
 }
 
-private static void addCancelImmediateEntries(List<SettingDescriptor> entries, String root) {
+private static void addCancelEarlyEntries(List<SettingDescriptor> entries, String root) {
     entries.add(bool(root + "enabled", true));
     entries.add(floatVal(root + "time-multiplier", 0.3, 0.0, 1.0));
 }
