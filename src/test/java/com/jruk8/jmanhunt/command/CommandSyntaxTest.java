@@ -389,4 +389,13 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.isBlockedCommand("stop now", List.of("minecraft:stop")));
         assertTrue(CommandSyntax.isBlockedCommand("minecraft:stop now", List.of("stop")));
     }
+
+    @Test
+    void escapedShapesValidate() {
+        assertTrue(CommandSyntax.error("<pmessage:Steve,hi\\,there>").isEmpty());
+        assertTrue(CommandSyntax.warnings("<pmessage:Steve,hi\\,there>").isEmpty());
+        assertTrue(CommandSyntax.error("say \\\\<yellow\\\\>").isEmpty());
+        assertEquals(1, CommandSyntax.warnings("say \\\\<yellow\\\\>").size());
+        assertTrue(CommandSyntax.warnings("say \\\\<yellow\\\\>").get(0).contains("Unknown tag"));
+    }
 }

@@ -45,7 +45,7 @@ public final class TagFunctions {
             "list.clear", "list.pop", "len", "list.shuffle", "range",
             "active-players", "plocation", "prole", "distance",
             "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt",
-            "while", "for", "def", "run");
+            "while", "for", "def", "run", "format");
 
     private TagFunctions() {
     }

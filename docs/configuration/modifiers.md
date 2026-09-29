@@ -335,6 +335,27 @@ and `@p`/`@s` resolve to the executing player. Inside tag arguments
 only JMHS tags (`<p>`, `<random-player>`) resolve; bare `@`
 selectors there stay verbatim.
 
+### Escaping Special Characters
+
+A backslash before any char makes it literal text: `\<yellow\>`
+survives tag parsing and renders MiniMessage yellow,
+`say a\,b` keeps one arg with a comma, and `\\` collapses to
+`\`. Structural chars (`< > , " ' \ : @ ~ ? & | ! = + - * / %
+( ) [ ] { }`, space, tab) hide from every scanner; any other
+escaped char (letters, digits) emits as-is, so word operators
+are unaffected. Escaped text never evaluates as tags, math,
+conditions, lists, selectors, or tildes.
+
+```yaml
+- '<pmessage:<p>,\<yellow\>This is yellow text!>'
+- '<pmessage:<p>,a\,b>'
+```
+
+Write escaped lines in single-quoted YAML: double-quoted YAML
+eats backslashes before the engine sees them. Escapes hide
+chars from JMHScript parsing only: PlaceholderAPI expansion
+still sees the restored literal text afterwards.
+
 ## Extended Tags
 
 Besides the placeholders above, JMHS understands a few computing
@@ -362,7 +383,7 @@ creator editor validates them as you type:
 | `<prole:Alex>` | `HUNTER` or `SPEEDRUNNER` for Alex, else `null`. |
 | `<phasitem:Alex,golden_apple,2>` | `true` when Alex holds at least 2 golden apples, else `false` (the count is 1 when omitted). |
 | `<plocation:Alex>` | Alex's spot as `[x, y, z, pitch, yaw, dimension]`. |
-| `<distance:[0,0,0],[3,4,0]>` | Blocks between two spots: `5`. Full location lists in different dimensions yield `null`. |
+| `<distance:[0,0,0],[3,4,0]>` | Blocks between two spots: `5`. Full location lists in different dimensions yield `null` silently. |
 | `<floor:2.7>` | `2`; `<ceil:2.3>` is `3`, `<round:2.5>` is `3`. |
 | `<abs:-4>` | `4`; `<sign:-4>` is `-1` (`0` and `1` for the rest). |
 | `<sqrt:9>` | `3`; `<cbrt:-8>` is `-2`. |
@@ -372,6 +393,7 @@ creator editor validates them as you type:
 | `<i>` | The innermost for-loop item, else `null`. |
 | `<def:double,x+x,x>` | Defines the run-local function `double` (see Functions). |
 | `<run:say hi>` | Runs `say hi` from the console like a command list entry; the tag leaves nothing behind. |
+| `<format:"{0} found {1}",[Alex,gold]>` | `Alex found gold`. Plain `{n}` substitution; missing indexes, `{x}`, and stray braces stay verbatim silently. No conversion specifiers. |
 | `<rflag:hunter,boost>` | The flag of the named role (see Flags). |
 | `<rmessage:hunter,push!>` | Tells the named role only. |
 | `<rsound:hunter,block.note_block.pling>` | Plays for the named role only. |
@@ -433,9 +455,11 @@ after it, which keeps words like `notable` plain text. A `not` with
 no comparison behind it warns and yields nothing.
 
 Only the condition and the chosen branch evaluate: tags in the dead
-branch never run. Quote comparisons holding literal `<` or `>`
-(`"7 <= 5"`), or use the word operators, so the tag scanner does not
-mistake them for tags.
+branch never run. Use the word operators for ordering comparisons,
+and backslash escapes for literal brackets (see Escaping Special
+Characters): quotes group condition text but never hid tags from
+the scanner. Empty branch results, including side-effect branches
+(which yield empty), are fine and warn-free on both paths.
 
 Ordering compares decimals as well as whole numbers (`7.5 gt 7`
 holds, `7.5 le 7.5` holds). Each side compares as a number when it
@@ -558,8 +582,9 @@ event arg. Unknown or offline players yield `null` silently, as do
 spectators for `<prole>`.
 
 `<distance>` measures between two spots with only the `x`, `y`, `z`
-entries, ignoring pitch, yaw, and dimension, so locations from
-different worlds still compare by coordinates:
+entries, ignoring pitch and yaw. Two full primitives in different
+dimensions yield `null` silently, while short lists carry no
+dimension and always compare by coordinates:
 `<distance:<plocation:Alex>,[0, 64, 0]>` is the blocks from Alex to
 spawn. Bad shapes warn and stop the line.
 
@@ -596,8 +621,9 @@ cancel). And every line gets 1000 shared steps, split between loop
 iterations and function calls: past that the tag becomes `null`,
 the match is cancelled, the console logs the modifier, behavior,
 list, and line, and the players are told to contact the
-administrator. Quote literal `<` and `>` inside loop bodies so the
-tag scanner does not mistake them for tags.
+administrator. Escape literal `<` and `>` inside loop bodies
+(see Escaping Special Characters): quotes never hid tags from
+the scanner.
 
 ### Functions
 

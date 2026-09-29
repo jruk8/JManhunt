@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.CommandSyntax;
+import com.jruk8.jmanhunt.command.EngineEscapes;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
 import com.jruk8.jmanhunt.command.TagBackends;
@@ -107,7 +108,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
 
     /** Console cleanup for one modifier; reused by toggle sync. */
     void runConsoleCleanup(String name, long matchId) {
-        ModifierTagScope scope = ModifierTagScope.executor(null, plugin.logger()::warning);
+        ModifierTagScope scope = ModifierTagScope.executor(null,
+                EngineEscapes.restoring(plugin.logger()::warning));
         for (int index : configService.behaviorIndexes(name)) {
             runCommandList(configService.commandList(name, index, "console-cleanup"), null,
                     tagContext(name, null, scope, matchId, List.of()),
@@ -165,7 +167,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                     playerStates.role(participant).name()));
         }
         return ModifierTagScope.match(executor == null ? null : executor.getName(),
-                scope, ThreadLocalRandom.current(), plugin.logger()::warning);
+                scope, ThreadLocalRandom.current(),
+                EngineEscapes.restoring(plugin.logger()::warning));
     }
 
     /** Starts interval modifiers; see {@link IntervalDispatcher}. */
@@ -327,13 +330,14 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      * entry. A hit only skips that line, never the outer list.
      */
     void runTagCommand(String line, String provenance) {
+        String restored = EngineEscapes.restore(line);
         Collection<String> blocked = configService.getStringList(BLACKLISTED_COMMANDS_PATH);
-        if (CommandSyntax.isBlockedCommand(line, blocked)) {
+        if (CommandSyntax.isBlockedCommand(restored, blocked)) {
             plugin.logger().severe("Blocked blacklisted modifier command '"
-                    + line + "' at " + provenance + ".");
+                    + restored + "' at " + provenance + ".");
             return;
         }
-        QuietConsoleDispatch.dispatch(line);
+        QuietConsoleDispatch.dispatch(restored);
     }
 
     /**

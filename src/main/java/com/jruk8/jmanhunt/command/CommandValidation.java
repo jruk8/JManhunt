@@ -33,11 +33,13 @@ public final class CommandValidation {
         if (problem.isPresent() || !validateCommands) {
             return problem;
         }
-        Optional<String> root = CommandSyntax.unknownRoot(raw, knownRoots);
+        String substituted = EngineEscapes.substitute(raw);
+        Optional<String> root = CommandSyntax.unknownRoot(substituted, knownRoots);
         if (root.isPresent()) {
-            return root;
+            return root.map(EngineEscapes::restore);
         }
-        return CommandSyntax.giveItemCheck(raw, knownMaterial, materialNames);
+        return CommandSyntax.giveItemCheck(substituted, knownMaterial, materialNames)
+                .map(EngineEscapes::restore);
     }
 
     /**

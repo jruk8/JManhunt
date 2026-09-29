@@ -58,8 +58,8 @@ public final class TagLocations {
      * {@code <distance:loc1,loc2>}: 3D Euclidean distance on x, y, z
      * only (extra elements ignored, so full primitives work;
      * pitch/yaw ignored). Two full primitives in different
-     * dimensions warn plus {@code "null"}; short lists carry no
-     * dimension and always compare. Non-lists and non-numeric
+     * dimensions resolve {@code "null"} silently; short lists carry
+     * no dimension and always compare. Non-lists and non-numeric
      * coords warn plus {@code "null"}.
      */
     static String distance(String tag, String args, TagContext context) {
@@ -79,8 +79,6 @@ public final class TagLocations {
         Optional<String> secondDimension = dimension(parts.get(1));
         if (firstDimension.isPresent() && secondDimension.isPresent()
                 && !firstDimension.get().equals(secondDimension.get())) {
-            context.scope().warn("Tag <distance> needs both locations in the same dimension, got '"
-                    + firstDimension.get() + "' and '" + secondDimension.get() + "': " + tag);
             return "null";
         }
         double dx = first.get()[0] - second.get()[0];

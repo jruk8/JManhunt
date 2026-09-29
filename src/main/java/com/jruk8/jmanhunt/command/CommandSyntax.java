@@ -42,7 +42,7 @@ public final class CommandSyntax {
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
                 "active-players", "plocation", "prole", "distance",
                 "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt", "root",
-                "while", "for", "i", "def", "run");
+                "while", "for", "i", "def", "run", "format");
     }
 
     /**
@@ -51,6 +51,11 @@ public final class CommandSyntax {
      * means the command is safe to save.
      */
     public static Optional<String> error(String command) {
+        Optional<String> problem = errorInner(EngineEscapes.substitute(command));
+        return problem.map(EngineEscapes::restore);
+    }
+
+    private static Optional<String> errorInner(String command) {
         if (command == null || command.isBlank()) {
             return Optional.of("Command must not be empty.");
         }
@@ -210,10 +215,10 @@ public final class CommandSyntax {
         if (command == null || command.isBlank() || error(command).isPresent()) {
             return found;
         }
-        for (String body : tagBodies(command)) {
+        for (String body : tagBodies(EngineEscapes.substitute(command))) {
             collectWarnings(body, found, knownFunctions);
         }
-        return found;
+        return found.stream().map(EngineEscapes::restore).toList();
     }
 
     private static Optional<String> tagError(String body) {
@@ -229,7 +234,7 @@ public final class CommandSyntax {
             case "gmessage" -> arityError(name, args, 1, "one text");
             case "pmessage" -> arityError(name, args, 2, "a player and a text");
             case "rmessage" -> RoleTagSyntax.messageError(name, args);
-            case "gsound" -> soundError(name, args);
+            case "gsound" -> TagSinks.soundError(name, args);
             case "psound" -> TagSinks.playerSoundError(name, args);
             case "rsound" -> RoleTagSyntax.soundError(name, args);
             case "if" -> ifError(args);
@@ -253,6 +258,7 @@ public final class CommandSyntax {
             case "root" -> topLevelArityError(name, args, 2, "<root:x,n>");
             case "while", "for" -> loopError(name, args);
             case "def" -> defError(name, args);
+            case "format" -> TagFormat.syntaxError(name, args);
             default -> Optional.empty();
         };
     }
@@ -553,22 +559,6 @@ public final class CommandSyntax {
         }
         if (FlagStore.parseName(parts.get(0)).isEmpty()) {
             return Optional.of("Tag <" + name + "> needs a name.");
-        }
-        return Optional.empty();
-    }
-
-    private static Optional<String> soundError(String name, String args) {
-        if (args == null || args.isBlank()) {
-            return Optional.of("Tag <" + name + "> needs a sound id.");
-        }
-        List<String> parts = CommandPlaceholders.splitPickArgs(args);
-        if (parts.size() < 1 || parts.size() > 3) {
-            return Optional.of("Tag <" + name + "> needs an id plus pitch and volume.");
-        }
-        for (String part : parts) {
-            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
-                return Optional.of("Tag <" + name + "> mixes quotes.");
-            }
         }
         return Optional.empty();
     }

@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.command.CommandPlaceholders;
+import com.jruk8.jmanhunt.command.EngineEscapes;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.PlaceholderResolver;
@@ -667,7 +668,8 @@ final class CompassLockService {
 
     /** Tag context for one debuff run: {@code <id>} is {@code debuffs}. */
     private TagContext debuffContext(Player holder) {
-        ModifierTagScope scope = ModifierTagScope.executor(holder.getName(), plugin.logger()::warning);
+        ModifierTagScope scope = ModifierTagScope.executor(holder.getName(),
+                EngineEscapes.restoring(plugin.logger()::warning));
         long matchId = game == null ? TagContext.NO_MATCH
                 : game.instanceOf(holder.getUniqueId()).map(GameInstance::matchId)
                         .orElse(TagContext.NO_MATCH);

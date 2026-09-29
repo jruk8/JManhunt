@@ -180,7 +180,11 @@ final class TagPrePass {
             return "";
         }
         String branch = result ? parts.get(1) : parts.get(2);
-        Optional<String> picked = CommandPlaceholders.parsePickItem(eval.evaluate(branch));
+        String evaluated = eval.evaluate(branch);
+        if (evaluated.isBlank()) {
+            return "";
+        }
+        Optional<String> picked = CommandPlaceholders.parsePickItem(evaluated);
         if (picked.isEmpty()) {
             context.scope().warn("Tag <if> has malformed branches: " + tag);
             return "";

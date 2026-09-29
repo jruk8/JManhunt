@@ -86,12 +86,12 @@ class TagRosterTest {
     }
 
     @Test
-    void proleWarnsOnUnknownAndMatchless() {
+    void proleSilentOnUnknownWarnsOnBlankAndMatchless() {
         Fixture fixture = new Fixture();
 
         assertEquals("null", fixture.replace("<prole:Ghost>", 7L));
         assertEquals("null", fixture.replace("<prole:>", 7L));
         assertEquals("null", fixture.replace("<prole:Steve>", TagContext.NO_MATCH));
-        assertEquals(3, fixture.warnings.size());
+        assertEquals(2, fixture.warnings.size());
     }
 }

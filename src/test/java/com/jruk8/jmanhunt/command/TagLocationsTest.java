@@ -94,7 +94,7 @@ class TagLocationsTest {
     }
 
     @Test
-    void distanceRejectsCrossDimensionPairs() {
+    void distanceYieldsNullSilentlyCrossDimension() {
         List<String> warnings = new ArrayList<>();
         TagContext context = TagContext.run(
                 ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add),
@@ -106,8 +106,7 @@ class TagLocationsTest {
         assertEquals("null", CommandPlaceholders.replace(
                 "<distance:[0, 0, 0, 0, 0, world],[3, 4, 0, 90, 12, world_nether]>",
                 "Steve", 0, 0, 0, context));
-        assertEquals(1, warnings.size());
-        assertTrue(warnings.get(0).contains("same dimension"), warnings.toString());
+        assertTrue(warnings.isEmpty(), warnings.toString());
     }
 
     @Test

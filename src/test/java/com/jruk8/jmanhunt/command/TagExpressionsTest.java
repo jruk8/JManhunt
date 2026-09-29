@@ -377,6 +377,42 @@ class TagExpressionsTest {
     }
 
     @Test
+    void escapedMessageDeliversRestored() {
+        Fixture fixture = new Fixture();
+        assertEquals("", replace(fixture, "<gmessage:\\<hi\\>>"));
+        assertEquals(List.of("<hi>"), fixture.globalMessages);
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void ifLazySideEffectBranchIsSilent() {
+        Fixture fixture = new Fixture();
+        assertEquals("", replace(fixture, "<if:\"1 == 1\",<gmessage:hi>>"));
+        assertEquals(List.of("hi"), fixture.globalMessages);
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void ifEagerEmptyBranchesAreSilent() {
+        Fixture fixture = new Fixture();
+        assertEquals("", TagExpressions.ifEval(
+                "<if:\"1 == 1\",,x>", "\"1 == 1\",,x", fixture.context));
+        assertEquals("", TagExpressions.ifEval(
+                "<if:\"1 == 2\",x,>", "\"1 == 2\",x,", fixture.context));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void ifBlankConditionStillWarns() {
+        Fixture fixture = new Fixture();
+        assertEquals("", replace(fixture, "<if:\"\",<gmessage:hi>>"));
+        assertEquals("", TagExpressions.ifEval("<if:\"\",x>", "\"\",x", fixture.context));
+        assertEquals(2, fixture.warnings.size());
+        assertTrue(fixture.warnings.get(0).contains("malformed branches"));
+        assertTrue(fixture.warnings.get(1).contains("malformed branches"));
+    }
+
+    @Test
     void soundsPlayThroughSinksWithDefaults() {
         Fixture fixture = new Fixture();
         assertEquals("", replace(fixture, "<gsound:block.stone.break>"));

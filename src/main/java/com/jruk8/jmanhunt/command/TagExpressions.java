@@ -438,8 +438,9 @@ public final class TagExpressions {
             return "";
         }
         Optional<String> condition = CommandPlaceholders.parsePickItem(parts.get(0));
-        Optional<String> thenBranch = CommandPlaceholders.parsePickItem(parts.get(1));
-        Optional<String> elseBranch = parts.size() > 2
+        Optional<String> thenBranch = parts.get(1).isBlank()
+                ? Optional.of("") : CommandPlaceholders.parsePickItem(parts.get(1));
+        Optional<String> elseBranch = parts.size() > 2 && !parts.get(2).isBlank()
                 ? CommandPlaceholders.parsePickItem(parts.get(2)) : Optional.of("");
         if (condition.isEmpty() || thenBranch.isEmpty() || elseBranch.isEmpty()
                 || condition.get().isBlank()) {
@@ -507,7 +508,8 @@ public final class TagExpressions {
         if (player.isEmpty()) {
             return "";
         }
-        context.losePlayer(player.get(), reasonArg(args));
+        context.losePlayer(EngineEscapes.restore(player.get()),
+                EngineEscapes.restore(reasonArg(args)));
         return "";
     }
 
@@ -527,7 +529,8 @@ public final class TagExpressions {
             context.scope().warn("Tag <win> needs HUNTER or SPEEDRUNNER: " + tag);
             return "";
         }
-        context.winMatch(role, reasonArg(args));
+        context.winMatch(EngineEscapes.restore(role),
+                EngineEscapes.restore(reasonArg(args)));
         return "";
     }
 

@@ -91,7 +91,7 @@ public final class CommandPlaceholders {
     public static String replace(String command, String playerName, double x, double y, double z,
             TagContext context) {
         context.resetStepBudget();
-        String parsed = convertSelectors(command);
+        String parsed = convertSelectors(EngineEscapes.substitute(command));
         try {
             parsed = evaluateTags(parsed, playerName, context);
         } catch (StackOverflowError exhausted) {
@@ -105,7 +105,7 @@ public final class CommandPlaceholders {
         if (playerName != null) {
             parsed = resolveTildes(parsed, x, y, z);
         }
-        return parsed;
+        return EngineEscapes.restore(parsed);
     }
 
     /**
@@ -292,10 +292,11 @@ public final class CommandPlaceholders {
      * list during tag evaluation instead. Pure for tests.
      */
     public static List<String> expandAllPlayers(String command, ModifierTagScope scope) {
-        String converted = convertSelectors(command);
+        String substituted = EngineEscapes.substitute(command);
+        String converted = convertSelectors(substituted);
         Matcher matcher = FANOUT_TOKEN.matcher(converted);
         if (!matcher.find()) {
-            return List.of(command);
+            return List.of(substituted);
         }
         String team = matcher.group(1);
         List<String> names = scope.participantNames(team);
@@ -499,8 +500,7 @@ public final class CommandPlaceholders {
             case "duration" -> tag;
             case "id" -> context.containerId();
             case "i" -> context.loopItem().orElse("null");
-            case "pstat" -> TagStats.player(tag, args, context);
-            case "gstat" -> TagStats.global(tag, args, context);
+            case "pstat" -> TagStats.player(tag, args, context); case "gstat" -> TagStats.global(tag, args, context);
             case "phasitem" -> TagItems.hasItem(tag, args, context);
             case "gflag", "gf" -> TagFlags.global(tag, args, context);
             case "pflag", "pf" -> TagFlags.player(tag, args, context);
@@ -524,6 +524,7 @@ public final class CommandPlaceholders {
             case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" ->
                     TagExpressions.mathUnary(tag, name, args, context);
             case "run" -> TagRun.run(tag, args, context);
+            case "format" -> TagFormat.format(tag, args, context);
             default -> TagFunctions.call(tag, name, args, context, eval);
         };
     }

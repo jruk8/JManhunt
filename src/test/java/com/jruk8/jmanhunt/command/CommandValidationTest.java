@@ -46,4 +46,11 @@ class CommandValidationTest {
         assertEquals(List.of("Unknown tag '<bogus>', left untouched at runtime."),
                 CommandSyntax.warnings("give <bogus> apple"));
     }
+
+    @Test
+    void escapedRootFailsClosedWithReadableMessage() {
+        assertEquals(Optional.of("Unknown command '<give>'."),
+                CommandValidation.validateLine("\\<give\\> Steve bread", true, ROOTS,
+                        KNOWN_APPLE, NAMES));
+    }
 }

@@ -35,7 +35,7 @@ final class TagSinks {
             context.scope().warn("Tag <" + name + "> has malformed quotes: " + tag);
             return "";
         }
-        context.sendGlobalMessage(item.orElse(""));
+        context.sendGlobalMessage(EngineEscapes.restore(item.orElse("")));
         return "";
     }
 
@@ -59,8 +59,10 @@ final class TagSinks {
             context.scope().warn("Tag <pmessage> has malformed quotes: " + tag);
             return "";
         }
-        if (!context.playerSinks().message(name.get().strip(), item.orElse(""))) {
-            context.scope().warn("Tag <pmessage> player '" + name.get().strip()
+        String target = EngineEscapes.restore(name.get().strip());
+        String text = EngineEscapes.restore(item.orElse(""));
+        if (!context.playerSinks().message(target, text)) {
+            context.scope().warn("Tag <pmessage> player '" + target
                     + "' is offline: " + tag);
         }
         return "";
@@ -85,7 +87,8 @@ final class TagSinks {
             context.scope().warn("Tag <rmessage> has malformed quotes: " + tag);
             return "";
         }
-        context.sendRoleMessage(role.get(), item.orElse(""));
+        context.sendRoleMessage(EngineEscapes.restore(role.get()),
+                EngineEscapes.restore(item.orElse("")));
         return "";
     }
 
@@ -114,7 +117,7 @@ final class TagSinks {
         }
         float pitch = soundNumber(parts, 1, tag, context);
         float volume = soundNumber(parts, 2, tag, context);
-        context.playGlobalSound(id.get(), pitch, volume);
+        context.playGlobalSound(EngineEscapes.restore(id.get()), pitch, volume);
         return "";
     }
 
@@ -143,8 +146,10 @@ final class TagSinks {
         }
         float pitch = soundNumber(rest, 1, tag, context);
         float volume = soundNumber(rest, 2, tag, context);
-        if (!context.playerSinks().sound(name.get().strip(), id.get(), pitch, volume)) {
-            context.scope().warn("Tag <psound> player '" + name.get().strip()
+        String target = EngineEscapes.restore(name.get().strip());
+        String sound = EngineEscapes.restore(id.get());
+        if (!context.playerSinks().sound(target, sound, pitch, volume)) {
+            context.scope().warn("Tag <psound> player '" + target
                     + "' is offline: " + tag);
         }
         return "";
@@ -174,7 +179,8 @@ final class TagSinks {
         }
         float pitch = soundNumber(rest, 1, tag, context);
         float volume = soundNumber(rest, 2, tag, context);
-        context.playRoleSound(role.get(), id.get(), pitch, volume);
+        context.playRoleSound(EngineEscapes.restore(role.get()),
+                EngineEscapes.restore(id.get()), pitch, volume);
         return "";
     }
 
@@ -189,6 +195,26 @@ final class TagSinks {
         List<String> parts = CommandPlaceholders.splitPickArgs(args);
         if (parts.size() < 2 || parts.size() > 4) {
             return Optional.of("Tag <" + name + "> needs a player plus an id, pitch, and volume.");
+        }
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
+                return Optional.of("Tag <" + name + "> mixes quotes.");
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Edit-time shape for {@code <gsound>}: an id, pitch, and volume,
+     * quotes parsed. Mirrors the runtime warns.
+     */
+    static Optional<String> soundError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs a sound id.");
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        if (parts.size() < 1 || parts.size() > 3) {
+            return Optional.of("Tag <" + name + "> needs an id plus pitch and volume.");
         }
         for (String part : parts) {
             if (CommandPlaceholders.parsePickItem(part).isEmpty()) {

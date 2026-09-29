@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.command.EngineEscapes;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.PlaceholderResolver;
@@ -131,7 +132,8 @@ public final class ModifierTestService {
      */
     public void report(Player sender, TestResult result) {
         for (String text : result.messages()) {
-            messages.sendText(sender, commands.formatEngineMessage(text));
+            messages.sendText(sender,
+                    commands.formatEngineMessage(EngineEscapes.restore(text)));
         }
         for (CapturedSound sound : result.sounds()) {
             if (sounds.isValidSound(sound.soundId())) {
@@ -140,7 +142,8 @@ public final class ModifierTestService {
         }
         if (!result.warnings().isEmpty()) {
             messages.message(sender, "modifiers.test-failure",
-                    Map.of("error", String.join("; ", result.warnings())));
+                    Map.of("error", EngineEscapes.restore(
+                            String.join("; ", result.warnings()))));
             return;
         }
         messages.message(sender, "modifiers.test-success",

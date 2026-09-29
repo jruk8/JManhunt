@@ -46,8 +46,8 @@ public final class TagRoster {
 
     /**
      * {@code <prole:player>}: uppercase HUNTER or SPEEDRUNNER for a
-     * match assignee, active or not. Unknown players warn plus
-     * {@code "null"}; other roles resolve {@code "null"} silently.
+     * match assignee, active or not. Unknown players and other roles
+     * resolve {@code "null"} silently.
      */
     static String role(String tag, String args, TagContext context) {
         if (context.matchId() == TagContext.NO_MATCH) {
@@ -66,8 +66,6 @@ public final class TagRoster {
         }
         Optional<String> role = context.roster().roleOf(name.get().strip());
         if (role.isEmpty()) {
-            context.scope().warn("Tag <prole> found no match player '"
-                    + name.get().strip() + "': " + tag);
             return "null";
         }
         String upper = role.get().toUpperCase(Locale.ROOT);
