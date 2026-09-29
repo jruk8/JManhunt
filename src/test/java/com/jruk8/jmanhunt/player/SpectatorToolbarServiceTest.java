@@ -14,6 +14,7 @@ import com.jruk8.jmanhunt.message.SoundService;
 import java.util.Optional;
 import java.util.UUID;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -192,5 +193,39 @@ class SpectatorToolbarServiceTest {
 
         assertFalse(toolbar.registerSneak(second, 1100L));
         assertTrue(toolbar.registerSneak(first, 1200L));
+    }
+
+    @Test
+    void modeChangeSkipsDeployForParticipants() {
+        PlayerStateStore players = new PlayerStateStore();
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(
+                mock(OverrideService.class), mock(MessageService.class),
+                mock(SoundService.class), players, mock(FakeSpectatorService.class),
+                mock(GameManager.class), mock(LobbyService.class),
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        Player hunter = mock(Player.class);
+        when(hunter.getUniqueId()).thenReturn(UUID.randomUUID());
+        players.setRole(hunter, Role.HUNTER);
+
+        toolbar.onModeChange(hunter, true);
+
+        assertFalse(toolbar.isDeployed(hunter));
+    }
+
+    @Test
+    void modeDisableWithoutDeployIsNoop() {
+        PlayerStateStore players = new PlayerStateStore();
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(
+                mock(OverrideService.class), mock(MessageService.class),
+                mock(SoundService.class), players, mock(FakeSpectatorService.class),
+                mock(GameManager.class), mock(LobbyService.class),
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        Player hunter = mock(Player.class);
+        when(hunter.getUniqueId()).thenReturn(UUID.randomUUID());
+        players.setRole(hunter, Role.HUNTER);
+
+        toolbar.onModeChange(hunter, false);
+
+        assertFalse(toolbar.isDeployed(hunter));
     }
 }

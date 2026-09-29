@@ -22,6 +22,7 @@ import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.ModifierTriggers;
+import com.jruk8.jmanhunt.match.StatusRosterService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
 import com.jruk8.jmanhunt.message.ListFormatter;
@@ -61,6 +62,7 @@ import java.util.Set;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.UUID;
 
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
@@ -112,6 +114,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final ModifiersCommand modifiersCmd;
     private final OverrideCommand overrideCmd;
     private final SetupService setupService;
+    private final StatusRosterService roster;
     private ModifierMenus modifierMenus;
     private final ManhuntMenus menus;
     /** Lobby-bounds corners per player, separate from the dev schem selection. */
@@ -126,6 +129,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.playerStates = playerStates; this.game = game;
         this.lobbyTeleporter = lobbyTeleporter; this.debugService = debugService;
         this.lobbies = lobbyService;
+        this.roster = new StatusRosterService(messages, playerStates);
         this.devSchem = new DevSchemCommand(plugin, messages);
         this.feedback = new SettingFeedback(messages, config, sounds);
         this.modifiersCmd = new ModifiersCommand(config, messages,
@@ -322,15 +326,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return message(sender, "manhunt.console-requires-id");
     }
 
-    /** One match roster: every online assignee grouped by role. */
+    /** One match roster: every online member grouped by role. */
     private boolean statusInstance(CommandSender sender, GameInstance instance) {
-        List<Player> players = game.onlineAssignedPlayers(instance);
+        List<Player> players = game.onlineMatchRoster(instance);
         message(sender, "manhunt.status-header", Map.of("status", instance.ending() ? "ENDING" : "ACTIVE"));
-        sendRoleSection(sender, players, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
-        sendRoleSection(sender, players, Role.HUNTER, "manhunt.hunters-header");
-        sendRoleSection(sender, players, Role.AFK, "manhunt.afk-header");
-        sendRoleSection(sender, players, Role.NONE, "manhunt.none-header");
-        sendSpectatorLine(sender, players);
+        sendMatchRoleBlocks(sender, players, instance.deadPlayers());
         sendWinConditionLines(sender);
         sendModifiersLine(sender);
         sendElapsedLine(sender, instance);
@@ -344,25 +344,24 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         List<Player> players = Bukkit.getOnlinePlayers().stream()
                 .filter(p -> lobby.contains(p.getUniqueId())).map(p -> (Player) p).toList();
         message(sender, "manhunt.status-header", Map.of("status", "INACTIVE"));
-        sendRoleSection(sender, players, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
-        sendRoleSection(sender, players, Role.HUNTER, "manhunt.hunters-header");
-        sendRoleSection(sender, players, Role.AFK, "manhunt.afk-header");
-        sendRoleSection(sender, players, Role.NONE, "manhunt.none-header");
-        sendSpectatorLine(sender, players);
+        sendMatchRoleBlocks(sender, players, List.of());
         sendWinConditionLines(sender);
         sendIdLine(sender, "L" + lobby.id());
         neutralSound(sender);
         return true;
     }
 
-    /** Bottom spectator roll call, shown only when someone is watching. */
-    private void sendSpectatorLine(CommandSender sender, List<Player> players) {
-        String names = players.stream().filter(p -> playerStates.role(p) == Role.SPECTATOR)
-                .map(Player::getName).sorted()
-                .collect(java.util.stream.Collectors.joining(", "));
-        if (!names.isEmpty()) {
-            message(sender, "manhunt.spectators-line", Map.of("value", names));
-        }
+    /** The four role blocks plus the spectator roll call, shared by both rosters. */
+    private void sendMatchRoleBlocks(CommandSender sender, List<Player> players,
+            List<GameInstance.DeadPlayer> dead) {
+        Predicate<UUID> respawning = StatusRosterService.respawning(plugin.respawnListener());
+        roster.sendRoleSection(sender, players, Role.SPEEDRUNNER, "manhunt.speedrunners-header",
+                dead, respawning);
+        roster.sendRoleSection(sender, players, Role.HUNTER, "manhunt.hunters-header", dead,
+                respawning);
+        roster.sendRoleSection(sender, players, Role.AFK, "manhunt.afk-header", dead, respawning);
+        roster.sendRoleSection(sender, players, Role.NONE, "manhunt.none-header", dead, respawning);
+        roster.sendSpectatorLine(sender, players);
     }
 
     /** Optional per-side win rules, off by default to keep status compact. */
@@ -459,18 +458,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             message(sender, "manhunt.status-all-lobby-entry", Map.of(
                     "lobby", String.valueOf(lobby.id()),
                     "count", String.valueOf(online)));
-        }
-    }
-
-    private void sendRoleSection(CommandSender sender, List<Player> players, Role role, String header) {
-        List<String> names = players.stream().filter(p -> playerStates.role(p) == role)
-                .map(Player::getName).sorted().toList();
-        if (names.isEmpty()) {
-            return;
-        }
-        message(sender, header);
-        for (String line : ListFormatter.chunk(names, 10)) {
-            message(sender, "manhunt.status-player", Map.of("player", line));
         }
     }
 

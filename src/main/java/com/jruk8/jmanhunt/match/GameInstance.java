@@ -4,8 +4,10 @@ import com.jruk8.jmanhunt.lobby.SubLobby;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Location;
 import org.bukkit.scheduler.BukkitTask;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
@@ -46,6 +48,8 @@ public final class GameInstance {
     private final Set<String> toggleStartedModifiers = new HashSet<>();
     /** Modifiers already cleaned by mid-match toggles this match. */
     private final Set<String> toggleCleanedModifiers = new HashSet<>();
+    /** Permanent deaths in death order (oldest first). */
+    private final List<DeadPlayer> deadPlayers = new ArrayList<>();
 
 
     public GameInstance(long matchId, int originLobbyId, OptionalLong cellIndex, long startedAtMillis) {
@@ -110,6 +114,29 @@ public final class GameInstance {
 
     public int assignedCount() {
         return assigned.size();
+    }
+
+    /** One permanent death: who, under which name, as which role. */
+    public record DeadPlayer(UUID playerId, String name, Role formerRole) {
+    }
+
+    /**
+     * Records a permanent death in death order; repeats for the same
+     * player are ignored. Kept for the status ghost line and
+     * end-of-match statistics.
+     */
+    public void recordDeath(UUID playerId, String name, Role formerRole) {
+        for (DeadPlayer dead : deadPlayers) {
+            if (dead.playerId().equals(playerId)) {
+                return;
+            }
+        }
+        deadPlayers.add(new DeadPlayer(playerId, name, formerRole));
+    }
+
+    /** Permanent deaths in death order (oldest first). */
+    public List<DeadPlayer> deadPlayers() {
+        return List.copyOf(deadPlayers);
     }
 
     /** Marks a player as an active participant (also records the assignment). */

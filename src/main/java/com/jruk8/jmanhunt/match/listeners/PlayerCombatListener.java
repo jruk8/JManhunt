@@ -168,7 +168,8 @@ public final class PlayerCombatListener implements Listener {
         if (!quiet) {
             game.sendToInstance(instance, "game.hunter-out-of-lives", Map.of());
         }
-        playerStates.setRole(player.getUniqueId(), Role.NONE);
+        instance.recordDeath(player.getUniqueId(), player.getName(), Role.HUNTER);
+        playerStates.setRole(player.getUniqueId(), Role.SPECTATOR);
         plugin.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());
         compass.reconcileTeammateModes(instance);
@@ -185,6 +186,9 @@ public final class PlayerCombatListener implements Listener {
     private void eliminateSpeedrunner(Player player, GameInstance instance, boolean quiet, long matchId) {
         // Out of lives: eliminate permanently. Only an opposite-role
         // killer earns the final kill: same-role finishes never count.
+        instance.recordDeath(player.getUniqueId(), player.getName(), Role.SPEEDRUNNER);
+        playerStates.setRole(player.getUniqueId(), Role.SPECTATOR);
+        plugin.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());
         compass.reconcileTeammateModes(instance);
         game.flagStore().removePlayer(matchId, player.getName());

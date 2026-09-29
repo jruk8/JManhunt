@@ -118,6 +118,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private UpdateCheckNotifier updateCheckNotifier;
     private RoleTeamService roleTeams;
     private FakeSpectatorService fakeSpectators;
+    private PlayerRespawnListener respawnListener;
     private SpectatorToolbarService spectatorToolbar;
     private SpawnCampService spawnCamp;
     private GuiService guiService;
@@ -252,6 +253,11 @@ public final class JManhuntPlugin extends JavaPlugin {
         return fakeSpectators;
     }
 
+    /** Respawn routing and delayed spectator revives. */
+    public PlayerRespawnListener respawnListener() {
+        return respawnListener;
+    }
+
     /** Rolling anti-spawn-camp guard. */
     public SpawnCampService spawnCamp() {
         return spawnCamp;
@@ -325,7 +331,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         getCommand("manhunt").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new CompassProtectionListener(this, compass, game), this);
         getServer().getPluginManager().registerEvents(new PortalRouter(this, game, worldEngine), this);
-        PlayerRespawnListener respawn = new PlayerRespawnListener(this, playerStates, game, compass);
+        PlayerRespawnListener respawn = createRespawnListener();
         SpeedrunnerDisconnectTracker disconnects = new SpeedrunnerDisconnectTracker();
         Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(
@@ -357,6 +363,12 @@ public final class JManhuntPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new GuiListener(guiService), this);
         getServer().getPluginManager().registerEvents(
                 new UpdateCheckJoinListener(updateChecks, updateCheckNotifier), this);
+    }
+
+    /** Creates the respawn router and keeps it for roster skull lookups. */
+    private PlayerRespawnListener createRespawnListener() {
+        respawnListener = new PlayerRespawnListener(this, playerStates, game, compass);
+        return respawnListener;
     }
 
     /** Registers chat listeners: team chat plus the setup tutorial. */

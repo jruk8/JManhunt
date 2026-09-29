@@ -138,6 +138,29 @@ public final class MatchStore {
                 .map(player -> (Player) player).toList();
     }
 
+    /**
+     * Online match members for status output: the active plus assigned
+     * holders of participant and spectator roles. Lobby-returned
+     * leavers (deactivated NONE/AFK) read only in lobby status.
+     */
+    public List<Player> onlineMatchRoster(GameInstance instance) {
+        Set<UUID> assigned = instance.assignedPlayerIds();
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(player -> assigned.contains(player.getUniqueId())
+                        && showsInMatchStatus(instance, player.getUniqueId(),
+                                playerStates.role(player)))
+                .map(player -> (Player) player).toList();
+    }
+
+    /**
+     * True when an assignee reads in match status: everyone active,
+     * plus the eliminated and box watchers holding participant or
+     * spectator roles. Pure for tests.
+     */
+    public static boolean showsInMatchStatus(GameInstance instance, UUID playerId, Role role) {
+        return instance.isActive(playerId) || role.isParticipant() || role == Role.SPECTATOR;
+    }
+
     public boolean isActiveInInstance(long matchId, UUID playerId) {
         GameInstance instance = instances.get(matchId);
         return instance != null && instance.isActive(playerId);

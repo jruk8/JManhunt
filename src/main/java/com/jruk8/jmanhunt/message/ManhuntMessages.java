@@ -36,6 +36,42 @@ public class ManhuntMessages extends OkaeriConfig {
     @CustomKey("status-player")
     private String statusPlayer = "<white>» <gray>{player}";
 
+    @CustomKey("status-dead-line")
+    private String statusDeadLine = "» <dark_gray>{dead_players}";
+
+    @CustomKey("status-limit-speedrunners")
+    private String statusLimitSpeedrunners = "5";
+
+    @CustomKey("status-limit-hunters")
+    private String statusLimitHunters = "10";
+
+    @CustomKey("status-limit-afk")
+    private String statusLimitAfk = "2";
+
+    @CustomKey("status-limit-none")
+    private String statusLimitNone = "20";
+
+    @CustomKey("status-limit-spectators")
+    private String statusLimitSpectators = "5";
+
+    @CustomKey("status-limit-dead")
+    private String statusLimitDead = "3";
+
+    @CustomKey("status-more")
+    private String statusMore = "more";
+
+    @CustomKey("status-dead-word")
+    private String statusDeadWord = "dead";
+
+    @CustomKey("status-skull")
+    private String statusSkull = "💀";
+
+    @CustomKey("status-and")
+    private String statusAnd = "<gray>and</gray>";
+
+    @CustomKey("status-comma")
+    private String statusComma = "<gray>,</gray>";
+
     @CustomKey("spectators-line")
     private String spectatorsLine = "\n{role-color-spectator}👁 Spectators: <gray>{value}";
 

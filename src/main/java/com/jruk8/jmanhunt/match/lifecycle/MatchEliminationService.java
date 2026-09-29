@@ -64,6 +64,7 @@ public final class MatchEliminationService {
             return false;
         }
         plugin.spawnCamp().quietKill(player);
+        instance.recordDeath(player.getUniqueId(), player.getName(), role);
         playerStates.setRole(player.getUniqueId(), Role.SPECTATOR);
         plugin.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());

@@ -145,6 +145,10 @@ public final class GameManager implements MatchControl {
     public List<Player> onlineAssignedPlayers(GameInstance instance) {
         return store.onlineAssignedPlayers(instance);
     }
+    /** Online match members for status output (lobby-returned leavers excluded). */
+    public List<Player> onlineMatchRoster(GameInstance instance) {
+        return store.onlineMatchRoster(instance);
+    }
     public boolean isActiveInInstance(long matchId, UUID playerId) {
         return store.isActiveInInstance(matchId, playerId);
     }

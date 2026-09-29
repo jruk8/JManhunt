@@ -94,26 +94,18 @@ public final class PlayerConnectionListener implements Listener {
     /** Parks a joiner whose lobby has a running match they are not part of. */
     private void handleJoinDuringMatch(Player player, int lobbyId) {
         // Their lobby has a running match they are not part of (a
-        // newcomer or an eliminated player): wait in the lobby as a
-        // spectator. Preserve the AFK role; only reset the rest to NONE.
-        // With nowhere to wait (engine off or no lobby set), they join
-        // the newest running match as a spectator instead.
+        // newcomer, an eliminated player, or a held queuer): they wait
+        // in the lobby under their current role, so held queues and
+        // queued spectators survive the relog. With nowhere to wait
+        // (engine off or no lobby set), they join the newest running
+        // match as a spectator instead.
         if (playerStates.role(player) != Role.AFK && !game.hasLobbyLocation(lobbyId)) {
-            if (!game.joinLeastTimeMatch(player)) {
-                playerStates.setRole(player.getUniqueId(), Role.NONE);
-                plugin.roleTeams().sync(player);
-            }
-        } else {
-            if (playerStates.role(player) != Role.AFK) {
-                playerStates.setRole(player.getUniqueId(), Role.NONE);
-                plugin.roleTeams().sync(player);
-            }
-            // Joining NONEs take fake spectator mode only with the toggle;
-            // AFK players keep their role and their mode.
-            if (playerStates.role(player) == Role.NONE
-                    && config.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
-                plugin.fakeSpectators().enable(player);
-            }
+            game.joinLeastTimeMatch(player);
+        } else if (playerStates.role(player) == Role.NONE
+                && config.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
+            // Joining NONEs take fake spectator mode only with the
+            // toggle; AFK players keep their role and their mode.
+            plugin.fakeSpectators().enable(player);
         }
     }
 
@@ -209,10 +201,11 @@ public final class PlayerConnectionListener implements Listener {
         if (role == Role.SPEEDRUNNER) {
             playerStates.setSpeedrunnerAlive(playerId, false);
         }
+        String playerName = Bukkit.getOfflinePlayer(playerId).getName();
+        instance.recordDeath(playerId, playerName != null ? playerName : playerId.toString(), role);
         playerStates.setRole(playerId, Role.NONE);
         instance.deactivate(playerId);
         compass.reconcileTeammateModes(instance);
-        String playerName = Bukkit.getOfflinePlayer(playerId).getName();
         if (playerName != null) {
             game.flagStore().removePlayer(matchId, playerName);
         }

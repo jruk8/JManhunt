@@ -18,6 +18,36 @@ class ListFormatterTest {
     }
 
     @Test
+    void truncatedWithoutOverflowMatchesOxford() {
+        assertEquals("", ListFormatter.joinOxfordTruncated(List.of(), 3, ",", "and", "more", "dead"));
+        assertEquals("a", ListFormatter.joinOxfordTruncated(List.of("a"), 3, ",", "and", "more", "dead"));
+        assertEquals("a and b",
+                ListFormatter.joinOxfordTruncated(List.of("a", "b"), 3, ",", "and", "more", "dead"));
+        assertEquals("a, b, and c", ListFormatter.joinOxfordTruncated(List.of("a", "b", "c"), 3, ",",
+                "and", "more", "dead"));
+    }
+
+    @Test
+    void truncatedOverflowAppendsAndNMore() {
+        assertEquals("a, b, c, and 2 more", ListFormatter.joinOxfordTruncated(
+                List.of("a", "b", "c", "d", "e"), 3, ",", "and", "more", "dead"));
+        assertEquals(
+                "a<gray>,</gray> b<gray>,</gray> c<gray>,</gray> <gray>and</gray> 2 more",
+                ListFormatter.joinOxfordTruncated(List.of("a", "b", "c", "d", "e"), 3, "<gray>,</gray>",
+                        "<gray>and</gray>", "more", "dead"));
+    }
+
+    @Test
+    void truncatedGhostLineShapes() {
+        assertEquals("💀a and 5 more", ListFormatter.joinOxfordTruncated(
+                List.of("💀a", "b", "c", "d", "e", "f"), 1, ",", "and", "more", "dead"));
+        assertEquals("💀a, 💀b, 💀c, and 2 more", ListFormatter.joinOxfordTruncated(
+                List.of("💀a", "💀b", "💀c", "d", "e"), 3, ",", "and", "more", "dead"));
+        assertEquals("6 dead", ListFormatter.joinOxfordTruncated(
+                List.of("a", "b", "c", "d", "e", "f"), 0, ",", "and", "more", "dead"));
+    }
+
+    @Test
     void chunkSplitsLinesAtLimit() {
         assertEquals(List.of("a, b", "c"),
                 ListFormatter.chunk(List.of("a", "b", "c"), 2));

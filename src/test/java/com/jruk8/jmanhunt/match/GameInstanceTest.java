@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.lobby.SubLobby;
+import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.OptionalLong;
@@ -118,6 +119,22 @@ class GameInstanceTest {
         assertNull(direct.subLobby());
         assertEquals("L2", direct.lobbyTag());
         assertEquals("L2-0", sublobbed.lobbyTag());
+    }
+
+    @Test
+    void recordDeathKeepsOrderAndIgnoresRepeats() {
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+
+        instance.recordDeath(first, "amy", Role.HUNTER);
+        instance.recordDeath(second, "bob", Role.SPEEDRUNNER);
+        instance.recordDeath(first, "amy", Role.HUNTER);
+
+        assertEquals(2, instance.deadPlayers().size());
+        assertEquals("amy", instance.deadPlayers().get(0).name());
+        assertEquals("bob", instance.deadPlayers().get(1).name());
+        assertEquals(Role.SPEEDRUNNER, instance.deadPlayers().get(1).formerRole());
     }
 
     @Test

@@ -39,6 +39,11 @@ public final class PlayerRespawnListener implements Listener {
         game.addGameEndListener(instance -> cancelAllRespawnTasks());
     }
 
+    /** True when the player has a delayed revive pending. */
+    public boolean hasPendingRespawn(UUID playerId) {
+        return respawnTasks.containsKey(playerId);
+    }
+
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());

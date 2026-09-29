@@ -69,9 +69,8 @@ public final class WorldEngineService implements SettingsListener {
      * index, or empty when the engine is off, the world is missing, or no
      * valid cell could be allocated. No vanilla border is ever set.
      */
-    public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
-                                     int lobbyId) {
-        return cells.onMatchStart(participants, spectators, lobbyId);
+    public OptionalLong onMatchStart(List<Player> participants, int lobbyId) {
+        return cells.onMatchStart(participants, lobbyId);
     }
 
     /**

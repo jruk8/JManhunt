@@ -11,7 +11,6 @@ import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.lobby.SubLobby;
-import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -41,9 +40,11 @@ import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
+import com.jruk8.jmanhunt.match.StatusRosterService;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.match.prestart.HeadstartState;
 import com.jruk8.jmanhunt.match.prestart.PrestartService;
@@ -75,6 +76,7 @@ public final class MatchStartService {
     private final PrestartService prestart;
     private final AutostartService autostart;
     private final MatchFinishService finishService;
+    private final StatusRosterService roster;
     private final List<Consumer<GameInstance>> gameStartListeners = new ArrayList<>();
     private final List<Consumer<GameInstance>> beginGameListeners = new ArrayList<>();
 
@@ -100,6 +102,7 @@ public final class MatchStartService {
         this.prestart = prestart;
         this.autostart = autostart;
         this.finishService = finishService;
+        this.roster = new StatusRosterService(messages, playerStates);
     }
 
     public void addGameStartListener(Consumer<GameInstance> listener) {
@@ -161,10 +164,9 @@ public final class MatchStartService {
         List<UUID> assignees = prepareMatchPlayers(participants, currentMatchId);
         List<Player> spectators = lobbyNonePlayers(lobby.get());
         participants.forEach(lobbies::restoreCollisions); // match wins; fakes re-disable below
-        spectators.forEach(lobbies::restoreCollisions);
-        OptionalLong matchCell = worldEngine.onMatchStart(participants, spectators, lobbyId);
-        GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell,
-                assignees, spectators);
+        spectators.forEach(lobbies::applyLobbyCollisions); // stayers keep lobby rules
+        OptionalLong matchCell = worldEngine.onMatchStart(participants, lobbyId);
+        GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell, assignees);
         instance.setStartCenter(engineOffStartCenter(participants, surroundOrigin, matchCell));
         store.registerInstance(instance);
         stats.recordLobbySession(lobbyId);
@@ -220,9 +222,13 @@ public final class MatchStartService {
         return assignees;
     }
 
-    /** Creates the instance and activates participants and watchers. */
+    /**
+     * Creates the instance and activates participants only. Lobby
+     * watchers stay in the lobby: they join the match explicitly via
+     * game join or the spectator browser instead of leaking in here.
+     */
     private GameInstance createMatchInstance(int lobbyId, long currentMatchId, OptionalLong matchCell,
-            List<UUID> assignees, List<Player> spectators) {
+            List<UUID> assignees) {
         GameInstance instance = new GameInstance(currentMatchId, lobbyId, matchCell,
                 System.currentTimeMillis());
         if (lobbies.multiLobbyAllowed()
@@ -233,19 +239,6 @@ public final class MatchStartService {
         }
         for (UUID playerId : assignees) {
             instance.activate(playerId);
-        }
-        // Watchers join the assignment too, so win titles, sounds, and
-        // broadcasts reach them like everyone else. Only SPECTATOR-role
-        // watchers are forced into fake spectator mode; NONEs keep lobby
-        // rules.
-        for (Player spectator : spectators) {
-            instance.activate(spectator.getUniqueId());
-            initMatchStats(currentMatchId, spectator);
-            playerStates.setLives(spectator.getUniqueId(),
-                    livesFor(lobbyId, playerStates.role(spectator)));
-            if (playerStates.role(spectator) == Role.SPECTATOR) {
-                plugin.fakeSpectators().enable(spectator);
-            }
         }
         return instance;
     }
@@ -548,29 +541,24 @@ public final class MatchStartService {
         return Math.max(0L, Math.round(seconds * 1000.0));
     }
 
-    /** Shows the starting roster to one match's players. */
+    /**
+     * Shows the starting roster to one match's players through the
+     * shared status formatter, so the roll call truncates and joins
+     * exactly like status output.
+     */
     private void showStatusToInstance(GameInstance instance, List<Player> players) {
+        Predicate<UUID> respawning = StatusRosterService.respawning(plugin.respawnListener());
         for (Player recipient : store.onlineAssignedPlayers(instance)) {
             messages.message(recipient, "manhunt.status-header", Map.of("status", "ACTIVE"));
-            sendRoleSection(recipient, players, Role.SPEEDRUNNER, "manhunt.speedrunners-header");
-            sendRoleSection(recipient, players, Role.HUNTER, "manhunt.hunters-header");
-            sendRoleSection(recipient, players, Role.AFK, "manhunt.afk-header");
-            sendRoleSection(recipient, players, Role.NONE, "manhunt.none-header");
-        }
-    }
-
-    private void sendRoleSection(Player receiver, List<Player> players, Role role, String headerKey) {
-        List<String> names = players.stream()
-                .filter(player -> playerStates.role(player) == role)
-                .map(Player::getName)
-                .sorted()
-                .toList();
-        if (names.isEmpty()) {
-            return;
-        }
-        messages.message(receiver, headerKey, Map.of());
-        for (String line : ListFormatter.chunk(names, 10)) {
-            messages.message(receiver, "manhunt.status-player", Map.of("player", line));
+            roster.sendRoleSection(recipient, players, Role.SPEEDRUNNER,
+                    "manhunt.speedrunners-header", instance.deadPlayers(), respawning);
+            roster.sendRoleSection(recipient, players, Role.HUNTER, "manhunt.hunters-header",
+                    instance.deadPlayers(), respawning);
+            roster.sendRoleSection(recipient, players, Role.AFK, "manhunt.afk-header",
+                    instance.deadPlayers(), respawning);
+            roster.sendRoleSection(recipient, players, Role.NONE, "manhunt.none-header",
+                    instance.deadPlayers(), respawning);
+            roster.sendSpectatorLine(recipient, players);
         }
     }
 

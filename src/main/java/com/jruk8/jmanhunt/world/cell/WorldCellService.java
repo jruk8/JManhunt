@@ -23,7 +23,6 @@ import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
-import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpectatorSpawnResolver;
 
 /** Match cells: allocation, buffering, index, and game teleports. */
@@ -60,8 +59,7 @@ public final class WorldCellService {
      * matches confine by pseudo-border rubber-band, or by auto-leave
      * when borders are off.
      */
-    public OptionalLong onMatchStart(List<Player> participants, List<Player> spectators,
-            int lobbyId) {
+    public OptionalLong onMatchStart(List<Player> participants, int lobbyId) {
         WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
         if (!config.enabled() || participants.isEmpty()) {
             return OptionalLong.empty();
@@ -83,38 +81,8 @@ public final class WorldCellService {
             }
         }
 
-        Location cellRoot = teleportToGame(participants, world, config, origin);
-        teleportSpectatorsToCell(spectators, participants, cellRoot);
+        teleportToGame(participants, world, config, origin);
         return OptionalLong.of(origin.index());
-    }
-
-    /**
-     * Teleports watchers to the match so they spectate instead of waiting
-     * in the lobby. SPECTATOR-role watchers always travel; NONE watchers
-     * only when the turn-nones-spectator toggle is on. Everyone lands on
-     * the shared spectator spawn pick, pinned to respawn at cell center.
-     */
-    private void teleportSpectatorsToCell(List<Player> spectators, List<Player> participants,
-            Location cellRoot) {
-        if (spectators.isEmpty() || cellRoot == null) {
-            return;
-        }
-        // AFK players never reach this list.
-        boolean nonesAllowed = plugin.configService().getBoolean(
-                "settings.players.roles.turn-nones-spectator.enabled", false);
-        SpectatorSpawnResolver resolver =
-                new SpectatorSpawnResolver(playerStates, plugin.fakeSpectators());
-        List<SpectatorSpawnResolver.SpawnCandidate> candidates =
-                resolver.candidatesOfPool(participants);
-        for (Player spectator : spectators) {
-            if (playerStates.role(spectator) != Role.SPECTATOR && !nonesAllowed) {
-                continue;
-            }
-            Location spawn = SpectatorSpawnResolver.resolve(candidates, cellRoot).orElse(cellRoot);
-            spectator.teleport(spawn);
-            spectator.setRespawnLocation(cellRoot, true);
-            plugin.fakeSpectators().enable(spectator);
-        }
     }
 
     /**
