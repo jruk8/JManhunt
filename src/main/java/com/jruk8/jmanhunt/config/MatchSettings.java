@@ -114,7 +114,7 @@ public class MatchSettings extends OkaeriConfig {
                 "Seconds to wait before automatically running /manhunt start.",
                 "Set to 0 to start immediately as soon as the queue is eligible."
         })
-        private int countdownSeconds = 45;
+        private int countdownSeconds = 30;
 
         @Comment({
                 "Minimum queued players per role before the autostart countdown can",

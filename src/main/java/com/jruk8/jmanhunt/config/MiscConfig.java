@@ -73,11 +73,11 @@ public class MiscConfig extends OkaeriConfig {
                 "case-insensitively. A hit logs an error and aborts the rest",
                 "of the command list; the match keeps running.",
                 "Default: op, deop, stop, restart, reload, luckperms, lp,",
-                "permissions, ban, kick, whitelist, execute"
+                "permissions, ban, kick, whitelist"
         })
         private List<String> blacklistedModifierCommands = new ArrayList<>(List.of("op", "deop",
                 "stop", "restart", "reload", "luckperms", "lp", "permissions", "ban", "kick",
-                "whitelist", "execute"));
+                "whitelist"));
 
         public List<String> getBlacklistedModifierCommands() {
             return blacklistedModifierCommands;

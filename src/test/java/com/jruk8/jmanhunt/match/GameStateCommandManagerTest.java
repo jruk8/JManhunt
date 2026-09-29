@@ -450,9 +450,9 @@ class GameStateCommandManagerTest {
                 "advanced.misc.interop.blacklisted-modifier-commands");
 
         assertTrue(blocked instanceof List, "blacklist must be a list");
-        assertEquals(12, ((List<String>) blocked).size());
+        assertEquals(11, ((List<String>) blocked).size());
         assertTrue(((List<String>) blocked).contains("op"));
-        assertTrue(((List<String>) blocked).contains("execute"));
+        assertFalse(((List<String>) blocked).contains("execute"));
         assertTrue(((List<String>) blocked).contains("whitelist"));
     }
 

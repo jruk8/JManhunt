@@ -64,7 +64,7 @@ class SettingFeedbackTest {
                 "settings.match.autostart.countdown-seconds", outcome);
 
         assertEquals(1, sent.size());
-        assertEquals("[JManhunt] Set settings.match.autostart.countdown-seconds to 60. (was 45)",
+        assertEquals("[JManhunt] Set settings.match.autostart.countdown-seconds to 60. (was 30)",
                 plain(sent.get(0)));
         verify(sounds, times(1)).playNeutralSound(sender);
     }
@@ -109,7 +109,7 @@ class SettingFeedbackTest {
     @Test
     void scalarUpdatedWithSameValueReportsUnchanged() {
         ConfigService.SetOutcome outcome =
-                config.setValue("settings.match.autostart.countdown-seconds", "45");
+                config.setValue("settings.match.autostart.countdown-seconds", "30");
 
         assertTrue(outcome.ok());
         feedback.scalarUpdated(sender,
@@ -117,7 +117,7 @@ class SettingFeedbackTest {
 
         assertEquals(1, sent.size());
         assertEquals("[JManhunt] Nothing changed. "
-                + "settings.match.autostart.countdown-seconds was already 45.",
+                + "settings.match.autostart.countdown-seconds was already 30.",
                 plain(sent.get(0)));
         verifyNoInteractions(sounds);
     }

@@ -316,7 +316,8 @@ class CommandSyntaxTest {
     @Test
     void everyDefaultBlacklistedCommandIsBlocked() {
         List<String> blocked = List.of("op", "deop", "stop", "restart", "reload", "luckperms",
-                "lp", "permissions", "ban", "kick", "whitelist", "execute");
+                "lp", "permissions", "ban", "kick", "whitelist");
+        assertFalse(CommandSyntax.isBlockedCommand("execute as @a run say hi", blocked));
         for (String root : blocked) {
             assertTrue(CommandSyntax.isBlockedCommand(root + " Steve", blocked), root);
             assertTrue(CommandSyntax.isBlockedCommand("/" + root + " Steve", blocked), root);

@@ -495,7 +495,7 @@ public final class SettingRegistry {
 
     private static void addSettingsMatchEntries(List<SettingDescriptor> entries) {
         entries.add(bool("settings.match.autostart.enabled", true));
-        entries.add(intVal("settings.match.autostart.countdown-seconds", 45, 0, null));
+        entries.add(intVal("settings.match.autostart.countdown-seconds", 30, 0, null));
         entries.add(intVal("settings.match.autostart.minimums.hunter", 1, 1, null));
         entries.add(intVal("settings.match.autostart.minimums.speedrunner", 1, 1, null));
         entries.add(intVal("settings.match.autostart.maximums.hunter", -1, -1, null));

@@ -154,20 +154,20 @@ public class SoundsConfig extends OkaeriConfig {
         @CustomKey("speedrunner-death")
         @Comment("Runs on speedrunner killed (by any means)")
         private SoundEntry speedrunnerDeath =
-                SoundEntry.of("block.trial_spawner.detect_player", 1.2, 1.0);
+                SoundEntry.of("block.dried_ghast.ambient", 1.0, 1.0);
 
         @CustomKey("hunter-death")
         @Comment("Runs on hunter killed (by any means)")
         private SoundEntry hunterDeath =
-                SoundEntry.of("entity.player.hurt_sweet_berry_bush", 0.9, 1.0);
+                SoundEntry.of("item.spyglass.use", 1.0, 1.0);
 
         @CustomKey("win-sound")
         @Comment("Runs when speedrunners win")
-        private SoundEntry winSound = SoundEntry.of("entity.ender_dragon.death", 1.0, 1.0);
+        private SoundEntry winSound = SoundEntry.of("block.beacon.activate", 1.1, 1.0);
 
         @CustomKey("fail-sound")
         @Comment("Runs when hunters win")
-        private SoundEntry failSound = SoundEntry.of("entity.wither.spawn", 1.0, 1.0);
+        private SoundEntry failSound = SoundEntry.of("block.skulk_shrieker.break", 0.7, 0.9);
 
         @CustomKey("cancelled-sound")
         @Comment("Runs when a match is canceled")
@@ -339,7 +339,7 @@ public class SoundsConfig extends OkaeriConfig {
         @CustomKey("neutral-sound")
         @Comment("Heard on command and GUI confirmations.")
         private SoundEntry neutralSound =
-                SoundEntry.of("block.note_block.pling", 1.0, 1.0);
+                SoundEntry.of("block.spawner.fall", 1.0, 1.0);
 
         @CustomKey("angry-sound")
         @Comment("Heard on validation errors and invalid input.")

@@ -107,7 +107,7 @@ public final class MessageService {
             case SPEEDRUNNER -> "<#74de66>";
             case HUNTER -> "<#de666e>";
             case SPECTATOR -> "<#6e728a>";
-            case AFK -> "<#a18e68>";
+            case AFK -> "<#d19e28>";
             case NONE -> "<#7d7d7d>";
         };
     }

@@ -126,7 +126,7 @@ the plugin logs an error naming the command and its source line, then skips
 the rest of that command list. The match itself keeps running.
 
 Defaults: `op`, `deop`, `stop`, `restart`, `reload`, `luckperms`, `lp`,
-`permissions`, `ban`, `kick`, `whitelist`, `execute`. Empty the list to
+`permissions`, `ban`, `kick`, `whitelist`. Empty the list to
 disable the blacklist entirely.
 
 # Run Timing

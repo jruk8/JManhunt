@@ -17,7 +17,7 @@ public class RoleColorsMessages extends OkaeriConfig {
     private String spectator = "<#6e728a>";
 
     @CustomKey("afk")
-    private String afk = "<#a18e68>";
+    private String afk = "<#d19e28>";
 
     @CustomKey("none")
     private String none = "<#7d7d7d>";

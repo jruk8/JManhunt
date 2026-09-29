@@ -96,7 +96,7 @@ class ModifiedGlowTest {
     void settingCategoryGlowsWhenAnyChildGlows() {
         assertFalse(ModifiedGlow.section(config, "settings.match"));
 
-        ConfigPathMapper.set(root, "settings.match.autostart.countdown-seconds", 30);
+        ConfigPathMapper.set(root, "settings.match.autostart.countdown-seconds", 60);
 
         assertTrue(ModifiedGlow.section(config, "settings.match"));
         assertTrue(ModifiedGlow.section(config, "settings.match.autostart"));

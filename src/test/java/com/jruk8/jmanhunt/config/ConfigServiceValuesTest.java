@@ -164,13 +164,13 @@ class ConfigServiceValuesTest {
         assertTrue(service.setValue("settings.match.autostart.countdown-seconds", "60").ok());
         assertTrue(service.isModified("settings.match.autostart.countdown-seconds"));
 
-        assertTrue(service.setValue("settings.match.autostart.countdown-seconds", "45").ok());
+        assertTrue(service.setValue("settings.match.autostart.countdown-seconds", "30").ok());
         assertFalse(service.isModified("settings.match.autostart.countdown-seconds"));
     }
 
     @Test
     void defaultValueReadsSchema() {
-        assertEquals(45, service.defaultValue("settings.match.autostart.countdown-seconds"));
+        assertEquals(30, service.defaultValue("settings.match.autostart.countdown-seconds"));
         assertEquals("FORCE_START",
                 service.defaultValue("settings.match.start-on-speedrunner-damage.on-expire"));
         assertEquals("compass", service.defaultValue("settings.compass.item"));
