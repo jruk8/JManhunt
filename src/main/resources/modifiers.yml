@@ -372,7 +372,6 @@ modifiers:
       0:
         runs-on:
           - ON_PLAYER_KILLS
-          - ON_RESPAWN
         commands:
           player:
             # SETTINGS (in half-hearts): total max health cap, and gain per kill.
