@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.enchantments.Enchantment;
@@ -117,6 +118,13 @@ final class CompassItemService {
     }
 
     void giveCompass(Player player) {
+        // The compass only spawns for live, playing holders: never on the
+        // death screen, never in (fake) spectator mode. Revives re-give
+        // after leaving spectator mode instead.
+        if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR
+                || plugin.fakeSpectators().isFakeSpectator(player)) {
+            return;
+        }
         Integer lobby = lobbyOf(player);
         if (!shouldReceiveCompass(lobby, playerStates.role(player)) || !mayHoldCompass(player)) {
             return;

@@ -569,8 +569,8 @@ final class CompassLockService {
                 dispatchDebuffLine(parsed, context);
             } catch (Exception exception) {
                 plugin.logger().severe(
-                        "Failed to run analysis debuff command '" + command + "'. Skipping..");
-                exception.printStackTrace();
+                        "Failed to run analysis debuff command '" + command + "'. Skipping..",
+                        exception);
             }
         }
     }

@@ -92,10 +92,10 @@ class JManhuntLoggerTest {
         logger.debug(DebugLevel.INFO, "debug.cell-fetched", Map.of("value", "7"));
 
         assertEquals(1, sink.console().size());
-        assertEquals("[INFO] [D] value 7.", plain(sink.console().get(0)));
+        assertEquals("[D] [INFO] value 7.", plain(sink.console().get(0)));
         assertEquals(List.of(player), sink.players());
         assertEquals(1, sink.playerLines().size());
-        assertEquals("[INFO] [D] value 7.", plain(sink.playerLines().get(0)));
+        assertEquals("[D] [INFO] value 7.", plain(sink.playerLines().get(0)));
     }
 
     @Test
@@ -109,8 +109,8 @@ class JManhuntLoggerTest {
         logger.debug(DebugLevel.SEVERE, "debug.cell-fetched", Map.of("value", "7"));
 
         assertEquals(2, sink.console().size());
-        assertEquals("[WARN] [D] value 7.", plain(sink.console().get(0)));
-        assertEquals("[SEVERE] [D] value 7.", plain(sink.console().get(1)));
+        assertEquals("[D] [WARN] value 7.", plain(sink.console().get(0)));
+        assertEquals("[D] [SEVERE] value 7.", plain(sink.console().get(1)));
     }
 
     @Test
@@ -136,6 +136,71 @@ class JManhuntLoggerTest {
         assertEquals(2, sink.console().size());
         assertEquals(4, sink.players().size());
         assertTrue(sink.players().contains(severePlayer));
+    }
+
+    @Test
+    void throwableOverloadsFanOutTruncatedLineAfterPrefix() {
+        RecordingSink sink = sink();
+        DebugService debug = new DebugService();
+        debug.setConsoleLevel(DebugLevel.INFO);
+        JManhuntLogger logger = logger(Logger.getAnonymousLogger(), debug, sink);
+
+        logger.severe("kaboom", new RuntimeException("bad"));
+
+        assertEquals(1, sink.console().size());
+        assertEquals("[D] [SEVERE] kaboom: java.lang.RuntimeException: bad",
+                plain(sink.console().get(0)));
+    }
+
+    @Test
+    void throwableFanOutTruncatesLongLines() {
+        RecordingSink sink = sink();
+        DebugService debug = new DebugService();
+        debug.setConsoleLevel(DebugLevel.INFO);
+        JManhuntLogger logger = logger(Logger.getAnonymousLogger(), debug, sink);
+
+        logger.warning("w".repeat(600), null);
+
+        assertEquals(1, sink.console().size());
+        String capped = plain(sink.console().get(0));
+        assertEquals(503, capped.length());
+        assertTrue(capped.endsWith("..."));
+    }
+
+    @Test
+    void truncateCapsLongLines() {
+        assertEquals("", JManhuntLogger.truncate(null));
+        assertEquals("short", JManhuntLogger.truncate("short"));
+        String exact = "x".repeat(500);
+        assertEquals(exact, JManhuntLogger.truncate(exact));
+        assertEquals("y".repeat(500) + "...", JManhuntLogger.truncate("y".repeat(501)));
+    }
+
+    @Test
+    void singleLineCollapsesWhitespace() {
+        assertEquals("", JManhuntLogger.singleLine(null, null));
+        assertEquals("boom", JManhuntLogger.singleLine("boom", null));
+        assertEquals("java.lang.RuntimeException: bad",
+                JManhuntLogger.singleLine(null, new RuntimeException("bad")));
+        assertEquals("ctx: java.lang.RuntimeException: bad",
+                JManhuntLogger.singleLine("ctx", new RuntimeException("bad")));
+        assertEquals("a b c", JManhuntLogger.singleLine("a\n\t b\r\nc", null));
+    }
+
+    @Test
+    void debugLevelMapsConsoleLevels() {
+        assertEquals(DebugLevel.SEVERE, JManhuntLogger.debugLevel(Level.SEVERE));
+        assertEquals(DebugLevel.WARN, JManhuntLogger.debugLevel(Level.WARNING));
+        assertEquals(DebugLevel.INFO, JManhuntLogger.debugLevel(Level.INFO));
+        assertEquals(DebugLevel.INFO, JManhuntLogger.debugLevel(Level.FINE));
+        assertEquals(DebugLevel.INFO, JManhuntLogger.debugLevel(null));
+    }
+
+    @Test
+    void capLengthKeepsShortAndTruncatesLong() {
+        assertEquals("short", plain(JManhuntLogger.capLength(Component.text("short"))));
+        assertEquals("z".repeat(500) + "...",
+                plain(JManhuntLogger.capLength(Component.text("z".repeat(600)))));
     }
 
     private static String plain(Component component) {

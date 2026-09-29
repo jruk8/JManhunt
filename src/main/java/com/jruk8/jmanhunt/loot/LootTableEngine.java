@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.loot;
 
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -51,6 +52,11 @@ public final class LootTableEngine {
     }
 
     public boolean loadFromFile(File jsonFile) {
+        return loadFromFile(jsonFile, null);
+    }
+
+    /** Loads the table, routing parse failures through the logger when given. */
+    public boolean loadFromFile(File jsonFile, JManhuntLogger logger) {
         parsedTable.clear();
         totalWeight = 0;
 
@@ -73,7 +79,9 @@ public final class LootTableEngine {
             return true;
 
         } catch (IOException | RuntimeException e) {
-            e.printStackTrace();
+            if (logger != null) {
+                logger.warning("Failed to parse loot table '" + jsonFile.getName() + "'.", e);
+            }
             return false;
         }
     }

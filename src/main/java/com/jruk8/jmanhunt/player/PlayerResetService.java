@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.player;
 
-import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -8,7 +7,6 @@ import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import java.util.List;
 
 /**
  * Leave and match-end player cleanup: full wipes, vitals resets, and
@@ -25,15 +23,12 @@ public final class PlayerResetService {
 
     /**
      * True when the end phase wipes participant inventories for the
-     * lobby: the game-rules bundle is on and RESET_PLAYERS_STATS is set.
+     * lobby: the game-rules bundle is on. The wipe itself is integral
+     * and no longer gated on a rule key.
      */
     public boolean endWipeEnabled(int lobbyId) {
-        if (!overrides.getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
-            return false;
-        }
-        List<String> rules = overrides.getStringList(lobbyId,
-                MatchConfig.GameRules.RULES_PATH);
-        return MatchConfig.GameRules.isRuleEnabled(rules, "RESET_PLAYERS_STATS");
+        return overrides.getBoolean(lobbyId,
+                "advanced.advanced-match-controls.game-rules.enabled", true);
     }
 
     /**

@@ -96,20 +96,15 @@ public class MatchConfig extends OkaeriConfig {
 
         /** Known rule keys, in display order. */
         public static final transient List<String> KNOWN = List.of(
-                "AUTO_SET_GAMEMODE",
-                "RESET_PLAYERS_STATS",
                 "DISABLE_LOCATOR_BAR",
                 "SET_RESPAWN_IMMEDIATE",
                 "SET_DAYTIME",
                 "DISABLE_PHANTOMS",
-                "DISABLE_COMMAND_FEEDBACK",
                 "DISABLE_PILLAGER_PATROLS",
                 "DISABLE_WANDERING_TRADER");
 
-        /** Rules enabled by default: all but DISABLE_COMMAND_FEEDBACK. */
+        /** Rules enabled by default. */
         public static final transient List<String> DEFAULT_RULES = List.of(
-                "AUTO_SET_GAMEMODE",
-                "RESET_PLAYERS_STATS",
                 "DISABLE_LOCATOR_BAR",
                 "SET_RESPAWN_IMMEDIATE",
                 "SET_DAYTIME",
@@ -122,9 +117,8 @@ public class MatchConfig extends OkaeriConfig {
 
         @Comment({
                 "Enabled game-state rules. Unknown entries are ignored.",
-                "Known: AUTO_SET_GAMEMODE, RESET_PLAYERS_STATS, DISABLE_LOCATOR_BAR,",
-                "SET_RESPAWN_IMMEDIATE, SET_DAYTIME, DISABLE_PHANTOMS,",
-                "DISABLE_COMMAND_FEEDBACK, DISABLE_PILLAGER_PATROLS, DISABLE_WANDERING_TRADER."
+                "Known: DISABLE_LOCATOR_BAR, SET_RESPAWN_IMMEDIATE, SET_DAYTIME,",
+                "DISABLE_PHANTOMS, DISABLE_PILLAGER_PATROLS, DISABLE_WANDERING_TRADER."
         })
         private List<String> rules = new ArrayList<>(DEFAULT_RULES);
 

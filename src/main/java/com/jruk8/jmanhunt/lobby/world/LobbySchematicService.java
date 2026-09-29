@@ -251,8 +251,8 @@ public final class LobbySchematicService {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception exception) {
                 plugin.logger().severe(
-                        "Failed to run lobby preset command '" + command + "'. Skipping..");
-                exception.printStackTrace();
+                        "Failed to run lobby preset command '" + command + "'. Skipping..",
+                        exception);
             }
         }
     }

@@ -42,7 +42,7 @@ public abstract class LootTableListener<T extends Event> implements Listener, Se
             return;
         }
 
-        boolean success = engine.loadFromFile(customFile);
+        boolean success = engine.loadFromFile(customFile, plugin.logger());
 
         if (!success) {
             plugin.logger().severe("Found loot table '%s.json' but failed to parse it!".formatted(name));

@@ -118,7 +118,7 @@ public final class AutostartService {
         messaging.sendToLobby(lobbyId, "manhunt.autostart-eligible",
                 Map.of("seconds", String.valueOf(configured)));
         messaging.playLobbySound(lobbyId, "game.autostart-countdown");
-        announceAutostartCheckpoint(lobbyId, countdown, countdown.remaining);
+        // Eligible covered these seconds already; ticks announce the rest.
         countdown.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             Optional<Lobby> tickLobby = lobbies.get(lobbyId);
             if (store.instanceForLobby(lobbyId).isPresent() || tickLobby.isEmpty()

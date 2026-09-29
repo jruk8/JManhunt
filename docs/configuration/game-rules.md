@@ -14,8 +14,6 @@ advanced:
     game-rules:
       enabled: true
       rules:
-        - AUTO_SET_GAMEMODE
-        - RESET_PLAYERS_STATS
         - DISABLE_LOCATOR_BAR
         - SET_RESPAWN_IMMEDIATE
         - SET_DAYTIME
@@ -27,11 +25,10 @@ advanced:
 `rules` lists the enabled rules; anything not listed stays off, and
 unknown entries are ignored. Matching is case-insensitive.
 
-- `AUTO_SET_GAMEMODE` puts participants in survival mode. Players with role
-  `NONE` are put in spectator mode and teleported to the lobby instead, unless
-  `settings.roles.turn-nones-spectator` is disabled, in which case they keep
-  their current gamemode.
-- `RESET_PLAYERS_STATS` clears participants' match statistics.
+Setting survival gamemodes at match start and clearing participants'
+match statistics are integral to the game and always run; they are no
+longer listed here. Match phases never touch `send_command_feedback`.
+
 - `DISABLE_LOCATOR_BAR` turns off the vanilla locator bar in every world for
   the duration of the match.
 - `SET_RESPAWN_IMMEDIATE` enables immediate respawn (no death screen) while a
@@ -39,9 +36,6 @@ unknown entries are ignored. Matching is case-insensitive.
 - `SET_DAYTIME` sets every world to daytime.
 - `DISABLE_PHANTOMS` stops phantoms from spawning while a match runs, and
   re-enables them afterwards.
-- `DISABLE_COMMAND_FEEDBACK` sets `send_command_feedback` to false while a
-  match runs, and restores it afterwards. Unlike the rest, it stays off
-  unless you list it.
 - `DISABLE_PILLAGER_PATROLS` stops pillager patrols from spawning while a
   match runs, and restores them afterwards.
 - `DISABLE_WANDERING_TRADER` stops wandering traders from spawning while a

@@ -11,12 +11,11 @@ import org.junit.jupiter.api.Test;
 class MatchConfigTest {
 
     @Test
-    void knownRulesCoverNineKeysWithEightDefaults() {
-        assertEquals(9, MatchConfig.GameRules.KNOWN.size());
-        assertEquals(8, MatchConfig.GameRules.DEFAULT_RULES.size());
+    void knownRulesCoverSixKeysWithSixDefaults() {
+        assertEquals(6, MatchConfig.GameRules.KNOWN.size());
+        assertEquals(6, MatchConfig.GameRules.DEFAULT_RULES.size());
         assertTrue(MatchConfig.GameRules.DEFAULT_RULES
-                .containsAll(MatchConfig.GameRules.KNOWN.stream()
-                        .filter(key -> !"DISABLE_COMMAND_FEEDBACK".equals(key)).toList()));
+                .containsAll(MatchConfig.GameRules.KNOWN));
         assertEquals(MatchConfig.GameRules.DEFAULT_RULES,
                 new MatchConfig.GameRules().getRules());
     }
@@ -26,7 +25,7 @@ class MatchConfigTest {
         List<String> rules = List.of("DISABLE_PHANTOMS", "SET_DAYTIME");
         assertTrue(MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_PHANTOMS"));
         assertTrue(MatchConfig.GameRules.isRuleEnabled(rules, "set_daytime"));
-        assertFalse(MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_COMMAND_FEEDBACK"));
+        assertFalse(MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_LOCATOR_BAR"));
         assertFalse(MatchConfig.GameRules.isRuleEnabled(rules, "BOGUS_RULE"));
         assertFalse(MatchConfig.GameRules.isRuleEnabled(rules, "disable-phantoms"));
         assertFalse(MatchConfig.GameRules.isRuleEnabled(List.of(), "SET_DAYTIME"));

@@ -507,9 +507,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         if (endWipeEnabled(lobbyId)) {
             participants.forEach(this::resetPlayer);
         }
-        if (MatchConfig.GameRules.isRuleEnabled(rules, "AUTO_SET_GAMEMODE")) {
-            applyDefaultGamemodes(phase, participants, lobbySpectators, lobbyId);
-        }
+        applyDefaultGamemodes(phase, participants, lobbySpectators, lobbyId);
         applyWorldRules(Bukkit.getWorlds(), phase, lastMatch, rules);
         if (MatchConfig.GameRules.isRuleEnabled(rules, "SET_DAYTIME")) {
             Bukkit.getWorlds().forEach(this::setDaytime);
@@ -522,13 +520,6 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         boolean disableLocatorBar =
                 MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_LOCATOR_BAR");
         worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, !disableLocatorBar));
-        // Quiet command feedback while a match runs and restore it when
-        // the last match ends. Unlike its siblings this rule defaults
-        // to off.
-        boolean disableFeedback =
-                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_COMMAND_FEEDBACK");
-        worlds.forEach(world -> world.setGameRule(GameRules.SEND_COMMAND_FEEDBACK,
-                gameruleRestored(phase, lastMatch, disableFeedback)));
         // Disable phantom spawning while a match runs and restore it when the
         // match ends. The gamerule is re-enabled on the end phase.
         boolean disablePhantoms =
@@ -643,8 +634,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                     }
                 }
             } catch (Exception e) {
-                plugin.logger().severe("Failed to run command '%s'. Skipping..".formatted(command));
-                e.printStackTrace();
+                plugin.logger().severe("Failed to run command '%s'. Skipping..".formatted(command), e);
             }
         }
     }

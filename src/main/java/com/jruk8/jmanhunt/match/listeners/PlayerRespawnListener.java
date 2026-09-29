@@ -47,7 +47,11 @@ public final class PlayerRespawnListener implements Listener {
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
         Player player = event.getPlayer();
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
-        if (match.isPresent() && playerStates.role(player).isParticipant()) {
+        // Delayed revives re-give after leaving spectator mode; handing one
+        // here would land it in the spectator inventory.
+        if (match.isPresent() && playerStates.role(player).isParticipant()
+                && !hasPendingRespawn(player.getUniqueId())
+                && !plugin.fakeSpectators().isFakeSpectator(player)) {
             Bukkit.getScheduler().runTask(plugin, () -> compass.giveCompass(player));
         }
         if (match.isEmpty() || !match.get().begun() || !playerStates.role(player).isParticipant()) {

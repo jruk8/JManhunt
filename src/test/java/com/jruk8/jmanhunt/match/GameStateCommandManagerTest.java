@@ -438,9 +438,9 @@ class GameStateCommandManagerTest {
                 "advanced.advanced-match-controls.game-rules.rules");
 
         assertTrue(rules instanceof List, "rules must be a list");
-        assertEquals(8, ((List<String>) rules).size());
+        assertEquals(6, ((List<String>) rules).size());
         assertTrue(((List<String>) rules).contains("DISABLE_PILLAGER_PATROLS"));
-        assertFalse(((List<String>) rules).contains("DISABLE_COMMAND_FEEDBACK"));
+        assertFalse(((List<String>) rules).contains("AUTO_SET_GAMEMODE"));
     }
 
     @Test
@@ -492,25 +492,18 @@ class GameStateCommandManagerTest {
     }
 
     @Test
-    void endWipeEnabledNeedsBundleAndRule() {
+    void endWipeEnabledNeedsBundle() {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         OverrideService overrides = mock(OverrideService.class);
         when(plugin.overrides()).thenReturn(overrides);
         GameStateCommandManager manager = wipeManager(plugin);
         when(overrides.getBoolean(3, "advanced.advanced-match-controls.game-rules.enabled", true))
                 .thenReturn(true);
-        when(overrides.getStringList(eq(3), anyString()))
-                .thenReturn(List.of("RESET_PLAYERS_STATS"));
 
         assertTrue(manager.endWipeEnabled(3));
 
-        when(overrides.getStringList(eq(3), anyString())).thenReturn(List.of());
-        assertFalse(manager.endWipeEnabled(3));
-
         when(overrides.getBoolean(3, "advanced.advanced-match-controls.game-rules.enabled", true))
                 .thenReturn(false);
-        when(overrides.getStringList(eq(3), anyString()))
-                .thenReturn(List.of("RESET_PLAYERS_STATS"));
         assertFalse(manager.endWipeEnabled(3));
     }
 }

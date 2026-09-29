@@ -384,8 +384,7 @@ public final class WorldCellService {
             try {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception e) {
-                plugin.logger().severe("Failed to run preloading command '%s'. Skipping..".formatted(command));
-                e.printStackTrace();
+                plugin.logger().severe("Failed to run preloading command '%s'. Skipping..".formatted(command), e);
             }
         }
     }

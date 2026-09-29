@@ -84,10 +84,17 @@ public final class CompassManager {
             Bukkit.getOnlinePlayers().stream()
                     .filter(p -> role(p).isParticipant())
                     .filter(p -> !isVanillaSpectator(p))
+                    .filter(p -> !p.isDead())
                     .filter(p -> inLiveInstance(p))
                     .filter(items::hasCompass)
                     .forEach(holder -> {
                         UUID id = holder.getUniqueId();
+                        // A running analysis owns the needle: the auto clock
+                        // restarts anyway so no refresh fires mid-analysis.
+                        if (locks.isAnalyzing(id)) {
+                            lastAutoRefresh.put(id, now);
+                            return;
+                        }
                         Integer lobby = lobbyOf(holder);
                         double intervalSeconds = plugin.overrides().getDouble(lobby,
                                 "settings.compass.refresh-interval", 10.0);
@@ -149,6 +156,9 @@ public final class CompassManager {
     }
 
     public void refreshCompass(Player holder) {
+        if (holder.isDead()) {
+            return;
+        }
         refreshCompassOutcome(holder);
     }
 
@@ -352,8 +362,10 @@ public final class CompassManager {
     private boolean renderCompassPick(Player holder, ItemStack item, int slot, CompassPick pick,
             String targetRoleString, boolean locked) {
         Location spot = resolutionSpot(holder);
-        Location targetPress = analysisTargets
-                .getOrDefault(holder.getUniqueId(), Map.of()).get(pick.id());
+        // Targetless picks (none, nearby, too far) carry a null id, and
+        // immutable maps reject null keys, so skip the lookup for them.
+        Location targetPress = pick.id() == null ? null
+                : analysisTargets.getOrDefault(holder.getUniqueId(), Map.of()).get(pick.id());
         Optional<SignalInterference.Reason> reason = pick.kind() == CompassPick.Kind.NONE
                 ? Optional.empty() : signal.reasonForPick(holder, spot, targetPress, pick);
         if (reason.isPresent()) {
