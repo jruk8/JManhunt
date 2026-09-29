@@ -37,11 +37,18 @@ public final class SignalInterference {
         NOT_VISIBLE
     }
 
+    /** Which side's invisibility the invisible option watches. */
+    public enum InvisibleMode {
+        TARGET,
+        SELF
+    }
+
     /**
      * One evaluated spot: light levels, whether the world is an overworld,
      * solid and fluid blocks strictly above the feet, feet Y, weather, the
      * block biome key such as "minecraft:desert" (lowercased), blocks moved
-     * since the refresh started, and whether the feet block is water.
+     * since the refresh started, whether the feet block is water, and
+     * whether the side's player is invisible.
      */
     public record Snapshot(
             int skyLight,
@@ -53,7 +60,8 @@ public final class SignalInterference {
             Weather weather,
             String biomeKey,
             double movedBlocks,
-            boolean feetInWater) {
+            boolean feetInWater,
+            boolean invisible) {
         public Snapshot {
             biomeKey = biomeKey == null ? "" : biomeKey.toLowerCase(Locale.ROOT);
         }
@@ -72,9 +80,9 @@ public final class SignalInterference {
      * 1-1000, bypass 0-1, movement threshold at 0), normalizes the
      * altitude endpoints so min <= max, defaults a missing interfere-when
      * to BOTH_UNMET and a missing line-of-sight mode to NOT_VISIBLE, and
-     * lowercases the biome list. Required-to-fail is clamped against the
-     * enabled count at verdict time instead, since this record does not
-     * count enablers.
+     * lowercases the biome list, and defaults a missing invisible mode
+     * to TARGET. Required-to-fail is clamped against the enabled count
+     * at verdict time instead, since this record does not count enablers.
      */
     public record Config(
             boolean lightEnabled,
@@ -104,6 +112,9 @@ public final class SignalInterference {
             boolean losEnabled,
             InterfereWhenVisible losWhen,
             int losMaxDistance,
+            boolean invisibleEnabled,
+            InvisibleMode invisibleMode,
+            boolean invisibleTwoWay,
             int requiredToFail,
             double chanceToBypass) {
         public Config {
@@ -114,6 +125,7 @@ public final class SignalInterference {
             maxFluidAbove = clamp(maxFluidAbove, 1, 380);
             losWhen = losWhen == null ? InterfereWhenVisible.NOT_VISIBLE : losWhen;
             losMaxDistance = clamp(losMaxDistance, 1, 1000);
+            invisibleMode = invisibleMode == null ? InvisibleMode.TARGET : invisibleMode;
             minY = clamp(minY, -64, 319);
             maxY = clamp(maxY, -64, 319);
             if (minY > maxY) {
@@ -243,7 +255,24 @@ public final class SignalInterference {
             reasons.add(config.losWhen() == InterfereWhenVisible.VISIBLE
                     ? "line-of-sight" : "line-of-sight-hidden");
         }
+        if (config.invisibleEnabled()
+                && invisibleSideApplies(config.invisibleMode(), config.invisibleTwoWay(),
+                        targetSide)
+                && snapshot.invisible()) {
+            reasons.add("invisible");
+        }
         return reasons;
+    }
+
+    /**
+     * True when the invisible option evaluates the given side: two-way
+     * checks both sides, otherwise the mode picks exactly one. Pure.
+     */
+    static boolean invisibleSideApplies(InvisibleMode mode, boolean twoWay, boolean targetSide) {
+        if (twoWay) {
+            return true;
+        }
+        return targetSide == (mode == InvisibleMode.TARGET);
     }
 
     private static int enabledCount(Config config) {
@@ -270,6 +299,9 @@ public final class SignalInterference {
             count++;
         }
         if (config.losEnabled()) {
+            count++;
+        }
+        if (config.invisibleEnabled()) {
             count++;
         }
         return count;

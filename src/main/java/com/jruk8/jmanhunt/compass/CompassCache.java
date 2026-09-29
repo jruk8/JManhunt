@@ -21,13 +21,16 @@ public final class CompassCache {
     /** Holder id to target id to snapshotted location. */
     private final Map<UUID, Map<UUID, Location>> spots = new HashMap<>();
 
+    /** Holder id to the holder's own refresh-time position. */
+    private final Map<UUID, Location> holders = new HashMap<>();
+
     /** max-targets clamped to its supported range. Pure for tests. */
     public static int clampMaxTargets(int raw) {
         return Math.clamp(raw, MIN_TARGETS, MAX_TARGETS);
     }
 
-    /** Replaces one holder's snapshots with the freshly refreshed sets. */
-    public void replace(UUID holderId, List<CompassSnapshot> hunters,
+    /** Replaces one holder's snapshots plus their refresh-time position. */
+    public void replace(UUID holderId, Location holderSpot, List<CompassSnapshot> hunters,
             List<CompassSnapshot> runners) {
         Map<UUID, Location> fresh = new HashMap<>();
         for (CompassSnapshot snapshot : hunters) {
@@ -37,6 +40,7 @@ public final class CompassCache {
             fresh.put(snapshot.id(), snapshot.location());
         }
         spots.put(holderId, fresh);
+        holders.put(holderId, holderSpot);
     }
 
     /** Snapshots for one holder; empty when never refreshed. */
@@ -44,8 +48,14 @@ public final class CompassCache {
         return spots.getOrDefault(holderId, Map.of());
     }
 
+    /** Refresh-time holder position, or null when never refreshed. */
+    public Location holderSpotFor(UUID holderId) {
+        return holders.get(holderId);
+    }
+
     /** Drops one holder's snapshots, for example on match leave. */
     public void clear(UUID holderId) {
         spots.remove(holderId);
+        holders.remove(holderId);
     }
 }

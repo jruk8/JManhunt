@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Distance-delta tracking actionbars: renders the plain or triangle
@@ -37,18 +38,32 @@ final class CompassDeltaRenderer {
     record DistanceRender(String text, String plain, boolean blinked) {
     }
 
+    /** Tracking-bar distance segment: separator colors, bullet, meters. */
+    private static final Pattern DISTANCE_SEGMENT =
+            Pattern.compile("(<[^>]+>)?\\s*•\\s*(<[^>]+>)?\\{distance\\}m");
+
     /**
      * Renders and stores one tracking actionbar, scheduling the plain
      * revert for blinked deltas. The revert only lands when no newer
-     * render replaced it and the holder is still online.
+     * render replaced it and the holder is still online. With
+     * show-distance off, the distance segment (and its delta
+     * triangle) is dropped and no distance history is recorded.
      */
     void putTrackingBar(Player holder, Role holderRole, Integer lobby, String key, String playerName,
             UUID targetId, double distance, Map<String, String> extra) {
-        DistanceRender render = distanceRender(holder, holderRole, lobby, key, targetId, distance);
+        boolean showDistance = plugin.overrides().getBoolean(lobby,
+                "settings.compass.actionbar.show-distance", true);
+        DistanceRender render = showDistance
+                ? distanceRender(holder, holderRole, lobby, key, targetId, distance)
+                : new DistanceRender("", "", false);
         Map<String, String> slots = new HashMap<>(extra);
         slots.put("player", playerName);
         slots.put("distance", render.text());
-        actionbars.put(holder.getUniqueId(), messages.component(key, slots));
+        String template = messages.string(key, key);
+        if (!showDistance) {
+            template = stripDistanceSegment(template);
+        }
+        actionbars.put(holder.getUniqueId(), messages.renderLiteral(template, slots));
         if (!render.blinked()) {
             return;
         }
@@ -73,6 +88,14 @@ final class CompassDeltaRenderer {
     void forget(UUID holderId) {
         lastRoundedDistances.remove(holderId);
         deltaGenerations.remove(holderId);
+    }
+
+    /**
+     * Drops the distance segment from a tracking-bar template, leaving
+     * the surrounding text cleanly joined. Pure for tests.
+     */
+    static String stripDistanceSegment(String template) {
+        return DISTANCE_SEGMENT.matcher(template).replaceAll("");
     }
 
     /**

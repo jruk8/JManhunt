@@ -196,7 +196,10 @@ public final class PlayerCombatListener implements Listener {
                 finalSlice.role = Role.HUNTER;
             }
         }
-        Bukkit.getScheduler().runTask(plugin, () -> plugin.fakeSpectators().enable(player));
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            plugin.fakeSpectators().enable(player);
+            compass.removeCompasses(player);
+        });
         if (!quiet) {
             game.sendToInstance(instance, "game.speedrunner-out-of-lives", Map.of());
         }

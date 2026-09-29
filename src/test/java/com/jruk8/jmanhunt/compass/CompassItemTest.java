@@ -1,11 +1,32 @@
 package com.jruk8.jmanhunt.compass;
 
+import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.player.PlayerStateStore;
+import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
 import org.junit.jupiter.api.Test;
+import java.util.Optional;
+import java.util.OptionalLong;
+import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class CompassItemTest {
 
@@ -68,5 +89,121 @@ class CompassItemTest {
         assertEquals(2L, CompassLockService.analysisTickInterval(0.08));
         assertEquals(1L, CompassLockService.analysisTickInterval(0.0));
         assertEquals(1L, CompassLockService.analysisTickInterval(-1.0));
+    }
+
+    @Test
+    void eliminatedSpeedrunnerMayNotHoldCompass() {
+        UUID uuid = UUID.randomUUID();
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 0L);
+        instance.activate(uuid);
+        instance.deactivate(uuid);
+        CompassItemService items = service(Role.SPEEDRUNNER, uuid, Optional.of(instance));
+
+        assertFalse(items.mayHoldCompass(player(uuid)));
+    }
+
+    @Test
+    void activeHunterMayHoldCompass() {
+        UUID uuid = UUID.randomUUID();
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 0L);
+        instance.activate(uuid);
+        CompassItemService items = service(Role.HUNTER, uuid, Optional.of(instance));
+
+        assertTrue(items.mayHoldCompass(player(uuid)));
+    }
+
+    @Test
+    void spectatorAndLobbyPlayersMayNotHoldCompass() {
+        UUID uuid = UUID.randomUUID();
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 0L);
+        instance.activate(uuid);
+
+        assertFalse(service(Role.SPECTATOR, uuid, Optional.of(instance))
+                .mayHoldCompass(player(uuid)));
+        assertFalse(service(Role.HUNTER, uuid, Optional.empty()).mayHoldCompass(player(uuid)));
+    }
+
+    @Test
+    void deduplicateCollapsesStackedCompassAndClearsExtraSlots() {
+        CompassItemService items = new CompassItemService(mock(JManhuntPlugin.class),
+                mock(MessageService.class), mock(PlayerStateStore.class),
+                new NamespacedKey("jmanhunt", "hunters_compass"));
+        Player player = mock(Player.class);
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(player.getInventory()).thenReturn(inventory);
+        when(inventory.getSize()).thenReturn(3);
+        ItemStack stacked = compassStack(2);
+        ItemStack single = compassStack(1);
+        ItemStack plain = mock(ItemStack.class);
+        when(inventory.getItem(0)).thenReturn(stacked);
+        when(inventory.getItem(1)).thenReturn(plain);
+        when(inventory.getItem(2)).thenReturn(single);
+
+        items.deduplicateCompasses(player);
+
+        verify(stacked).setAmount(1);
+        verify(inventory).setItem(2, null);
+        verify(inventory, never()).setItem(0, null);
+        verify(inventory, never()).setItem(1, null);
+        verify(single, never()).setAmount(anyInt());
+    }
+
+    @Test
+    void compassPrefersLastHotbarSlot() {
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(inventory.getSize()).thenReturn(36);
+
+        assertEquals(8, CompassItemService.DEFAULT_SLOT);
+        assertEquals(8,
+                CompassItemService.findAvailableSlot(inventory, CompassItemService.DEFAULT_SLOT));
+    }
+
+    @Test
+    void compassSlotFallsBackGracefully() {
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(inventory.getSize()).thenReturn(36);
+        ItemStack occupied = mock(ItemStack.class);
+        when(occupied.getType()).thenReturn(Material.DIRT);
+        when(inventory.getItem(8)).thenReturn(occupied);
+
+        assertEquals(0,
+                CompassItemService.findAvailableSlot(inventory, CompassItemService.DEFAULT_SLOT));
+
+        when(inventory.getItem(anyInt())).thenReturn(occupied);
+        assertEquals(-1,
+                CompassItemService.findAvailableSlot(inventory, CompassItemService.DEFAULT_SLOT));
+    }
+
+    private static CompassItemService service(Role role, UUID uuid, Optional<GameInstance> match) {
+        PlayerStateStore playerStates = mock(PlayerStateStore.class);
+        when(playerStates.role(any(Player.class))).thenAnswer(invocation -> {
+            Player candidate = invocation.getArgument(0);
+            return uuid.equals(candidate.getUniqueId()) ? role : Role.NONE;
+        });
+        GameManager game = mock(GameManager.class);
+        when(game.instanceOf(uuid)).thenReturn(match);
+        CompassItemService items = new CompassItemService(mock(JManhuntPlugin.class),
+                mock(MessageService.class), playerStates,
+                new NamespacedKey("jmanhunt", "hunters_compass"));
+        items.setGameManager(game);
+        return items;
+    }
+
+    private static Player player(UUID uuid) {
+        Player player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(uuid);
+        return player;
+    }
+
+    private static ItemStack compassStack(int amount) {
+        ItemStack stack = mock(ItemStack.class);
+        ItemMeta meta = mock(ItemMeta.class);
+        PersistentDataContainer container = mock(PersistentDataContainer.class);
+        when(stack.hasItemMeta()).thenReturn(true);
+        when(stack.getItemMeta()).thenReturn(meta);
+        when(stack.getAmount()).thenReturn(amount);
+        when(meta.getPersistentDataContainer()).thenReturn(container);
+        when(container.has(any(NamespacedKey.class), any())).thenReturn(true);
+        return stack;
     }
 }

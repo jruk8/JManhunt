@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.compass;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.ArgumentCaptor;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -24,6 +25,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.World;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
@@ -430,6 +433,41 @@ class CompassLockServiceTest {
         assertEquals(Role.SPEEDRUNNER, fixture.locks().targetRole(fixture.player()));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void buildCycleFreezesDistancesAtRefreshTimeHolderSpot() {
+        UUID holderId = UUID.randomUUID();
+        UUID targetId = UUID.randomUUID();
+        World world = mock(World.class);
+        when(world.getUID()).thenReturn(UUID.randomUUID());
+        Location refreshSpot = new Location(world, 0.0, 64.0, 0.0);
+        Location targetSpot = new Location(world, 3.0, 64.0, 4.0);
+        CompassCache cache = new CompassCache();
+        cache.replace(holderId, refreshSpot, List.of(),
+                List.of(new CompassSnapshot(targetId, targetSpot)));
+        Player player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(holderId);
+        when(player.getLocation()).thenReturn(new Location(world, 1000.0, 64.0, 0.0));
+        when(player.getWorld()).thenReturn(world);
+        CompassTargetService targets = mock(CompassTargetService.class);
+        when(targets.collectIdentities(any(), any(), any()))
+                .thenReturn(List.of(new CompassIdentity(targetId, "victim")));
+        when(targets.collectSightings(any(), any(), any(), any())).thenReturn(List.of());
+        CompassLockService locks = new CompassLockService(mock(JManhuntPlugin.class),
+                new PlayerStateStore(), mock(SoundService.class), mock(MessageService.class),
+                targets, new HashMap<>(), mock(Consumer.class), mock(Consumer.class),
+                mock(Consumer.class), ignored -> { }, cache, new HashMap<>());
+
+        CompassLockService.CachedCycle cycle = locks.buildCycle(player, mock(GameInstance.class),
+                Role.SPEEDRUNNER, 5);
+
+        assertEquals(1, cycle.cached().size());
+        assertEquals(5.0, cycle.cached().get(0).distance(), 0.001);
+        ArgumentCaptor<Location> origin = ArgumentCaptor.forClass(Location.class);
+        verify(targets).collectSightings(eq(player), eq(Role.SPEEDRUNNER), any(), origin.capture());
+        assertEquals(refreshSpot, origin.getValue());
+    }
+
     private record Fixture(CompassLockService locks, Player player, Consumer<Player> refresher,
             Consumer<Player> renderer, GameManager game, SoundService sounds,
             FakeSpectatorService fakes, MessageService messages, CompassTargetService targets,
@@ -462,7 +500,7 @@ class CompassLockServiceTest {
         when(game.instanceOf(holderId)).thenReturn(Optional.of(instance));
         CompassTargetService targets = mock(CompassTargetService.class);
         when(targets.collectOpponents(any(), any(), any())).thenReturn(opponents);
-        when(targets.collectSightings(any(), any(), any())).thenReturn(List.of());
+        when(targets.collectSightings(any(), any(), any(), any())).thenReturn(List.of());
         when(targets.collectIdentities(any(), any(), any())).thenReturn(opponents.stream()
                 .map(opponent -> new CompassIdentity(opponent.id(), opponent.name())).toList());
         Consumer<Player> refresher = mock(Consumer.class);
@@ -521,7 +559,7 @@ class CompassLockServiceTest {
         when(game.instanceOf(holderId)).thenReturn(Optional.of(instance));
         CompassTargetService targets = mock(CompassTargetService.class);
         when(targets.collectOpponents(any(), any(), any())).thenReturn(opponents);
-        when(targets.collectSightings(any(), any(), any())).thenReturn(List.of());
+        when(targets.collectSightings(any(), any(), any(), any())).thenReturn(List.of());
         when(targets.collectIdentities(any(), any(), any())).thenReturn(opponents.stream()
                 .map(opponent -> new CompassIdentity(opponent.id(), opponent.name())).toList());
         Consumer<Player> refresher = mock(Consumer.class);

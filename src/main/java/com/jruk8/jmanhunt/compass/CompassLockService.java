@@ -161,7 +161,9 @@ final class CompassLockService {
     /**
      * Builds one holder's cache-only inputs: snapshots filtered to
      * currently trackable same-world targets, stored sightings, and
-     * the capped cycle order. Reads no live positions.
+     * the capped cycle order. Distances measure from the holder's
+     * refresh-time snapshot, so browsing never recomputes them from
+     * the live position.
      */
     CachedCycle buildCycle(Player holder, GameInstance instance, Role targetRole, int maxTargets) {
         List<CompassIdentity> identities =
@@ -172,8 +174,9 @@ final class CompassLockService {
         }
         List<CompassCandidate> cached = new ArrayList<>();
         Map<UUID, Location> spots = cache.spotsFor(holder.getUniqueId());
+        Location origin = CompassManager.effectiveSpot(
+                cache.holderSpotFor(holder.getUniqueId()), holder.getLocation());
         if (!spots.isEmpty()) {
-            Location origin = holder.getLocation();
             UUID worldId = holder.getWorld().getUID();
             for (Map.Entry<UUID, Location> entry : spots.entrySet()) {
                 Location spot = entry.getValue();
@@ -188,7 +191,7 @@ final class CompassLockService {
             }
         }
         List<CompassSighting> sightings =
-                targets.collectSightings(holder, targetRole, instance);
+                targets.collectSightings(holder, targetRole, instance, origin);
         List<UUID> ordered =
                 CompassPick.orderedCachedCandidates(cached, sightings, identities, maxTargets);
         return new CachedCycle(cached, sightings, names.keySet(), ordered, names);

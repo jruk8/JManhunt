@@ -10,7 +10,7 @@ import java.util.List;
 /** Signal interference options. */
 @SuppressWarnings("FieldMayBeFinal")
 public class SignalInterferenceSettings extends OkaeriConfig {
-    private boolean enabled = false;
+    private boolean enabled = true;
 
     @CustomKey("required-to-fail")
     @Comment({
@@ -92,6 +92,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
             "Default: false"
     })
     private LineOfSight lineOfSight = new LineOfSight();
+
+    @Comment({
+            "Invisibility of the watched side. TARGET (default) interferes",
+            "when the tracked target is invisible; SELF when the holder is.",
+            "Default: true"
+    })
+    private Invisible invisible = new Invisible();
 
     public boolean isEnabled() {
         return enabled;
@@ -187,6 +194,14 @@ public class SignalInterferenceSettings extends OkaeriConfig {
 
     public void setLineOfSight(LineOfSight lineOfSight) {
         this.lineOfSight = lineOfSight;
+    }
+
+    public Invisible getInvisible() {
+        return invisible;
+    }
+
+    public void setInvisible(Invisible invisible) {
+        this.invisible = invisible;
     }
 
     /** Light-level interference. */
@@ -611,6 +626,51 @@ public class SignalInterferenceSettings extends OkaeriConfig {
 
         public void setMaxRayDistance(int maxRayDistance) {
             this.maxRayDistance = maxRayDistance;
+        }
+    }
+
+    /** Invisibility interference. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Invisible extends OkaeriConfig {
+        private boolean enabled = true;
+
+        @Comment({
+                "Which side's invisibility interferes: TARGET watches the",
+                "tracked target, SELF watches the holder.",
+                "Default: TARGET"
+        })
+        private SignalInterference.InvisibleMode mode =
+                SignalInterference.InvisibleMode.TARGET;
+
+        @CustomKey("two-way")
+        @Comment({
+                "When true, both sides must pass this check.",
+                "Default: false"
+        })
+        private boolean twoWay = false;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public SignalInterference.InvisibleMode getMode() {
+            return mode;
+        }
+
+        public void setMode(SignalInterference.InvisibleMode mode) {
+            this.mode = mode;
+        }
+
+        public boolean isTwoWay() {
+            return twoWay;
+        }
+
+        public void setTwoWay(boolean twoWay) {
+            this.twoWay = twoWay;
         }
     }
 }

@@ -82,10 +82,12 @@ final class CompassTargetService {
 
     /**
      * Last-seen locations of trackable opponents in the holder's world,
-     * nearest first.
+     * nearest first. Distances measure from the given origin: refresh
+     * paths pass the live holder position, cache-only click paths pass
+     * the refresh-time holder snapshot.
      */
-    List<CompassSighting> collectSightings(Player holder, Role targetRole, GameInstance instance) {
-        Location origin = holder.getLocation();
+    List<CompassSighting> collectSightings(Player holder, Role targetRole, GameInstance instance,
+            Location origin) {
         return playerStates.sightings().entrySet().stream()
                 .filter(entry -> isTrackableTarget(entry.getKey(), targetRole, instance))
                 .filter(entry -> !entry.getKey().equals(holder.getUniqueId()))

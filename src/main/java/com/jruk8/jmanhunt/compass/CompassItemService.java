@@ -11,6 +11,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import java.util.List;
@@ -110,7 +111,7 @@ final class CompassItemService {
 
     void giveCompass(Player player) {
         Integer lobby = lobbyOf(player);
-        if (!shouldReceiveCompass(lobby, playerStates.role(player))) {
+        if (!shouldReceiveCompass(lobby, playerStates.role(player)) || !mayHoldCompass(player)) {
             return;
         }
         removeCompasses(player);
@@ -134,8 +135,8 @@ final class CompassItemService {
         meta.getPersistentDataContainer().set(compassKey, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
 
-        // Try last slot (8) first, then find next available slot without overriding
-        int slot = findAvailableSlot(player, 8);
+        // Try the last hotbar slot first, then find next available slot without overriding
+        int slot = findAvailableSlot(player.getInventory(), DEFAULT_SLOT);
         if (slot >= 0) {
             player.getInventory().setItem(slot, item);
         } else {
@@ -143,17 +144,20 @@ final class CompassItemService {
         }
     }
 
+    /** Preferred compass slot: the last hotbar slot. */
+    static final int DEFAULT_SLOT = 8;
+
     /**
      * Finds an available inventory slot, preferring the given slot first.
      * Returns -1 if no slot is available.
      */
-    private int findAvailableSlot(Player player, int preferredSlot) {
-        ItemStack preferred = player.getInventory().getItem(preferredSlot);
+    static int findAvailableSlot(PlayerInventory inventory, int preferredSlot) {
+        ItemStack preferred = inventory.getItem(preferredSlot);
         if (preferred == null || preferred.getType() == Material.AIR) {
             return preferredSlot;
         }
-        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
-            ItemStack item = player.getInventory().getItem(slot);
+        for (int slot = 0; slot < inventory.getSize(); slot++) {
+            ItemStack item = inventory.getItem(slot);
             if (item == null || item.getType() == Material.AIR) {
                 return slot;
             }
@@ -177,7 +181,8 @@ final class CompassItemService {
     /**
      * Removes all but the first compass from the player's inventory.
      * Handles any number of duplicate compasses, including multiple picked
-     * up in a single tick.
+     * up in a single tick, and collapses a stacked compass (amount above
+     * 1, from identical compasses merging on pickup) back to a single.
      */
     void deduplicateCompasses(Player player) {
         boolean found = false;
@@ -188,6 +193,9 @@ final class CompassItemService {
                     player.getInventory().setItem(slot, null);
                 } else {
                     found = true;
+                    if (item.getAmount() > 1) {
+                        item.setAmount(1);
+                    }
                 }
             }
         }
@@ -218,14 +226,16 @@ final class CompassItemService {
 
     /**
      * True when the player may keep a compass: a hunter or speedrunner
-     * inside a live match. Everyone else loses picked-up compasses.
+     * actively in a live match. Eliminated (deactivated) players and
+     * everyone else lose picked-up compasses and receive none.
      */
     boolean mayHoldCompass(Player player) {
         Role holderRole = playerStates.role(player);
         if (holderRole != Role.HUNTER && holderRole != Role.SPEEDRUNNER) {
             return false;
         }
-        return game != null && game.instanceOf(player.getUniqueId()).isPresent();
+        return game != null && game.instanceOf(player.getUniqueId())
+                .map(instance -> instance.isActive(player.getUniqueId())).orElse(false);
     }
 
     /** Restamps the holder's compass with their role's name and lore. */

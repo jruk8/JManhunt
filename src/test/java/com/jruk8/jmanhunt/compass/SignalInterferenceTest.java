@@ -24,12 +24,24 @@ class SignalInterferenceTest {
     private static SignalInterference.Snapshot spot(int sky, int block, boolean normal, int above,
             int fluids, int y, SignalInterference.Weather weather, String biome,
             double moved, boolean feetInWater) {
+        return spot(sky, block, normal, above, fluids, y, weather, biome, moved, feetInWater,
+                false);
+    }
+
+    private static SignalInterference.Snapshot spot(int sky, int block, boolean normal, int above,
+            int fluids, int y, SignalInterference.Weather weather, String biome,
+            double moved, boolean feetInWater, boolean invisible) {
         return new SignalInterference.Snapshot(sky, block, normal, above, fluids, y, weather,
-                biome, moved, feetInWater);
+                biome, moved, feetInWater, invisible);
     }
 
     private static SignalInterference.Snapshot clearSpot() {
         return spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+    }
+
+    private static SignalInterference.Snapshot invisibleSpot() {
+        return spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains",
+                0.0, false, true);
     }
 
     private static SignalInterference.Config config(boolean light, boolean underground,
@@ -53,7 +65,18 @@ class SignalInterferenceTest {
                 altitude, -20, 120, altitudeTwo, weather,
                 Set.of(SignalInterference.Weather.STORM, SignalInterference.Weather.RAIN),
                 weatherTwo, biome, Set.of("minecraft:desert", "minecraft:the_end"), biomeTwo,
-                movement, 0.2, movementTwo, los, losWhen, 300, required, bypass);
+                movement, 0.2, movementTwo, los, losWhen, 300, false,
+                SignalInterference.InvisibleMode.TARGET, false, required, bypass);
+    }
+
+    private static SignalInterference.Config invisibleConfig(
+            SignalInterference.InvisibleMode mode, boolean twoWay) {
+        return new SignalInterference.Config(false, 10, 5,
+                SignalInterference.InterfereWhen.ONE_UNMET, false,
+                false, 3, false, false, 2, false, false, -20, 120, false, false,
+                Set.of(), false, false, Set.of(), false, false, 0.2, false,
+                false, SignalInterference.InterfereWhenVisible.VISIBLE, 300,
+                true, mode, twoWay, 1, 0.0);
     }
 
     private static SignalInterference.Config withCounts(
@@ -66,7 +89,9 @@ class SignalInterferenceTest {
                 base.weatherEnabled(), base.interfereDuring(), base.weatherTwoWay(),
                 base.biomeEnabled(), base.interfereIn(), base.biomeTwoWay(),
                 base.movementEnabled(), base.thresholdBlocks(), base.movementTwoWay(),
-                base.losEnabled(), base.losWhen(), base.losMaxDistance(), required, bypass);
+                base.losEnabled(), base.losWhen(), base.losMaxDistance(),
+                base.invisibleEnabled(), base.invisibleMode(), base.invisibleTwoWay(), required,
+                bypass);
     }
 
     private static SignalInterference.Config withModes(SignalInterference.Config base,
@@ -80,7 +105,8 @@ class SignalInterferenceTest {
                 base.weatherEnabled(), base.interfereDuring(), base.weatherTwoWay(),
                 base.biomeEnabled(), base.interfereIn(), base.biomeTwoWay(),
                 base.movementEnabled(), base.thresholdBlocks(), base.movementTwoWay(),
-                base.losEnabled(), losWhen, base.losMaxDistance(), base.requiredToFail(),
+                base.losEnabled(), losWhen, base.losMaxDistance(), base.invisibleEnabled(),
+                base.invisibleMode(), base.invisibleTwoWay(), base.requiredToFail(),
                 base.chanceToBypass());
     }
 
@@ -373,7 +399,8 @@ class SignalInterferenceTest {
         biomes.add(null);
         SignalInterference.Config clamped = new SignalInterference.Config(true, 99, -9, null, true,
                 true, 999, true, true, 999, true, true, 200, -100, true, true, null, true,
-                true, biomes, true, true, -5.0, true, true, null, 9999, -3, 2.5);
+                true, biomes, true, true, -5.0, true, true, null, 9999, true, null, true, -3,
+                2.5);
 
         assertEquals(15, clamped.minSkyLight());
         assertEquals(0, clamped.minBlockLight());
@@ -387,7 +414,66 @@ class SignalInterferenceTest {
         assertEquals(0.0, clamped.thresholdBlocks());
         assertEquals(SignalInterference.InterfereWhenVisible.NOT_VISIBLE, clamped.losWhen());
         assertEquals(1000, clamped.losMaxDistance());
+        assertEquals(SignalInterference.InvisibleMode.TARGET, clamped.invisibleMode());
         assertEquals(1.0, clamped.chanceToBypass());
+    }
+
+    @Test
+    void invisibleTargetModeFailsOnlyOnTargetSide() {
+        SignalInterference.Config target =
+                invisibleConfig(SignalInterference.InvisibleMode.TARGET, false);
+
+        assertTrue(SignalInterference.badSignal(clearSpot(), invisibleSpot(), target, 0.0));
+        assertFalse(SignalInterference.badSignal(invisibleSpot(), clearSpot(), target, 0.0));
+        assertFalse(SignalInterference.badSignal(clearSpot(), clearSpot(), target, 0.0));
+    }
+
+    @Test
+    void invisibleSelfModeFailsOnlyOnHolderSide() {
+        SignalInterference.Config self =
+                invisibleConfig(SignalInterference.InvisibleMode.SELF, false);
+
+        assertTrue(SignalInterference.badSignal(invisibleSpot(), clearSpot(), self, 0.0));
+        assertFalse(SignalInterference.badSignal(clearSpot(), invisibleSpot(), self, 0.0));
+    }
+
+    @Test
+    void invisibleTwoWayChecksBothSides() {
+        SignalInterference.Config both =
+                invisibleConfig(SignalInterference.InvisibleMode.TARGET, true);
+
+        assertTrue(SignalInterference.badSignal(invisibleSpot(), clearSpot(), both, 0.0));
+        assertTrue(SignalInterference.badSignal(clearSpot(), invisibleSpot(), both, 0.0));
+        assertFalse(SignalInterference.badSignal(clearSpot(), clearSpot(), both, 0.0));
+    }
+
+    @Test
+    void invisibleSideAppliesPicksExactlyOneSide() {
+        assertTrue(SignalInterference.invisibleSideApplies(
+                SignalInterference.InvisibleMode.TARGET, false, true));
+        assertFalse(SignalInterference.invisibleSideApplies(
+                SignalInterference.InvisibleMode.TARGET, false, false));
+        assertTrue(SignalInterference.invisibleSideApplies(
+                SignalInterference.InvisibleMode.SELF, false, false));
+        assertFalse(SignalInterference.invisibleSideApplies(
+                SignalInterference.InvisibleMode.SELF, false, true));
+        assertTrue(SignalInterference.invisibleSideApplies(
+                SignalInterference.InvisibleMode.TARGET, true, false));
+        assertTrue(SignalInterference.invisibleSideApplies(
+                SignalInterference.InvisibleMode.SELF, true, true));
+    }
+
+    @Test
+    void invisibleReportsReasonIdAndSide() {
+        SignalInterference.Config target =
+                invisibleConfig(SignalInterference.InvisibleMode.TARGET, false);
+
+        Optional<SignalInterference.Reason> reason = SignalInterference.lastReason(
+                clearSpot(), invisibleSpot(), target, 0.0, null);
+
+        assertTrue(reason.isPresent());
+        assertEquals("invisible", reason.get().id());
+        assertTrue(reason.get().targetSide());
     }
 
     @Test

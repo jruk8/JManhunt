@@ -326,7 +326,7 @@ public final class SettingRegistry {
         int count = 0;
         String base = "settings.compass.signal-interference.";
         for (String option : List.of("light-level", "underground", "underwater",
-                "altitude", "weather", "biome", "movement", "line-of-sight")) {
+                "altitude", "weather", "biome", "movement", "line-of-sight", "invisible")) {
             if (Boolean.TRUE.equals(lookup.apply(base + option + ".enabled"))) {
                 count++;
             }
@@ -586,6 +586,7 @@ public final class SettingRegistry {
     private static void addCompassActionbarEntries(List<SettingDescriptor> entries) {
         String root = "settings.compass.actionbar.";
         entries.add(intVal(root + "refresh-ticks", 1, 1, null));
+        entries.add(bool(root + "show-distance", true));
         entries.add(bool(root + "show-distance-delta.enabled", true));
         entries.add(string(root + "show-distance-delta.further-format", "<green>▲{distance}"));
         entries.add(string(root + "show-distance-delta.closer-format", "<red>▼{distance}"));
@@ -597,7 +598,7 @@ public final class SettingRegistry {
     }
 
     private static void addSignalInterferenceEntries(List<SettingDescriptor> entries) {
-        entries.add(bool("settings.compass.signal-interference.enabled", false));
+        entries.add(bool("settings.compass.signal-interference.enabled", true));
         entries.add(intDynamic("settings.compass.signal-interference.required-to-fail", 1, 1,
                 SettingDescriptor.DynamicBound.ENABLED_OPTION_COUNT));
         entries.add(floatVal("settings.compass.signal-interference.chance-to-bypass", 0.0, 0.0, 1.0));
@@ -632,6 +633,10 @@ public final class SettingRegistry {
                 "VISIBLE", "NOT_VISIBLE"));
         entries.add(intVal("settings.compass.signal-interference.line-of-sight.max-ray-distance",
                 300, 1, 1000));
+        entries.add(bool("settings.compass.signal-interference.invisible.enabled", true));
+        entries.add(option("settings.compass.signal-interference.invisible.mode", "TARGET",
+                "TARGET", "SELF"));
+        entries.add(bool("settings.compass.signal-interference.invisible.two-way", false));
     }
 
     private static void addPlayerEntries(List<SettingDescriptor> entries) {

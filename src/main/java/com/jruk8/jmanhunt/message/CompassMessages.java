@@ -102,5 +102,6 @@ public class CompassMessages extends OkaeriConfig {
             "biome", "wrong biome",
             "moved", "moved",
             "line-of-sight", "line of sight",
-            "line-of-sight-hidden", "no line of sight"));
+            "line-of-sight-hidden", "no line of sight",
+            "invisible", "invisible"));
 }

@@ -39,6 +39,7 @@ categories:
   compass/signal-interference: REDSTONE_TORCH
   compass/signal-interference/altitude: ELYTRA
   compass/signal-interference/biome: GRASS_BLOCK
+  compass/signal-interference/invisible: GLASS_BOTTLE
   compass/signal-interference/light-level: GLOWSTONE
   compass/signal-interference/line-of-sight: ENDER_EYE
   compass/signal-interference/movement: WIND_CHARGE
@@ -147,6 +148,7 @@ descriptions:
   "settings.compass.signal-interference": "Jam tracking by height, biome, light, and more."
   "settings.compass.signal-interference.altitude": "Jam tracking outside a height band."
   "settings.compass.signal-interference.biome": "Biomes that jam tracking."
+  "settings.compass.signal-interference.invisible": "Invisibility that jams tracking."
   "settings.compass.signal-interference.light-level": "Light levels that jam tracking."
   "settings.compass.signal-interference.line-of-sight": "Block tracking without line of sight."
   "settings.compass.signal-interference.underground": "Jam tracking under too many blocks."
@@ -260,6 +262,7 @@ descriptions:
   "settings.compass.analysis.debuffs.commands.hunter": "Extra commands for hunter holders."
   "settings.compass.actionbar": "Actionbar push rate and distance delta."
   "settings.compass.actionbar.refresh-ticks": "Ticks between actionbar pushes."
+  "settings.compass.actionbar.show-distance": "Show the distance on tracking bars."
   "settings.compass.actionbar.show-distance-delta": "Distance delta triangles."
   "settings.compass.actionbar.show-distance-delta.enabled": "Show up/down triangles on distance."
   "settings.compass.actionbar.show-distance-delta.further-format": "Format when the target got further."
@@ -288,6 +291,9 @@ descriptions:
   "settings.compass.signal-interference.line-of-sight.enabled": "Line of sight can interfere."
   "settings.compass.signal-interference.line-of-sight.interfere-when": "Sight condition that interferes."
   "settings.compass.signal-interference.line-of-sight.max-ray-distance": "Longest clean sight ray."
+  "settings.compass.signal-interference.invisible.enabled": "Invisibility can interfere."
+  "settings.compass.signal-interference.invisible.mode": "Side whose invisibility interferes."
+  "settings.compass.signal-interference.invisible.two-way": "Both sides must pass too."
   "settings.compass.signal-interference.movement.enabled": "Moving can interfere with tracking."
   "settings.compass.signal-interference.movement.threshold-blocks": "Blocks moved before interference."
   "settings.compass.signal-interference.movement.two-way": "Target movement must pass too."

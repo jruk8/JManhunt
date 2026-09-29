@@ -259,7 +259,7 @@ public final class CompassManager {
         List<CompassCandidate> opponents = targets.collectOpponents(holder, target.targetRole(),
                 target.instance());
         List<CompassSighting> sightings = targets.collectSightings(holder, target.targetRole(),
-                target.instance());
+                target.instance(), holder.getLocation());
         CompassLockService.LockedTargets narrowed = locks.narrowToLock(holder.getUniqueId(),
                 opponents, sightings);
         CompassPick pick = resolveCompassPick(target.instance().originLobbyId(),
@@ -299,7 +299,7 @@ public final class CompassManager {
     private void writeCache(Player holder, GameInstance instance) {
         int cap = CompassCache.clampMaxTargets(plugin.overrides()
                 .getInt(lobbyOf(holder), "settings.compass.left-click.max-targets", 5));
-        cache.replace(holder.getUniqueId(),
+        cache.replace(holder.getUniqueId(), holder.getLocation().clone(),
                 targets.collectSnapshots(holder, Role.HUNTER, instance, cap),
                 targets.collectSnapshots(holder, Role.SPEEDRUNNER, instance, cap));
     }
@@ -362,7 +362,8 @@ public final class CompassManager {
         }
         return switch (pick.kind()) {
             case TRACK_PLAYER -> trackPlayer(holder, item, slot, pick, targetRoleString, locked);
-            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked);
+            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked,
+                    resolutionSpot(holder));
             case NEARBY -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
@@ -421,7 +422,9 @@ public final class CompassManager {
             String targetRoleString, boolean locked) {
         switch (pick.kind()) {
             case TRACK_PLAYER -> trackCachedPlayer(holder, item, slot, pick, locked);
-            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked);
+            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked,
+                    effectiveSpot(cache.holderSpotFor(holder.getUniqueId()),
+                            resolutionSpot(holder)));
             case NEARBY -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
@@ -450,8 +453,10 @@ public final class CompassManager {
         setLodestone(item, spot);
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
+        Location origin = effectiveSpot(cache.holderSpotFor(holder.getUniqueId()),
+                resolutionSpot(holder));
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
-                resolutionSpot(holder).distance(spot), Map.of());
+                origin.distance(spot), Map.of());
     }
 
     /** Reasonless Bad Signal for uncached switch targets, by spec. */
@@ -494,7 +499,7 @@ public final class CompassManager {
     }
 
     private boolean trackSighting(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
-            boolean locked) {
+            boolean locked, Location origin) {
         Location location = playerStates.sightings().getOrDefault(pick.id(), Map.of())
                 .get(holder.getWorld().getUID());
         Player seen = Bukkit.getPlayer(pick.id());
@@ -509,7 +514,7 @@ public final class CompassManager {
         String reason = seen != null ? "Another Dimension" : "Log-Out";
         String key = trackingKey(holder, locked, true);
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
-                resolutionSpot(holder).distance(location), Map.of("reason", reason));
+                origin.distance(location), Map.of("reason", reason));
         return true;
     }
 

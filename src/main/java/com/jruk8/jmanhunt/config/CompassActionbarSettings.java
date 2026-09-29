@@ -16,6 +16,14 @@ public class CompassActionbarSettings extends OkaeriConfig {
     })
     private int refreshTicks = 1;
 
+    @CustomKey("show-distance")
+    @Comment({
+            "Show the distance in meters on tracking actionbars.",
+            "Off hides the distance along with its delta triangle.",
+            "Default: true"
+    })
+    private boolean showDistance = true;
+
     @CustomKey("show-distance-delta")
     @Comment("Distance delta triangles.")
     private ShowDistanceDelta showDistanceDelta = new ShowDistanceDelta();
@@ -26,6 +34,14 @@ public class CompassActionbarSettings extends OkaeriConfig {
 
     public void setRefreshTicks(int refreshTicks) {
         this.refreshTicks = refreshTicks;
+    }
+
+    public boolean isShowDistance() {
+        return showDistance;
+    }
+
+    public void setShowDistance(boolean showDistance) {
+        this.showDistance = showDistance;
     }
 
     public ShowDistanceDelta getShowDistanceDelta() {

@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -36,7 +37,7 @@ class CompassCacheTest {
         Location hunterSpot = new Location(null, 1.0, 64.0, 1.0);
         Location runnerSpot = new Location(null, 2.0, 64.0, 2.0);
 
-        cache.replace(holder,
+        cache.replace(holder, new Location(null, 0.0, 64.0, 0.0),
                 List.of(new CompassSnapshot(hunter, hunterSpot)),
                 List.of(new CompassSnapshot(runner, runnerSpot)));
 
@@ -49,20 +50,34 @@ class CompassCacheTest {
         CompassCache cache = new CompassCache();
         UUID holder = UUID.randomUUID();
         UUID stale = UUID.randomUUID();
-        cache.replace(holder,
+        cache.replace(holder, new Location(null, 0.0, 64.0, 0.0),
                 List.of(new CompassSnapshot(stale, new Location(null, 1.0, 64.0, 1.0))),
                 List.of());
 
-        cache.replace(holder, List.of(), List.of());
+        cache.replace(holder, new Location(null, 9.0, 64.0, 9.0), List.of(), List.of());
 
         assertTrue(cache.spotsFor(holder).isEmpty());
+    }
+
+    @Test
+    void replaceStoresAndClearDropsHolderSpot() {
+        CompassCache cache = new CompassCache();
+        UUID holder = UUID.randomUUID();
+        Location spot = new Location(null, 4.0, 64.0, 4.0);
+        cache.replace(holder, spot, List.of(), List.of());
+
+        assertEquals(spot, cache.holderSpotFor(holder));
+
+        cache.clear(holder);
+
+        assertNull(cache.holderSpotFor(holder));
     }
 
     @Test
     void clearDropsHolderSnapshots() {
         CompassCache cache = new CompassCache();
         UUID holder = UUID.randomUUID();
-        cache.replace(holder,
+        cache.replace(holder, new Location(null, 0.0, 64.0, 0.0),
                 List.of(new CompassSnapshot(UUID.randomUUID(), new Location(null, 1.0, 64.0, 1.0))),
                 List.of());
 

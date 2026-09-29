@@ -9,6 +9,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffectType;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
@@ -89,7 +90,7 @@ final class CompassSignalService {
         }
         Boolean sight = interference.losEnabled()
                 ? lineOfSight(holder, holderSpot, seen, interference) : null;
-        return reason(holder, holderSpot, target, press, interference, sight);
+        return reason(holder, holderSpot, target, press, interference, sight, seen);
     }
 
     /**
@@ -100,20 +101,25 @@ final class CompassSignalService {
      */
     private Optional<SignalInterference.Reason> reason(Player holder, Location holderSpot,
             Location target, Location targetPress, SignalInterference.Config interference,
-            Boolean hasLineOfSight) {
+            Boolean hasLineOfSight, Player seen) {
         Integer lobby = lobbyOf(holder);
         if (!plugin.overrides().getBoolean(lobby,
-                "settings.compass.signal-interference.enabled", false)) {
+                "settings.compass.signal-interference.enabled", true)) {
             return Optional.empty();
         }
         boolean ignoreTransparent = plugin.overrides().getBoolean(lobby,
                 "settings.compass.signal-interference.underground.ignore-transparent", true);
         double holderMoved = movedBlocks(holderSpot, holder.getLocation());
         SignalInterference.Snapshot targetSnapshot = targetSnapshot(target, targetPress,
-                ignoreTransparent);
+                ignoreTransparent, seen != null && isInvisible(seen));
         return SignalInterference.lastReason(
-                signalSnapshot(holderSpot, ignoreTransparent, holderMoved),
+                signalSnapshot(holderSpot, ignoreTransparent, holderMoved, isInvisible(holder)),
                 targetSnapshot, interference, ThreadLocalRandom.current().nextDouble(), hasLineOfSight);
+    }
+
+    /** True when the player carries the vanilla invisibility effect. */
+    private static boolean isInvisible(Player player) {
+        return player.hasPotionEffect(PotionEffectType.INVISIBILITY);
     }
 
     /**
@@ -187,6 +193,9 @@ final class CompassSignalService {
                 overrides.getBoolean(lobby, base + "line-of-sight.enabled", false),
                 losWhen,
                 overrides.getInt(lobby, base + "line-of-sight.max-ray-distance", 300),
+                overrides.getBoolean(lobby, base + "invisible.enabled", true),
+                invisibleMode(lobby, base),
+                overrides.getBoolean(lobby, base + "invisible.two-way", false),
                 overrides.getInt(lobby, base + "required-to-fail", 1),
                 overrides.getDouble(lobby, base + "chance-to-bypass", 0.0));
     }
@@ -228,9 +237,21 @@ final class CompassSignalService {
         }
     }
 
+    /** Parses the invisible watch mode, defaulting to TARGET. */
+    private SignalInterference.InvisibleMode invisibleMode(Integer lobby, String base) {
+        try {
+            String raw = plugin.overrides()
+                    .getString(lobby, base + "invisible.mode", "TARGET");
+            return SignalInterference.InvisibleMode.valueOf(
+                    (raw == null ? "TARGET" : raw).trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return SignalInterference.InvisibleMode.TARGET;
+        }
+    }
+
     /** Signal snapshot for a spot, read from its feet block. */
     private SignalInterference.Snapshot signalSnapshot(Location location, boolean ignoreTransparent,
-            double movedBlocks) {
+            double movedBlocks, boolean invisible) {
         Block block = location.getBlock();
         World world = block.getWorld();
         SignalInterference.Weather weather;
@@ -251,7 +272,8 @@ final class CompassSignalService {
                 weather,
                 block.getBiome().getKey().toString(),
                 movedBlocks,
-                block.getType() == Material.WATER);
+                block.getType() == Material.WATER,
+                invisible);
     }
 
     /**
@@ -261,13 +283,13 @@ final class CompassSignalService {
      * target side and refreshes never force chunk loads.
      */
     private SignalInterference.Snapshot targetSnapshot(Location live, Location press,
-            boolean ignoreTransparent) {
+            boolean ignoreTransparent, boolean targetInvisible) {
         Location spot = press != null ? press : live;
         if (spot == null || spot.getWorld() == null
                 || !spot.getWorld().isChunkLoaded(spot.getBlockX() >> 4, spot.getBlockZ() >> 4)) {
             return null;
         }
-        return signalSnapshot(spot, ignoreTransparent, movedBlocks(press, live));
+        return signalSnapshot(spot, ignoreTransparent, movedBlocks(press, live), targetInvisible);
     }
 
     /** Blocks strictly above the feet block, capped for cheap reads. */
