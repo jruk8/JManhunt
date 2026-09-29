@@ -490,7 +490,8 @@ public final class SettingRegistry {
     private static void addAdvancedMiscEntries(List<SettingDescriptor> entries) {
         String root = "advanced.misc.";
         entries.add(bool(root + "interop.disable-worldedit-navwand", true));
-        entries.add(bool(root + "interop.validate-modifier-editor-commands", true));
+        entries.add(bool(root + "modifier-editor.validate-commands", true));
+        entries.add(bool(root + "modifier-editor.remember-gui-commands", false));
     }
 
     private static void addSettingsMatchEntries(List<SettingDescriptor> entries) {

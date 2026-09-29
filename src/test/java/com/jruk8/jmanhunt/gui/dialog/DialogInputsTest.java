@@ -147,4 +147,34 @@ class DialogInputsTest {
                     DialogInputs.triggerKey(index));
         }
     }
+
+    @Test
+    void testCommandKeysFitPaperInputNameGrammar() {
+        assertTrue(DialogInputs.TEST_REMEMBER_KEY.matches("[A-Za-z0-9_]+"));
+        assertTrue(DialogInputs.TEST_ROLE_KEY.matches("[A-Za-z0-9_]+"));
+        assertEquals("cmd1", DialogInputs.testCommandKey(0));
+        assertEquals("cmd5", DialogInputs.testCommandKey(4));
+        for (int index = 0; index < DialogInputs.TEST_COMMAND_BOXES; index++) {
+            assertTrue(DialogInputs.testCommandKey(index).matches("[A-Za-z0-9_]+"));
+        }
+    }
+
+    @Test
+    void collapseTestCommandsDropsEmptiesAndKeepsOrder() {
+        assertEquals(List.of("say one", "say two"), DialogInputs.collapseTestCommands(
+                List.of("say one", "", "say two", "   ", "")));
+        assertEquals(List.of(), DialogInputs.collapseTestCommands(
+                List.of("", "  ", "", "", "")));
+        assertEquals(List.of("  say hi  "), DialogInputs.collapseTestCommands(
+                List.of("  say hi  ", "", "", "", "")));
+    }
+
+    @Test
+    void parseTestRoleDefaultsToSpeedrunner() {
+        assertEquals("HUNTER", DialogInputs.parseTestRole("HUNTER"));
+        assertEquals("HUNTER", DialogInputs.parseTestRole("hunter"));
+        assertEquals("SPEEDRUNNER", DialogInputs.parseTestRole("SPEEDRUNNER"));
+        assertEquals("SPEEDRUNNER", DialogInputs.parseTestRole("bogus"));
+        assertEquals("SPEEDRUNNER", DialogInputs.parseTestRole(null));
+    }
 }

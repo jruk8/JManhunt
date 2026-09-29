@@ -170,4 +170,7 @@ public class ModifiersMessages extends OkaeriConfig {
 
     @CustomKey("test-failure")
     private String testFailure = "{prefix}<red>Test run failed: <white>{error}<red>.";
+
+    @CustomKey("test-commands-empty")
+    private String testCommandsEmpty = "{prefix}<red>Define at least one command to test.";
 }

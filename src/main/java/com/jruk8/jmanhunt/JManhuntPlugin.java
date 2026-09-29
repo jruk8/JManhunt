@@ -511,6 +511,11 @@ public final class JManhuntPlugin extends JavaPlugin {
         return stats;
     }
 
+    /** Always-SQLite engine store, null until bootstrap finishes. */
+    public EngineStateRepository engineStates() {
+        return engineState;
+    }
+
     /** In-house `%jmanhunt_*%` values, with or without PlaceholderAPI. */
     public JManhuntPlaceholders placeholderValues() {
         return placeholderValues;

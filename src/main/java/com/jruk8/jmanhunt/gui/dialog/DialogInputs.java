@@ -15,9 +15,10 @@ import org.bukkit.Material;
 /**
  * Headless dialog input choice, shared by the Paper implementation and
  * unit tests. Nothing here touches client classes, so this loads without
- * a server while {@link SettingDialogs} cannot.
+ * a server while {@link SettingDialogs} cannot. The Test-a-Command
+ * helpers are public for the menu flow that drives that dialog.
  */
-final class DialogInputs {
+public final class DialogInputs {
 
     /** Text input ceiling: the classic full-string cap, far above any sane value. */
     static final int TEXT_MAX_LENGTH = 32767;
@@ -30,7 +31,7 @@ final class DialogInputs {
      * overlong values fall back to blank so a huge current value never
      * refuses the open; callers echo the full value in the body instead.
      */
-    static String safeInitial(String current) {
+    public static String safeInitial(String current) {
         if (current == null || current.length() > TEXT_MAX_LENGTH) {
             return "";
         }
@@ -148,5 +149,48 @@ final class DialogInputs {
             }
         }
         return checked;
+    }
+
+    /** Test-a-Command remember checkbox key. */
+    public static final String TEST_REMEMBER_KEY = "remember";
+
+    /** Test-a-Command role scroller key. */
+    public static final String TEST_ROLE_KEY = "role";
+
+    /** Test-a-Command command box count. */
+    public static final int TEST_COMMAND_BOXES = 5;
+
+    /**
+     * Test-a-Command box key for a 0-based box: cmd1..cmd5.
+     * Letters and digits only, like every input key.
+     */
+    public static String testCommandKey(int index) {
+        return "cmd" + (index + 1);
+    }
+
+    /**
+     * Submitted test boxes collapsed for execution: blank boxes drop
+     * and the rest keep their order, so boxes 1 and 3 filled run as
+     * lines 1-2. Lines keep their text verbatim.
+     */
+    public static List<String> collapseTestCommands(List<String> boxes) {
+        List<String> lines = new ArrayList<>();
+        for (String box : boxes) {
+            if (box != null && !box.isBlank()) {
+                lines.add(box);
+            }
+        }
+        return lines;
+    }
+
+    /**
+     * Test-a-Command role from a scroller answer: upper-case HUNTER
+     * or SPEEDRUNNER, SPEEDRUNNER when missing or unknown.
+     */
+    public static String parseTestRole(String answer) {
+        if (answer != null && answer.strip().equalsIgnoreCase("hunter")) {
+            return "HUNTER";
+        }
+        return "SPEEDRUNNER";
     }
 }

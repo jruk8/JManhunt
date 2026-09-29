@@ -8,8 +8,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Small always-SQLite store for engine state. It owns the world-engine
@@ -49,6 +53,10 @@ public final class EngineStateRepository implements AutoCloseable {
                     + "state_key VARCHAR(64) PRIMARY KEY, state_value BIGINT NOT NULL)");
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS end_reservations ("
                     + "match_id BIGINT PRIMARY KEY, world_name VARCHAR(128) NOT NULL)");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS modifier_editor_memory ("
+                    + "player_uuid TEXT PRIMARY KEY, role TEXT NOT NULL, remember INTEGER NOT NULL, "
+                    + "cmd1 TEXT NOT NULL, cmd2 TEXT NOT NULL, cmd3 TEXT NOT NULL, "
+                    + "cmd4 TEXT NOT NULL, cmd5 TEXT NOT NULL)");
         }
     }
 
@@ -200,6 +208,61 @@ public final class EngineStateRepository implements AutoCloseable {
 
     public synchronized void setSetupDone(boolean done) throws SQLException {
         putFlag(SETUP_DONE_KEY, done);
+    }
+
+    /**
+     * Test-a-Command memory for one player: the role, the remember
+     * toggle, and the five raw command boxes.
+     */
+    public record EditorMemory(String role, boolean remember, List<String> commands) {
+    }
+
+    /** Test-a-Command memory for one player, or empty when never stored. */
+    public synchronized Optional<EditorMemory> getEditorMemory(UUID playerId)
+            throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement select = connection.prepareStatement(
+                        "SELECT role, remember, cmd1, cmd2, cmd3, cmd4, cmd5 "
+                                + "FROM modifier_editor_memory WHERE player_uuid=?")) {
+            select.setString(1, playerId.toString());
+            try (ResultSet result = select.executeQuery()) {
+                if (!result.next()) {
+                    return Optional.empty();
+                }
+                List<String> commands = new ArrayList<>();
+                for (int index = 3; index <= 7; index++) {
+                    commands.add(result.getString(index));
+                }
+                return Optional.of(new EditorMemory(result.getString(1),
+                        result.getInt(2) != 0, commands));
+            }
+        }
+    }
+
+    /** Stores Test-a-Command memory for one player, replacing any row. */
+    public synchronized void putEditorMemory(UUID playerId, EditorMemory memory)
+            throws SQLException {
+        List<String> commands = new ArrayList<>(memory.commands());
+        while (commands.size() < 5) {
+            commands.add("");
+        }
+        try (Connection connection = connection();
+                PreparedStatement update = connection.prepareStatement(
+                        "INSERT INTO modifier_editor_memory (player_uuid, role, remember, "
+                                + "cmd1, cmd2, cmd3, cmd4, cmd5) VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+                                + "ON CONFLICT (player_uuid) DO UPDATE SET role=EXCLUDED.role, "
+                                + "remember=EXCLUDED.remember, cmd1=EXCLUDED.cmd1, "
+                                + "cmd2=EXCLUDED.cmd2, cmd3=EXCLUDED.cmd3, cmd4=EXCLUDED.cmd4, "
+                                + "cmd5=EXCLUDED.cmd5")) {
+            update.setString(1, playerId.toString());
+            update.setString(2, memory.role());
+            update.setInt(3, memory.remember() ? 1 : 0);
+            for (int index = 0; index < 5; index++) {
+                String command = commands.get(index);
+                update.setString(4 + index, command == null ? "" : command);
+            }
+            update.executeUpdate();
+        }
     }
 
     private void putFlag(String key, boolean value) throws SQLException {

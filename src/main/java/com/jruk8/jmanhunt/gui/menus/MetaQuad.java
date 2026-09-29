@@ -57,7 +57,7 @@ public final class MetaQuad {
                                 "Description", orUnset(target.description()),
                                 text("editor-click-edit", "Click to edit"),
                                 player -> fieldPrompt(player, reopen(target, parent, reopenMeta), "Description",
-                                        target.description(), true, raw -> {
+                                        target.description(), true, false, raw -> {
                                             target.patchDescription(raw);
                                             return null;
                                         })),
@@ -65,7 +65,7 @@ public final class MetaQuad {
                                 "Icon", target.item().name(),
                                 text("editor-click-edit", "Click to edit"),
                                 player -> fieldPrompt(player, reopen(target, parent, reopenMeta), "Icon",
-                                        target.item().name(), false, raw -> {
+                                        target.item().name(), false, true, raw -> {
                                             ModifierFieldEdits.Parsed<Material> item =
                                                     ModifierFieldEdits.item(raw);
                                             if (!item.ok()) {
@@ -81,7 +81,7 @@ public final class MetaQuad {
                                 text("editor-click-edit", "Click to edit"),
                                 player -> fieldPrompt(player, reopen(target, parent, reopenMeta), "Author",
                                         target.author() == null ? "" : target.author(),
-                                        true, raw -> {
+                                        true, false, raw -> {
                                             target.patchAuthor(raw);
                                             return null;
                                         })).withMeta(meta ->
@@ -104,7 +104,7 @@ public final class MetaQuad {
                         text("editor-rename-hint", "Right-click to rename id"))),
                 false, false,
                 player -> fieldPrompt(player, reopen(target, parent, reopenMeta),
-                        "Name", target.name(), false,
+                        "Name", target.name(), false, false,
                         raw -> {
                             ModifierFieldEdits.Parsed<String> name =
                                     ModifierFieldEdits.name(raw);
@@ -128,10 +128,15 @@ public final class MetaQuad {
     }
 
     private void fieldPrompt(Player player, Supplier<Menu> reopen, String label, String current,
-            boolean clearable, FieldPrompts.Submit submit) {
-        FieldPrompts.prompt(dialogs, gui, messages, sounds, player, reopen,
-                text("editor-prompt-title", "Edit {label}").replace("{label}", label),
-                current, clearable, submit);
+            boolean clearable, boolean withIcon, FieldPrompts.Submit submit) {
+        String title = text("editor-prompt-title", "Edit {label}").replace("{label}", label);
+        if (withIcon) {
+            FieldPrompts.promptWithIcon(dialogs, gui, messages, sounds, player, reopen,
+                    title, current, clearable, submit);
+        } else {
+            FieldPrompts.prompt(dialogs, gui, messages, sounds, player, reopen,
+                    title, current, clearable, submit);
+        }
     }
 
     private void renamePrompt(Player player, Supplier<Menu> reopen, MetaTarget target,

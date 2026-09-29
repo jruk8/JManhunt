@@ -59,4 +59,11 @@ public interface SettingDialog {
     /** Same, with a prefilled value for editing existing text. */
     void prompt(Player player, String titleText, String initial, List<String> body,
             Consumer<String> onSubmit, Runnable onCancel);
+
+    /**
+     * Same, with the item sprite for the initial value rendered above
+     * the body. Values naming no item show no sprite.
+     */
+    void promptWithIcon(Player player, String titleText, String initial, List<String> body,
+            Consumer<String> onSubmit, Runnable onCancel);
 }

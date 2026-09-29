@@ -187,4 +187,21 @@ class MetaQuadTest {
         assertTrue(text.contains("new-pack"), text);
         assertFalse(text.contains("Pack"), text);
     }
+
+    @Test
+    void iconEditShowsSpriteWhileOtherFieldsStayPlain() {
+        SettingDialog dialogs = mock(SettingDialog.class);
+        MetaQuad quad = new MetaQuad(messages, mock(SoundService.class),
+                mock(GuiService.class), dialogs);
+        Menu menu = quad.menu(target(), null, id -> null);
+        Player player = mock(Player.class);
+
+        menu.buttonAt(14).action().accept(player);
+        menu.buttonAt(12).action().accept(player);
+
+        verify(dialogs).promptWithIcon(eq(player), anyString(), eq("CHEST"), anyList(),
+                any(), any());
+        verify(dialogs).prompt(eq(player), anyString(), eq("Everything on"), anyList(),
+                any(), any());
+    }
 }

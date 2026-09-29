@@ -14,6 +14,7 @@ import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
+import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -26,6 +27,7 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.logging.Logger;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -41,6 +43,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.ArgumentCaptor;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,7 +80,7 @@ class ModifierMenusTest {
         messages.reload(new MessagesConfig());
         store = new ModifierStore(config, log);
         menus = new ModifierMenus(store, messages, null, null, null, null, null, null,
-                null, null);
+                null, null, null);
     }
 
     private static void addModifier(ModifiersConfig config, String id, boolean enabled,
@@ -152,7 +155,7 @@ class ModifierMenusTest {
         MenuButton presetCreate = menus.presetsMenu().buttonAt(8);
 
         assertEquals(Material.WRITABLE_BOOK, modifierCreate.material());
-        assertEquals("Create Modifier", textOf(modifierCreate.name()));
+        assertEquals("Modifier Editor", textOf(modifierCreate.name()));
         assertNotNull(modifierCreate.action());
         assertEquals("Create Preset", textOf(presetCreate.name()));
         assertNotNull(presetCreate.action());
@@ -271,7 +274,7 @@ class ModifierMenusTest {
         ConfigService service = new ConfigService(null, store);
         ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds, null);
         ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
@@ -298,7 +301,7 @@ class ModifierMenusTest {
         ConfigService service = new ConfigService(null, store);
         ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds, null);
         ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
         store.setEnabled("mike", true);
@@ -320,7 +323,7 @@ class ModifierMenusTest {
         ConfigService service = new ConfigService(null, store);
         ModifiersCommand toggles = new ModifiersCommand(service, messages, gui, null, sounds, null);
         ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
@@ -408,7 +411,7 @@ class ModifierMenusTest {
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
         ModifierMenus live = new ModifierMenus(emptyStore, messages, sounds, null,
-                toggles, null, null, null, null, null);
+                toggles, null, null, null, null, null, null);
 
         live.presetsMenu().buttonAt(2).action().accept(player);
 
@@ -432,7 +435,7 @@ class ModifierMenusTest {
         OverrideService overrides = new OverrideService(config, new LobbyConfig(), () -> {});
         assertTrue(overrides.setModifierOverride(0, "mike", true));
         ModifierMenus session = new ModifierMenus(store, messages, null, gui,
-                null, null, null, null, overrides, null);
+                null, null, null, null, overrides, null, null);
 
         Menu menu = session.modifiersMenu(viewer, null);
         MenuButton mike = findButton(menu, "Mike");
@@ -457,6 +460,100 @@ class ModifierMenusTest {
         return null;
     }
 
+    @Test
+    void editorTwinPairsTestCommandWithCreate() {
+        Menu twin = menus.editorTwin(null, null);
+
+        assertEquals(title("Modifier Editor"), twin.title());
+        MenuButton test = twin.buttonAt(12);
+        assertEquals(Material.REPEATING_COMMAND_BLOCK, test.material());
+        assertEquals("Test a Command", textOf(test.name()));
+        assertNotNull(test.action());
+        MenuButton create = twin.buttonAt(14);
+        assertEquals(Material.WRITABLE_BOOK, create.material());
+        assertEquals("Create Modifier", textOf(create.name()));
+        assertNotNull(create.action());
+        assertEquals(Material.PAPER, twin.buttonAt(13).material());
+    }
+
+    @Test
+    void testCommandDeniesWithoutPermission() {
+        ModifierDialog dialogs = mock(ModifierDialog.class);
+        ModifierMenus live = new ModifierMenus(store, messages, mock(SoundService.class),
+                mock(GuiService.class), mock(ModifiersCommand.class), null, dialogs, null,
+                null, null, mock(ModifierEditorMemory.class));
+        Player viewer = mock(Player.class);
+        when(viewer.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(false);
+
+        live.editorTwin(viewer, null).buttonAt(12).action().accept(viewer);
+
+        verify(viewer).sendMessage(messages.component("command.no-permission"));
+        verify(dialogs, never()).openTestCommands(any(), any(), any(), any());
+    }
+
+    @Test
+    void testCommandSubmitRunsPipelineAndReturnsToTwin() {
+        ModifierDialog dialogs = mock(ModifierDialog.class);
+        ModifierEditorMemory memory = mock(ModifierEditorMemory.class);
+        ModifiersCommand toggles = mock(ModifiersCommand.class);
+        GuiService gui = mock(GuiService.class);
+        ModifierDialog.TestSubmission initial = new ModifierDialog.TestSubmission(false,
+                "SPEEDRUNNER", List.of("", "", "", "", ""));
+        when(memory.initialFor(any())).thenReturn(initial);
+        ModifierMenus live = new ModifierMenus(store, messages, mock(SoundService.class), gui,
+                toggles, null, dialogs, null, null, null, memory);
+        Player viewer = mock(Player.class);
+        when(viewer.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+        Menu twin = live.editorTwin(viewer, null);
+
+        twin.buttonAt(12).action().accept(viewer);
+
+        ArgumentCaptor<Function<ModifierDialog.TestSubmission, Runnable>> submit =
+                ArgumentCaptor.forClass(Function.class);
+        verify(dialogs).openTestCommands(eq(viewer), eq(initial), submit.capture(), any());
+        ModifierDialog.TestSubmission answers = new ModifierDialog.TestSubmission(true, "HUNTER",
+                List.of("say one", "", "say two", "", ""));
+        submit.getValue().apply(answers).run();
+
+        verify(memory).store(viewer, answers);
+        verify(toggles).testCommands(viewer, "HUNTER", List.of("say one", "say two"));
+        verify(gui).navigate(eq(viewer), eq(twin));
+    }
+
+    @Test
+    void testCommandEmptySubmitErrorsAndReopens() {
+        ModifierDialog dialogs = mock(ModifierDialog.class);
+        ModifierEditorMemory memory = mock(ModifierEditorMemory.class);
+        ModifiersCommand toggles = mock(ModifiersCommand.class);
+        GuiService gui = mock(GuiService.class);
+        SoundService sounds = mock(SoundService.class);
+        ModifierDialog.TestSubmission initial = new ModifierDialog.TestSubmission(false,
+                "SPEEDRUNNER", List.of("", "", "", "", ""));
+        when(memory.initialFor(any())).thenReturn(initial);
+        ModifierMenus live = new ModifierMenus(store, messages, sounds, gui, toggles, null,
+                dialogs, null, null, null, memory);
+        Player viewer = mock(Player.class);
+        when(viewer.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+        Menu twin = live.editorTwin(viewer, null);
+
+        twin.buttonAt(12).action().accept(viewer);
+
+        ArgumentCaptor<Function<ModifierDialog.TestSubmission, Runnable>> submit =
+                ArgumentCaptor.forClass(Function.class);
+        verify(dialogs).openTestCommands(eq(viewer), eq(initial), submit.capture(), any());
+        ModifierDialog.TestSubmission answers = new ModifierDialog.TestSubmission(false,
+                "SPEEDRUNNER", List.of("", "  ", "", "", ""));
+        submit.getValue().apply(answers).run();
+
+        verify(viewer).sendMessage(messages.component("modifiers.test-commands-empty"));
+        verify(sounds).playAngrySound(viewer);
+        verify(memory, never()).store(any(), any());
+        verify(toggles, never()).testCommands(any(), any(), any());
+        verify(dialogs, times(1)).openTestCommands(eq(viewer), eq(initial), any(), any());
+        verify(dialogs, times(1)).openTestCommands(eq(viewer), eq(answers), any(), any());
+        verify(gui, never()).navigate(any(), any());
+    }
+
     private MessageService buildMenusWith(int total, int disabled) {
         ModifiersConfig config = new ModifiersConfig();
         List<String> members = new ArrayList<>();
@@ -471,7 +568,7 @@ class ModifierMenusTest {
         MessageService fresh = new MessageService();
         fresh.reload(new MessagesConfig());
         bigMenus = new ModifierMenus(new ModifierStore(config, log), fresh,
-                null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
         return fresh;
     }
 }

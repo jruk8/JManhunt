@@ -70,14 +70,26 @@ validation as globals.
 
 ## Modifier Creator
 
-The modifiers and presets lists carry a create button at the
-top-right and an import loom at the bottom-right. Create prompts
-for a display name (you become the author) and opens the new entry
-in its editor; right-clicking any existing entry opens the same
-editor. Preset lore shows the description first, then up to 8
-members, then collapses to `..and N more`. A preset with no members
-shows `No modifiers configured!` instead, and clicking it to enable
-plays the angry sound with a chat error rather than flipping state.
+The modifiers and presets lists carry an import loom at the
+bottom-right. The presets list keeps its create button at the
+top-right; the modifiers list opens a Modifier Editor panel there
+instead, pairing Test a Command with the same create flow. Create
+prompts for a display name (you become the author) and opens the
+new entry in its editor; right-clicking any existing entry opens
+the same editor. Preset lore shows the description first, then up
+to 8 members, then collapses to `..and N more`. A preset with no
+members shows `No modifiers configured!` instead, and clicking it
+to enable plays the angry sound with a chat error rather than
+flipping state.
+
+Test a Command dry-runs up to five command boxes through the real
+tag pipeline with mock stats, like the chat test command: gameplay
+lines still execute for real, and tag errors fail the run with
+the warning text. Blank boxes drop and the rest collapse in order;
+submitting five blanks chats an error and keeps the dialog open.
+The remember checkbox keeps the role and boxes per player across
+sessions (`advanced.misc.modifier-editor.remember-gui-commands`
+preselects it for first-timers).
 
 Each editor is a quad. The modifier root holds Meta, Behavior,
 Export, and Delete Modifier; the preset root holds Meta, Modifiers,
@@ -120,7 +132,7 @@ note. Saving validates the line: unbalanced
 brackets, empty commands, malformed random args, unknown root
 commands, and unknown `give` items are refused with a chat error,
 while unknown tags and skipped pick items only warn. Set
-`advanced.misc.interop.validate-modifier-editor-commands` to
+`advanced.misc.modifier-editor.validate-commands` to
 false to skip the root and item checks. Each save chats which
 ordinal line was set. See
 [Creating Modifiers and Presets](configuration/modifiers.md#creating-modifiers-and-presets).
@@ -142,6 +154,6 @@ double-fire.
    right-click the row and confirm the reset.
 3. In Command Lists, save `asd asd` and confirm refusal, then save
    `give <p> cooked_beef 8` and confirm the ordinal chat line.
-4. Toggle `validate-modifier-editor-commands` off, save `asd asd`,
+4. Toggle `modifier-editor.validate-commands` off, save `asd asd`,
    then toggle it back on.
 5. Import a share string through the bottom-right loom in both lists.

@@ -9,6 +9,7 @@ import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.PagedList;
 import com.jruk8.jmanhunt.gui.TwinPanel;
+import com.jruk8.jmanhunt.gui.dialog.DialogInputs;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
@@ -44,33 +45,37 @@ public final class ModifierMenus {
     private final GuiService gui;
     private final ModifiersCommand toggles;
     private final SettingDialogs dialogs;
+    private final ModifierDialog modifierDialogs;
     private final ModifierEditorMenus modifierEditor;
     private final PresetEditorMenus presetEditor;
     private final OverrideService overrides;
     private final SettingFeedback feedback;
+    private final ModifierEditorMemory memory;
 
     /**
      * @param store modifier and preset reads
      * @param messages GUI text; sounds, gui, toggles, dialogs,
-     *        commandValidation, overrides, and feedback are only touched
-     *        inside click actions or override sessions, so builders
-     *        tolerate them as null
+     *        commandValidation, overrides, feedback, and memory are only
+     *        touched inside click actions or override sessions, so
+     *        builders tolerate them as null
      */
     public ModifierMenus(ModifierStore store, MessageService messages, SoundService sounds,
             GuiService gui, ModifiersCommand toggles, SettingDialogs dialogs,
             ModifierDialog modifierDialogs, BooleanSupplier commandValidation,
-            OverrideService overrides, SettingFeedback feedback) {
+            OverrideService overrides, SettingFeedback feedback, ModifierEditorMemory memory) {
         this.store = store;
         this.messages = messages;
         this.sounds = sounds;
         this.gui = gui;
         this.toggles = toggles;
         this.dialogs = dialogs;
+        this.modifierDialogs = modifierDialogs;
         this.modifierEditor = new ModifierEditorMenus(store, messages, sounds, gui, toggles,
                 dialogs, modifierDialogs, commandValidation);
         this.presetEditor = new PresetEditorMenus(store, messages, sounds, gui, toggles, dialogs);
         this.overrides = overrides;
         this.feedback = feedback;
+        this.memory = memory;
     }
 
     /** 27-slot root with links to both lists. */
@@ -122,10 +127,10 @@ public final class ModifierMenus {
                 () -> mainMenu(viewer, parent), self -> toggleAllModifiersButton(viewer, self),
                 self -> importButton(self, "modifier", "import-modifier",
                         "import-modifier-lore", "import-modifier-title"),
-                createButton(Material.WRITABLE_BOOK, "create-modifier", "Create Modifier",
-                        "create-modifier-lore", "Start a new modifier",
-                        player -> modifierEditor.createModifier(player,
-                                () -> modifiersMenu(player, parent))));
+                createButton(Material.WRITABLE_BOOK, "modifier-editor", "Modifier Editor",
+                        "modifier-editor-lore", "Create a modifier or test commands",
+                        player -> gui.navigate(player,
+                                editorTwin(player, () -> modifiersMenu(player, parent)))));
     }
 
     /** 45-slot presets scroll list. */
@@ -199,6 +204,66 @@ public final class ModifierMenus {
                     },
                     () -> gui.navigate(player, self[0]));
         };
+    }
+
+    /**
+     * Modifier Editor twin panel: Test-a-Command on the left, the
+     * create flow on the right with back to this panel.
+     */
+    public Menu editorTwin(Player viewer, Supplier<Menu> parent) {
+        final Menu[] self = new Menu[1];
+        self[0] = TwinPanel.menu(
+                GuiTexts.title(messages, text("modifier-editor-title", "Modifier Editor")),
+                new MenuButton(Material.REPEATING_COMMAND_BLOCK,
+                        GuiTexts.name(messages, text("test-command", "Test a Command"),
+                                "Test a Command"),
+                        GuiTexts.lore(messages, text("test-command-lore",
+                                "Dry-run up to five commands")),
+                        false, false,
+                        player -> openTestDialog(player, self[0])).silent(),
+                createButton(Material.WRITABLE_BOOK, "create-modifier", "Create Modifier",
+                        "create-modifier-lore", "Start a new modifier",
+                        player -> modifierEditor.createModifier(player, () -> self[0])),
+                gui,
+                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                parent);
+        return self[0];
+    }
+
+    /** Test-a-Command dialog over the remembered initials. */
+    private void openTestDialog(Player player, Menu twin) {
+        if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
+            messages.message(player, "command.no-permission");
+            return;
+        }
+        openTestDialogWith(player, twin, memory.initialFor(player));
+    }
+
+    /** Test-a-Command dialog over explicit initials (reopens). */
+    private void openTestDialogWith(Player player, Menu twin,
+            ModifierDialog.TestSubmission initial) {
+        modifierDialogs.openTestCommands(player, initial,
+                submission -> submitTestDialog(player, twin, submission),
+                () -> gui.navigate(player, twin));
+    }
+
+    /**
+     * Runs one test submit through the dry-run pipeline and returns
+     * the follow-up: an empty submit chats an error and reopens the
+     * dialog with the same inputs, otherwise memory stores the
+     * submit and the twin panel returns.
+     */
+    private Runnable submitTestDialog(Player player, Menu twin,
+            ModifierDialog.TestSubmission submission) {
+        List<String> lines = DialogInputs.collapseTestCommands(submission.commands());
+        if (lines.isEmpty()) {
+            messages.message(player, "modifiers.test-commands-empty");
+            sounds.playAngrySound(player);
+            return () -> openTestDialogWith(player, twin, submission);
+        }
+        memory.store(player, submission);
+        toggles.testCommands(player, submission.role(), lines);
+        return () -> gui.navigate(player, twin);
     }
 
     /** Top-right create button opening the creator flow. */

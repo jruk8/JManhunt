@@ -2,12 +2,13 @@ package com.jruk8.jmanhunt.gui.menus;
 
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
+import com.jruk8.jmanhunt.gui.dialog.DialogInputs;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
-import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.bukkit.entity.Player;
 
@@ -40,25 +41,47 @@ public final class FieldPrompts {
             MessageService messages, SoundService sounds,
             Player player, Supplier<Menu> reopen, String title, String current,
             boolean clearable, Submit submit) {
+        promptWith(dialogs, gui, messages, sounds, player, reopen, title, current, clearable,
+                false, submit);
+    }
+
+    /** Same, with the item sprite for the current value rendered above the body. */
+    public static void promptWithIcon(SettingDialog dialogs, GuiService gui,
+            MessageService messages, SoundService sounds,
+            Player player, Supplier<Menu> reopen, String title, String current,
+            boolean clearable, Submit submit) {
+        promptWith(dialogs, gui, messages, sounds, player, reopen, title, current, clearable,
+                true, submit);
+    }
+
+    /** Shared field flow; the icon form shows the value sprite. */
+    private static void promptWith(SettingDialog dialogs, GuiService gui,
+            MessageService messages, SoundService sounds,
+            Player player, Supplier<Menu> reopen, String title, String current,
+            boolean clearable, boolean withIcon, Submit submit) {
         String shown = current == null
                 ? messages.string("modifiers-gui.editor-unset", "Not set") : current;
-        dialogs.prompt(player, title,
-                SettingDialogs.safeInitial(current),
-                List.of(messages
-                        .string("modifiers-gui.editor-prompt-current", "Current value: <white>{value}")
-                        .replace("{value}", shown)),
-                raw -> {
-                    String error = clearable && raw.isBlank()
-                            ? submit.submit(null) : submit.submit(raw);
-                    if (error != null) {
-                        messages.message(player, "modifiers.edit-invalid",
-                                Map.of("error", error));
-                        sounds.playAngrySound(player);
-                    } else {
-                        sounds.playNeutralSound(player);
-                    }
-                    gui.navigate(player, reopen.get());
-                },
-                () -> gui.navigate(player, reopen.get()));
+        List<String> body = List.of(messages
+                .string("modifiers-gui.editor-prompt-current", "Current value: <white>{value}")
+                .replace("{value}", shown));
+        Consumer<String> accepted = raw -> {
+            String error = clearable && raw.isBlank()
+                    ? submit.submit(null) : submit.submit(raw);
+            if (error != null) {
+                messages.message(player, "modifiers.edit-invalid",
+                        Map.of("error", error));
+                sounds.playAngrySound(player);
+            } else {
+                sounds.playNeutralSound(player);
+            }
+            gui.navigate(player, reopen.get());
+        };
+        if (withIcon) {
+            dialogs.promptWithIcon(player, title, DialogInputs.safeInitial(current), body,
+                    accepted, () -> gui.navigate(player, reopen.get()));
+        } else {
+            dialogs.prompt(player, title, DialogInputs.safeInitial(current), body,
+                    accepted, () -> gui.navigate(player, reopen.get()));
+        }
     }
 }

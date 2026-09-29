@@ -4,7 +4,10 @@ import com.jruk8.jmanhunt.world.cell.WorldCellAllocator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -124,6 +127,24 @@ class EngineStateRepositoryTest {
             repository.putEndReservation(7L, "world_the_end_3");
             repository.clearEndReservations();
             assertTrue(repository.endReservations().isEmpty());
+        }
+    }
+
+    @Test
+    void editorMemoryDefaultsEmptyAndRoundTrips(@TempDir Path dataFolder) throws Exception {
+        UUID id = UUID.randomUUID();
+        EngineStateRepository.EditorMemory memory = new EngineStateRepository.EditorMemory(
+                "HUNTER", true, List.of("say one", "", "say two", "", ""));
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertTrue(repository.getEditorMemory(id).isEmpty());
+            repository.putEditorMemory(id, memory);
+            assertEquals(Optional.of(memory), repository.getEditorMemory(id));
+            repository.putEditorMemory(id, new EngineStateRepository.EditorMemory(
+                    "SPEEDRUNNER", false, List.of("", "", "", "", "")));
+            assertEquals("SPEEDRUNNER", repository.getEditorMemory(id).orElseThrow().role());
+        }
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertEquals(false, repository.getEditorMemory(id).orElseThrow().remember());
         }
     }
 }

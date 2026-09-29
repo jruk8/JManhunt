@@ -90,6 +90,33 @@ public class ModifiersGuiMessages extends OkaeriConfig {
     @CustomKey("create-preset-lore")
     private String createPresetLore = "Start a new preset";
 
+    @CustomKey("modifier-editor")
+    private String modifierEditor = "Modifier Editor";
+
+    @CustomKey("modifier-editor-lore")
+    private String modifierEditorLore = "Create a modifier or test commands";
+
+    @CustomKey("modifier-editor-title")
+    private String modifierEditorTitle = "Modifier Editor";
+
+    @CustomKey("test-command")
+    private String testCommand = "Test a Command";
+
+    @CustomKey("test-command-lore")
+    private String testCommandLore = "Dry-run up to five commands";
+
+    @CustomKey("test-title")
+    private String testTitle = "Test a Command";
+
+    @CustomKey("test-remember")
+    private String testRemember = "Remember Commands";
+
+    @CustomKey("test-role")
+    private String testRole = "Role";
+
+    @CustomKey("test-command-box")
+    private String testCommandBox = "Command {n}";
+
     @CustomKey("create-name-title")
     private String createNameTitle = "Name your modifier";
 

@@ -10,6 +10,7 @@ import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialogs;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.gui.menus.ManhuntMenus;
+import com.jruk8.jmanhunt.gui.menus.ModifierEditorMemory;
 import com.jruk8.jmanhunt.gui.menus.ModifierMenus;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
@@ -146,8 +147,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.modifierMenus = new ModifierMenus(config.modifiers(), messages, sounds,
                 plugin.guiService(), modifiersCmd, dialogs, modifierDialogs,
                 () -> config.getBoolean(
-                        "advanced.misc.interop.validate-modifier-editor-commands", true),
-                plugin.overrides(), feedback);
+                        "advanced.misc.modifier-editor.validate-commands", true),
+                plugin.overrides(), feedback, new ModifierEditorMemory(plugin.engineStates(),
+                        plugin.logger(),
+                        () -> config.getBoolean(
+                                "advanced.misc.modifier-editor.remember-gui-commands", false)));
         this.menus = new ManhuntMenus(config, plugin.overrides(), plugin.guiConfig(),
                 messages, sounds, plugin.guiService(), dialogs, feedback, plugin.stats(),
                 modifierMenus, modifierDialogs);

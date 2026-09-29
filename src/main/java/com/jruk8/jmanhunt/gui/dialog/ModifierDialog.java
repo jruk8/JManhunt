@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.gui.dialog;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import org.bukkit.entity.Player;
 
 /**
@@ -47,4 +48,24 @@ public interface ModifierDialog {
      */
     void openInterfereDuring(Player player, List<String> current,
             Consumer<Set<String>> onSubmit, Runnable reopen);
+
+    /**
+     * Test-a-Command answers: the remember flag, the upper-case
+     * role, and the raw command box texts.
+     */
+    record TestSubmission(boolean remember, String role, List<String> commands) {
+    }
+
+    /**
+     * Opens the Test-a-Command dialog: a remember checkbox, a role
+     * scroller, and five command boxes over the command editor intro.
+     *
+     * @param player clicking player
+     * @param initial prefilled remember flag, role, and box texts
+     * @param onSubmit receives the submitted answers and returns the
+     *        follow-up navigation, run one tick later like cancel
+     * @param onCancel runs when the dialog is cancelled
+     */
+    void openTestCommands(Player player, TestSubmission initial,
+            Function<TestSubmission, Runnable> onSubmit, Runnable onCancel);
 }

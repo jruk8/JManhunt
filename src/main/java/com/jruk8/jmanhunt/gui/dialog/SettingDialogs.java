@@ -150,7 +150,22 @@ public final class SettingDialogs implements SettingDialog {
     @Override
     public void prompt(Player player, String titleText, String initial, List<String> body,
             Consumer<String> onSubmit, Runnable onCancel) {
+        promptBodies(player, titleText, initial, body, false, onSubmit, onCancel);
+    }
+
+    @Override
+    public void promptWithIcon(Player player, String titleText, String initial,
+            List<String> body, Consumer<String> onSubmit, Runnable onCancel) {
+        promptBodies(player, titleText, initial, body, true, onSubmit, onCancel);
+    }
+
+    /** Shared prompt flow; the icon form prepends the value sprite. */
+    private void promptBodies(Player player, String titleText, String initial, List<String> body,
+            boolean withIcon, Consumer<String> onSubmit, Runnable onCancel) {
         List<DialogBody> lines = new ArrayList<>();
+        if (withIcon) {
+            lines.addAll(iconBody(initial));
+        }
         for (String line : body) {
             lines.add(DialogBody.plainMessage(messages.parse(line)));
         }
@@ -158,6 +173,18 @@ public final class SettingDialogs implements SettingDialog {
                 lines,
                 value -> runLater(player, () -> onSubmit.accept(value)),
                 () -> runLater(player, onCancel));
+    }
+
+    /**
+     * Item sprite body for one string value: the item when the value
+     * names one, else nothing. Shared by setting dialogs and the
+     * icon prompt so the sprite renders from one place.
+     */
+    static List<DialogBody> iconBody(String value) {
+        List<DialogBody> lines = new ArrayList<>();
+        DialogInputs.iconSprite(value).ifPresent(material ->
+                lines.add(DialogBody.item(new ItemStack(material)).build()));
+        return lines;
     }
 
     /** Shared text dialog with caller-supplied submit and cancel behavior. */
@@ -272,8 +299,7 @@ public final class SettingDialogs implements SettingDialog {
     private List<DialogBody> bodyLines(Integer lobby, SettingDescriptor descriptor) {
         List<DialogBody> lines = new ArrayList<>();
         if (descriptor.type() == SettingType.STRING) {
-            DialogInputs.iconSprite(currentText(lobby, descriptor)).ifPresent(material ->
-                    lines.add(DialogBody.item(new ItemStack(material)).build()));
+            lines.addAll(iconBody(currentText(lobby, descriptor)));
         }
         String current = messages
                 .string("manhunt-gui.dialog-current", "Current value: <white>{value}")

@@ -316,7 +316,7 @@ class SettingRegistryTest {
     void advancedRootDrillsIntoThreeSections() {
         assertEquals(List.of("advanced-match-controls", "lobbies", "misc"),
                 SettingRegistry.children("advanced").sections());
-        assertEquals(List.of("interop"),
+        assertEquals(List.of("interop", "modifier-editor"),
                 SettingRegistry.children("advanced.misc").sections());
     }
 
