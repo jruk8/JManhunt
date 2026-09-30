@@ -270,6 +270,7 @@ public final class MatchStartService {
         for (UUID playerId : assignees) {
             instance.activate(playerId);
         }
+        stateCommands.trackMatchEntry(assignees);
         return instance;
     }
 
@@ -416,6 +417,7 @@ public final class MatchStartService {
                 instance.matchId(), playerId, GameManager.roleToPlayerRole(role)));
         messaging.sendToInstance(instance, "game.join-announce",
                 Map.of("player", player.getName(), "role", messages.roleName(role)));
+        stateCommands.trackMatchEntry(List.of(playerId));
         return true;
     }
 

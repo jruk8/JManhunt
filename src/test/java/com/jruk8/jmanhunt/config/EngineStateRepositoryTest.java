@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -145,6 +146,34 @@ class EngineStateRepositoryTest {
         }
         try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
             assertEquals(false, repository.getEditorMemory(id).orElseThrow().remember());
+        }
+    }
+
+    @Test
+    void crashCleanupRoundTrip(@TempDir Path dataFolder) throws Exception {
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertTrue(repository.crashCleanupIds().isEmpty());
+            repository.markCrashCleanup(first);
+            repository.markCrashCleanup(second);
+            repository.markCrashCleanup(first);
+            assertEquals(Set.of(first, second), repository.crashCleanupIds());
+            repository.clearCrashCleanup(first);
+            assertEquals(Set.of(second), repository.crashCleanupIds());
+        }
+    }
+
+    @Test
+    void crashCleanupSurvivesReopen(@TempDir Path dataFolder) throws Exception {
+        UUID id = UUID.randomUUID();
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            repository.markCrashCleanup(id);
+        }
+        try (EngineStateRepository repository = EngineStateRepository.open(dataFolder.toFile())) {
+            assertEquals(Set.of(id), repository.crashCleanupIds());
+            repository.clearCrashCleanup(id);
+            assertTrue(repository.crashCleanupIds().isEmpty());
         }
     }
 }

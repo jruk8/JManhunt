@@ -8,6 +8,7 @@ import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.Random;
 import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -488,6 +490,77 @@ class GameStateCommandManagerTest {
         when(player.getUniqueId()).thenReturn(UUID.randomUUID());
 
         assertFalse(manager.applyPendingEndWipe(player));
+        verify(player, never()).getInventory();
+    }
+
+    @Test
+    void pendingCrashWipeRunsOnceAndClearsRow() throws Exception {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        EngineStateRepository repository = mock(EngineStateRepository.class);
+        when(plugin.engineStates()).thenReturn(repository);
+        GameStateCommandManager manager = spy(wipeManager(plugin));
+        Player player = mock(Player.class);
+        UUID playerId = UUID.randomUUID();
+        when(player.getUniqueId()).thenReturn(playerId);
+        doNothing().when(manager).resetPlayer(player);
+
+        manager.trackMatchEntry(List.of(playerId));
+        verify(repository).markCrashCleanup(playerId);
+
+        assertTrue(manager.applyPendingCrashWipe(player));
+        verify(manager).resetPlayer(player);
+        verify(repository).clearCrashCleanup(playerId);
+        assertFalse(manager.applyPendingCrashWipe(player));
+    }
+
+    @Test
+    void untrackMatchExitDropsPendingWipe() throws Exception {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        EngineStateRepository repository = mock(EngineStateRepository.class);
+        when(plugin.engineStates()).thenReturn(repository);
+        GameStateCommandManager manager = spy(wipeManager(plugin));
+        Player player = mock(Player.class);
+        UUID playerId = UUID.randomUUID();
+        when(player.getUniqueId()).thenReturn(playerId);
+
+        manager.trackMatchEntry(List.of(playerId));
+        manager.untrackMatchExit(List.of(playerId));
+        verify(repository).clearCrashCleanup(playerId);
+
+        assertFalse(manager.applyPendingCrashWipe(player));
+        verify(manager, never()).resetPlayer(player);
+    }
+
+    @Test
+    void loadCrashCleanupHonorsSurvivingRows() throws Exception {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        EngineStateRepository repository = mock(EngineStateRepository.class);
+        when(plugin.engineStates()).thenReturn(repository);
+        GameStateCommandManager manager = spy(wipeManager(plugin));
+        Player player = mock(Player.class);
+        UUID playerId = UUID.randomUUID();
+        when(player.getUniqueId()).thenReturn(playerId);
+        doNothing().when(manager).resetPlayer(player);
+        when(repository.crashCleanupIds()).thenReturn(Set.of(playerId));
+
+        manager.loadCrashCleanup();
+
+        assertTrue(manager.applyPendingCrashWipe(player));
+        verify(manager).resetPlayer(player);
+    }
+
+    @Test
+    void pendingCrashWipeAbsentRunsNothing() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        GameStateCommandManager manager = wipeManager(plugin);
+        Player player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+
+        assertFalse(manager.applyPendingCrashWipe(player));
         verify(player, never()).getInventory();
     }
 

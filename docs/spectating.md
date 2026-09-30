@@ -62,7 +62,9 @@ is removed, the marker head is taken off with any real helmet restored,
 and visibility is restored, so nothing survives a disconnect. Join
 clears any dangling flight on the joiner and re-hides the currently
 active spectators from them, so a crash can never leave a player stuck
-flying or invisible. Alive players never see fake spectators: the
+flying or invisible. A crashed spectator's pre-match inventory snapshot
+is memory-only and gone with the crash, so rejoiners are wiped to normal
+instead of restored. Alive players never see fake spectators: the
 hide holds on every enable path (join, respawn, headstart, death
 watch), on every join of an alive player, and on every disable, with
 the invisibility effect as backup.

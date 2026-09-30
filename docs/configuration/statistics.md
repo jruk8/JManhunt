@@ -6,6 +6,13 @@ separate always-SQLite `engine.db` file. For statistics shared between
 servers, set `statistics.type` to `postgresql` and configure
 `statistics.postgresql` in `config.yml`.
 
+`engine.db` also holds the crash cleanup roster: every speedrunner,
+hunter, and spectator currently in match state. After a crash, each
+listed player is wiped back to normal (inventory, vitals, advancements,
+toolbar leftovers stripped, role NONE) on their next join, then removed
+from the roster. Clean exits delete the row immediately, so a clean
+restart wipes nobody.
+
 With PlaceholderAPI installed, JManhunt provides placeholders such as
 `%jmanhunt_total_kills%` and `%jmanhunt_formatted_time_as_hunter%`. The
 complete list and formatting options are documented in

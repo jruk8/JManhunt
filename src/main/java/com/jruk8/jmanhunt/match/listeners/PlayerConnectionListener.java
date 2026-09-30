@@ -65,6 +65,9 @@ public final class PlayerConnectionListener implements Listener {
         // A match that ended while they were offline left a deferred
         // wipe behind: run it before anything else reads their state.
         game.applyPendingEndWipe(player);
+        // A crash never ran teardown, so rows left in crash_cleanup get
+        // the same wipe here; the join-time toolbar strip finishes it.
+        game.applyPendingCrashWipe(player);
         // Repair scoreboard teams in case roles and teams drifted apart.
         plugin.roleTeams().sync(player);
         lobbies.assignDefault(player.getUniqueId());

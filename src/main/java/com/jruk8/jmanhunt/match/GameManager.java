@@ -523,6 +523,16 @@ public final class GameManager implements MatchControl {
         return stateCommands.applyPendingEndWipe(player);
     }
 
+    /** Loads surviving crash cleanup rows into the pending wipe set. */
+    public void loadCrashCleanup() {
+        stateCommands.loadCrashCleanup();
+    }
+
+    /** Runs the post-crash wipe for a rejoiner when one is pending. */
+    public boolean applyPendingCrashWipe(Player player) {
+        return stateCommands.applyPendingCrashWipe(player);
+    }
+
     /** Reconciles live matches with toggled modifiers. */
     public void syncModifierToggles(Collection<String> names) {
         stateCommands.syncModifierToggles(names);

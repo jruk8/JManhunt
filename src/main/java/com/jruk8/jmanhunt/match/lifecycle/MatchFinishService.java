@@ -232,6 +232,7 @@ public final class MatchFinishService {
         }
         playerStates.setSpeedrunnerAlive(playerId, false);
         instance.deactivate(playerId);
+        stateCommands.untrackMatchExit(List.of(playerId));
         playerStates.clearMatchFor(List.of(playerId));
         flagStore.removePlayer(instance.matchId(), player.getName());
         compass.removeCompasses(player);
@@ -468,6 +469,7 @@ public final class MatchFinishService {
         instance.setActive(false);
         Set<UUID> clearIds = new HashSet<>(instance.assignedPlayerIds());
         clearIds.removeAll(transferred);
+        stateCommands.untrackMatchExit(clearIds);
         playerStates.clearMatchFor(clearIds);
         stats.clearMatch(teardownId);
         flagStore.clearMatch(teardownId);
@@ -515,6 +517,7 @@ public final class MatchFinishService {
                     Map.of("player", spectator.getName(), "role", messages.roleName(Role.SPECTATOR)));
             moved.add(playerId);
         }
+        stateCommands.trackMatchEntry(moved);
         return moved;
     }
 

@@ -10,9 +10,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -57,6 +59,8 @@ public final class EngineStateRepository implements AutoCloseable {
                     + "player_uuid TEXT PRIMARY KEY, role TEXT NOT NULL, remember INTEGER NOT NULL, "
                     + "cmd1 TEXT NOT NULL, cmd2 TEXT NOT NULL, cmd3 TEXT NOT NULL, "
                     + "cmd4 TEXT NOT NULL, cmd5 TEXT NOT NULL)");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS crash_cleanup ("
+                    + "uuid TEXT PRIMARY KEY, added_at INTEGER NOT NULL)");
         }
     }
 
@@ -159,6 +163,52 @@ public final class EngineStateRepository implements AutoCloseable {
             }
         }
         return rows;
+    }
+
+    /**
+     * Role-less crash cleanup roster: every speedrunner, hunter, and
+     * spectator currently in match state. Roles are memory-only and die
+     * with a crash, so the bare row is the whole signal: a row present
+     * at join means that player still needs their items and stats wiped
+     * back to normal. Re-marking refreshes the timestamp.
+     */
+    public synchronized void markCrashCleanup(UUID playerId) throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement update = connection.prepareStatement(
+                        "INSERT INTO crash_cleanup (uuid, added_at) VALUES (?, ?) "
+                                + "ON CONFLICT (uuid) DO UPDATE SET added_at=EXCLUDED.added_at")) {
+            update.setString(1, playerId.toString());
+            update.setLong(2, System.currentTimeMillis());
+            update.executeUpdate();
+        }
+    }
+
+    /** Drops one player from the crash cleanup roster after a clean exit or wipe. */
+    public synchronized void clearCrashCleanup(UUID playerId) throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement delete = connection.prepareStatement(
+                        "DELETE FROM crash_cleanup WHERE uuid=?")) {
+            delete.setString(1, playerId.toString());
+            delete.executeUpdate();
+        }
+    }
+
+    /** Every UUID currently on the crash cleanup roster. Corrupt rows are skipped. */
+    public synchronized Set<UUID> crashCleanupIds() throws SQLException {
+        Set<UUID> ids = new LinkedHashSet<>();
+        try (Connection connection = connection();
+                PreparedStatement select = connection.prepareStatement(
+                        "SELECT uuid FROM crash_cleanup");
+                ResultSet result = select.executeQuery()) {
+            while (result.next()) {
+                try {
+                    ids.add(UUID.fromString(result.getString(1)));
+                } catch (IllegalArgumentException corrupt) {
+                    // A row we cannot parse can never match a joiner; leave it.
+                }
+            }
+        }
+        return ids;
     }
 
     /** Drops every end reservation, used after a crash leaves them stale. */

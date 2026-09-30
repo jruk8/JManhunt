@@ -238,6 +238,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         game = new GameManager(
                 this, messages, sounds, playerStates, compass, stats,
                 configService, worldEngine, winConditionEngine, lobbyService);
+        game.loadCrashCleanup();
         compass.setGameManager(game);
         worldEngine.setMatchRunningSupplier(game::isActive);
         modifierStore.addToggleListener(name -> game.syncModifierToggles(List.of(name)));
