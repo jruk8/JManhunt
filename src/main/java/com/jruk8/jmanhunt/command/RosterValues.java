@@ -53,6 +53,15 @@ public interface RosterValues {
         return Optional.empty();
     }
 
+    /**
+     * Upper-case main-hand material for an online player, or empty
+     * when the player is offline, unknown, or empty-handed.
+     * Defaults to empty.
+     */
+    default Optional<String> heldItem(String playerName) {
+        return Optional.empty();
+    }
+
     /** Roster that resolves nothing. */
     static RosterValues inert() {
         return new RosterValues() {

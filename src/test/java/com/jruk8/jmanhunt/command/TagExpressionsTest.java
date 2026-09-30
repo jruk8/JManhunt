@@ -89,7 +89,7 @@ class TagExpressionsTest {
         assertEquals("y", replace(fixture, "<if:\"-2.5 gt -3\",\"y\",\"n\">"));
         assertEquals("y", replace(fixture, "<if:\"7.0 le 7\",\"y\",\"n\">"));
         assertEquals("y", replace(fixture,
-                "<if:\"7.5 le 7.5 and '500.5-100 ?? -1' gt 300\",\"y\",\"n\">"));
+                "<if:\"7.5 le 7.5 and '500.5-100' gt 300\",\"y\",\"n\">"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }
 
@@ -197,19 +197,34 @@ class TagExpressionsTest {
     @Test
     void wordOperatorsSurviveLaterClosingBracket() {
         assertTrue(TagExpressions.hasComparison(
-                "<pstat:<p>,health> le 7 and <gstat:duration>-<pflag:x> ?? 999999 gt 300"));
+                "<pstat:<p>,health> le 7 and <gstat:duration>-<pflag:x> gt 300"));
         assertTrue(TagExpressions.hasComparison("7 le 5 or a gt b"));
     }
 
     @Test
-    void ifCoalesceExampleFromGappleShape() {
+    void ifDefaultExampleFromGappleShape() {
         Fixture fixture = new Fixture();
         assertEquals("n", replace(fixture,
-                "<if:\"7 le 7 and '100-500 ?? -1' gt 300\",\"y\",\"n\">"));
+                "<if:\"7 le 7 and 100-<default:50,-999999> gt 300\",\"y\",\"n\">"));
         assertEquals("y", replace(fixture,
-                "<if:\"7 le 7 and '500-100 ?? -1' gt 300\",\"y\",\"n\">"));
-        assertEquals("y", replace(fixture, "<if:\"null ?? 5 gt 3\",\"y\",\"n\">"));
+                "<if:\"7 le 7 and 500-<default:null,-999999> gt 300\",\"y\",\"n\">"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void defaultMatrix() {
+        Fixture fixture = new Fixture();
+        assertEquals("7", replace(fixture, "<default:7,0>"));
+        assertEquals("0", replace(fixture, "<default:null,0>"));
+        assertEquals("0", replace(fixture, "<default:NULL,0>"));
+        assertEquals("0", replace(fixture, "<default:,0>"));
+        assertEquals("0", replace(fixture, "<default:   ,0>"));
+        assertEquals("x", replace(fixture, "<default:x,0>"));
+        assertEquals("nullx", replace(fixture, "<default:nullx,0>"));
+        assertEquals("a,b", replace(fixture, "<default:null,\"a,b\">"));
+        assertEquals("null", replace(fixture, "<default:7>"));
+        assertEquals("null", replace(fixture, "<default:7,0,1>"));
+        assertEquals(2, fixture.warnings.size());
     }
 
     @Test

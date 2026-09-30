@@ -17,6 +17,7 @@ class TagItemsTest {
     private static final class Fixture {
         final List<String> warnings = new ArrayList<>();
         final Map<String, Integer> counts = new HashMap<>();
+        final Map<String, String> held = new HashMap<>();
         final RosterValues roster = new RosterValues() {
             @Override
             public Optional<String> roleOf(String playerName) {
@@ -36,6 +37,11 @@ class TagItemsTest {
             @Override
             public Optional<Integer> countItem(String playerName, String materialKey) {
                 return Optional.ofNullable(counts.get(playerName + "|" + materialKey));
+            }
+
+            @Override
+            public Optional<String> heldItem(String playerName) {
+                return Optional.ofNullable(held.get(playerName));
             }
         };
 
@@ -93,6 +99,18 @@ class TagItemsTest {
         assertEquals("false", fixture.replace("<phasitem:Steve,golden_apple,0>"));
         assertEquals("false", fixture.replace("<phasitem:Steve,golden_apple,many>"));
         assertEquals(4, fixture.warnings.size());
+    }
+
+    @Test
+    void heldReportsMainHandMaterial() {
+        Fixture fixture = new Fixture();
+        fixture.held.put("Steve", "DIAMOND_SWORD");
+
+        assertEquals("DIAMOND_SWORD", fixture.replace("<pheld:Steve>"));
+        assertEquals("null", fixture.replace("<pheld:Ghost>"));
+        assertEquals("null", fixture.replace("<pheld:>"));
+        assertEquals("null", fixture.replace("<pheld:Steve,extra>"));
+        assertEquals(2, fixture.warnings.size());
     }
 
     @Test

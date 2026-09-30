@@ -40,11 +40,14 @@ public final class CommandSyntax {
                 "rflag", "rmessage", "rmsg", "rsound",
                 "loseplayer", "win", "args", "list.append", "list.get", "list.set", "list.remove",
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
+                "list.filter", "list.reverse", "list.join", "list.slice", "list.first", "list.last",
                 "active-players", "plocation", "prole", "distance",
                 "overlap-players", "nearby-players", "pworld", "world",
                 "px", "py", "pz", "pyaw", "ppitch",
                 "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt", "root",
-                "while", "for", "i", "def", "run", "format");
+                "while", "for", "i", "def", "run", "format",
+                "str.join", "str.split", "str.lower", "str.upper", "str.contains",
+                "cooldown", "cooldown.get", "cooldown.reset", "default", "pheld");
     }
 
     /**
@@ -250,12 +253,18 @@ public final class CommandSyntax {
             case "win" -> winError(name, args);
             case "args" -> argsError(name, args);
             case "list.append", "list.get", "list.set", "list.remove", "list.contains",
-                    "list.clear", "list.pop", "len", "list.shuffle" ->
+                    "list.clear", "list.pop", "len", "list.shuffle", "list.filter", "list.reverse",
+                    "list.join", "list.slice", "list.first", "list.last" ->
                     TagLists.opError(name, args);
             case "range" -> rangeError(name, args);
+            case "str.join", "str.split", "str.lower", "str.upper", "str.contains" ->
+                    TagStrings.opError(name, args);
+            case "cooldown", "cooldown.get", "cooldown.reset" ->
+                    TagCooldowns.syntaxError(name, args);
+            case "default" -> topLevelArityError(name, args, 2, "<default:value,fallback>");
             case "active-players" -> activePlayersError(name, args);
-            case "plocation", "prole", "pworld", "world", "px", "py", "pz", "pyaw", "ppitch" ->
-                    playerNameError(name, args);
+            case "plocation", "prole", "pworld", "world", "px", "py", "pz", "pyaw", "ppitch",
+                    "pheld" -> playerNameError(name, args);
             case "overlap-players", "nearby-players" -> proximityError(name, args);
             case "distance" -> topLevelArityError(name, args, 2, "<distance:loc1,loc2>");
             case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" -> mathUnaryError(name, args);

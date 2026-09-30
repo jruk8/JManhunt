@@ -7,9 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Bare arithmetic: precedence, parens, exponents, floor division,
- * remainder, unary signs, groups, and null coalescing. Anything
- * unparseable throws syntax (verbatim upstream); anything
- * unparseable-but-structured like division by zero throws eval.
+ * remainder, unary signs, and groups. Anything unparseable throws
+ * syntax (verbatim upstream); anything unparseable-but-structured
+ * like division by zero throws eval.
  */
 class TagMathTest {
 
@@ -65,20 +65,24 @@ class TagMathTest {
     }
 
     @Test
-    void nullCoalescesAndPropagates() throws Exception {
-        assertEquals(5.0, value("null ?? 5"));
-        assertEquals(8.0, value("8 ?? 9"));
-        assertEquals(3.0, value("null ?? null ?? 3"));
+    void nullPropagatesThroughMath() throws Exception {
         assertNull(TagMath.evaluate("null"));
         assertNull(TagMath.evaluate("null+1"));
-        assertEquals(7.0, value("(null ?? 6)+1"));
+        assertNull(TagMath.evaluate("8*null"));
+    }
+
+    @Test
+    void coalesceOperatorNoLongerParses() {
+        assertThrows(TagMath.SyntaxException.class, () -> TagMath.evaluate("null ?? 5"));
+        assertThrows(TagMath.SyntaxException.class, () -> TagMath.evaluate("8 ?? 9"));
+        assertThrows(TagMath.SyntaxException.class, () -> TagMath.evaluate("(null ?? 6)+1"));
     }
 
     @Test
     void quotedSpansGroup() throws Exception {
         assertEquals(26.0, value("'8+5'*2"));
         assertEquals(5.0, value("\"(2+3)\""));
-        assertEquals(-400.0, value("'100-500 ?? -1'"));
+        assertEquals(-400.0, value("'100-500'"));
     }
 
     @Test

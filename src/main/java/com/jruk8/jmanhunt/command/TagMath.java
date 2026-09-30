@@ -6,9 +6,8 @@ import java.util.function.Consumer;
  * Bare arithmetic for modifier commands. Expressions use standard
  * precedence: parentheses, exponents ({@code **}, right associative),
  * unary signs, then {@code * / // %} left to right, then
- * {@code + -} left to right. {@code //} is floor division,
- * {@code %} is remainder, and {@code ??} is null coalescing with
- * the loosest binding. Quoted spans group subexpressions and the
+ * {@code + -} left to right. {@code //} is floor division and
+ * {@code %} is remainder. Quoted spans group subexpressions and the
  * {@code null} literal propagates through math. No Bukkit types.
  */
 public final class TagMath {
@@ -43,9 +42,9 @@ public final class TagMath {
     }
 
     /**
-     * Evaluates one operand: math when it parses (numbers, groups,
-     * {@code ??}), else literal text. Math that parses but cannot
-     * run warns and yields 0.
+     * Evaluates one operand: math when it parses (numbers, groups),
+     * else literal text. Math that parses but cannot run warns and
+     * yields 0.
      */
     static Value evalValue(String raw, Consumer<String> warn, String where) {
         String text = unquote(raw.strip());
@@ -86,7 +85,7 @@ public final class TagMath {
             throw new SyntaxException("empty expression");
         }
         Parser parser = new Parser(compact);
-        Double value = parser.coalesce();
+        Double value = parser.additive();
         if (parser.pos != compact.length()) {
             throw new SyntaxException("unexpected '" + compact.charAt(parser.pos) + "'");
         }
@@ -112,16 +111,6 @@ public final class TagMath {
 
         private Parser(String text) {
             this.text = text;
-        }
-
-        private Double coalesce() throws SyntaxException, EvalException {
-            Double left = additive();
-            if (peek("??")) {
-                pos += 2;
-                Double right = coalesce();
-                return left != null ? left : right;
-            }
-            return left;
         }
 
         private Double additive() throws SyntaxException, EvalException {
@@ -176,7 +165,7 @@ public final class TagMath {
         private Double primary() throws SyntaxException, EvalException {
             if (peek("(")) {
                 pos++;
-                Double value = coalesce();
+                Double value = additive();
                 if (!peek(")")) {
                     throw new SyntaxException("unclosed '('");
                 }

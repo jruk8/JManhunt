@@ -290,7 +290,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     /** Tag context for one modifier dispatch run: id, sinks, stats, flags, event args. */
     private TagContext tagContext(String name, Player executor, ModifierTagScope scope, long matchId,
             List<String> eventArgs) {
-        return TagContext.run(scope, name,
+        TagContext context = TagContext.run(scope, name,
                 text -> messages.broadcastText(sinks.formatEngineMessage(text)),
                 text -> {
                     if (executor != null) {
@@ -318,6 +318,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                 (role, soundId, pitch, volume) -> sinks.playRoleSound(name, matchId, scope, role,
                         soundId, pitch, volume),
                 (line, provenance) -> sinks.runTagCommand(line, provenance));
+        context.setCooldowns(game.cooldownStore());
+        return context;
     }
 
     /**

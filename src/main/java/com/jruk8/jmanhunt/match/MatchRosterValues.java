@@ -136,4 +136,17 @@ public final class MatchRosterValues implements RosterValues {
         }
         return Optional.of(count);
     }
+
+    @Override
+    public Optional<String> heldItem(String playerName) {
+        Player found = NamedPlayerSinks.onlinePlayer(playerName);
+        if (found == null || found.getInventory() == null) {
+            return Optional.empty();
+        }
+        ItemStack held = found.getInventory().getItemInMainHand();
+        if (held == null || held.getType() == Material.AIR) {
+            return Optional.empty();
+        }
+        return Optional.of(held.getType().name());
+    }
 }

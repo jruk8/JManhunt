@@ -196,4 +196,66 @@ class TagListOpsTest {
         assertEquals("[b, a]", fixture.replace("<gflag:dupes>", context));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }
+
+    @Test
+    void filterBindsLoopItemPerEntry() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+
+        assertEquals("[bb, abc]", fixture.replace(
+                "<list.filter:[a,bb,abc],<str.contains:<i>,b>>", context));
+        assertEquals("[2, 3]", fixture.replace(
+                "<list.filter:[1,2,3],<if:\"<i> gt 1\",\"true\",\"false\">>", context));
+        assertEquals("[a, b]", fixture.replace("<list.filter:[a,b],TRUE>", context));
+        assertEquals("[]", fixture.replace("<list.filter:[a,b],false>", context));
+        assertEquals("[]", fixture.replace("<list.filter:[a,b],1>", context));
+        assertEquals("null", fixture.replace("<list.filter:plain,<i>>", context));
+        assertEquals("null", fixture.replace("<list.filter:[a]>", context));
+        assertEquals(2, fixture.warnings.size());
+    }
+
+    @Test
+    void sliceClampsAndCountsFromTheEnd() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+
+        assertEquals("[b, c]", fixture.replace("<list.slice:[a,b,c],1,3>", context));
+        assertEquals("[a, b]", fixture.replace("<list.slice:[a,b,c],0,-1>", context));
+        assertEquals("[b, c]", fixture.replace("<list.slice:[a,b,c],-2,99>", context));
+        assertEquals("[a, b, c]", fixture.replace("<list.slice:[a,b,c],-99,99>", context));
+        assertEquals("[]", fixture.replace("<list.slice:[a,b,c],2,1>", context));
+        assertEquals("[]", fixture.replace("<list.slice:[a,b,c],9,9>", context));
+        assertEquals("[]", fixture.replace("<list.slice:plain,0,1>", context));
+        assertEquals("null", fixture.replace("<list.slice:[a,b],0,x>", context));
+        assertEquals("null", fixture.replace("<list.slice:[a,b],0>", context));
+        assertEquals(2, fixture.warnings.size());
+    }
+
+    @Test
+    void readOnlyOps() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+
+        assertEquals("[c, b, a]", fixture.replace("<list.reverse:[a,b,c]>", context));
+        assertEquals("a-b", fixture.replace("<list.join:[a,b],->", context));
+        assertEquals("ab", fixture.replace("<list.join:[a,b],>", context));
+        assertEquals("a", fixture.replace("<list.first:[a,b]>", context));
+        assertEquals("b", fixture.replace("<list.last:[a,b]>", context));
+        assertEquals("null", fixture.replace("<list.first:[]>", context));
+        assertEquals("null", fixture.replace("<list.last:plain>", context));
+        assertEquals("null", fixture.replace("<list.join:plain,->", context));
+        assertEquals(1, fixture.warnings.size());
+    }
+
+    @Test
+    void filterSliceJoinCompose() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+
+        assertEquals("[c]", fixture.replace(
+                "<list.filter:<list.slice:[a,b,c],1,3>,<str.contains:<i>,c>>", context));
+        assertEquals("c-b", fixture.replace(
+                "<list.join:<list.reverse:<list.slice:[a,b,c,d],1,3>>,->", context));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
 }

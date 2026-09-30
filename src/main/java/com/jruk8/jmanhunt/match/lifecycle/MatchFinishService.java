@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.api.events.JMatchCancelEvent;
 import com.jruk8.jmanhunt.api.events.JMatchEndEvent;
 import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
 import com.jruk8.jmanhunt.command.FlagStore;
+import com.jruk8.jmanhunt.command.TagCooldownStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.LeaveDestination;
@@ -60,6 +61,7 @@ public final class MatchFinishService {
     private final PrestartService prestart;
     private final AutostartService autostart;
     private final FlagStore flagStore;
+    private final TagCooldownStore cooldowns;
     private final MatchEliminationService elimination;
     private final MatchLeaveService leave;
     private final List<Consumer<GameInstance>> gameEndListeners = new ArrayList<>();
@@ -68,7 +70,7 @@ public final class MatchFinishService {
             CompassManager compass, StatsManager stats, GameStateCommandManager stateCommands,
             ConfigService configService, WorldEngineService worldEngine, MatchStore store,
             MatchMessaging messaging, TimeLimitService timeLimits, PrestartService prestart,
-            AutostartService autostart, FlagStore flagStore) {
+            AutostartService autostart, FlagStore flagStore, TagCooldownStore cooldowns) {
         this.plugin = plugin;
         this.messages = messages;
         this.playerStates = playerStates;
@@ -82,6 +84,7 @@ public final class MatchFinishService {
         this.prestart = prestart;
         this.autostart = autostart;
         this.flagStore = flagStore;
+        this.cooldowns = cooldowns;
         this.elimination = new MatchEliminationService(plugin, playerStates, compass, store,
                 messaging, flagStore, this::finishIfBucketEmpty);
         this.leave = new MatchLeaveService(plugin, messages, playerStates, compass, stateCommands,
@@ -323,6 +326,7 @@ public final class MatchFinishService {
         playerStates.clearMatchFor(clearIds);
         stats.clearMatch(teardownId);
         flagStore.clearMatch(teardownId);
+        cooldowns.clearMatch(teardownId);
         store.removeInstance(teardownId);
         plugin.logger().debug(DebugLevel.INFO, "debug.match-end", Map.of("index", GameManager.cellString(instance)));
         worldEngine.prepareNextCell();

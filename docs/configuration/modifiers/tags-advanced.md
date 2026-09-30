@@ -47,7 +47,7 @@ non-letter-or-digit boundary on each side (spaces work, so does the
 edge of the condition), which keeps them distinct from tag brackets:
 
 ```yaml
-- '<if:"<pstat:<p>,health> le 7 and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 gt 300","give <p> golden_apple","exit">'
+- '<if:"<pstat:<p>,health> le 7 and <gstat:duration>-<default:<pflag:lastuse-<id>>,-999999> gt 300","give <p> golden_apple","exit">'
 ```
 
 An `<if>` without an else branch yields nothing when the condition
@@ -66,8 +66,10 @@ instead. Quote the condition when it holds commas or nested tags.
 
 Flags are variables commands can share. Omit the value to read, pass
 one to write; writes return nothing, and reads of unset flags yield
-`null`, which pairs with `??` for defaults. Names match exactly and
-may hold spaces inside quotes.
+`null`, which pairs with `<default>` for fallbacks.
+`<default:<pflag:cooldown>,0>` reads `0` until the flag is set; any
+blank or case-blind `null` value falls back, anything else passes
+through. Names match exactly and may hold spaces inside quotes.
 
 | Tag | Scope | Lifetime |
 | --- | --- | --- |
@@ -112,6 +114,12 @@ survive. Positions start at `0`, and out-of-range reads yield `null`:
 | `<list.pop:[a,b]>` | `b`, the last item. |
 | `<list.shuffle:[a,b]>` | The items in random order. |
 | `<list.clear:[a,b]>` | `[]`. |
+| `<list.filter:[a,b],cond>` | Items whose condition resolves to `true`. |
+| `<list.reverse:[a,b]>` | `[b, a]`. |
+| `<list.join:[a,b],->` | `a-b`. |
+| `<list.slice:[a,b,c],1,3>` | `[b, c]`. |
+| `<list.first:[a,b]>` | `a` (`null` when empty). |
+| `<list.last:[a,b]>` | `b` (`null` when empty). |
 | `<range:5>` | `[0, 1, 2, 3, 4]`; `<range:1,5>` starts at `1`, and `<range:5,0,-1>` counts down. |
 
 `<range>` follows Python: start inclusive, stop exclusive, step `1`
@@ -123,6 +131,52 @@ The mutating ops (`append`, `set`, `remove`, `clear`, `pop`,
 `<list.append:<gflag:nums>,4>` grows the stored flag and leaves
 nothing behind. Anything else (literals, other expressions) applies
 purely and returns the new list.
+
+`<list.filter:list,condition>` keeps the items whose condition
+resolves to `true` (case-blind, nothing else counts), with each
+item behind `<i>` in turn:
+`<list.filter:[a,bb,abc],<str.contains:<i>,b>>` is `[bb, abc]`.
+The condition re-resolves per item like a loop body and must hold
+no top-level commas, so quote-free tag expressions work best; each
+item spends one shared line step like a loop iteration. A non-list
+warns and yields `null`.
+
+`<list.slice:list,start,end>` follows Python: start inclusive, end
+exclusive, negatives count from the end, out-of-range bounds clamp.
+Non-integer bounds warn and yield `null`. `<list.reverse>` returns
+a reversed copy, `<list.first>` and `<list.last>` read the ends
+(`null` when empty), and `<list.join:list,separator>` joins with
+the separator verbatim (it may be empty). Joining a non-list warns
+and yields `null`.
+
+## Strings
+
+`<str.join:list,separator>` is the same join as `<list.join>`,
+and `<str.split:text,delimiter>` inverts it: the split is literal
+(never a pattern) and keeps every part, so splitting a join
+restores the list exactly. The delimiter must be non-empty, and
+text holding commas needs quotes (`<str.split:"a,b",",">` is
+`[a, b]`); dynamic comma text nests behind quotes too
+(`<str.split:"<gflag:csv>",",">`). `<str.lower>` and `<str.upper>`
+fold case, and `<str.contains:text,needle>` is a case-sensitive
+`true`/`false` test.
+
+## Cooldowns
+
+`<cooldown:key,seconds>` stamps the key and yields `true` when no
+stamp exists or the window elapsed, else `false` without
+re-stamping; `<cooldown.get:key,seconds>` reads the remaining
+window (`0` when ready or unknown), and `<cooldown.reset:key>`
+clears and yields `true`. Keys are plain match-scoped strings, so
+compose per-player keys with `<p>`:
+
+```yaml
+- '<if:"<cooldown:dash-<p>,5> == false","exit">'
+- 'effect give <p> minecraft:speed 5 1 true'
+```
+
+Non-numeric or negative seconds warn and yield `null`, as do blank
+keys. Stamps clear with the match on teardown.
 
 ## Loops
 

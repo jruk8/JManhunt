@@ -379,7 +379,7 @@ modifiers:
             - "<lflag:maxhp,60>"
             - "<lflag:step,4>"
             # Cache the baseline the first time this runs for a player.
-            - "<pflag:basehp,<pflag:basehp> ?? <pstat:<p>,max-health>>"
+            - "<pflag:basehp,<default:<pflag:basehp>,<pstat:<p>,max-health>>>"
             # Baseline + step per kill, capped at maxhp (0 kills = baseline).
             - "<lflag:target,<min:<pflag:basehp>+<lflag:step>*<placeholder:jmanhunt_game_kills_this_session>,<lflag:maxhp>>>"
             - "attribute <p> minecraft:max_health base set <lflag:target>"
@@ -411,7 +411,7 @@ modifiers:
         commands:
           speedrunner:
             - '<if:"<phasitem:<p>,golden_apple> == true","exit">'
-            - '<if:"<pstat:<p>,health> le 7 and <gstat:duration>-<pflag:lastuse-<id>> ?? 999999 gt 300","give <p> golden_apple","exit">'
+            - '<if:"<pstat:<p>,health> le 7 and <gstat:duration>-<default:<pflag:lastuse-<id>>,-999999> gt 300","give <p> golden_apple","exit">'
             - "<pflag:lastuse-<id>,<gstat:duration>>"
 
 # Named groups of modifiers. A preset has no state of its own: it reads

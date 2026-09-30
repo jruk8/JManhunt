@@ -498,6 +498,32 @@ public final class TagExpressions {
     }
 
     /**
+     * {@code <default:value,fallback>}: the value unless it is blank
+     * or case-blind {@code null}, else the fallback. Quote-parsed
+     * like list args; misuse warns plus {@code "null"}.
+     */
+    static String defaultValue(String tag, String args, TagContext context) {
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 2) {
+            context.scope().warn("Tag <default> needs a value plus a fallback like "
+                    + "<default:<pflag:x>,0>: " + tag);
+            return "null";
+        }
+        Optional<String> value = CommandPlaceholders.parsePickItem(parts.get(0));
+        Optional<String> fallback = CommandPlaceholders.parsePickItem(parts.get(1));
+        if ((value.isEmpty() && !parts.get(0).isBlank())
+                || (fallback.isEmpty() && !parts.get(1).isBlank())) {
+            context.scope().warn("Tag <default> mixes quotes: " + tag);
+            return "null";
+        }
+        String text = value.orElse("");
+        if (text.isBlank() || text.strip().equalsIgnoreCase("null")) {
+            return fallback.orElse("");
+        }
+        return text;
+    }
+
+    /**
      * {@code <loseplayer:player,reason>}: eliminates one player by
      * name through the context sink and returns empty. The reason is
      * everything after the first comma and defaults to unknown
@@ -628,7 +654,8 @@ public final class TagExpressions {
     }
 
     static boolean isRootChar(char letter) {
-        return letter == '_' || letter == '-' || Character.isLetterOrDigit(letter);
+        return letter == '_' || letter == '-' || letter == '.'
+                || Character.isLetterOrDigit(letter);
     }
 
     /** Inclusive index of the balancing {@code >}, or null when unclosed. Shared with loops. */

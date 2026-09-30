@@ -31,6 +31,7 @@ import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStartService;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.StatValues;
+import com.jruk8.jmanhunt.command.TagCooldownStore;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartService;
@@ -56,6 +57,7 @@ public final class GameManager implements MatchControl {
     private final MatchStartService matchStart;
     private final PseudoborderParticleService pseudoborderParticles;
     private final FlagStore flagStore;
+    private final TagCooldownStore cooldownStore;
     private final StatsManager stats;
     private final WinConditionTextService winConditions;
 
@@ -74,6 +76,7 @@ public final class GameManager implements MatchControl {
                 messages, sounds, this);
         this.store = new MatchStore(playerStates);
         this.flagStore = new FlagStore();
+        this.cooldownStore = new TagCooldownStore();
         this.stats = stats;
         this.messaging = new MatchMessaging(messages, sounds, configService, store, lobbies);
         this.timeLimits = new TimeLimitService(plugin, winConditionEngine, store, messaging, this);
@@ -83,7 +86,7 @@ public final class GameManager implements MatchControl {
                 worldEngine, store, messaging, this);
         this.matchFinish = new MatchFinishService(plugin, messages, playerStates, compass, stats,
                 stateCommands, configService, worldEngine, store, messaging, timeLimits, prestart,
-                autostart, flagStore);
+                autostart, flagStore, cooldownStore);
         this.matchStart = new MatchStartService(plugin, messages, sounds, playerStates, compass, stats,
                 stateCommands, configService, worldEngine, lobbies, store, messaging, timeLimits,
                 prestart, autostart);
@@ -122,6 +125,8 @@ public final class GameManager implements MatchControl {
     public Integer lobbyOfPlayer(UUID playerId) { return store.lobbyOfPlayer(playerId); }
     /** Shared flag store behind command tags; cleared per match on teardown. */
     public FlagStore flagStore() { return flagStore; }
+    /** Shared cooldown stamps behind command tags; cleared per match on teardown. */
+    public TagCooldownStore cooldownStore() { return cooldownStore; }
     /** Stat values bound to one match for one tag run. */
     public StatValues matchStatValues(long matchId) {
         return new MatchStatValues(stats, store, matchId);

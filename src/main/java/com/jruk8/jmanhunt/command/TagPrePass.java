@@ -13,8 +13,9 @@ import java.util.regex.Pattern;
 /**
  * Span pre-passes for tag evaluation: constructs the plain
  * innermost-tag scan cannot see (loop bodies with per-iteration
- * values, if conditions with bare comparisons, mutating list ops
- * with flag references) resolve here first. No Bukkit types.
+ * values, if conditions with bare comparisons, filter conditions
+ * binding {@code <i>}, mutating list ops with flag references)
+ * resolve here first. No Bukkit types.
  */
 final class TagPrePass {
 
@@ -31,10 +32,10 @@ final class TagPrePass {
 
     /**
      * Start/end pairs shielding plain-tag windows from span innards:
-     * outermost defs and loops, ready ifs (no nested if, so plain
-     * tags inside unready outers still resolve eagerly as before),
-     * and flag-ref mutators (pure mutators stay plain-phase).
-     * Computed fresh per walk on the current text.
+     * outermost defs, loops, and filters, ready ifs (no nested if,
+     * so plain tags inside unready outers still resolve eagerly as
+     * before), and flag-ref mutators (pure mutators stay
+     * plain-phase). Computed fresh per walk on the current text.
      */
     static List<int[]> protectionSpans(String command) {
         List<int[]> spans = new ArrayList<>();
@@ -42,6 +43,9 @@ final class TagPrePass {
             spans.add(new int[] {span.start(), span.end()});
         }
         for (TagLoops.LoopSpan span : TagLoops.findLoopSpans(command)) {
+            spans.add(new int[] {span.start(), span.end()});
+        }
+        for (TagLoops.LoopSpan span : TagLists.findFilterSpans(command)) {
             spans.add(new int[] {span.start(), span.end()});
         }
         for (TagExpressions.IfSpan span : TagExpressions.findIfSpans(command)) {
@@ -193,6 +197,25 @@ final class TagPrePass {
     }
 
     /**
+     * Resolves outermost filter spans, left to right, resolving the
+     * strict-prefix plain window before each span through the gap
+     * function. Nested filters wait for the condition evaluation of
+     * their enclosing filter, which recurses through the evaluation
+     * chain per item.
+     */
+    static String resolveFilterSpans(String command, TagContext context,
+            TagLoops.Evaluator eval, BiFunction<String, Integer, String> gap) {
+        List<TagLoops.LoopSpan> spans = TagLists.findFilterSpans(command);
+        if (spans.isEmpty()) {
+            return command;
+        }
+        return stitch(command, spans, TagLoops.LoopSpan::start, TagLoops.LoopSpan::end,
+                span -> TagLists.filterSpan(command.substring(span.start(), span.end()),
+                        span.args(), context, eval),
+                gap);
+    }
+
+    /**
      * Resolves mutating list spans whose list arg is a verbatim flag
      * reference, writing the result back to that flag. Spans holding
      * other expressions are left for generic inside-out evaluation,
@@ -218,7 +241,7 @@ final class TagPrePass {
             }
             String tag = command.substring(span.start(), span.end());
             String resolved = TagLists.writeBack(tag, span.op(), ref.get().kind(), ref.get().name(),
-                    rest, context);
+                    rest, context, eval);
             result.replace(span.start(), span.end(), resolved);
         }
         return result.toString();

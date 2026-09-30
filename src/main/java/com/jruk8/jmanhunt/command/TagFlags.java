@@ -6,8 +6,9 @@ import java.util.Optional;
 /**
  * Flag tags behind {@code <gflag>}, {@code <pflag>},
  * {@code <rflag>}, and {@code <lflag>}. One value arg sets, none
- * gets; a get of an unset flag yields {@code null} so {@code ??} can
- * catch it. Sets return empty like the other side-effect tags. Names
+ * gets; a get of an unset flag yields {@code null} so
+ * {@code <default>} can catch it. Sets return empty like the other
+ * side-effect tags. Names
  * match exactly; global, player, and role flags need a live match
  * while local flags only need their run.
  */

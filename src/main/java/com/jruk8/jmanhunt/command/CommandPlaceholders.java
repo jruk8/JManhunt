@@ -409,10 +409,10 @@ public final class CommandPlaceholders {
      * their conditions may hold bare {@code < > <= >=} that the plain
      * innermost scan cannot see. Mutating list tags with flag
      * references resolve last so they can write back before the
-     * reference itself resolves to a value. Loops and ifs walk left
-     * to right with the strict-prefix plain window before each span
-     * resolved first, so earlier writes are visible later on the
-     * line; a final sweep resolves the remaining plain tags.
+     * reference itself resolves to a value. Loops, ifs, and filters
+     * walk left to right with the strict-prefix plain window before
+     * each span resolved first, so earlier writes are visible later
+     * on the line; a final sweep resolves the remaining plain tags.
      */
     private static String evaluateTags(String command, String playerName, TagContext context) {
         String current = command;
@@ -420,6 +420,7 @@ public final class CommandPlaceholders {
         for (int pass = 0; pass < MAX_TAG_PASSES; pass++) {
             String stepped = TagPrePass.resolveDefSpans(current, context);
             stepped = walkLoops(stepped, playerName, context, eval);
+            stepped = walkFilters(stepped, playerName, context, eval);
             stepped = walkIfs(stepped, playerName, context, eval);
             stepped = TagPrePass.resolveListSpans(stepped, context, eval);
             boolean changed = !stepped.equals(current);
@@ -453,6 +454,15 @@ public final class CommandPlaceholders {
             TagLoops.Evaluator eval) {
         List<int[]> protections = TagPrePass.protectionSpans(command);
         return TagPrePass.resolveIfSpans(command, context, eval,
+                (gap, base) -> resolvePlainWindow(gap, base, protections, playerName,
+                        context, eval));
+    }
+
+    /** Filters walk with prefix windows over the current text. */
+    private static String walkFilters(String command, String playerName, TagContext context,
+            TagLoops.Evaluator eval) {
+        List<int[]> protections = TagPrePass.protectionSpans(command);
+        return TagPrePass.resolveFilterSpans(command, context, eval,
                 (gap, base) -> resolvePlainWindow(gap, base, protections, playerName,
                         context, eval));
     }
@@ -516,7 +526,15 @@ public final class CommandPlaceholders {
             case "win" -> TagExpressions.win(tag, args, context);
             case "args" -> TagArgs.resolve(tag, args, context);
             case "list.append", "list.get", "list.set", "list.remove", "list.contains", "list.clear",
-                    "list.pop", "len", "list.shuffle" -> TagLists.resolve(tag, name, args, context);
+                    "list.pop", "len", "list.shuffle", "list.filter", "list.reverse", "list.join",
+                    "list.slice", "list.first", "list.last" ->
+                    TagLists.resolve(tag, name, args, context, eval);
+            case "str.join", "str.split", "str.lower", "str.upper", "str.contains" ->
+                    TagStrings.resolve(tag, name, args, context);
+            case "cooldown", "cooldown.get", "cooldown.reset" ->
+                    TagCooldowns.resolve(tag, name, args, context);
+            case "default" -> TagExpressions.defaultValue(tag, args, context);
+            case "pheld" -> TagItems.held(tag, args, context);
             case "range" -> TagLists.range(tag, args, context);
             case "active-players" -> TagRoster.activePlayers(tag, args, context);
             case "plocation" -> TagLocations.plocation(tag, args, context);

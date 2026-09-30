@@ -69,6 +69,12 @@ public final class PlaceholderCheatsheet {
             Map.entry("list.pop", new String[]{"<list.pop:list>", "remove and return first item"}),
             Map.entry("len", new String[]{"<len:list>", "item count, 0 when no list"}),
             Map.entry("list.shuffle", new String[]{"<list.shuffle:list>", "shuffle, store back, empty"}),
+            Map.entry("list.filter", new String[]{"<list.filter:list,cond>", "items where cond is true"}),
+            Map.entry("list.reverse", new String[]{"<list.reverse:list>", "reversed copy"}),
+            Map.entry("list.join", new String[]{"<list.join:list,sep>", "items joined with sep"}),
+            Map.entry("list.slice", new String[]{"<list.slice:list,start,end>", "python-style slice"}),
+            Map.entry("list.first", new String[]{"<list.first:list>", "first item, else null"}),
+            Map.entry("list.last", new String[]{"<list.last:list>", "last item, else null"}),
             Map.entry("active-players", new String[]{"<active-players:ROLE>", "eligible names as a list"}),
             Map.entry("plocation", new String[]{"<plocation:player>", "player location list"}),
             Map.entry("prole", new String[]{"<prole:player>", "HUNTER or SPEEDRUNNER, else null"}),
@@ -101,7 +107,17 @@ public final class PlaceholderCheatsheet {
             Map.entry("rflag", new String[]{"<rflag:hunter,boost>", "flag of the named role"}),
             Map.entry("rmessage", new String[]{"<rmessage:hunter,push!>", "tells the named role"}),
             Map.entry("rmsg", new String[]{"<rmsg:hunter,push!>", "alias of rmessage"}),
-            Map.entry("rsound", new String[]{"<rsound:hunter,id>", "plays for the named role"}));
+            Map.entry("rsound", new String[]{"<rsound:hunter,id>", "plays for the named role"}),
+            Map.entry("str.join", new String[]{"<str.join:list,sep>", "items joined with sep"}),
+            Map.entry("str.split", new String[]{"<str.split:text,delim>", "literal split to list"}),
+            Map.entry("str.lower", new String[]{"<str.lower:text>", "lowercase"}),
+            Map.entry("str.upper", new String[]{"<str.upper:text>", "UPPERCASE"}),
+            Map.entry("str.contains", new String[]{"<str.contains:text,needle>", "true when held"}),
+            Map.entry("cooldown", new String[]{"<cooldown:key,seconds>", "true when ready, stamps"}),
+            Map.entry("cooldown.get", new String[]{"<cooldown.get:key,seconds>", "seconds left, else 0"}),
+            Map.entry("cooldown.reset", new String[]{"<cooldown.reset:key>", "clears, true"}),
+            Map.entry("default", new String[]{"<default:value,fallback>", "fallback when blank/null"}),
+            Map.entry("pheld", new String[]{"<pheld:player>", "main-hand material, else null"}));
 
     private PlaceholderCheatsheet() {
     }

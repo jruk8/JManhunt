@@ -46,6 +46,7 @@ see the Tags pages for full rules.
 | `<pstat:player,key>` | One player's stat (`health`, `hunger`, ...). |
 | `<gstat:key>` | Match-wide stat (`duration`, ...). |
 | `<phasitem:player,item,count>` | `true` when the player holds count of item. |
+| `<pheld:player>` | Main-hand material, else `null`. |
 | `<active-players:ROLE>` | Eligible names as a list (`ALL` lists both sides). |
 | `<plocation:player>` | Player spot as `[x, y, z, world, pitch, yaw]`. |
 | `<overlap-players:origin,role,radius,max>` | Names near an origin, nearest first. |
@@ -93,6 +94,30 @@ see the Tags pages for full rules.
 | `<list.clear:list>` | Empty the list, store back. |
 | `<list.pop:list>` | Remove and return the first item. |
 | `<list.shuffle:list>` | Shuffle, store back, empty. |
+| `<list.filter:list,cond>` | Items whose condition is `true` (`<i>` bound). |
+| `<list.reverse:list>` | Reversed copy. |
+| `<list.join:list,sep>` | Items joined with `sep`. |
+| `<list.slice:list,start,end>` | Python-style slice. |
+| `<list.first:list>` | First item, `null` when empty. |
+| `<list.last:list>` | Last item, `null` when empty. |
+
+### Strings
+
+| Tag | Meaning |
+| --- | --- |
+| `<str.join:list,sep>` | Same join as `<list.join>`. |
+| `<str.split:text,delim>` | Literal split to a list. |
+| `<str.lower:text>` | Lowercase. |
+| `<str.upper:text>` | Uppercase. |
+| `<str.contains:text,needle>` | `true` when held (case-sensitive). |
+
+### Cooldowns
+
+| Tag | Meaning |
+| --- | --- |
+| `<cooldown:key,seconds>` | `true` when ready, stamps. |
+| `<cooldown.get:key,seconds>` | Seconds left, else `0`. |
+| `<cooldown.reset:key>` | Clears, `true`. |
 
 ### Flags
 
@@ -102,6 +127,7 @@ see the Tags pages for full rules.
 | `<pflag:name,value>` | Per-player flag (alias `<pf>`). |
 | `<lflag:name,value>` | Run-only flag (alias `<lf>`). |
 | `<rflag:role,name,value>` | Flag of the named role (`ALL` fans out sets, reads consensus). |
+| `<default:value,fallback>` | Fallback when blank or `null`. |
 
 ### Loops and Functions
 

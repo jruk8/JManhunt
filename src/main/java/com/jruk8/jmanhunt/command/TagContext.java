@@ -82,6 +82,7 @@ public final class TagContext {
     private final RoleSoundSink roleSound;
     private final BiConsumer<String, String> commandRun;
     private Provenance provenance;
+    private TagCooldownStore cooldowns = new TagCooldownStore();
     private int stepBudget = TagLoops.LOOP_LIMIT;
     private boolean limitFired;
 
@@ -224,6 +225,19 @@ public final class TagContext {
 
     public ModifierTagScope scope() {
         return scope;
+    }
+
+    /** Cooldown stamps behind {@code <cooldown>} and siblings. */
+    public TagCooldownStore cooldowns() {
+        return cooldowns;
+    }
+
+    /**
+     * Points this run at the shared match store; managers call this
+     * per run. Fresh contexts start with a private empty store.
+     */
+    public void setCooldowns(TagCooldownStore cooldowns) {
+        this.cooldowns = cooldowns;
     }
 
     public String containerId() {

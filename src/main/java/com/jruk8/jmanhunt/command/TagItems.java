@@ -5,11 +5,11 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Inventory tag behind {@code <phasitem:player,item,qty>}: true when
- * the named online player holds at least qty of the item in storage
- * contents. Reads through the context roster; managers own every
- * Bukkit call. Always resolves "true" or "false" so {@code == true}
- * comparisons stay total.
+ * Inventory tags behind {@code <phasitem:player,item,qty>} and
+ * {@code <pheld:player>}: storage counts and the main-hand
+ * material. Reads through the context roster; managers own every
+ * Bukkit call. {@code phasitem} always resolves "true" or "false"
+ * so {@code == true} comparisons stay total.
  */
 public final class TagItems {
 
@@ -96,5 +96,24 @@ public final class TagItems {
             return "false";
         }
         return count.get() >= qty ? "true" : "false";
+    }
+
+    /**
+     * Resolves {@code <pheld:player>}: the upper-case main-hand
+     * material. Offline, unknown, or empty-handed players resolve
+     * {@code null} silently.
+     */
+    static String held(String tag, String args, TagContext context) {
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 1) {
+            context.scope().warn("Tag <pheld> needs a player like <pheld:Steve>: " + tag);
+            return "null";
+        }
+        Optional<String> name = CommandPlaceholders.parsePickItem(parts.get(0));
+        if (name.isEmpty() || name.get().isBlank()) {
+            context.scope().warn("Tag <pheld> needs a player like <pheld:Steve>: " + tag);
+            return "null";
+        }
+        return context.roster().heldItem(name.get().strip()).orElse("null");
     }
 }

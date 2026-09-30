@@ -250,6 +250,18 @@ public final class ModifierTestService {
                 }
                 return Optional.of(count);
             }
+
+            @Override
+            public Optional<String> heldItem(String playerName) {
+                if (!playerName.equalsIgnoreCase(name) || sender.getInventory() == null) {
+                    return Optional.empty();
+                }
+                ItemStack held = sender.getInventory().getItemInMainHand();
+                if (held == null || held.getType() == Material.AIR) {
+                    return Optional.empty();
+                }
+                return Optional.of(held.getType().name());
+            }
         };
     }
 }

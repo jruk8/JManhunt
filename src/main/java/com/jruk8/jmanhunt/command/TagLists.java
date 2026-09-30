@@ -134,8 +134,9 @@ public final class TagLists {
      * applies without persistence (used for literal and resolved
      * list args).
      */
-    static String resolve(String tag, String op, String args, TagContext context) {
-        return apply(tag, op, splitTopLevel(args), context).text();
+    static String resolve(String tag, String op, String args, TagContext context,
+            TagLoops.Evaluator eval) {
+        return apply(tag, op, splitTopLevel(args), context, eval).text();
     }
 
     /**
@@ -143,9 +144,10 @@ public final class TagLists {
      * hygiene, plus the per-op shape. Mirrors the runtime warns.
      */
     static Optional<String> opError(String name, String args) {
-        int arity = name.equals("list.set") ? 3 : name.equals("list.append")
-                || name.equals("list.get") || name.equals("list.remove")
-                || name.equals("list.contains") ? 2 : 1;
+        int arity = name.equals("list.set") || name.equals("list.slice") ? 3
+                : name.equals("list.append") || name.equals("list.get") || name.equals("list.remove")
+                        || name.equals("list.contains") || name.equals("list.filter")
+                        || name.equals("list.join") ? 2 : 1;
         String example = switch (name) {
             case "list.append" -> "<list.append:list,x>";
             case "list.get" -> "<list.get:list,index>";
@@ -155,6 +157,12 @@ public final class TagLists {
             case "list.clear" -> "<list.clear:list>";
             case "list.pop" -> "<list.pop:list>";
             case "list.shuffle" -> "<list.shuffle:list>";
+            case "list.filter" -> "<list.filter:list,cond>";
+            case "list.reverse" -> "<list.reverse:list>";
+            case "list.join" -> "<list.join:list,sep>";
+            case "list.slice" -> "<list.slice:list,start,end>";
+            case "list.first" -> "<list.first:list>";
+            case "list.last" -> "<list.last:list>";
             default -> "<len:list>";
         };
         if (args == null || args.isBlank()) {
@@ -247,16 +255,40 @@ public final class TagLists {
      * must be pre-evaluated by the caller.
      */
     static String writeBack(String tag, String op, String kind, String name,
-            List<String> evaluatedRest, TagContext context) {
+            List<String> evaluatedRest, TagContext context, TagLoops.Evaluator eval) {
         String current = TagFlags.loadFlag(kind, name, context);
         List<String> segments = new ArrayList<>();
         segments.add(current);
         segments.addAll(evaluatedRest);
-        OpResult result = apply(tag, op, segments, context);
+        OpResult result = apply(tag, op, segments, context, eval);
         if (result.writeBack() != null) {
             TagFlags.storeFlag(kind, name, format(result.writeBack()), tag, context);
         }
         return result.text();
+    }
+
+    /**
+     * Validates arity and quotes, then parses each segment. Misuse
+     * warns and yields empty; the caller maps that to the op's
+     * failure value.
+     */
+    private static Optional<List<String>> parsedArgs(String tag, String op,
+            List<String> segments, TagContext context) {
+        if (segments.size() != arity(op)) {
+            context.scope().warn("Tag <" + op + "> needs " + arity(op) + " args like "
+                    + example(op) + ": " + tag);
+            return Optional.empty();
+        }
+        List<String> args = new ArrayList<>();
+        for (String segment : segments) {
+            Optional<String> item = CommandPlaceholders.parsePickItem(segment);
+            if (item.isEmpty() && !segment.isBlank()) {
+                context.scope().warn("Tag <" + op + "> mixes quotes: " + tag);
+                return Optional.empty();
+            }
+            args.add(item.orElse(""));
+        }
+        return Optional.of(args);
     }
 
     /**
@@ -265,22 +297,18 @@ public final class TagLists {
      * {@code len}); data misses (out-of-bounds, absent items) use
      * their specified returns silently.
      */
-    private static OpResult apply(String tag, String op, List<String> segments, TagContext context) {
-        if (segments.size() != arity(op)) {
-            context.scope().warn("Tag <" + op + "> needs " + arity(op) + " args like "
-                    + example(op) + ": " + tag);
+    private static OpResult apply(String tag, String op, List<String> segments, TagContext context,
+            TagLoops.Evaluator eval) {
+        Optional<List<String>> parsed = parsedArgs(tag, op, segments, context);
+        if (parsed.isEmpty()) {
             return new OpResult(failure(op), null);
         }
-        List<String> args = new ArrayList<>();
-        for (String segment : segments) {
-            Optional<String> item = CommandPlaceholders.parsePickItem(segment);
-            if (item.isEmpty() && !segment.isBlank()) {
-                context.scope().warn("Tag <" + op + "> mixes quotes: " + tag);
-                return new OpResult(failure(op), null);
-            }
-            args.add(item.orElse(""));
-        }
+        List<String> args = parsed.get();
         List<String> items = new ArrayList<>(parse(args.get(0)));
+        OpResult extra = applyExtra(tag, op, args, items, context, eval);
+        if (extra != null) {
+            return extra;
+        }
         return switch (op) {
             case "list.append" -> {
                 items.add(args.get(1));
@@ -306,6 +334,142 @@ public final class TagLists {
                 yield new OpResult("", items);
             }
         };
+    }
+
+    /**
+     * Pure read-only ops: filter, reverse, join, slice, first, and
+     * last. Null when the op is not one of them. Never writes back,
+     * so flag references read through without storing.
+     */
+    private static OpResult applyExtra(String tag, String op, List<String> args,
+            List<String> items, TagContext context, TagLoops.Evaluator eval) {
+        return switch (op) {
+            case "list.filter" -> filter(tag, args.get(0), items, args.get(1), context, eval);
+            case "list.reverse" -> reverse(items);
+            case "list.join" -> joinOp(tag, args.get(0), args.get(1), context);
+            case "list.slice" -> slice(tag, items, args.get(1), args.get(2), context);
+            case "list.first" -> new OpResult(items.isEmpty() ? "null" : items.get(0), null);
+            case "list.last" -> new OpResult(items.isEmpty() ? "null"
+                    : items.get(items.size() - 1), null);
+            default -> null;
+        };
+    }
+
+    /**
+     * Eager filter for pre-resolved args: keeps the items whose
+     * condition resolves to {@code true} (case-blind) with the item
+     * behind {@code <i>}. Non-lists warn plus null.
+     */
+    private static OpResult filter(String tag, String raw, List<String> items, String condition,
+            TagContext context, TagLoops.Evaluator eval) {
+        if (!isList(raw)) {
+            context.scope().warn("Tag <list.filter> needs a list like [a, b]: " + tag);
+            return new OpResult("null", null);
+        }
+        return filterItems(tag, items, condition, context, eval);
+    }
+
+    /**
+     * Outermost balanced filter spans: the condition binds
+     * {@code <i>} per item, so spans resolve in the pre-pass like
+     * loops instead of the innermost-tag sweep.
+     */
+    static List<TagLoops.LoopSpan> findFilterSpans(String line) {
+        return TagLoops.findOpSpans(line, "list.filter"::equals);
+    }
+
+    /**
+     * Lazy filter for one span: the list arg resolves once up front
+     * while the condition re-resolves per item with the item behind
+     * {@code <i>}. Bad shapes warn plus {@code "null"}.
+     */
+    static String filterSpan(String tag, String args, TagContext context,
+            TagLoops.Evaluator eval) {
+        List<String> parts = splitTopLevel(args);
+        if (parts.size() != 2) {
+            context.scope().warn("Tag <list.filter> needs a list plus a condition like "
+                    + "<list.filter:list,cond>: " + tag);
+            return "null";
+        }
+        String resolved = eval.evaluate(parts.get(0));
+        if (!isList(resolved)) {
+            context.scope().warn("Tag <list.filter> needs a list like [a, b]: " + tag);
+            return "null";
+        }
+        return filterItems(tag, parse(resolved), parts.get(1), context, eval).text();
+    }
+
+    /**
+     * Keeps the items whose condition resolves to {@code true}
+     * (case-blind) with the item behind {@code <i>}. Each item
+     * spends one shared line step.
+     */
+    private static OpResult filterItems(String tag, List<String> items, String condition,
+            TagContext context, TagLoops.Evaluator eval) {
+        List<String> kept = new ArrayList<>();
+        for (String item : items) {
+            if (!context.tryConsumeStep()) {
+                context.loopLimitExceeded("<list.filter> exceeded " + TagLoops.LOOP_LIMIT
+                        + " steps at " + context.provenance().describe() + ": " + tag);
+                return new OpResult("null", null);
+            }
+            context.pushLoopItem(item);
+            try {
+                if (eval.evaluate(condition).strip().equalsIgnoreCase("true")) {
+                    kept.add(item);
+                }
+            } finally {
+                context.popLoopItem();
+            }
+        }
+        return new OpResult(format(kept), null);
+    }
+
+    /** Reversed copy; the input list is never mutated. */
+    private static OpResult reverse(List<String> items) {
+        List<String> copy = new ArrayList<>(items);
+        Collections.reverse(copy);
+        return new OpResult(format(copy), null);
+    }
+
+    /** Joins through the shared string SSOT; non-lists warn plus null. */
+    private static OpResult joinOp(String tag, String raw, String separator, TagContext context) {
+        if (!isList(raw)) {
+            context.scope().warn("Tag <list.join> needs a list like [a, b]: " + tag);
+            return new OpResult("null", null);
+        }
+        return new OpResult(TagStrings.join(parse(raw), separator), null);
+    }
+
+    /**
+     * Python-style slice: start inclusive, end exclusive, negatives
+     * count from the end, out-of-range bounds clamp. Non-integer
+     * bounds warn plus null.
+     */
+    private static OpResult slice(String tag, List<String> items, String startText,
+            String endText, TagContext context) {
+        Optional<Integer> start = sliceBound(tag, startText, context);
+        Optional<Integer> end = sliceBound(tag, endText, context);
+        if (start.isEmpty() || end.isEmpty()) {
+            return new OpResult("null", null);
+        }
+        int size = items.size();
+        int from = Math.min(Math.max(start.get() < 0 ? size + start.get() : start.get(), 0), size);
+        int to = Math.min(Math.max(end.get() < 0 ? size + end.get() : end.get(), 0), size);
+        if (from >= to) {
+            return new OpResult(format(List.of()), null);
+        }
+        return new OpResult(format(new ArrayList<>(items.subList(from, to))), null);
+    }
+
+    /** Whole-number slice bound; non-numeric warns plus empty. */
+    private static Optional<Integer> sliceBound(String tag, String boundText, TagContext context) {
+        try {
+            return Optional.of(Integer.parseInt(boundText.strip()));
+        } catch (NumberFormatException unmatched) {
+            context.scope().warn("Tag <list.slice> needs whole bounds: " + tag);
+            return Optional.empty();
+        }
     }
 
     /** Element at index, or {@code "null"} when out of bounds. */
@@ -358,8 +522,9 @@ public final class TagLists {
 
     private static int arity(String op) {
         return switch (op) {
-            case "list.set" -> 3;
-            case "list.clear", "list.pop", "len", "list.shuffle" -> 1;
+            case "list.set", "list.slice" -> 3;
+            case "list.clear", "list.pop", "len", "list.shuffle", "list.reverse", "list.first",
+                    "list.last" -> 1;
             default -> 2;
         };
     }
@@ -374,6 +539,12 @@ public final class TagLists {
             case "list.clear" -> "<list.clear:list>";
             case "list.pop" -> "<list.pop:list>";
             case "len" -> "<len:list>";
+            case "list.filter" -> "<list.filter:list,cond>";
+            case "list.reverse" -> "<list.reverse:list>";
+            case "list.join" -> "<list.join:list,sep>";
+            case "list.slice" -> "<list.slice:list,start,end>";
+            case "list.first" -> "<list.first:list>";
+            case "list.last" -> "<list.last:list>";
             default -> "<list.shuffle:list>";
         };
     }

@@ -93,6 +93,7 @@ creator editor validates them as you type:
 | `<active-players:HUNTER>` | Eligible hunters as a list, like `[Alex, Bo]` (`ALL` lists both sides). |
 | `<prole:Alex>` | `HUNTER` or `SPEEDRUNNER` for Alex, else `null`. |
 | `<phasitem:Alex,golden_apple,2>` | `true` when Alex holds at least 2 golden apples, else `false` (the count is 1 when omitted). |
+| `<pheld:Alex>` | Alex's main-hand material, else `null`. |
 | `<plocation:Alex>` | Alex's spot as `[x, y, z, world, pitch, yaw]`. |
 | `<overlap-players:[0,64,0],HUNTER,10,5>` | Up to 5 hunters within 10 blocks of the origin, nearest first. |
 | `<nearby-players:Alex,ALL,10,5>` | Up to 5 players within 10 blocks of Alex, sender excluded. |
@@ -187,10 +188,11 @@ sides warn and stop the line. Nested tags need their own brackets:
 ## Bare math
 
 Any no-space token that fully parses as math evaluates: `give <p> egg
-1+1` hands out 2 eggs. Parentheses, `**`, `//`, `%`, and `??` (null
-coalescing) work; division by zero warns and yields 0. Quote a token
-to protect it: `say "2026-09-26"` stays a date, while a bare
-`2026-09-26` computes to 1991.
+1+1` hands out 2 eggs. Parentheses, `**`, `//`, and `%` work;
+division by zero warns and yields 0. Quote a token to protect it:
+`say "2026-09-26"` stays a date, while a bare `2026-09-26` computes
+to 1991. For fallback values use `<default:value,fallback>` (see
+Flags in the advanced tags).
 
 ## Placeholders
 
