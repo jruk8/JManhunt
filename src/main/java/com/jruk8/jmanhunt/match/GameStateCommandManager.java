@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -177,9 +178,12 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         intervals.cancelIntervalModifiers(matchId);
     }
 
-    /** Cancels every match's interval tasks; see {@link IntervalDispatcher}. */
-    public void cancelAllIntervalModifiers() {
-        intervals.cancelAllIntervalModifiers();
+    /**
+     * Re-registers interval chains for changed modifiers;
+     * see {@link IntervalDispatcher}.
+     */
+    public void reregisterIntervalModifiers(long matchId, Set<String> names) {
+        intervals.reregisterIntervalModifiers(matchId, names);
     }
 
     /**

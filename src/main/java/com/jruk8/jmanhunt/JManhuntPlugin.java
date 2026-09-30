@@ -37,7 +37,10 @@ import com.jruk8.jmanhunt.message.MessagesRegistrar;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.files.ModFileKind;
+import com.jruk8.jmanhunt.modifiers.files.ModLoadResult;
 import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
+import com.jruk8.jmanhunt.modifiers.files.ModifierReloadCache;
+import com.jruk8.jmanhunt.modifiers.files.ReloadDiff;
 import com.jruk8.jmanhunt.modifiers.files.ModsDefaults;
 import com.jruk8.jmanhunt.modifiers.files.ModsLoader;
 import com.jruk8.jmanhunt.placeholders.PlaceholderConfigRegistrar;
@@ -88,8 +91,10 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public final class JManhuntPlugin extends JavaPlugin {
@@ -108,6 +113,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private ConfigService configService;
     private OverrideService overrideService;
     private ModifierStore modifierStore;
+    private final ModifierReloadCache reloadCache = new ModifierReloadCache();
     private WorldEngineService worldEngine;
     private WinConditionEngine winConditionEngine;
     private JManhuntLogger logger;
@@ -588,7 +594,15 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
     }
 
+    /** Synchronous full reload, used at enable. */
     public void reload() {
+        reloadExceptModifiers();
+        applyModifierReload(loadModsSnapshot());
+        logger().info("JManhunt has been reloaded.");
+    }
+
+    /** Reloads everything except mods: the synchronous part of /mh reload. */
+    public void reloadExceptModifiers() {
         if (configRegistrar != null) {
             configRegistrar.reload();
         }
@@ -607,38 +621,62 @@ public final class JManhuntPlugin extends JavaPlugin {
             messages.reload(messageConfigs.getMessagesConfig());
         }
 
-        reloadModifiers();
         reloadContentConfigs();
 
         if (winConditionEngine != null) {
             winConditionEngine.reload(configService);
         }
 
-        // Cancel any running interval modifier tasks before reloading settings
-        // so stale tasks do not keep firing against a partially updated config.
-        if (game != null) {
-            game.stateCommands().cancelAllIntervalModifiers();
-        }
         reloadSettingsListeners();
-        restartLiveIntervals();
-        logger().info("JManhunt has been reloaded.");
+    }
+
+    /** Loads both mods dirs. Async-safe: file IO plus logger warnings only. */
+    public ModLoadResult loadModsSnapshot() {
+        return new ModsLoader(this::seedBundledMods, getLogger()).load(modsRoot());
     }
 
     /**
-     * Restarts interval modifiers for begun, non-ending matches after a
-     * reload, replacing the cancelled schedulers with fresh ones that
-     * read fresh config. Unbegun matches arm at begin and ending
-     * matches stay quiet for teardown.
+     * Applies a fresh mods load on the main thread: diffs against the
+     * cache, swaps the store, refreshes the cache, and re-registers
+     * interval chains for changed/removed modifiers only. Returns the
+     * diff; the first load seeds the cache and reports nothing.
      */
-    private void restartLiveIntervals() {
+    public ReloadDiff applyModifierReload(ModLoadResult fresh) {
+        if (modifierStore == null) {
+            modifierStore = new ModifierStore(
+                    ModifierFiles.fromLoad(modsRoot(), fresh), getLogger());
+            reloadCache.seed(fresh);
+            return new ReloadDiff(List.of(), List.of(), List.of(), List.of());
+        }
+        ReloadDiff diff = reloadCache.diff(fresh);
+        Set<String> changed = reloadCache.changedModifierIds(fresh);
+        modifierStore.replaceAll(fresh);
+        modifierStore.clearItemWarnings();
+        reloadCache.replace(fresh);
+        reregisterChangedIntervals(diff, changed);
+        return diff;
+    }
+
+    /**
+     * Re-registers interval chains for changed/removed modifiers on
+     * begun, non-ending matches. Unbegun matches arm at begin and
+     * ending matches stay quiet for teardown.
+     */
+    private void reregisterChangedIntervals(ReloadDiff diff, Set<String> changed) {
         if (game == null) {
+            return;
+        }
+        Set<String> affected = new LinkedHashSet<>(diff.newModifiers());
+        affected.addAll(diff.removedModifiers());
+        affected.addAll(changed);
+        if (affected.isEmpty()) {
             return;
         }
         for (GameInstance instance : game.liveInstances()) {
             if (!instance.begun() || instance.ending()) {
                 continue;
             }
-            game.stateCommands().startIntervalModifiers(instance.matchId());
+            game.stateCommands().reregisterIntervalModifiers(instance.matchId(), affected);
         }
     }
 
@@ -668,16 +706,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         }
     }
 
-    private void reloadModifiers() {
-        Path modsRoot = new File(getDataFolder(), "mods").toPath();
-        ModsLoader loader = new ModsLoader(this::seedBundledMods, getLogger());
-        if (modifierStore == null) {
-            modifierStore = new ModifierStore(
-                    ModifierFiles.fromLoad(modsRoot, loader.load(modsRoot)), getLogger());
-        } else {
-            modifierStore.replaceAll(loader.load(modsRoot));
-            modifierStore.clearItemWarnings();
-        }
+    private Path modsRoot() {
+        return new File(getDataFolder(), "mods").toPath();
     }
 
     /**

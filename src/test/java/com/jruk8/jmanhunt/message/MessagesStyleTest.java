@@ -162,6 +162,45 @@ class MessagesStyleTest {
     }
 
     @Test
+    void reloadReportKeysExistWithSlots() {
+        YamlConfiguration messages = loadSchemaMessages();
+
+        for (String key : List.of("manhunt.reload-success", "manhunt.reload-bullet",
+                "manhunt.reload-changes-new", "manhunt.reload-changes-removed",
+                "manhunt.reload-changes-join", "manhunt.reload-unknown",
+                "manhunt.reload-failed", "manhunt.reload-duplicate",
+                "manhunt.reload-item-modifier", "manhunt.reload-item-modifiers",
+                "manhunt.reload-item-preset", "manhunt.reload-item-presets",
+                "manhunt.reload-item-both", "manhunt.reload-label-unknown-file",
+                "manhunt.reload-label-unknown-files", "manhunt.reload-label-duplicate-id",
+                "manhunt.reload-label-duplicate-ids", "manhunt.reload-extra")) {
+            assertFalse(messages.getString(key, "").isBlank(), key);
+        }
+        String success = messages.getString("manhunt.reload-success", "");
+        assertTrue(success.contains("{prefix}"), "reload-success needs {prefix}");
+        assertTrue(success.contains("{elapsed}"), "reload-success needs {elapsed}");
+        for (String key : List.of("manhunt.reload-changes-new", "manhunt.reload-changes-removed")) {
+            String part = messages.getString(key, "");
+            assertTrue(part.contains("{total}"), key + " needs {total}");
+            assertTrue(part.contains("{items}"), key + " needs {items}");
+        }
+        String unknown = messages.getString("manhunt.reload-unknown", "");
+        assertTrue(unknown.contains("{label}"), "reload-unknown needs {label}");
+        assertTrue(unknown.contains("{filename}"), "reload-unknown needs {filename}");
+        assertTrue(unknown.contains("{extra}"), "reload-unknown needs {extra}");
+        String failed = messages.getString("manhunt.reload-failed", "");
+        assertTrue(failed.contains("{items}"), "reload-failed needs {items}");
+        assertTrue(failed.contains("{filename}"), "reload-failed needs {filename}");
+        assertTrue(failed.contains("{extra}"), "reload-failed needs {extra}");
+        String duplicate = messages.getString("manhunt.reload-duplicate", "");
+        assertTrue(duplicate.contains("{label}"), "reload-duplicate needs {label}");
+        assertTrue(duplicate.contains("{id}"), "reload-duplicate needs {id}");
+        assertTrue(duplicate.contains("{extra}"), "reload-duplicate needs {extra}");
+        assertTrue(messages.getString("manhunt.reload-extra", "").contains("{n}"),
+                "reload-extra needs {n}");
+    }
+
+    @Test
     void bundledResourcesContainNoEmDashes() throws Exception {
         for (ModFileKind kind : ModFileKind.values()) {
             for (String id : ModsDefaults.ids(kind)) {

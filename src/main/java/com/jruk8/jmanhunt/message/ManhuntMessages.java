@@ -197,8 +197,59 @@ public class ManhuntMessages extends OkaeriConfig {
     private String notActive = "{prefix}<yellow>No match is active.";
 
     @CustomKey("reload-success")
-    private String reloadSuccess = "{prefix}<green>Reloaded config.yml, messages.yml, and settings in "
+    private String reloadSuccess = "\n{prefix}<green>Reloaded the Manhunt engine in "
             + "<white>{elapsed}ms</white>.";
+
+    @CustomKey("reload-bullet")
+    private String reloadBullet = "<green>»</green> ";
+
+    @CustomKey("reload-changes-new")
+    private String reloadChangesNew = "<yellow><white>{total}</white> new {items}";
+
+    @CustomKey("reload-changes-removed")
+    private String reloadChangesRemoved = "<yellow>removed <white>{total}</white> {items}";
+
+    @CustomKey("reload-changes-join")
+    private String reloadChangesJoin = ", ";
+
+    @CustomKey("reload-unknown")
+    private String reloadUnknown = "<yellow>{label}: <white>{filename}</white>{extra}";
+
+    @CustomKey("reload-failed")
+    private String reloadFailed = "<yellow>Failed to parse {items}: <white>{filename}</white>{extra}";
+
+    @CustomKey("reload-duplicate")
+    private String reloadDuplicate = "<yellow>{label}: <white>{id}</white>{extra}";
+
+    @CustomKey("reload-item-modifier")
+    private String reloadItemModifier = "modifier";
+
+    @CustomKey("reload-item-modifiers")
+    private String reloadItemModifiers = "modifiers";
+
+    @CustomKey("reload-item-preset")
+    private String reloadItemPreset = "preset";
+
+    @CustomKey("reload-item-presets")
+    private String reloadItemPresets = "presets";
+
+    @CustomKey("reload-item-both")
+    private String reloadItemBoth = "modifiers/presets";
+
+    @CustomKey("reload-label-unknown-file")
+    private String reloadLabelUnknownFile = "Unknown file";
+
+    @CustomKey("reload-label-unknown-files")
+    private String reloadLabelUnknownFiles = "Unknown files";
+
+    @CustomKey("reload-label-duplicate-id")
+    private String reloadLabelDuplicateId = "Duplicate id found";
+
+    @CustomKey("reload-label-duplicate-ids")
+    private String reloadLabelDuplicateIds = "Duplicate ids found";
+
+    @CustomKey("reload-extra")
+    private String reloadExtra = " and <white>{n}</white> more";
 
     @CustomKey("setting-invalid")
     private String settingInvalid = "{prefix}<red>Unknown setting.";

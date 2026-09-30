@@ -30,6 +30,10 @@ import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.modifiers.files.ModLoadResult;
+import com.jruk8.jmanhunt.modifiers.files.ReloadDiff;
+import com.jruk8.jmanhunt.modifiers.files.ReloadReportComposer;
+import com.jruk8.jmanhunt.modifiers.files.ReloadWords;
 import com.jruk8.jmanhunt.player.CapLimits;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -2130,12 +2134,56 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     private boolean reload(CommandSender sender) {
         long started = System.nanoTime();
-        plugin.reload();
+        plugin.reloadExceptModifiers();
         game.validateLobbyWorldName();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            ModLoadResult fresh = plugin.loadModsSnapshot();
+            Bukkit.getScheduler().runTask(plugin, () -> applyReload(sender, fresh, started));
+        });
+        return true;
+    }
+
+    /** Applies a background mods load on the main thread, then reports it. */
+    private void applyReload(CommandSender sender, ModLoadResult fresh, long started) {
+        if (!plugin.isEnabled()) {
+            plugin.logger().info("Skipping mods reload: JManhunt is disabled.");
+            return;
+        }
+        ReloadDiff diff = plugin.applyModifierReload(fresh);
         long elapsed = (System.nanoTime() - started) / 1_000_000L;
         message(sender, "manhunt.reload-success", Map.of("elapsed", String.valueOf(elapsed)));
+        String bullet = messages.string("manhunt.reload-bullet", "<green>»</green> ");
+        for (String line : ReloadReportComposer.compose(diff, fresh, reloadWords())) {
+            sender.sendMessage(messages.renderLiteral(bullet + line, Map.of()));
+        }
+        plugin.logger().info("JManhunt has been reloaded.");
         neutralSound(sender);
-        return true;
+    }
+
+    /** Resolves every reload report template with its schema default behind it. */
+    private ReloadWords reloadWords() {
+        return new ReloadWords(
+                word("manhunt.reload-changes-new", "<yellow><white>{total}</white> new {items}"),
+                word("manhunt.reload-changes-removed", "<yellow>removed <white>{total}</white> {items}"),
+                word("manhunt.reload-changes-join", ", "),
+                word("manhunt.reload-unknown", "<yellow>{label}: <white>{filename}</white>{extra}"),
+                word("manhunt.reload-failed",
+                        "<yellow>Failed to parse {items}: <white>{filename}</white>{extra}"),
+                word("manhunt.reload-duplicate", "<yellow>{label}: <white>{id}</white>{extra}"),
+                word("manhunt.reload-item-modifier", "modifier"),
+                word("manhunt.reload-item-modifiers", "modifiers"),
+                word("manhunt.reload-item-preset", "preset"),
+                word("manhunt.reload-item-presets", "presets"),
+                word("manhunt.reload-item-both", "modifiers/presets"),
+                word("manhunt.reload-label-unknown-file", "Unknown file"),
+                word("manhunt.reload-label-unknown-files", "Unknown files"),
+                word("manhunt.reload-label-duplicate-id", "Duplicate id found"),
+                word("manhunt.reload-label-duplicate-ids", "Duplicate ids found"),
+                word("manhunt.reload-extra", " and <white>{n}</white> more"));
+    }
+
+    private String word(String key, String fallback) {
+        return messages.string(key, fallback);
     }
 
     private boolean debug(CommandSender sender, String[] args) {

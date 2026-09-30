@@ -93,23 +93,46 @@ public final class IntervalDispatcher {
      */
     void scheduleIntervalModifiers(long matchId) {
         for (String name : enabledModifiers(matchId)) {
-            for (int index : configService.behaviorIndexes(name)) {
-                if (!ModifierTriggers.runsOn(configService.runsOn(name, index), "INTERVAL")) {
-                    continue;
-                }
-                double intervalSeconds = configService.intervalSeconds(name, index);
-                if (intervalSeconds < 0) {
-                    continue;
-                }
-                double deviation = ModifierTriggers.clampDeviation(
-                        configService.intervalDeviation(name, index), intervalSeconds);
-                ModifierTriggers.TriggerScope scope = ModifierTriggers.parseScope(
-                        configService.intervalBehavior(name, index));
-                if (deviation > 0.0 && scope == ModifierTriggers.TriggerScope.PER_EXECUTOR) {
-                    startPerExecutorInterval(name, index, matchId);
-                } else {
-                    scheduleSharedFiring(name, index, matchId);
-                }
+            scheduleBehaviors(name, matchId);
+        }
+    }
+
+    /**
+     * Re-registers interval chains for changed modifiers only: cancels
+     * their chains and pending delayed dispatches, then reschedules
+     * their current INTERVAL behaviors when still enabled. Anything
+     * else keeps running untouched (no generation bump).
+     */
+    public void reregisterIntervalModifiers(long matchId, Set<String> names) {
+        if (names.isEmpty()) {
+            return;
+        }
+        cancelChainsFor(matchId, names);
+        Integer lobby = lobbyOf(matchId);
+        for (String name : names) {
+            if (plugin.overrides().modifierEnabled(lobby, name)) {
+                scheduleBehaviors(name, matchId);
+            }
+        }
+    }
+
+    private void scheduleBehaviors(String name, long matchId) {
+        for (int index : configService.behaviorIndexes(name)) {
+            if (!ModifierTriggers.runsOn(configService.runsOn(name, index), "INTERVAL")) {
+                continue;
+            }
+            double intervalSeconds = configService.intervalSeconds(name, index);
+            if (intervalSeconds < 0) {
+                continue;
+            }
+            double deviation = ModifierTriggers.clampDeviation(
+                    configService.intervalDeviation(name, index), intervalSeconds);
+            ModifierTriggers.TriggerScope scope = ModifierTriggers.parseScope(
+                    configService.intervalBehavior(name, index));
+            if (deviation > 0.0 && scope == ModifierTriggers.TriggerScope.PER_EXECUTOR) {
+                startPerExecutorInterval(name, index, matchId);
+            } else {
+                scheduleSharedFiring(name, index, matchId);
             }
         }
     }
@@ -118,24 +141,17 @@ public final class IntervalDispatcher {
     public void cancelIntervalModifiers(long matchId) {
         IntervalEngine engine = engine(matchId);
         engine.generation++;
-        for (BukkitTask task : engine.tasks) {
+        for (BukkitTask task : engine.tasks.keySet()) {
             task.cancel();
         }
         engine.tasks.clear();
-        for (BukkitTask task : engine.delayed) {
+        for (BukkitTask task : engine.delayed.keySet()) {
             task.cancel();
         }
         engine.delayed.clear();
         engine.executors.clear();
         engine.consoleChained.clear();
         intervalEngines.remove(matchId);
-    }
-
-    /** Cancels every match's interval tasks, e.g. on reload. */
-    public void cancelAllIntervalModifiers() {
-        for (long matchId : List.copyOf(intervalEngines.keySet())) {
-            cancelIntervalModifiers(matchId);
-        }
     }
 
     /**
@@ -146,7 +162,7 @@ public final class IntervalDispatcher {
      */
     void cancelIntervalChains(long matchId) {
         IntervalEngine engine = engine(matchId);
-        for (BukkitTask task : engine.tasks) {
+        for (BukkitTask task : engine.tasks.keySet()) {
             task.cancel();
         }
         engine.tasks.clear();
@@ -157,10 +173,35 @@ public final class IntervalDispatcher {
     /** Drops delayed modifier commands that never fired, e.g. at match end. */
     public void cancelPendingDelayed(long matchId) {
         IntervalEngine engine = engine(matchId);
-        for (BukkitTask task : engine.delayed) {
+        for (BukkitTask task : engine.delayed.keySet()) {
             task.cancel();
         }
         engine.delayed.clear();
+    }
+
+    /** Cancels one match's chains and delayed tasks owned by the given modifiers. */
+    private void cancelChainsFor(long matchId, Set<String> names) {
+        IntervalEngine engine = intervalEngines.get(matchId);
+        if (engine == null) {
+            return;
+        }
+        cancelOwned(engine.tasks, names);
+        cancelOwned(engine.delayed, names);
+        engine.executors.keySet().removeIf(chain -> names.contains(chain.name()));
+        engine.consoleChained.removeIf(chain -> names.contains(chain.name()));
+    }
+
+    private static void cancelOwned(Map<BukkitTask, IntervalEngine.BehaviorChain> tasks, Set<String> names) {
+        List<BukkitTask> owned = new ArrayList<>();
+        for (Map.Entry<BukkitTask, IntervalEngine.BehaviorChain> entry : tasks.entrySet()) {
+            if (names.contains(entry.getValue().name())) {
+                owned.add(entry.getKey());
+            }
+        }
+        for (BukkitTask task : owned) {
+            task.cancel();
+            tasks.remove(task);
+        }
     }
 
     /**
@@ -193,7 +234,7 @@ public final class IntervalDispatcher {
                 }
                 runIntervalCommands(name, index, matchId, intervalArg(intervalTicks));
             }, intervalTicks, intervalTicks));
-            engine.tasks.add(ref.get());
+            engine.tasks.put(ref.get(), new IntervalEngine.BehaviorChain(name, index));
             return;
         }
         long delayTicks = ModifierTriggers.jitteredIntervalTicks(intervalSeconds, deviation,
@@ -208,7 +249,7 @@ public final class IntervalDispatcher {
             runIntervalCommands(name, index, matchId, intervalArg(delayTicks));
             scheduleSharedFiring(name, index, matchId);
         }, delayTicks));
-        engine.tasks.add(ref.get());
+        engine.tasks.put(ref.get(), new IntervalEngine.BehaviorChain(name, index));
     }
 
     /** Starts one interval chain per participating player plus a console chain. */
@@ -246,7 +287,7 @@ public final class IntervalDispatcher {
             reconcilePlayerChains(name, index, matchId);
             scheduleConsoleFiring(name, index, matchId);
         }, delayTicks));
-        engine.tasks.add(ref.get());
+        engine.tasks.put(ref.get(), new IntervalEngine.BehaviorChain(name, index));
     }
 
     /** Schedules the next firing of one player's interval chain. */
@@ -286,7 +327,7 @@ public final class IntervalDispatcher {
                 schedulePlayerFiring(name, index, playerId, matchId);
             }
         }, delayTicks));
-        engine.tasks.add(ref.get());
+        engine.tasks.put(ref.get(), new IntervalEngine.BehaviorChain(name, index));
     }
 
     /**
@@ -352,7 +393,7 @@ public final class IntervalDispatcher {
                 engine.delayed.remove(ref.get());
             }
         }, delay));
-        engine.delayed.add(ref.get());
+        engine.delayed.put(ref.get(), new IntervalEngine.BehaviorChain(name, index));
     }
 
     /**

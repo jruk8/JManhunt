@@ -1,10 +1,9 @@
 package com.jruk8.jmanhunt.match;
 
 import org.bukkit.scheduler.BukkitTask;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -16,8 +15,10 @@ final class IntervalEngine {
     record BehaviorChain(String name, int index) {
     }
 
-    final List<BukkitTask> tasks = new ArrayList<>();
-    final List<BukkitTask> delayed = new ArrayList<>();
+    /** Running chain tasks by owner; insertion-ordered. */
+    final Map<BukkitTask, BehaviorChain> tasks = new LinkedHashMap<>();
+    /** Pending delayed dispatches by owner; insertion-ordered. */
+    final Map<BukkitTask, BehaviorChain> delayed = new LinkedHashMap<>();
     /** Bumped every time interval chains are (re)started so stale firings stop. */
     long generation;
     /** Behaviors with per-executor timing: chain to player ids owning a chain. */

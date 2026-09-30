@@ -9,12 +9,14 @@ import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
+import com.jruk8.jmanhunt.modifiers.files.ModLoadResult;
 import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -66,6 +68,32 @@ class ModifiersCommandTest {
 
         assertEquals(List.of("Alpha", "mike", "zeta"), command.modifierNameOptions());
         assertEquals(List.of("apple", "zulu"), command.presetIdOptions());
+    }
+
+    @Test
+    void completionFollowsReloadSwap() {
+        ModifierFiles config = ModifierFiles.inMemory();
+        config.getModifiers().put("alpha", new ModifierEntry());
+        config.getPresets().put("zed", new ModifierPreset());
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ModifierStore store = new ModifierStore(config, log);
+        // Nulls are never touched: options read the store, messages unused.
+        ModifiersCommand command = new ModifiersCommand(
+                new ConfigService(null, store), null, null, null, null, null);
+        assertEquals(List.of("alpha"), command.modifierNameOptions());
+        assertEquals(List.of("zed"), command.presetIdOptions());
+
+        ModLoadResult fresh = new ModLoadResult(
+                Map.of("beta", new ModLoadResult.LoadedModifier(
+                        new ModifierEntry(), Path.of("beta"), "fp")),
+                Map.of("ay", new ModLoadResult.LoadedPreset(
+                        new ModifierPreset(), Path.of("ay"), "fp")),
+                List.of(), List.of(), List.of(), List.of());
+        store.replaceAll(fresh);
+
+        assertEquals(List.of("beta"), command.modifierNameOptions());
+        assertEquals(List.of("ay"), command.presetIdOptions());
     }
 
     @Test
