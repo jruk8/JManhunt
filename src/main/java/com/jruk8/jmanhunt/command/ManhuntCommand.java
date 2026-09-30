@@ -233,19 +233,30 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Support links: Discord invite, GitHub, Ko-fi. Players and console alike. */
     private boolean support(CommandSender sender) {
-        sender.sendMessage(messages.miniMessage("{prefix}"));
-        sender.sendMessage(Component.empty());
-        sender.sendMessage(messages.miniMessage(
-                "<green>Need help? Join our <#de7766><click:open_url:'" + DISCORD_URL + "'>"
-                        + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
-        sender.sendMessage(messages.miniMessage(
-                "<green>Star us on <#de7766><click:open_url:'" + GITHUB_URL + "'>"
-                        + "<underlined>GitHub</underlined></click></#de7766>.</green>"));
-        sender.sendMessage(messages.miniMessage(
-                "<green>Support our development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
-                        + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
+        for (Component line : supportMessages(messages)) {
+            sender.sendMessage(line);
+        }
         neutralSound(sender);
         return true;
+    }
+
+    /**
+     * Support output lines: blank, parsed prefix, then the Discord,
+     * GitHub, and Ko-fi lines. Static for tests.
+     */
+    static List<Component> supportMessages(MessageService messages) {
+        return List.of(
+                Component.empty(),
+                messages.component("prefix"),
+                messages.miniMessage(
+                        "<green>Need help? Join our <#de7766><click:open_url:'" + DISCORD_URL + "'>"
+                                + "<underlined>Discord server</underlined></click></#de7766>!</green>"),
+                messages.miniMessage(
+                        "<green>Star us on <#de7766><click:open_url:'" + GITHUB_URL + "'>"
+                                + "<underlined>GitHub</underlined></click></#de7766>.</green>"),
+                messages.miniMessage(
+                        "<green>Support our development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
+                                + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
     }
 
     /** Starts the interactive setup tutorial. Players only: it runs over chat. */

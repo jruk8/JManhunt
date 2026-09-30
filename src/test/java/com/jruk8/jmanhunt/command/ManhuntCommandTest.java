@@ -1,7 +1,12 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
+import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.Role;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
@@ -213,5 +218,20 @@ class ManhuntCommandTest {
     void parseTptoTargetRejectsAnythingElse() {
         assertEquals(Optional.empty(), ManhuntCommand.parseTptoTarget("lobby"));
         assertEquals(Optional.empty(), ManhuntCommand.parseTptoTarget(""));
+    }
+
+    @Test
+    void supportShowsBlankThenParsedPrefix() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "prefix", "<gray>[T]</gray> ");
+        MessageService messages = new MessageService();
+        messages.reload(config);
+
+        List<Component> lines = ManhuntCommand.supportMessages(messages);
+
+        assertEquals(5, lines.size());
+        assertEquals(Component.empty(), lines.get(0));
+        assertEquals(messages.component("prefix"), lines.get(1));
+        assertEquals("[T] ", PlainTextComponentSerializer.plainText().serialize(lines.get(1)));
     }
 }

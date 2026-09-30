@@ -116,6 +116,15 @@ public class MatchSettings extends OkaeriConfig {
         })
         private int countdownSeconds = 30;
 
+        @CustomKey("countdown-style")
+        @Comment({
+                "Countdown announcement style: SIMPLE uses the plain",
+                "autostart messages, VERSUS shows the runner-vs-hunter",
+                "lineup instead.",
+                "Default: VERSUS"
+        })
+        private String countdownStyle = "VERSUS";
+
         @Comment({
                 "Minimum queued players per role before the autostart countdown can",
                 "begin. Only applies to autostart; manual /manhunt start keeps its",
@@ -154,6 +163,14 @@ public class MatchSettings extends OkaeriConfig {
 
         public void setCountdownSeconds(int countdownSeconds) {
             this.countdownSeconds = countdownSeconds;
+        }
+
+        public String getCountdownStyle() {
+            return countdownStyle;
+        }
+
+        public void setCountdownStyle(String countdownStyle) {
+            this.countdownStyle = countdownStyle;
         }
 
         public Minimums getMinimums() {

@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.message;
 
 import eu.okaeri.configs.OkaeriConfig;
+import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 
 /** Core /manhunt command responses. */
@@ -132,10 +133,21 @@ public class ManhuntMessages extends OkaeriConfig {
     private String roleAnnounceSubtitleSpectator = "<gray>Watch the Hunt";
 
     @CustomKey("autostart-eligible")
-    private String autostartEligible = "{prefix}<yellow>Manhunt auto-starts in <white>{seconds}<yellow>s.";
+    @Comment("SIMPLE countdown opener; settings.match.autostart.countdown-style picks SIMPLE or VERSUS.")
+    private String autostartEligible = "{prefix}<yellow>Manhunt starts in <white>{seconds}<yellow>s.";
 
     @CustomKey("autostart-countdown")
+    @Comment("SIMPLE countdown checkpoints; settings.match.autostart.countdown-style picks SIMPLE or VERSUS.")
     private String autostartCountdown = "{prefix}<yellow>Manhunt starts in <white>{seconds}<yellow>s.";
+
+    @CustomKey("autostart-versus-eligible")
+    @Comment("VERSUS countdown opener; settings.match.autostart.countdown-style picks SIMPLE or VERSUS.")
+    private String autostartVersusEligible = "{prefix}<yellow>{runners}v{hunters} starts in <white>{seconds}</white>s.";
+
+    @CustomKey("autostart-versus-countdown")
+    @Comment("VERSUS countdown checkpoints; settings.match.autostart.countdown-style picks SIMPLE or VERSUS.")
+    private String autostartVersusCountdown = "{prefix}<yellow>{runners}v{hunters} starts in "
+            + "<white>{seconds}</white>s.";
 
     @CustomKey("autostart-cancelled")
     private String autostartCancelled = "{prefix}<yellow>Auto-start cancelled.";

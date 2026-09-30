@@ -9,6 +9,7 @@ settings:
   autostart:
     enabled: true
     countdown-seconds: 30
+    countdown-style: VERSUS
     minimums:
       hunter: 1
       speedrunner: 1
@@ -44,6 +45,13 @@ message never fires instantly on assignment.
 `countdown-seconds` (default 30) is how long JManhunt waits, once the
 queue becomes eligible, before running `/manhunt start` on its own. Set
 to `0` to start immediately with no countdown at all.
+
+`countdown-style` (default `VERSUS`) picks the announcement style.
+`SIMPLE` uses the plain `manhunt.autostart-eligible` and
+`manhunt.autostart-countdown` messages, while `VERSUS` shows the
+runner-vs-hunter lineup instead (`3v5 starts in 30s.`, with each count
+in its configured role color). Both styles are customizable in
+`messages.yml`.
 
 # Start on Speedrunner Damage
 

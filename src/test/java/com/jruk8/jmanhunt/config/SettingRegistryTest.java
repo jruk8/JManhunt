@@ -120,6 +120,13 @@ class SettingRegistryTest {
     }
 
     @Test
+    void countdownStyleAcceptsSimpleAndVersus() {
+        assertEquals("VERSUS", validate("settings.match.autostart.countdown-style", "versus").value());
+        assertEquals("SIMPLE", validate("settings.match.autostart.countdown-style", "SIMPLE").value());
+        assertFalse(validate("settings.match.autostart.countdown-style", "maybe").ok());
+    }
+
+    @Test
     void optionRejectsUnknownListingValid() {
         var outcome = validate("settings.match.start-on-speedrunner-damage.on-expire", "maybe");
 

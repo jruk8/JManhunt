@@ -250,6 +250,7 @@ descriptions:
   "settings.server.team-chat.spectators-see": "Let fake spectators read team chat."
   "settings.match.autostart.enabled": "Start matches automatically once minimums are met."
   "settings.match.autostart.countdown-seconds": "Wait before auto-starting; 0 starts at once."
+  "settings.match.autostart.countdown-style": "SIMPLE or VERSUS countdown announcements."
   "settings.match.autostart.minimums.hunter": "Queued hunters needed before autostart can begin."
   "settings.match.autostart.minimums.speedrunner": "Queued speedrunners needed before autostart can begin."
   "settings.match.autostart.maximums.hunter": "Queued hunters allowed before autostart refuses."

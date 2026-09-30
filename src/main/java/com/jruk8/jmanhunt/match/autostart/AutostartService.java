@@ -115,8 +115,7 @@ public final class AutostartService {
         countdown.configured = configured;
         countdown.remaining = configured;
         autostartCountdowns.put(lobbyId, countdown);
-        messaging.sendToLobby(lobbyId, "manhunt.autostart-eligible",
-                Map.of("seconds", String.valueOf(configured)));
+        sendAutostartEligible(lobby.get(), configured);
         messaging.playLobbySound(lobbyId, "game.autostart-countdown");
         // Eligible covered these seconds already; ticks announce the rest.
         countdown.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -132,17 +131,111 @@ public final class AutostartService {
                 control.start(lobbyId);
                 return;
             }
-            announceAutostartCheckpoint(lobbyId, countdown, countdown.remaining);
+            announceAutostartCheckpoint(lobbyId, tickLobby.get(), countdown, countdown.remaining);
         }, 20L, 20L);
     }
 
-    private void announceAutostartCheckpoint(int lobbyId, AutostartCountdown countdown, int remainingSeconds) {
+    private void announceAutostartCheckpoint(int lobbyId, Lobby lobby,
+            AutostartCountdown countdown, int remainingSeconds) {
         if (!AutostartCountdownMessages.shouldAnnounce(remainingSeconds, countdown.configured)) {
             return;
         }
-        messaging.sendToLobby(lobbyId, "manhunt.autostart-countdown",
-                Map.of("seconds", String.valueOf(remainingSeconds)));
+        if (isVersusStyle(countdownStyle(lobbyId))) {
+            int[] counts = countQueuedRoles(lobby);
+            messaging.sendToLobby(lobbyId, "manhunt.autostart-versus-countdown",
+                    versusValues(remainingSeconds, counts[0], hunterColor(),
+                            counts[1], runnerColor()));
+        } else {
+            messaging.sendToLobby(lobbyId, "manhunt.autostart-countdown",
+                    Map.of("seconds", String.valueOf(remainingSeconds)));
+        }
         messaging.playLobbySound(lobbyId, "game.autostart-countdown");
+    }
+
+    /** Eligible opener in the lobby countdown style (SIMPLE or VERSUS). */
+    private void sendAutostartEligible(Lobby lobby, int configured) {
+        if (isVersusStyle(countdownStyle(lobby.id()))) {
+            int[] counts = countQueuedRoles(lobby);
+            messaging.sendToLobby(lobby.id(), "manhunt.autostart-versus-eligible",
+                    versusValues(configured, counts[0], hunterColor(),
+                            counts[1], runnerColor()));
+            return;
+        }
+        messaging.sendToLobby(lobby.id(), "manhunt.autostart-eligible",
+                Map.of("seconds", String.valueOf(configured)));
+    }
+
+    private String countdownStyle(int lobbyId) {
+        return plugin.overrides().getString(lobbyId,
+                "settings.match.autostart.countdown-style", "VERSUS");
+    }
+
+    private String hunterColor() {
+        return messages.roleColor(Role.HUNTER);
+    }
+
+    private String runnerColor() {
+        return messages.roleColor(Role.SPEEDRUNNER);
+    }
+
+    /**
+     * True unless the style explicitly reads SIMPLE (case-blind). Blank
+     * and unrecognized values fall back to the VERSUS default. Pure for
+     * tests.
+     */
+    public static boolean isVersusStyle(String style) {
+        return style == null || !"SIMPLE".equalsIgnoreCase(style.strip());
+    }
+
+    /**
+     * Versus placeholder values: seconds plus the role-colored runner
+     * and hunter counts. Pure for tests.
+     */
+    public static Map<String, String> versusValues(int seconds, int hunters, String hunterColor,
+            int speedrunners, String runnerColor) {
+        return Map.of("seconds", String.valueOf(seconds),
+                "hunters", versusCount(hunters, hunterColor),
+                "runners", versusCount(speedrunners, runnerColor));
+    }
+
+    /**
+     * One role-colored versus count: the count wrapped in the role color
+     * with the color cancelled at the end ({@code <red>5</red>}). The
+     * closer mirrors the tag ({@code <#de666e>} closes with
+     * {@code </#de666e>}); legacy codes convert first. Pure for tests.
+     */
+    public static String versusCount(int count, String roleColor) {
+        String color = roleColor == null ? "" : roleColor;
+        return color + count + closeColor(color);
+    }
+
+    /**
+     * MiniMessage closer mirroring a color tag: named and hex tags close
+     * by name, parameterized tags (gradients) close by their base name,
+     * legacy codes convert before mirroring, and anything unparseable
+     * closes with nothing. Pure for tests.
+     */
+    static String closeColor(String colorTag) {
+        if (colorTag == null) {
+            return "";
+        }
+        String converted = MessageService.legacyToMiniMessage(colorTag.strip());
+        if (!converted.startsWith("<") || !converted.endsWith(">") || converted.length() <= 2) {
+            return "";
+        }
+        String body = converted.substring(1, converted.length() - 1);
+        int cut = body.length();
+        for (int i = 0; i < body.length(); i++) {
+            char c = body.charAt(i);
+            if (c == ':' || c == '\'' || c == '"' || Character.isWhitespace(c)) {
+                cut = i;
+                break;
+            }
+        }
+        if (cut == 0) {
+            return "";
+        }
+        return "</" + body.substring(0, cut) + ">";
     }
 
     /**

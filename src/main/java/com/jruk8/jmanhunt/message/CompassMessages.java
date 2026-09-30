@@ -63,7 +63,7 @@ public class CompassMessages extends OkaeriConfig {
     private String noTargetActionbar = "<gray>No {role}<gray> location available.";
 
     @CustomKey("nearby-actionbar")
-    private String nearbyActionbar = "<green>{player} is nearby! The compass is disabled.";
+    private String nearbyActionbar = "<green>{player} is nearby! Tracking is disabled.";
 
     @CustomKey("too-far-actionbar")
     private String tooFarActionbar = "<yellow>{player} is out of tracking range.";

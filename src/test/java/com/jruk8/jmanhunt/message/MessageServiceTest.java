@@ -128,6 +128,32 @@ class MessageServiceTest {
     }
 
     @Test
+    void autostartEligibleSaysStarts() {
+        MessageService messages = defaults();
+
+        assertEquals("[JManhunt] Manhunt starts in 60s.",
+                plain(messages.component("manhunt.autostart-eligible", Map.of("seconds", "60"))));
+    }
+
+    @Test
+    void otherAutostartMessagesUntouched() {
+        MessageService messages = defaults();
+
+        assertEquals("[JManhunt] Manhunt starts in 5s.",
+                plain(messages.component("manhunt.autostart-countdown", Map.of("seconds", "5"))));
+        assertEquals("[JManhunt] Auto-start cancelled.",
+                plain(messages.component("manhunt.autostart-cancelled")));
+    }
+
+    @Test
+    void nearbyBarSaysTrackingIsDisabled() {
+        MessageService messages = defaults();
+
+        assertEquals("Steve is nearby! Tracking is disabled.",
+                plain(messages.component("compass.nearby-actionbar", Map.of("player", "Steve"))));
+    }
+
+    @Test
     void missingKeyRendersKeyItself() {
         MessageService messages = messages();
 
@@ -140,6 +166,12 @@ class MessageServiceTest {
 
         assertTrue(messages.strings("compass.compass-lore").isEmpty());
         assertEquals(3, messages.strings("compass.hunter-lore").size());
+    }
+
+    private static MessageService defaults() {
+        MessageService messages = new MessageService();
+        messages.reload(new MessagesConfig());
+        return messages;
     }
 
     private static MessageService messages() {
