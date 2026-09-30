@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.api.events.JMatchCancelEvent;
 import com.jruk8.jmanhunt.api.events.JMatchEndEvent;
+import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
@@ -29,6 +30,7 @@ import org.bukkit.entity.Player;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -445,26 +447,85 @@ public final class MatchFinishService {
         List<Player> participants = store.onlineAssignedPlayers(instance).stream()
                 .filter(p -> playerStates.role(p).isParticipant()).toList();
         List<Player> spectators = instanceNonePlayers(instance);
+        Set<UUID> transferred = transferSpectators(instance, spectators);
+        List<Player> returning = spectators.stream()
+                .filter(spectator -> !transferred.contains(spectator.getUniqueId())).toList();
         boolean lastMatch = store.instances().size() <= 1;
-        stateCommands.runEnd(teardownId, participants, spectators, instance.originLobbyId(), lastMatch);
+        stateCommands.runEnd(teardownId, participants, returning, instance.originLobbyId(), lastMatch);
         scatterEngineOffEnd(instance, participants);
-        worldEngine.onMatchEnd(participants, spectators, instance.originLobbyId(), teardownId);
+        worldEngine.onMatchEnd(participants, returning, instance.originLobbyId(), teardownId);
         markOfflineEndWipes(instance);
         if (plugin.overrides().getBoolean(instance.originLobbyId(),
                 "settings.players.roles.reset-on-game-end.enabled", true)) {
-            playerStates.resetRoles(instance.assignedPlayerIds());
+            Set<UUID> resetIds = new HashSet<>(instance.assignedPlayerIds());
+            resetIds.removeAll(transferred);
+            playerStates.resetRoles(resetIds);
         }
         // A finished match fields no sides, even when roles are kept.
-        plugin.roleTeams().removeAll(store.onlineAssignedPlayers(instance));
+        plugin.roleTeams().removeAll(store.onlineAssignedPlayers(instance).stream()
+                .filter(player -> !transferred.contains(player.getUniqueId())).toList());
         plugin.spawnCamp().clearMatch(teardownId);
         instance.setActive(false);
-        playerStates.clearMatchFor(instance.assignedPlayerIds());
+        Set<UUID> clearIds = new HashSet<>(instance.assignedPlayerIds());
+        clearIds.removeAll(transferred);
+        playerStates.clearMatchFor(clearIds);
         stats.clearMatch(teardownId);
         flagStore.clearMatch(teardownId);
         store.removeInstance(teardownId);
         plugin.logger().debug(DebugLevel.INFO, "debug.match-end", Map.of("index", GameManager.cellString(instance)));
         worldEngine.prepareNextCell();
         autostart.updateAutostartState();
+    }
+
+    /**
+     * Moves ending-match spectators to the oldest running match of the
+     * same lobby, returning the moved player ids. The target side mirrors
+     * a spectator join (activation, spawn-pick teleport, fake spectator
+     * mode, teams, join event and announcement); the ending side excludes
+     * the moved players from its own cleanup below. Eliminated NONEs are
+     * never moved: they return to the lobby with everyone else.
+     */
+    private Set<UUID> transferSpectators(GameInstance instance, List<Player> spectators) {
+        Optional<GameInstance> target = transferTarget(
+                store.instancesForLobby(instance.originLobbyId()), instance.matchId());
+        if (target.isEmpty()) {
+            return Set.of();
+        }
+        GameInstance destination = target.get();
+        Set<UUID> moved = new HashSet<>();
+        for (Player spectator : spectators) {
+            if (playerStates.role(spectator) != Role.SPECTATOR) {
+                continue;
+            }
+            UUID playerId = spectator.getUniqueId();
+            instance.deactivate(playerId);
+            destination.activate(playerId);
+            if (destination.cellIndex().isPresent()) {
+                worldEngine.teleportJoinersToCell(destination, List.of(spectator),
+                        destination.cellIndex().getAsLong());
+            }
+            playerStates.recordLastSeen(spectator, spectator.getLocation());
+            if (!plugin.fakeSpectators().isFakeSpectator(spectator)) {
+                plugin.fakeSpectators().enable(spectator);
+            }
+            plugin.roleTeams().sync(spectator);
+            Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(destination.matchId(),
+                    playerId, GameManager.roleToPlayerRole(Role.SPECTATOR)));
+            messaging.sendToInstance(destination, "game.join-announce",
+                    Map.of("player", spectator.getName(), "role", messages.roleName(Role.SPECTATOR)));
+            moved.add(playerId);
+        }
+        return moved;
+    }
+
+    /**
+     * Oldest running same-lobby match excluding the ending one; empty
+     * when no sibling runs. Lowest live sublobby wins. Pure for tests.
+     */
+    static Optional<GameInstance> transferTarget(
+            Collection<GameInstance> lobbyInstances, long endingMatchId) {
+        return MatchStore.oldestSubLobby(lobbyInstances.stream()
+                .filter(other -> other.matchId() != endingMatchId).toList());
     }
 
     /**

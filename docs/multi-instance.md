@@ -119,6 +119,8 @@ keeps gathering in the parent while its sublobbies play, and each
 from the queued players only. `setplayer` into a live sublobby queues
 the role for the next one, and status output shows the tag
 (`L2-0|G5` in `status`, `L2-0|G5`-style entries in `status all`).
+When a sublobby ends, its spectators move to the oldest running
+sibling; the last match's spectators return to the lobby as `none`.
 Switch the policy to `HOLD` for plain direct hosting with one match
 per lobby.
 

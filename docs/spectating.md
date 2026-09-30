@@ -134,3 +134,10 @@ every online participant and last-seen spot is teleported back to the
 nearest one, or to the cell center when no anchor exists. This stops
 roaming spectators from generating chunks far from the match. It is
 silent: no message, no sound.
+
+## When a match ends
+
+Spectators of an ending match move to the oldest running match of the
+same lobby (lowest sublobby number) with their role, fake spectator
+mode, and toolbar intact. When no other match of that lobby runs, they
+return to the lobby as `none` with their inventory restored.
