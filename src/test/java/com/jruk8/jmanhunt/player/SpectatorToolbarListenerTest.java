@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -211,6 +212,37 @@ class SpectatorToolbarListenerTest {
         InventoryClickEvent event = click(fixture, ClickType.SWAP_OFFHAND);
 
         fixture.listener().onInventoryClick(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void spectatorHeadClickCancelsWithoutDeploy() {
+        Fixture fixture = fixture();
+        UUID playerId = fixture.player().getUniqueId();
+        when(fixture.toolbar().isDeployed(fixture.player())).thenReturn(false);
+        ItemStack head = mock(ItemStack.class);
+        when(fixture.toolbar().isSpectatorHead(eq(head), eq(playerId))).thenReturn(true);
+        InventoryClickEvent event = click(fixture, ClickType.LEFT);
+        when(event.getCurrentItem()).thenReturn(head);
+
+        fixture.listener().onInventoryClick(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    @Test
+    void spectatorHeadDragCancelsWithoutDeploy() {
+        Fixture fixture = fixture();
+        UUID playerId = fixture.player().getUniqueId();
+        when(fixture.toolbar().isDeployed(fixture.player())).thenReturn(false);
+        ItemStack head = mock(ItemStack.class);
+        when(fixture.toolbar().isSpectatorHead(eq(head), eq(playerId))).thenReturn(true);
+        InventoryDragEvent event = mock(InventoryDragEvent.class);
+        when(event.getWhoClicked()).thenReturn(fixture.player());
+        when(event.getCursor()).thenReturn(head);
+
+        fixture.listener().onInventoryDrag(event);
 
         verify(event).setCancelled(true);
     }

@@ -80,8 +80,18 @@ public final class SpectatorToolbarListener implements Listener {
     }
 
     @EventHandler public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)
-                || !toolbar.isDeployed(player)) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+        // Marker heads never move, even for fake spectators without a
+        // deployed toolbar (respawn waits, headstart holds, and the rest
+        // keep their own inventories).
+        if (toolbar.isSpectatorHead(event.getCurrentItem(), player.getUniqueId())
+                || toolbar.isSpectatorHead(event.getCursor(), player.getUniqueId())) {
+            event.setCancelled(true);
+            return;
+        }
+        if (!toolbar.isDeployed(player)) {
             return;
         }
         if (toolbar.isToolbarItem(event.getCurrentItem())
@@ -102,8 +112,14 @@ public final class SpectatorToolbarListener implements Listener {
     }
 
     @EventHandler public void onInventoryDrag(InventoryDragEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)
-                || !toolbar.isDeployed(player)) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+        if (toolbar.isSpectatorHead(event.getCursor(), player.getUniqueId())) {
+            event.setCancelled(true);
+            return;
+        }
+        if (!toolbar.isDeployed(player)) {
             return;
         }
         if (toolbar.isToolbarItem(event.getCursor())) {

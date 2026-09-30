@@ -3,11 +3,16 @@ package com.jruk8.jmanhunt.player;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.lobby.LobbyService;
@@ -18,9 +23,13 @@ import com.jruk8.jmanhunt.message.SoundService;
 import java.util.Optional;
 import java.util.UUID;
 import org.bukkit.NamespacedKey;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.junit.jupiter.api.Test;
@@ -57,6 +66,38 @@ class SpectatorToolbarServiceTest {
         assertEquals(4, SpectatorToolbarService.snowballSlot(buttons));
         assertEquals(-1, SpectatorToolbarService.snowballSlot(
                 SpectatorToolbarService.parseLayout("cp######b")));
+    }
+
+    @Test
+    void spectatorHeadNeedsTagAndOwner() {
+        NamespacedKey key = new NamespacedKey("jmanhunt", "spectator_toolbar");
+        SpectatorToolbarService toolbar = toolbar(key);
+        UUID owner = UUID.randomUUID();
+
+        assertFalse(toolbar.isSpectatorHead(null, owner));
+        ItemStack stone = mock(ItemStack.class);
+        when(stone.getType()).thenReturn(Material.STONE);
+        assertFalse(toolbar.isSpectatorHead(stone, owner));
+        assertFalse(toolbar.isSpectatorHead(headStack(key, owner, "c"), owner));
+        assertFalse(toolbar.isSpectatorHead(headStack(key, owner, null), owner));
+        assertFalse(toolbar.isSpectatorHead(headStack(key, owner, "h"), UUID.randomUUID()));
+        assertFalse(toolbar.isSpectatorHead(headStack(key, owner, "h"), null));
+        assertTrue(toolbar.isSpectatorHead(headStack(key, owner, "h"), owner));
+    }
+
+    private static ItemStack headStack(NamespacedKey key, UUID owner, String tag) {
+        PersistentDataContainer container = mock(PersistentDataContainer.class);
+        when(container.get(key, PersistentDataType.STRING)).thenReturn(tag);
+        SkullMeta meta = mock(SkullMeta.class);
+        when(meta.getPersistentDataContainer()).thenReturn(container);
+        OfflinePlayer offline = mock(OfflinePlayer.class);
+        when(offline.getUniqueId()).thenReturn(owner);
+        when(meta.getOwningPlayer()).thenReturn(offline);
+        ItemStack head = mock(ItemStack.class);
+        when(head.getType()).thenReturn(Material.PLAYER_HEAD);
+        when(head.hasItemMeta()).thenReturn(true);
+        when(head.getItemMeta()).thenReturn(meta);
+        return head;
     }
 
     @Test
@@ -262,18 +303,23 @@ class SpectatorToolbarServiceTest {
     @Test
     void modeChangeSkipsDeployForParticipants() {
         PlayerStateStore players = new PlayerStateStore();
-        SpectatorToolbarService toolbar = new SpectatorToolbarService(
+        SpectatorToolbarService toolbar = spy(new SpectatorToolbarService(
                 mock(OverrideService.class), mock(MessageService.class),
                 mock(SoundService.class), players, mock(FakeSpectatorService.class),
                 mock(GameManager.class), mock(LobbyService.class),
-                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+                new NamespacedKey("jmanhunt", "spectator_toolbar")));
+        ItemStack head = mock(ItemStack.class);
+        doReturn(head).when(toolbar).buildSpectatorHead(any());
         Player hunter = mock(Player.class);
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(hunter.getInventory()).thenReturn(inventory);
         when(hunter.getUniqueId()).thenReturn(UUID.randomUUID());
         players.setRole(hunter, Role.HUNTER);
 
         toolbar.onModeChange(hunter, true);
 
         assertFalse(toolbar.isDeployed(hunter));
+        verify(inventory).setHelmet(head);
     }
 
     @Test
@@ -285,11 +331,14 @@ class SpectatorToolbarServiceTest {
                 mock(GameManager.class), mock(LobbyService.class),
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
         Player hunter = mock(Player.class);
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(hunter.getInventory()).thenReturn(inventory);
         when(hunter.getUniqueId()).thenReturn(UUID.randomUUID());
         players.setRole(hunter, Role.HUNTER);
 
         toolbar.onModeChange(hunter, false);
 
         assertFalse(toolbar.isDeployed(hunter));
+        verify(inventory, never()).setHelmet(any());
     }
 }

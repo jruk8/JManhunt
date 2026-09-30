@@ -3,15 +3,30 @@
 JManhunt never puts spectators into vanilla spectator gamemode. Instead,
 joining a match as a `spectator` (plus headstart holds, death watches,
 and respawn waits) activates fake spectator mode: adventure gamemode
-with flight, terrain collision, and full invisibility to other players.
+with flight, terrain collision, an infinite invisibility effect, and
+full invisibility to alive players.
 
 ## What fake spectator mode does
 
 On enable, the player gets adventure gamemode, flight allowed and active,
-entity collision disabled, and `hidePlayer` from every online player
-(including late joiners). Hiding also conceals held items and armor
-client-side. On disable, flight is grounded, collision is restored, and
-the player is shown to everyone again.
+entity collision disabled, an infinite invisibility effect (no
+particles, no icon), and `hidePlayer` from every alive online player
+(including late joiners). Fake spectators see each other: enabling
+shows every active fake spectator to the newcomer and the newcomer to
+them. Hiding also conceals held items and armor client-side. On
+disable, flight is grounded, collision is restored, the invisibility
+effect is removed, and the player is shown to everyone again, while
+remaining fake spectators are hidden from them once more.
+
+## Spectator marker heads
+
+Every player in fake spectator mode wears their own player head in the
+helmet slot, so mutually visible spectators can tell each other apart
+(the invisibility effect hides bodies; worn armor, including the head,
+stays visible). The head is fetched from the player's UUID and cannot
+be moved to another slot by anyone. Any previously worn helmet is
+preserved and restored exactly on exit; toolbar spectators additionally
+get the standard inventory snapshot and restore.
 
 While active, the following are cancelled for the spectator:
 
@@ -42,15 +57,21 @@ mode without the role.
 ## Safety guarantees
 
 Fake spectator state lives in memory only and is never persisted. Quit
-always disables the mode: flight is grounded and visibility is restored,
-so nothing survives a disconnect. Join clears any dangling flight on
-the joiner and re-hides the currently active spectators from them, so
-a crash can never leave a player stuck flying or invisible.
+always disables the mode: flight is grounded, the invisibility effect
+is removed, the marker head is taken off with any real helmet restored,
+and visibility is restored, so nothing survives a disconnect. Join
+clears any dangling flight on the joiner and re-hides the currently
+active spectators from them, so a crash can never leave a player stuck
+flying or invisible. Alive players never see fake spectators: the
+hide holds on every enable path (join, respawn, headstart, death
+watch), on every join of an alive player, and on every disable, with
+the invisibility effect as backup.
 
 ## Admin notes
 
 - There is no config for fake spectator mode; it is always on.
-- Spectators are hidden from each other as well as from players.
+- Fake spectators see each other (marked by their player heads) but no
+  alive player ever sees them.
 - Use `/jmanhunt setplayer <name> spectator` to move someone into the
   spectator role, or the role pads and lobby flows that already do.
 

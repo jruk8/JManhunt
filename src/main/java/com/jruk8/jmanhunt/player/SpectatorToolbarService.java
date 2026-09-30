@@ -25,6 +25,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
@@ -99,6 +100,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     private final Map<UUID, InventorySnapshot> snapshots = new HashMap<>();
     private final Map<UUID, UUID> locks = new HashMap<>();
     private final Map<UUID, Long> lastSneaks = new HashMap<>();
+    private final Map<UUID, ItemStack> previousHelmets = new HashMap<>();
 
     public SpectatorToolbarService(OverrideService overrides, MessageService messages,
             SoundService sounds, PlayerStateStore playerStates, FakeSpectatorService fakes,
@@ -156,10 +158,64 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             if (playerStates.role(player) == Role.SPECTATOR) {
                 deploy(player);
             }
+            placeHead(player);
             return;
         }
         restore(player);
         clearLock(player.getUniqueId());
+        removeHead(player);
+    }
+
+    /** Places the spectator marker head, preserving any real helmet. */
+    private void placeHead(Player player) {
+        UUID id = player.getUniqueId();
+        ItemStack previous = player.getInventory().getHelmet();
+        if (!isSpectatorHead(previous, id)) {
+            previousHelmets.put(id, previous);
+        }
+        player.getInventory().setHelmet(buildSpectatorHead(player));
+    }
+
+    /** Removes the marker head, restoring the preserved helmet. */
+    private void removeHead(Player player) {
+        UUID id = player.getUniqueId();
+        if (isSpectatorHead(player.getInventory().getHelmet(), id)) {
+            player.getInventory().setHelmet(previousHelmets.remove(id));
+        } else {
+            previousHelmets.remove(id);
+        }
+    }
+
+    /**
+     * True when the item is the spectator marker head owned by the id:
+     * our toolbar tag plus a skull profile for the owner. Pure for
+     * tests (Bukkit-free; callers supply the item and owner).
+     */
+    boolean isSpectatorHead(ItemStack item, UUID ownerId) {
+        if (item == null || item.getType() != Material.PLAYER_HEAD || ownerId == null) {
+            return false;
+        }
+        if (!toolbarButton(item).map(button -> button == 'h').orElse(false)) {
+            return false;
+        }
+        ItemMeta meta = item.getItemMeta();
+        if (!(meta instanceof SkullMeta skull) || skull.getOwningPlayer() == null) {
+            return false;
+        }
+        return ownerId.equals(skull.getOwningPlayer().getUniqueId());
+    }
+
+    /** Marker head with the player's own skin for mutual spectator visibility. */
+    ItemStack buildSpectatorHead(Player player) {
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD, 1);
+        ItemMeta meta = head.getItemMeta();
+        if (meta instanceof SkullMeta skull) {
+            skull.setOwningPlayer(Bukkit.getOfflinePlayer(player.getUniqueId()));
+        }
+        meta.getPersistentDataContainer().set(toolbarKey,
+                PersistentDataType.STRING, "h");
+        head.setItemMeta(meta);
+        return head;
     }
 
     /**

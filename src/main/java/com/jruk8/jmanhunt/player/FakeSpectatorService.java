@@ -11,10 +11,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 
 /**
  * Fake spectator mode: adventure plus flight plus no collision plus
- * hidden from other players. This keeps terrain collision (noclip is a
+ * infinite invisibility, hidden from alive players but visible to
+ * other fake spectators. This keeps terrain collision (noclip is a
  * vanilla spectator property, not a flight property) while hiding held
  * items and armor client-side. Role-spectator and fake-spectator-mode
  * are not the same thing: queuing as a spectator never enters this
@@ -60,8 +63,17 @@ public final class FakeSpectatorService {
         player.setAllowFlight(true);
         player.setFlying(true);
         player.setCollidable(false);
+        player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY,
+                PotionEffect.INFINITE_DURATION, 0, false, false, false));
         for (Player viewer : onlinePlayers.get()) {
-            if (!viewer.getUniqueId().equals(id)) {
+            if (viewer.getUniqueId().equals(id)) {
+                continue;
+            }
+            // The new fake sees everyone; only fakes see them back.
+            player.showPlayer(plugin, viewer);
+            if (seesPlayer(isFakeSpectator(viewer), true)) {
+                viewer.showPlayer(plugin, player);
+            } else {
                 viewer.hidePlayer(plugin, player);
             }
         }
@@ -83,12 +95,27 @@ public final class FakeSpectatorService {
         // exit: it would land as fall damage on the next touchdown.
         player.setFallDistance(0F);
         player.setGameMode(GameMode.SURVIVAL);
+        player.removePotionEffect(PotionEffectType.INVISIBILITY);
         for (Player viewer : onlinePlayers.get()) {
-            if (!viewer.getUniqueId().equals(id)) {
-                viewer.showPlayer(plugin, player);
+            if (viewer.getUniqueId().equals(id)) {
+                continue;
+            }
+            viewer.showPlayer(plugin, player);
+            if (seesPlayer(false, isFakeSpectator(viewer))) {
+                player.showPlayer(plugin, viewer);
+            } else {
+                player.hidePlayer(plugin, viewer);
             }
         }
         notifyMode(player, false);
+    }
+
+    /**
+     * True when a viewer sees a target player: anyone sees the alive,
+     * but only fake spectators see fakes. Pure for tests.
+     */
+    static boolean seesPlayer(boolean viewerFake, boolean targetFake) {
+        return !targetFake || viewerFake;
     }
 
     private void notifyMode(Player player, boolean enabled) {

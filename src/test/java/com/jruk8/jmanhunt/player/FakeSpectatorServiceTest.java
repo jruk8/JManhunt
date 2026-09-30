@@ -3,6 +3,9 @@ package com.jruk8.jmanhunt.player;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -14,6 +17,7 @@ import java.util.UUID;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.potion.PotionEffect;
 import org.junit.jupiter.api.Test;
 
 class FakeSpectatorServiceTest {
@@ -256,5 +260,89 @@ class FakeSpectatorServiceTest {
 
         assertFalse(fixture.fakes().isFakeSpectator((Player) null));
         assertFalse(fixture.fakes().isFakeSpectator((UUID) null));
+    }
+
+    @Test
+    void seesPlayerTruthTable() {
+        assertTrue(FakeSpectatorService.seesPlayer(false, false));
+        assertFalse(FakeSpectatorService.seesPlayer(false, true));
+        assertTrue(FakeSpectatorService.seesPlayer(true, false));
+        assertTrue(FakeSpectatorService.seesPlayer(true, true));
+    }
+
+    @Test
+    void enableShowsMutuallyToFakeViewers() {
+        Fixture fixture = fixture();
+        fixture.fakes().enable(fixture.viewer());
+        clearInvocations(fixture.viewer(), fixture.watched());
+
+        fixture.fakes().enable(fixture.watched());
+
+        verify(fixture.viewer()).showPlayer(fixture.plugin(), fixture.watched());
+        verify(fixture.watched()).showPlayer(fixture.plugin(), fixture.viewer());
+        verify(fixture.viewer(), never()).hidePlayer(fixture.plugin(), fixture.watched());
+        verify(fixture.watched(), never()).hidePlayer(fixture.plugin(), fixture.viewer());
+    }
+
+    @Test
+    void enableShowsNewFakeToAliveViewersButHidesBack() {
+        Fixture fixture = fixture();
+
+        fixture.fakes().enable(fixture.watched());
+
+        verify(fixture.watched()).showPlayer(fixture.plugin(), fixture.viewer());
+        verify(fixture.viewer()).hidePlayer(fixture.plugin(), fixture.watched());
+        verify(fixture.viewer(), never()).showPlayer(fixture.plugin(), fixture.watched());
+    }
+
+    @Test
+    void disableHidesRemainingFakesFromLeaver() {
+        Fixture fixture = fixture();
+        fixture.fakes().enable(fixture.viewer());
+        fixture.fakes().enable(fixture.watched());
+        clearInvocations(fixture.viewer(), fixture.watched());
+
+        fixture.fakes().disable(fixture.watched());
+
+        verify(fixture.viewer()).showPlayer(fixture.plugin(), fixture.watched());
+        verify(fixture.watched()).hidePlayer(fixture.plugin(), fixture.viewer());
+    }
+
+    @Test
+    void disableShowsAliveViewersBothWays() {
+        Fixture fixture = fixture();
+        fixture.fakes().enable(fixture.watched());
+        clearInvocations(fixture.viewer(), fixture.watched());
+
+        fixture.fakes().disable(fixture.watched());
+
+        verify(fixture.viewer()).showPlayer(fixture.plugin(), fixture.watched());
+        verify(fixture.watched()).showPlayer(fixture.plugin(), fixture.viewer());
+        verify(fixture.watched(), never()).hidePlayer(fixture.plugin(), fixture.viewer());
+    }
+
+    @Test
+    void enableAppliesInfiniteInvisibilityWithoutParticlesOrIcon() {
+        Fixture fixture = fixture();
+
+        fixture.fakes().enable(fixture.watched());
+
+        verify(fixture.watched()).addPotionEffect(argThat(effect ->
+                effect != null
+                        && effect.getDuration() == PotionEffect.INFINITE_DURATION
+                        && effect.getAmplifier() == 0
+                        && !effect.isAmbient()
+                        && !effect.hasParticles()
+                        && !effect.hasIcon()));
+    }
+
+    @Test
+    void disableRemovesInvisibility() {
+        Fixture fixture = fixture();
+        fixture.fakes().enable(fixture.watched());
+
+        fixture.fakes().disable(fixture.watched());
+
+        verify(fixture.watched()).removePotionEffect(any());
     }
 }
