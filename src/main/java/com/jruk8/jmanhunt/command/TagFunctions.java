@@ -39,7 +39,7 @@ public final class TagFunctions {
             "pstat", "gstat", "phasitem", "gflag", "gf", "pflag", "pf", "lflag", "lf", "rflag",
             "placeholder",
             "min", "max", "clamp", "root", "if",
-            "gmessage", "pmessage", "rmessage", "gsound", "psound", "rsound",
+            "gmessage", "gmsg", "pmessage", "pmsg", "rmessage", "rmsg", "gsound", "psound", "rsound",
             "loseplayer", "win", "args",
             "list.append", "list.get", "list.set", "list.remove", "list.contains",
             "list.clear", "list.pop", "len", "list.shuffle", "range",

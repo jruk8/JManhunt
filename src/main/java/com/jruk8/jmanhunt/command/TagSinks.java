@@ -20,10 +20,10 @@ final class TagSinks {
      */
     static String message(String tag, String name, String args, TagContext context) {
         List<String> parts = CommandPlaceholders.splitPickArgs(args);
-        if (name.equals("rmessage")) {
+        if (name.equals("rmessage") || name.equals("rmsg")) {
             return roleMessage(tag, parts, context);
         }
-        if (name.equals("pmessage")) {
+        if (name.equals("pmessage") || name.equals("pmsg")) {
             return playerMessage(tag, parts, context);
         }
         if (parts.size() != 1) {

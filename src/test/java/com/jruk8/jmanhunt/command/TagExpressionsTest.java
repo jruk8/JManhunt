@@ -377,6 +377,48 @@ class TagExpressionsTest {
     }
 
     @Test
+    void messageAliasesMatchCanonical() {
+        Fixture fixture = new Fixture();
+        assertEquals("", replace(fixture, "<gmsg:hi>"));
+        assertEquals("", replace(fixture, "<pmsg:Alex,yo>"));
+        assertEquals(List.of("hi"), fixture.globalMessages);
+        assertEquals(List.of("Alex:yo"), fixture.namedMessages);
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void roleMessageAliasMatchesCanonical() {
+        List<String> warnings = new ArrayList<>();
+        List<String> roleMessages = new ArrayList<>();
+        TagContext context = TagContext.run(
+                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
+                "beef", warnings::add, warnings::add,
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                (player, reason) -> { }, (role, reason) -> { },
+                7L, TagBackends.inert(), List.of(), detail -> { },
+                (role, text) -> roleMessages.add(role + ":" + text),
+                (role, id, pitch, volume) -> { });
+        assertEquals("", CommandPlaceholders.replace("<rmsg:hunter,hi>", "Steve", 0, 0, 0, context));
+        assertEquals("", CommandPlaceholders.replace("<rmsg:hi>", "Steve", 0, 0, 0, context));
+        assertEquals(List.of("HUNTER:hi"), roleMessages);
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).contains("needs a role and a text"));
+    }
+
+    @Test
+    void playerMessageAliasWarnsWhenOffline() {
+        List<String> warnings = new ArrayList<>();
+        TagContext context = TagContext.of(
+                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
+                "beef", warnings::add, warnings::add,
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { });
+        assertEquals("", CommandPlaceholders.replace("<pmsg:Alex,yo>", "Steve", 0, 0, 0,
+                context));
+        assertEquals(1, warnings.size());
+        assertTrue(warnings.get(0).contains("is offline"));
+    }
+
+    @Test
     void escapedMessageDeliversRestored() {
         Fixture fixture = new Fixture();
         assertEquals("", replace(fixture, "<gmessage:\\<hi\\>>"));

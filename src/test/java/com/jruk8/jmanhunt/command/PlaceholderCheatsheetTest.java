@@ -22,6 +22,18 @@ class PlaceholderCheatsheetTest {
     }
 
     @Test
+    void aliasEntriesNameTheirCanonicalTag() {
+        List<String> lines = PlaceholderCheatsheet.lines();
+
+        assertTrue(lines.stream().anyMatch(line -> line.contains("<gmsg:text>")
+                && line.contains("alias of gmessage")), lines.toString());
+        assertTrue(lines.stream().anyMatch(line -> line.contains("<pmsg:player,text>")
+                && line.contains("alias of pmessage")), lines.toString());
+        assertTrue(lines.stream().anyMatch(line -> line.contains("<rmsg:hunter,push!>")
+                && line.contains("alias of rmessage")), lines.toString());
+    }
+
+    @Test
     void everyLineUsesTheDoubleArrowMarker() {
         for (String line : PlaceholderCheatsheet.lines()) {
             assertTrue(line.contains("»"), line);

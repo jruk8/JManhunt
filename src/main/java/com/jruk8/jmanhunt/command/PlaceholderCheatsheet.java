@@ -28,8 +28,11 @@ public final class PlaceholderCheatsheet {
             Map.entry("clamp", new String[]{"<clamp:x,low,high>", "number clamped to a range"}),
             Map.entry("if", new String[]{"<if:cond,then,else>", "branch on a condition"}),
             Map.entry("gmessage", new String[]{"<gmessage:text>", "broadcast text, returns empty"}),
+            Map.entry("gmsg", new String[]{"<gmsg:text>", "alias of gmessage"}),
             Map.entry("pmessage",
                     new String[]{"<pmessage:player,text>", "message one player, returns empty"}),
+            Map.entry("pmsg",
+                    new String[]{"<pmsg:player,text>", "alias of pmessage"}),
             Map.entry("gsound",
                     new String[]{"<gsound:id,pitch,volume>", "sound for all, returns empty"}),
             Map.entry("psound",
@@ -88,6 +91,7 @@ public final class PlaceholderCheatsheet {
                     new String[]{"<format:string,params>", "fills {0}, {1}, silent when missing"}),
             Map.entry("rflag", new String[]{"<rflag:hunter,boost>", "flag of the named role"}),
             Map.entry("rmessage", new String[]{"<rmessage:hunter,push!>", "tells the named role"}),
+            Map.entry("rmsg", new String[]{"<rmsg:hunter,push!>", "alias of rmessage"}),
             Map.entry("rsound", new String[]{"<rsound:hunter,id>", "plays for the named role"}));
 
     private PlaceholderCheatsheet() {

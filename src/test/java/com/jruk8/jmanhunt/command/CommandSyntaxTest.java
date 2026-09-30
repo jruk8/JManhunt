@@ -366,6 +366,20 @@ class CommandSyntaxTest {
     }
 
     @Test
+    void shortMessageAliasesValidate() {
+        assertTrue(CommandSyntax.error("say <gmsg:hi> <pmsg:Alex,yo> <rmsg:hunter,yo>").isEmpty());
+        assertTrue(CommandSyntax.warnings("say <gmsg:hi> <pmsg:Alex,yo> <rmsg:hunter,yo>").isEmpty());
+        assertTrue(CommandSyntax.error("say <gmsg> done").isPresent());
+        assertTrue(CommandSyntax.error("say <pmsg:yo> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rmsg> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rmsg:yo> done").isPresent());
+        assertTrue(CommandSyntax.error("say <rmsg:banana,yo> done").isPresent());
+        assertTrue(TagFunctions.isBuiltin("gmsg"));
+        assertTrue(TagFunctions.isBuiltin("pmsg"));
+        assertTrue(TagFunctions.isBuiltin("rmsg"));
+    }
+
+    @Test
     void functionScopeGroupsExecutorLists() {
         assertEquals(List.of("player", "hunter", "speedrunner"),
                 TagFunctionScope.functionScopeLists("hunter"));

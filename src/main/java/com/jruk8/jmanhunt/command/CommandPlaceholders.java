@@ -509,7 +509,8 @@ public final class CommandPlaceholders {
             case "placeholder" -> TagPlaceholders.resolve(tag, args, context);
             case "min", "max", "clamp", "root" -> TagExpressions.minMaxClamp(tag, name, args, context);
             case "if" -> TagExpressions.ifEval(tag, args, context);
-            case "gmessage", "pmessage", "rmessage" -> TagSinks.message(tag, name, args, context);
+            case "gmessage", "gmsg", "pmessage", "pmsg", "rmessage", "rmsg" ->
+                    TagSinks.message(tag, name, args, context);
             case "gsound", "psound", "rsound" -> TagSinks.sound(tag, name, args, context);
             case "loseplayer" -> TagExpressions.loseplayer(tag, args, context);
             case "win" -> TagExpressions.win(tag, args, context);
@@ -523,8 +524,7 @@ public final class CommandPlaceholders {
             case "distance" -> TagLocations.distance(tag, args, context);
             case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" ->
                     TagExpressions.mathUnary(tag, name, args, context);
-            case "run" -> TagRun.run(tag, args, context);
-            case "format" -> TagFormat.format(tag, args, context);
+            case "run" -> TagRun.run(tag, args, context); case "format" -> TagFormat.format(tag, args, context);
             default -> TagFunctions.call(tag, name, args, context, eval);
         };
     }

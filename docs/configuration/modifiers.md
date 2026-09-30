@@ -32,9 +32,9 @@ see the Tags pages for full rules.
 
 | Tag | Meaning |
 | --- | --- |
-| `<gmessage:text>` | Send text to every participant; leaves nothing behind. |
-| `<pmessage:player,text>` | Send text to one player. |
-| `<rmessage:role,text>` | Send text to one role. |
+| `<gmessage:text>` | Send text to every participant; leaves nothing behind (alias `<gmsg>`). |
+| `<pmessage:player,text>` | Send text to one player (alias `<pmsg>`). |
+| `<rmessage:role,text>` | Send text to one role (alias `<rmsg>`). |
 | `<gsound:id,pitch,volume>` | Play a sound for every participant. |
 | `<psound:player,id,pitch,volume>` | Play a sound for one player. |
 | `<rsound:role,id,pitch,volume>` | Play a sound for one role. |

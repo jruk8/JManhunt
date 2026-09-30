@@ -35,9 +35,9 @@ public final class CommandSyntax {
     public static List<String> knownTags() {
         return List.of("p", "random-mob", "random-item", "random-num",
                 "random-pick", "random-player", "all-players", "id", "min",
-                "max", "clamp", "if", "gmessage", "pmessage", "gsound", "psound",
+                "max", "clamp", "if", "gmessage", "gmsg", "pmessage", "pmsg", "gsound", "psound",
                 "pstat", "gstat", "phasitem", "gflag", "gf", "pflag", "pf", "lflag", "lf", "placeholder",
-                "rflag", "rmessage", "rsound",
+                "rflag", "rmessage", "rmsg", "rsound",
                 "loseplayer", "win", "args", "list.append", "list.get", "list.set", "list.remove",
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
                 "active-players", "plocation", "prole", "distance",
@@ -231,9 +231,9 @@ public final class CommandSyntax {
             case "id", "i" -> noArgsError(name, args);
             case "min", "max" -> arityError(name, args, 2, "two numbers");
             case "clamp" -> arityError(name, args, 3, "a value plus low and high");
-            case "gmessage" -> arityError(name, args, 1, "one text");
-            case "pmessage" -> arityError(name, args, 2, "a player and a text");
-            case "rmessage" -> RoleTagSyntax.messageError(name, args);
+            case "gmessage", "gmsg" -> arityError(name, args, 1, "one text");
+            case "pmessage", "pmsg" -> arityError(name, args, 2, "a player and a text");
+            case "rmessage", "rmsg" -> RoleTagSyntax.messageError(name, args);
             case "gsound" -> TagSinks.soundError(name, args);
             case "psound" -> TagSinks.playerSoundError(name, args);
             case "rsound" -> RoleTagSyntax.soundError(name, args);
