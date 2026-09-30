@@ -1,0 +1,10 @@
+# Bundled JManhunt preset: vanilla-plus
+meta:
+  name: "Vanilla+"
+  description: "Light extras that can help balance Manhunts"
+  item: GRASS_BLOCK
+  author: JManhunt
+modifiers:
+  - everyone-gets-beef
+  - regen-on-kill
+  - fireres-on-nether-enter

@@ -6,7 +6,7 @@ import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import net.kyori.adventure.text.Component;
 import org.junit.jupiter.api.Test;
 import java.util.List;
@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModifierToggleAllTest {
 
-    private static ConfigService service(ModifiersConfig config) {
+    private static ConfigService service(ModifierFiles config) {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         return new ConfigService(null, new ModifierStore(config, log));
@@ -30,7 +30,7 @@ class ModifierToggleAllTest {
         return messages;
     }
 
-    private static void addModifier(ModifiersConfig config, String id, boolean enabled) {
+    private static void addModifier(ModifierFiles config, String id, boolean enabled) {
         ModifierEntry entry = new ModifierEntry();
         entry.setEnabled(enabled);
         config.getModifiers().put(id, entry);
@@ -38,7 +38,7 @@ class ModifierToggleAllTest {
 
     @Test
     void toggleAllModifiersFlipsEveryModifierWithOneSummary() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         addModifier(config, "a", false);
         addModifier(config, "b", true);
         ConfigService service = service(config);
@@ -57,7 +57,7 @@ class ModifierToggleAllTest {
 
     @Test
     void toggleAllModifiersSkipsUnknownIdsQuietly() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         addModifier(config, "a", false);
         ConfigService service = service(config);
         MessageService messages = messages();
@@ -74,7 +74,7 @@ class ModifierToggleAllTest {
 
     @Test
     void toggleAllModifiersWithoutPermissionChangesNothing() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         addModifier(config, "a", false);
         ConfigService service = service(config);
         MessageService messages = messages();
@@ -89,7 +89,7 @@ class ModifierToggleAllTest {
 
     @Test
     void toggleAllPresetsFlipsMembersWithOneSummary() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         addModifier(config, "a", false);
         addModifier(config, "b", false);
         ModifierPreset preset = new ModifierPreset();
@@ -111,7 +111,7 @@ class ModifierToggleAllTest {
 
     @Test
     void toggleAllPresetsWithoutPermissionChangesNothing() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         addModifier(config, "a", false);
         ModifierPreset preset = new ModifierPreset();
         preset.setModifiers(List.of("a"));

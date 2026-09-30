@@ -5,7 +5,7 @@ import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +42,7 @@ class OverrideServiceTest {
     void setUp() {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
-        ModifierStore store = new ModifierStore(new ModifiersConfig(), log);
+        ModifierStore store = new ModifierStore(ModifierFiles.inMemory(), log);
         ModifierEntry beef = new ModifierEntry();
         beef.setEnabled(true);
         store.addModifier("beef", beef);

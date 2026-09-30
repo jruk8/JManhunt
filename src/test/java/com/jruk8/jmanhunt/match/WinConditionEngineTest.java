@@ -7,7 +7,7 @@ import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,7 +24,7 @@ class WinConditionEngineTest {
     private static ConfigService service(JManhuntConfig root) {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
-        return new ConfigService(root, new ModifierStore(new ModifiersConfig(), log));
+        return new ConfigService(root, new ModifierStore(ModifierFiles.inMemory(), log));
     }
 
     @Test

@@ -15,7 +15,6 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.DevConfig;
 import com.jruk8.jmanhunt.config.DevConfigRegistrar;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
-import com.jruk8.jmanhunt.config.YamlFileUpdater;
 import com.jruk8.jmanhunt.lobby.bounds.LobbyBoundsService;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfigRegistrar;
@@ -37,7 +36,10 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesRegistrar;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersRegistrar;
+import com.jruk8.jmanhunt.modifiers.files.ModFileKind;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
+import com.jruk8.jmanhunt.modifiers.files.ModsDefaults;
+import com.jruk8.jmanhunt.modifiers.files.ModsLoader;
 import com.jruk8.jmanhunt.placeholders.PlaceholderConfigRegistrar;
 import com.jruk8.jmanhunt.gui.menus.SpectatorMenus;
 import com.jruk8.jmanhunt.player.FakeSpectatorListener;
@@ -82,6 +84,8 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -89,7 +93,6 @@ import java.util.Map;
 import java.util.UUID;
 
 public final class JManhuntPlugin extends JavaPlugin {
-    private static final int MODIFIERS_VERSION = 2;
     private MessageService messages;
     private MessagesRegistrar messageConfigs;
     private SoundService sounds;
@@ -105,7 +108,6 @@ public final class JManhuntPlugin extends JavaPlugin {
     private ConfigService configService;
     private OverrideService overrideService;
     private ModifierStore modifierStore;
-    private ModifiersRegistrar modifierConfigs;
     private WorldEngineService worldEngine;
     private WinConditionEngine winConditionEngine;
     private JManhuntLogger logger;
@@ -667,14 +669,26 @@ public final class JManhuntPlugin extends JavaPlugin {
     }
 
     private void reloadModifiers() {
-        YamlFileUpdater.update(this, "modifiers.yml", "modifiers-version", MODIFIERS_VERSION);
-        if (modifierConfigs == null) {
-            modifierConfigs = new ModifiersRegistrar(this);
-            modifierConfigs.register();
-            modifierStore = new ModifierStore(modifierConfigs.getModifiersConfig(), getLogger());
+        Path modsRoot = new File(getDataFolder(), "mods").toPath();
+        ModsLoader loader = new ModsLoader(this::seedBundledMods, getLogger());
+        if (modifierStore == null) {
+            modifierStore = new ModifierStore(
+                    ModifierFiles.fromLoad(modsRoot, loader.load(modsRoot)), getLogger());
         } else {
-            modifierConfigs.reload();
+            modifierStore.replaceAll(loader.load(modsRoot));
             modifierStore.clearItemWarnings();
+        }
+    }
+
+    /**
+     * Copies bundled defaults for one kind dir. The loader calls this
+     * only when it creates the dir, so user deletions are never
+     * restored. The resource path resolves the target, so {@code dir}
+     * only documents the seeding contract.
+     */
+    private void seedBundledMods(ModFileKind kind, Path dir) {
+        for (String id : ModsDefaults.ids(kind)) {
+            saveResource("mods/" + kind.dirName() + "/" + id + ".yml", false);
         }
     }
 

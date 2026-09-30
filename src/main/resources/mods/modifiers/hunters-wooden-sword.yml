@@ -1,0 +1,13 @@
+# Bundled JManhunt modifier: hunters-wooden-sword
+enabled: false
+meta:
+  name: "Hunter Wooden Sword"
+  description: "Hunters start with a wooden sword"
+  item: WOODEN_SWORD
+  author: JManhunt
+behavior:
+  0:
+    commands:
+      hunter:
+        # Runs only once for each Hunter, with <p> replaced by their name.
+        - "give <p> wooden_sword"

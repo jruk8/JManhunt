@@ -1,0 +1,34 @@
+# Bundled JManhunt modifier: everyone-gets-beef
+# Gives every participating player eight steaks when the match starts.
+enabled: false
+meta:
+  name: "Everyone Gets Beef"
+  description: "Gives everyone 8 Steak at the start"
+  item: COOKED_BEEF
+  author: JManhunt
+behavior:
+  0:
+    # When should commands other than cleanup be run? A list of any of:
+    # ON_START - Once when the match starts (runs for all participants)
+    # INTERVAL - On a fixed interval that starts counting when the game begins
+    # ON_MOB_KILLED - When a participating player kills a mob or other non-player entity (never players)
+    # ON_PLAYER_KILLS - When a participating player kills another player
+    # Enable both ON_MOB_KILLED and ON_PLAYER_KILLS to count every kill
+    # ON_HUNTER_KILLS - When a hunter kills a player
+    # ON_SPEEDRUNNER_KILLS - When a speedrunner kills a player
+    # ON_NETHER_ENTER - When a participating player enters the Nether (once per player per match)
+    # ON_END_ENTER - When a participating player enters the End (once per player per match)
+    # ON_FIRST_NETHER_ENTER - When the first participating player enters the Nether (once per match)
+    # ON_FIRST_END_ENTER - When the first participating player enters the End (once per match)
+    # ON_EVERY_ADVANCEMENT - When a participating player earns any advancement
+    # ON_RESPAWN - When a player respawns (only the executing player)
+    # ON_SPEEDRUNNER_RESPAWN - When a speedrunner respawns (only the executing player)
+    # ON_HUNTER_RESPAWN - When a hunter respawns (only the executing player)
+    # ON_DAMAGE_TAKEN - When a participant takes damage (only the executing player)
+    # If omitted, defaults to ON_START.
+    runs-on:
+      - ON_START
+    commands:
+      player:
+        # Runs for every participating player (only hunters and speedrunners, not including NONE)
+        - "give <p> minecraft:cooked_beef 8"

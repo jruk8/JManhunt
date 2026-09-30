@@ -16,7 +16,7 @@ import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -54,7 +54,7 @@ class PresetEditorMenusTest {
 
     @BeforeEach
     void setup() throws Exception {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         addModifier(config, "zebra", "Zulu");
         addModifier(config, "apple", "Apple");
         ModifierPreset preset = new ModifierPreset();
@@ -79,7 +79,7 @@ class PresetEditorMenusTest {
         editor = new PresetEditorMenus(store, messages, null, null, null, null);
     }
 
-    private static void addModifier(ModifiersConfig config, String id, String name) {
+    private static void addModifier(ModifierFiles config, String id, String name) {
         ModifierEntry entry = new ModifierEntry();
         ModifierMeta meta = new ModifierMeta();
         meta.setName(name);

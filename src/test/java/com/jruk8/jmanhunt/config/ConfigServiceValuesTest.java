@@ -2,7 +2,7 @@ package com.jruk8.jmanhunt.config;
 
 import com.jruk8.jmanhunt.match.prestart.OnExpire;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
@@ -27,7 +27,7 @@ class ConfigServiceValuesTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         service = new ConfigService(new JManhuntConfig(),
-                new ModifierStore(new ModifiersConfig(), log), () -> {});
+                new ModifierStore(ModifierFiles.inMemory(), log), () -> {});
     }
 
     @Test

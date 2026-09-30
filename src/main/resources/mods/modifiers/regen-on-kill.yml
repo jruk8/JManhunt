@@ -1,0 +1,14 @@
+# Bundled JManhunt modifier: regen-on-kill
+enabled: false
+meta:
+  name: "Regen On Kill"
+  description: "Regeneration II for 10s on every player kill"
+  item: GHAST_TEAR
+  author: JManhunt
+behavior:
+  0:
+    runs-on:
+      - ON_PLAYER_KILLS
+    commands:
+      player:
+        - "effect give <p> minecraft:regeneration 10 1 true"

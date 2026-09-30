@@ -7,21 +7,25 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierExecution;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierOptions;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModLoadResult;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 import org.bukkit.Material;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
 /**
- * Owns modifiers.yml behind the Okaeri model: modifier toggles,
- * typed behavior lookups, presets, and display metadata. Item names
+ * Owns the mods/ trees behind the per-file models: modifier toggles,
+ * typed behavior lookups, presets, and display metadata. Every
+ * mutation persists only its touched file, atomically. Item names
  * resolve without a running server so unit tests can exercise every
  * fallback.
  */
@@ -30,14 +34,14 @@ public final class ModifierStore {
     public static final String DEFAULT_DESCRIPTION = "Enable for a twist!";
     public static final String DEFAULT_PRESET_NAME = "My Preset";
 
-    private final ModifiersConfig config;
+    private final ModifierFiles files;
     private final Logger log;
     private final Set<String> warnedItems = new HashSet<>();
     private final Set<String> warnedBehaviorKeys = new HashSet<>();
     private final List<Consumer<String>> toggleListeners = new ArrayList<>();
 
-    public ModifierStore(ModifiersConfig config, Logger log) {
-        this.config = config;
+    public ModifierStore(ModifierFiles files, Logger log) {
+        this.files = files;
         this.log = log;
     }
 
@@ -47,14 +51,19 @@ public final class ModifierStore {
         warnedBehaviorKeys.clear();
     }
 
+    /** Swaps contents from a fresh load pass (reload). */
+    public void replaceAll(ModLoadResult result) {
+        files.replaceAll(result);
+    }
+
     /** Raw modifier entry, or null when unknown. */
     public ModifierEntry modifierEntry(String name) {
-        return config.getModifiers().get(name);
+        return files.getModifiers().get(name);
     }
 
     /** Raw preset, or null when unknown. */
     public ModifierPreset presetEntry(String id) {
-        return config.getPresets().get(id);
+        return files.getPresets().get(id);
     }
 
     /**
@@ -92,69 +101,75 @@ public final class ModifierStore {
         return addPreset(slug.isEmpty() ? "preset" : slug, preset);
     }
 
-    /** Removes a modifier, saving immediately. False when unknown. */
+    /** Removes a modifier and deletes its file. False when unknown. */
     public boolean removeModifier(String id) {
-        if (config.getModifiers().remove(id) == null) {
+        if (files.getModifiers().remove(id) == null) {
             return false;
         }
-        save();
+        files.deleteModifierFile(id, log);
         return true;
     }
 
-    /** Removes a preset, saving immediately. False when unknown. */
+    /** Removes a preset and deletes its file. False when unknown. */
     public boolean removePreset(String id) {
-        if (config.getPresets().remove(id) == null) {
+        if (files.getPresets().remove(id) == null) {
             return false;
         }
-        save();
+        files.deletePresetFile(id, log);
         return true;
     }
 
     /**
-     * Renames a modifier id, saving immediately. Preset member lists
-     * follow the rename so presets keep pointing at the same entry.
-     * False when the old id is unknown or the new id is taken.
+     * Renames a modifier id, moving its file within its directory.
+     * Preset member lists follow the rename so presets keep pointing
+     * at the same entry. False when the old id is unknown or the new
+     * id is taken.
      */
     public boolean renameModifier(String oldId, String newId) {
         if (oldId.equals(newId)) {
-            return config.getModifiers().containsKey(oldId);
+            return files.getModifiers().containsKey(oldId);
         }
-        ModifierEntry entry = config.getModifiers().get(oldId);
-        if (entry == null || config.getModifiers().containsKey(newId)) {
+        ModifierEntry entry = files.getModifiers().get(oldId);
+        if (entry == null || files.getModifiers().containsKey(newId)) {
             return false;
         }
-        config.getModifiers().remove(oldId);
-        config.getModifiers().put(newId, entry);
-        for (ModifierPreset preset : config.getPresets().values()) {
-            List<String> members = preset.getModifiers();
+        files.getModifiers().remove(oldId);
+        files.getModifiers().put(newId, entry);
+        files.moveModifierFile(oldId, newId, log);
+        for (Map.Entry<String, ModifierPreset> preset : files.getPresets().entrySet()) {
+            List<String> members = preset.getValue().getModifiers();
             if (members == null) {
                 continue;
             }
+            boolean touched = false;
             for (int index = 0; index < members.size(); index++) {
                 if (members.get(index).equals(oldId)) {
                     members.set(index, newId);
+                    touched = true;
                 }
             }
+            if (touched) {
+                files.savePreset(preset.getKey(), log);
+            }
         }
-        save();
         return true;
     }
 
     /**
-     * Renames a preset id, saving immediately. False when the old id
-     * is unknown or the new id is taken.
+     * Renames a preset id, moving its file within its directory.
+     * False when the old id is unknown or the new id is taken.
      */
     public boolean renamePreset(String oldId, String newId) {
         if (oldId.equals(newId)) {
-            return config.getPresets().containsKey(oldId);
+            return files.getPresets().containsKey(oldId);
         }
-        ModifierPreset preset = config.getPresets().get(oldId);
-        if (preset == null || config.getPresets().containsKey(newId)) {
+        ModifierPreset preset = files.getPresets().get(oldId);
+        if (preset == null || files.getPresets().containsKey(newId)) {
             return false;
         }
-        config.getPresets().remove(oldId);
-        config.getPresets().put(newId, preset);
-        save();
+        files.getPresets().remove(oldId);
+        files.getPresets().put(newId, preset);
+        files.movePresetFile(oldId, newId, log);
         return true;
     }
 
@@ -164,12 +179,12 @@ public final class ModifierStore {
      * ensure helpers when the patch needs them.
      */
     public boolean updateModifier(String id, Consumer<ModifierEntry> patch) {
-        ModifierEntry entry = config.getModifiers().get(id);
+        ModifierEntry entry = files.getModifiers().get(id);
         if (entry == null) {
             return false;
         }
         patch.accept(entry);
-        save();
+        files.saveModifier(id, log);
         return true;
     }
 
@@ -179,7 +194,7 @@ public final class ModifierStore {
      * meet a null parent.
      */
     public boolean updatePreset(String id, Consumer<ModifierPreset> patch) {
-        ModifierPreset preset = config.getPresets().get(id);
+        ModifierPreset preset = files.getPresets().get(id);
         if (preset == null) {
             return false;
         }
@@ -187,7 +202,7 @@ public final class ModifierStore {
             preset.setMeta(new ModifierMeta());
         }
         patch.accept(preset);
-        save();
+        files.savePreset(id, log);
         return true;
     }
 
@@ -197,7 +212,7 @@ public final class ModifierStore {
      * was already listed.
      */
     public boolean memberAdd(String presetId, String modifierId) {
-        ModifierPreset preset = config.getPresets().get(presetId);
+        ModifierPreset preset = files.getPresets().get(presetId);
         if (preset == null) {
             return false;
         }
@@ -208,7 +223,7 @@ public final class ModifierStore {
             return false;
         }
         preset.getModifiers().add(modifierId);
-        save();
+        files.savePreset(presetId, log);
         return true;
     }
 
@@ -218,14 +233,14 @@ public final class ModifierStore {
      * member was not listed.
      */
     public boolean memberRemove(String presetId, String modifierId) {
-        ModifierPreset preset = config.getPresets().get(presetId);
+        ModifierPreset preset = files.getPresets().get(presetId);
         if (preset == null || preset.getModifiers() == null) {
             return false;
         }
         if (!preset.getModifiers().remove(modifierId)) {
             return false;
         }
-        save();
+        files.savePreset(presetId, log);
         return true;
     }
 
@@ -243,7 +258,7 @@ public final class ModifierStore {
      * once per load and are skipped; sparse indexes need no contiguity.
      */
     public List<Integer> behaviorIndexes(String name) {
-        ModifierEntry entry = config.getModifiers().get(name);
+        ModifierEntry entry = files.getModifiers().get(name);
         if (entry == null || entry.getBehavior() == null) {
             return List.of();
         }
@@ -268,7 +283,7 @@ public final class ModifierStore {
      * new index, or -1 when the modifier is unknown.
      */
     public int addBehavior(String name) {
-        ModifierEntry entry = config.getModifiers().get(name);
+        ModifierEntry entry = files.getModifiers().get(name);
         if (entry == null) {
             return -1;
         }
@@ -277,20 +292,20 @@ public final class ModifierStore {
             index = Math.max(index, present + 1);
         }
         ensureBehavior(entry, index);
-        save();
+        files.saveModifier(name, log);
         return index;
     }
 
     /** Removes one behavior, saving immediately. False when nothing removed. */
     public boolean removeBehavior(String name, int index) {
-        ModifierEntry entry = config.getModifiers().get(name);
+        ModifierEntry entry = files.getModifiers().get(name);
         if (entry == null || entry.getBehavior() == null) {
             return false;
         }
         if (entry.getBehavior().remove(String.valueOf(index)) == null) {
             return false;
         }
-        save();
+        files.saveModifier(name, log);
         return true;
     }
 
@@ -333,9 +348,9 @@ public final class ModifierStore {
      */
     public String addModifier(String id, ModifierEntry entry) {
         String finalId = id;
-        if (config.getModifiers().containsKey(finalId)) {
+        if (files.getModifiers().containsKey(finalId)) {
             Set<String> takenNames = new HashSet<>();
-            for (String key : config.getModifiers().keySet()) {
+            for (String key : files.getModifiers().keySet()) {
                 takenNames.add(metaName(key));
             }
             String base = metaNameOf(entry);
@@ -348,15 +363,15 @@ public final class ModifierStore {
                 if (slug.isEmpty()) {
                     slug = "modifier";
                 }
-            } while (config.getModifiers().containsKey(slug));
+            } while (files.getModifiers().containsKey(slug));
             if (entry.getMeta() == null) {
                 entry.setMeta(new ModifierMeta());
             }
             entry.getMeta().setName(name);
             finalId = slug;
         }
-        config.getModifiers().put(finalId, entry);
-        save();
+        files.getModifiers().put(finalId, entry);
+        files.saveModifier(finalId, log);
         return finalId;
     }
 
@@ -367,9 +382,9 @@ public final class ModifierStore {
      */
     public String addPreset(String id, ModifierPreset preset) {
         String finalId = id;
-        if (config.getPresets().containsKey(finalId)) {
+        if (files.getPresets().containsKey(finalId)) {
             Set<String> takenNames = new HashSet<>();
-            for (String key : config.getPresets().keySet()) {
+            for (String key : files.getPresets().keySet()) {
                 takenNames.add(presetName(key));
             }
             String base = presetNameOf(preset);
@@ -382,24 +397,34 @@ public final class ModifierStore {
                 if (slug.isEmpty()) {
                     slug = "preset";
                 }
-            } while (config.getPresets().containsKey(slug));
+            } while (files.getPresets().containsKey(slug));
             if (preset.getMeta() == null) {
                 preset.setMeta(new ModifierMeta());
             }
             preset.getMeta().setName(name);
             finalId = slug;
         }
-        config.getPresets().put(finalId, preset);
-        save();
+        files.getPresets().put(finalId, preset);
+        files.savePreset(finalId, log);
         return finalId;
     }
 
     public Set<String> modifierNames() {
-        return new LinkedHashSet<>(config.getModifiers().keySet());
+        return new LinkedHashSet<>(files.getModifiers().keySet());
+    }
+
+    /** True when a modifier id is loaded (root or any subdir). */
+    public boolean hasModifier(String id) {
+        return files.getModifiers().containsKey(id);
+    }
+
+    /** Known source file for one modifier, or null. */
+    public Path modifierPath(String id) {
+        return files.modifierPath(id);
     }
 
     public boolean isEnabled(String name) {
-        ModifierEntry entry = config.getModifiers().get(name);
+        ModifierEntry entry = files.getModifiers().get(name);
         return entry != null && entry.isEnabled();
     }
 
@@ -414,13 +439,13 @@ public final class ModifierStore {
      * Listeners hear only genuine flips, never redundant re-sets.
      */
     public boolean setEnabled(String name, boolean value) {
-        ModifierEntry entry = config.getModifiers().get(name);
+        ModifierEntry entry = files.getModifiers().get(name);
         if (entry == null) {
             return false;
         }
         boolean changed = entry.isEnabled() != value;
         entry.setEnabled(value);
-        save();
+        files.saveModifier(name, log);
         if (changed) {
             for (Consumer<String> listener : List.copyOf(toggleListeners)) {
                 listener.accept(name);
@@ -545,12 +570,22 @@ public final class ModifierStore {
     }
 
     public Set<String> presetNames() {
-        return new LinkedHashSet<>(config.getPresets().keySet());
+        return new LinkedHashSet<>(files.getPresets().keySet());
+    }
+
+    /** True when a preset id is loaded (root or any subdir). */
+    public boolean hasPreset(String id) {
+        return files.getPresets().containsKey(id);
+    }
+
+    /** Known source file for one preset, or null. */
+    public Path presetPath(String id) {
+        return files.presetPath(id);
     }
 
     /** Preset member ids; empty when the preset is unknown. */
     public List<String> presetMembers(String id) {
-        ModifierPreset preset = config.getPresets().get(id);
+        ModifierPreset preset = files.getPresets().get(id);
         return preset == null || preset.getModifiers() == null ? List.of() : preset.getModifiers();
     }
 
@@ -595,12 +630,12 @@ public final class ModifierStore {
     }
 
     private ModifierMeta presetMeta(String id) {
-        ModifierPreset preset = config.getPresets().get(id);
+        ModifierPreset preset = files.getPresets().get(id);
         return preset == null ? null : preset.getMeta();
     }
 
     private ModifierBehavior behavior(String name, int index) {
-        ModifierEntry entry = config.getModifiers().get(name);
+        ModifierEntry entry = files.getModifiers().get(name);
         if (entry == null || entry.getBehavior() == null) {
             return null;
         }
@@ -608,7 +643,7 @@ public final class ModifierStore {
     }
 
     private ModifierMeta meta(String name) {
-        ModifierEntry entry = config.getModifiers().get(name);
+        ModifierEntry entry = files.getModifiers().get(name);
         return entry == null ? null : entry.getMeta();
     }
 
@@ -665,14 +700,6 @@ public final class ModifierStore {
             return Material.valueOf(normalized);
         } catch (IllegalArgumentException e) {
             return null;
-        }
-    }
-
-    private void save() {
-        try {
-            config.save();
-        } catch (RuntimeException exception) {
-            log.warning("Could not save modifiers.yml: " + exception.getMessage());
         }
     }
 }

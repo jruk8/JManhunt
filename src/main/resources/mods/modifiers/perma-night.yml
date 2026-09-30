@@ -1,0 +1,18 @@
+# Bundled JManhunt modifier: perma-night
+# Sets to night permanently for the duration of the match.
+enabled: false
+meta:
+  name: "Permanent Night"
+  description: "Locks the match to midnight"
+  item: CLOCK
+  author: JManhunt
+behavior:
+  0:
+    commands:
+      console:
+        # Ran by the console when the match starts.
+        - "gamerule advance_time false"
+        - "time set midnight"
+      console-cleanup:
+        # Ran by the console when the match ends.
+        - "gamerule advance_time true"

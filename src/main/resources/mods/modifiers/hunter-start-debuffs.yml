@@ -1,0 +1,20 @@
+# Bundled JManhunt modifier: hunter-start-debuffs
+# Softens the hunters right out of the gate: slowness II and weakness I
+# for 10 seconds each.
+enabled: false
+meta:
+  name: "Hunter Start Debuffs"
+  description: "Slowness II and weakness I for hunters, 10 seconds"
+  item: FERMENTED_SPIDER_EYE
+  author: JManhunt
+behavior:
+  0:
+    on-start:
+      # When to run the commands? BEFORE or AFTER the match pre-start window?
+      pre-start-order: AFTER
+    commands:
+      hunter:
+        # Runs only once for each Hunter, with <p> replaced by their name.
+        # Durations are in seconds, amplifiers zero-based.
+        - "effect give <p> minecraft:slowness 10 1 true"
+        - "effect give <p> minecraft:weakness 10 0 true"

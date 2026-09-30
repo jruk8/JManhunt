@@ -21,7 +21,7 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierExecution;
 import com.jruk8.jmanhunt.modifiers.config.ModifierInterval;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierOptions;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -61,7 +61,7 @@ class ModifierEditorMenusTest {
 
     @BeforeEach
     void setup() throws Exception {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         ModifierEntry entry = new ModifierEntry();
         entry.setEnabled(true);
         ModifierMeta meta = new ModifierMeta();

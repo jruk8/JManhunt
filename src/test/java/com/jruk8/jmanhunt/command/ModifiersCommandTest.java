@@ -9,7 +9,7 @@ import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.entity.Player;
@@ -50,7 +50,7 @@ class ModifiersCommandTest {
 
     @Test
     void optionsSortCaseInsensitively() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         for (String name : List.of("zeta", "Alpha", "mike")) {
             config.getModifiers().put(name, new ModifierEntry());
         }
@@ -135,7 +135,7 @@ class ModifiersCommandTest {
 
     @Test
     void togglesWithoutPermissionChangeNothing() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         config.getModifiers().put("beef", new ModifierEntry());
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
@@ -158,7 +158,7 @@ class ModifiersCommandTest {
     }
 
     private static Fixture fixture() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         ModifierEntry entry = new ModifierEntry();
         ModifierMeta meta =
                 new ModifierMeta();

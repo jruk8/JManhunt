@@ -1,13 +1,14 @@
 package com.jruk8.jmanhunt.modifiers;
 
 import com.jruk8.jmanhunt.command.CommandSyntax;
-import com.jruk8.jmanhunt.modifiers.config.ModifierCommandsPack;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
-import eu.okaeri.configs.ConfigManager;
-import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
+import com.jruk8.jmanhunt.modifiers.files.ModLoadResult;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
+import com.jruk8.jmanhunt.modifiers.files.ModsDefaults;
+import com.jruk8.jmanhunt.modifiers.files.ModsLoader;
+import com.jruk8.jmanhunt.modifiers.files.ModsSeeder;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,78 +33,79 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModifierStoreTest {
 
-    private static final String FIXTURE = """
-            modifiers-version: 1
+    private static final String BEEF = """
+            enabled: true
+            meta:
+              name: "Everyone Gets Beef"
+              description: "Steak at the start"
+              item: COOKED_BEEF
+              author: JManhunt
+            behavior:
+              0:
+                runs-on:
+                  - ON_START
+                options:
+                  interval-settings:
+                    interval: 90
+                    deviation: 5
+                    behavior: PER_EXECUTOR
+                  success-chance:
+                    chance: 0.5
+                    behavior: PER_EXECUTOR
+                  execution:
+                    selection: PICK_RANDOM
+                    pick-random:
+                      count: 2
+                      behavior: PER_EXECUTOR
+                  delay: 100
+                commands:
+                  player:
+                    - "give <p> beef 8"
+                  custom-list:
+                    - "say hi"
+              2:
+                runs-on:
+                  - ON_KILL
+            """;
+
+    private static final String THIN = """
+            enabled: false
+            behavior:
+              0:
+                commands:
+                  player:
+                    - "say thin"
+              extra:
+                runs-on:
+                  - ON_START
+            """;
+
+    private static final String MIXED = """
+            meta:
+              name: "Mixed"
+              description: "Beef plus nothing"
+              item: TNT
             modifiers:
-              beef:
-                enabled: true
-                meta:
-                  name: "Everyone Gets Beef"
-                  description: "Steak at the start"
-                  item: COOKED_BEEF
-                  author: JManhunt
-                behavior:
-                  0:
-                    runs-on:
-                      - ON_START
-                    options:
-                      interval-settings:
-                        interval: 90
-                        deviation: 5
-                        behavior: PER_EXECUTOR
-                      success-chance:
-                        chance: 0.5
-                        behavior: PER_EXECUTOR
-                      execution:
-                        selection: PICK_RANDOM
-                        pick-random:
-                          count: 2
-                          behavior: PER_EXECUTOR
-                      delay: 100
-                    commands:
-                      player:
-                        - "give <p> beef 8"
-                      custom-list:
-                        - "say hi"
-                  2:
-                    runs-on:
-                      - ON_KILL
-              bare:
-                enabled: false
-              thin:
-                enabled: false
-                behavior:
-                  0:
-                    commands:
-                      player:
-                        - "say thin"
-                  extra:
-                    runs-on:
-                      - ON_START
-            presets:
-              mixed:
-                meta:
-                  name: "Mixed"
-                  description: "Beef plus nothing"
-                  item: TNT
-                modifiers:
-                  - beef
-                  - bare
+              - beef
+              - bare
             """;
 
     @TempDir
     private Path tempDir;
 
-    private File file;
-    private ModifiersConfig config;
+    private Path modsRoot;
+    private ModifierFiles config;
     private ModifierStore store;
     private List<String> warnings;
 
     @BeforeEach
     void setup() throws Exception {
-        file = tempDir.resolve("modifiers.yml").toFile();
-        Files.writeString(file.toPath(), FIXTURE, StandardCharsets.UTF_8);
-        config = load(file);
+        modsRoot = tempDir.resolve("mods");
+        writeFixture("modifiers", "beef", BEEF);
+        writeFixture("modifiers", "bare", "enabled: false\n");
+        writeFixture("modifiers", "thin", THIN);
+        writeFixture("presets", "mixed", MIXED);
+        config = ModifierFiles.fromLoad(modsRoot, loadRoot());
 
         warnings = new ArrayList<>();
         Logger log = Logger.getAnonymousLogger();
@@ -150,8 +152,8 @@ class ModifierStoreTest {
         assertTrue(store.setEnabled("bare", true));
         assertTrue(store.isEnabled("bare"));
 
-        YamlConfiguration reread = YamlConfiguration.loadConfiguration(file);
-        assertTrue(reread.getBoolean("modifiers.bare.enabled"));
+        YamlConfiguration reread = YamlConfiguration.loadConfiguration(modFile("bare"));
+        assertTrue(reread.getBoolean("enabled"));
     }
 
     @Test
@@ -306,24 +308,25 @@ class ModifierStoreTest {
     void saveKeepsAbsentSectionsAbsent() {
         assertTrue(store.setEnabled("bare", true));
 
-        YamlConfiguration reread = YamlConfiguration.loadConfiguration(file);
-        var bare = reread.getConfigurationSection("modifiers.bare");
-        assertTrue(bare.getBoolean("enabled"));
-        assertFalse(bare.contains("meta"));
-        assertFalse(bare.contains("behavior"));
+        YamlConfiguration reread = YamlConfiguration.loadConfiguration(modFile("bare"));
+        assertTrue(reread.getBoolean("enabled"));
+        assertFalse(reread.contains("meta"));
+        assertFalse(reread.contains("behavior"));
 
-        var thin = reread.getConfigurationSection("modifiers.thin.behavior.0");
-        assertTrue(thin.contains("commands"));
-        assertFalse(thin.contains("runs-on"));
-        assertFalse(thin.contains("options"));
-        assertFalse(thin.contains("on-start"));
+        YamlConfiguration thin = YamlConfiguration.loadConfiguration(modFile("thin"));
+        var behavior = thin.getConfigurationSection("behavior.0");
+        assertTrue(behavior.contains("commands"));
+        assertFalse(behavior.contains("runs-on"));
+        assertFalse(behavior.contains("options"));
+        assertFalse(behavior.contains("on-start"));
     }
 
     @Test
-    void saveKeepsCustomListsAndOptions() throws Exception {
+    void saveKeepsCustomListsAndOptions() {
         assertTrue(store.setEnabled("bare", true));
 
-        ModifierStore reread = new ModifierStore(load(file), Logger.getAnonymousLogger());
+        ModifierStore reread = new ModifierStore(
+                ModifierFiles.fromLoad(modsRoot, loadRoot()), Logger.getAnonymousLogger());
         assertEquals(List.of("say hi"), reread.commandList("beef", 0, "custom-list"));
         assertEquals("PICK_RANDOM", reread.selection("beef", 0));
         assertEquals(2, reread.pickCount("beef", 0));
@@ -332,53 +335,51 @@ class ModifierStoreTest {
     }
 
     @Test
-    void bundledFileHasCompleteDefaults() throws Exception {
-        YamlConfiguration bundled;
-        try (InputStream stream = Objects.requireNonNull(
-                getClass().getClassLoader().getResourceAsStream("modifiers.yml"),
-                "missing test resource: modifiers.yml")) {
-            bundled = YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(stream, StandardCharsets.UTF_8));
-        }
-
-        var modifiers = bundled.getConfigurationSection("modifiers");
-        assertEquals(19, modifiers.getKeys(false).size());
-        for (String name : modifiers.getKeys(false)) {
-            var section = modifiers.getConfigurationSection(name);
-            assertTrue(section.contains("enabled"), name);
-            assertTrue(section.getConfigurationSection("meta").contains("name"), name);
-            assertTrue(section.getConfigurationSection("meta").contains("description"), name);
-            assertTrue(section.getConfigurationSection("meta").contains("item"), name);
-            assertTrue(section.getConfigurationSection("meta").contains("author"), name);
-            var behavior = section.getConfigurationSection("behavior");
+    void bundledDefaultsHaveCompleteMeta() throws Exception {
+        assertEquals(19, ModsDefaults.MODIFIERS.size());
+        for (String id : ModsDefaults.MODIFIERS) {
+            YamlConfiguration yaml = bundledYaml("modifiers", id);
+            assertTrue(yaml.contains("enabled"), id);
+            var meta = yaml.getConfigurationSection("meta");
+            assertTrue(meta.contains("name"), id);
+            assertTrue(meta.contains("description"), id);
+            assertTrue(meta.contains("item"), id);
+            assertTrue(meta.contains("author"), id);
+            var behavior = yaml.getConfigurationSection("behavior");
             for (String index : behavior.getKeys(false)) {
                 List<String> behaviorKeys = new ArrayList<>(
                         behavior.getConfigurationSection(index).getKeys(false));
                 assertEquals("commands", behaviorKeys.get(behaviorKeys.size() - 1),
-                        name + "/" + index);
+                        id + "/" + index);
             }
         }
 
-        var presets = bundled.getConfigurationSection("presets");
-        assertEquals(3, presets.getKeys(false).size());
-        for (String id : presets.getKeys(false)) {
-            var preset = presets.getConfigurationSection(id);
-            for (String member : preset.getStringList("modifiers")) {
-                assertTrue(modifiers.contains(member),
+        assertEquals(3, ModsDefaults.PRESETS.size());
+        for (String id : ModsDefaults.PRESETS) {
+            YamlConfiguration yaml = bundledYaml("presets", id);
+            for (String member : yaml.getStringList("modifiers")) {
+                assertTrue(ModsDefaults.MODIFIERS.contains(member),
                         "preset " + id + " references missing modifier " + member);
             }
         }
     }
 
     @Test
-    void bundledFileLoadsThroughStore() throws Exception {
-        File bundledFile = tempDir.resolve("bundled.yml").toFile();
-        try (InputStream stream = Objects.requireNonNull(
-                getClass().getClassLoader().getResourceAsStream("modifiers.yml"),
-                "missing test resource: modifiers.yml")) {
-            Files.copy(stream, bundledFile.toPath());
-        }
-        ModifierStore bundled = new ModifierStore(load(bundledFile), Logger.getAnonymousLogger());
+    void bundledDefaultsLoadThroughStore() {
+        Path bundledRoot = tempDir.resolve("bundled");
+        ModsLoader seeder = new ModsLoader((kind, dir) -> {
+            for (String id : ModsDefaults.ids(kind)) {
+                String resource = "mods/" + kind.dirName() + "/" + id + ".yml";
+                try (InputStream stream = Objects.requireNonNull(
+                        getClass().getClassLoader().getResourceAsStream(resource),
+                        "missing test resource: " + resource)) {
+                    Files.copy(stream, dir.resolve(id + ".yml"));
+                }
+            }
+        }, Logger.getAnonymousLogger());
+        ModifierStore bundled = new ModifierStore(
+                ModifierFiles.fromLoad(bundledRoot, seeder.load(bundledRoot)),
+                Logger.getAnonymousLogger());
 
         assertEquals(19, bundled.modifierNames().size());
         assertEquals(3, bundled.presetNames().size());
@@ -394,19 +395,10 @@ class ModifierStoreTest {
 
     @Test
     void bundledCommandsPassSyntaxValidation() throws Exception {
-        YamlConfiguration bundled;
-        try (InputStream stream = Objects.requireNonNull(
-                getClass().getClassLoader().getResourceAsStream("modifiers.yml"),
-                "missing test resource: modifiers.yml")) {
-            bundled = YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(stream, StandardCharsets.UTF_8));
-        }
-
-        var modifiers = bundled.getConfigurationSection("modifiers");
         int checked = 0;
-        for (String name : modifiers.getKeys(false)) {
-            var behavior = modifiers.getConfigurationSection(name)
-                    .getConfigurationSection("behavior");
+        for (String id : ModsDefaults.MODIFIERS) {
+            YamlConfiguration yaml = bundledYaml("modifiers", id);
+            var behavior = yaml.getConfigurationSection("behavior");
             if (behavior == null) {
                 continue;
             }
@@ -419,7 +411,7 @@ class ModifierStoreTest {
                 for (String list : commands.getKeys(false)) {
                     for (String line : commands.getStringList(list)) {
                         assertTrue(CommandSyntax.error(line).isEmpty(),
-                                name + "/" + index + "/" + list + ": " + line + " -> "
+                                id + "/" + index + "/" + list + ": " + line + " -> "
                                         + CommandSyntax.error(line).orElse(""));
                         checked++;
                     }
@@ -433,7 +425,7 @@ class ModifierStoreTest {
     void addModifierBumpsNameOnIdCollision() {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
-        ModifierStore store = new ModifierStore(new ModifiersConfig(), log);
+        ModifierStore store = new ModifierStore(ModifierFiles.inMemory(), log);
         ModifierEntry first = new ModifierEntry();
         ModifierMeta firstMeta = new ModifierMeta();
         firstMeta.setName("Gear Dice");
@@ -453,7 +445,7 @@ class ModifierStoreTest {
     void addPresetBumpsNameOnIdCollision() {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
-        ModifierStore store = new ModifierStore(new ModifiersConfig(), log);
+        ModifierStore store = new ModifierStore(ModifierFiles.inMemory(), log);
         ModifierPreset first = new ModifierPreset();
         first.setMeta(namedMeta("Chaos"));
         assertEquals("chaos", store.addPreset("chaos", first));
@@ -487,20 +479,27 @@ class ModifierStoreTest {
         return meta;
     }
 
-    private static ModifiersConfig load(File source) throws Exception {
-        ModifiersConfig loaded = ConfigManager.create(ModifiersConfig.class, it -> {
-            // No SerdesBukkit: it probes Bukkit classes whose static init needs
-            // a server, and this model uses no Bukkit types anyway.
-            it.withConfigurer(new YamlBukkitConfigurer(), new ModifierCommandsPack());
-            it.withBindFile(source);
-            it.withRemoveOrphans(true);
-        });
-        loaded.saveDefaults();
-        // Okaeri never closes file loads, which locks the file on Windows;
-        // a self-managed stream keeps temp-dir cleanup working.
-        try (InputStream stream = Files.newInputStream(source.toPath())) {
-            loaded.load(stream);
+    private void writeFixture(String kind, String id, String body) throws Exception {
+        Path dir = modsRoot.resolve(kind);
+        Files.createDirectories(dir);
+        Files.writeString(dir.resolve(id + ".yml"), body, StandardCharsets.UTF_8);
+    }
+
+    private ModLoadResult loadRoot() {
+        return new ModsLoader(ModsSeeder.none(), Logger.getAnonymousLogger()).load(modsRoot);
+    }
+
+    private File modFile(String id) {
+        return modsRoot.resolve("modifiers").resolve(id + ".yml").toFile();
+    }
+
+    private static YamlConfiguration bundledYaml(String kind, String id) throws Exception {
+        String resource = "mods/" + kind + "/" + id + ".yml";
+        try (InputStream stream = Objects.requireNonNull(
+                ModifierStoreTest.class.getClassLoader().getResourceAsStream(resource),
+                "missing test resource: " + resource)) {
+            return YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(stream, StandardCharsets.UTF_8));
         }
-        return loaded;
     }
 }

@@ -11,7 +11,7 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierExecution;
 import com.jruk8.jmanhunt.modifiers.config.ModifierInterval;
 import com.jruk8.jmanhunt.modifiers.config.ModifierOptions;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPickRandom;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -36,8 +36,8 @@ class ModifiedGlowTest {
         log.setUseParentHandlers(false);
         root = new JManhuntConfig();
         config = new ConfigService(root,
-                new ModifierStore(new ModifiersConfig(), log));
-        ModifiersConfig modifiers = new ModifiersConfig();
+                new ModifierStore(ModifierFiles.inMemory(), log));
+        ModifierFiles modifiers = ModifierFiles.inMemory();
         modifiers.getModifiers().put("zebra", behaviorEntry());
         modifiers.getModifiers().put("plain", plainEntry());
         store = new ModifierStore(modifiers, log);

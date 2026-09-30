@@ -1,0 +1,10 @@
+# Bundled JManhunt preset: chaos-mode
+meta:
+  name: "Chaos Mode"
+  description: "Random mobs, random items, gear dice"
+  item: TNT
+  author: JManhunt
+modifiers:
+  - random-mob-spawner
+  - random-item-giver
+  - gear-dice

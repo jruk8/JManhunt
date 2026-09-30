@@ -16,7 +16,7 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierExecution;
 import com.jruk8.jmanhunt.modifiers.config.ModifierInterval;
 import com.jruk8.jmanhunt.modifiers.config.ModifierOptions;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +64,7 @@ class BehaviorOptionsMenusTest {
 
     @BeforeEach
     void setup() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         config.getModifiers().put("zebra", behaviorEntry());
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);

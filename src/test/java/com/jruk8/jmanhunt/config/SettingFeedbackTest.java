@@ -5,7 +5,7 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
@@ -43,7 +43,7 @@ class SettingFeedbackTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         config = new ConfigService(new JManhuntConfig(),
-                new ModifierStore(new ModifiersConfig(), log), () -> {});
+                new ModifierStore(ModifierFiles.inMemory(), log), () -> {});
         sounds = mock(SoundService.class);
         feedback = new SettingFeedback(messages, config, sounds);
         sent = new ArrayList<>();

@@ -9,7 +9,7 @@ import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -37,7 +37,7 @@ class OverrideCommandTest {
     void setUp() throws Exception {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
-        ModifiersConfig modifiers = new ModifiersConfig();
+        ModifierFiles modifiers = ModifierFiles.inMemory();
         ModifierEntry beef = new ModifierEntry();
         beef.setEnabled(true);
         modifiers.getModifiers().put("beef", beef);

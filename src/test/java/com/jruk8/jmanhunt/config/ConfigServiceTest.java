@@ -3,7 +3,7 @@ package com.jruk8.jmanhunt.config;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ class ConfigServiceTest {
 
     @BeforeEach
     void setup() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         entry(config, "beef", true);
         entry(config, "bare", false);
         preset(config, "mixed", List.of("beef", "bare"));
@@ -92,13 +92,13 @@ class ConfigServiceTest {
         assertFalse(service.presetEnabled("lonely"));
     }
 
-    private static void entry(ModifiersConfig config, String name, boolean enabled) {
+    private static void entry(ModifierFiles config, String name, boolean enabled) {
         ModifierEntry entry = new ModifierEntry();
         entry.setEnabled(enabled);
         config.getModifiers().put(name, entry);
     }
 
-    private static void preset(ModifiersConfig config, String id, List<String> members) {
+    private static void preset(ModifierFiles config, String id, List<String> members) {
         ModifierPreset preset = new ModifierPreset();
         preset.setModifiers(new ArrayList<>(members));
         config.getPresets().put(id, preset);

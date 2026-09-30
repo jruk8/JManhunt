@@ -1,0 +1,18 @@
+# Bundled JManhunt modifier: random-start-resources
+# Gives every participating player a random ore stash when the match
+# starts: coal (4-12), iron (3-9), gold (3-9), or diamonds (1-3).
+enabled: false
+meta:
+  name: "Random Start Resources"
+  description: "Random ore stash at start: coal, iron, gold, or diamond"
+  item: DIAMOND_ORE
+  author: JManhunt
+behavior:
+  0:
+    runs-on:
+      - ON_START
+    commands:
+      player:
+        # Tags evaluate from the inside out: each <random-num> rolls first,
+        # then <random-pick> chooses one "item amount" pair.
+        - "give <p> <random-pick:coal <random-num:4,12>, iron_ingot <random-num:3,9>, gold_ingot <random-num:3,9>, diamond <random-num:1,3>>"

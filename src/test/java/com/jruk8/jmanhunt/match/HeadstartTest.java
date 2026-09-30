@@ -4,7 +4,7 @@ import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 import java.util.logging.Logger;
@@ -17,7 +17,7 @@ class HeadstartTest {
     private static ConfigService service(JManhuntConfig root) {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
-        return new ConfigService(root, new ModifierStore(new ModifiersConfig(), log));
+        return new ConfigService(root, new ModifierStore(ModifierFiles.inMemory(), log));
     }
 
     @Test

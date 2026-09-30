@@ -1,0 +1,10 @@
+# Bundled JManhunt preset: speedrunner-buffs
+meta:
+  name: "Speedrunner Buffs"
+  description: "Buffs for speedrunners, pressure on hunters"
+  item: SUGAR
+  author: JManhunt
+modifiers:
+  - speedrunners-speed-potion
+  - hunter-start-debuffs
+  - speedrunner-health-advantage

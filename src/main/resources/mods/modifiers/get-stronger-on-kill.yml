@@ -1,0 +1,32 @@
+# Bundled JManhunt modifier: get-stronger-on-kill
+# Two new permanent hearts on every kill (plus a heal and a feed),
+# stacking up to 30 hearts total. Cleanup restores the baseline.
+enabled: false
+meta:
+  name: "Get Stronger On Kill"
+  description: "Gain two new permanent hearts on every kill."
+  item: NETHERITE_SWORD
+  author: JManhunt
+behavior:
+  0:
+    runs-on:
+      - ON_PLAYER_KILLS
+    commands:
+      player:
+        # SETTINGS (in half-hearts): total max health cap, and gain per kill.
+        - "<lflag:maxhp,60>"
+        - "<lflag:step,4>"
+        # Cache the baseline the first time this runs for a player.
+        - "<pflag:basehp,<default:<pflag:basehp>,<pstat:<p>,max-health>>>"
+        # Baseline + step per kill, capped at maxhp (0 kills = baseline).
+        - "<lflag:target,<min:<pflag:basehp>+<lflag:step>*<placeholder:jmanhunt_game_kills_this_session>,<lflag:maxhp>>>"
+        - "attribute <p> minecraft:max_health base set <lflag:target>"
+        # Always heals 2 hearts, even at the cap.
+        - "effect give <p> minecraft:instant_health 1 0 true"
+        # Missing hunger points (0 if already full).
+        - "<lflag:missing,<clamp:20-<pstat:<p>,hunger>,0,20>>"
+        # Only feed if something is missing.
+        - "<if:'<lflag:missing> lt 1','exit','effect give <p> minecraft:saturation 1 <clamp:<lflag:missing>-1,0,19> true'>"
+      player-cleanup:
+        # Nothing cached means this never ran for the player, so leave their max health alone.
+        - "<if:'<pflag:basehp> == null','exit','attribute <p> minecraft:max_health base set <pflag:basehp>'>"

@@ -24,7 +24,7 @@ import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -68,7 +68,7 @@ class ModifierMenusTest {
 
     @BeforeEach
     void setup() throws Exception {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         addModifier(config, "zebra", true, "Zulu", "Stripes", "COOKED_BEEF", "JManhunt");
         addModifier(config, "mike", false, "<red>Mike</red>", "", null, null);
         addModifier(config, "apple", false, "&aApple", "Fruit\nCrisp", "BOGUS_ITEM", " ");
@@ -83,7 +83,7 @@ class ModifierMenusTest {
                 null, null, null);
     }
 
-    private static void addModifier(ModifiersConfig config, String id, boolean enabled,
+    private static void addModifier(ModifierFiles config, String id, boolean enabled,
             String name, String description, String item, String author) {
         ModifierEntry entry = new ModifierEntry();
         entry.setEnabled(enabled);
@@ -96,7 +96,7 @@ class ModifierMenusTest {
         config.getModifiers().put(id, entry);
     }
 
-    private static void addPreset(ModifiersConfig config, String id, String name,
+    private static void addPreset(ModifierFiles config, String id, String name,
             String description, String item, String author, List<String> members) {
         ModifierPreset preset = new ModifierPreset();
         ModifierMeta meta = new ModifierMeta();
@@ -401,7 +401,7 @@ class ModifierMenusTest {
 
     @Test
     void toggleEmptyPresetRefusesWithAngrySoundAndNoStateChange() {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         addPreset(config, "big", "Big", null, null, null, List.of());
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
@@ -555,7 +555,7 @@ class ModifierMenusTest {
     }
 
     private MessageService buildMenusWith(int total, int disabled) {
-        ModifiersConfig config = new ModifiersConfig();
+        ModifierFiles config = ModifierFiles.inMemory();
         List<String> members = new ArrayList<>();
         for (int index = 0; index < total; index++) {
             String id = "m" + index;

@@ -1,0 +1,14 @@
+# Bundled JManhunt modifier: fireres-on-nether-enter
+enabled: false
+meta:
+  name: "Nether Fire Resistance"
+  description: "Fire resistance potion on entering the Nether"
+  item: MAGMA_CREAM
+  author: JManhunt
+behavior:
+  0:
+    runs-on:
+      - ON_NETHER_ENTER
+    commands:
+      player:
+        - "give <p> potion[potion_contents={potion:\"minecraft:fire_resistance\",custom_effects:[{id:\"minecraft:fire_resistance\",amplifier:0,duration:6000,show_particles:1b,show_icon:1b}]}] 1"

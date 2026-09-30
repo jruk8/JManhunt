@@ -14,7 +14,7 @@ import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.List;
@@ -43,7 +43,7 @@ class HotspotServiceTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
-                new ModifierStore(new ModifiersConfig(), log));
+                new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.overrides()).thenReturn(
                 new OverrideService(configService, new LobbyConfig(), () -> { }));

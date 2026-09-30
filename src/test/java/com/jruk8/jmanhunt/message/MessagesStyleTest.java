@@ -1,5 +1,7 @@
 package com.jruk8.jmanhunt.message;
 
+import com.jruk8.jmanhunt.modifiers.files.ModFileKind;
+import com.jruk8.jmanhunt.modifiers.files.ModsDefaults;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -161,7 +163,12 @@ class MessagesStyleTest {
 
     @Test
     void bundledResourcesContainNoEmDashes() throws Exception {
-        assertFalse(rawResource("modifiers.yml").contains("\u2014"), "modifiers.yml");
+        for (ModFileKind kind : ModFileKind.values()) {
+            for (String id : ModsDefaults.ids(kind)) {
+                String name = "mods/" + kind.dirName() + "/" + id + ".yml";
+                assertFalse(rawResource(name).contains("\u2014"), name);
+            }
+        }
         assertFalse(rawResource("Core/gui.yml").contains("\u2014"), "Core/gui.yml");
         assertFalse(rawResource("Core/tutorial.yml").contains("\u2014"), "Core/tutorial.yml");
         assertFalse(rawResource("Core/dev.yml").contains("\u2014"), "Core/dev.yml");

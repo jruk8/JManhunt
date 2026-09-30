@@ -1,0 +1,20 @@
+# Bundled JManhunt modifier: tpall-on-end
+enabled: false
+meta:
+  name: "Teleport All On End"
+  description: "Teleports everyone to the first End enterer"
+  item: ENDER_PEARL
+  author: JManhunt
+behavior:
+  0:
+    runs-on:
+      - ON_FIRST_END_ENTER
+    options:
+      # Ticks to wait after triggering before this modifier's commands run.
+      # Applies to start, interval, and event triggers, but not to cleanup.
+      # Delay in case the speedrunner lags when loading into The End.
+      delay: 100
+    commands:
+      speedrunner:
+        # <all-players> covers only this match (raw @a is converted to it).
+        - "tp <all-players> <p>"

@@ -33,7 +33,7 @@ import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.logging.Logger;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
@@ -483,7 +483,7 @@ class CompassLockServiceTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
-                new ModifierStore(new ModifiersConfig(), log));
+                new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.configService()).thenReturn(configService);
         when(plugin.overrides()).thenReturn(
@@ -542,7 +542,7 @@ class CompassLockServiceTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
-                new ModifierStore(new ModifiersConfig(), log));
+                new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.configService()).thenReturn(configService);
         when(plugin.overrides()).thenReturn(

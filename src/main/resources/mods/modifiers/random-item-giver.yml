@@ -1,0 +1,21 @@
+# Bundled JManhunt modifier: random-item-giver
+# Gives every participating player a random item every 30 seconds.
+enabled: false
+meta:
+  name: "Random Item Giver"
+  description: "Gives everyone a random item every 30s"
+  item: CHEST
+  author: JManhunt
+behavior:
+  0:
+    runs-on:
+      - INTERVAL
+    options:
+      interval-settings:
+        interval: 30
+        deviation: 5
+        behavior: PER_EXECUTOR
+    commands:
+      player:
+        # <random-item> is replaced with a random item type.
+        - "give <p> <random-item> <random-num:1,8>"

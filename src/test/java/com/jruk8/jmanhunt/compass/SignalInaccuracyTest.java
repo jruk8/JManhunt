@@ -11,7 +11,7 @@ import com.jruk8.jmanhunt.config.SignalInaccuracySettings;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
+import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -131,7 +131,7 @@ class SignalInaccuracyTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
-                new ModifierStore(new ModifiersConfig(), log));
+                new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.overrides()).thenReturn(
                 new OverrideService(configService, new LobbyConfig(), () -> { }));

@@ -1,0 +1,24 @@
+# Bundled JManhunt modifier: speedrunner-health-advantage
+# Speedrunners get a health advantage while hunters' health gets a debuff.
+enabled: false
+meta:
+  name: "Speedrunner Health Advantage"
+  description: "Speedrunners 15 hearts with hunters to 8 hearts"
+  item: GOLDEN_APPLE
+  author: JManhunt
+behavior:
+  0:
+    commands:
+      hunter:
+        # Runs only once for each Hunter, with <p> replaced by their name.
+        # Sets health to 8 full hearts for all hunters.
+        - "attribute <p> minecraft:max_health base set 16"
+        - "effect give <p> minecraft:instant_health 1 50 true"
+      speedrunner:
+        # Runs only once for each Speedrunner, with <p> replaced by their name.
+        # Sets health to 15 full hearts for all speedrunners.
+        - "attribute <p> minecraft:max_health base set 30"
+        - "effect give <p> minecraft:instant_health 1 50 true"
+      player-cleanup:
+        # Runs for every participating player (only hunters and speedrunners, not including NONE)
+        - "attribute <p> minecraft:max_health base set 20"

@@ -1,0 +1,53 @@
+# Bundled JManhunt modifier: gear-dice
+# Gives a random reward to each player about every 45-75 seconds.
+enabled: false
+meta:
+  name: "Gear Dice"
+  description: "Random gear reward about every 45 to 75s"
+  item: BUNDLE
+  author: JManhunt
+behavior:
+  0:
+    runs-on:
+      - INTERVAL
+    options:
+      # Only applicable when "runs-on" contains INTERVAL.
+      interval-settings:
+        # Interval duration in seconds.
+        interval: 15
+        # Random spread in seconds. 20 and 10 means every 10 to 30 seconds.
+        # Cannot go above interval. Defaults to 0.
+        deviation: 5
+        # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
+        # console their own timer. Defaults to PER_INVOKE.
+        behavior: PER_EXECUTOR
+      # Success chance for running the commands.
+      # Must be between 0 and 1.0 where 1.0 means 100% chance.
+      # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls for each player.
+      # Ignored by cleanup commands.
+      success-chance:
+        chance: 0.5
+        behavior: PER_EXECUTOR
+      # IN_ORDER runs every line sequentially.
+      # PICK_RANDOM runs a random few instead.
+      # Defaults to IN_ORDER.
+      execution:
+        selection: PICK_RANDOM
+        pick-random:
+          # How many lines to pick. Minimum 1. Defaults to 1.
+          count: 1
+          # PER_INVOKE picks once for everyone; PER_EXECUTOR picks separately
+          # for the console and each player. Defaults to PER_INVOKE.
+          behavior: PER_EXECUTOR
+    commands:
+      player:
+        - "give <p> minecraft:golden_apple 1"
+        - "give <p> minecraft:golden_apple 2"
+        - "give <p> minecraft:cobblestone 24"
+        - "give <p> minecraft:cobblestone 32"
+        - "give <p> minecraft:oak_planks 24"
+        - "give <p> minecraft:oak_planks 32"
+        - "give <p> minecraft:lava_bucket 1"
+        - "give <p> minecraft:iron_ingot 8"
+        - "give <p> minecraft:ender_pearl 1"
+        - "give <p> minecraft:diamond 2"

@@ -1,0 +1,24 @@
+# Bundled JManhunt modifier: random-mob-spawner
+# Spawns a random mob on every speedrunner every 90 seconds.
+enabled: false
+meta:
+  name: "Random Mob Spawner"
+  description: "Summons a random mob on everyone on an interval"
+  item: SPAWNER
+  author: JManhunt
+behavior:
+  0:
+    runs-on:
+      - INTERVAL
+    options:
+      # Only applicable when "runs-on" contains INTERVAL.
+      interval-settings:
+        # Interval duration in seconds.
+        interval: 90
+        deviation: 5
+        behavior: PER_EXECUTOR
+    commands:
+      player:
+        # <random-mob> is replaced with a random spawnable living entity type.
+        # Tildes (~) are resolved to the player's position automatically.
+        - "summon <random-mob> ~ ~1 ~"
