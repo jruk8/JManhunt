@@ -57,6 +57,7 @@ categories:
   compass/distance-limits/speedrunner/min-distance: STRING
   compass/feedback: ITEM_FRAME
   compass/feedback/actionbar: GLOW_INK_SAC
+  compass/feedback/actionbar/show-accuracy: MACE
   compass/feedback/actionbar/show-distance-delta: ARROW
   compass/feedback/chat-messages: NOTE_BLOCK
   compass/signal: SCULK_SENSOR
@@ -334,6 +335,10 @@ descriptions:
   "settings.compass.feedback.actionbar": "Actionbar push rate and distance delta."
   "settings.compass.feedback.actionbar.refresh-ticks": "Ticks between actionbar pushes."
   "settings.compass.feedback.actionbar.show-distance": "Show the distance on tracking bars."
+  "settings.compass.feedback.actionbar.show-accuracy": "Stepped accuracy percent."
+  "settings.compass.feedback.actionbar.show-accuracy.enabled": "Show accuracy after the name."
+  "settings.compass.feedback.actionbar.show-accuracy.accurate-color": "Color at full accuracy."
+  "settings.compass.feedback.actionbar.show-accuracy.inaccurate-color": "Color at zero accuracy."
   "settings.compass.feedback.actionbar.show-distance-delta": "Distance delta triangles."
   "settings.compass.feedback.actionbar.show-distance-delta.enabled": "Show up/down triangles on distance."
   "settings.compass.feedback.actionbar.show-distance-delta.further-format": "Format when the target got further."

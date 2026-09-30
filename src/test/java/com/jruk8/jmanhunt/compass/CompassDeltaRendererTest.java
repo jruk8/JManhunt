@@ -12,6 +12,7 @@ import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifiersConfig;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
@@ -21,6 +22,7 @@ import java.util.UUID;
 import java.util.logging.Logger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -47,7 +49,7 @@ class CompassDeltaRendererTest {
             Map<String, String> extra = bar.getKey().contains("last-seen")
                     ? Map.of("reason", "Log-Out") : Map.of();
             fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
-                    bar.getKey(), "victim", UUID.randomUUID(), 120.0, extra);
+                    bar.getKey(), "victim", UUID.randomUUID(), 120.0, extra, exact());
 
             String text = text(fixture.bars().get(fixture.player().getUniqueId()));
             assertEquals(bar.getValue(), text, bar.getKey());
@@ -60,10 +62,72 @@ class CompassDeltaRendererTest {
         Fixture fixture = fixture(true);
 
         fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
-                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of());
+                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                exact());
 
         assertEquals("Tracking victim • 120m",
                 text(fixture.bars().get(fixture.player().getUniqueId())));
+    }
+
+    @Test
+    void accuracyAppendsSteppedPercent() {
+        Fixture fixture = accuracyFixture(true, "#63d42a", "#cc472d");
+
+        fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
+                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                drift(300.0, 600.0));
+
+        assertEquals("Tracking victim (50%) • 120m",
+                text(fixture.bars().get(fixture.player().getUniqueId())));
+    }
+
+    @Test
+    void accuracyReadsHundredWhenUnapplied() {
+        Fixture fixture = accuracyFixture(true, "#63d42a", "#cc472d");
+
+        fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
+                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                exact());
+
+        assertEquals("Tracking victim (100%) • 120m",
+                text(fixture.bars().get(fixture.player().getUniqueId())));
+    }
+
+    @Test
+    void accuracySurvivesHiddenDistance() {
+        Fixture fixture = accuracyHiddenFixture();
+
+        fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
+                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                exact());
+
+        assertEquals("Tracking victim (100%)",
+                text(fixture.bars().get(fixture.player().getUniqueId())));
+    }
+
+    @Test
+    void accuracyJunkColorsFallBack() {
+        Fixture fixture = accuracyFixture(true, "bogus", "#123");
+
+        fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
+                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                drift(300.0, 600.0));
+
+        assertEquals("Tracking victim (50%) • 120m",
+                text(fixture.bars().get(fixture.player().getUniqueId())));
+    }
+
+    @Test
+    void accuracySegmentClosesColorInMiniMessage() {
+        Fixture fixture = accuracyFixture(true, "#63d42a", "#cc472d");
+
+        fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
+                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                drift(300.0, 600.0));
+
+        String mini = mini(fixture.bars().get(fixture.player().getUniqueId()));
+        String hex = CompassAccuracyRenderer.lerpColor("#cc472d", "#63d42a", 0.5);
+        assertTrue(mini.contains("(<" + hex + ">50%<gray>)"), mini);
     }
 
     @Test
@@ -99,5 +163,55 @@ class CompassDeltaRendererTest {
 
     private static String text(Component component) {
         return PlainTextComponentSerializer.plainText().serialize(component);
+    }
+
+    private static String mini(Component component) {
+        return MiniMessage.miniMessage().serialize(component);
+    }
+
+    private static CompassInaccuracyService.Result exact() {
+        return new CompassInaccuracyService.Result(null, 120.0, 0.0, 0.0, false);
+    }
+
+    private static CompassInaccuracyService.Result drift(double error, double theory) {
+        return new CompassInaccuracyService.Result(null, 120.0, error, theory, true);
+    }
+
+    private static Fixture accuracyFixture(boolean showDistance, String accurate,
+            String inaccurate) {
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.compass.feedback.actionbar.show-distance",
+                showDistance);
+        ConfigPathMapper.set(root,
+                "settings.compass.feedback.actionbar.show-accuracy.enabled", true);
+        ConfigPathMapper.set(root,
+                "settings.compass.feedback.actionbar.show-accuracy.accurate-color", accurate);
+        ConfigPathMapper.set(root,
+                "settings.compass.feedback.actionbar.show-accuracy.inaccurate-color", inaccurate);
+        return configuredFixture(root);
+    }
+
+    private static Fixture accuracyHiddenFixture() {
+        JManhuntConfig root = new JManhuntConfig();
+        ConfigPathMapper.set(root, "settings.compass.feedback.actionbar.show-distance", false);
+        ConfigPathMapper.set(root,
+                "settings.compass.feedback.actionbar.show-accuracy.enabled", true);
+        return configuredFixture(root);
+    }
+
+    private static Fixture configuredFixture(JManhuntConfig root) {
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ConfigService configService = new ConfigService(root,
+                new ModifierStore(new ModifiersConfig(), log));
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.overrides()).thenReturn(
+                new OverrideService(configService, new LobbyConfig(), () -> { }));
+        MessageService messages = new MessageService();
+        messages.reload(new MessagesConfig());
+        Map<UUID, Component> bars = new HashMap<>();
+        Player player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(UUID.randomUUID());
+        return new Fixture(new CompassDeltaRenderer(plugin, messages, bars), player, bars);
     }
 }

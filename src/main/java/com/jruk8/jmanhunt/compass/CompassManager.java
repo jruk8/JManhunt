@@ -458,7 +458,7 @@ public final class CompassManager {
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
-                drifted.feedbackDistance(), Map.of());
+                drifted.feedbackDistance(), Map.of(), drifted);
     }
 
     /**
@@ -517,7 +517,7 @@ public final class CompassManager {
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, target.getName(), pick.id(),
-                drifted.feedbackDistance(), Map.of());
+                drifted.feedbackDistance(), Map.of(), drifted);
         return true;
     }
 
@@ -539,7 +539,7 @@ public final class CompassManager {
         String reason = seen != null ? "Another Dimension" : "Log-Out";
         String key = trackingKey(holder, locked, true);
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
-                drifted.feedbackDistance(), Map.of("reason", reason));
+                drifted.feedbackDistance(), Map.of("reason", reason), drifted);
         return true;
     }
 

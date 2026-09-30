@@ -47,10 +47,13 @@ final class CompassDeltaRenderer {
      * revert for blinked deltas. The revert only lands when no newer
      * render replaced it and the holder is still online. With
      * show-distance off, the distance segment (and its delta
-     * triangle) is dropped and no distance history is recorded.
+     * triangle) is dropped and no distance history is recorded. The
+     * drift record feeds the optional accuracy segment; the blink
+     * revert reuses the same template so the segment survives it.
      */
     void putTrackingBar(Player holder, Role holderRole, Integer lobby, String key, String playerName,
-            UUID targetId, double distance, Map<String, String> extra) {
+            UUID targetId, double distance, Map<String, String> extra,
+            CompassInaccuracyService.Result drift) {
         boolean showDistance = plugin.overrides().getBoolean(lobby,
                 "settings.compass.feedback.actionbar.show-distance", true);
         DistanceRender render = showDistance
@@ -63,12 +66,13 @@ final class CompassDeltaRenderer {
         if (!showDistance) {
             template = stripDistanceSegment(template);
         }
+        template = insertAccuracy(template, lobby, drift);
         actionbars.put(holder.getUniqueId(), messages.renderLiteral(template, slots));
         if (!render.blinked()) {
             return;
         }
         slots.put("distance", render.plain());
-        Component plainBar = messages.component(key, slots);
+        Component plainBar = messages.renderLiteral(template, slots);
         UUID id = holder.getUniqueId();
         long generation = deltaGenerations.merge(id, 1L, Long::sum);
         long delayTicks = blinkDelayTicks(plugin.overrides().getDouble(lobby,
@@ -88,6 +92,32 @@ final class CompassDeltaRenderer {
     void forget(UUID holderId) {
         lastRoundedDistances.remove(holderId);
         deltaGenerations.remove(holderId);
+    }
+
+    /**
+     * Appends the accuracy segment after the player slot when
+     * show-accuracy is on: unapplied samples (inaccuracy off or below
+     * the gate) read 100 percent, else the drift record's error over
+     * its theoretical max, stepped. Pure apart from config reads.
+     */
+    private String insertAccuracy(String template, Integer lobby,
+            CompassInaccuracyService.Result drift) {
+        String base = "settings.compass.feedback.actionbar.show-accuracy.";
+        if (!plugin.overrides().getBoolean(lobby, base + "enabled", false)) {
+            return template;
+        }
+        double accuracy = drift != null && drift.applied()
+                ? CompassAccuracyRenderer.accuracy(drift.errorDistance(),
+                        drift.theoreticalMax())
+                : 1.0;
+        double stepped = CompassAccuracyRenderer.stepped(accuracy);
+        String hex = CompassAccuracyRenderer.lerpColor(
+                plugin.overrides().getString(lobby, base + "inaccurate-color", "#cc472d"),
+                plugin.overrides().getString(lobby, base + "accurate-color", "#63d42a"),
+                stepped);
+        String segment = CompassAccuracyRenderer.segment(
+                CompassAccuracyRenderer.percent(stepped), hex);
+        return template.replace("{player}", "{player} " + segment);
     }
 
     /**

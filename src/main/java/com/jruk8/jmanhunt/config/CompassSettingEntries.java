@@ -104,6 +104,9 @@ private static void addCompassActionbarEntries(List<SettingDescriptor> entries) 
     String root = "settings.compass.feedback.actionbar.";
     entries.add(intVal(root + "refresh-ticks", 1, 1, null));
     entries.add(bool(root + "show-distance", true));
+    entries.add(bool(root + "show-accuracy.enabled", false));
+    entries.add(string(root + "show-accuracy.accurate-color", "#63d42a"));
+    entries.add(string(root + "show-accuracy.inaccurate-color", "#cc472d"));
     entries.add(bool(root + "show-distance-delta.enabled", true));
     entries.add(string(root + "show-distance-delta.further-format", "<green>▲{distance}"));
     entries.add(string(root + "show-distance-delta.closer-format", "<red>▼{distance}"));

@@ -260,6 +260,18 @@ triangle entirely.
 With it off, the bar shows direction without any distance, delta
 triangle, or distance history.
 
+### Show Accuracy
+
+Under `settings.compass.feedback.actionbar.show-accuracy`, `enabled`
+(default off) appends a stepped accuracy percent after the tracked
+name: `Tracking Alex (80%)`. The percent snaps to tens and its color
+lerps on the same stepped value, so holders can never exploit
+sub-step precision: 0% is the worst possible error for the settings,
+100% is the true spot. With inaccuracy off, every bar reads 100%.
+`accurate-color` (default `#63d42a`) and `inaccurate-color` (default
+`#cc472d`) set the lerp ends as `#rrggbb`; junk values fall back to
+the defaults.
+
 ## Chat Messages
 
 Under `settings.compass.feedback.chat-messages`, compass actions can

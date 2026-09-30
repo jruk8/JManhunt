@@ -28,6 +28,10 @@ public class CompassActionbarSettings extends OkaeriConfig {
     @Comment("Distance delta triangles.")
     private ShowDistanceDelta showDistanceDelta = new ShowDistanceDelta();
 
+    @CustomKey("show-accuracy")
+    @Comment("Stepped accuracy percent after the tracked name.")
+    private ShowAccuracy showAccuracy = new ShowAccuracy();
+
     public int getRefreshTicks() {
         return refreshTicks;
     }
@@ -50,6 +54,66 @@ public class CompassActionbarSettings extends OkaeriConfig {
 
     public void setShowDistanceDelta(ShowDistanceDelta showDistanceDelta) {
         this.showDistanceDelta = showDistanceDelta;
+    }
+
+    public ShowAccuracy getShowAccuracy() {
+        return showAccuracy;
+    }
+
+    public void setShowAccuracy(ShowAccuracy showAccuracy) {
+        this.showAccuracy = showAccuracy;
+    }
+
+    /** Stepped accuracy percent. */
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class ShowAccuracy extends OkaeriConfig {
+
+        @Comment({
+                "Show a stepped accuracy percent after the tracked name,",
+                "like Tracking Alex (80%). Steps run in tens with a matching",
+                "stepped color, so sub-step precision never leaks. Reads 100%",
+                "whenever inaccuracy is off.",
+                "Default: false"
+        })
+        private boolean enabled = false;
+
+        @CustomKey("accurate-color")
+        @Comment({
+                "Hex color at full accuracy, as #rrggbb.",
+                "Default: #63d42a"
+        })
+        private String accurateColor = "#63d42a";
+
+        @CustomKey("inaccurate-color")
+        @Comment({
+                "Hex color at zero accuracy, as #rrggbb.",
+                "Default: #cc472d"
+        })
+        private String inaccurateColor = "#cc472d";
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getAccurateColor() {
+            return accurateColor;
+        }
+
+        public void setAccurateColor(String accurateColor) {
+            this.accurateColor = accurateColor;
+        }
+
+        public String getInaccurateColor() {
+            return inaccurateColor;
+        }
+
+        public void setInaccurateColor(String inaccurateColor) {
+            this.inaccurateColor = inaccurateColor;
+        }
     }
 
     /** Distance delta triangles. */
