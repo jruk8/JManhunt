@@ -416,6 +416,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         Bukkit.getScheduler().runTaskTimer(this, spectatorToolbar::tickLocks, 5L, 5L);
         Bukkit.getScheduler().runTaskTimer(this, tutorialService::checkTimeouts, 100L, 100L);
         Bukkit.getScheduler().runTaskTimer(this, worldEngine::careTick, 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(this, compass::sampleHotspots, 20L, 20L);
         Bukkit.getScheduler().runTaskAsynchronously(this,
                 () -> updateChecks.checkNow(updateCheckSettings(), getPluginMeta().getVersion()));
     }

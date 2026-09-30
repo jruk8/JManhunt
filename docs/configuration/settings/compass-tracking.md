@@ -530,6 +530,24 @@ is visible (`show-distance` or `show-distance-delta.enabled`); with
 both off there is nothing to drift. Scrolled (cache-only) targets drift
 exactly like refreshed ones.
 
+### Hotspot
+
+Under `settings.compass.signal.accuracy.hotspot`, idling targets get
+easier to pin down: every `sample-interval` seconds (default 10) the
+plugin records each live participant's spot, keeping the last
+`max-points` spots (default 40). When many of a target's saved spots
+sit within `hotspot-radius` meters (default 50) of where they stand
+now, the error donut shrinks, like averaging noisy fixes to find the
+truth. Movers keep the full error.
+
+`full-accuracy-fraction` (default 0.5) is the share of `max-points`
+needed inside the radius for the full bonus: 40 points at 0.5 means 20
+idling samples max it out, with partial credit below that.
+`max-reduction` (default 0.9) is how much error the full bonus removes:
+at 0.9 a fully idling target reads with a tenth of the normal error.
+Histories clear when the player leaves or loses their compass, and
+offline players are pruned.
+
 ## WorldEdit Navwand
 
 WorldEdit teleports players who click with a compass, which fights the

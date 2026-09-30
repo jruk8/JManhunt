@@ -145,4 +145,109 @@ public final class SignalInaccuracy {
         }
         return Math.min(1.0, Math.max(0.0, value));
     }
+
+    /** Default hotspot radius used when the configured value is unusable. */
+    static final double DEFAULT_HOTSPOT_RADIUS = 50.0;
+
+    /** Default sample interval used when the configured value is unusable. */
+    static final int DEFAULT_SAMPLE_INTERVAL = 10;
+
+    /** Default history size used when the configured value is unusable. */
+    static final int DEFAULT_MAX_POINTS = 40;
+
+    /** Default full-accuracy share used when the configured value is NaN. */
+    static final double DEFAULT_FULL_FRACTION = 0.5;
+
+    /** Default max reduction used when the configured value is unusable. */
+    static final double DEFAULT_MAX_REDUCTION = 0.9;
+
+    /**
+     * Hotspot radius: must stay positive, so NaN, infinities, and values
+     * at or below 0 map to the 50 default. Pure.
+     */
+    public static double clampRadius(double value) {
+        if (!Double.isFinite(value) || value <= 0.0) {
+            return DEFAULT_HOTSPOT_RADIUS;
+        }
+        return value;
+    }
+
+    /**
+     * Sample interval clamped to [1, 100]; anything else maps to the 10
+     * default. Pure.
+     */
+    public static int clampSampleInterval(int value) {
+        if (value < 1 || value > 100) {
+            return DEFAULT_SAMPLE_INTERVAL;
+        }
+        return value;
+    }
+
+    /**
+     * History size: at least 1 point, anything below maps to the 40
+     * default. Pure.
+     */
+    public static int clampMaxPoints(int value) {
+        if (value < 1) {
+            return DEFAULT_MAX_POINTS;
+        }
+        return value;
+    }
+
+    /**
+     * Full-accuracy share clamped to [0, 1]; NaN maps to the 0.5
+     * default. Pure.
+     */
+    public static double clampFraction(double value) {
+        if (Double.isNaN(value)) {
+            return DEFAULT_FULL_FRACTION;
+        }
+        if (!Double.isFinite(value)) {
+            return value > 0.0 ? 1.0 : 0.0;
+        }
+        return Math.min(1.0, Math.max(0.0, value));
+    }
+
+    /**
+     * Max reduction clamped to ]0, 1]: 0, negatives, and NaN map to the
+     * 0.9 default, values above 1 pin to 1. Pure.
+     */
+    public static double clampMaxReduction(double value) {
+        if (Double.isNaN(value) || value <= 0.0) {
+            return DEFAULT_MAX_REDUCTION;
+        }
+        if (!Double.isFinite(value)) {
+            return 1.0;
+        }
+        return Math.min(1.0, value);
+    }
+
+    /**
+     * Error reduction from idling: the inside share of the points needed
+     * for full effect (maxPoints * fraction), clamped to [0, 1], times
+     * the max reduction. A zero denominator (0 points or 0 fraction)
+     * yields 0 instead of dividing. Pure.
+     */
+    public static double hotspotReduction(int pointsInside, int maxPoints, double fraction,
+            double maxReduction) {
+        double needed = (double) maxPoints * fraction;
+        if (!(needed > 0.0)) {
+            return 0.0;
+        }
+        double share = Math.min(1.0, Math.max(0.0, pointsInside / needed));
+        return share * maxReduction;
+    }
+
+    /**
+     * True when a recorded point sits inside the hotspot radius of the
+     * live spot: squared XZ distance against radius*radius computed
+     * here at call time, never cached, since the radius can change at
+     * runtime. Pure.
+     */
+    public static boolean countsInside(double pointX, double pointZ, double liveX, double liveZ,
+            double radius) {
+        double dx = pointX - liveX;
+        double dz = pointZ - liveZ;
+        return dx * dx + dz * dz <= radius * radius;
+    }
 }

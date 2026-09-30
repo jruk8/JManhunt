@@ -18,6 +18,7 @@ final class CompassSettingEntries {
     static void addAll(List<SettingDescriptor> entries) {
         addCompassEntries(entries);
         addSignalInaccuracyEntries(entries);
+        addSignalAccuracyEntries(entries);
         addSignalInterferenceEntries(entries);
     }
 
@@ -29,6 +30,16 @@ private static void addSignalInaccuracyEntries(List<SettingDescriptor> entries) 
     entries.add(floatVal(root + "thresholds.min-distance", 100.0, -1.0, null));
     entries.add(floatVal(root + "thresholds.max-distance", 1000.0, -1.0, null));
     entries.add(option(root + "inaccurate-on", "BOTH", "NEEDLE", "DISTANCE_FEEDBACK", "BOTH"));
+}
+
+private static void addSignalAccuracyEntries(List<SettingDescriptor> entries) {
+    String root = "settings.compass.signal.accuracy.hotspot.";
+    entries.add(bool(root + "enabled", false));
+    entries.add(floatVal(root + "hotspot-radius", 50.0, 0.0, null));
+    entries.add(intVal(root + "sample-interval", 10, 1, 100));
+    entries.add(intVal(root + "max-points", 40, 1, null));
+    entries.add(floatVal(root + "full-accuracy-fraction", 0.5, 0.0, 1.0));
+    entries.add(floatVal(root + "max-reduction", 0.9, 0.0, 1.0));
 }
 
 private static void addCompassEntries(List<SettingDescriptor> entries) {

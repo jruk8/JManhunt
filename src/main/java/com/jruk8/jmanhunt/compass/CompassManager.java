@@ -32,6 +32,7 @@ public final class CompassManager {
     private final PlayerStateStore playerStates;
     private final CompassTargetService targets;
     private final CompassSignalService signal;
+    private final HotspotService hotspots;
     private final CompassInaccuracyService inaccuracy;
     private final CompassLockService locks;
     private final CompassItemService items;
@@ -53,7 +54,8 @@ public final class CompassManager {
         this.playerStates = playerStates;
         this.targets = new CompassTargetService(playerStates, plugin.fakeSpectators());
         this.signal = new CompassSignalService(plugin, playerStates);
-        this.inaccuracy = new CompassInaccuracyService(plugin);
+        this.hotspots = new HotspotService(plugin, playerStates);
+        this.inaccuracy = new CompassInaccuracyService(plugin, hotspots);
         this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
         this.sessions = new CompassAnalysisSessions(plugin, messages, playerStates, targets,
                 signal, items, compassActionbars);
@@ -70,6 +72,7 @@ public final class CompassManager {
         locks.setGameManager(game);
         items.setGameManager(game);
         sessions.setGameManager(game);
+        hotspots.setGameManager(game);
     }
 
     /** Origin lobby of the holder's match, or null outside matches. */
@@ -449,7 +452,8 @@ public final class CompassManager {
         }
         Location origin = effectiveSpot(cache.holderSpotFor(holder.getUniqueId()),
                 sessions.resolutionSpot(holder));
-        CompassInaccuracyService.Result drifted = resolveInaccuracy(holder, origin, spot);
+        CompassInaccuracyService.Result drifted =
+                resolveInaccuracy(holder, origin, spot, pick.id());
         setLodestone(item, drifted.needleSpot());
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
@@ -460,13 +464,19 @@ public final class CompassManager {
     /**
      * Drifts one true spot through the inaccuracy service: the shared
      * helper behind live, sighting, and cache renders, so scrolled
-     * targets drift exactly like refreshed ones.
+     * targets drift exactly like refreshed ones. The target id feeds
+     * the hotspot reduction (null for unknown owners).
      */
     private CompassInaccuracyService.Result resolveInaccuracy(Player holder, Location origin,
-            Location truth) {
+            Location truth, UUID targetId) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
-        return inaccuracy.resolve(lobbyOf(holder), origin, truth, random.nextDouble(),
+        return inaccuracy.resolve(lobbyOf(holder), origin, truth, targetId, random.nextDouble(),
                 random.nextDouble());
+    }
+
+    /** One hotspot sampling tick, driven by the plugin scheduler. */
+    public void sampleHotspots() {
+        hotspots.tick(System.currentTimeMillis());
     }
 
     /** Reasonless Bad Signal for uncached switch targets, by spec. */
@@ -501,8 +511,8 @@ public final class CompassManager {
             return false;
         }
         Location truth = target.getLocation();
-        CompassInaccuracyService.Result drifted =
-                resolveInaccuracy(holder, sessions.resolutionSpot(holder), truth);
+        CompassInaccuracyService.Result drifted = resolveInaccuracy(holder,
+                sessions.resolutionSpot(holder), truth, pick.id());
         setLodestone(item, drifted.needleSpot());
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
@@ -522,7 +532,8 @@ public final class CompassManager {
             showNoTarget(holder, item, slot, targetRoleString);
             return false;
         }
-        CompassInaccuracyService.Result drifted = resolveInaccuracy(holder, origin, location);
+        CompassInaccuracyService.Result drifted =
+                resolveInaccuracy(holder, origin, location, pick.id());
         setLodestone(item, drifted.needleSpot());
         holder.getInventory().setItem(slot, item);
         String reason = seen != null ? "Another Dimension" : "Log-Out";
@@ -620,6 +631,7 @@ public final class CompassManager {
         items.removeCompasses(player);
         deltas.forget(player.getUniqueId());
         sessions.cancelAnalysisSnapshots(player.getUniqueId());
+        hotspots.clear(player.getUniqueId());
     }
 
     public boolean isCompass(ItemStack item) {

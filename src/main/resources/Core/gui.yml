@@ -60,6 +60,8 @@ categories:
   compass/feedback/actionbar/show-distance-delta: ARROW
   compass/feedback/chat-messages: NOTE_BLOCK
   compass/signal: SCULK_SENSOR
+  compass/signal/accuracy: CALIBRATED_SCULK_SENSOR
+  compass/signal/accuracy/hotspot: BREEZE_ROD
   compass/signal/inaccuracy: END_CRYSTAL
   compass/signal/inaccuracy/thresholds: HEART_OF_THE_SEA
   compass/signal/interference: REDSTONE_TORCH
@@ -182,6 +184,14 @@ descriptions:
   "settings.compass.feedback.chat-messages": "Chat the holder about compass actions."
   "settings.compass.feedback.chat-messages.enabled": "Lock, switch, and died chat messages."
   "settings.compass.signal": "Needle signal: interference and inaccuracy."
+  "settings.compass.signal.accuracy": "Bonuses that shrink the error."
+  "settings.compass.signal.accuracy.hotspot": "Idling targets get easier to pin."
+  "settings.compass.signal.accuracy.hotspot.enabled": "Track where targets linger."
+  "settings.compass.signal.accuracy.hotspot.hotspot-radius": "Samples this close count as one."
+  "settings.compass.signal.accuracy.hotspot.sample-interval": "Seconds between saved spots."
+  "settings.compass.signal.accuracy.hotspot.max-points": "Past spots kept per target."
+  "settings.compass.signal.accuracy.hotspot.full-accuracy-fraction": "Share of spots for full bonus."
+  "settings.compass.signal.accuracy.hotspot.max-reduction": "Error removed at full bonus."
   "settings.compass.signal.inaccuracy": "Drift the needle and distance off truth."
   "settings.compass.signal.inaccuracy.enabled": "Wander readings around the target."
   "settings.compass.signal.inaccuracy.inner-deadzone": "Hole in the middle of the error."

@@ -2,13 +2,16 @@ package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Location;
+import java.util.UUID;
 
 /** Signal inaccuracy verdicts and donut samples for tracking attempts. */
 final class CompassInaccuracyService {
     private final JManhuntPlugin plugin;
+    private final HotspotService hotspots;
 
-    CompassInaccuracyService(JManhuntPlugin plugin) {
+    CompassInaccuracyService(JManhuntPlugin plugin, HotspotService hotspots) {
         this.plugin = plugin;
+        this.hotspots = hotspots;
     }
 
     /** One resolved drift: needle spot, shown distance, and error facts. */
@@ -82,11 +85,13 @@ final class CompassInaccuracyService {
      * returns the exact spot. The needle spot honors the needle
      * verdict, the feedback distance honors the distance verdict, and
      * the error distance always measures the drawn sample against the
-     * truth (0 when nothing was drawn). Spots that cannot be compared
-     * (missing or mismatched worlds) stay exact with a 0 distance.
+     * truth (0 when nothing was drawn). Idling targets shrink the outer
+     * radius through their hotspot reduction; the theoretical max stays
+     * config-based. Spots that cannot be compared (missing or
+     * mismatched worlds) stay exact with a 0 distance.
      */
-    Result resolve(Integer lobby, Location trackerSpot, Location trueSpot, double u1,
-            double u2) {
+    Result resolve(Integer lobby, Location trackerSpot, Location trueSpot, UUID targetId,
+            double u1, double u2) {
         SignalInaccuracy.Config config = config(lobby);
         double distance = safeDistance(trackerSpot, trueSpot);
         double theory = theoreticalMax(config, distance);
@@ -96,8 +101,10 @@ final class CompassInaccuracyService {
                 || (!needle && !feedback)) {
             return new Result(trueSpot, Math.max(0.0, distance), 0.0, theory, false);
         }
+        double reduction = hotspots.reductionFor(targetId, trueSpot.getX(), trueSpot.getZ(),
+                lobby);
         double outer = SignalInaccuracy.outerRadius(distance, config.drift(),
-                config.maxDistance());
+                config.maxDistance()) * (1.0 - reduction);
         double[] sampled = SignalInaccuracy.sample(trueSpot.getX(), trueSpot.getZ(), outer,
                 config.deadzone(), u1, u2);
         Location drifted = new Location(trueSpot.getWorld(), sampled[0], trueSpot.getY(),
