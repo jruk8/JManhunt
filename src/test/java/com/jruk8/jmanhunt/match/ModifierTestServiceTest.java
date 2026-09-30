@@ -1,11 +1,14 @@
 package com.jruk8.jmanhunt.match;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyFloat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -19,6 +22,7 @@ import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -124,7 +128,8 @@ class ModifierTestServiceTest {
         Player sender = mock(Player.class);
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(12L, List.of(),
                 List.of("hello"), List.of(new ModifierTestService.CapturedSound("good", 1, 1),
-                        new ModifierTestService.CapturedSound("bad", 1, 1)));
+                        new ModifierTestService.CapturedSound("bad", 1, 1)),
+                null, null);
 
         service.report(sender, result);
 
@@ -135,6 +140,81 @@ class ModifierTestServiceTest {
     }
 
     @Test
+    void runCapturesThrowingLineAndStops() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        doAnswer(call -> {
+            TagContext context = call.getArgument(2);
+            context.setProvenance(new TagContext.Provenance("modifiers-test", -1, "test", 1));
+            throw new IllegalStateException("boom");
+        }).when(commands).runCommandList(any(), any(), any(), any());
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                mock(MessageService.class), mock(SoundService.class));
+        Player sender = mock(Player.class);
+        when(sender.getName()).thenReturn("Steve");
+
+        ModifierTestService.TestResult result =
+                service.run(sender, "HUNTER", List.of("say one", "say two"));
+
+        assertEquals(2, result.errorLine());
+        assertEquals("java.lang.IllegalStateException: boom", result.errorText());
+        assertTrue(result.elapsedMs() >= 0);
+        assertTrue(result.messages().isEmpty());
+        verify(commands).runCommandList(any(), any(), any(), any());
+    }
+
+    @Test
+    void runFloorsUnknownLinesAndCatchesErrors() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        doAnswer(call -> {
+            throw new AssertionError("fatal");
+        }).when(commands).runCommandList(any(), any(), any(), any());
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                mock(MessageService.class), mock(SoundService.class));
+        Player sender = mock(Player.class);
+        when(sender.getName()).thenReturn("Steve");
+
+        ModifierTestService.TestResult result = service.run(sender, "HUNTER", List.of("say hi"));
+
+        assertEquals(1, result.errorLine());
+        assertEquals("java.lang.AssertionError: fatal", result.errorText());
+    }
+
+    @Test
+    void runLeavesErrorInfoNullWhenClean() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                mock(MessageService.class), mock(SoundService.class));
+        Player sender = mock(Player.class);
+        when(sender.getName()).thenReturn("Steve");
+
+        ModifierTestService.TestResult result = service.run(sender, "HUNTER", List.of("say hi"));
+
+        assertNull(result.errorLine());
+        assertNull(result.errorText());
+    }
+
+    @Test
+    void reportPrintsErrorLineThenFailure() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        MessageService messages = mock(MessageService.class);
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                messages, mock(SoundService.class));
+        Player sender = mock(Player.class);
+        ModifierTestService.TestResult result = new ModifierTestService.TestResult(7L,
+                List.of(), List.of("partial"), List.of(), 2, "java.lang.Boom: bang");
+
+        service.report(sender, result);
+
+        InOrder order = inOrder(messages);
+        order.verify(messages).message(sender, "modifiers.test-error-line",
+                Map.of("line", "2", "exception", "java.lang.Boom: bang"));
+        order.verify(messages).message(sender, "modifiers.test-error", Map.of("time", "7"));
+        verify(messages, never()).message(eq(sender), eq("modifiers.test-success"), any());
+        verify(messages, never()).message(eq(sender), eq("modifiers.test-failure"), any());
+        verify(messages, never()).sendText(eq(sender), anyString());
+    }
+
+    @Test
     void reportJoinsWarningsIntoFailure() {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         MessageService messages = mock(MessageService.class);
@@ -142,7 +222,7 @@ class ModifierTestServiceTest {
                 messages, mock(SoundService.class));
         Player sender = mock(Player.class);
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(3L,
-                List.of("first", "second"), List.of(), List.of());
+                List.of("first", "second"), List.of(), List.of(), null, null);
 
         service.report(sender, result);
 

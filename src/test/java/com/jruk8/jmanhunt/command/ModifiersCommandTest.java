@@ -227,7 +227,7 @@ class ModifiersCommandTest {
         Fixture fixture = fixture();
         ModifierTestService service = mock(ModifierTestService.class);
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(12L, List.of(),
-                List.of(), List.of());
+                List.of(), List.of(), null, null);
         when(service.run(any(), eq("HUNTER"), eq(List.of("say hi")))).thenReturn(result);
         ModifiersCommand command = new ModifiersCommand(fixture.service(), fixture.messages(),
                 null, null, null, service);

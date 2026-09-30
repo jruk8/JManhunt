@@ -38,9 +38,13 @@ public final class ModifierTestService {
     public record CapturedSound(String soundId, float pitch, float volume) {
     }
 
-    /** One test run: elapsed ms plus captured warnings and sink output. */
+    /**
+     * One test run: elapsed ms plus captured warnings and sink output,
+     * plus the 1-based failing line and restored exception text when a
+     * line threw (both null on a clean run).
+     */
     public record TestResult(long elapsedMs, List<String> warnings, List<String> messages,
-            List<CapturedSound> sounds) {
+            List<CapturedSound> sounds, Integer errorLine, String errorText) {
     }
 
     private final GameStateCommandManager commands;
@@ -118,19 +122,36 @@ public final class ModifierTestService {
                         new CapturedSound(id, pitch, volume)),
                 (line, provenance) -> commands.runTagCommand(line, provenance));
         long start = System.nanoTime();
-        commands.runCommandList(lines, sender, context,
-                TagContext.Provenance.of("modifiers-test", -1, "test"));
+        try {
+            commands.runCommandList(lines, sender, context,
+                    TagContext.Provenance.of("modifiers-test", -1, "test"));
+        } catch (Throwable thrown) {
+            long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+            int line = Math.max(1, context.provenance().lineIndex() + 1);
+            return new TestResult(elapsedMs, List.copyOf(warnings),
+                    List.copyOf(capturedMessages), List.copyOf(capturedSounds), line,
+                    EngineEscapes.restore(String.valueOf(thrown)));
+        }
         long elapsedMs = (System.nanoTime() - start) / 1_000_000;
         return new TestResult(elapsedMs, List.copyOf(warnings), List.copyOf(capturedMessages),
-                List.copyOf(capturedSounds));
+                List.copyOf(capturedSounds), null, null);
     }
 
     /**
-     * Reports one run to the sender: captured messages replay through
-     * the engine format, valid captured sounds play, then the result
-     * line. Any warning fails the run with the joined warnings.
+     * Reports one run to the sender: a throwing line prints the error
+     * line plus the failed-in-ms line and stops there; otherwise
+     * captured messages replay through the engine format, valid
+     * captured sounds play, then the result line. Any warning fails
+     * the run with the joined warnings.
      */
     public void report(Player sender, TestResult result) {
+        if (result.errorLine() != null) {
+            messages.message(sender, "modifiers.test-error-line", Map.of("line",
+                    String.valueOf(result.errorLine()), "exception", result.errorText()));
+            messages.message(sender, "modifiers.test-error",
+                    Map.of("time", String.valueOf(result.elapsedMs())));
+            return;
+        }
         for (String text : result.messages()) {
             messages.sendText(sender,
                     commands.formatEngineMessage(EngineEscapes.restore(text)));

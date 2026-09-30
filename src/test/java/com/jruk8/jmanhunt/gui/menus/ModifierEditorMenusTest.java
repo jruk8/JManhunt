@@ -263,7 +263,7 @@ class ModifierEditorMenusTest {
         ModifierTestService service = mock(ModifierTestService.class);
         when(service.roleFor(any(), eq("player"))).thenReturn("HUNTER");
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(12L, List.of(),
-                List.of(), List.of());
+                List.of(), List.of(), null, null);
         when(service.run(any(), eq("HUNTER"), eq(List.of("give <p> apple")))).thenReturn(result);
         ModifiersCommand toggles = new ModifiersCommand(null, messages, null, null, null,
                 service);

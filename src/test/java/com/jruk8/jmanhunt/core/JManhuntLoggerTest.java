@@ -5,6 +5,8 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
@@ -114,6 +116,23 @@ class JManhuntLoggerTest {
     }
 
     @Test
+    void debugTagsCarryLevelColors() {
+        RecordingSink sink = sink();
+        DebugService debug = new DebugService();
+        debug.setConsoleLevel(DebugLevel.INFO);
+        JManhuntLogger logger = logger(Logger.getAnonymousLogger(), debug, sink);
+
+        logger.debug(DebugLevel.INFO, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.WARN, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.SEVERE, "debug.cell-fetched", Map.of("value", "7"));
+
+        assertEquals(3, sink.console().size());
+        assertEquals(NamedTextColor.GRAY, tagColor(sink.console().get(0), "[INFO] "));
+        assertEquals(NamedTextColor.YELLOW, tagColor(sink.console().get(1), "[WARN] "));
+        assertEquals(NamedTextColor.RED, tagColor(sink.console().get(2), "[SEVERE] "));
+    }
+
+    @Test
     void debugFiltersPerRecipientLevel() {
         RecordingSink sink = sink();
         DebugService debug = new DebugService();
@@ -210,6 +229,19 @@ class JManhuntLoggerTest {
             text.append(plain(child));
         }
         return text.toString();
+    }
+
+    private static TextColor tagColor(Component root, String tag) {
+        if (root instanceof TextComponent text && text.content().equals(tag)) {
+            return text.color();
+        }
+        for (Component child : root.children()) {
+            TextColor found = tagColor(child, tag);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
     }
 
     private static JManhuntLogger logger(Logger jul, DebugService debug, RecordingSink sink) {

@@ -77,7 +77,7 @@ public final class JManhuntLogger {
         // templates carry {debug-prefix} themselves, so render the body
         // with it blanked to avoid doubling the prefix.
         Component rendered = messages.component("debug.prefix")
-                .append(Component.text("[" + level.name() + "] "))
+                .append(messages.miniMessage(levelTag(level)))
                 .append(messages.renderLiteral(
                         messages.string(key, key).replace("{debug-prefix}", ""), values));
         sendRendered(level, rendered);
@@ -90,9 +90,21 @@ public final class JManhuntLogger {
         }
         DebugLevel debugLevel = debugLevel(level);
         Component rendered = messages.component("debug.prefix")
-                .append(Component.text("[" + debugLevel.name() + "] "))
+                .append(messages.miniMessage(levelTag(debugLevel)))
                 .append(Component.text(truncate(singleLine(message, error))));
         sendRendered(debugLevel, rendered);
+    }
+
+    /**
+     * Colored level tag: severe red, warn yellow, info gray, brackets
+     * included and the color closed so the body keeps its own colors.
+     */
+    private static String levelTag(DebugLevel level) {
+        return switch (level) {
+            case SEVERE -> "<red>[SEVERE] </red>";
+            case WARN -> "<yellow>[WARN] </yellow>";
+            case INFO -> "<gray>[INFO] </gray>";
+        };
     }
 
     private void sendRendered(DebugLevel level, Component rendered) {
