@@ -100,12 +100,12 @@ class GameStateCommandManagerTest {
 
     @Test
     void gameruleRestoresOnLastMatchEnd() {
-        assertFalse(GameStateCommandManager.gameruleRestored("start", true, true));
-        assertFalse(GameStateCommandManager.gameruleRestored("start", false, true));
-        assertFalse(GameStateCommandManager.gameruleRestored("end", false, true));
-        assertTrue(GameStateCommandManager.gameruleRestored("end", true, true));
-        assertTrue(GameStateCommandManager.gameruleRestored("start", true, false));
-        assertTrue(GameStateCommandManager.gameruleRestored("end", false, false));
+        assertFalse(MatchDefaultsService.gameruleRestored("start", true, true));
+        assertFalse(MatchDefaultsService.gameruleRestored("start", false, true));
+        assertFalse(MatchDefaultsService.gameruleRestored("end", false, true));
+        assertTrue(MatchDefaultsService.gameruleRestored("end", true, true));
+        assertTrue(MatchDefaultsService.gameruleRestored("start", true, false));
+        assertTrue(MatchDefaultsService.gameruleRestored("end", false, false));
     }
 
     @Test

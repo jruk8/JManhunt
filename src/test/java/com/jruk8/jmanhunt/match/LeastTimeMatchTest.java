@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.match.lifecycle.MatchStartService;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
@@ -13,8 +14,8 @@ class LeastTimeMatchTest {
         GameInstance oldMatch = live(1L, 1_000L);
         GameInstance newMatch = live(2L, 2_000L);
 
-        assertEquals(Optional.of(newMatch), GameManager.leastTimeMatch(List.of(oldMatch, newMatch)));
-        assertEquals(Optional.of(newMatch), GameManager.leastTimeMatch(List.of(newMatch, oldMatch)));
+        assertEquals(Optional.of(newMatch), MatchStartService.leastTimeMatch(List.of(oldMatch, newMatch)));
+        assertEquals(Optional.of(newMatch), MatchStartService.leastTimeMatch(List.of(newMatch, oldMatch)));
     }
 
     @Test
@@ -26,12 +27,12 @@ class LeastTimeMatchTest {
         GameInstance liveMatch = live(3L, 1_000L);
 
         assertEquals(Optional.of(liveMatch),
-                GameManager.leastTimeMatch(List.of(ending, inactive, liveMatch)));
+                MatchStartService.leastTimeMatch(List.of(ending, inactive, liveMatch)));
     }
 
     @Test
     void emptyWhenNothingRuns() {
-        assertEquals(Optional.empty(), GameManager.leastTimeMatch(List.of()));
+        assertEquals(Optional.empty(), MatchStartService.leastTimeMatch(List.of()));
     }
 
     private static GameInstance live(long matchId, long startedAt) {

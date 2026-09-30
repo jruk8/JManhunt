@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.lobby.SubLobby;
+import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
@@ -14,8 +15,8 @@ class OldestSubLobbyTest {
         GameInstance first = live(1L, 0);
         GameInstance second = live(2L, 3);
 
-        assertEquals(Optional.of(first), GameManager.oldestSubLobby(List.of(second, first)));
-        assertEquals(Optional.of(first), GameManager.oldestSubLobby(List.of(first, second)));
+        assertEquals(Optional.of(first), MatchStore.oldestSubLobby(List.of(second, first)));
+        assertEquals(Optional.of(first), MatchStore.oldestSubLobby(List.of(first, second)));
     }
 
     @Test
@@ -28,13 +29,13 @@ class OldestSubLobbyTest {
         parentHosted.setActive(true);
         GameInstance liveMatch = live(4L, 5);
 
-        assertEquals(Optional.of(liveMatch), GameManager.oldestSubLobby(
+        assertEquals(Optional.of(liveMatch), MatchStore.oldestSubLobby(
                 List.of(ending, inactive, parentHosted, liveMatch)));
     }
 
     @Test
     void emptyWhenNothingRuns() {
-        assertEquals(Optional.empty(), GameManager.oldestSubLobby(List.of()));
+        assertEquals(Optional.empty(), MatchStore.oldestSubLobby(List.of()));
     }
 
     private static GameInstance live(long matchId, int subId) {

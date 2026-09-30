@@ -10,28 +10,19 @@ import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.core.PlaceholderPass;
 import com.jruk8.jmanhunt.config.ConfigService;
-import com.jruk8.jmanhunt.config.EngineStateRepository;
-import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.player.PlayerResetService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
-import org.bukkit.Bukkit;
-import org.bukkit.GameRule;
-import org.bukkit.GameRules;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -49,10 +40,9 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     private final GameManager game;
     private final IntervalDispatcher intervals;
     private final ModifierToggleService toggles;
-    private final PlayerResetService resets;
-    private final Set<UUID> pendingEndWipes = new HashSet<>();
-    /** In-match UUIDs still owed a post-crash wipe; mirrored in crash_cleanup. */
-    private final Set<UUID> pendingCrashWipes = new HashSet<>();
+    private final PlayerWipeService wipes;
+    private final MatchDefaultsService defaults;
+    private final ModifierTagSinks sinks;
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
                                    ConfigService configService, MessageService messages,
@@ -66,12 +56,14 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         this.intervals = new IntervalDispatcher(plugin, configService, game, playerStates,
                 this::dispatchModifier);
         this.toggles = new ModifierToggleService(plugin, configService, game, intervals, this);
-        this.resets = new PlayerResetService(plugin.overrides());
+        this.wipes = new PlayerWipeService(plugin, new PlayerResetService(plugin.overrides()));
+        this.defaults = new MatchDefaultsService(plugin, playerStates, wipes);
+        this.sinks = new ModifierTagSinks(plugin, messages, sounds, game, playerStates, configService);
     }
 
     public void runStart(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId) {
         intervals.cancelPendingDelayed(matchId);
-        runDefault("start", participants, lobbySpectators, lobbyId, false);
+        defaults.runDefault("start", participants, lobbySpectators, lobbyId, false);
         runModifierStarts(matchId);
     }
 
@@ -101,7 +93,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     public void runEnd(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
                        boolean lastMatch) {
         intervals.cancelPendingDelayed(matchId);
-        runDefault("end", participants, lobbySpectators, lobbyId, lastMatch);
+        defaults.runDefault("end", participants, lobbySpectators, lobbyId, lastMatch);
     }
 
     public void runConsoleCleanup(long matchId) {
@@ -299,175 +291,33 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     private TagContext tagContext(String name, Player executor, ModifierTagScope scope, long matchId,
             List<String> eventArgs) {
         return TagContext.run(scope, name,
-                text -> messages.broadcastText(formatEngineMessage(text)),
+                text -> messages.broadcastText(sinks.formatEngineMessage(text)),
                 text -> {
                     if (executor != null) {
-                        messages.sendText(executor, formatEngineMessage(text));
+                        messages.sendText(executor, sinks.formatEngineMessage(text));
                     } else {
                         scope.warn("Tag <pmessage> needs an executor player: skipped in '" + name + "'.");
                     }
                 },
-                (soundId, pitch, volume) -> playEngineSound(name, null, soundId, pitch, volume),
+                (soundId, pitch, volume) -> sinks.playEngineSound(name, null, soundId, pitch, volume),
                 (soundId, pitch, volume) -> {
                     if (executor != null) {
-                        playEngineSound(name, executor, soundId, pitch, volume);
+                        sinks.playEngineSound(name, executor, soundId, pitch, volume);
                     } else {
                         scope.warn("Tag <psound> needs an executor player: skipped in '" + name + "'.");
                     }
                 },
-                (target, reason) -> losePlayerByName(name, target, reason, scope, matchId),
-                (role, reason) -> winForRole(name, role, reason, scope, matchId),
+                (target, reason) -> sinks.losePlayerByName(name, target, reason, scope, matchId),
+                (role, reason) -> sinks.winForRole(name, role, reason, scope, matchId),
                 matchId, new TagBackends(game.matchStatValues(matchId), game.flagStore(),
                         new PlaceholderPass(plugin.placeholderValues()),
                         new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId),
                         NamedPlayerSinks.of(messages, sounds, plugin.logger()::warning, name)),
-                eventArgs, detail -> loopLimitExceeded(detail, matchId),
-                (role, text) -> sendRoleMessage(name, matchId, scope, role, text),
-                (role, soundId, pitch, volume) -> playRoleSound(name, matchId, scope, role,
+                eventArgs, detail -> sinks.loopLimitExceeded(detail, matchId),
+                (role, text) -> sinks.sendRoleMessage(name, matchId, scope, role, text),
+                (role, soundId, pitch, volume) -> sinks.playRoleSound(name, matchId, scope, role,
                         soundId, pitch, volume),
-                (line, provenance) -> runTagCommand(line, provenance));
-    }
-
-    /**
-     * {@code <run>} sink: dispatches one evaluated line from the
-     * console with the blacklist enforced, like a command list
-     * entry. A hit only skips that line, never the outer list.
-     */
-    void runTagCommand(String line, String provenance) {
-        String restored = EngineEscapes.restore(line);
-        Collection<String> blocked = configService.getStringList(BLACKLISTED_COMMANDS_PATH);
-        if (CommandSyntax.isBlockedCommand(restored, blocked)) {
-            plugin.logger().severe("Blocked blacklisted modifier command '"
-                    + restored + "' at " + provenance + ".");
-            return;
-        }
-        QuietConsoleDispatch.dispatch(restored);
-    }
-
-    /**
-     * {@code <rmessage>} sink: tells every online assigned player of
-     * the named role, formatted like {@code <pmessage>}.
-     */
-    private void sendRoleMessage(String name, long matchId, ModifierTagScope scope,
-            String role, String text) {
-        roleMembers("rmessage", name, matchId, scope, role).ifPresent(members -> {
-            String formatted = formatEngineMessage(text);
-            for (Player member : members) {
-                messages.sendText(member, formatted);
-            }
-        });
-    }
-
-    /**
-     * {@code <rsound>} sink: plays for every online assigned player
-     * of the named role. Unknown ids skip like engine sounds.
-     */
-    private void playRoleSound(String name, long matchId, ModifierTagScope scope,
-            String role, String soundId, float pitch, float volume) {
-        Optional<List<Player>> members = roleMembers("rsound", name, matchId, scope, role);
-        if (members.isEmpty()) {
-            return;
-        }
-        if (!sounds.isValidSound(soundId)) {
-            plugin.logger().warning("modifier \"" + name
-                    + "\" tried playing invalid sound \"" + soundId + "\"");
-            return;
-        }
-        for (Player member : members.get()) {
-            sounds.playCustomSound(member, soundId, pitch, volume);
-        }
-    }
-
-    /**
-     * Online assigned players of the named role behind role tags,
-     * else empty with the reason warned. The tag layer validates the
-     * role, like {@code <win>}.
-     */
-    private Optional<List<Player>> roleMembers(String tag, String name, long matchId,
-            ModifierTagScope scope, String role) {
-        Role target = Role.valueOf(role);
-        Optional<GameInstance> instance = game.instance(matchId);
-        if (instance.isEmpty()) {
-            scope.warn("Tag <" + tag + "> needs a live match: skipped in '" + name + "'.");
-            return Optional.empty();
-        }
-        List<Player> members = new ArrayList<>();
-        for (Player member : game.onlineAssignedPlayers(instance.get())) {
-            if (playerStates.role(member) == target) {
-                members.add(member);
-            }
-        }
-        return Optional.of(members);
-    }
-
-    /**
-     * Loop-limit sink: a {@code <while>} or {@code <for>} passed 1000
-     * steps. Logs the source line, tells the match to contact an
-     * administrator, and cancels the match.
-     */
-    private void loopLimitExceeded(String detail, long matchId) {
-        plugin.logger().severe("JMHScript loop exceeded 1000 steps at " + detail);
-        Optional<GameInstance> instance = game.instance(matchId);
-        if (instance.isEmpty()) {
-            return;
-        }
-        String text = messages.string("modifiers.loop-limit",
-                "{prefix}<red>A modifier loop exceeded its step limit and the match was cancelled. "
-                        + "Please tell an administrator.");
-        for (Player player : game.onlineParticipants(matchId)) {
-            messages.sendText(player, text);
-        }
-        game.cancel(instance.get());
-    }
-
-    /**
-     * {@code <loseplayer>} sink: eliminates one player by name with
-     * the tag reason; failures skip with a warning naming the tag.
-     */
-    private void losePlayerByName(String name, String target, String reason,
-            ModifierTagScope scope, long matchId) {
-        if (!game.losePlayer(matchId, target, reason)) {
-            scope.warn("Tag <loseplayer:" + target + "> skipped: '" + target
-                    + "' is not an active runner or hunter in '" + name + "'.");
-        }
-    }
-
-    /**
-     * {@code <win:ROLE>} sink: ends the match for one role next
-     * tick, with the tag reason on the win screen.
-     */
-    private void winForRole(String name, String role, String reason,
-            ModifierTagScope scope, long matchId) {
-        Optional<GameInstance> instance = game.instance(matchId);
-        if (instance.isEmpty() || !instance.get().begun() || instance.get().ending()) {
-            scope.warn("Tag <win> needs a live match: skipped in '" + name + "'.");
-            return;
-        }
-        game.finishLater(instance.get(), Role.valueOf(role), reason);
-    }
-
-    String formatEngineMessage(String text) {
-        return NamedPlayerSinks.formatEngineMessage(messages, text);
-    }
-
-    /**
-     * Plays one engine sound for every online player (global) or one
-     * executor. Unknown ids skip with the modifier named in the log.
-     */
-    private void playEngineSound(String containerId, Player target, String soundId,
-            float pitch, float volume) {
-        if (!sounds.isValidSound(soundId)) {
-            plugin.logger().warning("modifier \"" + containerId
-                    + "\" tried playing invalid sound \"" + soundId + "\"");
-            return;
-        }
-        if (target != null) {
-            sounds.playCustomSound(target, soundId, pitch, volume);
-            return;
-        }
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            sounds.playCustomSound(online, soundId, pitch, volume);
-        }
+                (line, provenance) -> sinks.runTagCommand(line, provenance));
     }
 
     /**
@@ -485,109 +335,9 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         return ModifierTriggers.pickCommands(commands, count, ThreadLocalRandom.current());
     }
 
-    /**
-     * True when a match-paused gamerule is back on: the end phase of the
-     * last match, or any phase when its toggle is off. Pure for tests.
-     */
-    static boolean gameruleRestored(String phase, boolean lastMatch, boolean toggleEnabled) {
-        return (phase.equals("end") && lastMatch) || !toggleEnabled;
-    }
-
-    /** Pauses a spawn gamerule while a match runs, restoring it after. */
-    private void applySpawnGamerule(List<World> worlds, String phase,
-            boolean lastMatch, boolean disabled, GameRule<Boolean> rule) {
-        worlds.forEach(world -> world.setGameRule(rule,
-                gameruleRestored(phase, lastMatch, disabled)));
-    }
-
     /** True when the end phase wipes participant inventories for the lobby. */
     public boolean endWipeEnabled(int lobbyId) {
-        return resets.endWipeEnabled(lobbyId);
-    }
-
-    private void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators, int lobbyId,
-                            boolean lastMatch) {
-        if (!plugin.overrides().getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
-            return;
-        }
-        List<String> rules = plugin.overrides().getStringList(lobbyId,
-                MatchConfig.GameRules.RULES_PATH);
-        if (endWipeEnabled(lobbyId)) {
-            participants.forEach(this::resetPlayer);
-        }
-        applyDefaultGamemodes(phase, participants, lobbySpectators, lobbyId);
-        applyWorldRules(Bukkit.getWorlds(), phase, lastMatch, rules);
-        if (MatchConfig.GameRules.isRuleEnabled(rules, "SET_DAYTIME")) {
-            Bukkit.getWorlds().forEach(this::setDaytime);
-        }
-    }
-
-    /** Vanilla gamerule applications for one phase. */
-    private void applyWorldRules(List<World> worlds, String phase,
-            boolean lastMatch, List<String> rules) {
-        boolean disableLocatorBar =
-                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_LOCATOR_BAR");
-        worlds.forEach(world -> world.setGameRule(GameRules.LOCATOR_BAR, !disableLocatorBar));
-        // Disable phantom spawning while a match runs and restore it when the
-        // match ends. The gamerule is re-enabled on the end phase.
-        boolean disablePhantoms =
-                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_PHANTOMS");
-        worlds.forEach(world -> world.setGameRule(GameRules.SPAWN_PHANTOMS,
-                gameruleRestored(phase, lastMatch, disablePhantoms)));
-        worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
-                MatchConfig.GameRules.isRuleEnabled(rules, "SET_RESPAWN_IMMEDIATE")));
-        // Prevent spectators from generating chunks while the match is active.
-        // This is the native gamerule equivalent of the old spectator chunk
-        // generation toggle and avoids lag from spectators exploring.
-        worlds.forEach(world -> world.setGameRule(GameRules.SPECTATORS_GENERATE_CHUNKS, false));
-        // Pillager patrols never spawn while a match runs; restored when the last match ends.
-        applySpawnGamerule(worlds, phase, lastMatch,
-                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_PILLAGER_PATROLS"),
-                GameRules.SPAWN_PATROLS);
-        // Wandering traders never spawn while a match runs; restored when the last match ends.
-        applySpawnGamerule(worlds, phase, lastMatch,
-                MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_WANDERING_TRADER"),
-                GameRules.SPAWN_WANDERING_TRADERS);
-    }
-
-    /**
-     * Default modes for a phase: participants to survival, NONEs to fake
-     * spectator on start (or back to survival on end) unless AFK. Nobody
-     * is teleported here: match travel belongs to the cell teleports.
-     */
-    private void applyDefaultGamemodes(String phase, List<Player> participants,
-            List<Player> lobbySpectators, int lobbyId) {
-        // AFK players are skipped above and always left alone; NONEs follow
-        // the toggle, keeping their mode like AFK when it is off.
-        boolean setNoneSpectator = plugin.overrides().getBoolean(lobbyId,
-                "settings.players.roles.turn-nones-spectator.enabled", false);
-        for (Player player : participants) {
-            plugin.fakeSpectators().disable(player);
-        }
-        for (Player player : lobbySpectators) {
-            if (playerStates.role(player) == Role.AFK) {
-                continue; // AFK players are left alone
-            }
-            if (phase.equals("start")) {
-                if (setNoneSpectator) {
-                    plugin.fakeSpectators().enable(player);
-                }
-            } else {
-                plugin.fakeSpectators().disable(player);
-            }
-        }
-    }
-
-    private void setDaytime(World world) {
-        try {
-            world.setTime(0L);
-            // Clear any ongoing rain/storm so a fresh match starts with clear
-            // skies, matching the behaviour of a newly generated world.
-            world.setStorm(false);
-            world.setWeatherDuration(0);
-        } catch (IllegalArgumentException exception) {
-            plugin.logger().fine("Skipping daytime reset in world without a world clock: " + world.getName());
-        }
+        return wipes.endWipeEnabled(lobbyId);
     }
 
     /** Runs ON_START modifiers that do not wait out the pre-start window. */
@@ -673,9 +423,9 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         return true;
     }
 
-    /** Full match-end style wipe for one player. */
+    /** Full match-end style wipe for one player. See {@link PlayerWipeService}. */
     public void resetPlayer(Player player) {
-        resets.resetPlayer(player);
+        wipes.resetPlayer(player);
     }
 
     /**
@@ -683,7 +433,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      * teardown. Memory only: matches never survive a restart anyway.
      */
     public void markPendingEndWipe(Collection<UUID> playerIds) {
-        pendingEndWipes.addAll(playerIds);
+        wipes.markPendingEndWipe(playerIds);
     }
 
     /**
@@ -691,102 +441,54 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      * when a wipe was pending and ran.
      */
     public boolean applyPendingEndWipe(Player player) {
-        if (!pendingEndWipes.remove(player.getUniqueId())) {
-            return false;
-        }
-        resetPlayer(player);
-        return true;
+        return wipes.applyPendingEndWipe(player, this::resetPlayer);
     }
 
     /**
      * Tracks match-state entry for post-crash cleanup: every
-     * speedrunner, hunter, and spectator activation. The memory set
-     * answers joins; the crash_cleanup rows survive the crash itself.
-     * Failures log and continue, never blocking the match.
+     * speedrunner, hunter, and spectator activation.
+     * See {@link PlayerWipeService}.
      */
     public void trackMatchEntry(Collection<UUID> playerIds) {
-        pendingCrashWipes.addAll(playerIds);
-        EngineStateRepository repository = plugin.engineStates();
-        if (repository == null) {
-            return;
-        }
-        for (UUID playerId : playerIds) {
-            try {
-                repository.markCrashCleanup(playerId);
-            } catch (SQLException failed) {
-                plugin.logger().warning("Could not track crash cleanup for " + playerId + ": "
-                        + failed.getMessage());
-            }
-        }
+        wipes.trackMatchEntry(playerIds);
     }
 
     /**
-     * Drops clean match-state exits from post-crash cleanup: voluntary
-     * leave, auto-leave, and teardown back to normal play. Transferred
-     * spectators stay tracked under their new match.
+     * Drops clean match-state exits from post-crash cleanup.
+     * See {@link PlayerWipeService}.
      */
     public void untrackMatchExit(Collection<UUID> playerIds) {
-        pendingCrashWipes.removeAll(playerIds);
-        EngineStateRepository repository = plugin.engineStates();
-        if (repository == null) {
-            return;
-        }
-        for (UUID playerId : playerIds) {
-            try {
-                repository.clearCrashCleanup(playerId);
-            } catch (SQLException failed) {
-                plugin.logger().warning("Could not clear crash cleanup for " + playerId + ": "
-                        + failed.getMessage());
-            }
-        }
+        wipes.untrackMatchExit(playerIds);
     }
 
     /**
-     * Loads surviving crash_cleanup rows after enable. Rows are honored
-     * regardless of the crash flag so a player who misses the first
-     * post-crash restart is still wiped on their next join; each row
-     * deletes only when its player is actually wiped.
+     * Loads surviving crash_cleanup rows after enable.
+     * See {@link PlayerWipeService}.
      */
     public void loadCrashCleanup() {
-        EngineStateRepository repository = plugin.engineStates();
-        if (repository == null) {
-            return;
-        }
-        try {
-            pendingCrashWipes.addAll(repository.crashCleanupIds());
-        } catch (SQLException failed) {
-            plugin.logger().warning("Could not load crash cleanup rows: " + failed.getMessage());
-        }
+        wipes.loadCrashCleanup();
     }
 
     /**
      * Runs the post-crash wipe for a rejoiner. Returns true when a wipe
-     * was pending and ran. Match stats are memory-only and died with
-     * the crash, career stats were never saved for the crashed match,
-     * and roles are memory-only too, so the full resetPlayer wipe plus
-     * the join-time toolbar strip is the complete cleanup.
+     * was pending and ran. See {@link PlayerWipeService}.
      */
     public boolean applyPendingCrashWipe(Player player) {
-        UUID playerId = player.getUniqueId();
-        if (!pendingCrashWipes.remove(playerId)) {
-            return false;
-        }
-        resetPlayer(player);
-        EngineStateRepository repository = plugin.engineStates();
-        if (repository == null) {
-            return true;
-        }
-        try {
-            repository.clearCrashCleanup(playerId);
-        } catch (SQLException failed) {
-            plugin.logger().warning("Could not clear crash cleanup for " + playerId + ": "
-                    + failed.getMessage());
-        }
-        return true;
+        return wipes.applyPendingCrashWipe(player, this::resetPlayer);
     }
 
     /** Vitals-only reset for one player. */
     public void resetVitals(Player player) {
-        resets.resetVitals(player);
+        wipes.resetVitals(player);
+    }
+
+    /** Engine message format; package-visible for the Test-a-Command runner. */
+    String formatEngineMessage(String text) {
+        return sinks.formatEngineMessage(text);
+    }
+
+    /** Runs one {@code <run>} line; package-visible for the Test-a-Command runner. */
+    void runTagCommand(String line, String provenance) {
+        sinks.runTagCommand(line, provenance);
     }
 }

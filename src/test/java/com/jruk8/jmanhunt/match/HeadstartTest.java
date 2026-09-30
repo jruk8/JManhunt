@@ -50,8 +50,8 @@ class HeadstartTest {
 
     @Test
     void oppositeSwapsParticipantSides() {
-        assertEquals(Role.SPEEDRUNNER, GameManager.opposite(Role.HUNTER));
-        assertEquals(Role.HUNTER, GameManager.opposite(Role.SPEEDRUNNER));
-        assertEquals(Role.NONE, GameManager.opposite(Role.NONE));
+        assertEquals(Role.SPEEDRUNNER, Role.HUNTER.opposite());
+        assertEquals(Role.HUNTER, Role.SPEEDRUNNER.opposite());
+        assertEquals(Role.NONE, Role.NONE.opposite());
     }
 }

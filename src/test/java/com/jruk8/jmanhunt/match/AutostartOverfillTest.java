@@ -32,13 +32,13 @@ class AutostartOverfillTest {
 
     @Test
     void minimumAboveMaximumIsNeverEligible() {
-        Map<Role, Integer> belowMax = GameManager.autostartShortfall(2, 1, 3, 1);
+        Map<Role, Integer> belowMax = AutostartService.autostartShortfall(2, 1, 3, 1);
         Map<Role, Integer> belowMaxExcess = AutostartService.autostartOverfill(2, 1, 2, -1);
         assertFalse(belowMax.isEmpty());
         assertTrue(belowMaxExcess.isEmpty());
         assertFalse(AutostartService.autostartEligible(belowMax, belowMaxExcess));
 
-        Map<Role, Integer> aboveMax = GameManager.autostartShortfall(3, 1, 3, 1);
+        Map<Role, Integer> aboveMax = AutostartService.autostartShortfall(3, 1, 3, 1);
         Map<Role, Integer> aboveMaxExcess = AutostartService.autostartOverfill(3, 1, 2, -1);
         assertTrue(aboveMax.isEmpty());
         assertFalse(aboveMaxExcess.isEmpty());

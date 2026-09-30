@@ -19,21 +19,21 @@ class MatchFinishServiceTest {
 
     @Test
     void recoveryUsesSurfacePlusOneOutsideNether() {
-        assertEquals(65.0, MatchFinishService.recoveryY(
+        assertEquals(65.0, MatchBorderEnforcer.recoveryY(
                 world(World.Environment.NORMAL, 64, 320), 10.4, 20.7, 11.0), 0.0);
-        assertEquals(65.0, MatchFinishService.recoveryY(
+        assertEquals(65.0, MatchBorderEnforcer.recoveryY(
                 world(World.Environment.THE_END, 64, 320), 10.4, 20.7, 11.0), 0.0);
     }
 
     @Test
     void recoveryKeepsLiveYInNether() {
-        assertEquals(11.0, MatchFinishService.recoveryY(
+        assertEquals(11.0, MatchBorderEnforcer.recoveryY(
                 world(World.Environment.NETHER, 120, 320), 10.4, 20.7, 11.0), 0.0);
     }
 
     @Test
     void recoveryCapsBelowCeiling() {
-        assertEquals(318.0, MatchFinishService.recoveryY(
+        assertEquals(318.0, MatchBorderEnforcer.recoveryY(
                 world(World.Environment.NORMAL, 400, 320), 10.4, 20.7, 11.0), 0.0);
     }
 

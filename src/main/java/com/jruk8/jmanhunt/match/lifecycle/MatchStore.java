@@ -51,6 +51,32 @@ public final class MatchStore {
         return Optional.ofNullable(instances.get(matchId));
     }
 
+    /** Live instance by world-engine cell index. */
+    public Optional<GameInstance> instanceByCell(long cellIndex) {
+        return instances.values().stream()
+                .filter(instance -> instance.cellIndex().isPresent()
+                        && instance.cellIndex().getAsLong() == cellIndex)
+                .findFirst();
+    }
+
+    /**
+     * Resolves an instance id typed in a command: a match id first, then a
+     * world-engine cell index as an alias. Empty when unparsable or unknown.
+     */
+    public Optional<GameInstance> resolveInstance(String raw) {
+        if (raw == null) {
+            return Optional.empty();
+        }
+        long id;
+        try {
+            id = Long.parseLong(raw.trim());
+        } catch (NumberFormatException exception) {
+            return Optional.empty();
+        }
+        Optional<GameInstance> byMatch = instance(id);
+        return byMatch.isPresent() ? byMatch : instanceByCell(id);
+    }
+
     public void registerInstance(GameInstance instance) {
         instances.put(instance.matchId(), instance);
     }

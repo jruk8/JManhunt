@@ -10,12 +10,9 @@ import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.LeaveDestination;
 import com.jruk8.jmanhunt.message.MessageService;
-import com.jruk8.jmanhunt.player.PlayerResetService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
-import com.jruk8.jmanhunt.player.SpectatorTravelService;
 import com.jruk8.jmanhunt.stats.StatsManager;
-import com.jruk8.jmanhunt.world.cell.CellBounds;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.world.WorldEngineService;
@@ -53,7 +50,6 @@ public final class MatchFinishService {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final PlayerStateStore playerStates;
-    private final CompassManager compass;
     private final StatsManager stats;
     private final GameStateCommandManager stateCommands;
     private final ConfigService configService;
@@ -65,9 +61,8 @@ public final class MatchFinishService {
     private final AutostartService autostart;
     private final FlagStore flagStore;
     private final MatchEliminationService elimination;
+    private final MatchLeaveService leave;
     private final List<Consumer<GameInstance>> gameEndListeners = new ArrayList<>();
-    /** Enforcement cadence in ticks: rubber-band, travel cap, elapsed cache. */
-    private static final long ENFORCE_PERIOD_TICKS = 5L;
 
     public MatchFinishService(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
             CompassManager compass, StatsManager stats, GameStateCommandManager stateCommands,
@@ -77,7 +72,6 @@ public final class MatchFinishService {
         this.plugin = plugin;
         this.messages = messages;
         this.playerStates = playerStates;
-        this.compass = compass;
         this.stats = stats;
         this.stateCommands = stateCommands;
         this.configService = configService;
@@ -90,16 +84,13 @@ public final class MatchFinishService {
         this.flagStore = flagStore;
         this.elimination = new MatchEliminationService(plugin, playerStates, compass, store,
                 messaging, flagStore, this::finishIfBucketEmpty);
-        // Quarter-second tick: pseudo-border guard, spectator travel limit,
-        // and the elapsed-time cache (ended matches ignore the refresh).
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            enforcePseudoBorders();
-            enforceSpectatorTravel();
-            long now = System.currentTimeMillis();
-            for (GameInstance instance : store.liveInstances()) {
-                instance.refreshElapsedCache(now);
-            }
-        }, ENFORCE_PERIOD_TICKS, ENFORCE_PERIOD_TICKS);
+        this.leave = new MatchLeaveService(plugin, messages, playerStates, compass, stateCommands,
+                configService, worldEngine, store, messaging, flagStore, instance -> {
+                    compass.reconcileTeammateModes(instance);
+                    finishIfBucketEmpty(instance);
+                    cancelIfPreStartUnviable(instance);
+                });
+        new MatchBorderEnforcer(plugin, configService, store, worldEngine, playerStates);
     }
 
     public void addGameEndListener(Consumer<GameInstance> listener) {
@@ -173,178 +164,37 @@ public final class MatchFinishService {
         return Optional.empty();
     }
 
-    /** Configured leave destination, SPECTATOR by default. */
+    /** Configured leave destination, SPECTATOR by default. See {@link MatchLeaveService}. */
     public LeaveDestination leaveDestination(Integer lobby) {
-        return LeaveDestination.parse(plugin.overrides()
-                .getString(lobby, "settings.match.game-leave.destination", "SPECTATOR"));
+        return leave.leaveDestination(lobby);
     }
 
     /**
      * Removes players from a match: deactivates them, clears their match
-     * state, and moves them to the configured destination. Begun-match
-     * participants drop their gear when {@code dropGear} is true (voluntary
-     * leave) or are wiped match-end style when false (auto-leave); pre-start
-     * leavers keep everything. Hunter and speedrunner departures are
-     * announced to the lobby with the remaining role count. Returns the
+     * state, and moves them to the configured destination. Returns the
      * number removed. A last leaver ends the match for the other side.
+     * See {@link MatchLeaveService}.
      */
     public int leaveMatch(GameInstance instance, List<Player> leavers, boolean dropGear) {
-        if (!instance.active()) {
-            return 0;
-        }
-        LeaveDestination destination = leaveDestination(instance.originLobbyId());
-        int removed = 0;
-        List<Role> leftRoles = new ArrayList<>();
-        List<String> leftNames = new ArrayList<>();
-        for (Player player : leavers) {
-            Role before = leavePlayer(instance, player, dropGear, destination);
-            if (before == null) {
-                continue;
-            }
-            leftRoles.add(before);
-            leftNames.add(player.getName());
-            removed++;
-        }
-        announceLeaves(instance, leftRoles, leftNames);
-        if (removed > 0) {
-            compass.reconcileTeammateModes(instance);
-            finishIfBucketEmpty(instance);
-            cancelIfPreStartUnviable(instance);
-        }
-        return removed;
-    }
-
-    /** Removes one player from the instance. Returns the prior role, or null when not active. */
-    private Role leavePlayer(GameInstance instance, Player player, boolean dropGear,
-            LeaveDestination destination) {
-        UUID playerId = player.getUniqueId();
-        if (!instance.isActive(playerId)) {
-            return null;
-        }
-        Role before = playerStates.role(player);
-        if (instance.begun() && before.isParticipant()) {
-            if (dropGear) {
-                PlayerResetService.dropAllGear(player);
-                stateCommands.resetVitals(player);
-            } else {
-                stateCommands.resetPlayer(player);
-            }
-        }
-        playerStates.setSpeedrunnerAlive(playerId, false);
-        instance.deactivate(playerId);
-        stateCommands.untrackMatchExit(List.of(playerId));
-        playerStates.clearMatchFor(List.of(playerId));
-        flagStore.removePlayer(instance.matchId(), player.getName());
-        compass.removeCompasses(player);
-        applyLeaveDestination(instance, player, dropGear, destination);
-        plugin.roleTeams().sync(player);
-        messages.message(player, "game.leave-success", Map.of());
-        return before;
+        return leave.leaveMatch(instance, leavers, dropGear);
     }
 
     /**
-     * Mid-match setplayer to AFK or NONE: a full leave (gear, compass,
-     * announcements, bucket checks) plus a lobby return under the given
-     * role. The role must be AFK or NONE. Returns the number removed.
+     * Mid-match setplayer to AFK or NONE: a full leave plus a lobby
+     * return under the given role. The role must be AFK or NONE.
+     * Returns the number removed. See {@link MatchLeaveService}.
      */
     public int leaveMatchToLobby(GameInstance instance, Player player, Role role) {
-        int removed = leaveMatch(instance, List.of(player), instance.begun());
-        if (removed == 0) {
-            return 0;
-        }
-        playerStates.setRole(player, role);
-        worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
-        worldEngine.setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
-        plugin.fakeSpectators().disable(player);
-        plugin.roleTeams().sync(player);
-        return removed;
-    }
-
-    /** Moves a leaver to the lobby or the spectator box. */
-    private void applyLeaveDestination(GameInstance instance, Player player, boolean dropGear,
-            LeaveDestination destination) {
-        if (destination == LeaveDestination.LOBBY) {
-            playerStates.setRole(player, Role.NONE);
-            worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
-            worldEngine.setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
-            if (plugin.fakeSpectators().isFakeSpectator(player)) {
-                plugin.fakeSpectators().disable(player);
-            }
-        } else {
-            playerStates.setRole(player, Role.SPECTATOR);
-            plugin.fakeSpectators().enable(player);
-            if (!dropGear && instance.cellIndex().isPresent()) {
-                // Auto-leave pulled them out of bounds: put the watcher
-                // back in the cell instead of stranding them outside it.
-                worldEngine.teleportJoinersToCell(instance, List.of(player),
-                        instance.cellIndex().getAsLong());
-            }
-        }
-    }
-
-    /** Announces hunter and speedrunner departures to the origin lobby. */
-    private void announceLeaves(GameInstance instance, List<Role> leftRoles, List<String> leftNames) {
-        for (int index = 0; index < leftRoles.size(); index++) {
-            Role before = leftRoles.get(index);
-            if (before == Role.HUNTER) {
-                messaging.sendToLobby(instance.originLobbyId(), "game.hunter-left",
-                        Map.of("player", leftNames.get(index),
-                                "remaining", String.valueOf(store.activeHunterCount(instance))));
-            } else if (before == Role.SPEEDRUNNER) {
-                messaging.sendToLobby(instance.originLobbyId(), "game.speedrunner-left",
-                        Map.of("player", leftNames.get(index),
-                                "remaining", String.valueOf(store.activeRunnerCount(instance))));
-            }
-        }
+        return leave.leaveMatchToLobby(instance, player, role);
     }
 
     /**
      * Removes a begun-match participant standing outside their cell or in
-     * the lobby world, with a reason notice. The End is skipped like the
-     * border enforcement, and matches with borders on confine by
-     * rubber-band instead, so this only confines when borders are off.
-     * Returns true when the player was removed.
+     * the lobby world, with a reason notice. Returns true when the player
+     * was removed. See {@link MatchLeaveService}.
      */
     public boolean autoLeaveIfOutside(Player player, Location at) {
-        Optional<GameInstance> match = store.instanceOf(player.getUniqueId());
-        if (match.isEmpty() || !match.get().begun() || match.get().ending()) {
-            return false;
-        }
-        if (!playerStates.role(player).isParticipant()) {
-            return false;
-        }
-        GameInstance instance = match.get();
-        if (at.getWorld() != null && at.getWorld().getName().equals(worldEngine.lobbyWorldName())) {
-            messages.message(player, "game.auto-left-lobby-world", Map.of());
-            leaveMatch(instance, List.of(player), false);
-            return true;
-        }
-        if (at.getWorld() == null) {
-            return false;
-        }
-        World.Environment environment = at.getWorld().getEnvironment();
-        if (environment != World.Environment.NORMAL && environment != World.Environment.NETHER) {
-            return false;
-        }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
-        if (!config.enabled() || instance.cellIndex().isEmpty()) {
-            return false;
-        }
-        if (config.worldBorderEnabled()) {
-            // Pseudo-borders confine by rubber-band instead; auto-leave
-            // only confines matches running with borders off.
-            return false;
-        }
-        boolean nether = environment == World.Environment.NETHER;
-        CellBounds bounds = CellBounds.forCell(instance.cellIndex().getAsLong(),
-                config.cellSize(), config.startBorderDiameter(),
-                config.useStartBorder(instance.begun()));
-        if (bounds.contains(at.getX(), at.getZ(), nether)) {
-            return false;
-        }
-        messages.message(player, "game.auto-left-bounds", Map.of());
-        leaveMatch(instance, List.of(player), false);
-        return true;
+        return leave.autoLeaveIfOutside(player, at);
     }
 
     /** Ends the match when exactly one is live; a no-op otherwise. */
@@ -683,119 +533,4 @@ public final class MatchFinishService {
                 .map(p -> (Player) p).toList();
     }
 
-    /**
-     * Confines every match to its cell: players outside their cell are
-     * rubber-banded back in and take border damage past the damage
-     * buffer. Spectators bypass it. The End is skipped: end dimensions
-     * are assigned one per match, so no sharing needs confining; if
-     * that ever changes, the recovery helper below already gives
-     * non-Nether worlds the surface treatment.
-     */
-    private void enforcePseudoBorders() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
-        if (!config.enabled() || !config.worldBorderEnabled()) {
-            return;
-        }
-        for (GameInstance instance : store.liveInstances()) {
-            if (instance.cellIndex().isEmpty()) {
-                continue;
-            }
-            CellBounds bounds = CellBounds.forCell(instance.cellIndex().getAsLong(),
-                    config.cellSize(), config.startBorderDiameter(),
-                    config.useStartBorder(instance.begun()));
-            for (Player player : store.onlineActivePlayers(instance)) {
-                if (plugin.fakeSpectators().isFakeSpectator(player)) {
-                    continue;
-                }
-                if (!worldEngine.isBorderedWorld(player.getWorld())) {
-                    continue;
-                }
-                boolean nether = player.getWorld().getEnvironment() == World.Environment.NETHER;
-                Location location = player.getLocation();
-                double outside = bounds.outsideBy(location.getX(), location.getZ(), nether);
-                if (outside <= 0.0) {
-                    continue;
-                }
-                double[] inside = bounds.clampInside(location.getX(), location.getZ(), nether, 2.0);
-                if (inside != null) {
-                    double y = recoveryY(location.getWorld(), inside[0], inside[1], location.getY());
-                    player.teleport(new Location(location.getWorld(), inside[0], y, inside[1],
-                            location.getYaw(), location.getPitch()));
-                }
-                if (outside > config.damageBuffer() && config.damageAmount() > 0.0) {
-                    // damage.amount stays per-second across cadence changes.
-                    player.damage(config.damageAmount() * ENFORCE_PERIOD_TICKS / 20.0);
-                }
-            }
-        }
-    }
-
-    /**
-     * Pulls roaming watchers back to the nearest player or last-seen
-     * spot once they pass the travel cap, so spectators cannot farm
-     * chunk generation far from the action. Cell center is the fallback
-     * when no anchor exists. Silent: no message, no sound.
-     */
-    private void enforceSpectatorTravel() {
-        if (!configService.getBoolean("settings.players.spectator.travel.enabled", true)) {
-            return;
-        }
-        double maxDistance = configService.getDouble(
-                "settings.players.spectator.travel.max-distance", 125.0);
-        if (maxDistance <= 0.0) {
-            return;
-        }
-        for (GameInstance instance : store.liveInstances()) {
-            if (instance.cellIndex().isEmpty()) {
-                continue;
-            }
-            Location center = worldEngine.cellCenter(instance.cellIndex().getAsLong()).orElse(null);
-            List<Location> anchors = travelAnchors(instance);
-            for (Player player : store.onlineActivePlayers(instance)) {
-                Role role = playerStates.role(player);
-                boolean watching = role == Role.SPECTATOR
-                        || (plugin.fakeSpectators().isFakeSpectator(player) && !role.isParticipant());
-                if (!watching) {
-                    continue;
-                }
-                SpectatorTravelService.teleportTarget(player.getLocation(), anchors,
-                        center, maxDistance).ifPresent(player::teleport);
-            }
-        }
-    }
-
-    /** Online participant spots plus every recorded last-seen spot. */
-    private List<Location> travelAnchors(GameInstance instance) {
-        List<Location> anchors = new ArrayList<>();
-        for (Player player : store.onlineActivePlayers(instance)) {
-            if (playerStates.role(player).isParticipant()) {
-                anchors.add(player.getLocation());
-            }
-        }
-        Map<UUID, Map<UUID, Location>> sightings = playerStates.sightings();
-        for (UUID playerId : instance.assignedPlayerIds()) {
-            if (!playerStates.role(playerId).isParticipant()) {
-                continue;
-            }
-            Map<UUID, Location> seen = sightings.get(playerId);
-            if (seen != null) {
-                anchors.addAll(seen.values());
-            }
-        }
-        return anchors;
-    }
-
-    /**
-     * Rubberband height at the clamped spot: the highest block plus one
-     * for the Overworld and the End, capped below the ceiling; the live
-     * Y in the Nether, where the roof would corrupt the lookup. Testable
-     * with a stubbed world.
-     */
-    static double recoveryY(World world, double x, double z, double currentY) {
-        if (world.getEnvironment() == World.Environment.NETHER) {
-            return currentY;
-        }
-        int top = world.getHighestBlockYAt((int) Math.floor(x), (int) Math.floor(z));
-        return Math.min(top + 1.0, world.getMaxHeight() - 2.0);
-    }
 }

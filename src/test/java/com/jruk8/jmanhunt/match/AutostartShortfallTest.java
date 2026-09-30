@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
@@ -12,35 +13,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AutostartShortfallTest {
     @Test
     void emptyShortfallMeansEligible() {
-        assertTrue(GameManager.autostartShortfall(1, 1, 1, 1).isEmpty());
-        assertTrue(GameManager.autostartShortfall(3, 2, 1, 1).isEmpty());
+        assertTrue(AutostartService.autostartShortfall(1, 1, 1, 1).isEmpty());
+        assertTrue(AutostartService.autostartShortfall(3, 2, 1, 1).isEmpty());
     }
 
     @Test
     void shortfallCountsMissingPlayersPerRole() {
         assertEquals(Map.of(Role.HUNTER, 1, Role.SPEEDRUNNER, 1),
-                GameManager.autostartShortfall(0, 0, 1, 1));
+                AutostartService.autostartShortfall(0, 0, 1, 1));
         assertEquals(Map.of(Role.SPEEDRUNNER, 2),
-                GameManager.autostartShortfall(2, 0, 1, 2));
+                AutostartService.autostartShortfall(2, 0, 1, 2));
         assertEquals(Map.of(Role.HUNTER, 3),
-                GameManager.autostartShortfall(0, 4, 3, 1));
+                AutostartService.autostartShortfall(0, 4, 3, 1));
     }
 
     @Test
     void shortfallPartPluralizesAndClosesRoleColor() {
         assertEquals("<white>one</white> more <#de666e>Hunter<yellow>",
-                GameManager.shortfallPart("one", "<#de666e>Hunter", 1));
+                AutostartService.shortfallPart("one", "<#de666e>Hunter", 1));
         assertEquals("<white>two</white> more <#de666e>Hunters<yellow>",
-                GameManager.shortfallPart("two", "<#de666e>Hunter", 2));
+                AutostartService.shortfallPart("two", "<#de666e>Hunter", 2));
     }
 
     @Test
     void shortfallNagReachesOnlyAssignedTeams() {
-        assertTrue(GameManager.receivesShortfall(Role.HUNTER));
-        assertTrue(GameManager.receivesShortfall(Role.SPEEDRUNNER));
-        assertFalse(GameManager.receivesShortfall(Role.NONE));
-        assertFalse(GameManager.receivesShortfall(Role.AFK));
-        assertFalse(GameManager.receivesShortfall(Role.SPECTATOR));
+        assertTrue(AutostartService.receivesShortfall(Role.HUNTER));
+        assertTrue(AutostartService.receivesShortfall(Role.SPEEDRUNNER));
+        assertFalse(AutostartService.receivesShortfall(Role.NONE));
+        assertFalse(AutostartService.receivesShortfall(Role.AFK));
+        assertFalse(AutostartService.receivesShortfall(Role.SPECTATOR));
     }
 
     @Test
@@ -48,29 +49,29 @@ class AutostartShortfallTest {
         UUID alice = UUID.randomUUID();
         UUID bob = UUID.randomUUID();
 
-        assertFalse(GameManager.teamGrew(null, Set.of(alice)));
-        assertTrue(GameManager.teamGrew(Set.of(), Set.of(alice)));
-        assertTrue(GameManager.teamGrew(Set.of(alice), Set.of(alice, bob)));
-        assertFalse(GameManager.teamGrew(Set.of(alice), Set.of(alice)));
-        assertFalse(GameManager.teamGrew(Set.of(alice, bob), Set.of(alice)));
-        assertFalse(GameManager.teamGrew(Set.of(), Set.of()));
+        assertFalse(AutostartService.teamGrew(null, Set.of(alice)));
+        assertTrue(AutostartService.teamGrew(Set.of(), Set.of(alice)));
+        assertTrue(AutostartService.teamGrew(Set.of(alice), Set.of(alice, bob)));
+        assertFalse(AutostartService.teamGrew(Set.of(alice), Set.of(alice)));
+        assertFalse(AutostartService.teamGrew(Set.of(alice, bob), Set.of(alice)));
+        assertFalse(AutostartService.teamGrew(Set.of(), Set.of()));
     }
 
     @Test
     void minimumsClampToHardMinimumOne() {
         assertEquals(Map.of(Role.HUNTER, 1, Role.SPEEDRUNNER, 1),
-                GameManager.autostartShortfall(0, 0, 0, 0));
+                AutostartService.autostartShortfall(0, 0, 0, 0));
         assertEquals(Map.of(Role.HUNTER, 1, Role.SPEEDRUNNER, 1),
-                GameManager.autostartShortfall(0, 0, -5, -5));
+                AutostartService.autostartShortfall(0, 0, -5, -5));
         assertEquals(Map.of(Role.SPEEDRUNNER, 1),
-                GameManager.autostartShortfall(3, 0, 0, 1));
+                AutostartService.autostartShortfall(3, 0, 0, 1));
     }
 
     @Test
     void nagDueFiresOncePerInterval() {
-        assertTrue(GameManager.nagDue(100_000L, null, 60));
-        assertTrue(GameManager.nagDue(160_000L, 100_000L, 60));
-        assertFalse(GameManager.nagDue(159_999L, 100_000L, 60));
-        assertFalse(GameManager.nagDue(100_000L, 100_000L, 60));
+        assertTrue(AutostartService.nagDue(100_000L, null, 60));
+        assertTrue(AutostartService.nagDue(160_000L, 100_000L, 60));
+        assertFalse(AutostartService.nagDue(159_999L, 100_000L, 60));
+        assertFalse(AutostartService.nagDue(100_000L, 100_000L, 60));
     }
 }

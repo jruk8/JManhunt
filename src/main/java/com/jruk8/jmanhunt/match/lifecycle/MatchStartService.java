@@ -20,17 +20,13 @@ import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 
-import net.kyori.adventure.title.Title;
-
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +35,6 @@ import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
@@ -61,7 +56,6 @@ public final class MatchStartService {
 
     private final JManhuntPlugin plugin;
     private final MessageService messages;
-    private final SoundService sounds;
     private final PlayerStateStore playerStates;
     private final CompassManager compass;
     private final StatsManager stats;
@@ -74,8 +68,8 @@ public final class MatchStartService {
     private final TimeLimitService timeLimits;
     private final PrestartService prestart;
     private final AutostartService autostart;
-    private final MatchFinishService finishService;
-    private final StatusRosterService roster;
+    private final MatchAnnounceService announce;
+    private final QuickStartService quickStart;
     private final List<Consumer<GameInstance>> gameStartListeners = new ArrayList<>();
     private final List<Consumer<GameInstance>> beginGameListeners = new ArrayList<>();
 
@@ -84,10 +78,9 @@ public final class MatchStartService {
             GameStateCommandManager stateCommands, ConfigService configService,
             WorldEngineService worldEngine, LobbyService lobbies, MatchStore store,
             MatchMessaging messaging, TimeLimitService timeLimits, PrestartService prestart,
-            AutostartService autostart, MatchFinishService finishService) {
+            AutostartService autostart) {
         this.plugin = plugin;
         this.messages = messages;
-        this.sounds = sounds;
         this.playerStates = playerStates;
         this.compass = compass;
         this.stats = stats;
@@ -100,8 +93,10 @@ public final class MatchStartService {
         this.timeLimits = timeLimits;
         this.prestart = prestart;
         this.autostart = autostart;
-        this.finishService = finishService;
-        this.roster = new StatusRosterService(messages, playerStates);
+        this.announce = new MatchAnnounceService(plugin, messages, sounds,
+                playerStates, store, new StatusRosterService(messages, playerStates));
+        this.quickStart = new QuickStartService(plugin, lobbies, playerStates, store, autostart,
+                this::start);
     }
 
     public void addGameStartListener(Consumer<GameInstance> listener) {
@@ -145,7 +140,7 @@ public final class MatchStartService {
      * wilderness point (console and autostart).
      */
     public boolean start(int lobbyId, Location surroundOrigin) {
-        if (liveMatchBlocks(lobbyId)) {
+        if (quickStart.blocksStart(lobbyId)) {
             return false;
         }
         Optional<Lobby> lobby = lobbies.get(lobbyId);
@@ -215,16 +210,6 @@ public final class MatchStartService {
      */
     static boolean isQueuedSpectator(Role role, boolean inLiveMatch) {
         return role == Role.SPECTATOR && !inLiveMatch;
-    }
-
-    /**
-     * True when a live lobby match blocks a new start: any live match
-     * except under sublobby policies with the world engine on, where the
-     * new match becomes the next child sublobby.
-     */
-    private boolean liveMatchBlocks(int lobbyId) {
-        return store.instanceForLobby(lobbyId).isPresent()
-                && !lobbies.midMatchPolicy().allowsConcurrentStart(lobbies.multiLobbyAllowed());
     }
 
     /** Collects queued lobby participants, excluding live matches. */
@@ -308,8 +293,8 @@ public final class MatchStartService {
         gameStartListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchStartEvent(instance.matchId(), lobbyId, matchCell));
         messaging.playInstanceNeutral(instance);
-        showStatusToInstance(instance, players);
-        announceRoles(lobbyId, players, spectators);
+        announce.showStatusToInstance(instance, players);
+        announce.announceRoles(lobbyId, players, spectators);
     }
 
     /** Arms headstarts, then begins play or waits for the first hit. */
@@ -506,101 +491,6 @@ public final class MatchStartService {
         };
     }
 
-    /**
-     * Tells each participant their own role when a match starts. This runs
-     * inside {@link #start()} after the match status is shown, but still
-     * before the pre-start window opens, so it always plays before any damage
-     * can occur. Non-participants are skipped. Sounds toggle separately:
-     * when both chat and title are disabled, nothing plays at all.
-     */
-    private void announceRoles(int lobbyId, List<Player> players, List<Player> spectators) {
-        boolean chat = plugin.overrides()
-                .getBoolean(lobbyId, "settings.players.announce-roles.chat.enabled", true);
-        boolean title = plugin.overrides()
-                .getBoolean(lobbyId, "settings.players.announce-roles.title.enabled", true);
-        if (!chat && !title) {
-            return;
-        }
-        boolean soundsEnabled = plugin.overrides()
-                .getBoolean(lobbyId, "settings.players.announce-roles.sounds.enabled", true);
-        long fadeIn = toMillis(plugin.overrides()
-                .getDouble(lobbyId, "settings.players.announce-roles.title.fade-in-seconds", 0.5));
-        long stay = toMillis(plugin.overrides()
-                .getDouble(lobbyId, "settings.players.announce-roles.title.stay-seconds", 3.0));
-        long fadeOut = toMillis(plugin.overrides().getDouble(lobbyId,
-                "settings.players.announce-roles.title.fade-out-seconds", 0.5));
-        Title.Times times = Title.Times.times(
-                Duration.ofMillis(fadeIn), Duration.ofMillis(stay), Duration.ofMillis(fadeOut));
-        for (Player player : players) {
-            Role playerRole = playerStates.role(player);
-            if (!playerRole.isParticipant()) {
-                continue;
-            }
-            Map<String, String> values = Map.of("role", messages.roleName(playerRole));
-            if (chat) {
-                messages.message(player, "manhunt.role-announce-chat", values);
-            }
-            if (title) {
-                String subtitleKey = playerRole == Role.HUNTER
-                        ? "manhunt.role-announce-subtitle-hunter" : "manhunt.role-announce-subtitle-speedrunner";
-                player.showTitle(Title.title(
-                        messages.component("manhunt.role-announce-title", values),
-                        messages.component(subtitleKey), times));
-            }
-            if (soundsEnabled) {
-                sounds.playSound(player,
-                        playerRole == Role.HUNTER ? "announce.hunter" : "announce.speedrunner");
-            }
-        }
-        for (Player spectator : spectators) {
-            announceSpectator(spectator, chat, title, times, soundsEnabled);
-        }
-    }
-
-    private void announceSpectator(Player spectator, boolean chat, boolean title, Title.Times times,
-            boolean soundsEnabled) {
-        if (playerStates.role(spectator) != Role.SPECTATOR) {
-            return;
-        }
-        Map<String, String> values = Map.of("role", messages.roleName(Role.SPECTATOR));
-        if (chat) {
-            messages.message(spectator, "manhunt.role-announce-chat", values);
-        }
-        if (title) {
-            spectator.showTitle(Title.title(
-                    messages.component("manhunt.role-announce-title", values),
-                    messages.component("manhunt.role-announce-subtitle-spectator"), times));
-        }
-        if (soundsEnabled) {
-            sounds.playSound(spectator, "announce.spectator");
-        }
-    }
-
-    private static long toMillis(double seconds) {
-        return Math.max(0L, Math.round(seconds * 1000.0));
-    }
-
-    /**
-     * Shows the starting roster to one match's players through the
-     * shared status formatter, so the roll call truncates and joins
-     * exactly like status output.
-     */
-    private void showStatusToInstance(GameInstance instance, List<Player> players) {
-        Predicate<UUID> respawning = StatusRosterService.respawning(plugin.respawnListener());
-        for (Player recipient : store.onlineAssignedPlayers(instance)) {
-            messages.message(recipient, "manhunt.status-header", Map.of("status", "ACTIVE"));
-            roster.sendRoleSection(recipient, players, Role.SPEEDRUNNER,
-                    "manhunt.speedrunners-header", instance.deadPlayers(), respawning);
-            roster.sendRoleSection(recipient, players, Role.HUNTER, "manhunt.hunters-header",
-                    instance.deadPlayers(), respawning);
-            roster.sendRoleSection(recipient, players, Role.AFK, "manhunt.afk-header",
-                    instance.deadPlayers(), respawning);
-            roster.sendRoleSection(recipient, players, Role.NONE, "manhunt.none-header",
-                    instance.deadPlayers(), respawning);
-            roster.sendSpectatorLine(recipient, players);
-        }
-    }
-
     /** Online lobby members watching without playing: NONE and SPECTATOR, never AFK. */
     private List<Player> lobbyNonePlayers(Lobby lobby) {
         return Bukkit.getOnlinePlayers().stream()
@@ -649,8 +539,21 @@ public final class MatchStartService {
      * @param lobbyId the lobby whose members form the convertible pool
      * @return whether the match started
      */
+    /**
+     * Quick-starts a match by assigning eligible players of one lobby to
+     * teams and immediately starting the game, bypassing the autostart
+     * system. Queue caps never apply and NONE players always join the
+     * convertible pool. See {@link QuickStartService}.
+     *
+     * @param speedrunnerPercent the percentage of convertible players that
+     *                           should become speedrunners (0-100), or -1 for
+     *                           default (keep teams, converting only what is
+     *                           missing to start)
+     * @param lobbyId the lobby whose members form the convertible pool
+     * @return whether the match started
+     */
     public QuickStartOutcome quickStart(int speedrunnerPercent, int lobbyId) {
-        return quickStart(speedrunnerPercent, lobbyId, null);
+        return quickStart.quickStart(speedrunnerPercent, lobbyId);
     }
 
     /**
@@ -659,113 +562,6 @@ public final class MatchStartService {
      * wilderness point (console).
      */
     public QuickStartOutcome quickStart(int speedrunnerPercent, int lobbyId, Location surroundOrigin) {
-        if (liveMatchBlocks(lobbyId)) {
-            return new QuickStartOutcome(false);
-        }
-        Optional<Lobby> lobby = lobbies.get(lobbyId);
-        if (lobby.isEmpty()) {
-            return new QuickStartOutcome(false);
-        }
-        Lobby resolved = lobby.get();
-        // Every online non-AFK, non-spectator lobby member is convertible:
-        // existing hunters and speedrunners keep their roles unless
-        // conversion is needed, and NONEs always join the pool.
-        List<Player> pool = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> resolved.contains(p.getUniqueId())
-                        && playerStates.role(p) != Role.AFK && playerStates.role(p) != Role.SPECTATOR
-                        && !store.isInLiveInstance(p.getUniqueId()))
-                .map(p -> (Player) p)
-                .toList();
-        // Cancel any autostart countdown silently
-        autostart.cancelAllAutostartCountdowns(false);
-        // A match needs at least one hunter and one speedrunner, so with
-        // fewer than two convertible players there is nothing to assign.
-        if (pool.size() < 2) {
-            return new QuickStartOutcome(start(lobbyId, surroundOrigin));
-        }
-        if (speedrunnerPercent < 0) {
-            ensureMinimumTeams(pool);
-        } else {
-            assignQuickStartRoles(pool, speedrunnerPercent);
-        }
-        // Validate after assignment: start() requires at least one hunter and
-        // one speedrunner, so e.g. two players online with one AFK will fail.
-        return new QuickStartOutcome(start(lobbyId, surroundOrigin));
-    }
-
-    /** Assigns quickstart roles by percentage over the convertible pool. */
-    private void assignQuickStartRoles(List<Player> pool, int speedrunnerPercent) {
-        // Percentage-based assignment over the whole convertible pool:
-        // random selection, players become speedrunners until the count
-        // is reached and hunters after that.
-        int speedrunnerCount = quickStartSpeedrunnerCount(pool.size(), speedrunnerPercent);
-        List<Player> shuffled = new ArrayList<>(pool);
-        Collections.shuffle(shuffled);
-        for (int index = 0; index < shuffled.size(); index++) {
-            Role want = index < speedrunnerCount ? Role.SPEEDRUNNER : Role.HUNTER;
-            playerStates.setRole(shuffled.get(index), want);
-            plugin.roleTeams().sync(shuffled.get(index));
-        }
-    }
-
-    /**
-     * Computes how many players of a convertible pool become speedrunners for
-     * a quick-start percentage. Fractional results are rounded to the nearest
-     * whole player, with always at least one speedrunner.
-     *
-     * @param poolSize the number of convertible players (must be positive)
-     * @param percent the requested speedrunner percentage (0-100)
-     * @return the number of speedrunners to assign
-     */
-    public static int quickStartSpeedrunnerCount(int poolSize, int percent) {
-        return Math.max(1, (int) Math.round(poolSize * percent / 100.0));
-    }
-
-    /**
-     * Guarantees at least one hunter and one speedrunner by converting random
-     * pool members only where a team is missing, so an all-hunter or an
-     * all-speedrunner lobby still starts. NONE players become hunters and
-     * everyone else keeps their current role.
-     */
-    private void ensureMinimumTeams(List<Player> pool) {
-        boolean hasHunter = pool.stream().anyMatch(p -> playerStates.role(p) == Role.HUNTER);
-        boolean hasSpeedrunner = pool.stream().anyMatch(p -> playerStates.role(p) == Role.SPEEDRUNNER);
-        Player converted = null;
-        if (!hasSpeedrunner) {
-            converted = pickConvertible(pool, null);
-            if (converted != null) {
-                playerStates.setRole(converted, Role.SPEEDRUNNER);
-                plugin.roleTeams().sync(converted);
-            }
-        }
-        if (!hasHunter) {
-            Player hunter = pickConvertible(pool, converted);
-            if (hunter != null) {
-                playerStates.setRole(hunter, Role.HUNTER);
-                plugin.roleTeams().sync(hunter);
-            }
-        }
-        for (Player p : pool) {
-            if (playerStates.role(p) != Role.NONE) {
-                continue;
-            }
-            playerStates.setRole(p, Role.HUNTER);
-            plugin.roleTeams().sync(p);
-        }
-    }
-
-    /**
-     * Picks a random convertible pool member, preferring NONE players so
-     * queued roles are only disturbed when no unassigned player is left.
-     *
-     * @return the picked player, or null if the pool holds only the exclusion
-     */
-    private Player pickConvertible(List<Player> pool, Player exclude) {
-        List<Player> candidates = pool.stream().filter(p -> !p.equals(exclude)).toList();
-        List<Player> unassigned = candidates.stream()
-                .filter(p -> playerStates.role(p) == Role.NONE).toList();
-        List<Player> preferred = unassigned.isEmpty() ? candidates : unassigned;
-        return preferred.isEmpty()
-                ? null : preferred.get(ThreadLocalRandom.current().nextInt(preferred.size()));
+        return quickStart.quickStart(speedrunnerPercent, lobbyId, surroundOrigin);
     }
 }
