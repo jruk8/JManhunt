@@ -130,35 +130,39 @@ private static void addSignalInterferenceEntries(List<SettingDescriptor> entries
     entries.add(intVal("settings.compass.signal.interference.light-level.min-block-light", 5, 0, 15));
     entries.add(option("settings.compass.signal.interference.light-level.interfere-when", "BOTH_UNMET",
             "ONE_UNMET", "BOTH_UNMET"));
-    entries.add(bool("settings.compass.signal.interference.light-level.two-way", false));
+    entries.add(option("settings.compass.signal.interference.light-level.check-on", "SELF",
+            "SELF", "TARGET", "BOTH"));
     entries.add(bool("settings.compass.signal.interference.underground.enabled", false));
     entries.add(intVal("settings.compass.signal.interference.underground.max-blocks-above", 3, 1, 380));
     entries.add(bool("settings.compass.signal.interference.underground.ignore-transparent", true));
-    entries.add(bool("settings.compass.signal.interference.underground.two-way", false));
+    entries.add(option("settings.compass.signal.interference.underground.check-on", "BOTH",
+            "SELF", "TARGET", "BOTH"));
     entries.add(bool("settings.compass.signal.interference.underwater.enabled", false));
     entries.add(intVal("settings.compass.signal.interference.underwater.max-blocks-above", 2, 1, 380));
-    entries.add(bool("settings.compass.signal.interference.underwater.two-way", false));
+    entries.add(option("settings.compass.signal.interference.underwater.check-on", "BOTH",
+            "SELF", "TARGET", "BOTH"));
     entries.add(bool("settings.compass.signal.interference.altitude.enabled", false));
     entries.add(intVal("settings.compass.signal.interference.altitude.min-y", -20, -64, 319));
     entries.add(intVal("settings.compass.signal.interference.altitude.max-y", 120, -64, 319));
-    entries.add(bool("settings.compass.signal.interference.altitude.two-way", false));
+    entries.add(option("settings.compass.signal.interference.altitude.check-on", "BOTH",
+            "SELF", "TARGET", "BOTH"));
     entries.add(bool("settings.compass.signal.interference.weather.enabled", false));
-    entries.add(bool("settings.compass.signal.interference.weather.two-way", false));
     entries.add(bool("settings.compass.signal.interference.biome.enabled", false));
-    entries.add(bool("settings.compass.signal.interference.biome.two-way", false));
+    entries.add(option("settings.compass.signal.interference.biome.check-on", "BOTH",
+            "SELF", "TARGET", "BOTH"));
     entries.add(bool("settings.compass.signal.interference.movement.enabled", false));
     entries.add(floatVal("settings.compass.signal.interference.movement.threshold-blocks",
             0.2, 0.0, null));
-    entries.add(bool("settings.compass.signal.interference.movement.two-way", false));
+    entries.add(option("settings.compass.signal.interference.movement.check-on", "SELF",
+            "SELF", "TARGET", "BOTH"));
     entries.add(bool("settings.compass.signal.interference.line-of-sight.enabled", false));
-    entries.add(option("settings.compass.signal.interference.line-of-sight.interfere-when", "NOT_VISIBLE",
+    entries.add(option("settings.compass.signal.interference.line-of-sight.interfere-when", "VISIBLE",
             "VISIBLE", "NOT_VISIBLE"));
     entries.add(intVal("settings.compass.signal.interference.line-of-sight.max-ray-distance",
             300, 1, 1000));
     entries.add(bool("settings.compass.signal.interference.invisible.enabled", true));
-    entries.add(option("settings.compass.signal.interference.invisible.mode", "TARGET",
-            "TARGET", "SELF"));
-    entries.add(bool("settings.compass.signal.interference.invisible.two-way", false));
+    entries.add(option("settings.compass.signal.interference.invisible.check-on", "BOTH",
+            "SELF", "TARGET", "BOTH"));
     addPlayerStatsEntries(entries);
 }
 
@@ -166,12 +170,12 @@ private static void addPlayerStatsEntries(List<SettingDescriptor> entries) {
     String root = "settings.compass.signal.interference.player-stats.";
     entries.add(bool(root + "health.enabled", false));
     entries.add(intVal(root + "health.min-health", 8, 1, 100));
-    entries.add(bool(root + "health.two-way", false));
+    entries.add(option(root + "health.check-on", "SELF", "SELF", "TARGET", "BOTH"));
     entries.add(bool(root + "hunger.enabled", false));
     entries.add(intVal(root + "hunger.min-hunger", 10, 1, 20));
-    entries.add(bool(root + "hunger.two-way", false));
+    entries.add(option(root + "hunger.check-on", "SELF", "SELF", "TARGET", "BOTH"));
     entries.add(bool(root + "experience.enabled", false));
     entries.add(intVal(root + "experience.min-exp-level", 5, 1, 100));
-    entries.add(bool(root + "experience.two-way", false));
+    entries.add(option(root + "experience.check-on", "SELF", "SELF", "TARGET", "BOTH"));
 }
 }

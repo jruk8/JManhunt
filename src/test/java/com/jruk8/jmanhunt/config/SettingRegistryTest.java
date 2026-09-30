@@ -359,6 +359,37 @@ class SettingRegistryTest {
     }
 
     @Test
+    void interferenceCheckOnOptionsCarryPerOptionDefaults() {
+        String base = "settings.compass.signal.interference.";
+        assertCheckOn(base + "light-level.check-on", "SELF");
+        assertCheckOn(base + "underground.check-on", "BOTH");
+        assertCheckOn(base + "underwater.check-on", "BOTH");
+        assertCheckOn(base + "altitude.check-on", "BOTH");
+        assertCheckOn(base + "biome.check-on", "BOTH");
+        assertCheckOn(base + "movement.check-on", "SELF");
+        assertCheckOn(base + "invisible.check-on", "BOTH");
+        assertCheckOn(base + "player-stats.health.check-on", "SELF");
+        assertCheckOn(base + "player-stats.hunger.check-on", "SELF");
+        assertCheckOn(base + "player-stats.experience.check-on", "SELF");
+        assertEquals("VISIBLE", SettingRegistry.byPath(
+                base + "line-of-sight.interfere-when").defaultValue());
+        assertNull(SettingRegistry.byPath(base + "weather.check-on"));
+        assertNull(SettingRegistry.byPath(base + "light-level.two-way"));
+        assertNull(SettingRegistry.byPath(base + "weather.two-way"));
+        assertNull(SettingRegistry.byPath(base + "invisible.mode"));
+        assertNull(SettingRegistry.byPath(base + "invisible.two-way"));
+        assertNull(SettingRegistry.byPath(base + "player-stats.health.two-way"));
+    }
+
+    private static void assertCheckOn(String path, String def) {
+        assertEquals(List.of("SELF", "TARGET", "BOTH"),
+                SettingRegistry.byPath(path).options());
+        assertEquals(def, SettingRegistry.byPath(path).defaultValue());
+        assertTrue(validate(path, "TARGET").ok());
+        assertFalse(validate(path, "SIDEWAYS").ok());
+    }
+
+    @Test
     void movedDefaultsMirrorTheirSpecs() {
         assertEquals("30.0", SettingRegistry.byPath(
                 "advanced.advanced-match-controls.start-reminder-interval").defaultValue());

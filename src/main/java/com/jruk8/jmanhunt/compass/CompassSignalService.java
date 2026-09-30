@@ -201,35 +201,40 @@ final class CompassSignalService {
                 overrides.getInt(lobby, base + "light-level.min-sky-light", 10),
                 overrides.getInt(lobby, base + "light-level.min-block-light", 5),
                 when,
-                overrides.getBoolean(lobby, base + "light-level.two-way", false),
+                checkOn(lobby, base + "light-level.check-on",
+                        SignalInterference.CheckOn.SELF),
                 overrides.getBoolean(lobby, base + "underground.enabled", false),
                 overrides.getInt(lobby, base + "underground.max-blocks-above", 3),
-                overrides.getBoolean(lobby, base + "underground.two-way", false),
+                checkOn(lobby, base + "underground.check-on",
+                        SignalInterference.CheckOn.BOTH),
                 overrides.getBoolean(lobby, base + "underwater.enabled", false),
                 overrides.getInt(lobby, base + "underwater.max-blocks-above", 2),
-                overrides.getBoolean(lobby, base + "underwater.two-way", false),
+                checkOn(lobby, base + "underwater.check-on",
+                        SignalInterference.CheckOn.BOTH),
                 overrides.getBoolean(lobby, base + "altitude.enabled", false),
                 overrides.getInt(lobby, base + "altitude.min-y", -20),
                 overrides.getInt(lobby, base + "altitude.max-y", 120),
-                overrides.getBoolean(lobby, base + "altitude.two-way", false),
+                checkOn(lobby, base + "altitude.check-on",
+                        SignalInterference.CheckOn.BOTH),
                 overrides.getBoolean(lobby, base + "weather.enabled", false),
                 during,
-                overrides.getBoolean(lobby, base + "weather.two-way", false),
                 overrides.getBoolean(lobby, base + "biome.enabled", false),
                 new HashSet<>(overrides.getStringList(lobby, base + "biome.interfere-in")),
-                overrides.getBoolean(lobby, base + "biome.two-way", false),
+                checkOn(lobby, base + "biome.check-on",
+                        SignalInterference.CheckOn.BOTH),
                 overrides.getBoolean(lobby, base + "movement.enabled", false),
                 overrides.getDouble(lobby, base + "movement.threshold-blocks", 0.2),
-                overrides.getBoolean(lobby, base + "movement.two-way", false),
+                checkOn(lobby, base + "movement.check-on",
+                        SignalInterference.CheckOn.SELF),
                 overrides.getBoolean(lobby, base + "line-of-sight.enabled", false),
                 losWhen,
                 overrides.getInt(lobby, base + "line-of-sight.max-ray-distance", 300),
                 overrides.getBoolean(lobby, base + "invisible.enabled", true),
-                invisibleMode(lobby, base),
-                overrides.getBoolean(lobby, base + "invisible.two-way", false),
-                stats.healthEnabled(), stats.minHealth(), stats.healthTwoWay(),
-                stats.hungerEnabled(), stats.minHunger(), stats.hungerTwoWay(),
-                stats.expEnabled(), stats.minExpLevel(), stats.expTwoWay(),
+                checkOn(lobby, base + "invisible.check-on",
+                        SignalInterference.CheckOn.BOTH),
+                stats.healthEnabled(), stats.minHealth(), stats.healthCheckOn(),
+                stats.hungerEnabled(), stats.minHunger(), stats.hungerCheckOn(),
+                stats.expEnabled(), stats.minExpLevel(), stats.expCheckOn(),
                 overrides.getInt(lobby, base + "required-to-fail", 1),
                 overrides.getDouble(lobby, base + "chance-to-bypass", 0.0));
     }
@@ -240,13 +245,16 @@ final class CompassSignalService {
         return new SignalInterference.StatThresholds(
                 overrides.getBoolean(lobby, base + "player-stats.health.enabled", false),
                 overrides.getInt(lobby, base + "player-stats.health.min-health", 8),
-                overrides.getBoolean(lobby, base + "player-stats.health.two-way", false),
+                checkOn(lobby, base + "player-stats.health.check-on",
+                        SignalInterference.CheckOn.SELF),
                 overrides.getBoolean(lobby, base + "player-stats.hunger.enabled", false),
                 overrides.getInt(lobby, base + "player-stats.hunger.min-hunger", 10),
-                overrides.getBoolean(lobby, base + "player-stats.hunger.two-way", false),
+                checkOn(lobby, base + "player-stats.hunger.check-on",
+                        SignalInterference.CheckOn.SELF),
                 overrides.getBoolean(lobby, base + "player-stats.experience.enabled", false),
                 overrides.getInt(lobby, base + "player-stats.experience.min-exp-level", 5),
-                overrides.getBoolean(lobby, base + "player-stats.experience.two-way", false));
+                checkOn(lobby, base + "player-stats.experience.check-on",
+                        SignalInterference.CheckOn.SELF));
     }
 
     /** Parses the weather buckets that interfere, ignoring unknown values. */
@@ -274,27 +282,27 @@ final class CompassSignalService {
         }
     }
 
-    /** Parses the line-of-sight interfere-when mode, defaulting to NOT_VISIBLE. */
+    /** Parses the line-of-sight interfere-when mode, defaulting to VISIBLE. */
     private SignalInterference.InterfereWhenVisible losInterfereWhen(Integer lobby, String base) {
         try {
             String raw = plugin.overrides()
-                    .getString(lobby, base + "line-of-sight.interfere-when", "NOT_VISIBLE");
+                    .getString(lobby, base + "line-of-sight.interfere-when", "VISIBLE");
             return SignalInterference.InterfereWhenVisible.valueOf(
-                    (raw == null ? "NOT_VISIBLE" : raw).trim().toUpperCase(Locale.ROOT));
+                    (raw == null ? "VISIBLE" : raw).trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            return SignalInterference.InterfereWhenVisible.NOT_VISIBLE;
+            return SignalInterference.InterfereWhenVisible.VISIBLE;
         }
     }
 
-    /** Parses the invisible watch mode, defaulting to TARGET. */
-    private SignalInterference.InvisibleMode invisibleMode(Integer lobby, String base) {
+    /** Parses a check-on side gate, defaulting to the per-option default. */
+    private SignalInterference.CheckOn checkOn(Integer lobby, String path,
+            SignalInterference.CheckOn fallback) {
         try {
-            String raw = plugin.overrides()
-                    .getString(lobby, base + "invisible.mode", "TARGET");
-            return SignalInterference.InvisibleMode.valueOf(
-                    (raw == null ? "TARGET" : raw).trim().toUpperCase(Locale.ROOT));
+            String raw = plugin.overrides().getString(lobby, path, fallback.name());
+            return SignalInterference.CheckOn.valueOf(
+                    (raw == null ? fallback.name() : raw).trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            return SignalInterference.InvisibleMode.TARGET;
+            return fallback;
         }
     }
 
@@ -329,8 +337,9 @@ final class CompassSignalService {
     }
 
     /**
-     * Target-side snapshot for two-way checks: the press-time spot when
-     * one is known, else the live spot. Null when no spot is known or
+     * Target-side snapshot for TARGET and BOTH check-on evaluation:
+     * the press-time spot when one is known, else the live spot. Null
+     * when no spot is known or
      * its chunk is not loaded, so unloaded sightings never fail the
      * target side and refreshes never force chunk loads. Offline and
      * sighting targets read passing stats, so stats only fail live

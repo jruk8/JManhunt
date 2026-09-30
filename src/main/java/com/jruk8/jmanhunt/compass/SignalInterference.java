@@ -37,23 +37,32 @@ public final class SignalInterference {
         NOT_VISIBLE
     }
 
-    /** Which side's invisibility the invisible option watches. */
-    public enum InvisibleMode {
+    /**
+     * Which sides an option checks: SELF checks the holder, TARGET
+     * checks the tracked target, BOTH checks each.
+     */
+    public enum CheckOn {
+        SELF,
         TARGET,
-        SELF
+        BOTH
     }
 
     /** Resolved player-stats thresholds, spread into the config. */
     public record StatThresholds(
             boolean healthEnabled,
             int minHealth,
-            boolean healthTwoWay,
+            CheckOn healthCheckOn,
             boolean hungerEnabled,
             int minHunger,
-            boolean hungerTwoWay,
+            CheckOn hungerCheckOn,
             boolean expEnabled,
             int minExpLevel,
-            boolean expTwoWay) {
+            CheckOn expCheckOn) {
+        public StatThresholds {
+            healthCheckOn = healthCheckOn == null ? CheckOn.SELF : healthCheckOn;
+            hungerCheckOn = hungerCheckOn == null ? CheckOn.SELF : hungerCheckOn;
+            expCheckOn = expCheckOn == null ? CheckOn.SELF : expCheckOn;
+        }
     }
 
     /**
@@ -97,8 +106,10 @@ public final class SignalInterference {
      * 1-1000, bypass 0-1, movement threshold at 0, health 1-100, hunger
      * 1-20, exp level 1-100), normalizes the altitude endpoints so min
      * <= max, defaults a missing interfere-when to BOTH_UNMET and a
-     * missing line-of-sight mode to NOT_VISIBLE, and lowercases the
-     * biome list, and defaults a missing invisible mode to TARGET.
+     * missing line-of-sight mode to VISIBLE, defaults each missing
+     * check-on to its per-option default (SELF for light, movement,
+     * and the stats; BOTH for underground, underwater, altitude,
+     * biome, and invisible), and lowercases the biome list.
      * Required-to-fail is clamped against the enabled count at verdict
      * time instead, since this record does not count enablers.
      */
@@ -107,52 +118,59 @@ public final class SignalInterference {
             int minSkyLight,
             int minBlockLight,
             InterfereWhen interfereWhen,
-            boolean lightTwoWay,
+            CheckOn lightCheckOn,
             boolean undergroundEnabled,
             int maxBlocksAbove,
-            boolean undergroundTwoWay,
+            CheckOn undergroundCheckOn,
             boolean underwaterEnabled,
             int maxFluidAbove,
-            boolean underwaterTwoWay,
+            CheckOn underwaterCheckOn,
             boolean altitudeEnabled,
             int minY,
             int maxY,
-            boolean altitudeTwoWay,
+            CheckOn altitudeCheckOn,
             boolean weatherEnabled,
             Set<Weather> interfereDuring,
-            boolean weatherTwoWay,
             boolean biomeEnabled,
             Set<String> interfereIn,
-            boolean biomeTwoWay,
+            CheckOn biomeCheckOn,
             boolean movementEnabled,
             double thresholdBlocks,
-            boolean movementTwoWay,
+            CheckOn movementCheckOn,
             boolean losEnabled,
             InterfereWhenVisible losWhen,
             int losMaxDistance,
             boolean invisibleEnabled,
-            InvisibleMode invisibleMode,
-            boolean invisibleTwoWay,
+            CheckOn invisibleCheckOn,
             boolean healthEnabled,
             int minHealth,
-            boolean healthTwoWay,
+            CheckOn healthCheckOn,
             boolean hungerEnabled,
             int minHunger,
-            boolean hungerTwoWay,
+            CheckOn hungerCheckOn,
             boolean expEnabled,
             int minExpLevel,
-            boolean expTwoWay,
+            CheckOn expCheckOn,
             int requiredToFail,
             double chanceToBypass) {
         public Config {
             minSkyLight = clamp(minSkyLight, 0, 15);
             minBlockLight = clamp(minBlockLight, 0, 15);
             interfereWhen = interfereWhen == null ? InterfereWhen.BOTH_UNMET : interfereWhen;
+            lightCheckOn = lightCheckOn == null ? CheckOn.SELF : lightCheckOn;
+            undergroundCheckOn = undergroundCheckOn == null ? CheckOn.BOTH : undergroundCheckOn;
+            underwaterCheckOn = underwaterCheckOn == null ? CheckOn.BOTH : underwaterCheckOn;
+            altitudeCheckOn = altitudeCheckOn == null ? CheckOn.BOTH : altitudeCheckOn;
+            biomeCheckOn = biomeCheckOn == null ? CheckOn.BOTH : biomeCheckOn;
+            movementCheckOn = movementCheckOn == null ? CheckOn.SELF : movementCheckOn;
+            invisibleCheckOn = invisibleCheckOn == null ? CheckOn.BOTH : invisibleCheckOn;
+            healthCheckOn = healthCheckOn == null ? CheckOn.SELF : healthCheckOn;
+            hungerCheckOn = hungerCheckOn == null ? CheckOn.SELF : hungerCheckOn;
+            expCheckOn = expCheckOn == null ? CheckOn.SELF : expCheckOn;
             maxBlocksAbove = clamp(maxBlocksAbove, 1, 380);
             maxFluidAbove = clamp(maxFluidAbove, 1, 380);
-            losWhen = losWhen == null ? InterfereWhenVisible.NOT_VISIBLE : losWhen;
+            losWhen = losWhen == null ? InterfereWhenVisible.VISIBLE : losWhen;
             losMaxDistance = clamp(losMaxDistance, 1, 1000);
-            invisibleMode = invisibleMode == null ? InvisibleMode.TARGET : invisibleMode;
             minHealth = clamp(minHealth, 1, 100);
             minHunger = clamp(minHunger, 1, 20);
             minExpLevel = clamp(minExpLevel, 1, 100);
@@ -187,7 +205,8 @@ public final class SignalInterference {
      * line-of-sight verdict is relational, so the caller raycasts it and
      * passes it in; null skips the option. Each side counts its own
      * failures against required-to-fail: the holder side across every
-     * enabled option, the target side across options with two-way on. Pure.
+     * enabled option, the target side across options whose check-on
+     * covers TARGET. Pure.
      */
     public static boolean badSignal(Snapshot holder, Snapshot target, Config config, double roll,
             Boolean hasLineOfSight) {
@@ -245,38 +264,38 @@ public final class SignalInterference {
 
     /**
      * Ids of the enabled sub-options interfering at one spot, in check
-     * order. Target-side evaluation only considers options with two-way
-     * on; line of sight has no two-way flag and never counts there. Pure.
+     * order. Each option's check-on gates which side evaluates it;
+     * weather and line of sight are holder-side only. Pure.
      */
     static List<String> interferingReasons(Snapshot snapshot, Config config,
             Boolean hasLineOfSight, boolean targetSide) {
         List<String> reasons = new ArrayList<>();
-        if (config.lightEnabled() && (!targetSide || config.lightTwoWay())
+        if (config.lightEnabled() && sideApplies(config.lightCheckOn(), targetSide)
                 && lightInterferes(snapshot, config.minSkyLight(),
                         config.minBlockLight(), config.interfereWhen())) {
             reasons.add("light-level");
         }
-        if (config.undergroundEnabled() && (!targetSide || config.undergroundTwoWay())
+        if (config.undergroundEnabled() && sideApplies(config.undergroundCheckOn(), targetSide)
                 && undergroundInterferes(snapshot.solidBlocksAbove(), config.maxBlocksAbove())) {
             reasons.add("underground");
         }
-        if (config.underwaterEnabled() && (!targetSide || config.underwaterTwoWay())
+        if (config.underwaterEnabled() && sideApplies(config.underwaterCheckOn(), targetSide)
                 && underwaterInterferes(snapshot, config.maxFluidAbove())) {
             reasons.add("underwater");
         }
-        if (config.altitudeEnabled() && (!targetSide || config.altitudeTwoWay())
+        if (config.altitudeEnabled() && sideApplies(config.altitudeCheckOn(), targetSide)
                 && altitudeInterferes(snapshot.blockY(), config.minY(), config.maxY())) {
             reasons.add("altitude");
         }
-        if (config.weatherEnabled() && (!targetSide || config.weatherTwoWay())
+        if (!targetSide && config.weatherEnabled()
                 && weatherInterferes(snapshot.weather(), config.interfereDuring())) {
             reasons.add("weather");
         }
-        if (config.biomeEnabled() && (!targetSide || config.biomeTwoWay())
+        if (config.biomeEnabled() && sideApplies(config.biomeCheckOn(), targetSide)
                 && biomeInterferes(snapshot.biomeKey(), config.interfereIn())) {
             reasons.add("biome");
         }
-        if (config.movementEnabled() && (!targetSide || config.movementTwoWay())
+        if (config.movementEnabled() && sideApplies(config.movementCheckOn(), targetSide)
                 && movementInterferes(snapshot.movedBlocks(), config.thresholdBlocks())) {
             reasons.add("moved");
         }
@@ -285,9 +304,7 @@ public final class SignalInterference {
             reasons.add(config.losWhen() == InterfereWhenVisible.VISIBLE
                     ? "line-of-sight" : "line-of-sight-hidden");
         }
-        if (config.invisibleEnabled()
-                && invisibleSideApplies(config.invisibleMode(), config.invisibleTwoWay(),
-                        targetSide)
+        if (config.invisibleEnabled() && sideApplies(config.invisibleCheckOn(), targetSide)
                 && snapshot.invisible()) {
             reasons.add("invisible");
         }
@@ -301,15 +318,15 @@ public final class SignalInterference {
      */
     static List<String> statReasons(Snapshot snapshot, Config config, boolean targetSide) {
         List<String> reasons = new ArrayList<>();
-        if (config.healthEnabled() && (!targetSide || config.healthTwoWay())
+        if (config.healthEnabled() && sideApplies(config.healthCheckOn(), targetSide)
                 && healthInterferes(snapshot.health(), config.minHealth())) {
             reasons.add("low-health");
         }
-        if (config.hungerEnabled() && (!targetSide || config.hungerTwoWay())
+        if (config.hungerEnabled() && sideApplies(config.hungerCheckOn(), targetSide)
                 && hungerInterferes(snapshot.hunger(), config.minHunger())) {
             reasons.add("hungry");
         }
-        if (config.expEnabled() && (!targetSide || config.expTwoWay())
+        if (config.expEnabled() && sideApplies(config.expCheckOn(), targetSide)
                 && expInterferes(snapshot.expLevel(), config.minExpLevel())) {
             reasons.add("low-exp-level");
         }
@@ -317,14 +334,16 @@ public final class SignalInterference {
     }
 
     /**
-     * True when the invisible option evaluates the given side: two-way
-     * checks both sides, otherwise the mode picks exactly one. Pure.
+     * True when an option evaluates the given side: SELF skips
+     * target-side evaluation, TARGET skips self-side evaluation,
+     * BOTH evaluates each. Pure.
      */
-    static boolean invisibleSideApplies(InvisibleMode mode, boolean twoWay, boolean targetSide) {
-        if (twoWay) {
-            return true;
-        }
-        return targetSide == (mode == InvisibleMode.TARGET);
+    static boolean sideApplies(CheckOn checkOn, boolean targetSide) {
+        return switch (checkOn) {
+            case BOTH -> true;
+            case TARGET -> targetSide;
+            case SELF -> !targetSide;
+        };
     }
 
     private static int enabledCount(Config config) {

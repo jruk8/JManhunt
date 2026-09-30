@@ -478,24 +478,29 @@ Each sub-option watches one thing (all default to off except
   have no gap to move in.
 - `line-of-sight`: fails based on whether the holder can see the
   target. One eye-to-eye ray is checked; glass and leaves never block
-  it. `interfere-when` picks the failing side (`NOT_VISIBLE` by
-  default, `VISIBLE` for the opposite), and `max-ray-distance`
+  it. `interfere-when` picks the failing side (`VISIBLE` by
+  default, `NOT_VISIBLE` for the opposite), and `max-ray-distance`
   (default 300) caps the ray: past it, there is no line of sight.
   Only live targets in the same world are checked.
-- `invisible`: fails when the watched side is under the invisibility
-  effect (on by default). `mode` picks the side: `TARGET` watches
-  the tracked target, `SELF` watches the holder.
-- `player-stats`: fails when the watched side's stats run low.
+- `invisible`: fails when a side is under the invisibility effect
+  (on by default). Its `check-on` default of `BOTH` means either
+  side's invisibility interferes.
+- `player-stats`: fails when a side's stats run low.
   `health` fails below `min-health` health points (default 8, where
   20 is full vanilla health), `hunger` below `min-hunger` hunger
   bar levels (default 10), and `experience` below `min-exp-level`
-  levels (default 5). Each has its own `two-way` flag like the
-  other options.
+  levels (default 5). Each has its own `check-on` key defaulting
+  to `SELF`.
 
-Every option except `line-of-sight` has its own `two-way` flag
-(default off). With two-way on, the target's press-time spot must
-pass the check too; with it off, only the holder's spot is checked.
-Each side counts its own failures against `required-to-fail`
+Every option except `line-of-sight` and `weather` has its own
+`check-on` key: `SELF` checks only the holder's spot, `TARGET`
+checks only the target's press-time spot, and `BOTH` checks each.
+Light, movement, and the player stats default to `SELF`;
+underground, underwater, altitude, biome, and invisible default to
+`BOTH`. Weather is always evaluated at the holder's spot only and
+has no `check-on` key; line of sight is relational, so it is
+evaluated once for the holder-target pair instead. Each side counts
+its own failures against `required-to-fail`
 (default 1), and `chance-to-bypass` gives a bad signal a random
 chance to track anyway. Locked targets can fail too. The nearby and
 out-of-range readouts consult interference as well; only the no-target

@@ -1,5 +1,13 @@
 package com.jruk8.jmanhunt.compass;
 
+import com.jruk8.jmanhunt.compass.SignalInterference.CheckOn;
+import com.jruk8.jmanhunt.compass.SignalInterference.Config;
+import com.jruk8.jmanhunt.compass.SignalInterference.InterfereWhen;
+import com.jruk8.jmanhunt.compass.SignalInterference.InterfereWhenVisible;
+import com.jruk8.jmanhunt.compass.SignalInterference.Reason;
+import com.jruk8.jmanhunt.compass.SignalInterference.Snapshot;
+import com.jruk8.jmanhunt.compass.SignalInterference.StatThresholds;
+import com.jruk8.jmanhunt.compass.SignalInterference.Weather;
 import org.junit.jupiter.api.Test;
 import java.util.HashSet;
 import java.util.List;
@@ -11,138 +19,130 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verdict matrix for the pure signal interference core: each option,
- * required-to-fail combining, per-option two-way sides, bypass
+ * required-to-fail combining, per-option check-on sides, bypass
  * boundaries, reason ids, and config clamping. No Bukkit server needed.
  */
 class SignalInterferenceTest {
 
-    private static SignalInterference.Snapshot spot(int sky, int block, boolean normal, int above,
-            int fluids, int y, SignalInterference.Weather weather, String biome) {
+    private static Snapshot spot(int sky, int block, boolean normal, int above,
+            int fluids, int y, Weather weather, String biome) {
         return spot(sky, block, normal, above, fluids, y, weather, biome, 0.0, false);
     }
 
-    private static SignalInterference.Snapshot spot(int sky, int block, boolean normal, int above,
-            int fluids, int y, SignalInterference.Weather weather, String biome,
+    private static Snapshot spot(int sky, int block, boolean normal, int above,
+            int fluids, int y, Weather weather, String biome,
             double moved, boolean feetInWater) {
         return spot(sky, block, normal, above, fluids, y, weather, biome, moved, feetInWater,
                 false);
     }
 
-    private static SignalInterference.Snapshot spot(int sky, int block, boolean normal, int above,
-            int fluids, int y, SignalInterference.Weather weather, String biome,
+    private static Snapshot spot(int sky, int block, boolean normal, int above,
+            int fluids, int y, Weather weather, String biome,
             double moved, boolean feetInWater, boolean invisible) {
         return spot(sky, block, normal, above, fluids, y, weather, biome, moved, feetInWater,
                 invisible, 20.0, 20, 30);
     }
 
-    private static SignalInterference.Snapshot spot(int sky, int block, boolean normal, int above,
-            int fluids, int y, SignalInterference.Weather weather, String biome,
+    private static Snapshot spot(int sky, int block, boolean normal, int above,
+            int fluids, int y, Weather weather, String biome,
             double moved, boolean feetInWater, boolean invisible, double health, int hunger,
             int expLevel) {
-        return new SignalInterference.Snapshot(sky, block, normal, above, fluids, y, weather,
+        return new Snapshot(sky, block, normal, above, fluids, y, weather,
                 biome, moved, feetInWater, invisible, health, hunger, expLevel);
     }
 
-    private static SignalInterference.Snapshot clearSpot() {
-        return spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+    private static Snapshot clearSpot() {
+        return spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains");
     }
 
-    private static SignalInterference.Snapshot invisibleSpot() {
-        return spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains",
+    private static Snapshot invisibleSpot() {
+        return spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
                 0.0, false, true);
     }
 
-    private static SignalInterference.Config config(boolean light, boolean underground,
+    private static Config config(boolean light, boolean underground,
             boolean underwater, boolean altitude, boolean weather, boolean biome,
             boolean movement, boolean los) {
         return configFull(light, underground, underwater, altitude, weather, biome, movement,
-                los, false, false, false, false, false, false, false, 1, 0.0,
-                SignalInterference.InterfereWhen.ONE_UNMET,
-                SignalInterference.InterfereWhenVisible.VISIBLE);
+                los, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET, InterfereWhenVisible.VISIBLE);
     }
 
-    private static SignalInterference.Config configFull(boolean light, boolean underground,
+    private static Config configFull(boolean light, boolean underground,
             boolean underwater, boolean altitude, boolean weather, boolean biome,
-            boolean movement, boolean los, boolean lightTwo, boolean undergroundTwo,
-            boolean underwaterTwo, boolean altitudeTwo, boolean weatherTwo, boolean biomeTwo,
-            boolean movementTwo, int required, double bypass,
-            SignalInterference.InterfereWhen when,
-            SignalInterference.InterfereWhenVisible losWhen) {
-        return new SignalInterference.Config(light, 10, 5, when, lightTwo,
-                underground, 3, undergroundTwo, underwater, 2, underwaterTwo,
-                altitude, -20, 120, altitudeTwo, weather,
-                Set.of(SignalInterference.Weather.STORM, SignalInterference.Weather.RAIN),
-                weatherTwo, biome, Set.of("minecraft:desert", "minecraft:the_end"), biomeTwo,
-                movement, 0.2, movementTwo, los, losWhen, 300, false,
-                SignalInterference.InvisibleMode.TARGET, false, false, 8, false,
-                false, 10, false, false, 5, false, required, bypass);
+            boolean movement, boolean los, CheckOn lightOn, CheckOn undergroundOn,
+            CheckOn underwaterOn, CheckOn altitudeOn, CheckOn biomeOn, CheckOn movementOn,
+            int required, double bypass, InterfereWhen when, InterfereWhenVisible losWhen) {
+        return new Config(light, 10, 5, when, lightOn,
+                underground, 3, undergroundOn, underwater, 2, underwaterOn,
+                altitude, -20, 120, altitudeOn, weather,
+                Set.of(Weather.STORM, Weather.RAIN),
+                biome, Set.of("minecraft:desert", "minecraft:the_end"), biomeOn,
+                movement, 0.2, movementOn, los, losWhen, 300, false,
+                CheckOn.BOTH, false, 8, CheckOn.SELF,
+                false, 10, CheckOn.SELF, false, 5, CheckOn.SELF, required, bypass);
     }
 
-    private static SignalInterference.Config invisibleConfig(
-            SignalInterference.InvisibleMode mode, boolean twoWay) {
-        return new SignalInterference.Config(false, 10, 5,
-                SignalInterference.InterfereWhen.ONE_UNMET, false,
-                false, 3, false, false, 2, false, false, -20, 120, false, false,
-                Set.of(), false, false, Set.of(), false, false, 0.2, false,
-                false, SignalInterference.InterfereWhenVisible.VISIBLE, 300,
-                true, mode, twoWay, false, 8, false, false, 10, false, false, 5,
-                false, 1, 0.0);
+    private static Config invisibleConfig(CheckOn checkOn) {
+        return new Config(false, 10, 5, InterfereWhen.ONE_UNMET, CheckOn.SELF,
+                false, 3, CheckOn.BOTH, false, 2, CheckOn.BOTH, false, -20, 120,
+                CheckOn.BOTH, false, Set.of(), false, Set.of(), CheckOn.BOTH, false, 0.2,
+                CheckOn.SELF, false, InterfereWhenVisible.VISIBLE, 300,
+                true, checkOn, false, 8, CheckOn.SELF, false, 10, CheckOn.SELF, false, 5,
+                CheckOn.SELF, 1, 0.0);
     }
 
-    private static SignalInterference.Config statsConfig(boolean health, boolean hunger,
-            boolean experience, boolean healthTwo, boolean hungerTwo, boolean expTwo) {
-        return new SignalInterference.Config(false, 10, 5,
-                SignalInterference.InterfereWhen.ONE_UNMET, false,
-                false, 3, false, false, 2, false, false, -20, 120, false, false,
-                Set.of(), false, false, Set.of(), false, false, 0.2, false,
-                false, SignalInterference.InterfereWhenVisible.VISIBLE, 300,
-                false, SignalInterference.InvisibleMode.TARGET, false, health, 8,
-                healthTwo, hunger, 10, hungerTwo, experience, 5, expTwo, 1, 0.0);
+    private static Config statsConfig(boolean health, boolean hunger,
+            boolean experience, CheckOn healthOn, CheckOn hungerOn, CheckOn expOn) {
+        return new Config(false, 10, 5, InterfereWhen.ONE_UNMET, CheckOn.SELF,
+                false, 3, CheckOn.BOTH, false, 2, CheckOn.BOTH, false, -20, 120,
+                CheckOn.BOTH, false, Set.of(), false, Set.of(), CheckOn.BOTH, false, 0.2,
+                CheckOn.SELF, false, InterfereWhenVisible.VISIBLE, 300,
+                false, CheckOn.BOTH, health, 8, healthOn, hunger, 10, hungerOn,
+                experience, 5, expOn, 1, 0.0);
     }
 
-    private static SignalInterference.Config withCounts(
-            SignalInterference.Config base, int required, double bypass) {
-        return new SignalInterference.Config(base.lightEnabled(), base.minSkyLight(),
-                base.minBlockLight(), base.interfereWhen(), base.lightTwoWay(),
-                base.undergroundEnabled(), base.maxBlocksAbove(), base.undergroundTwoWay(),
-                base.underwaterEnabled(), base.maxFluidAbove(), base.underwaterTwoWay(),
-                base.altitudeEnabled(), base.minY(), base.maxY(), base.altitudeTwoWay(),
-                base.weatherEnabled(), base.interfereDuring(), base.weatherTwoWay(),
-                base.biomeEnabled(), base.interfereIn(), base.biomeTwoWay(),
-                base.movementEnabled(), base.thresholdBlocks(), base.movementTwoWay(),
+    private static Config withCounts(Config base, int required, double bypass) {
+        return new Config(base.lightEnabled(), base.minSkyLight(),
+                base.minBlockLight(), base.interfereWhen(), base.lightCheckOn(),
+                base.undergroundEnabled(), base.maxBlocksAbove(), base.undergroundCheckOn(),
+                base.underwaterEnabled(), base.maxFluidAbove(), base.underwaterCheckOn(),
+                base.altitudeEnabled(), base.minY(), base.maxY(), base.altitudeCheckOn(),
+                base.weatherEnabled(), base.interfereDuring(),
+                base.biomeEnabled(), base.interfereIn(), base.biomeCheckOn(),
+                base.movementEnabled(), base.thresholdBlocks(), base.movementCheckOn(),
                 base.losEnabled(), base.losWhen(), base.losMaxDistance(),
-                base.invisibleEnabled(), base.invisibleMode(), base.invisibleTwoWay(),
-                base.healthEnabled(), base.minHealth(), base.healthTwoWay(),
-                base.hungerEnabled(), base.minHunger(), base.hungerTwoWay(),
-                base.expEnabled(), base.minExpLevel(), base.expTwoWay(), required, bypass);
+                base.invisibleEnabled(), base.invisibleCheckOn(),
+                base.healthEnabled(), base.minHealth(), base.healthCheckOn(),
+                base.hungerEnabled(), base.minHunger(), base.hungerCheckOn(),
+                base.expEnabled(), base.minExpLevel(), base.expCheckOn(), required, bypass);
     }
 
-    private static SignalInterference.Config withModes(SignalInterference.Config base,
-            SignalInterference.InterfereWhen when,
-            SignalInterference.InterfereWhenVisible losWhen) {
-        return new SignalInterference.Config(base.lightEnabled(), base.minSkyLight(),
-                base.minBlockLight(), when, base.lightTwoWay(),
-                base.undergroundEnabled(), base.maxBlocksAbove(), base.undergroundTwoWay(),
-                base.underwaterEnabled(), base.maxFluidAbove(), base.underwaterTwoWay(),
-                base.altitudeEnabled(), base.minY(), base.maxY(), base.altitudeTwoWay(),
-                base.weatherEnabled(), base.interfereDuring(), base.weatherTwoWay(),
-                base.biomeEnabled(), base.interfereIn(), base.biomeTwoWay(),
-                base.movementEnabled(), base.thresholdBlocks(), base.movementTwoWay(),
+    private static Config withModes(Config base, InterfereWhen when,
+            InterfereWhenVisible losWhen) {
+        return new Config(base.lightEnabled(), base.minSkyLight(),
+                base.minBlockLight(), when, base.lightCheckOn(),
+                base.undergroundEnabled(), base.maxBlocksAbove(), base.undergroundCheckOn(),
+                base.underwaterEnabled(), base.maxFluidAbove(), base.underwaterCheckOn(),
+                base.altitudeEnabled(), base.minY(), base.maxY(), base.altitudeCheckOn(),
+                base.weatherEnabled(), base.interfereDuring(),
+                base.biomeEnabled(), base.interfereIn(), base.biomeCheckOn(),
+                base.movementEnabled(), base.thresholdBlocks(), base.movementCheckOn(),
                 base.losEnabled(), losWhen, base.losMaxDistance(), base.invisibleEnabled(),
-                base.invisibleMode(), base.invisibleTwoWay(), base.healthEnabled(),
-                base.minHealth(), base.healthTwoWay(), base.hungerEnabled(), base.minHunger(),
-                base.hungerTwoWay(), base.expEnabled(), base.minExpLevel(), base.expTwoWay(),
+                base.invisibleCheckOn(), base.healthEnabled(),
+                base.minHealth(), base.healthCheckOn(), base.hungerEnabled(), base.minHunger(),
+                base.hungerCheckOn(), base.expEnabled(), base.minExpLevel(), base.expCheckOn(),
                 base.requiredToFail(), base.chanceToBypass());
     }
 
     @Test
     void allDisabledNeverFails() {
-        SignalInterference.Config off = configFull(false, false, false, false, false, false,
-                false, false, true, true, true, true, true, true, true, 1, 0.0,
-                SignalInterference.InterfereWhen.ONE_UNMET,
-                SignalInterference.InterfereWhenVisible.VISIBLE);
-        SignalInterference.Snapshot worst =
-                spot(0, 0, true, 380, 380, -64, SignalInterference.Weather.STORM, "minecraft:desert",
+        Config off = configFull(false, false, false, false, false, false,
+                false, false, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.BOTH, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Snapshot worst =
+                spot(0, 0, true, 380, 380, -64, Weather.STORM, "minecraft:desert",
                         999.0, true);
 
         assertFalse(SignalInterference.badSignal(worst, worst, off, 0.99));
@@ -150,123 +150,129 @@ class SignalInterferenceTest {
 
     @Test
     void lightOneUnmetFailsOnEitherReading() {
-        SignalInterference.Config light =
+        Config light =
                 config(true, false, false, false, false, false, false, false);
 
         assertFalse(SignalInterference.badSignal(
-                spot(10, 5, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(10, 5, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains"),
                 null, light, 0.0));
         assertTrue(SignalInterference.badSignal(
-                spot(9, 5, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(9, 5, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains"),
                 null, light, 0.0));
         assertTrue(SignalInterference.badSignal(
-                spot(10, 4, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(10, 4, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains"),
                 null, light, 0.0));
     }
 
     @Test
     void lightBothUnmetNeedsBothReadings() {
-        SignalInterference.Config both = withModes(
+        Config both = withModes(
                 config(true, false, false, false, false, false, false, false),
-                SignalInterference.InterfereWhen.BOTH_UNMET,
-                SignalInterference.InterfereWhenVisible.VISIBLE);
+                InterfereWhen.BOTH_UNMET, InterfereWhenVisible.VISIBLE);
 
         assertFalse(SignalInterference.badSignal(
-                spot(9, 5, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(9, 5, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains"),
                 null, both, 0.0));
         assertFalse(SignalInterference.badSignal(
-                spot(10, 4, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(10, 4, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains"),
                 null, both, 0.0));
         assertTrue(SignalInterference.badSignal(
-                spot(9, 4, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(9, 4, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains"),
                 null, both, 0.0));
     }
 
     @Test
     void lightSkippedOutsideOverworld() {
-        SignalInterference.Config light =
+        Config light =
                 config(true, false, false, false, false, false, false, false);
 
         assertFalse(SignalInterference.badSignal(
-                spot(0, 0, false, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(0, 0, false, 0, 0, 64, Weather.CLEAR, "minecraft:plains"),
                 null, light, 0.0));
     }
 
     @Test
     void undergroundFailsPastMaximum() {
-        SignalInterference.Config underground =
+        Config underground =
                 config(false, true, false, false, false, false, false, false);
 
         assertFalse(SignalInterference.badSignal(
-                spot(15, 15, true, 3, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(15, 15, true, 3, 0, 64, Weather.CLEAR, "minecraft:plains"),
                 null, underground, 0.0));
         assertTrue(SignalInterference.badSignal(
-                spot(15, 15, true, 4, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(15, 15, true, 4, 0, 64, Weather.CLEAR, "minecraft:plains"),
                 null, underground, 0.0));
     }
 
     @Test
     void underwaterFailsPastMaximum() {
-        SignalInterference.Config underwater =
+        Config underwater =
                 config(false, false, true, false, false, false, false, false);
 
         assertFalse(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 2, 64, SignalInterference.Weather.CLEAR, "minecraft:plains",
+                spot(15, 15, true, 0, 2, 64, Weather.CLEAR, "minecraft:plains",
                         0.0, true),
                 null, underwater, 0.0));
         assertTrue(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 3, 64, SignalInterference.Weather.CLEAR, "minecraft:plains",
+                spot(15, 15, true, 0, 3, 64, Weather.CLEAR, "minecraft:plains",
                         0.0, true),
                 null, underwater, 0.0));
     }
 
     @Test
     void underwaterNeedsWaterFeet() {
-        SignalInterference.Config underwater =
+        Config underwater =
                 config(false, false, true, false, false, false, false, false);
 
         assertFalse(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 380, 64, SignalInterference.Weather.CLEAR, "minecraft:plains",
+                spot(15, 15, true, 0, 380, 64, Weather.CLEAR, "minecraft:plains",
                         0.0, false),
                 null, underwater, 0.0));
     }
 
     @Test
     void movementFailsPastThreshold() {
-        SignalInterference.Config movement =
+        Config movement =
                 config(false, false, false, false, false, false, true, false);
-        SignalInterference.Snapshot still =
-                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains",
+        Snapshot still =
+                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
                         0.2, false);
-        SignalInterference.Snapshot stepped =
-                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains",
+        Snapshot stepped =
+                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
                         0.21, false);
 
         assertFalse(SignalInterference.badSignal(still, null, movement, 0.0));
         assertTrue(SignalInterference.badSignal(stepped, null, movement, 0.0));
-        assertEquals(Optional.of(new SignalInterference.Reason("moved", false)),
+        assertEquals(Optional.of(new Reason("moved", false)),
                 SignalInterference.lastReason(stepped, null, movement, 0.0, null));
     }
 
     @Test
-    void movementTwoWayChecksTargetSide() {
-        SignalInterference.Config oneWay =
+    void movementCheckOnGatesSides() {
+        Config self =
                 config(false, false, false, false, false, false, true, false);
-        SignalInterference.Config twoWay = configFull(false, false, false, false, false, false,
-                true, false, false, false, false, false, false, false, true, 1, 0.0,
-                SignalInterference.InterfereWhen.ONE_UNMET,
-                SignalInterference.InterfereWhenVisible.VISIBLE);
-        SignalInterference.Snapshot moved =
-                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains",
+        Config both = configFull(false, false, false, false, false, false,
+                true, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.BOTH, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Config target = configFull(false, false, false, false, false, false,
+                true, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.TARGET, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Snapshot moved =
+                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
                         5.0, false);
 
-        assertFalse(SignalInterference.badSignal(clearSpot(), moved, oneWay, 0.0));
-        assertTrue(SignalInterference.badSignal(clearSpot(), moved, twoWay, 0.0));
+        assertFalse(SignalInterference.badSignal(clearSpot(), moved, self, 0.0));
+        assertTrue(SignalInterference.badSignal(clearSpot(), moved, both, 0.0));
+        assertTrue(SignalInterference.badSignal(moved, clearSpot(), both, 0.0));
+        assertFalse(SignalInterference.badSignal(moved, clearSpot(), target, 0.0));
+        assertTrue(SignalInterference.badSignal(clearSpot(), moved, target, 0.0));
     }
 
     @Test
     void losVisibleModeFailsOnlyWhenSeen() {
-        SignalInterference.Config los =
+        Config los =
                 config(false, false, false, false, false, false, false, true);
 
         assertTrue(SignalInterference.badSignal(clearSpot(), null, los, 0.0, true));
@@ -277,10 +283,9 @@ class SignalInterferenceTest {
 
     @Test
     void losNotVisibleModeFailsOnlyWhenHidden() {
-        SignalInterference.Config hidden = withModes(
+        Config hidden = withModes(
                 config(false, false, false, false, false, false, false, true),
-                SignalInterference.InterfereWhen.ONE_UNMET,
-                SignalInterference.InterfereWhenVisible.NOT_VISIBLE);
+                InterfereWhen.ONE_UNMET, InterfereWhenVisible.NOT_VISIBLE);
 
         assertFalse(SignalInterference.badSignal(clearSpot(), null, hidden, 0.0, true));
         assertTrue(SignalInterference.badSignal(clearSpot(), null, hidden, 0.0, false));
@@ -289,7 +294,7 @@ class SignalInterferenceTest {
 
     @Test
     void lineOfSightNeverCountsTargetSide() {
-        SignalInterference.Config los =
+        Config los =
                 config(false, false, false, false, false, false, false, true);
 
         assertEquals(List.of("line-of-sight"),
@@ -300,59 +305,70 @@ class SignalInterferenceTest {
 
     @Test
     void altitudeFailsOutsideInclusiveRange() {
-        SignalInterference.Config altitude =
+        Config altitude =
                 config(false, false, false, true, false, false, false, false);
 
         assertFalse(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 0, -20, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(15, 15, true, 0, 0, -20, Weather.CLEAR, "minecraft:plains"),
                 null, altitude, 0.0));
         assertFalse(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 0, 120, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(15, 15, true, 0, 0, 120, Weather.CLEAR, "minecraft:plains"),
                 null, altitude, 0.0));
         assertTrue(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 0, -21, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(15, 15, true, 0, 0, -21, Weather.CLEAR, "minecraft:plains"),
                 null, altitude, 0.0));
         assertTrue(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 0, 121, SignalInterference.Weather.CLEAR, "minecraft:plains"),
+                spot(15, 15, true, 0, 0, 121, Weather.CLEAR, "minecraft:plains"),
                 null, altitude, 0.0));
     }
 
     @Test
     void weatherFailsOnlyDuringListedBuckets() {
-        SignalInterference.Config weather =
+        Config weather =
                 config(false, false, false, false, true, false, false, false);
 
         assertTrue(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.STORM, "minecraft:plains"),
+                spot(15, 15, true, 0, 0, 64, Weather.STORM, "minecraft:plains"),
                 null, weather, 0.0));
         assertTrue(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.RAIN, "minecraft:plains"),
+                spot(15, 15, true, 0, 0, 64, Weather.RAIN, "minecraft:plains"),
                 null, weather, 0.0));
         assertFalse(SignalInterference.badSignal(clearSpot(), null, weather, 0.0));
     }
 
     @Test
+    void weatherNeverEvaluatesTargetSide() {
+        Config weather =
+                config(false, false, false, false, true, false, false, false);
+        Snapshot stormy =
+                spot(15, 15, true, 0, 0, 64, Weather.STORM, "minecraft:plains");
+
+        assertTrue(SignalInterference.badSignal(stormy, clearSpot(), weather, 0.0));
+        assertFalse(SignalInterference.badSignal(clearSpot(), stormy, weather, 0.0));
+    }
+
+    @Test
     void biomeMatchesKeysCaseInsensitively() {
-        SignalInterference.Config biome =
+        Config biome =
                 config(false, false, false, false, false, true, false, false);
 
         assertTrue(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:desert"),
+                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:desert"),
                 null, biome, 0.0));
         assertTrue(SignalInterference.badSignal(
-                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "MINECRAFT:THE_END"),
+                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "MINECRAFT:THE_END"),
                 null, biome, 0.0));
         assertFalse(SignalInterference.badSignal(clearSpot(), null, biome, 0.0));
     }
 
     @Test
     void requiredToFailNeedsEnoughOptions() {
-        SignalInterference.Config two = withCounts(
+        Config two = withCounts(
                 config(true, true, false, false, false, false, false, false), 2, 0.0);
-        SignalInterference.Snapshot dark =
-                spot(0, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
-        SignalInterference.Snapshot darkAndCovered =
-                spot(0, 15, true, 9, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+        Snapshot dark =
+                spot(0, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains");
+        Snapshot darkAndCovered =
+                spot(0, 15, true, 9, 0, 64, Weather.CLEAR, "minecraft:plains");
 
         assertFalse(SignalInterference.badSignal(dark, null, two, 0.0));
         assertTrue(SignalInterference.badSignal(darkAndCovered, null, two, 0.0));
@@ -360,42 +376,48 @@ class SignalInterferenceTest {
 
     @Test
     void requiredToFailClampsToEnabledCount() {
-        SignalInterference.Config clamped = withCounts(
+        Config clamped = withCounts(
                 config(true, false, false, false, false, false, false, false), 5, 0.0);
-        SignalInterference.Snapshot dark =
-                spot(0, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+        Snapshot dark =
+                spot(0, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains");
 
         assertTrue(SignalInterference.badSignal(dark, null, clamped, 0.0));
         assertFalse(SignalInterference.badSignal(clearSpot(), null, clamped, 0.0));
     }
 
     @Test
-    void lightTwoWayFailsFromTargetSide() {
-        SignalInterference.Config oneWay =
+    void lightCheckOnGatesSides() {
+        Config self =
                 config(true, false, false, false, false, false, false, false);
-        SignalInterference.Config twoWay = configFull(true, false, false, false, false, false,
-                false, false, true, false, false, false, false, false, false, 1, 0.0,
-                SignalInterference.InterfereWhen.ONE_UNMET,
-                SignalInterference.InterfereWhenVisible.VISIBLE);
-        SignalInterference.Snapshot dark =
-                spot(0, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+        Config both = configFull(true, false, false, false, false, false,
+                false, false, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Config target = configFull(true, false, false, false, false, false,
+                false, false, CheckOn.TARGET, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Snapshot dark =
+                spot(0, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains");
 
-        assertFalse(SignalInterference.badSignal(clearSpot(), dark, oneWay, 0.0));
-        assertTrue(SignalInterference.badSignal(clearSpot(), dark, twoWay, 0.0));
-        assertTrue(SignalInterference.badSignal(dark, clearSpot(), twoWay, 0.0));
-        assertFalse(SignalInterference.badSignal(clearSpot(), null, twoWay, 0.0));
+        assertFalse(SignalInterference.badSignal(clearSpot(), dark, self, 0.0));
+        assertTrue(SignalInterference.badSignal(clearSpot(), dark, both, 0.0));
+        assertTrue(SignalInterference.badSignal(dark, clearSpot(), both, 0.0));
+        assertFalse(SignalInterference.badSignal(clearSpot(), null, both, 0.0));
+        assertFalse(SignalInterference.badSignal(dark, clearSpot(), target, 0.0));
+        assertTrue(SignalInterference.badSignal(clearSpot(), dark, target, 0.0));
     }
 
     @Test
-    void twoWayIsPerOption() {
-        SignalInterference.Config mixed = configFull(true, true, false, false, false, false,
-                false, false, true, false, false, false, false, false, false, 1, 0.0,
-                SignalInterference.InterfereWhen.ONE_UNMET,
-                SignalInterference.InterfereWhenVisible.VISIBLE);
-        SignalInterference.Snapshot dark =
-                spot(0, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
-        SignalInterference.Snapshot buried =
-                spot(15, 15, true, 10, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+    void checkOnIsPerOption() {
+        Config mixed = configFull(true, true, false, false, false, false,
+                false, false, CheckOn.BOTH, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Snapshot dark =
+                spot(0, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains");
+        Snapshot buried =
+                spot(15, 15, true, 10, 0, 64, Weather.CLEAR, "minecraft:plains");
 
         assertTrue(SignalInterference.badSignal(clearSpot(), dark, mixed, 0.0));
         assertFalse(SignalInterference.badSignal(clearSpot(), buried, mixed, 0.0));
@@ -404,12 +426,12 @@ class SignalInterferenceTest {
 
     @Test
     void bypassRollSavesBadSignalsUnderChance() {
-        SignalInterference.Config none =
+        Config none =
                 config(true, false, false, false, false, false, false, false);
-        SignalInterference.Config half = withCounts(none, 1, 0.5);
-        SignalInterference.Config always = withCounts(none, 1, 1.0);
-        SignalInterference.Snapshot dark =
-                spot(0, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+        Config half = withCounts(none, 1, 0.5);
+        Config always = withCounts(none, 1, 1.0);
+        Snapshot dark =
+                spot(0, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains");
 
         assertTrue(SignalInterference.badSignal(dark, null, none, 0.0));
         assertFalse(SignalInterference.badSignal(dark, null, half, 0.49));
@@ -422,14 +444,24 @@ class SignalInterferenceTest {
         Set<String> biomes = new HashSet<>();
         biomes.add("MINECRAFT:DESERT");
         biomes.add(null);
-        SignalInterference.Config clamped = new SignalInterference.Config(true, 99, -9, null, true,
-                true, 999, true, true, 999, true, true, 200, -100, true, true, null, true,
-                true, biomes, true, true, -5.0, true, true, null, 9999, true, null, true,
-                true, 999, true, true, -5, true, true, 500, true, -3, 2.5);
+        Config clamped = new Config(true, 99, -9, null, null,
+                true, 999, null, true, 999, null, true, 200, -100, null, true, null,
+                true, biomes, null, true, -5.0, null, true, null, 9999, true, null,
+                true, 999, null, true, -5, null, true, 500, null, -3, 2.5);
 
         assertEquals(15, clamped.minSkyLight());
         assertEquals(0, clamped.minBlockLight());
-        assertEquals(SignalInterference.InterfereWhen.BOTH_UNMET, clamped.interfereWhen());
+        assertEquals(InterfereWhen.BOTH_UNMET, clamped.interfereWhen());
+        assertEquals(CheckOn.SELF, clamped.lightCheckOn());
+        assertEquals(CheckOn.BOTH, clamped.undergroundCheckOn());
+        assertEquals(CheckOn.BOTH, clamped.underwaterCheckOn());
+        assertEquals(CheckOn.BOTH, clamped.altitudeCheckOn());
+        assertEquals(CheckOn.BOTH, clamped.biomeCheckOn());
+        assertEquals(CheckOn.SELF, clamped.movementCheckOn());
+        assertEquals(CheckOn.BOTH, clamped.invisibleCheckOn());
+        assertEquals(CheckOn.SELF, clamped.healthCheckOn());
+        assertEquals(CheckOn.SELF, clamped.hungerCheckOn());
+        assertEquals(CheckOn.SELF, clamped.expCheckOn());
         assertEquals(380, clamped.maxBlocksAbove());
         assertEquals(380, clamped.maxFluidAbove());
         assertEquals(-64, clamped.minY());
@@ -437,13 +469,22 @@ class SignalInterferenceTest {
         assertTrue(clamped.interfereDuring().isEmpty());
         assertEquals(Set.of("minecraft:desert"), clamped.interfereIn());
         assertEquals(0.0, clamped.thresholdBlocks());
-        assertEquals(SignalInterference.InterfereWhenVisible.NOT_VISIBLE, clamped.losWhen());
+        assertEquals(InterfereWhenVisible.VISIBLE, clamped.losWhen());
         assertEquals(1000, clamped.losMaxDistance());
-        assertEquals(SignalInterference.InvisibleMode.TARGET, clamped.invisibleMode());
         assertEquals(100, clamped.minHealth());
         assertEquals(1, clamped.minHunger());
         assertEquals(100, clamped.minExpLevel());
         assertEquals(1.0, clamped.chanceToBypass());
+    }
+
+    @Test
+    void statThresholdsDefaultToSelf() {
+        StatThresholds stats = new StatThresholds(true, 8, null, true, 10, null,
+                true, 5, null);
+
+        assertEquals(CheckOn.SELF, stats.healthCheckOn());
+        assertEquals(CheckOn.SELF, stats.hungerCheckOn());
+        assertEquals(CheckOn.SELF, stats.expCheckOn());
     }
 
     @Test
@@ -458,14 +499,15 @@ class SignalInterferenceTest {
 
     @Test
     void playerStatsFailHolderSideWithReasonIds() {
-        SignalInterference.Config stats = statsConfig(true, true, true, false, false, false);
-        SignalInterference.Snapshot weak = spot(15, 15, true, 0, 0, 64,
-                SignalInterference.Weather.CLEAR, "minecraft:plains", 0.0, false, false,
+        Config stats = statsConfig(true, true, true,
+                CheckOn.SELF, CheckOn.SELF, CheckOn.SELF);
+        Snapshot weak = spot(15, 15, true, 0, 0, 64,
+                Weather.CLEAR, "minecraft:plains", 0.0, false, false,
                 7.0, 9, 4);
 
         assertTrue(SignalInterference.badSignal(weak, clearSpot(), stats, 0.0));
         assertFalse(SignalInterference.badSignal(clearSpot(), clearSpot(), stats, 0.0));
-        Optional<SignalInterference.Reason> reason =
+        Optional<Reason> reason =
                 SignalInterference.lastReason(weak, clearSpot(), stats, 0.0, null);
         assertTrue(reason.isPresent());
         assertEquals("low-exp-level", reason.get().id());
@@ -473,17 +515,23 @@ class SignalInterferenceTest {
     }
 
     @Test
-    void playerStatsTwoWayChecksTargetSide() {
-        SignalInterference.Config oneWay = statsConfig(true, false, false, false, false, false);
-        SignalInterference.Config twoWay = statsConfig(true, false, false, true, false, false);
-        SignalInterference.Snapshot weak = spot(15, 15, true, 0, 0, 64,
-                SignalInterference.Weather.CLEAR, "minecraft:plains", 0.0, false, false,
+    void playerStatsCheckOnGatesSides() {
+        Config self = statsConfig(true, false, false,
+                CheckOn.SELF, CheckOn.SELF, CheckOn.SELF);
+        Config both = statsConfig(true, false, false,
+                CheckOn.BOTH, CheckOn.SELF, CheckOn.SELF);
+        Config target = statsConfig(true, false, false,
+                CheckOn.TARGET, CheckOn.SELF, CheckOn.SELF);
+        Snapshot weak = spot(15, 15, true, 0, 0, 64,
+                Weather.CLEAR, "minecraft:plains", 0.0, false, false,
                 7.0, 20, 30);
 
-        assertFalse(SignalInterference.badSignal(clearSpot(), weak, oneWay, 0.0));
-        assertTrue(SignalInterference.badSignal(clearSpot(), weak, twoWay, 0.0));
-        Optional<SignalInterference.Reason> reason =
-                SignalInterference.lastReason(clearSpot(), weak, twoWay, 0.0, null);
+        assertFalse(SignalInterference.badSignal(clearSpot(), weak, self, 0.0));
+        assertTrue(SignalInterference.badSignal(clearSpot(), weak, both, 0.0));
+        assertFalse(SignalInterference.badSignal(weak, clearSpot(), target, 0.0));
+        assertTrue(SignalInterference.badSignal(clearSpot(), weak, target, 0.0));
+        Optional<Reason> reason =
+                SignalInterference.lastReason(clearSpot(), weak, both, 0.0, null);
         assertTrue(reason.isPresent());
         assertEquals("low-health", reason.get().id());
         assertTrue(reason.get().targetSide());
@@ -491,13 +539,13 @@ class SignalInterferenceTest {
 
     @Test
     void playerStatsCountTowardRequiredToFail() {
-        SignalInterference.Config stats =
-                withCounts(statsConfig(true, true, false, false, false, false), 2, 0.0);
-        SignalInterference.Snapshot weak = spot(15, 15, true, 0, 0, 64,
-                SignalInterference.Weather.CLEAR, "minecraft:plains", 0.0, false, false,
+        Config stats = withCounts(statsConfig(true, true, false,
+                CheckOn.SELF, CheckOn.SELF, CheckOn.SELF), 2, 0.0);
+        Snapshot weak = spot(15, 15, true, 0, 0, 64,
+                Weather.CLEAR, "minecraft:plains", 0.0, false, false,
                 7.0, 9, 30);
-        SignalInterference.Snapshot hungry = spot(15, 15, true, 0, 0, 64,
-                SignalInterference.Weather.CLEAR, "minecraft:plains", 0.0, false, false,
+        Snapshot hungry = spot(15, 15, true, 0, 0, 64,
+                Weather.CLEAR, "minecraft:plains", 0.0, false, false,
                 20.0, 9, 30);
 
         assertTrue(SignalInterference.badSignal(weak, clearSpot(), stats, 0.0));
@@ -505,9 +553,8 @@ class SignalInterferenceTest {
     }
 
     @Test
-    void invisibleTargetModeFailsOnlyOnTargetSide() {
-        SignalInterference.Config target =
-                invisibleConfig(SignalInterference.InvisibleMode.TARGET, false);
+    void invisibleTargetFailsOnlyOnTargetSide() {
+        Config target = invisibleConfig(CheckOn.TARGET);
 
         assertTrue(SignalInterference.badSignal(clearSpot(), invisibleSpot(), target, 0.0));
         assertFalse(SignalInterference.badSignal(invisibleSpot(), clearSpot(), target, 0.0));
@@ -515,18 +562,16 @@ class SignalInterferenceTest {
     }
 
     @Test
-    void invisibleSelfModeFailsOnlyOnHolderSide() {
-        SignalInterference.Config self =
-                invisibleConfig(SignalInterference.InvisibleMode.SELF, false);
+    void invisibleSelfFailsOnlyOnHolderSide() {
+        Config self = invisibleConfig(CheckOn.SELF);
 
         assertTrue(SignalInterference.badSignal(invisibleSpot(), clearSpot(), self, 0.0));
         assertFalse(SignalInterference.badSignal(clearSpot(), invisibleSpot(), self, 0.0));
     }
 
     @Test
-    void invisibleTwoWayChecksBothSides() {
-        SignalInterference.Config both =
-                invisibleConfig(SignalInterference.InvisibleMode.TARGET, true);
+    void invisibleBothChecksEachSide() {
+        Config both = invisibleConfig(CheckOn.BOTH);
 
         assertTrue(SignalInterference.badSignal(invisibleSpot(), clearSpot(), both, 0.0));
         assertTrue(SignalInterference.badSignal(clearSpot(), invisibleSpot(), both, 0.0));
@@ -534,27 +579,79 @@ class SignalInterferenceTest {
     }
 
     @Test
-    void invisibleSideAppliesPicksExactlyOneSide() {
-        assertTrue(SignalInterference.invisibleSideApplies(
-                SignalInterference.InvisibleMode.TARGET, false, true));
-        assertFalse(SignalInterference.invisibleSideApplies(
-                SignalInterference.InvisibleMode.TARGET, false, false));
-        assertTrue(SignalInterference.invisibleSideApplies(
-                SignalInterference.InvisibleMode.SELF, false, false));
-        assertFalse(SignalInterference.invisibleSideApplies(
-                SignalInterference.InvisibleMode.SELF, false, true));
-        assertTrue(SignalInterference.invisibleSideApplies(
-                SignalInterference.InvisibleMode.TARGET, true, false));
-        assertTrue(SignalInterference.invisibleSideApplies(
-                SignalInterference.InvisibleMode.SELF, true, true));
+    void sideAppliesGatesEachSide() {
+        assertTrue(SignalInterference.sideApplies(CheckOn.BOTH, false));
+        assertTrue(SignalInterference.sideApplies(CheckOn.BOTH, true));
+        assertTrue(SignalInterference.sideApplies(CheckOn.SELF, false));
+        assertFalse(SignalInterference.sideApplies(CheckOn.SELF, true));
+        assertFalse(SignalInterference.sideApplies(CheckOn.TARGET, false));
+        assertTrue(SignalInterference.sideApplies(CheckOn.TARGET, true));
+    }
+
+    @Test
+    void targetCheckOnSkipsHolderSideForEveryOption() {
+        Snapshot dark = spot(0, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains");
+        Snapshot buried =
+                spot(15, 15, true, 10, 0, 64, Weather.CLEAR, "minecraft:plains");
+        Snapshot soaked = spot(15, 15, true, 0, 3, 64, Weather.CLEAR, "minecraft:plains",
+                0.0, true);
+        Snapshot high = spot(15, 15, true, 0, 0, 121, Weather.CLEAR, "minecraft:plains");
+        Snapshot desert =
+                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:desert");
+        Snapshot moved = spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
+                5.0, false);
+        Snapshot weak = spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
+                0.0, false, false, 7.0, 9, 4);
+        Config light = configFull(true, false, false, false, false, false,
+                false, false, CheckOn.TARGET, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Config underground = configFull(false, true, false, false, false, false,
+                false, false, CheckOn.SELF, CheckOn.TARGET, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Config underwater = configFull(false, false, true, false, false, false,
+                false, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.TARGET, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Config altitude = configFull(false, false, false, true, false, false,
+                false, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.TARGET,
+                CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Config biome = configFull(false, false, false, false, false, true,
+                false, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.TARGET, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Config movement = configFull(false, false, false, false, false, false,
+                true, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.TARGET, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+
+        assertTargetOnly(light, dark);
+        assertTargetOnly(underground, buried);
+        assertTargetOnly(underwater, soaked);
+        assertTargetOnly(altitude, high);
+        assertTargetOnly(biome, desert);
+        assertTargetOnly(movement, moved);
+        assertTargetOnly(invisibleConfig(CheckOn.TARGET), invisibleSpot());
+        assertTargetOnly(statsConfig(true, false, false,
+                CheckOn.TARGET, CheckOn.SELF, CheckOn.SELF), weak);
+        assertTargetOnly(statsConfig(false, true, false,
+                CheckOn.SELF, CheckOn.TARGET, CheckOn.SELF), weak);
+        assertTargetOnly(statsConfig(false, false, true,
+                CheckOn.SELF, CheckOn.SELF, CheckOn.TARGET), weak);
+    }
+
+    private static void assertTargetOnly(Config config, Snapshot failing) {
+        assertFalse(SignalInterference.badSignal(failing, clearSpot(), config, 0.0));
+        assertTrue(SignalInterference.badSignal(clearSpot(), failing, config, 0.0));
     }
 
     @Test
     void invisibleReportsReasonIdAndSide() {
-        SignalInterference.Config target =
-                invisibleConfig(SignalInterference.InvisibleMode.TARGET, false);
+        Config target = invisibleConfig(CheckOn.TARGET);
 
-        Optional<SignalInterference.Reason> reason = SignalInterference.lastReason(
+        Optional<Reason> reason = SignalInterference.lastReason(
                 clearSpot(), invisibleSpot(), target, 0.0, null);
 
         assertTrue(reason.isPresent());
@@ -564,34 +661,34 @@ class SignalInterferenceTest {
 
     @Test
     void lastReasonNamesTheSingleFailure() {
-        SignalInterference.Config underground =
+        Config underground =
                 config(false, true, false, false, false, false, false, false);
 
-        assertEquals(Optional.of(new SignalInterference.Reason("underground", false)),
+        assertEquals(Optional.of(new Reason("underground", false)),
                 SignalInterference.lastReason(
-                        spot(15, 15, true, 10, 0, 64, SignalInterference.Weather.CLEAR,
+                        spot(15, 15, true, 10, 0, 64, Weather.CLEAR,
                                 "minecraft:plains"),
                         null, underground, 0.99, null));
     }
 
     @Test
     void lastReasonPicksTheMostRecentOfMany() {
-        SignalInterference.Config both =
+        Config both =
                 config(false, true, false, false, false, true, false, false);
 
-        assertEquals(Optional.of(new SignalInterference.Reason("biome", false)),
+        assertEquals(Optional.of(new Reason("biome", false)),
                 SignalInterference.lastReason(
-                        spot(15, 15, true, 10, 0, 64, SignalInterference.Weather.CLEAR,
+                        spot(15, 15, true, 10, 0, 64, Weather.CLEAR,
                                 "minecraft:desert"),
                         null, both, 0.99, null));
     }
 
     @Test
     void lastReasonEmptyWhenGoodOrBypassed() {
-        SignalInterference.Config underground =
+        Config underground =
                 config(false, true, false, false, false, false, false, false);
-        SignalInterference.Snapshot buried =
-                spot(15, 15, true, 10, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
+        Snapshot buried =
+                spot(15, 15, true, 10, 0, 64, Weather.CLEAR, "minecraft:plains");
 
         assertEquals(Optional.empty(),
                 SignalInterference.lastReason(clearSpot(), null, underground, 0.99, null));
@@ -601,43 +698,42 @@ class SignalInterferenceTest {
 
     @Test
     void lastReasonPrefersTheHolderSide() {
-        SignalInterference.Config both = configFull(false, true, false, false, false, true,
-                false, false, false, false, false, false, false, true, false, 1, 0.0,
-                SignalInterference.InterfereWhen.ONE_UNMET,
-                SignalInterference.InterfereWhenVisible.VISIBLE);
-        SignalInterference.Snapshot buried =
-                spot(15, 15, true, 10, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:plains");
-        SignalInterference.Snapshot desert =
-                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:desert");
+        Config both = configFull(false, true, false, false, false, true,
+                false, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Snapshot buried =
+                spot(15, 15, true, 10, 0, 64, Weather.CLEAR, "minecraft:plains");
+        Snapshot desert =
+                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:desert");
 
-        assertEquals(Optional.of(new SignalInterference.Reason("underground", false)),
+        assertEquals(Optional.of(new Reason("underground", false)),
                 SignalInterference.lastReason(buried, desert, both, 0.99, null));
     }
 
     @Test
     void lastReasonMarksTargetSideFailures() {
-        SignalInterference.Config biome = configFull(false, false, false, false, false, true,
-                false, false, false, false, false, false, false, true, false, 1, 0.0,
-                SignalInterference.InterfereWhen.ONE_UNMET,
-                SignalInterference.InterfereWhenVisible.VISIBLE);
-        SignalInterference.Snapshot desert =
-                spot(15, 15, true, 0, 0, 64, SignalInterference.Weather.CLEAR, "minecraft:desert");
+        Config biome = configFull(false, false, false, false, false, true,
+                false, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
+                CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
+                InterfereWhenVisible.VISIBLE);
+        Snapshot desert =
+                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:desert");
 
-        assertEquals(Optional.of(new SignalInterference.Reason("biome", true)),
+        assertEquals(Optional.of(new Reason("biome", true)),
                 SignalInterference.lastReason(clearSpot(), desert, biome, 0.99, null));
     }
 
     @Test
     void lastReasonIdsLineOfSightByMode() {
-        SignalInterference.Config visible =
+        Config visible =
                 config(false, false, false, false, false, false, false, true);
-        SignalInterference.Config hidden = withModes(visible,
-                SignalInterference.InterfereWhen.ONE_UNMET,
-                SignalInterference.InterfereWhenVisible.NOT_VISIBLE);
+        Config hidden = withModes(visible,
+                InterfereWhen.ONE_UNMET, InterfereWhenVisible.NOT_VISIBLE);
 
-        assertEquals(Optional.of(new SignalInterference.Reason("line-of-sight", false)),
+        assertEquals(Optional.of(new Reason("line-of-sight", false)),
                 SignalInterference.lastReason(clearSpot(), null, visible, 0.0, true));
-        assertEquals(Optional.of(new SignalInterference.Reason("line-of-sight-hidden", false)),
+        assertEquals(Optional.of(new Reason("line-of-sight-hidden", false)),
                 SignalInterference.lastReason(clearSpot(), null, hidden, 0.0, false));
     }
 }

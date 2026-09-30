@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.config;
 
+import com.jruk8.jmanhunt.compass.SignalInterference;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
@@ -48,12 +49,13 @@ public class PlayerStatsSettings extends OkaeriConfig {
         })
         private int minHealth = 8;
 
-        @CustomKey("two-way")
+        @CustomKey("check-on")
         @Comment({
-                "When true, the target's health must also pass this check.",
-                "Default: false"
+                "Which sides' health must pass: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: SELF"
         })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
         public boolean isEnabled() {
             return enabled;
@@ -71,12 +73,12 @@ public class PlayerStatsSettings extends OkaeriConfig {
             this.minHealth = minHealth;
         }
 
-        public boolean isTwoWay() {
-            return twoWay;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 
@@ -92,12 +94,13 @@ public class PlayerStatsSettings extends OkaeriConfig {
         })
         private int minHunger = 10;
 
-        @CustomKey("two-way")
+        @CustomKey("check-on")
         @Comment({
-                "When true, the target's hunger must also pass this check.",
-                "Default: false"
+                "Which sides' hunger must pass: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: SELF"
         })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
         public boolean isEnabled() {
             return enabled;
@@ -115,12 +118,12 @@ public class PlayerStatsSettings extends OkaeriConfig {
             this.minHunger = minHunger;
         }
 
-        public boolean isTwoWay() {
-            return twoWay;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 
@@ -136,12 +139,13 @@ public class PlayerStatsSettings extends OkaeriConfig {
         })
         private int minExpLevel = 5;
 
-        @CustomKey("two-way")
+        @CustomKey("check-on")
         @Comment({
-                "When true, the target's level must also pass this check.",
-                "Default: false"
+                "Which sides' level must pass: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: SELF"
         })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
         public boolean isEnabled() {
             return enabled;
@@ -159,12 +163,12 @@ public class PlayerStatsSettings extends OkaeriConfig {
             this.minExpLevel = minExpLevel;
         }
 
-        public boolean isTwoWay() {
-            return twoWay;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 }

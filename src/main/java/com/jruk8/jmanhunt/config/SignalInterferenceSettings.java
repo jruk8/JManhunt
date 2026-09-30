@@ -94,15 +94,15 @@ public class SignalInterferenceSettings extends OkaeriConfig {
     private LineOfSight lineOfSight = new LineOfSight();
 
     @Comment({
-            "Invisibility of the watched side. TARGET (default) interferes",
-            "when the tracked target is invisible; SELF when the holder is.",
+            "Invisibility of either side. The check-on key picks whose",
+            "invisibility interferes.",
             "Default: true"
     })
     private Invisible invisible = new Invisible();
 
     @CustomKey("player-stats")
     @Comment({
-            "Health, hunger, and experience of the watched side.",
+            "Health, hunger, and experience of either side.",
             "Default: false"
     })
     private PlayerStatsSettings playerStats = new PlayerStatsSettings();
@@ -247,12 +247,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         private SignalInterference.InterfereWhen interfereWhen =
                 SignalInterference.InterfereWhen.BOTH_UNMET;
 
-        @CustomKey("two-way")
+        @CustomKey("check-on")
         @Comment({
-                "When true, the target's spot must also pass this check.",
-                "Default: false"
+                "Which sides' light must pass: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: SELF"
         })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
         public boolean isEnabled() {
             return enabled;
@@ -286,12 +287,12 @@ public class SignalInterferenceSettings extends OkaeriConfig {
             this.interfereWhen = interfereWhen;
         }
 
-        public boolean isTwoWay() {
-            return twoWay;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 
@@ -315,12 +316,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private boolean ignoreTransparent = true;
 
-        @CustomKey("two-way")
+        @CustomKey("check-on")
         @Comment({
-                "When true, the target's spot must also pass this check.",
-                "Default: false"
+                "Which sides' cover must pass: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: BOTH"
         })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
         public boolean isEnabled() {
             return enabled;
@@ -346,12 +348,12 @@ public class SignalInterferenceSettings extends OkaeriConfig {
             this.ignoreTransparent = ignoreTransparent;
         }
 
-        public boolean isTwoWay() {
-            return twoWay;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 
@@ -368,12 +370,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private int maxBlocksAbove = 2;
 
-        @CustomKey("two-way")
+        @CustomKey("check-on")
         @Comment({
-                "When true, the target's spot must also pass this check.",
-                "Default: false"
+                "Which sides' water must pass: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: BOTH"
         })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
         public boolean isEnabled() {
             return enabled;
@@ -391,12 +394,12 @@ public class SignalInterferenceSettings extends OkaeriConfig {
             this.maxBlocksAbove = maxBlocksAbove;
         }
 
-        public boolean isTwoWay() {
-            return twoWay;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 
@@ -416,12 +419,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         @Comment("Default: 120")
         private int maxY = 120;
 
-        @CustomKey("two-way")
+        @CustomKey("check-on")
         @Comment({
-                "When true, the target's spot must also pass this check.",
-                "Default: false"
+                "Which sides' altitude must pass: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: BOTH"
         })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
         public boolean isEnabled() {
             return enabled;
@@ -447,16 +451,16 @@ public class SignalInterferenceSettings extends OkaeriConfig {
             this.maxY = maxY;
         }
 
-        public boolean isTwoWay() {
-            return twoWay;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 
-    /** Weather interference. */
+    /** Weather interference, always evaluated at the holder's spot. */
     @SuppressWarnings("FieldMayBeFinal")
     public static class Weather extends OkaeriConfig {
 
@@ -467,15 +471,12 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         private boolean enabled = false;
 
         @CustomKey("interfere-during")
-        @Comment("Default: STORM, RAIN")
-        private List<String> interfereDuring = new ArrayList<>(List.of("STORM", "RAIN"));
-
-        @CustomKey("two-way")
         @Comment({
-                "When true, the target's spot must also pass this check.",
-                "Default: false"
+                "Weather at the holder's spot; weather has no check-on key",
+                "and never evaluates the target side.",
+                "Default: STORM, RAIN"
         })
-        private boolean twoWay = false;
+        private List<String> interfereDuring = new ArrayList<>(List.of("STORM", "RAIN"));
 
         public boolean isEnabled() {
             return enabled;
@@ -491,14 +492,6 @@ public class SignalInterferenceSettings extends OkaeriConfig {
 
         public void setInterfereDuring(List<String> interfereDuring) {
             this.interfereDuring = interfereDuring;
-        }
-
-        public boolean isTwoWay() {
-            return twoWay;
-        }
-
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
         }
     }
 
@@ -521,12 +514,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
                 "minecraft:basalt_deltas",
                 "minecraft:the_end"));
 
-        @CustomKey("two-way")
+        @CustomKey("check-on")
         @Comment({
-                "When true, the target's spot must also pass this check.",
-                "Default: false"
+                "Which sides' biome must pass: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: BOTH"
         })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
         public boolean isEnabled() {
             return enabled;
@@ -544,12 +538,12 @@ public class SignalInterferenceSettings extends OkaeriConfig {
             this.interfereIn = interfereIn;
         }
 
-        public boolean isTwoWay() {
-            return twoWay;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 
@@ -565,12 +559,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private double thresholdBlocks = 0.2;
 
-        @CustomKey("two-way")
+        @CustomKey("check-on")
         @Comment({
-                "When true, the target's movement must also pass this check.",
-                "Default: false"
+                "Which sides' movement must pass: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: SELF"
         })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
         public boolean isEnabled() {
             return enabled;
@@ -588,12 +583,12 @@ public class SignalInterferenceSettings extends OkaeriConfig {
             this.thresholdBlocks = thresholdBlocks;
         }
 
-        public boolean isTwoWay() {
-            return twoWay;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 
@@ -606,10 +601,10 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         @Comment({
                 "VISIBLE interferes when the target is visible; NOT_VISIBLE",
                 "interferes when hidden.",
-                "Default: NOT_VISIBLE"
+                "Default: VISIBLE"
         })
         private SignalInterference.InterfereWhenVisible interfereWhen =
-                SignalInterference.InterfereWhenVisible.NOT_VISIBLE;
+                SignalInterference.InterfereWhenVisible.VISIBLE;
 
         @CustomKey("max-ray-distance")
         @Comment({
@@ -649,20 +644,13 @@ public class SignalInterferenceSettings extends OkaeriConfig {
     public static class Invisible extends OkaeriConfig {
         private boolean enabled = true;
 
+        @CustomKey("check-on")
         @Comment({
-                "Which side's invisibility interferes: TARGET watches the",
-                "tracked target, SELF watches the holder.",
-                "Default: TARGET"
+                "Which sides' invisibility interferes: SELF checks the holder,",
+                "TARGET checks the tracked target, BOTH checks each.",
+                "Default: BOTH"
         })
-        private SignalInterference.InvisibleMode mode =
-                SignalInterference.InvisibleMode.TARGET;
-
-        @CustomKey("two-way")
-        @Comment({
-                "When true, both sides must pass this check.",
-                "Default: false"
-        })
-        private boolean twoWay = false;
+        private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
         public boolean isEnabled() {
             return enabled;
@@ -672,20 +660,12 @@ public class SignalInterferenceSettings extends OkaeriConfig {
             this.enabled = enabled;
         }
 
-        public SignalInterference.InvisibleMode getMode() {
-            return mode;
+        public SignalInterference.CheckOn getCheckOn() {
+            return checkOn;
         }
 
-        public void setMode(SignalInterference.InvisibleMode mode) {
-            this.mode = mode;
-        }
-
-        public boolean isTwoWay() {
-            return twoWay;
-        }
-
-        public void setTwoWay(boolean twoWay) {
-            this.twoWay = twoWay;
+        public void setCheckOn(SignalInterference.CheckOn checkOn) {
+            this.checkOn = checkOn;
         }
     }
 
