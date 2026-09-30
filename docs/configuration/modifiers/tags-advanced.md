@@ -163,20 +163,24 @@ fold case, and `<str.contains:text,needle>` is a case-sensitive
 
 ## Cooldowns
 
-`<cooldown:key,seconds>` stamps the key and yields `true` when no
-stamp exists or the window elapsed, else `false` without
-re-stamping; `<cooldown.get:key,seconds>` reads the remaining
-window (`0` when ready or unknown), and `<cooldown.reset:key>`
-clears and yields `true`. Keys are plain match-scoped strings, so
-compose per-player keys with `<p>`:
+`<pcooldown:player,key,seconds>` gates one player and
+`<gcooldown:key,seconds>` gates match-wide, each with `.get`
+(remaining window, `0` when ready or unknown) and `.reset`
+(clears, yields `true`) siblings. The set tags stamp only when the
+gate opens (no stamp or the window elapsed) and yield `true` then,
+else `false` without touching the stamp, so polling never extends
+a cooldown:
 
 ```yaml
-- '<if:"<cooldown:dash-<p>,5> == false","exit">'
+- '<if:"<pcooldown:<p>,dash,5> == false","exit">'
 - 'effect give <p> minecraft:speed 5 1 true'
 ```
 
-Non-numeric or negative seconds warn and yield `null`, as do blank
-keys. Stamps clear with the match on teardown.
+Player keys namespace below the lower-cased name, so `Steve` and
+`steve` share one cooldown; offline or unknown players resolve
+`null` silently. Non-numeric or negative seconds warn and yield
+`null`, as do blank players and keys. Stamps clear with the match
+on teardown.
 
 ## Loops
 

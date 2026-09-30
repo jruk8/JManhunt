@@ -115,9 +115,12 @@ see the Tags pages for full rules.
 
 | Tag | Meaning |
 | --- | --- |
-| `<cooldown:key,seconds>` | `true` when ready, stamps. |
-| `<cooldown.get:key,seconds>` | Seconds left, else `0`. |
-| `<cooldown.reset:key>` | Clears, `true`. |
+| `<pcooldown:player,key,seconds>` | `true` when ready, stamps. |
+| `<pcooldown.get:player,key,seconds>` | Seconds left, else `0`. |
+| `<pcooldown.reset:player,key>` | Clears, `true`. |
+| `<gcooldown:key,seconds>` | Match-wide gate, `true` when ready. |
+| `<gcooldown.get:key,seconds>` | Seconds left, else `0`. |
+| `<gcooldown.reset:key>` | Clears, `true`. |
 
 ### Flags
 

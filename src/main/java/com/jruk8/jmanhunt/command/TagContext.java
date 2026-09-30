@@ -227,7 +227,7 @@ public final class TagContext {
         return scope;
     }
 
-    /** Cooldown stamps behind {@code <cooldown>} and siblings. */
+    /** Cooldown stamps behind the {@code pcooldown} and {@code gcooldown} tags. */
     public TagCooldownStore cooldowns() {
         return cooldowns;
     }

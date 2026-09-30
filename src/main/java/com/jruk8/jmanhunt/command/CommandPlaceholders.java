@@ -531,8 +531,8 @@ public final class CommandPlaceholders {
                     TagLists.resolve(tag, name, args, context, eval);
             case "str.join", "str.split", "str.lower", "str.upper", "str.contains" ->
                     TagStrings.resolve(tag, name, args, context);
-            case "cooldown", "cooldown.get", "cooldown.reset" ->
-                    TagCooldowns.resolve(tag, name, args, context);
+            case "pcooldown", "pcooldown.get", "pcooldown.reset", "gcooldown", "gcooldown.get",
+                    "gcooldown.reset" -> TagCooldowns.resolve(tag, name, args, context);
             case "default" -> TagExpressions.defaultValue(tag, args, context);
             case "pheld" -> TagItems.held(tag, args, context);
             case "range" -> TagLists.range(tag, args, context);

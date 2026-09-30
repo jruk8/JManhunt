@@ -113,9 +113,12 @@ public final class PlaceholderCheatsheet {
             Map.entry("str.lower", new String[]{"<str.lower:text>", "lowercase"}),
             Map.entry("str.upper", new String[]{"<str.upper:text>", "UPPERCASE"}),
             Map.entry("str.contains", new String[]{"<str.contains:text,needle>", "true when held"}),
-            Map.entry("cooldown", new String[]{"<cooldown:key,seconds>", "true when ready, stamps"}),
-            Map.entry("cooldown.get", new String[]{"<cooldown.get:key,seconds>", "seconds left, else 0"}),
-            Map.entry("cooldown.reset", new String[]{"<cooldown.reset:key>", "clears, true"}),
+            Map.entry("pcooldown", new String[]{"<pcooldown:player,key,seconds>", "true when ready, stamps"}),
+            Map.entry("pcooldown.get", new String[]{"<pcooldown.get:player,key,seconds>", "seconds left, else 0"}),
+            Map.entry("pcooldown.reset", new String[]{"<pcooldown.reset:player,key>", "clears, true"}),
+            Map.entry("gcooldown", new String[]{"<gcooldown:key,seconds>", "true when ready, stamps"}),
+            Map.entry("gcooldown.get", new String[]{"<gcooldown.get:key,seconds>", "seconds left, else 0"}),
+            Map.entry("gcooldown.reset", new String[]{"<gcooldown.reset:key>", "clears, true"}),
             Map.entry("default", new String[]{"<default:value,fallback>", "fallback when blank/null"}),
             Map.entry("pheld", new String[]{"<pheld:player>", "main-hand material, else null"}));
 

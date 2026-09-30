@@ -47,7 +47,8 @@ public final class CommandSyntax {
                 "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt", "root",
                 "while", "for", "i", "def", "run", "format",
                 "str.join", "str.split", "str.lower", "str.upper", "str.contains",
-                "cooldown", "cooldown.get", "cooldown.reset", "default", "pheld");
+                "pcooldown", "pcooldown.get", "pcooldown.reset",
+                "gcooldown", "gcooldown.get", "gcooldown.reset", "default", "pheld");
     }
 
     /**
@@ -259,8 +260,8 @@ public final class CommandSyntax {
             case "range" -> rangeError(name, args);
             case "str.join", "str.split", "str.lower", "str.upper", "str.contains" ->
                     TagStrings.opError(name, args);
-            case "cooldown", "cooldown.get", "cooldown.reset" ->
-                    TagCooldowns.syntaxError(name, args);
+            case "pcooldown", "pcooldown.get", "pcooldown.reset", "gcooldown", "gcooldown.get",
+                    "gcooldown.reset" -> TagCooldowns.syntaxError(name, args);
             case "default" -> topLevelArityError(name, args, 2, "<default:value,fallback>");
             case "active-players" -> activePlayersError(name, args);
             case "plocation", "prole", "pworld", "world", "px", "py", "pz", "pyaw", "ppitch",

@@ -5,9 +5,9 @@ import java.util.Map;
 import java.util.function.LongSupplier;
 
 /**
- * Match-owned cooldown stamps behind {@code <cooldown>},
- * {@code <cooldown.get>}, and {@code <cooldown.reset>}: match id
- * to key to epoch-millis. The game manager owns one; tag runs
+ * Match-owned cooldown stamps behind the {@code pcooldown} and
+ * {@code gcooldown} tag families: match id to key to epoch-millis.
+ * The game manager owns one; tag runs
  * reach it through {@link TagContext#cooldowns()}. The clock is
  * injectable for tests. No Bukkit types.
  */
