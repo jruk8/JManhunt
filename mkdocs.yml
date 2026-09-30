@@ -73,7 +73,13 @@ nav:
           - End Dimensions: configuration/world-engine/end-dimensions.md
           - Pseudoborder Particles: configuration/world-engine/pseudoborder-particles.md
           - Troubleshooting: configuration/world-engine/troubleshooting.md
-      - Modifiers: configuration/modifiers.md
+      - Modifiers:
+          - Overview: configuration/modifiers.md
+          - Behaviors: configuration/modifiers/behaviors.md
+          - Command Lists: configuration/modifiers/command-lists.md
+          - Tags Basics: configuration/modifiers/tags-basics.md
+          - Tags Advanced: configuration/modifiers/tags-advanced.md
+          - Creating: configuration/modifiers/creating.md
       - Game Rules: configuration/game-rules.md
       - Statistics & PlaceholderAPI: configuration/statistics.md
       - Sounds: configuration/sounds.md

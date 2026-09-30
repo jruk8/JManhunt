@@ -135,7 +135,7 @@ while unknown tags and skipped pick items only warn. Set
 `advanced.misc.modifier-editor.validate-commands` to
 false to skip the root and item checks. Each save chats which
 ordinal line was set. See
-[Creating Modifiers and Presets](configuration/modifiers.md#creating-modifiers-and-presets).
+[Creating Modifiers and Presets](configuration/modifiers/creating.md#creating-modifiers-and-presets).
 
 ## Sounds
 

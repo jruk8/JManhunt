@@ -18,7 +18,7 @@ named; changes within the same class stay silent.
 Roles also mirror to vanilla scoreboard teams (`HUNTER`, `SPEEDRUNNER`,
 `SPECTATOR`; `none` and `afk` sit in no team), repaired on every role
 change and login, so datapacks and
-[custom modifiers](../modifiers.md#targeting-sides-with-selectors) can
+[custom modifiers](../modifiers/command-lists.md#targeting-sides-with-selectors) can
 target sides with selectors like `@a[distance=..15,team=HUNTER]`.
 
 Under `settings.roles`, you can control how player roles are assigned and

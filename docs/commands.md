@@ -346,7 +346,7 @@ command list (`--console`, `--player`, `--hunter`, `--speedrunner`,
 values are refused with an error, while unknown command tags only
 warn. The same creator lives in the GUI: a create button sits at the
 top-right of each list, and right-clicking any entry edits it (see
-[Creating Modifiers and Presets](configuration/modifiers.md#creating-modifiers-and-presets)).
+[Creating Modifiers and Presets](configuration/modifiers/creating.md#creating-modifiers-and-presets)).
 
 ### Full Reference
 
