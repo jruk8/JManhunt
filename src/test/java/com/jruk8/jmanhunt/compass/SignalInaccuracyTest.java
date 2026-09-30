@@ -288,7 +288,7 @@ class SignalInaccuracyTest {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
         ConfigPathMapper.set(fixture.root(),
-                "settings.compass.signal.accuracy.hotspot.enabled", true);
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
         UUID target = UUID.randomUUID();
         for (int point = 0; point < 20; point++) {
             fixture.hotspots().record(target, 500.0, 0.0, 40);

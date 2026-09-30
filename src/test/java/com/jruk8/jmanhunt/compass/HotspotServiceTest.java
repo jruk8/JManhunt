@@ -89,7 +89,7 @@ class HotspotServiceTest {
         }
         assertEquals(0.0, fixture.hotspots().reductionFor(id, 0.0, 0.0, null), 0.0);
         ConfigPathMapper.set(fixture.root(),
-                "settings.compass.signal.accuracy.hotspot.enabled", true);
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
         assertEquals(0.9, fixture.hotspots().reductionFor(id, 0.0, 0.0, null), 1e-9);
         assertEquals(0.0, fixture.hotspots().reductionFor(id, 500.0, 0.0, null), 0.0);
     }
@@ -120,9 +120,9 @@ class HotspotServiceTest {
     void tickSamplesDueLobbiesOnly() {
         Fixture fixture = fixture();
         ConfigPathMapper.set(fixture.root(),
-                "settings.compass.signal.accuracy.hotspot.enabled", true);
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
         ConfigPathMapper.set(fixture.root(),
-                "settings.compass.signal.accuracy.hotspot.sample-interval", 10);
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.sample-interval", 10);
         Player player = tracked(fixture, Role.HUNTER, 100.0, 200.0);
         try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
             bukkit.when(() -> Bukkit.getPlayer(any(UUID.class))).thenReturn(player);
@@ -144,7 +144,7 @@ class HotspotServiceTest {
             fixture.hotspots().tick(60_000L);
             assertEquals(0, fixture.hotspots().historySize(watcher.getUniqueId()));
             ConfigPathMapper.set(fixture.root(),
-                    "settings.compass.signal.accuracy.hotspot.enabled", true);
+                    "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
             fixture.hotspots().tick(120_000L);
             assertEquals(0, fixture.hotspots().historySize(watcher.getUniqueId()));
         }

@@ -544,7 +544,7 @@ exactly like refreshed ones.
 
 ### Hotspot
 
-Under `settings.compass.signal.accuracy.hotspot`, idling targets get
+Under `settings.compass.signal.inaccuracy.accuracy-hotspot`, idling targets get
 easier to pin down: every `sample-interval` seconds (default 10) the
 plugin records each live participant's spot, keeping the last
 `max-points` spots (default 40). When many of a target's saved spots

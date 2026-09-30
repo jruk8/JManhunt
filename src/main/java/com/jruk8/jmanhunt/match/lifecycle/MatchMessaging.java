@@ -37,7 +37,7 @@ public final class MatchMessaging {
             return;
         }
         Component rendered = messages.component(key, values);
-        for (Player recipient : store.onlineAssignedPlayers(instance)) {
+        for (Player recipient : store.onlineMatchAudience(instance)) {
             recipient.sendMessage(rendered);
         }
         Bukkit.getConsoleSender().sendMessage(rendered);
@@ -45,21 +45,21 @@ public final class MatchMessaging {
 
     /** Plays a match sound for a match's online players. */
     public void playInstanceSound(GameInstance instance, String key) {
-        for (Player recipient : store.onlineAssignedPlayers(instance)) {
+        for (Player recipient : store.onlineMatchAudience(instance)) {
             sounds.playSound(recipient, key);
         }
     }
 
     /** Plays the neutral click for a match's online players. */
     public void playInstanceNeutral(GameInstance instance) {
-        for (Player recipient : store.onlineAssignedPlayers(instance)) {
+        for (Player recipient : store.onlineMatchAudience(instance)) {
             sounds.playNeutralSound(recipient);
         }
     }
 
     /** Sends a pre-rendered message to a match plus the console, never other matches. */
     public void sendToInstanceComponent(GameInstance instance, Component rendered) {
-        for (Player recipient : store.onlineAssignedPlayers(instance)) {
+        for (Player recipient : store.onlineMatchAudience(instance)) {
             recipient.sendMessage(rendered);
         }
         Bukkit.getConsoleSender().sendMessage(rendered);

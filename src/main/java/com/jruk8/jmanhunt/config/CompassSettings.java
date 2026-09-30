@@ -318,9 +318,6 @@ public class CompassSettings extends OkaeriConfig {
     @SuppressWarnings("FieldMayBeFinal")
     public static class Signal extends OkaeriConfig {
 
-        @Comment("Accuracy bonuses that shrink the error for idling targets.")
-        private SignalAccuracySettings accuracy = new SignalAccuracySettings();
-
         @CustomKey("inaccuracy")
         @Comment({
                 "Signal inaccuracy: when enabled, the needle and/or the shown",
@@ -341,14 +338,6 @@ public class CompassSettings extends OkaeriConfig {
                 "Default: false"
         })
         private SignalInterferenceSettings interference = new SignalInterferenceSettings();
-
-        public SignalAccuracySettings getAccuracy() {
-            return accuracy;
-        }
-
-        public void setAccuracy(SignalAccuracySettings accuracy) {
-            this.accuracy = accuracy;
-        }
 
         public SignalInaccuracySettings getInaccuracy() {
             return inaccuracy;

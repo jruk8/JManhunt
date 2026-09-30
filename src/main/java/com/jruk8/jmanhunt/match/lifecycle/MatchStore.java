@@ -165,6 +165,22 @@ public final class MatchStore {
     }
 
     /**
+     * Online audience for match traffic: assigned members who read in
+     * the match (everyone active, plus eliminated and box watchers
+     * holding participant or spectator roles). Lobby-returned leavers
+     * (deactivated, role NONE) hear nothing more. Cleanup and teleport
+     * code keeps using onlineAssignedPlayers.
+     */
+    public List<Player> onlineMatchAudience(GameInstance instance) {
+        Set<UUID> assigned = instance.assignedPlayerIds();
+        return Bukkit.getOnlinePlayers().stream()
+                .filter(player -> assigned.contains(player.getUniqueId())
+                        && showsInMatchStatus(instance, player.getUniqueId(),
+                                playerStates.role(player)))
+                .map(player -> (Player) player).toList();
+    }
+
+    /**
      * Online match members for status output: the active plus assigned
      * holders of participant and spectator roles. Lobby-returned
      * leavers (deactivated NONE/AFK) read only in lobby status.

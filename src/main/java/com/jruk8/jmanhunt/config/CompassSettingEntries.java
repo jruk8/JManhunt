@@ -33,7 +33,7 @@ private static void addSignalInaccuracyEntries(List<SettingDescriptor> entries) 
 }
 
 private static void addSignalAccuracyEntries(List<SettingDescriptor> entries) {
-    String root = "settings.compass.signal.accuracy.hotspot.";
+    String root = "settings.compass.signal.inaccuracy.accuracy-hotspot.";
     entries.add(bool(root + "enabled", false));
     entries.add(floatVal(root + "hotspot-radius", 50.0, 0.0, null));
     entries.add(intVal(root + "sample-interval", 10, 1, 100));

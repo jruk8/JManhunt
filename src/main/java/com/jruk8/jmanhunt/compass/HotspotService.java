@@ -54,7 +54,7 @@ final class HotspotService {
 
     /** Samples one match when its lobby interval is due. */
     private void tickLobby(GameInstance instance, long nowMillis) {
-        String base = "settings.compass.signal.accuracy.hotspot.";
+        String base = "settings.compass.signal.inaccuracy.accuracy-hotspot.";
         var overrides = plugin.overrides();
         Integer lobby = instance.originLobbyId();
         if (!overrides.getBoolean(lobby, base + "enabled", false)) {
@@ -98,7 +98,7 @@ final class HotspotService {
      * the feature is off or the target has no history.
      */
     double reductionFor(UUID targetId, double x, double z, Integer lobby) {
-        String base = "settings.compass.signal.accuracy.hotspot.";
+        String base = "settings.compass.signal.inaccuracy.accuracy-hotspot.";
         var overrides = plugin.overrides();
         if (targetId == null || !overrides.getBoolean(lobby, base + "enabled", false)) {
             return 0.0;

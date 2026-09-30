@@ -185,6 +185,8 @@ and join matches through `/manhunt game join`. Match members never
 appear in a lobby roster: lobby status lists queue members only, and
 match traffic (leave lines, kill lines, friendly fire) reaches only
 the match compartment plus the console, never sibling lobbies.
+Eliminated spectators keep hearing their match; players who left back
+to the lobby hear nothing more.
 
 ## Lobby and Game Worlds
 
