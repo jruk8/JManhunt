@@ -60,6 +60,8 @@ categories:
   compass/feedback/actionbar/show-distance-delta: ARROW
   compass/feedback/chat-messages: NOTE_BLOCK
   compass/signal: SCULK_SENSOR
+  compass/signal/inaccuracy: END_CRYSTAL
+  compass/signal/inaccuracy/thresholds: HEART_OF_THE_SEA
   compass/signal/interference: REDSTONE_TORCH
   compass/signal/interference/altitude: ELYTRA
   compass/signal/interference/biome: GRASS_BLOCK
@@ -180,6 +182,14 @@ descriptions:
   "settings.compass.feedback.chat-messages": "Chat the holder about compass actions."
   "settings.compass.feedback.chat-messages.enabled": "Lock, switch, and died chat messages."
   "settings.compass.signal": "Needle signal: interference and inaccuracy."
+  "settings.compass.signal.inaccuracy": "Drift the needle and distance off truth."
+  "settings.compass.signal.inaccuracy.enabled": "Wander readings around the target."
+  "settings.compass.signal.inaccuracy.inner-deadzone": "Hole in the middle of the error."
+  "settings.compass.signal.inaccuracy.drift-radius": "Wander range as a share of range."
+  "settings.compass.signal.inaccuracy.thresholds": "When the error starts and caps."
+  "settings.compass.signal.inaccuracy.thresholds.min-distance": "Range past which error starts."
+  "settings.compass.signal.inaccuracy.thresholds.max-distance": "Range past which error caps."
+  "settings.compass.signal.inaccuracy.inaccurate-on": "Drift the needle, distance, or both."
   "settings.compass.signal.interference": "Jam tracking by height, biome, light, and more."
   "settings.compass.signal.interference.altitude": "Jam tracking outside a height band."
   "settings.compass.signal.interference.biome": "Biomes that jam tracking."

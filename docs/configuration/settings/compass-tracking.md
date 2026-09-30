@@ -496,6 +496,40 @@ Interference works best with automatic refreshes off
 on (`actions.manual.enabled: true`): instant refreshes leave no gap
 for movement, doom, or stat changes to matter.
 
+## Signal Inaccuracy
+
+Under `settings.compass.signal.inaccuracy`, the compass can drift off
+the truth instead of failing outright. Every refresh picks a random
+point inside a ring (a donut) around the true spot: the ring grows with
+the true distance, so far targets read fuzzier than near ones. Close
+range stays exact until the `thresholds.min-distance` gate passes.
+
+- `enabled` (default off) is the master switch.
+- `inner-deadzone` (default 0.4) is the hole in the middle of the
+  donut, from 0 up to (but not including) 1. At 0.5 no sample ever
+  lands inside half the outer radius; at 0 the sample may land right
+  on the true spot.
+- `drift-radius` (default 0.6) is how far the readout may wander, as a
+  share of the true distance. At 1 the error reaches up to the full
+  distance away; near 0 it hugs the truth. It clamps to 0.01 at the
+  bottom so the error never fully vanishes while enabled.
+- `thresholds.min-distance` (default 100) is the range past which the
+  error kicks in. Set it to -1 to always apply the error. It must stay
+  below `max-distance` while max is set.
+- `thresholds.max-distance` (default 1000) is the range past which the
+  error stops growing: longer true distances reuse this range for the
+  donut. Set it to -1 for unbounded growth.
+- `inaccurate-on` (default BOTH) picks what drifts: NEEDLE moves only
+  the needle, DISTANCE_FEEDBACK moves only the shown distance, BOTH
+  moves both.
+
+Two guardrails keep the drift honest. The needle only drifts on a plain
+`compass` obtaining item: any other item has no settable needle, so its
+needle stays exact. The distance only drifts while a distance readout
+is visible (`show-distance` or `show-distance-delta.enabled`); with
+both off there is nothing to drift. Scrolled (cache-only) targets drift
+exactly like refreshed ones.
+
 ## WorldEdit Navwand
 
 WorldEdit teleports players who click with a compass, which fights the

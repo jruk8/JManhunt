@@ -32,6 +32,7 @@ public final class CompassManager {
     private final PlayerStateStore playerStates;
     private final CompassTargetService targets;
     private final CompassSignalService signal;
+    private final CompassInaccuracyService inaccuracy;
     private final CompassLockService locks;
     private final CompassItemService items;
     private final CompassCache cache = new CompassCache();
@@ -52,6 +53,7 @@ public final class CompassManager {
         this.playerStates = playerStates;
         this.targets = new CompassTargetService(playerStates, plugin.fakeSpectators());
         this.signal = new CompassSignalService(plugin, playerStates);
+        this.inaccuracy = new CompassInaccuracyService(plugin);
         this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
         this.sessions = new CompassAnalysisSessions(plugin, messages, playerStates, targets,
                 signal, items, compassActionbars);
@@ -445,13 +447,26 @@ public final class CompassManager {
             showCacheBadSignal(holder, item, slot);
             return;
         }
-        setLodestone(item, spot);
-        holder.getInventory().setItem(slot, item);
-        String key = trackingKey(holder, locked, false);
         Location origin = effectiveSpot(cache.holderSpotFor(holder.getUniqueId()),
                 sessions.resolutionSpot(holder));
+        CompassInaccuracyService.Result drifted = resolveInaccuracy(holder, origin, spot);
+        setLodestone(item, drifted.needleSpot());
+        holder.getInventory().setItem(slot, item);
+        String key = trackingKey(holder, locked, false);
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
-                origin.distance(spot), Map.of());
+                drifted.feedbackDistance(), Map.of());
+    }
+
+    /**
+     * Drifts one true spot through the inaccuracy service: the shared
+     * helper behind live, sighting, and cache renders, so scrolled
+     * targets drift exactly like refreshed ones.
+     */
+    private CompassInaccuracyService.Result resolveInaccuracy(Player holder, Location origin,
+            Location truth) {
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        return inaccuracy.resolve(lobbyOf(holder), origin, truth, random.nextDouble(),
+                random.nextDouble());
     }
 
     /** Reasonless Bad Signal for uncached switch targets, by spec. */
@@ -485,11 +500,14 @@ public final class CompassManager {
             showNoTarget(holder, item, slot, targetRoleString);
             return false;
         }
-        setLodestone(item, target.getLocation());
+        Location truth = target.getLocation();
+        CompassInaccuracyService.Result drifted =
+                resolveInaccuracy(holder, sessions.resolutionSpot(holder), truth);
+        setLodestone(item, drifted.needleSpot());
         holder.getInventory().setItem(slot, item);
         String key = trackingKey(holder, locked, false);
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, target.getName(), pick.id(),
-                sessions.resolutionSpot(holder).distance(target.getLocation()), Map.of());
+                drifted.feedbackDistance(), Map.of());
         return true;
     }
 
@@ -504,12 +522,13 @@ public final class CompassManager {
             showNoTarget(holder, item, slot, targetRoleString);
             return false;
         }
-        setLodestone(item, location);
+        CompassInaccuracyService.Result drifted = resolveInaccuracy(holder, origin, location);
+        setLodestone(item, drifted.needleSpot());
         holder.getInventory().setItem(slot, item);
         String reason = seen != null ? "Another Dimension" : "Log-Out";
         String key = trackingKey(holder, locked, true);
         deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
-                origin.distance(location), Map.of("reason", reason));
+                drifted.feedbackDistance(), Map.of("reason", reason));
         return true;
     }
 

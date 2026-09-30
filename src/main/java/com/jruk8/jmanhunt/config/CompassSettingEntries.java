@@ -17,8 +17,19 @@ final class CompassSettingEntries {
 
     static void addAll(List<SettingDescriptor> entries) {
         addCompassEntries(entries);
+        addSignalInaccuracyEntries(entries);
         addSignalInterferenceEntries(entries);
     }
+
+private static void addSignalInaccuracyEntries(List<SettingDescriptor> entries) {
+    String root = "settings.compass.signal.inaccuracy.";
+    entries.add(bool(root + "enabled", false));
+    entries.add(floatVal(root + "inner-deadzone", 0.4, 0.0, 1.0));
+    entries.add(floatVal(root + "drift-radius", 0.6, 0.0, 1.0));
+    entries.add(floatVal(root + "thresholds.min-distance", 100.0, -1.0, null));
+    entries.add(floatVal(root + "thresholds.max-distance", 1000.0, -1.0, null));
+    entries.add(option(root + "inaccurate-on", "BOTH", "NEEDLE", "DISTANCE_FEEDBACK", "BOTH"));
+}
 
 private static void addCompassEntries(List<SettingDescriptor> entries) {
     entries.add(bool("settings.compass.obtaining.given-to.hunters", true));

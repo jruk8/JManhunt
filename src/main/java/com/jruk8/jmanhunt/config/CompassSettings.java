@@ -318,6 +318,16 @@ public class CompassSettings extends OkaeriConfig {
     @SuppressWarnings("FieldMayBeFinal")
     public static class Signal extends OkaeriConfig {
 
+        @CustomKey("inaccuracy")
+        @Comment({
+                "Signal inaccuracy: when enabled, the needle and/or the shown",
+                "distance drift around the true spot inside an error donut that",
+                "grows with distance. Close-range tracking stays exact until",
+                "the min-distance gate passes.",
+                "Default: false"
+        })
+        private SignalInaccuracySettings inaccuracy = new SignalInaccuracySettings();
+
         @CustomKey("interference")
         @Comment({
                 "Signal interference: when enabled, tracking can fail with a Bad",
@@ -328,6 +338,14 @@ public class CompassSettings extends OkaeriConfig {
                 "Default: false"
         })
         private SignalInterferenceSettings interference = new SignalInterferenceSettings();
+
+        public SignalInaccuracySettings getInaccuracy() {
+            return inaccuracy;
+        }
+
+        public void setInaccuracy(SignalInaccuracySettings inaccuracy) {
+            this.inaccuracy = inaccuracy;
+        }
 
         public SignalInterferenceSettings getInterference() {
             return interference;
