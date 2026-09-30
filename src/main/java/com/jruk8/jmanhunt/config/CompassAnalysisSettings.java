@@ -187,11 +187,11 @@ public class CompassAnalysisSettings extends OkaeriConfig {
 
         @CustomKey("cost-on")
         @Comment({
-                "When to charge: INITIATE at press, SUCCESS at resolution.",
-                "List either or both.",
+                "When to charge: INITIATE at press, SUCCESS at resolution,",
+                "BOTH at each.",
                 "Default: INITIATE"
         })
-        private List<String> costOn = new ArrayList<>(List.of("INITIATE"));
+        private String costOn = "INITIATE";
 
         @Comment("One container per charge; each toggles separately.")
         private Payment payment = new Payment();
@@ -207,11 +207,11 @@ public class CompassAnalysisSettings extends OkaeriConfig {
             this.enabled = enabled;
         }
 
-        public List<String> getCostOn() {
+        public String getCostOn() {
             return costOn;
         }
 
-        public void setCostOn(List<String> costOn) {
+        public void setCostOn(String costOn) {
             this.costOn = costOn;
         }
 
@@ -240,6 +240,15 @@ public class CompassAnalysisSettings extends OkaeriConfig {
             @CustomKey("exp-level")
             private ExpLevel expLevel = new ExpLevel();
 
+            @CustomKey("failure-cooldown")
+            @Comment({
+                    "Seconds a holder who cannot pay must wait before",
+                    "refreshing again. Both this and the manual cooldown",
+                    "must pass. At or below 0 disables the wait.",
+                    "Default: 1.0"
+            })
+            private double failureCooldown = 1.0;
+
             public Saturation getSaturation() {
                 return saturation;
             }
@@ -264,10 +273,18 @@ public class CompassAnalysisSettings extends OkaeriConfig {
                 this.expLevel = expLevel;
             }
 
+            public double getFailureCooldown() {
+                return failureCooldown;
+            }
+
+            public void setFailureCooldown(double failureCooldown) {
+                this.failureCooldown = failureCooldown;
+            }
+
             /** Saturation charge. */
             @SuppressWarnings("FieldMayBeFinal")
             public static class Saturation extends OkaeriConfig {
-                private boolean enabled = true;
+                private boolean enabled = false;
 
                 @CustomKey("value")
                 @Comment({
@@ -298,7 +315,7 @@ public class CompassAnalysisSettings extends OkaeriConfig {
             /** Health charge. */
             @SuppressWarnings("FieldMayBeFinal")
             public static class Health extends OkaeriConfig {
-                private boolean enabled = true;
+                private boolean enabled = false;
 
                 @CustomKey("value")
                 @Comment({

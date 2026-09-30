@@ -84,13 +84,15 @@ private static void addCompassAnalysisEntries(List<SettingDescriptor> entries) {
 
 private static void addAnalysisCostEntries(List<SettingDescriptor> entries, String root) {
     entries.add(bool(root + "enabled", false));
-    entries.add(bool(root + "payment.saturation.enabled", true));
+    entries.add(option(root + "cost-on", "INITIATE", "INITIATE", "SUCCESS", "BOTH"));
+    entries.add(bool(root + "payment.saturation.enabled", false));
     entries.add(intVal(root + "payment.saturation.value", 3, 1, 40));
-    entries.add(bool(root + "payment.health.enabled", true));
+    entries.add(bool(root + "payment.health.enabled", false));
     entries.add(intVal(root + "payment.health.value", 4, 1, 100));
     entries.add(bool(root + "payment.health.can-kill", true));
     entries.add(bool(root + "payment.exp-level.enabled", true));
     entries.add(intVal(root + "payment.exp-level.value", 1, 1, 100));
+    entries.add(floatVal(root + "payment.failure-cooldown", 1.0, 0.0, null));
     entries.add(bool(root + "poverty-behavior.cancel-when-poor", true));
     entries.add(bool(root + "poverty-behavior.show-reason", true));
 }

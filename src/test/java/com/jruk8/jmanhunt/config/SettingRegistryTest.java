@@ -120,6 +120,27 @@ class SettingRegistryTest {
     }
 
     @Test
+    void costOnAcceptsInitiateSuccessBoth() {
+        assertEquals("INITIATE",
+                validate("settings.compass.actions.manual.analysis.cost.cost-on", "initiate").value());
+        assertEquals("SUCCESS",
+                validate("settings.compass.actions.manual.analysis.cost.cost-on", "SUCCESS").value());
+        assertEquals("BOTH",
+                validate("settings.compass.actions.manual.analysis.cost.cost-on", "both").value());
+        assertFalse(
+                validate("settings.compass.actions.manual.analysis.cost.cost-on", "maybe").ok());
+    }
+
+    @Test
+    void failureCooldownFloorZero() {
+        assertEquals(1.0, validate(
+                "settings.compass.actions.manual.analysis.cost.payment.failure-cooldown", "1.0")
+                .value());
+        assertFalse(validate(
+                "settings.compass.actions.manual.analysis.cost.payment.failure-cooldown", "-1").ok());
+    }
+
+    @Test
     void countdownStyleAcceptsSimpleAndVersus() {
         assertEquals("VERSUS", validate("settings.match.autostart.countdown-style", "versus").value());
         assertEquals("SIMPLE", validate("settings.match.autostart.countdown-style", "SIMPLE").value());

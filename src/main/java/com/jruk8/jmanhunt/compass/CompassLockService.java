@@ -539,9 +539,7 @@ final class CompassLockService {
     /** Completes an in-flight analysis, charging SUCCESS costs first. */
     private void resolveAnalysis(Player holder, UUID id) {
         analyzing.remove(id);
-        sharedClicks.put(id, System.currentTimeMillis());
-        if (!analysisHost.trySuccessCost(holder)) {
-            analysisHost.cancelAnalysisSnapshots(id);
+        if (!AnalysisResolution.stampClickOnSuccessfulCost(analysisHost, sharedClicks, holder, id)) {
             return;
         }
         if (holder.isOnline()) {
@@ -554,7 +552,6 @@ final class CompassLockService {
             actionbars.remove(id);
         }
     }
-
 
     /** Cancel-early multiplier: 1.0 when the option is disabled. */
     private double cancelEarlyMultiplier(Integer lobby) {

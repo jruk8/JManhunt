@@ -58,7 +58,7 @@ public final class CompassManager {
         this.inaccuracy = new CompassInaccuracyService(plugin, hotspots);
         this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
         this.sessions = new CompassAnalysisSessions(plugin, messages, playerStates, targets,
-                signal, items, compassActionbars);
+                signal, items, compassActionbars, sounds);
         this.locks = new CompassLockService(plugin, playerStates, sounds, messages, targets,
                 compassActionbars, this::refreshCompass, this::resolveClickRefresh,
                 this::renderFromCache, sessions::beginAnalysisSpot, cache, lastClick, sessions);
@@ -669,6 +669,9 @@ public final class CompassManager {
         long cooldownMs = (long) (plugin.overrides()
                 .getDouble(lobby, "settings.compass.actions.manual.cooldown", 3.0) * 1000);
         if (!shouldRefresh(now, lastClick.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
+            return;
+        }
+        if (sessions.failureBlocked(player.getUniqueId(), lobby, now)) {
             return;
         }
         // Right-clicks run on the refresh click cooldown, so a fresh

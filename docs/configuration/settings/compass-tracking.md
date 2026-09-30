@@ -354,25 +354,26 @@ debuffs:
 
 Under `settings.compass.actions.manual.analysis.cost`, each analysis
 can charge the holder in hunger, health, and experience. `cost-on`
-lists when to charge: `INITIATE` at the press, `SUCCESS` at the
-resolution, or both. Each `payment` container toggles separately:
+picks when to charge: `INITIATE` at the press, `SUCCESS` at the
+resolution, or `BOTH` at each. Each `payment` container toggles
+separately:
 
 ```yaml
 cost:
   enabled: false
-  cost-on:
-    - INITIATE
+  cost-on: INITIATE
   payment:
     saturation:
-      enabled: true
+      enabled: false
       value: 3
     health:
-      enabled: true
+      enabled: false
       value: 4
       can-kill: true
     exp-level:
       enabled: true
       value: 1
+    failure-cooldown: 1.0
   poverty-behavior:
     cancel-when-poor: true
     show-reason: true
@@ -388,6 +389,11 @@ message); `show-reason` names each lacking charge with the
 player-stat words (`low health`, `hungry`, `low exp level`). With
 cancelling off, the holder pays whatever they have. At `SUCCESS`,
 a poor holder's result is thrown away and the compass never updates.
+A cost-too-high block never touches the regular refresh cooldown,
+but `failure-cooldown` (seconds, `0` disables) holds further
+refreshes until it passes. Successful charges and blocks each play
+a sound (`sounds.md`, compass section); when several cost types
+apply, one used sound is picked at random.
 
 ### Cancel Early
 

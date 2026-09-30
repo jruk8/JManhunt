@@ -26,6 +26,15 @@ class CompassManagerTest {
     }
 
     @Test
+    void failureGateHoldsInsideWindowOnly() {
+        assertTrue(CompassAnalysisSessions.failureBlockedAt(10_500L, 10_000L, 1.0));
+        assertFalse(CompassAnalysisSessions.failureBlockedAt(11_000L, 10_000L, 1.0));
+        assertFalse(CompassAnalysisSessions.failureBlockedAt(10_500L, 10_000L, 0.0));
+        assertFalse(CompassAnalysisSessions.failureBlockedAt(10_500L, 10_000L, -1.0));
+        assertFalse(CompassAnalysisSessions.failureBlockedAt(10_500L, 0L, 1.0));
+    }
+
+    @Test
     void blinkDelayRoundsToTicks() {
         assertEquals(12L, CompassDeltaRenderer.blinkDelayTicks(0.6));
         assertEquals(0L, CompassDeltaRenderer.blinkDelayTicks(0.0));

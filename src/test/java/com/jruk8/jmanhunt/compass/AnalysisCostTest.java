@@ -11,12 +11,48 @@ class AnalysisCostTest {
 
     @Test
     void chargesAtMatchesPointsCaseInsensitively() {
-        assertTrue(AnalysisCost.chargesAt(List.of("INITIATE"), "INITIATE"));
-        assertTrue(AnalysisCost.chargesAt(List.of("initiate", "success"), "SUCCESS"));
-        assertFalse(AnalysisCost.chargesAt(List.of("INITIATE"), "SUCCESS"));
-        assertFalse(AnalysisCost.chargesAt(List.of("BOGUS"), "INITIATE"));
-        assertFalse(AnalysisCost.chargesAt(null, "INITIATE"));
-        assertFalse(AnalysisCost.chargesAt(List.of("INITIATE"), null));
+        assertTrue(AnalysisCost.chargesAt("INITIATE", "INITIATE"));
+        assertTrue(AnalysisCost.chargesAt("initiate", "INITIATE"));
+        assertTrue(AnalysisCost.chargesAt("SUCCESS", "SUCCESS"));
+        assertTrue(AnalysisCost.chargesAt("success", "success"));
+        assertFalse(AnalysisCost.chargesAt("INITIATE", "SUCCESS"));
+        assertFalse(AnalysisCost.chargesAt("SUCCESS", "INITIATE"));
+        assertFalse(AnalysisCost.chargesAt("INITIATE", null));
+        assertFalse(AnalysisCost.chargesAt("INITIATE", "BOGUS"));
+    }
+
+    @Test
+    void chargesAtBothHitsEachPoint() {
+        assertTrue(AnalysisCost.chargesAt("BOTH", "INITIATE"));
+        assertTrue(AnalysisCost.chargesAt("BOTH", "SUCCESS"));
+        assertTrue(AnalysisCost.chargesAt("both", "success"));
+    }
+
+    @Test
+    void chargesAtFallsBackToInitiate() {
+        assertTrue(AnalysisCost.chargesAt("BOGUS", "INITIATE"));
+        assertFalse(AnalysisCost.chargesAt("BOGUS", "SUCCESS"));
+        assertTrue(AnalysisCost.chargesAt(null, "INITIATE"));
+        assertFalse(AnalysisCost.chargesAt(null, "SUCCESS"));
+        assertFalse(AnalysisCost.chargesAt(null, null));
+    }
+
+    @Test
+    void appliedTypesListsEnabledPositiveChargesInOrder() {
+        AnalysisCost.Payment all = new AnalysisCost.Payment(true, 3, true, 4, true, true, 1);
+
+        assertEquals(List.of("health", "saturation", "exp"), AnalysisCost.appliedTypes(all));
+        assertEquals(List.of("exp"), AnalysisCost.appliedTypes(
+                new AnalysisCost.Payment(false, 3, false, 4, true, true, 1)));
+        assertEquals(List.of(), AnalysisCost.appliedTypes(
+                new AnalysisCost.Payment(false, 40, false, 100, true, false, 100)));
+    }
+
+    @Test
+    void appliedTypesSkipsZeroValuedContainers() {
+        AnalysisCost.Payment zeroed = new AnalysisCost.Payment(true, 0, true, 0, true, true, 0);
+
+        assertEquals(List.of(), AnalysisCost.appliedTypes(zeroed));
     }
 
     @Test

@@ -327,6 +327,7 @@ descriptions:
   "settings.compass.actions.manual.analysis.cost.payment.health.can-kill": "The charge can kill."
   "settings.compass.actions.manual.analysis.cost.payment.exp-level.enabled": "Charge exp levels."
   "settings.compass.actions.manual.analysis.cost.payment.exp-level.value": "Exp levels charged."
+  "settings.compass.actions.manual.analysis.cost.payment.failure-cooldown": "Wait after a cost-too-high block."
   "settings.compass.actions.manual.analysis.cost.poverty-behavior.cancel-when-poor": "Abort when the holder cannot pay."
   "settings.compass.actions.manual.analysis.cost.poverty-behavior.show-reason": "Name each lacking charge."
   "settings.compass.actions.manual.analysis.cancel-early.enabled": "Doomed analyses finish early."

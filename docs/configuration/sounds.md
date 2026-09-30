@@ -65,6 +65,13 @@ Under `compass`, heard by the compass holder:
 - `failure`: when a compass click fails to track: target too near or
   too far, signal interference, no target, or a scroll with nothing
   to cycle to.
+- `cost-too-high`: when an analysis cost is too high to pay. Defaults
+  to the `failure` sound.
+- `cost-used-exp`: when an analysis charges experience levels.
+- `cost-used-health`: when an analysis charges health.
+- `cost-used-saturation`: when an analysis charges the hunger pool.
+  When several cost types apply to one charge, exactly one of these
+  is picked at random.
 
 ## Chat Sounds
 

@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
@@ -13,7 +14,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -31,6 +34,9 @@ final class CompassAnalysisSessions implements AnalysisHost {
     private final CompassSignalService signal;
     private final CompassItemService items;
     private final Map<UUID, Component> compassActionbars;
+    private final SoundService sounds;
+    /** Last cost-too-high block per holder; gates refreshes while fresh. */
+    private final Map<UUID, Long> lastFailure = new HashMap<>();
     /** Analysis press-time holder spots, consumed by one resolution. */
     private final Map<UUID, Location> analysisSpots = new HashMap<>();
     /** Analysis press-time target spots per holder, consumed by one resolution. */
@@ -43,7 +49,7 @@ final class CompassAnalysisSessions implements AnalysisHost {
     CompassAnalysisSessions(JManhuntPlugin plugin, MessageService messages,
             PlayerStateStore playerStates, CompassTargetService targets,
             CompassSignalService signal, CompassItemService items,
-            Map<UUID, Component> compassActionbars) {
+            Map<UUID, Component> compassActionbars, SoundService sounds) {
         this.plugin = plugin;
         this.messages = messages;
         this.playerStates = playerStates;
@@ -51,6 +57,29 @@ final class CompassAnalysisSessions implements AnalysisHost {
         this.signal = signal;
         this.items = items;
         this.compassActionbars = compassActionbars;
+        this.sounds = sounds;
+    }
+
+    /** Failure stamps, exposed for tests. */
+    Map<UUID, Long> lastFailureStamps() {
+        return lastFailure;
+    }
+
+    /** True when a recent cost-too-high block still holds the holder. */
+    boolean failureBlocked(UUID holderId, Integer lobby, long now) {
+        return failureBlockedAt(now, lastFailure.getOrDefault(holderId, 0L),
+                failureCooldownSeconds(lobby));
+    }
+
+    /**
+     * True when the failure stamp still holds: a positive cooldown with
+     * a stamp inside its window. Pure for tests.
+     */
+    static boolean failureBlockedAt(long now, long lastFailureMillis, double failureSeconds) {
+        if (failureSeconds <= 0 || lastFailureMillis <= 0) {
+            return false;
+        }
+        return !CompassManager.shouldRefresh(now, lastFailureMillis, (long) (failureSeconds * 1000));
     }
 
     /** Wires the locks after construction; doom checks narrow through them. */
@@ -202,7 +231,7 @@ private boolean tryCost(Player holder, String point) {
     if (!overrides.getBoolean(lobby, COST_BASE + "enabled", false)) {
         return true;
     }
-    if (!AnalysisCost.chargesAt(overrides.getStringList(lobby, COST_BASE + "cost-on"), point)) {
+    if (!AnalysisCost.chargesAt(overrides.getString(lobby, COST_BASE + "cost-on", "INITIATE"), point)) {
         return true;
     }
     AnalysisCost.Payment payment = costPayment(lobby);
@@ -213,6 +242,8 @@ private boolean tryCost(Player holder, String point) {
             && overrides.getBoolean(lobby, COST_BASE + "poverty-behavior.cancel-when-poor", true)) {
         showCostTooHigh(holder, lacking, overrides.getBoolean(lobby,
                 COST_BASE + "poverty-behavior.show-reason", true));
+        sounds.playSound(holder, "compass.cost-too-high");
+        recordFailure(holder.getUniqueId(), lobby);
         return false;
     }
     AnalysisCost.Charge charge = AnalysisCost.charge(stats, payment);
@@ -220,8 +251,37 @@ private boolean tryCost(Player holder, String point) {
     holder.setFoodLevel(charge.foodLevel());
     holder.setLevel(charge.expLevel());
     holder.setHealth(charge.health());
+    playUsedSound(holder, payment);
     return true;
 }
+
+    /** Stamps the failure cooldown when it is enabled (positive). */
+    private void recordFailure(UUID holderId, Integer lobby) {
+        if (failureCooldownSeconds(lobby) > 0) {
+            lastFailure.put(holderId, System.currentTimeMillis());
+        }
+    }
+
+    private double failureCooldownSeconds(Integer lobby) {
+        return plugin.overrides().getDouble(lobby, COST_BASE + "payment.failure-cooldown", 1.0);
+    }
+
+    /** Plays exactly one used sound for the applied cost types, picked at random. */
+    private void playUsedSound(Player holder, AnalysisCost.Payment payment) {
+        List<String> types = AnalysisCost.appliedTypes(payment);
+        if (types.isEmpty()) {
+            return;
+        }
+        sounds.playSound(holder, "compass.cost-used-" + pickUsedType(types, ThreadLocalRandom.current()));
+    }
+
+    /**
+     * One uniform random pick from the applied cost types. Pure for
+     * tests; single-type lists always yield their only type.
+     */
+    static String pickUsedType(List<String> types, Random random) {
+        return types.get(random.nextInt(types.size()));
+    }
 
 /** Resolved payment containers for one charge. */
 private AnalysisCost.Payment costPayment(Integer lobby) {

@@ -22,7 +22,6 @@ public final class SettingRegistry {
     private static final Set<String> NAMES = Set.copyOf(BY_PATH.keySet());
     private static final Set<String> LIST_PATHS = Set.of(
             "advanced.advanced-match-controls.end-statistics",
-            "settings.compass.actions.manual.analysis.cost.cost-on",
             "settings.compass.actions.manual.analysis.debuffs.commands.player",
             "settings.compass.actions.manual.analysis.debuffs.commands.speedrunner",
             "settings.compass.actions.manual.analysis.debuffs.commands.hunter",

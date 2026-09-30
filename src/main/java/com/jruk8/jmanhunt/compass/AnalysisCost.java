@@ -27,19 +27,41 @@ public final class AnalysisCost {
     }
 
     /**
-     * True when the cost-on list charges at the given point
-     * (INITIATE or SUCCESS), matched case-insensitively. Pure.
+     * True when the cost-on option charges at the given point
+     * (INITIATE or SUCCESS), matched case-insensitively. BOTH matches
+     * both points; null and unrecognized values fall back to INITIATE.
+     * Pure.
      */
-    public static boolean chargesAt(List<String> costOn, String point) {
-        if (costOn == null || point == null) {
+    public static boolean chargesAt(String costOn, String point) {
+        if (point == null) {
             return false;
         }
-        for (String entry : costOn) {
-            if (point.equalsIgnoreCase(entry)) {
-                return true;
-            }
+        if (point.equalsIgnoreCase("SUCCESS")) {
+            return "SUCCESS".equalsIgnoreCase(costOn) || "BOTH".equalsIgnoreCase(costOn);
+        }
+        if (point.equalsIgnoreCase("INITIATE")) {
+            return !"SUCCESS".equalsIgnoreCase(costOn);
         }
         return false;
+    }
+
+    /**
+     * Cost types an enabled payment actually applies (ids matching the
+     * cost-used sound suffixes), in health, hunger, experience order.
+     * Zero-valued containers apply nothing. Pure.
+     */
+    public static List<String> appliedTypes(Payment payment) {
+        List<String> types = new ArrayList<>();
+        if (payment.healthEnabled() && payment.healthValue() > 0) {
+            types.add("health");
+        }
+        if (payment.saturationEnabled() && payment.saturationValue() > 0) {
+            types.add("saturation");
+        }
+        if (payment.expEnabled() && payment.expValue() > 0) {
+            types.add("exp");
+        }
+        return types;
     }
 
     /**

@@ -312,6 +312,26 @@ public class SoundsConfig extends OkaeriConfig {
         private SoundEntry failure =
                 SoundEntry.of("block.cherry_wood_hanging_sign.place", 0.8, 1.0);
 
+        @CustomKey("cost-too-high")
+        @Comment("Heard by the holder when an analysis cost is too high to pay.")
+        private SoundEntry costTooHigh =
+                SoundEntry.of("block.cherry_wood_hanging_sign.place", 0.8, 1.0);
+
+        @CustomKey("cost-used-exp")
+        @Comment("Heard by the holder when an analysis charges experience levels.")
+        private SoundEntry costUsedExp =
+                SoundEntry.of("entity.experience_bottle.throw", 1.0, 1.0);
+
+        @CustomKey("cost-used-health")
+        @Comment("Heard by the holder when an analysis charges health.")
+        private SoundEntry costUsedHealth =
+                SoundEntry.of("entity.camel.eat", 1.2, 0.8);
+
+        @CustomKey("cost-used-saturation")
+        @Comment("Heard by the holder when an analysis charges the hunger pool.")
+        private SoundEntry costUsedSaturation =
+                SoundEntry.of("entity.splash_potion.break", 1.2, 1.0);
+
         public SoundEntry getLeftClick() {
             return leftClick;
         }
@@ -342,6 +362,38 @@ public class SoundsConfig extends OkaeriConfig {
 
         public void setFailure(SoundEntry failure) {
             this.failure = failure;
+        }
+
+        public SoundEntry getCostTooHigh() {
+            return costTooHigh;
+        }
+
+        public void setCostTooHigh(SoundEntry costTooHigh) {
+            this.costTooHigh = costTooHigh;
+        }
+
+        public SoundEntry getCostUsedExp() {
+            return costUsedExp;
+        }
+
+        public void setCostUsedExp(SoundEntry costUsedExp) {
+            this.costUsedExp = costUsedExp;
+        }
+
+        public SoundEntry getCostUsedHealth() {
+            return costUsedHealth;
+        }
+
+        public void setCostUsedHealth(SoundEntry costUsedHealth) {
+            this.costUsedHealth = costUsedHealth;
+        }
+
+        public SoundEntry getCostUsedSaturation() {
+            return costUsedSaturation;
+        }
+
+        public void setCostUsedSaturation(SoundEntry costUsedSaturation) {
+            this.costUsedSaturation = costUsedSaturation;
         }
     }
 
