@@ -415,12 +415,12 @@ public class PlayerSettings extends OkaeriConfig {
 
             @Comment({
                     "Hotbar layout, one character per slot 0 to 8. c is the",
-                    "match browser, p the player teleporter, b the back-to-lobby",
-                    "exit, # an empty slot; anything else is empty too.",
-                    "Must be exactly 9 characters.",
-                    "Default: \"cp######b\""
+                    "match browser, p the player teleporter, s the snowball,",
+                    "b the back-to-lobby exit, # an empty slot; anything",
+                    "else is empty too. Must be exactly 9 characters.",
+                    "Default: \"cp##s###b\""
             })
-            private String layout = "cp######b";
+            private String layout = "cp##s###b";
 
             @CustomKey("lock-on")
             @Comment({
@@ -437,6 +437,42 @@ public class PlayerSettings extends OkaeriConfig {
                     "Default: 25"
             })
             private int tpDistance = 25;
+
+            @Comment({
+                    "Rechargeable spectator snowball: harmless fun while watching.",
+                    "The snowball never leaves its slot, deals no damage,",
+                    "and applies no knockback to anything it hits."
+            })
+            @CustomKey("snowball")
+            public Snowball snowball = new Snowball();
+
+            /** Spectator snowball fun item. */
+            @SuppressWarnings("FieldMayBeFinal")
+            public static class Snowball extends OkaeriConfig {
+                @Comment({"Show the snowball on the toolbar.", "Default: true"})
+                @CustomKey("enabled")
+                private boolean enabled = true;
+
+                @Comment({"Recharge time between throws, in seconds.", "Default: 8"})
+                @CustomKey("cooldown-seconds")
+                private int cooldownSeconds = 8;
+
+                public boolean isEnabled() {
+                    return enabled;
+                }
+
+                public void setEnabled(boolean enabled) {
+                    this.enabled = enabled;
+                }
+
+                public int getCooldownSeconds() {
+                    return cooldownSeconds;
+                }
+
+                public void setCooldownSeconds(int cooldownSeconds) {
+                    this.cooldownSeconds = cooldownSeconds;
+                }
+            }
 
             public String getLayout() {
                 return layout;

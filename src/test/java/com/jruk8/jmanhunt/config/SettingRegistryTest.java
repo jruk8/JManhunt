@@ -102,6 +102,16 @@ class SettingRegistryTest {
     }
 
     @Test
+    void snowballCooldownFloorZero() {
+        assertEquals(8, validate(
+                "settings.players.spectator.toolbar.snowball.cooldown-seconds", "8").value());
+        assertFalse(validate(
+                "settings.players.spectator.toolbar.snowball.cooldown-seconds", "-1").ok());
+        assertEquals(Boolean.TRUE, validate(
+                "settings.players.spectator.toolbar.snowball.enabled", "true").value());
+    }
+
+    @Test
     void optionMatchesCaseInsensitivelyToCanonical() {
         var outcome = validate("settings.match.start-on-speedrunner-damage.on-expire", "cancel");
 

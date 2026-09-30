@@ -564,9 +564,11 @@ public final class SettingRegistry {
         entries.add(bool("settings.players.friendly-fire.broadcast-kills", true));
         entries.add(bool("settings.players.invulnerability.on-game-end.enabled", true));
         entries.add(bool("settings.players.invulnerability.none-players.enabled", true));
-        entries.add(stringLength("settings.players.spectator.toolbar.layout", "cp######b", 9));
+        entries.add(stringLength("settings.players.spectator.toolbar.layout", "cp##s###b", 9));
         entries.add(bool("settings.players.spectator.toolbar.lock-on", true));
         entries.add(intVal("settings.players.spectator.toolbar.tp-distance", 25, 1, null));
+        entries.add(bool("settings.players.spectator.toolbar.snowball.enabled", true));
+        entries.add(intVal("settings.players.spectator.toolbar.snowball.cooldown-seconds", 8, 0, null));
         entries.add(bool("settings.players.spectator.travel.enabled", true));
         entries.add(floatVal("settings.players.spectator.travel.max-distance", 125.0, 0.0, null));
         entries.add(bool("settings.players.announce-roles.chat.enabled", true));

@@ -71,15 +71,31 @@ work, since they only use their own top half.
 ### Layout
 
 `settings.players.spectator.toolbar.layout` maps hotbar slots 0 to 8,
-one character per slot, default `cp######b`:
+one character per slot, default `cp##s###b`:
 
 - `c`: match browser (compass).
 - `p`: player teleporter (blaze rod).
+- `s`: snowball toss (snowball, middle slot).
 - `b`: back to lobby (paper).
 - `#`: empty slot. Any other character is empty too.
 
 The layout must be exactly 9 characters; anything else falls back to
 the default.
+
+### Snowball
+
+The `s` slot holds a rechargeable snowball: pure fun while watching.
+Throwing it never consumes it, it deals no damage and applies no
+knockback to anything it hits (players, mobs, end crystals, armor
+stands, item frames), and every participant and spectator sees it fly.
+Right-click air to throw; aiming at a block throws nothing, since
+spectators cannot interact with blocks.
+
+`settings.players.spectator.toolbar.snowball.enabled` (default `true`)
+shows or hides the item; disabled layouts render `s` as empty.
+`settings.players.spectator.toolbar.snowball.cooldown-seconds`
+(default 8, minimum 0) sets the recharge time. The thrown snowball is
+a plain visible projectile, so it is never hidden from anyone.
 
 ### Buttons
 

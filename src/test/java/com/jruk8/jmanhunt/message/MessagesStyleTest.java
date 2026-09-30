@@ -131,6 +131,14 @@ class MessagesStyleTest {
     }
 
     @Test
+    void snowballCooldownKeyCarriesSeconds() {
+        YamlConfiguration messages = loadSchemaMessages();
+
+        String cooldown = messages.getString("spectator.snowball-cooldown", "");
+        assertTrue(cooldown.contains("{seconds}"), "snowball-cooldown needs {seconds}");
+    }
+
+    @Test
     void sublobbyQueueKeysExistWithSlots() {
         YamlConfiguration messages = loadSchemaMessages();
 

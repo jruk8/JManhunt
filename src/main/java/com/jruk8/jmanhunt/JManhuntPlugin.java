@@ -41,6 +41,8 @@ import com.jruk8.jmanhunt.placeholders.PlaceholderConfigRegistrar;
 import com.jruk8.jmanhunt.gui.menus.SpectatorMenus;
 import com.jruk8.jmanhunt.player.FakeSpectatorListener;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import com.jruk8.jmanhunt.player.SpectatorSnowballListener;
+import com.jruk8.jmanhunt.player.SpectatorSnowballService;
 import com.jruk8.jmanhunt.player.SpectatorToolbarListener;
 import com.jruk8.jmanhunt.player.SpectatorToolbarService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -393,6 +395,9 @@ public final class JManhuntPlugin extends JavaPlugin {
         SpectatorMenus menus = new SpectatorMenus(messages, guiService, spectatorToolbar);
         getServer().getPluginManager().registerEvents(
                 new SpectatorToolbarListener(spectatorToolbar, menus), this);
+        SpectatorSnowballService snowballs = new SpectatorSnowballService(
+                this, spectatorToolbar, messages, sounds);
+        getServer().getPluginManager().registerEvents(new SpectatorSnowballListener(snowballs), this);
     }
 
     private void setupScheduling() {

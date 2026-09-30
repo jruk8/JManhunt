@@ -18,6 +18,8 @@ import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import io.papermc.paper.datacomponent.DataComponentTypes;
+import io.papermc.paper.datacomponent.item.UseCooldown;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -49,7 +51,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     public static final String TP_DISTANCE_PATH = "settings.players.spectator.toolbar.tp-distance";
 
     /** Fallback layout when the configured one is not 9 characters. */
-    public static final String DEFAULT_LAYOUT = "cp######b";
+    public static final String DEFAULT_LAYOUT = "cp##s###b";
 
     /** Double-shift pair window for follow exit, in milliseconds. */
     public static final long SNEAK_PAIR_WINDOW_MILLIS = 500L;
@@ -58,6 +60,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     public enum ToolbarButton {
         LOBBIES,
         PLAYERS,
+        SNOWBALL,
         BACK,
         EMPTY
     }
@@ -113,9 +116,10 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
 
     /**
      * Parses a layout into 9 hotbar buttons: c browses matches, p
-     * teleports to players, b returns to the lobby, # is empty, and
-     * anything else is empty too. Anything but a 9-character string
-     * falls back to the default layout. Pure for tests.
+     * teleports to players, s throws the snowball, b returns to the
+     * lobby, # is empty, and anything else is empty too. Anything but
+     * a 9-character string falls back to the default layout. Pure for
+     * tests.
      */
     public static ToolbarButton[] parseLayout(String layout) {
         String effective = layout != null && layout.length() == 9 ? layout : DEFAULT_LAYOUT;
@@ -124,6 +128,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             buttons[slot] = switch (effective.charAt(slot)) {
                 case 'c' -> ToolbarButton.LOBBIES;
                 case 'p' -> ToolbarButton.PLAYERS;
+                case 's' -> ToolbarButton.SNOWBALL;
                 case 'b' -> ToolbarButton.BACK;
                 default -> ToolbarButton.EMPTY;
             };
@@ -466,8 +471,12 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         inventory.setArmorContents(new ItemStack[4]);
         inventory.setItemInOffHand(null);
         ToolbarButton[] buttons = layout(player);
+        boolean snowball = snowballEnabled(player);
         for (int slot = 0; slot < buttons.length; slot++) {
-            ItemStack button = buttonItem(buttons[slot]);
+            if (buttons[slot] == ToolbarButton.SNOWBALL && !snowball) {
+                continue;
+            }
+            ItemStack button = buttonItem(player, buttons[slot]);
             if (button != null) {
                 inventory.setItem(slot, button);
             }
@@ -508,7 +517,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         }
     }
 
-    private ItemStack buttonItem(ToolbarButton button) {
+    private ItemStack buttonItem(Player player, ToolbarButton button) {
         return switch (button) {
             case LOBBIES -> toolbarItem(Material.COMPASS, 'c',
                     "spectator.toolbar-lobbies-name", "Browse Matches",
@@ -518,12 +527,58 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
                     "spectator.toolbar-players-name", "Spectate Player",
                     "spectator.toolbar-players-lore",
                     "Teleport to a player\\nand follow them");
+            case SNOWBALL -> snowballItem(snowballCooldownSeconds(player));
             case BACK -> toolbarItem(Material.PAPER, 'b',
                     "spectator.toolbar-back-name", "Back to Lobby",
                     "spectator.toolbar-back-lore",
                     "Return to your lobby\\nLeave spectator mode");
             case EMPTY -> null;
         };
+    }
+
+    /** Snowball section toggle path. */
+    public static final String SNOWBALL_ENABLED_PATH =
+            "settings.players.spectator.toolbar.snowball.enabled";
+
+    /** Snowball cooldown path, in seconds. */
+    public static final String SNOWBALL_COOLDOWN_PATH =
+            "settings.players.spectator.toolbar.snowball.cooldown-seconds";
+
+    /** True when the snowball button deploys for the spectator. */
+    public boolean snowballEnabled(Player spectator) {
+        return overrides.getBoolean(lobbyOf(spectator), SNOWBALL_ENABLED_PATH, true);
+    }
+
+    /** Snowball recharge time in seconds, never negative. */
+    public int snowballCooldownSeconds(Player spectator) {
+        return Math.max(0, overrides.getInt(lobbyOf(spectator), SNOWBALL_COOLDOWN_PATH, 8));
+    }
+
+    /** Hotbar slot holding the snowball in a parsed layout, or -1 when absent. Pure for tests. */
+    static int snowballSlot(ToolbarButton[] buttons) {
+        for (int slot = 0; slot < buttons.length; slot++) {
+            if (buttons[slot] == ToolbarButton.SNOWBALL) {
+                return slot;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Fresh tagged snowball stack, count 1, for deploy and post-throw
+     * restore. Carries the item-native use cooldown, so no plugin-side
+     * cooldown state is needed for honest clients.
+     */
+    public ItemStack snowballItem(int cooldownSeconds) {
+        ItemStack item = toolbarItem(Material.SNOWBALL, 's',
+                "spectator.toolbar-snowball-name", "Snowball Toss",
+                "spectator.toolbar-snowball-lore",
+                "Harmless fun for spectators\\nZero damage, zero knockback");
+        if (cooldownSeconds > 0) {
+            item.setData(DataComponentTypes.USE_COOLDOWN,
+                    UseCooldown.useCooldown((float) cooldownSeconds).build());
+        }
+        return item;
     }
 
     private ItemStack toolbarItem(Material material, char button,

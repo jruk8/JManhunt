@@ -67,6 +67,15 @@ public class SpectatorMessages extends OkaeriConfig {
     @CustomKey("follow-exited")
     private String followExited = "{prefix}<gray>Stopped following <white>{player}<gray>.";
 
+    @CustomKey("toolbar-snowball-name")
+    private String toolbarSnowballName = "Snowball Toss";
+
+    @CustomKey("toolbar-snowball-lore")
+    private String toolbarSnowballLore = "Harmless fun for spectators\\nZero damage, zero knockback";
+
+    @CustomKey("snowball-cooldown")
+    private String snowballCooldown = "{prefix}<yellow>Snowball recharging: <white>{seconds}s<yellow>.";
+
     @CustomKey("scroll-up")
     private String scrollUp = "Scroll up";
 

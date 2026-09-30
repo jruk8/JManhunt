@@ -3,6 +3,10 @@ package com.jruk8.jmanhunt.player;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -42,6 +46,66 @@ class SpectatorToolbarServiceTest {
         for (int slot = 2; slot < 8; slot++) {
             assertEquals(SpectatorToolbarService.ToolbarButton.EMPTY, buttons[slot]);
         }
+    }
+
+    @Test
+    void snowballParsesToMiddleSlot() {
+        SpectatorToolbarService.ToolbarButton[] buttons =
+                SpectatorToolbarService.parseLayout("cp##s###b");
+
+        assertEquals(SpectatorToolbarService.ToolbarButton.SNOWBALL, buttons[4]);
+        assertEquals(4, SpectatorToolbarService.snowballSlot(buttons));
+        assertEquals(-1, SpectatorToolbarService.snowballSlot(
+                SpectatorToolbarService.parseLayout("cp######b")));
+    }
+
+    @Test
+    void snowballSettingsDefaultOnWithEightSeconds() {
+        // Real item builds need a running server; the item-native
+        // cooldown component itself is covered by manual QA on live.
+        SnowballFixture fixture = snowballFixture(0, null, null);
+
+        assertTrue(fixture.toolbar().snowballEnabled(fixture.player()));
+        assertEquals(8, fixture.toolbar().snowballCooldownSeconds(fixture.player()));
+    }
+
+    @Test
+    void snowballSettingsReadOverridesWithFloor() {
+        SnowballFixture fixture = snowballFixture(2, false, -5);
+
+        assertFalse(fixture.toolbar().snowballEnabled(fixture.player()));
+        assertEquals(0, fixture.toolbar().snowballCooldownSeconds(fixture.player()));
+    }
+
+    private record SnowballFixture(SpectatorToolbarService toolbar, Player player) {
+    }
+
+    private SnowballFixture snowballFixture(int lobby, Boolean enabled, Integer seconds) {
+        OverrideService overrides = mock(OverrideService.class);
+        GameManager game = mock(GameManager.class);
+        Player player = mock(Player.class);
+        UUID id = UUID.randomUUID();
+        when(player.getUniqueId()).thenReturn(id);
+        when(game.lobbyOfPlayer(id)).thenReturn(lobby);
+        if (enabled == null || seconds == null) {
+            when(overrides.getBoolean(eq(lobby), anyString(), anyBoolean()))
+                    .thenAnswer(invocation -> invocation.getArgument(2));
+            when(overrides.getInt(eq(lobby), anyString(), anyInt()))
+                    .thenAnswer(invocation -> invocation.getArgument(2));
+        } else {
+            when(overrides.getBoolean(eq(lobby),
+                    eq(SpectatorToolbarService.SNOWBALL_ENABLED_PATH), eq(true)))
+                    .thenReturn(enabled);
+            when(overrides.getInt(eq(lobby),
+                    eq(SpectatorToolbarService.SNOWBALL_COOLDOWN_PATH), eq(8)))
+                    .thenReturn(seconds);
+        }
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(overrides,
+                mock(MessageService.class), mock(SoundService.class), new PlayerStateStore(),
+                mock(FakeSpectatorService.class), game,
+                mock(LobbyService.class),
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        return new SnowballFixture(toolbar, player);
     }
 
     @Test

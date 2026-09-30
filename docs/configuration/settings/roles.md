@@ -208,13 +208,18 @@ settings:
   players:
     spectator:
       toolbar:
-        layout: "cp######b"
+        layout: "cp##s###b"
         lock-on: true
         tp-distance: 25
+        snowball:
+          enabled: true
+          cooldown-seconds: 8
 ```
 
 `layout` maps hotbar slots 0 to 8 (`c` match browser, `p` player
-teleporter, `b` back to lobby, `#` empty) and must be exactly 9
-characters. `lock-on` follows teleported-to players, pulling the
-spectator back within `tp-distance` blocks every 5 ticks until they
-move. See [Spectating](../../spectating.md) for the full behavior.
+teleporter, `s` snowball, `b` back to lobby, `#` empty) and must be
+exactly 9 characters. `lock-on` follows teleported-to players, pulling
+the spectator back within `tp-distance` blocks every 5 ticks until
+they move. `snowball` is the rechargeable spectator snowball (zero
+damage, zero knockback) with its own toggle and recharge time in
+seconds. See [Spectating](../../spectating.md) for the full behavior.

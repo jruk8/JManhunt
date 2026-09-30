@@ -92,6 +92,7 @@ categories:
   players/announce-roles/sounds: MUSIC_DISC_13
   players/spectator: ECHO_SHARD
   players/spectator/toolbar: BLAZE_ROD
+  players/spectator/toolbar/snowball: SNOWBALL
   players/spectator/travel: LEAD
   server: BELL
   server/status: MAP
@@ -386,9 +387,12 @@ descriptions:
   "settings.players.announce-roles.title.fade-in-seconds": "Title fade-in time in seconds."
   "settings.players.announce-roles.title.stay-seconds": "Title stay time in seconds."
   "settings.players.announce-roles.title.fade-out-seconds": "Title fade-out time in seconds."
-  "settings.players.spectator.toolbar.layout": "Hotbar slots: c matches, p players, b lobby."
+  "settings.players.spectator.toolbar.layout": "Hotbar slots: c matches, p players, s snowball, b lobby."
   "settings.players.spectator.toolbar.lock-on": "Follow teleported-to players automatically."
   "settings.players.spectator.toolbar.tp-distance": "Follow range in blocks before teleporting."
+  "settings.players.spectator.toolbar.snowball": "Rechargeable harmless snowball item."
+  "settings.players.spectator.toolbar.snowball.enabled": "Show the snowball on the toolbar."
+  "settings.players.spectator.toolbar.snowball.cooldown-seconds": "Snowball recharge time in seconds."
   "settings.players.spectator.travel.enabled": "Pull back spectators who roam too far."
   "settings.players.spectator.travel.max-distance": "Blocks from players or last-seen spots."
   "settings.server.announce-config-changes": "Broadcast config changes to admins."

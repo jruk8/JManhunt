@@ -36,6 +36,11 @@ public final class SpectatorToolbarListener implements Listener {
         if (button.isEmpty()) {
             return;
         }
+        if (button.get() == 's' && toolbar.isDeployed(player)) {
+            // Snowball throws vanilla: the snowball service owns cooldown,
+            // restore, and the zero-damage guarantee from here on.
+            return;
+        }
         // Runs even when the fake-spectator gate already cancelled: the
         // cancellation only stops vanilla behavior, never this handler.
         event.setCancelled(true);
