@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.player;
 
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -96,13 +97,23 @@ public class SpectatorSnowballService {
         }
     }
 
-    /** Restores the snowball to its layout slot after a throw consumes it. */
+    /**
+     * Restores the snowball to its layout slot one tick after the throw:
+     * vanilla consumes the item after the launch event, so a synchronous
+     * write would be eaten. Shooters who logged out or undeployed before
+     * the tick get nothing back.
+     */
     private void restoreSnowball(Player shooter) {
         int slot = SpectatorToolbarService.snowballSlot(toolbar.layout(shooter));
         if (slot < 0) {
             return;
         }
-        shooter.getInventory().setItem(
-                slot, toolbar.snowballItem(toolbar.snowballCooldownSeconds(shooter)));
+        int seconds = toolbar.snowballCooldownSeconds(shooter);
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!shooter.isOnline() || !toolbar.isDeployed(shooter)) {
+                return;
+            }
+            shooter.getInventory().setItem(slot, toolbar.snowballItem(seconds));
+        });
     }
 }

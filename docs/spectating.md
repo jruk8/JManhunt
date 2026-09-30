@@ -127,15 +127,18 @@ a plain visible projectile, so it is never hidden from anyone.
 - `c` (right-click) opens the match browser: every running match.
   Sublobby matches glow and sort to the top. Clicking an entry moves
   the spectator into that match and lands them on the shared spectator
-  spawn pick (see below). Moving within
+  spawn pick (see below), with a neutral sound. Clicking the current
+  match chats an already-here line instead of moving. Moving within
   the same lobby (including into its sublobbies) is always allowed;
   switching to another lobby's match needs the
   `jmanhunt.spectator.swaplobby` permission.
 - `p` opens the player browser: heads of online speedrunners and
   hunters in the spectator's match (or lobby, when outside matches),
   each described by its role in that role's color. Clicking a head
-  plays a click, chats a spectate confirmation, teleports to that
-  player, and locks on. The locked player's head glows.
+  plays a neutral sound, chats a spectate confirmation, teleports to
+  that player, and locks on. Clicking the already-followed head chats
+  an already-spectating line instead of re-teleporting. The locked
+  player's head glows.
 
 ### Lock-on
 

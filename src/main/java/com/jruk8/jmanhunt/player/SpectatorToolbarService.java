@@ -384,11 +384,14 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
                 .filter(instance -> instance.active() && !instance.ending());
         if (target.isEmpty()) {
             messages.message(spectator, "spectator.match-gone");
+            sounds.playAngrySound(spectator);
             spectator.closeInventory();
             return false;
         }
         Optional<GameInstance> current = game.instanceOf(spectator.getUniqueId());
         if (current.isPresent() && current.get().matchId() == matchId) {
+            messages.message(spectator, "spectator.already-in-match");
+            sounds.playNeutralSound(spectator);
             spectator.closeInventory();
             return true;
         }
@@ -399,16 +402,19 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         if (fromLobby != null && fromLobby != target.get().originLobbyId()
                 && !spectator.hasPermission(SWAP_LOBBY_PERMISSION)) {
             messages.message(spectator, "command.no-permission");
+            sounds.playAngrySound(spectator);
             return false;
         }
         current.ifPresent(old -> game.leaveMatch(old, List.of(spectator), false));
         if (game.joinPlayers(target.get(), List.of(spectator), Role.SPECTATOR) == 0) {
             messages.message(spectator, "spectator.match-gone");
+            sounds.playAngrySound(spectator);
             spectator.closeInventory();
             return false;
         }
         teleportToPriority(spectator, target.get());
         clearLock(spectator.getUniqueId());
+        sounds.playNeutralSound(spectator);
         spectator.closeInventory();
         return true;
     }
@@ -446,15 +452,24 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     }
 
     /**
-     * Teleports to a player and locks on when lock-on applies. Always
-     * chats the spectate confirmation; without a lock the follow
-     * actionbar stays empty since there is nothing to follow.
+     * Teleports to a player and locks on when lock-on applies, chatting
+     * the spectate confirmation; without a lock the follow actionbar
+     * stays empty since there is nothing to follow. Re-clicking the
+     * locked target chats the already-spectating line instead.
      */
     public boolean teleportAndLock(Player spectator, UUID targetId) {
         Player target = Bukkit.getPlayer(targetId);
         if (target == null) {
+            sounds.playAngrySound(spectator);
             spectator.closeInventory();
             return false;
+        }
+        if (lockOn(spectator) && targetId.equals(lockedTarget(spectator.getUniqueId()))) {
+            messages.message(spectator, "spectator.already-spectating",
+                    Map.of("player", target.getName()));
+            sounds.playNeutralSound(spectator);
+            spectator.closeInventory();
+            return true;
         }
         spectator.teleport(target.getLocation());
         if (lockOn(spectator) && targetValid(candidateOf(target))) {
@@ -465,6 +480,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         messages.message(spectator, "spectator.now-spectating",
                 Map.of("role", messages.roleName(playerStates.role(target)),
                         "player", target.getName()));
+        sounds.playNeutralSound(spectator);
         spectator.closeInventory();
         return true;
     }

@@ -61,6 +61,13 @@ public class SpectatorMessages extends OkaeriConfig {
     @CustomKey("now-spectating")
     private String nowSpectating = "{prefix}<green>Now spectating [{role}<green>] <white>{player}";
 
+    @CustomKey("already-in-match")
+    private String alreadyInMatch = "{prefix}<yellow>You are already spectating this match.";
+
+    @CustomKey("already-spectating")
+    private String alreadySpectating = "{prefix}<yellow>You are already spectating "
+            + "<white>{player}<yellow>.";
+
     @CustomKey("following-actionbar")
     private String followingActionbar = "<gray>Following [{role}<gray>] <white>{player} <gray>• double-shift to exit";
 

@@ -94,9 +94,7 @@ public final class SpectatorMenus {
                                     .replace("{label}", entry.label()),
                             entry.label()),
                     GuiTexts.lore(messages, lore), entry.subLobby(), false,
-                    entry.current()
-                            ? Player::closeInventory
-                            : player -> toolbar.swapSpectator(player, entry.matchId())));
+                    player -> toolbar.swapSpectator(player, entry.matchId())).silent());
         }
         return buttons;
     }
@@ -111,6 +109,7 @@ public final class SpectatorMenus {
                             text("players-entry-hint", "Click to teleport and follow"))),
                     entry.locked(), false,
                     player -> toolbar.teleportAndLock(player, entry.id()))
+                    .silent()
                     .withMeta(meta -> {
                         if (meta instanceof SkullMeta skull) {
                             skull.setOwnerProfile(Bukkit.createPlayerProfile(entry.id()));

@@ -521,17 +521,17 @@ final class CompassLockService {
         return false;
     }
 
-    /** Cancels an in-flight analysis with a cancelled bad signal. Always on. */
+    /** Cancels an analysis, pushing the bar at once for compassless holders. Always on. */
     private void cancelAnalysis(BukkitTask task, UUID id, Player holder) {
         task.cancel();
         analyzing.remove(id);
         generations.merge(id, 1L, Long::sum);
         sharedClicks.put(id, System.currentTimeMillis());
         analysisHost.cancelAnalysisSnapshots(id);
-        actionbars.put(id, messages.component("compass.bad-signal-reason-actionbar",
-                Map.of("reason",
-                        messages.string("compass.signal-reason.cancelled", "cancelled"))));
+        actionbars.put(id, messages.component("compass.bad-signal-reason-actionbar", Map.of(
+                "reason", messages.string("compass.signal-reason.cancelled", "cancelled"))));
         if (holder.isOnline()) {
+            holder.sendActionBar(actionbars.get(id));
             sounds.playSound(holder, "compass.failure");
         }
     }

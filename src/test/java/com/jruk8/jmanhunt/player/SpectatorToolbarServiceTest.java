@@ -8,24 +8,32 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -33,6 +41,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 /** Spectator toolbar layout, targeting, lock breaks, and item identity. */
 class SpectatorToolbarServiceTest {
@@ -340,5 +349,132 @@ class SpectatorToolbarServiceTest {
 
         assertFalse(toolbar.isDeployed(hunter));
         verify(inventory, never()).setHelmet(any());
+    }
+
+    private record SwapFixture(SpectatorToolbarService toolbar, GameManager game,
+            LobbyService lobbies, MessageService messages, SoundService sounds, Player spectator) {
+    }
+
+    private static SwapFixture swapFixture() {
+        GameManager game = mock(GameManager.class);
+        LobbyService lobbies = mock(LobbyService.class);
+        MessageService messages = mock(MessageService.class);
+        SoundService sounds = mock(SoundService.class);
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(
+                mock(OverrideService.class), messages, sounds, new PlayerStateStore(),
+                mock(FakeSpectatorService.class), game, lobbies,
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        Player spectator = mock(Player.class);
+        when(spectator.getUniqueId()).thenReturn(UUID.randomUUID());
+        return new SwapFixture(toolbar, game, lobbies, messages, sounds, spectator);
+    }
+
+    private static GameInstance liveMatch(long matchId) {
+        GameInstance instance = mock(GameInstance.class);
+        when(instance.active()).thenReturn(true);
+        when(instance.ending()).thenReturn(false);
+        when(instance.matchId()).thenReturn(matchId);
+        return instance;
+    }
+
+    @Test
+    void swapToSameMatchMessagesInsteadOfMoving() {
+        SwapFixture fixture = swapFixture();
+        GameInstance current = liveMatch(7L);
+        when(fixture.game().instance(7L)).thenReturn(Optional.of(current));
+        when(fixture.game().instanceOf(fixture.spectator().getUniqueId()))
+                .thenReturn(Optional.of(current));
+
+        assertTrue(fixture.toolbar().swapSpectator(fixture.spectator(), 7L));
+
+        verify(fixture.messages()).message(fixture.spectator(), "spectator.already-in-match");
+        verify(fixture.sounds()).playNeutralSound(fixture.spectator());
+        verify(fixture.spectator()).closeInventory();
+        verify(fixture.game(), never()).leaveMatch(any(), any(), anyBoolean());
+        verify(fixture.game(), never()).joinPlayers(any(), any(), any());
+    }
+
+    @Test
+    void swapSuccessPlaysNeutral() {
+        SwapFixture fixture = swapFixture();
+        GameInstance target = liveMatch(7L);
+        when(fixture.game().instance(7L)).thenReturn(Optional.of(target));
+        when(fixture.game().instanceOf(fixture.spectator().getUniqueId()))
+                .thenReturn(Optional.empty());
+        when(fixture.lobbies().lobbyOf(fixture.spectator().getUniqueId()))
+                .thenReturn(Optional.empty());
+        when(fixture.game().joinPlayers(eq(target), any(), eq(Role.SPECTATOR))).thenReturn(1);
+        SpectatorToolbarService toolbar = spy(fixture.toolbar());
+        doNothing().when(toolbar).teleportToPriority(any(), any());
+
+        assertTrue(toolbar.swapSpectator(fixture.spectator(), 7L));
+
+        verify(fixture.sounds()).playNeutralSound(fixture.spectator());
+        verify(fixture.spectator()).closeInventory();
+    }
+
+    @Test
+    void swapToGoneMatchPlaysAngry() {
+        SwapFixture fixture = swapFixture();
+        when(fixture.game().instance(7L)).thenReturn(Optional.empty());
+
+        assertFalse(fixture.toolbar().swapSpectator(fixture.spectator(), 7L));
+
+        verify(fixture.messages()).message(fixture.spectator(), "spectator.match-gone");
+        verify(fixture.sounds()).playAngrySound(fixture.spectator());
+        verify(fixture.spectator()).closeInventory();
+    }
+
+    @Test
+    void teleportRelockMessagesInsteadOfTeleporting() {
+        OverrideService overrides = mock(OverrideService.class);
+        when(overrides.getBoolean(any(), anyString(), anyBoolean())).thenReturn(true);
+        MessageService messages = mock(MessageService.class);
+        when(messages.roleName(any())).thenReturn("Hunter");
+        SoundService sounds = mock(SoundService.class);
+        PlayerStateStore players = new PlayerStateStore();
+        GameManager game = mock(GameManager.class);
+        when(game.instanceOf(any())).thenReturn(Optional.empty());
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(overrides, messages,
+                sounds, players, mock(FakeSpectatorService.class), game,
+                mock(LobbyService.class),
+                new NamespacedKey("jmanhunt", "spectator_toolbar"));
+        Player spectator = mock(Player.class);
+        when(spectator.getUniqueId()).thenReturn(UUID.randomUUID());
+        Player target = mock(Player.class);
+        UUID targetId = UUID.randomUUID();
+        when(target.getUniqueId()).thenReturn(targetId);
+        when(target.getName()).thenReturn("Alex");
+        when(target.isOnline()).thenReturn(true);
+        when(target.getLocation()).thenReturn(new Location(mock(World.class), 1.0, 2.0, 3.0));
+        players.setRole(target, Role.HUNTER);
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(() -> Bukkit.getPlayer(targetId)).thenReturn(target);
+
+            assertTrue(toolbar.teleportAndLock(spectator, targetId));
+            assertTrue(toolbar.teleportAndLock(spectator, targetId));
+        }
+
+        verify(spectator, times(1)).teleport(any(Location.class));
+        verify(messages, times(1)).message(eq(spectator), eq("spectator.now-spectating"),
+                any());
+        verify(messages).message(spectator, "spectator.already-spectating",
+                Map.of("player", "Alex"));
+        verify(sounds, times(2)).playNeutralSound(spectator);
+        verify(spectator, times(2)).closeInventory();
+    }
+
+    @Test
+    void teleportToMissingTargetPlaysAngry() {
+        SwapFixture fixture = swapFixture();
+        UUID targetId = UUID.randomUUID();
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(() -> Bukkit.getPlayer(targetId)).thenReturn(null);
+
+            assertFalse(fixture.toolbar().teleportAndLock(fixture.spectator(), targetId));
+        }
+
+        verify(fixture.sounds()).playAngrySound(fixture.spectator());
+        verify(fixture.spectator()).closeInventory();
     }
 }

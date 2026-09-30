@@ -30,6 +30,7 @@ import com.jruk8.jmanhunt.match.listeners.PlayerCombatListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerConnectionListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerMovementListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
+import com.jruk8.jmanhunt.match.listeners.PrestartTargetListener;
 import com.jruk8.jmanhunt.match.listeners.TeamChatListener;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -347,8 +348,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         setupChatListeners();
         getServer().getPluginManager().registerEvents(new PlayerMovementListener(
                 playerStates, game, winConditionEngine, worldEngine, fakeSpectators), this);
-        getServer().getPluginManager().registerEvents(
-                new FakeSpectatorListener(fakeSpectators, playerStates, game), this);
+        setupTargetShielding();
         setupSpectatorToolbar();
         getServer().getPluginManager().registerEvents(respawn, this);
         getServer().getPluginManager().registerEvents(piglinBarter, this);
@@ -372,6 +372,13 @@ public final class JManhuntPlugin extends JavaPlugin {
     private PlayerRespawnListener createRespawnListener() {
         respawnListener = new PlayerRespawnListener(this, playerStates, game, compass);
         return respawnListener;
+    }
+
+    /** Registers mob-target shields: fake spectators plus the pre-start window. */
+    private void setupTargetShielding() {
+        getServer().getPluginManager().registerEvents(
+                new FakeSpectatorListener(fakeSpectators, playerStates, game), this);
+        getServer().getPluginManager().registerEvents(new PrestartTargetListener(game), this);
     }
 
     /** Registers chat listeners: team chat plus the setup tutorial. */
