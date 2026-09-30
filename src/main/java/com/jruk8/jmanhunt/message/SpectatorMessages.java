@@ -78,7 +78,7 @@ public class SpectatorMessages extends OkaeriConfig {
     private String toolbarSnowballName = "Snowball Toss";
 
     @CustomKey("toolbar-snowball-lore")
-    private String toolbarSnowballLore = "Harmless fun for spectators\\nZero damage, zero knockback";
+    private String toolbarSnowballLore = "Harmless fun for spectators\\nPlayers can see the snowball";
 
     @CustomKey("snowball-cooldown")
     private String snowballCooldown = "{prefix}<yellow>Snowball recharging: <white>{seconds}s<yellow>.";
