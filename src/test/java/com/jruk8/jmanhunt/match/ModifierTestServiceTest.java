@@ -115,6 +115,35 @@ class ModifierTestServiceTest {
     }
 
     @Test
+    void nullDistanceSidePrintsNullAndPasses() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        java.util.List<String> outputs = new java.util.ArrayList<>();
+        doAnswer(call -> {
+            TagContext context = call.getArgument(2);
+            @SuppressWarnings("unchecked")
+            java.util.List<String> lines = (java.util.List<String>) call.getArgument(0);
+            for (String line : lines) {
+                outputs.add(com.jruk8.jmanhunt.command.CommandPlaceholders.replace(
+                        line, "Steve", 0, 64, 0, context));
+            }
+            return null;
+        }).when(commands).runCommandList(any(), any(), any(), any());
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                mock(MessageService.class), mock(SoundService.class));
+        Player sender = mock(Player.class);
+        when(sender.getName()).thenReturn("Steve");
+        org.bukkit.World world = mock(org.bukkit.World.class);
+        when(world.getName()).thenReturn("world");
+        when(sender.getLocation()).thenReturn(new org.bukkit.Location(world, 0, 64, 0));
+
+        ModifierTestService.TestResult result = service.run(sender, "HUNTER",
+                List.of("say <distance:<plocation:<p>>,<plocation:FakePlayer>>"));
+
+        assertEquals(List.of("say null"), outputs);
+        assertTrue(result.warnings().isEmpty(), result.warnings().toString());
+    }
+
+    @Test
     void reportReplaysOutputThenSuccess() {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         when(commands.formatEngineMessage(anyString()))

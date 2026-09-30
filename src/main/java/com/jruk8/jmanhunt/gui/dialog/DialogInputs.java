@@ -161,6 +161,13 @@ public final class DialogInputs {
     public static final int TEST_COMMAND_BOXES = 5;
 
     /**
+     * Test-a-Command box length cap: effectively none (the dialog API
+     * needs an int, so the boxes take the max; the protocol caps
+     * submissions at 32767 regardless).
+     */
+    public static final int TEST_COMMAND_MAX_LENGTH = Integer.MAX_VALUE;
+
+    /**
      * Test-a-Command box key for a 0-based box: cmd1..cmd5.
      * Letters and digits only, like every input key.
      */
@@ -192,5 +199,23 @@ public final class DialogInputs {
             return "HUNTER";
         }
         return "SPEEDRUNNER";
+    }
+
+    /**
+     * Reads one test submit off the response getters: the remember
+     * flag, the role, and the raw command box texts (null boxes read
+     * blank). Box texts pass through verbatim with no length cap.
+     */
+    public static ModifierDialog.TestSubmission readTestSubmission(
+            Function<String, Boolean> bool, Function<String, String> text) {
+        List<String> boxes = new ArrayList<>();
+        for (int index = 0; index < TEST_COMMAND_BOXES; index++) {
+            String value = text.apply(testCommandKey(index));
+            boxes.add(value == null ? "" : value);
+        }
+        return new ModifierDialog.TestSubmission(
+                Boolean.TRUE.equals(bool.apply(TEST_REMEMBER_KEY)),
+                parseTestRole(text.apply(TEST_ROLE_KEY)),
+                boxes);
     }
 }

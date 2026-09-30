@@ -31,8 +31,9 @@ public final class TagLocations {
 
     /**
      * {@code <plocation:player>}: the online player's location as a
-     * canonical 6-element list. Offline or unknown players warn plus
-     * {@code "null"}.
+     * canonical 6-element list. Offline or unknown players resolve
+     * {@code "null"} silently (routine runtime state, not a script
+     * error); only blank or malformed args warn.
      */
     static String plocation(String tag, String args, TagContext context) {
         List<String> parts = TagLists.splitTopLevel(args);
@@ -47,8 +48,6 @@ public final class TagLocations {
         }
         Optional<Location> location = context.roster().locationOf(name.get().strip());
         if (location.isEmpty() || location.get().getWorld() == null) {
-            context.scope().warn("Tag <plocation> found no online player '"
-                    + name.get().strip() + "': " + tag);
             return "null";
         }
         return formatLocation(location.get(), location.get().getWorld().getName());
@@ -57,16 +56,19 @@ public final class TagLocations {
     /**
      * {@code <distance:loc1,loc2>}: 3D Euclidean distance on x, y, z
      * only (extra elements ignored, so full primitives work;
-     * pitch/yaw ignored). Two full primitives in different
-     * dimensions resolve {@code "null"} silently; short lists carry
-     * no dimension and always compare. Non-lists and non-numeric
-     * coords warn plus {@code "null"}.
+     * pitch/yaw ignored). Null, blank, and unparseable sides resolve
+     * {@code "null"} silently, as do two full primitives in different
+     * dimensions; short lists carry no dimension and always compare.
+     * Non-null malformed sides warn plus {@code "null"}.
      */
     static String distance(String tag, String args, TagContext context) {
         List<String> parts = TagLists.splitTopLevel(args);
         if (parts.size() != 2) {
             context.scope().warn("Tag <distance> needs two locations like "
                     + "<distance:loc1,loc2>: " + tag);
+            return "null";
+        }
+        if (isNullish(parts.get(0)) || isNullish(parts.get(1))) {
             return "null";
         }
         Optional<double[]> first = coords(parts.get(0));
@@ -85,6 +87,18 @@ public final class TagLocations {
         double dy = first.get()[1] - second.get()[1];
         double dz = first.get()[2] - second.get()[2];
         return TagMath.formatNumber(Math.sqrt(dx * dx + dy * dy + dz * dz));
+    }
+
+    /**
+     * True when a distance side is blank, literal null, or fails pick
+     * parsing: silent {@code "null"}, never a warning.
+     */
+    private static boolean isNullish(String segment) {
+        if (segment == null || segment.isBlank()) {
+            return true;
+        }
+        Optional<String> item = CommandPlaceholders.parsePickItem(segment);
+        return item.isEmpty() || item.get().isBlank() || item.get().strip().equalsIgnoreCase("null");
     }
 
     /** Sixth list item (dimension); empty when the list is not a full primitive. */

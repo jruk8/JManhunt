@@ -177,4 +177,25 @@ class DialogInputsTest {
         assertEquals("SPEEDRUNNER", DialogInputs.parseTestRole("bogus"));
         assertEquals("SPEEDRUNNER", DialogInputs.parseTestRole(null));
     }
+
+    @Test
+    void testCommandBoxesHaveNoLengthCap() {
+        assertEquals(Integer.MAX_VALUE, DialogInputs.TEST_COMMAND_MAX_LENGTH);
+    }
+
+    @Test
+    void longSubmissionPassesThroughIntact() {
+        String longCommand = "say " + "x".repeat(600);
+
+        ModifierDialog.TestSubmission submission = DialogInputs.readTestSubmission(
+                key -> true,
+                key -> key.equals(DialogInputs.testCommandKey(0)) ? longCommand
+                        : key.equals(DialogInputs.TEST_ROLE_KEY) ? "hunter" : null);
+
+        assertTrue(submission.remember());
+        assertEquals("HUNTER", submission.role());
+        assertEquals(DialogInputs.TEST_COMMAND_BOXES, submission.commands().size());
+        assertEquals(longCommand, submission.commands().get(0));
+        assertEquals("", submission.commands().get(1));
+    }
 }

@@ -155,7 +155,11 @@ entries, ignoring pitch and yaw. Two full primitives in different
 dimensions yield `null` silently, while short lists carry no
 dimension and always compare by coordinates:
 `<distance:<plocation:Alex>,[0, 64, 0]>` is the blocks from Alex to
-spawn. Bad shapes warn and stop the line.
+spawn. Null, blank, and unparseable sides (an offline player's spot,
+for example) also yield `null` silently. Genuinely malformed non-null
+sides warn and stop the line. Nested tags need their own brackets:
+`<distance:<plocation:Alex>,[0, 64, 0]>` resolves, while bare
+`plocation:Alex` inside the args stays plain text.
 
 ## Bare math
 

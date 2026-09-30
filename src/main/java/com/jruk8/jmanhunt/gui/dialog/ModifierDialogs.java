@@ -142,7 +142,8 @@ public final class ModifierDialogs implements ModifierDialog {
             String value = index < initial.commands().size() ? initial.commands().get(index) : "";
             inputs.add(DialogInput.text(DialogInputs.testCommandKey(index),
                     GuiTexts.name(messages, label, label))
-                    .initial(value == null ? "" : value).build());
+                    .initial(value == null ? "" : value)
+                    .maxLength(DialogInputs.TEST_COMMAND_MAX_LENGTH).build());
         }
         return inputs;
     }
@@ -150,15 +151,7 @@ public final class ModifierDialogs implements ModifierDialog {
     /** Reads one test submit off the response getters. */
     private static ModifierDialog.TestSubmission readTestSubmission(
             Function<String, Boolean> bool, Function<String, String> text) {
-        List<String> boxes = new ArrayList<>();
-        for (int index = 0; index < DialogInputs.TEST_COMMAND_BOXES; index++) {
-            String value = text.apply(DialogInputs.testCommandKey(index));
-            boxes.add(value == null ? "" : value);
-        }
-        return new ModifierDialog.TestSubmission(
-                Boolean.TRUE.equals(bool.apply(DialogInputs.TEST_REMEMBER_KEY)),
-                DialogInputs.parseTestRole(text.apply(DialogInputs.TEST_ROLE_KEY)),
-                boxes);
+        return DialogInputs.readTestSubmission(bool, text);
     }
 
     private void openChecklist(Player player, List<String> known,

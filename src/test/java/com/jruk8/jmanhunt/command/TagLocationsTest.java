@@ -65,7 +65,7 @@ class TagLocationsTest {
                 CommandPlaceholders.replace("<plocation:Steve>", "Steve", 0, 0, 0, context));
         assertEquals("null",
                 CommandPlaceholders.replace("<plocation:Ghost>", "Steve", 0, 0, 0, context));
-        assertEquals(1, warnings.size());
+        assertTrue(warnings.isEmpty(), warnings.toString());
     }
 
     @Test
@@ -106,6 +106,27 @@ class TagLocationsTest {
         assertEquals("null", CommandPlaceholders.replace(
                 "<distance:[0, 0, 0, 0, 0, world],[3, 4, 0, 90, 12, world_nether]>",
                 "Steve", 0, 0, 0, context));
+        assertTrue(warnings.isEmpty(), warnings.toString());
+    }
+
+    @Test
+    void distanceYieldsNullSilentlyForNullSides() {
+        List<String> warnings = new ArrayList<>();
+        TagContext context = TagContext.run(
+                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add),
+                "locs", warnings::add, warnings::add,
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                (player, reason) -> { }, (role, reason) -> { },
+                7L, TagBackends.inert());
+
+        assertEquals("null", CommandPlaceholders.replace(
+                "<distance:null,[3,4,0]>", "Steve", 0, 0, 0, context));
+        assertEquals("null", CommandPlaceholders.replace(
+                "<distance:[3,4,0],NULL>", "Steve", 0, 0, 0, context));
+        assertEquals("null", CommandPlaceholders.replace(
+                "<distance:\"\",[3,4,0]>", "Steve", 0, 0, 0, context));
+        assertEquals("null", CommandPlaceholders.replace(
+                "<distance:,[3,4,0]>", "Steve", 0, 0, 0, context));
         assertTrue(warnings.isEmpty(), warnings.toString());
     }
 

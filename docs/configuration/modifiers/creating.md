@@ -53,6 +53,13 @@ to false to skip the root and item checks; placeholder checks
 always run. The command-line creator enforces the same rules; see
 [Modifiers](../../commands.md#modifiers) for its flags.
 
+Toggling a modifier back and forth in one match runs its enable
+commands at most once and its disable commands at most once, so
+effects like granted items never duplicate. Set
+`advanced.misc.modifier-editor.prevent-duplicate-toggle` to false
+for rapid testing if you are a modifier creator; every toggle
+then runs.
+
 Presets keep their display data under `meta:`, exactly like
 modifiers, with the member list beside it:
 

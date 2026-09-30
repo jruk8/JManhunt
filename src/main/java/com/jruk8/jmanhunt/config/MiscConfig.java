@@ -120,6 +120,24 @@ public class MiscConfig extends OkaeriConfig {
         public void setRememberGuiCommands(boolean rememberGuiCommands) {
             this.rememberGuiCommands = rememberGuiCommands;
         }
+
+        @CustomKey("prevent-duplicate-toggle")
+        @Comment({
+                "When true, toggling a modifier back and forth in one",
+                "match runs its enable commands at most once and its",
+                "disable commands at most once. Set to false for rapid",
+                "testing if you are a modifier creator.",
+                "Default: true"
+        })
+        private boolean preventDuplicateToggle = true;
+
+        public boolean isPreventDuplicateToggle() {
+            return preventDuplicateToggle;
+        }
+
+        public void setPreventDuplicateToggle(boolean preventDuplicateToggle) {
+            this.preventDuplicateToggle = preventDuplicateToggle;
+        }
     }
 
 }

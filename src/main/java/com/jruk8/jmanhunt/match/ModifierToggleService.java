@@ -9,9 +9,10 @@ import java.util.List;
 
 /**
  * Mid-match modifier toggle reconciliation: newly effective modifiers
- * fire ON_START, newly ineffective ones clean up, each at most once
- * per match. The command-running half lives in
- * GameStateCommandManager behind Commands.
+ * fire ON_START, newly ineffective ones clean up. With
+ * prevent-duplicate-toggle on (the default), each runs at most once
+ * per match; with it off, every toggle runs. The command-running half
+ * lives in GameStateCommandManager behind Commands.
  */
 public final class ModifierToggleService {
 
@@ -41,10 +42,11 @@ public final class ModifierToggleService {
      * Reconciles live matches with toggled modifiers. Newly effective
      * modifiers activate: ON_START fires honoring delays and INTERVAL
      * chains restart from fresh config. Newly ineffective ones run
-     * cleanup once; their interval tasks self-cancel at next firing.
-     * Each modifier fires and cleans at most once per match, so repeat
-     * toggles grant nothing. Ending matches are skipped: teardown owns
-     * their end state.
+     * cleanup; their interval tasks self-cancel at next firing. With
+     * prevent-duplicate-toggle on, each modifier fires and cleans at
+     * most once per match, so repeat toggles grant nothing; with it
+     * off, every toggle runs. Ending matches are skipped: teardown
+     * owns their end state.
      */
     public void syncModifierToggles(Collection<String> names) {
         for (GameInstance instance : game.liveInstances()) {
@@ -53,11 +55,13 @@ public final class ModifierToggleService {
             }
             long matchId = instance.matchId();
             Integer lobby = game.lobbyOf(matchId);
+            boolean dedup = plugin.overrides().getBoolean(lobby,
+                    "advanced.misc.modifier-editor.prevent-duplicate-toggle", true);
             List<String> activating = new ArrayList<>();
             for (String name : names) {
                 if (plugin.overrides().modifierEnabled(lobby, name)) {
                     activating.add(name);
-                } else if (instance.markModifierCleaned(name)) {
+                } else if (!dedup || instance.markModifierCleaned(name)) {
                     runModifierCleanup(name, matchId);
                 } else {
                     warnToggleRepeat(name, "cleaned");
@@ -65,7 +69,7 @@ public final class ModifierToggleService {
             }
             if (!instance.begun()) {
                 for (String name : activating) {
-                    if (instance.markModifierStarted(name)) {
+                    if (!dedup || instance.markModifierStarted(name)) {
                         firePreStartModifier(name, matchId);
                     } else {
                         warnToggleRepeat(name, "enabled");
@@ -78,7 +82,7 @@ public final class ModifierToggleService {
                 intervals.scheduleIntervalModifiers(matchId);
             }
             for (String name : activating) {
-                if (instance.markModifierStarted(name)) {
+                if (!dedup || instance.markModifierStarted(name)) {
                     fireModifierStart(name, matchId);
                 } else {
                     warnToggleRepeat(name, "enabled");

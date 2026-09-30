@@ -25,11 +25,17 @@ class ModifierToggleSyncTest {
     }
 
     private static Fixture fixture(boolean begun, boolean ending, boolean effective) {
+        return fixture(begun, ending, effective, true);
+    }
+
+    private static Fixture fixture(boolean begun, boolean ending, boolean effective, boolean dedup) {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
         OverrideService overrides = mock(OverrideService.class);
         when(plugin.overrides()).thenReturn(overrides);
         when(overrides.modifierEnabled(any(), eq("m"))).thenReturn(effective);
+        when(overrides.getBoolean(any(), eq("advanced.misc.modifier-editor.prevent-duplicate-toggle"),
+                eq(true))).thenReturn(dedup);
         ConfigService config = mock(ConfigService.class);
         when(config.behaviorIndexes("m")).thenReturn(List.of(0));
         when(config.runsOn("m", 0)).thenReturn(List.of("ON_START"));
@@ -88,6 +94,38 @@ class ModifierToggleSyncTest {
         fixture.sync().syncModifierToggles(List.of("m"));
 
         verify(fixture.commands(), times(1)).cleanModifier("m", 7L, List.of(fixture.player()));
+    }
+
+    @Test
+    void repeatToggleOnFiresEveryTimeWhenDedupOff() {
+        Fixture fixture = fixture(true, false, true, false);
+
+        fixture.sync().syncModifierToggles(List.of("m"));
+        fixture.sync().syncModifierToggles(List.of("m"));
+
+        verify(fixture.commands(), times(2)).fireBehavior("m", 0, 7L);
+    }
+
+    @Test
+    void repeatToggleOffCleansEveryTimeWhenDedupOff() {
+        Fixture fixture = fixture(true, false, false, false);
+
+        fixture.sync().syncModifierToggles(List.of("m"));
+        fixture.sync().syncModifierToggles(List.of("m"));
+
+        verify(fixture.commands(), times(2)).cleanModifier("m", 7L, List.of(fixture.player()));
+    }
+
+    @Test
+    void newMatchInstanceFiresAgain() {
+        Fixture first = fixture(true, false, true);
+        Fixture second = fixture(true, false, true);
+
+        first.sync().syncModifierToggles(List.of("m"));
+        second.sync().syncModifierToggles(List.of("m"));
+
+        verify(first.commands(), times(1)).fireBehavior("m", 0, 7L);
+        verify(second.commands(), times(1)).fireBehavior("m", 0, 7L);
     }
 
     @Test

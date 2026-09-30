@@ -491,6 +491,7 @@ public final class SettingRegistry {
         entries.add(bool(root + "interop.disable-worldedit-navwand", true));
         entries.add(bool(root + "modifier-editor.validate-commands", true));
         entries.add(bool(root + "modifier-editor.remember-gui-commands", false));
+        entries.add(bool(root + "modifier-editor.prevent-duplicate-toggle", true));
     }
 
     private static void addSettingsMatchEntries(List<SettingDescriptor> entries) {

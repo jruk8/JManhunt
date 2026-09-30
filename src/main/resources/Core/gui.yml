@@ -242,6 +242,7 @@ descriptions:
   "advanced.misc.modifier-editor": "Modifier editor toggles."
   "advanced.misc.modifier-editor.validate-commands": "Reject bad roots and give items in the editor."
   "advanced.misc.modifier-editor.remember-gui-commands": "Preselect the Test-a-Command remember checkbox."
+  "advanced.misc.modifier-editor.prevent-duplicate-toggle": "Run each toggle at most once per match."
   "settings.server.anti-spawn-camp": "Punish farming kills on one victim."
   "settings.server.status": "Pick which lines status commands show."
   "settings.server.team-chat": "Prefixed chat for match teammates."
