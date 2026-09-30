@@ -41,6 +41,8 @@ public final class CommandSyntax {
                 "loseplayer", "win", "args", "list.append", "list.get", "list.set", "list.remove",
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
                 "active-players", "plocation", "prole", "distance",
+                "overlap-players", "nearby-players", "pworld", "world",
+                "px", "py", "pz", "pyaw", "ppitch",
                 "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt", "root",
                 "while", "for", "i", "def", "run", "format");
     }
@@ -252,7 +254,9 @@ public final class CommandSyntax {
                     TagLists.opError(name, args);
             case "range" -> rangeError(name, args);
             case "active-players" -> activePlayersError(name, args);
-            case "plocation", "prole" -> playerNameError(name, args);
+            case "plocation", "prole", "pworld", "world", "px", "py", "pz", "pyaw", "ppitch" ->
+                    playerNameError(name, args);
+            case "overlap-players", "nearby-players" -> proximityError(name, args);
             case "distance" -> topLevelArityError(name, args, 2, "<distance:loc1,loc2>");
             case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" -> mathUnaryError(name, args);
             case "root" -> topLevelArityError(name, args, 2, "<root:x,n>");
@@ -445,8 +449,8 @@ public final class CommandSyntax {
     }
 
     /**
-     * Active-players shape: one role, HUNTER or SPEEDRUNNER. Like
-     * {@code <win>} the role must be literal here.
+     * Active-players shape: one role, HUNTER, SPEEDRUNNER, or ALL.
+     * Like {@code <win>} the role must be literal here.
      */
     /**
      * Range shape: one to three quote-clean bounds; values are
@@ -468,21 +472,50 @@ public final class CommandSyntax {
         return Optional.empty();
     }
 
+    /**
+     * Proximity shape: an origin or player, a literal role, a radius,
+     * and a max. Like {@code <win>} the role must be literal here;
+     * values may be nested since they resolve at runtime.
+     */
+    private static Optional<String> proximityError(String name, String args) {
+        String shape = name.equals("overlap-players") ? "an origin" : "a player";
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs " + shape
+                    + ", a role, a radius, and a max.");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 4) {
+            return Optional.of("Tag <" + name + "> needs " + shape
+                    + ", a role, a radius, and a max.");
+        }
+        for (String part : parts) {
+            if (CommandPlaceholders.parsePickItem(part).isEmpty()) {
+                return Optional.of("Tag <" + name + "> mixes quotes.");
+            }
+        }
+        String role = CommandPlaceholders.parsePickItem(parts.get(1)).orElse("").strip()
+                .toUpperCase(Locale.ROOT);
+        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER") && !role.equals("ALL")) {
+            return Optional.of("Tag <" + name + "> needs HUNTER, SPEEDRUNNER, or ALL.");
+        }
+        return Optional.empty();
+    }
+
     private static Optional<String> activePlayersError(String name, String args) {
         if (args == null || args.isBlank()) {
-            return Optional.of("Tag <active-players> needs HUNTER or SPEEDRUNNER.");
+            return Optional.of("Tag <active-players> needs HUNTER, SPEEDRUNNER, or ALL.");
         }
         List<String> parts = TagLists.splitTopLevel(args);
         if (parts.size() != 1) {
-            return Optional.of("Tag <active-players> needs HUNTER or SPEEDRUNNER.");
+            return Optional.of("Tag <active-players> needs HUNTER, SPEEDRUNNER, or ALL.");
         }
         Optional<String> item = CommandPlaceholders.parsePickItem(parts.get(0));
         if (item.isEmpty()) {
             return Optional.of("Tag <active-players> mixes quotes.");
         }
         String role = item.get().strip().toUpperCase(Locale.ROOT);
-        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER")) {
-            return Optional.of("Tag <active-players> needs HUNTER or SPEEDRUNNER.");
+        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER") && !role.equals("ALL")) {
+            return Optional.of("Tag <active-players> needs HUNTER, SPEEDRUNNER, or ALL.");
         }
         return Optional.empty();
     }

@@ -24,6 +24,25 @@ public interface RosterValues {
     Optional<Location> locationOf(String playerName);
 
     /**
+     * One online participant for proximity scans: display name, raw
+     * upper-case role, coords, and world environment plus name (both
+     * raw; tags normalize through
+     * {@link TagLocations#worldAlias}).
+     */
+    record NearbyParticipant(String name, String role, double x, double y, double z,
+            String environment, String world) {
+    }
+
+    /**
+     * Interval-eligible online participants of both teams for
+     * proximity tags (the same population {@link #activePlayers}
+     * draws from). Defaults to empty.
+     */
+    default List<NearbyParticipant> nearbyParticipants() {
+        return List.of();
+    }
+
+    /**
      * Storage-contents count of one material for an online player, or
      * empty when the player is offline or the key resolves to
      * nothing. The key arrives raw (any case, optional

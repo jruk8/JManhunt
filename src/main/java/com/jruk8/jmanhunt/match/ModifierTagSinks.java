@@ -100,12 +100,11 @@ public final class ModifierTagSinks {
 
     /**
      * Online assigned players of the named role behind role tags,
-     * else empty with the reason warned. The tag layer validates the
-     * role, like {@code <win>}.
+     * else empty with the reason warned. ALL covers both teams. The
+     * tag layer validates the role, like {@code <win>}.
      */
     private Optional<List<Player>> roleMembers(String tag, String name, long matchId,
             ModifierTagScope scope, String role) {
-        Role target = Role.valueOf(role);
         Optional<GameInstance> instance = game.instance(matchId);
         if (instance.isEmpty()) {
             scope.warn("Tag <" + tag + "> needs a live match: skipped in '" + name + "'.");
@@ -113,11 +112,23 @@ public final class ModifierTagSinks {
         }
         List<Player> members = new ArrayList<>();
         for (Player member : game.onlineAssignedPlayers(instance.get())) {
-            if (playerStates.role(member) == target) {
+            if (roleMatches(role, playerStates.role(member))) {
                 members.add(member);
             }
         }
         return Optional.of(members);
+    }
+
+    /**
+     * True when a member role falls under a role tag filter: ALL
+     * covers hunters and speedrunners, anything else matches one
+     * side. Pure for tests.
+     */
+    static boolean roleMatches(String filter, Role member) {
+        if ("ALL".equals(filter)) {
+            return member == Role.HUNTER || member == Role.SPEEDRUNNER;
+        }
+        return member == Role.valueOf(filter);
     }
 
     /**

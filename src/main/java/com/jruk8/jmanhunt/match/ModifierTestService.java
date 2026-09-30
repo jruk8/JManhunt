@@ -218,6 +218,17 @@ public final class ModifierTestService {
             }
 
             @Override
+            public List<RosterValues.NearbyParticipant> nearbyParticipants() {
+                Location spot = sender.getLocation();
+                if (spot == null || spot.getWorld() == null) {
+                    return List.of();
+                }
+                return List.of(new RosterValues.NearbyParticipant(name, role,
+                        spot.getX(), spot.getY(), spot.getZ(),
+                        spot.getWorld().getEnvironment().name(), spot.getWorld().getName()));
+            }
+
+            @Override
             public Optional<Integer> countItem(String playerName, String materialKey) {
                 if (!playerName.equalsIgnoreCase(name) || sender.getInventory() == null) {
                     return Optional.empty();

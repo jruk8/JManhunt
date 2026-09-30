@@ -99,6 +99,45 @@ class TagStatsFlagsTest {
     }
 
     @Test
+    void rflagAllFansSetsOutToBothTeams() {
+        Fixture fixture = new Fixture();
+
+        assertEquals("", fixture.replaceAs("<rflag:ALL,k,v>", "Steve"));
+        assertEquals("v", fixture.replaceAs("<rflag:HUNTER,k>", "Steve"));
+        assertEquals("v", fixture.replaceAs("<rflag:speedrunner,k>", "Steve"));
+        assertEquals("v", fixture.replaceAs("<rflag:all,k>", "Steve"));
+        assertEquals("v", fixture.flags.role(7L, "HUNTER:k"));
+        assertEquals("v", fixture.flags.role(7L, "SPEEDRUNNER:k"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void rflagAllReadsConsensusOrNull() {
+        Fixture fixture = new Fixture();
+
+        assertEquals("", fixture.replaceAs("<rflag:hunter,same,1>", "Steve"));
+        assertEquals("", fixture.replaceAs("<rflag:speedrunner,same,1>", "Steve"));
+        assertEquals("1", fixture.replaceAs("<rflag:ALL,same>", "Steve"));
+        assertEquals("", fixture.replaceAs("<rflag:speedrunner,same,2>", "Steve"));
+        assertEquals("null", fixture.replaceAs("<rflag:ALL,same>", "Steve"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void rflagAllWritebackLoadsAndStoresBothTeams() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context("Steve", 7L);
+
+        TagFlags.storeFlag("rflag", "ALL:k", "[1]", "<list.append:<rflag:ALL,k>,1>", context);
+        assertEquals("[1]", fixture.flags.role(7L, "HUNTER:k"));
+        assertEquals("[1]", fixture.flags.role(7L, "SPEEDRUNNER:k"));
+        assertEquals("[1]", TagFlags.loadFlag("rflag", "ALL:k", context));
+        fixture.flags.setRole(7L, "SPEEDRUNNER:k", "[2]");
+        assertEquals("null", TagFlags.loadFlag("rflag", "ALL:k", context));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
     void rflagInvalidRoleWarns() {
         Fixture fixture = new Fixture();
 
@@ -106,8 +145,8 @@ class TagStatsFlagsTest {
         assertEquals("", fixture.replaceAs("<rflag:spectator,k,v>", "Steve"));
         assertEquals("", fixture.replaceAs("<rflag:k>", "Steve"));
         assertEquals(3, fixture.warnings.size());
-        assertTrue(fixture.warnings.get(0).contains("needs HUNTER or SPEEDRUNNER"));
-        assertTrue(fixture.warnings.get(1).contains("needs HUNTER or SPEEDRUNNER"));
+        assertTrue(fixture.warnings.get(0).contains("needs HUNTER, SPEEDRUNNER, or ALL"));
+        assertTrue(fixture.warnings.get(1).contains("needs HUNTER, SPEEDRUNNER, or ALL"));
         assertTrue(fixture.warnings.get(2).contains("needs a role, a name"));
     }
 

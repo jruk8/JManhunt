@@ -56,6 +56,35 @@ public final class FlagStore {
     }
 
     /**
+     * One role flag by prefixed key, honoring ALL consensus: an ALL
+     * key reads the value both teams share, or {@link #UNSET} when
+     * they disagree.
+     */
+    public String roleOrAll(long matchId, String key) {
+        if (!key.startsWith("ALL:")) {
+            return role(matchId, key);
+        }
+        String name = key.substring(4);
+        String hunter = role(matchId, roleKey("HUNTER", name));
+        String runner = role(matchId, roleKey("SPEEDRUNNER", name));
+        return hunter.equals(runner) ? hunter : UNSET;
+    }
+
+    /**
+     * Stores one role flag by prefixed key, fanning ALL keys out to
+     * both teams so later single-role reads see the value.
+     */
+    public void setRoleOrAll(long matchId, String key, String value) {
+        if (!key.startsWith("ALL:")) {
+            setRole(matchId, key, value);
+            return;
+        }
+        String name = key.substring(4);
+        setRole(matchId, roleKey("HUNTER", name), value);
+        setRole(matchId, roleKey("SPEEDRUNNER", name), value);
+    }
+
+    /**
      * Drops every player flag whose suffix names this player. Names
      * match exactly, like the keys themselves.
      */
@@ -112,14 +141,14 @@ public final class FlagStore {
     }
 
     /**
-     * Canonical role for role-scoped tags: HUNTER or SPEEDRUNNER,
-     * case-insensitive, quotes parsed. Anything else misses silently
-     * for reference detection.
+     * Canonical role for role-scoped tags: HUNTER, SPEEDRUNNER, or
+     * ALL (both teams), case-insensitive, quotes parsed. Anything
+     * else misses silently for reference detection.
      */
     public static Optional<String> canonicalRole(String raw) {
         Optional<String> item = CommandPlaceholders.parsePickItem(raw);
         String role = item.map(value -> value.strip().toUpperCase(Locale.ROOT)).orElse("");
-        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER")) {
+        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER") && !role.equals("ALL")) {
             return Optional.empty();
         }
         return Optional.of(role);
@@ -127,13 +156,13 @@ public final class FlagStore {
 
     /**
      * Canonical role for one role tag arg, warning on anything but
-     * HUNTER or SPEEDRUNNER.
+     * HUNTER, SPEEDRUNNER, or ALL.
      */
     public static Optional<String> parseRole(String tag, String root, String raw,
             ModifierTagScope scope) {
         Optional<String> role = canonicalRole(raw);
         if (role.isEmpty()) {
-            scope.warn("Tag <" + root + "> needs HUNTER or SPEEDRUNNER: " + tag);
+            scope.warn("Tag <" + root + "> needs HUNTER, SPEEDRUNNER, or ALL: " + tag);
         }
         return role;
     }

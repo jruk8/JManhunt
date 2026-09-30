@@ -52,6 +52,17 @@ class TagRosterTest {
     }
 
     @Test
+    void activePlayersMergesBothTeamsForAll() {
+        Fixture fixture = new Fixture();
+        fixture.actives.put("HUNTER", List.of("Zed", "Amy"));
+        fixture.actives.put("SPEEDRUNNER", List.of("bob"));
+
+        assertEquals("[Amy, bob, Zed]", fixture.replace("<active-players:ALL>", 7L));
+        assertEquals("[Amy, bob, Zed]", fixture.replace("<active-players:all>", 7L));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
     void activePlayersFormatsEligibleNames() {
         Fixture fixture = new Fixture();
         fixture.actives.put("HUNTER", List.of("Alice", "Bob"));

@@ -7,8 +7,8 @@ import java.util.Optional;
 /**
  * Edit-time validation for the role tags ({@code <rflag>},
  * {@code <rmessage>}, {@code <rsound>}): arity, quote hygiene, plus
- * the HUNTER/SPEEDRUNNER head. Mirrors the runtime warns. No Bukkit
- * types.
+ * the HUNTER/SPEEDRUNNER/ALL head. Mirrors the runtime warns. No
+ * Bukkit types.
  */
 final class RoleTagSyntax {
 
@@ -74,15 +74,15 @@ final class RoleTagSyntax {
     }
 
     /**
-     * Role head value: HUNTER or SPEEDRUNNER. Like {@code <win>} the
-     * role must be literal here; nested tags resolve at runtime but
-     * the editor cannot see through them.
+     * Role head value: HUNTER, SPEEDRUNNER, or ALL. Like {@code <win>}
+     * the role must be literal here; nested tags resolve at runtime
+     * but the editor cannot see through them.
      */
     private static Optional<String> headError(String name, String head) {
         String role = CommandPlaceholders.parsePickItem(head).orElse("").strip()
                 .toUpperCase(Locale.ROOT);
-        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER")) {
-            return Optional.of("Tag <" + name + "> needs HUNTER or SPEEDRUNNER.");
+        if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER") && !role.equals("ALL")) {
+            return Optional.of("Tag <" + name + "> needs HUNTER, SPEEDRUNNER, or ALL.");
         }
         return Optional.empty();
     }

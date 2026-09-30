@@ -35,7 +35,9 @@ public final class TagFlags {
     /**
      * Resolves {@code <rflag:role,name>} and
      * {@code <rflag:role,name,value>}, scoped to the named role. Bad
-     * role or name warns; gets read {@code null}, sets skip.
+     * role or name warns; gets read {@code null}, sets skip. ALL
+     * fans sets out to both teams and reads the value both share
+     * ({@code null} when they disagree).
      */
     static String role(String tag, String args, TagContext context) {
         List<String> parts = TagLists.splitTopLevel(args);
@@ -62,14 +64,14 @@ public final class TagFlags {
         }
         String key = FlagStore.roleKey(role.get(), name.get());
         if (get) {
-            return context.flagStore().role(context.matchId(), key);
+            return context.flagStore().roleOrAll(context.matchId(), key);
         }
         Optional<String> value = CommandPlaceholders.parsePickItem(parts.get(2));
         if (value.isEmpty()) {
             context.scope().warn("Tag <rflag> has a malformed value: " + tag);
             return "";
         }
-        context.flagStore().setRole(context.matchId(), key, value.get());
+        context.flagStore().setRoleOrAll(context.matchId(), key, value.get());
         return "";
     }
 
@@ -100,7 +102,7 @@ public final class TagFlags {
         String tag = "<" + kind + ":" + name + ">";
         if (kind.equals("rflag")) {
             return context.matchId() == TagContext.NO_MATCH ? FlagStore.UNSET
-                    : context.flagStore().role(context.matchId(), name);
+                    : context.flagStore().roleOrAll(context.matchId(), name);
         }
         return switch (kind) {
             case "gflag", "gf" -> global(tag, name, context);
@@ -135,7 +137,7 @@ public final class TagFlags {
                 if (context.matchId() == TagContext.NO_MATCH) {
                     context.scope().warn("Tag <rflag> needs a live match: " + tag);
                 } else {
-                    context.flagStore().setRole(context.matchId(), name, value);
+                    context.flagStore().setRoleOrAll(context.matchId(), name, value);
                 }
             }
             default -> context.localFlags().put(name, value);

@@ -119,9 +119,9 @@ class TagArgsTest {
     @Test
     void respawnTriggerCarriesOneDeathLocationList() {
         Fixture fixture = new Fixture();
-        List<String> args = List.of("[100, 64, -30, 12.5, 90, world]");
+        List<String> args = List.of("[100, 64, -30, world, 12.5, 90]");
 
-        assertEquals("[100, 64, -30, 12.5, 90, world]", fixture.replace("<args:0>", args));
+        assertEquals("[100, 64, -30, world, 12.5, 90]", fixture.replace("<args:0>", args));
         assertEquals("null", fixture.replace("<args:1>", args));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }

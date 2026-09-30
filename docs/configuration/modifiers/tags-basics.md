@@ -90,10 +90,14 @@ creator editor validates them as you type:
 | `<args:0>` | The trigger's first event arg (see below); bare `<args>` reads index `0`. |
 | `<len:[a,b]>` | List tools (`list.get`, `list.set`, `list.append`, and more; see Lists). |
 | `<range:1,5>` | The list `[1, 2, 3, 4]`, Python style (see Lists). |
-| `<active-players:HUNTER>` | Eligible hunters as a list, like `[Alex, Bo]`. |
+| `<active-players:HUNTER>` | Eligible hunters as a list, like `[Alex, Bo]` (`ALL` lists both sides). |
 | `<prole:Alex>` | `HUNTER` or `SPEEDRUNNER` for Alex, else `null`. |
 | `<phasitem:Alex,golden_apple,2>` | `true` when Alex holds at least 2 golden apples, else `false` (the count is 1 when omitted). |
-| `<plocation:Alex>` | Alex's spot as `[x, y, z, pitch, yaw, dimension]`. |
+| `<plocation:Alex>` | Alex's spot as `[x, y, z, world, pitch, yaw]`. |
+| `<overlap-players:[0,64,0],HUNTER,10,5>` | Up to 5 hunters within 10 blocks of the origin, nearest first. |
+| `<nearby-players:Alex,ALL,10,5>` | Up to 5 players within 10 blocks of Alex, sender excluded. |
+| `<pworld:Alex>` | `nether`, `end`, or the raw world name (`<world:Alex>` is the same tag). |
+| `<px:Alex>` | Alex's x; `<py>`, `<pz>`, `<pyaw>`, `<ppitch>` read the rest. |
 | `<distance:[0,0,0],[3,4,0]>` | Blocks between two spots: `5`. Full location lists in different dimensions yield `null` silently. |
 | `<floor:2.7>` | `2`; `<ceil:2.3>` is `3`, `<round:2.5>` is `3`. |
 | `<abs:-4>` | `4`; `<sign:-4>` is `-1` (`0` and `1` for the rest). |
@@ -106,9 +110,9 @@ creator editor validates them as you type:
 | `<run:say hi>` | Runs `say hi` from the console like a command list entry; the tag leaves nothing behind. |
 | `<format:"{0} found {1}",[Alex,gold]>` | `Alex found gold`. Plain `{n}` substitution; missing indexes, `{x}`, and stray braces stay verbatim silently. No conversion specifiers. |
 | `<format>` mismatch rules | Missing indexes, `{x}`, and stray braces stay verbatim with no warning; `{0:D}`-style specifiers stay literal (none exist); wrong arity or bad quotes warn plus `null`. |
-| `<rflag:hunter,boost>` | The flag of the named role (see Flags). |
-| `<rmessage:hunter,push!>` | Tells the named role only. |
-| `<rsound:hunter,block.note_block.pling>` | Plays for the named role only. |
+| `<rflag:hunter,boost>` | The flag of the named role, or `ALL` for both (see Flags). |
+| `<rmessage:hunter,push!>` | Tells the named role only (`ALL` tells both). |
+| `<rsound:hunter,block.note_block.pling>` | Plays for the named role only (`ALL` plays for both). |
 
 `<min>`, `<max>`, and `<clamp>` accept math in their arguments
 (`<min:8+5,10>` is `10`) and yield `0` with a console warning when an
@@ -144,11 +148,30 @@ a live match warns and yields 0.
 
 `<active-players:HUNTER>` (or `SPEEDRUNNER`, case does not matter)
 lists the players currently eligible for interval commands: online,
-active, and neither respawning nor held. `<prole:Alex>` reads one
-player's side, and `<plocation:Alex>` reads their spot as
-`[x, y, z, pitch, yaw, dimension]`, the same shape as the respawn
+active, and neither respawning nor held. `ALL` lists both sides as
+one list. `<prole:Alex>` reads one player's side, and
+`<plocation:Alex>` reads their spot as
+`[x, y, z, world, pitch, yaw]`, the same shape as the respawn
 event arg. Unknown or offline players yield `null` silently, as do
 spectators for `<prole>`.
+
+`<overlap-players:origin,role,radius,max>` and
+`<nearby-players:player,role,radius,max>` list names within
+`radius` blocks, nearest first with name order breaking ties, capped
+at `max` names. The role filters like `<active-players>` and
+accepts `ALL`. A bare `[x, y, z]` origin searches every world; a
+full `[x, y, z, world, pitch, yaw]` origin searches that world only.
+`<nearby-players>` centers on the named player (whose own world
+scopes the search) and drops the executing player from the list, so
+console lists still see everyone. Bad shapes warn and yield `null`;
+an unknown center player yields `null` silently, and an empty search
+yields `[]`.
+
+`<pworld:Alex>` reports the world alias: `nether` for the nether,
+`end` for the end, else the raw world name. `<world:Alex>` is the
+same tag. `<px:Alex>`, `<py:Alex>`, `<pz:Alex>`,
+`<pyaw:Alex>`, and `<ppitch:Alex>` read single numbers from the
+live spot. Unknown or offline players yield `null` silently.
 
 `<distance>` measures between two spots with only the `x`, `y`, `z`
 entries, ignoring pitch and yaw. Two full primitives in different

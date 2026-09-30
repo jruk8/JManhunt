@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.command;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -16,8 +17,8 @@ public final class TagRoster {
 
     /**
      * {@code <active-players:ROLE>}: alphabetical eligible names for
-     * HUNTER or SPEEDRUNNER as a canonical list, {@code []} when
-     * none (empty is data, never a warning).
+     * HUNTER, SPEEDRUNNER, or ALL (both teams merged) as a canonical
+     * list, {@code []} when none (empty is data, never a warning).
      */
     static String activePlayers(String tag, String args, TagContext context) {
         if (context.matchId() == TagContext.NO_MATCH) {
@@ -37,9 +38,15 @@ public final class TagRoster {
             return "null";
         }
         String upper = role.get().strip().toUpperCase(Locale.ROOT);
-        if (!upper.equals("HUNTER") && !upper.equals("SPEEDRUNNER")) {
-            context.scope().warn("Tag <active-players> needs HUNTER or SPEEDRUNNER: " + tag);
+        if (!upper.equals("HUNTER") && !upper.equals("SPEEDRUNNER") && !upper.equals("ALL")) {
+            context.scope().warn("Tag <active-players> needs HUNTER, SPEEDRUNNER, or ALL: " + tag);
             return "null";
+        }
+        if (upper.equals("ALL")) {
+            List<String> names = new ArrayList<>(context.roster().activePlayers("HUNTER"));
+            names.addAll(context.roster().activePlayers("SPEEDRUNNER"));
+            names.sort(String.CASE_INSENSITIVE_ORDER);
+            return TagLists.format(names);
         }
         return TagLists.format(context.roster().activePlayers(upper));
     }

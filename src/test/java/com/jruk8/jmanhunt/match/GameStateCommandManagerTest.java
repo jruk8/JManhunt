@@ -410,9 +410,9 @@ class GameStateCommandManagerTest {
         harness.manager.runPlayerCleanup(7L, List.of(watcher));
 
         verify(harness.logger).warning(argThat(line -> line != null
-                && line.contains("<rmessage> needs HUNTER or SPEEDRUNNER")));
+                && line.contains("<rmessage> needs HUNTER, SPEEDRUNNER, or ALL")));
         verify(harness.logger).warning(argThat(line -> line != null
-                && line.contains("<rsound> needs HUNTER or SPEEDRUNNER")));
+                && line.contains("<rsound> needs HUNTER, SPEEDRUNNER, or ALL")));
         verify(harness.messages, never()).sendText(any(Player.class), anyString());
     }
 

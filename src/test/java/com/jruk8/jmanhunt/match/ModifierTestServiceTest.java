@@ -134,6 +134,7 @@ class ModifierTestServiceTest {
         when(sender.getName()).thenReturn("Steve");
         org.bukkit.World world = mock(org.bukkit.World.class);
         when(world.getName()).thenReturn("world");
+        when(world.getEnvironment()).thenReturn(org.bukkit.World.Environment.NORMAL);
         when(sender.getLocation()).thenReturn(new org.bukkit.Location(world, 0, 64, 0));
 
         ModifierTestService.TestResult result = service.run(sender, "HUNTER",

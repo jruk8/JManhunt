@@ -68,10 +68,11 @@ public final class ModifierTagScope {
 
     /**
      * Participant names, narrowed to one team when {@code team} names a
-     * role (case-insensitive). A null or blank team returns everyone.
+     * role (case-insensitive). A null, blank, or ALL team returns
+     * everyone.
      */
     public List<String> participantNames(String team) {
-        if (team == null || team.isBlank()) {
+        if (team == null || team.isBlank() || team.strip().equalsIgnoreCase("ALL")) {
             return participants.stream().map(Participant::name).toList();
         }
         String wanted = team.trim();

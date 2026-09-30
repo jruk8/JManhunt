@@ -358,8 +358,8 @@ class TagExpressionsTest {
         assertEquals("", replace(fixture, "<rmessage:hi>"));
         assertEquals("", replace(fixture, "<rsound:hunter>"));
         assertEquals(4, fixture.warnings.size());
-        assertTrue(fixture.warnings.get(0).contains("needs HUNTER or SPEEDRUNNER"));
-        assertTrue(fixture.warnings.get(1).contains("needs HUNTER or SPEEDRUNNER"));
+        assertTrue(fixture.warnings.get(0).contains("needs HUNTER, SPEEDRUNNER, or ALL"));
+        assertTrue(fixture.warnings.get(1).contains("needs HUNTER, SPEEDRUNNER, or ALL"));
         assertTrue(fixture.warnings.get(2).contains("needs a role and a text"));
         assertTrue(fixture.warnings.get(3).contains("needs a role plus an id"));
     }

@@ -34,10 +34,10 @@ see the Tags pages for full rules.
 | --- | --- |
 | `<gmessage:text>` | Send text to every participant; leaves nothing behind (alias `<gmsg>`). |
 | `<pmessage:player,text>` | Send text to one player (alias `<pmsg>`). |
-| `<rmessage:role,text>` | Send text to one role (alias `<rmsg>`). |
+| `<rmessage:role,text>` | Send text to one role (`ALL` sends to both; alias `<rmsg>`). |
 | `<gsound:id,pitch,volume>` | Play a sound for every participant. |
 | `<psound:player,id,pitch,volume>` | Play a sound for one player. |
-| `<rsound:role,id,pitch,volume>` | Play a sound for one role. |
+| `<rsound:role,id,pitch,volume>` | Play a sound for one role (`ALL` plays for both). |
 
 ### Stats and Roster
 
@@ -46,8 +46,12 @@ see the Tags pages for full rules.
 | `<pstat:player,key>` | One player's stat (`health`, `hunger`, ...). |
 | `<gstat:key>` | Match-wide stat (`duration`, ...). |
 | `<phasitem:player,item,count>` | `true` when the player holds count of item. |
-| `<active-players:ROLE>` | Eligible names as a list. |
-| `<plocation:player>` | Player spot as `[x, y, z, pitch, yaw, dimension]`. |
+| `<active-players:ROLE>` | Eligible names as a list (`ALL` lists both sides). |
+| `<plocation:player>` | Player spot as `[x, y, z, world, pitch, yaw]`. |
+| `<overlap-players:origin,role,radius,max>` | Names near an origin, nearest first. |
+| `<nearby-players:player,role,radius,max>` | Names near a player, sender excluded. |
+| `<pworld:player>` | `nether`, `end`, or the raw world name (`<world:player>` alias). |
+| `<px:player>` | Single coords (`py`, `pz`, `pyaw`, `ppitch`). |
 | `<prole:player>` | `HUNTER` or `SPEEDRUNNER`, else `null`. |
 | `<distance:loc1,loc2>` | 3D distance on xyz; cross-dimension full lists yield silent `null`. |
 
@@ -97,7 +101,7 @@ see the Tags pages for full rules.
 | `<gflag:name,value>` | Match-wide flag (alias `<gf>`). |
 | `<pflag:name,value>` | Per-player flag (alias `<pf>`). |
 | `<lflag:name,value>` | Run-only flag (alias `<lf>`). |
-| `<rflag:role,name,value>` | Flag of the named role. |
+| `<rflag:role,name,value>` | Flag of the named role (`ALL` fans out sets, reads consensus). |
 
 ### Loops and Functions
 

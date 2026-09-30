@@ -90,6 +90,35 @@ public final class MatchRosterValues implements RosterValues {
     }
 
     @Override
+    public List<RosterValues.NearbyParticipant> nearbyParticipants() {
+        Optional<GameInstance> match = game.instance(matchId);
+        if (match.isEmpty()) {
+            return List.of();
+        }
+        List<RosterValues.NearbyParticipant> entries = new ArrayList<>();
+        for (UUID id : match.get().assignedPlayerIds()) {
+            Role role = playerStates.role(id);
+            if (role != Role.HUNTER && role != Role.SPEEDRUNNER) {
+                continue;
+            }
+            Player player = Bukkit.getPlayer(id);
+            if (player == null || player.getLocation().getWorld() == null) {
+                continue;
+            }
+            if (IntervalDispatcher.intervalSkipWhy(playerStates.role(player),
+                    game.isActiveInInstance(matchId, id),
+                    player.isDead(), fakeSpectators.isFakeSpectator(player)).isPresent()) {
+                continue;
+            }
+            Location spot = player.getLocation();
+            entries.add(new RosterValues.NearbyParticipant(player.getName(), role.name(),
+                    spot.getX(), spot.getY(), spot.getZ(),
+                    spot.getWorld().getEnvironment().name(), spot.getWorld().getName()));
+        }
+        return entries;
+    }
+
+    @Override
     public Optional<Integer> countItem(String playerName, String materialKey) {
         Player found = NamedPlayerSinks.onlinePlayer(playerName);
         if (found == null) {

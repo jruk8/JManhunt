@@ -71,7 +71,7 @@ public final class PlayerRespawnListener implements Listener {
         if (death == null || death.getWorld() == null) {
             return List.of();
         }
-        return List.of(TagLocations.formatLocation(death, death.getWorld().getName()));
+        return List.of(TagLocations.formatLocation(death));
     }
 
     /**

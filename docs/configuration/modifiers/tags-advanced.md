@@ -73,7 +73,7 @@ may hold spaces inside quotes.
 | --- | --- | --- |
 | `<gflag:name,value>` | Whole match | Dies with the match. |
 | `<pflag:name,value>` | Executing player (`-CONSOLE` for console lists) | Flushed when the player leaves, is eliminated, or disconnects for good; dies with the match. |
-| `<rflag:role,name,value>` | Named role (`hunter` or `speedrunner`) | Dies with the match; player removal leaves role flags alone. |
+| `<rflag:role,name,value>` | Named role (`hunter`, `speedrunner`, or `ALL`) | Dies with the match; player removal leaves role flags alone. |
 | `<lflag:name,value>` | This run only | Set in an early line, read in a later line, discarded after. |
 
 `<lf>`, `<pf>`, and `<gf>` are short aliases for `<lflag>`,
@@ -83,10 +83,11 @@ including flag references and the tag cheatsheet.
 `<pflag:"cooldown",<gstat:"duration">>` stamps a cooldown;
 `<pflag:"cooldown">` reads it back. `<rflag>` names its role up
 front: `<rflag:hunter,boost>` and `<rflag:speedrunner,boost>` keep
-independent values under the same name. The role is `hunter` or
-`speedrunner` (any case); anything else warns, reads `null`, and
-skips writes. Role flags need no executor, so console lists can use
-them too.
+independent values under the same name. The role is `hunter`,
+`speedrunner`, or `ALL` (any case). `ALL` fans a set out to both
+roles and reads back the shared value, or `null` when the two sides
+disagree. Anything else warns, reads `null`, and skips writes. Role
+flags need no executor, so console lists can use them too.
 
 Flags are modifier-agnostic on purpose: any modifier can read what
 another wrote. For a strictly private flag, namespace the name with
@@ -211,7 +212,7 @@ A missing index yields `null`; a non-numeric index warns and yields
 | `ON_PLAYER_KILLS`, `ON_HUNTER_KILLS`, `ON_SPEEDRUNNER_KILLS` | `0`: the exact name of the killer. `1`: the exact name of the killed player. |
 | `ON_NETHER_ENTER`, `ON_END_ENTER`, `ON_FIRST_NETHER_ENTER`, `ON_FIRST_END_ENTER` | `0`: the origin world name, `1`: the destination world name. |
 | `ON_EVERY_ADVANCEMENT` | `0`: the advancement's namespaced key (e.g. `minecraft:nether/root`). |
-| `ON_RESPAWN`, `ON_SPEEDRUNNER_RESPAWN`, `ON_HUNTER_RESPAWN` | `0`: the death location as one list, `[x, y, z, pitch, yaw, dimension]`. |
+| `ON_RESPAWN`, `ON_SPEEDRUNNER_RESPAWN`, `ON_HUNTER_RESPAWN` | `0`: the death location as one list, `[x, y, z, world, pitch, yaw]`. |
 | `ON_DAMAGE_TAKEN` | `0`: the damaged player's name. `1`: damage taken in half hearts. `2`: the damage dealer's name, or `null` for mobs and the environment. |
 
 ## Match control

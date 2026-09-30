@@ -1,6 +1,8 @@
 package com.jruk8.jmanhunt.command;
 
 import org.bukkit.Location;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -14,19 +16,38 @@ public final class TagLocations {
     }
 
     /**
-     * Canonical location list {@code [x, y, z, pitch, yaw,
-     * dimension]}: coords via {@link TagMath#formatNumber}, pitch
-     * before yaw, dimension as the world name passed in. The name
-     * stays a parameter (instead of reading the location world) so
-     * callers with a bare location stay unit-testable.
+     * Canonical location list {@code [x, y, z, world, pitch, yaw]}:
+     * coords via {@link TagMath#formatNumber}, world as the
+     * normalized alias (see {@link #worldAlias}), never the raw
+     * name. The location must have a world; callers null-check
+     * first. Shared by the respawn event arg producer.
      */
-    public static String formatLocation(Location location, String worldName) {
+    public static String formatLocation(Location location) {
         return "[" + TagMath.formatNumber(location.getX()) + ", "
                 + TagMath.formatNumber(location.getY()) + ", "
                 + TagMath.formatNumber(location.getZ()) + ", "
+                + worldAlias(location.getWorld().getEnvironment().name(),
+                        location.getWorld().getName()) + ", "
                 + TagMath.formatNumber(location.getPitch()) + ", "
-                + TagMath.formatNumber(location.getYaw()) + ", "
-                + worldName + "]";
+                + TagMath.formatNumber(location.getYaw()) + "]";
+    }
+
+    /**
+     * Normalized world alias for primitives and {@code <pworld>}:
+     * NETHER environments read {@code nether}, THE_END reads
+     * {@code end} whatever the pooled name, and everything else
+     * reads the raw world name. Keyed on environment, never on
+     * name, so the configurable end base name needs no special
+     * case. Pure SSOT for tests.
+     */
+    public static String worldAlias(String environmentName, String worldName) {
+        if ("NETHER".equalsIgnoreCase(environmentName)) {
+            return "nether";
+        }
+        if ("THE_END".equalsIgnoreCase(environmentName)) {
+            return "end";
+        }
+        return worldName;
     }
 
     /**
@@ -50,8 +71,79 @@ public final class TagLocations {
         if (location.isEmpty() || location.get().getWorld() == null) {
             return "null";
         }
-        return formatLocation(location.get(), location.get().getWorld().getName());
+        return formatLocation(location.get());
     }
+
+    /**
+     * {@code <pworld:player>} (alias {@code <world:player>}): the
+     * player's world as the normalized alias, through the same
+     * helper as every primitive world slot. Offline or unknown
+     * players resolve {@code "null"} silently; only blank or
+     * malformed args warn.
+     */
+    static String playerWorld(String tag, String name, String args, TagContext context) {
+        Optional<Location> spot = playerSpot(tag, args, name, context);
+        if (spot.isEmpty()) {
+            return "null";
+        }
+        Location location = spot.get();
+        if (location.getWorld() == null) {
+            return "null";
+        }
+        return worldAlias(location.getWorld().getEnvironment().name(),
+                location.getWorld().getName());
+    }
+
+    /**
+     * {@code <px:player>}, {@code <py>}, {@code <pz>},
+     * {@code <pyaw>}, {@code <ppitch>}: one coordinate of the online
+     * player. Offline or unknown players resolve {@code "null"}
+     * silently; only blank or malformed args warn.
+     */
+    static String playerCoord(String tag, String name, String args, TagContext context) {
+        Optional<Location> spot = playerSpot(tag, args, name, context);
+        if (spot.isEmpty()) {
+            return "null";
+        }
+        Location location = spot.get();
+        if (location.getWorld() == null) {
+            return "null";
+        }
+        return switch (name) {
+            case "px" -> TagMath.formatNumber(location.getX());
+            case "py" -> TagMath.formatNumber(location.getY());
+            case "pz" -> TagMath.formatNumber(location.getZ());
+            case "pyaw" -> TagMath.formatNumber(location.getYaw());
+            default -> TagMath.formatNumber(location.getPitch());
+        };
+    }
+
+    /**
+     * One player arg resolved to a live location: blank or malformed
+     * args warn, offline or unknown players stay silent. Both
+     * read {@code "null"}.
+     */
+    private static Optional<Location> playerSpot(String tag, String args, String root,
+            TagContext context) {
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 1) {
+            context.scope().warn("Tag <" + root + "> needs a player like <" + root + ":Steve>: "
+                    + tag);
+            return Optional.empty();
+        }
+        Optional<String> name = CommandPlaceholders.parsePickItem(parts.get(0));
+        if (name.isEmpty() || name.get().isBlank()) {
+            context.scope().warn("Tag <" + root + "> needs a player like <" + root + ":Steve>: "
+                    + tag);
+            return Optional.empty();
+        }
+        Optional<Location> location = context.roster().locationOf(name.get().strip());
+        if (location.isEmpty()) {
+            return Optional.empty();
+        }
+        return location;
+    }
+
 
     /**
      * {@code <distance:loc1,loc2>}: 3D Euclidean distance on x, y, z
@@ -101,7 +193,190 @@ public final class TagLocations {
         return item.isEmpty() || item.get().isBlank() || item.get().strip().equalsIgnoreCase("null");
     }
 
-    /** Sixth list item (dimension); empty when the list is not a full primitive. */
+    /**
+     * {@code <overlap-players:origin,role,radius,max>}: names within
+     * radius blocks (3D Euclidean, at or under) of a location
+     * primitive origin, filtered to HUNTER, SPEEDRUNNER, or ALL
+     * (both), capped at max, nearest-first with name order breaking
+     * ties. A 4-plus-element origin scopes to its world alias (index
+     * 3); 3-element origins match all worlds. Pitch and yaw never
+     * matter. Empty matches read {@code []}.
+     */
+    static String overlapPlayers(String tag, String args, TagContext context) {
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 4) {
+            context.scope().warn("Tag <overlap-players> needs an origin, a role, a radius, "
+                    + "and a max like <overlap-players:[0, 64, 0],HUNTER,10,5>: " + tag);
+            return "null";
+        }
+        Optional<double[]> origin = originCoords(tag, parts.get(0), "overlap-players", context);
+        Optional<String> role = FlagStore.parseRole(tag, "overlap-players", parts.get(1),
+                context.scope());
+        Optional<Double> radius = proximityRadius(tag, parts.get(2), "overlap-players", context);
+        Optional<Integer> max = proximityMax(tag, parts.get(3), "overlap-players", context);
+        if (origin.isEmpty() || role.isEmpty() || radius.isEmpty() || max.isEmpty()) {
+            return "null";
+        }
+        return selectProximity(origin.get(), originWorld(parts.get(0)), role.get(),
+                radius.get(), max.get(), null, context);
+    }
+
+    /**
+     * {@code <nearby-players:player,role,radius,max>}: like
+     * overlap-players with a player's live location as the origin,
+     * scoped to their world, never including the command sender.
+     * Offline or unknown players resolve {@code "null"} silently.
+     */
+    static String nearbyPlayers(String tag, String args, String senderName, TagContext context) {
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 4) {
+            context.scope().warn("Tag <nearby-players> needs a player, a role, a radius, "
+                    + "and a max like <nearby-players:Steve,HUNTER,10,5>: " + tag);
+            return "null";
+        }
+        Optional<String> name = CommandPlaceholders.parsePickItem(parts.get(0));
+        if (name.isEmpty() || name.get().isBlank()) {
+            context.scope().warn("Tag <nearby-players> needs a player like "
+                    + "<nearby-players:Steve,HUNTER,10,5>: " + tag);
+            return "null";
+        }
+        Optional<Location> spot = context.roster().locationOf(name.get().strip());
+        if (spot.isEmpty() || spot.get().getWorld() == null) {
+            return "null";
+        }
+        Optional<String> role = FlagStore.parseRole(tag, "nearby-players", parts.get(1),
+                context.scope());
+        Optional<Double> radius = proximityRadius(tag, parts.get(2), "nearby-players", context);
+        Optional<Integer> max = proximityMax(tag, parts.get(3), "nearby-players", context);
+        if (role.isEmpty() || radius.isEmpty() || max.isEmpty()) {
+            return "null";
+        }
+        Location origin = spot.get();
+        return selectProximity(new double[] {origin.getX(), origin.getY(), origin.getZ()},
+                Optional.of(worldAlias(origin.getWorld().getEnvironment().name(),
+                        origin.getWorld().getName())),
+                role.get(), radius.get(), max.get(), senderName, context);
+    }
+
+    /**
+     * Shared proximity scan: role filter, optional sender exclusion,
+     * optional world scope, radius cap, nearest-first order, max cap.
+     */
+    private static String selectProximity(double[] origin, Optional<String> scopeWorld,
+            String role, double radius, int max, String excludeName, TagContext context) {
+        List<ScoredName> hits = new ArrayList<>();
+        for (RosterValues.NearbyParticipant candidate : context.roster().nearbyParticipants()) {
+            if (!proximityRoleMatches(role, candidate.role())) {
+                continue;
+            }
+            if (excludeName != null && candidate.name().equalsIgnoreCase(excludeName)) {
+                continue;
+            }
+            if (scopeWorld.isPresent() && !worldAlias(candidate.environment(), candidate.world())
+                    .equals(scopeWorld.get())) {
+                continue;
+            }
+            double dx = candidate.x() - origin[0];
+            double dy = candidate.y() - origin[1];
+            double dz = candidate.z() - origin[2];
+            double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (distance > radius) {
+                continue;
+            }
+            hits.add(new ScoredName(candidate.name(), distance));
+        }
+        hits.sort(Comparator.comparingDouble(ScoredName::distance)
+                .thenComparing(ScoredName::name, String.CASE_INSENSITIVE_ORDER));
+        return TagLists.format(hits.stream().limit(max).map(ScoredName::name).toList());
+    }
+
+    /** One proximity hit for nearest-first ordering. */
+    private record ScoredName(String name, double distance) {
+    }
+
+    /** True when a candidate role falls under a proximity filter. */
+    private static boolean proximityRoleMatches(String filter, String candidateRole) {
+        if (filter.equalsIgnoreCase("ALL")) {
+            return candidateRole.equalsIgnoreCase("HUNTER")
+                    || candidateRole.equalsIgnoreCase("SPEEDRUNNER");
+        }
+        return candidateRole.equalsIgnoreCase(filter);
+    }
+
+    /** First three origin elements as doubles; warns on anything less numeric. */
+    private static Optional<double[]> originCoords(String tag, String segment, String root,
+            TagContext context) {
+        Optional<String> item = CommandPlaceholders.parsePickItem(segment);
+        if (item.isEmpty()) {
+            context.scope().warn("Tag <" + root + "> needs a location origin with numeric "
+                    + "x, y, z: " + tag);
+            return Optional.empty();
+        }
+        List<String> elements = TagLists.parse(item.get());
+        if (elements.size() < 3) {
+            context.scope().warn("Tag <" + root + "> needs a location origin with numeric "
+                    + "x, y, z: " + tag);
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new double[] {
+                    Double.parseDouble(elements.get(0).strip()),
+                    Double.parseDouble(elements.get(1).strip()),
+                    Double.parseDouble(elements.get(2).strip())});
+        } catch (NumberFormatException unmatched) {
+            context.scope().warn("Tag <" + root + "> needs a location origin with numeric "
+                    + "x, y, z: " + tag);
+            return Optional.empty();
+        }
+    }
+
+    /** Origin world scope (index 3); empty for 3-element origins. */
+    private static Optional<String> originWorld(String segment) {
+        Optional<String> item = CommandPlaceholders.parsePickItem(segment);
+        if (item.isEmpty()) {
+            return Optional.empty();
+        }
+        List<String> elements = TagLists.parse(item.get());
+        if (elements.size() < 4) {
+            return Optional.empty();
+        }
+        return Optional.of(elements.get(3).strip());
+    }
+
+    /** Radius at or above 0; warns on anything else (including NaN). */
+    private static Optional<Double> proximityRadius(String tag, String segment, String root,
+            TagContext context) {
+        Optional<String> item = CommandPlaceholders.parsePickItem(segment);
+        try {
+            double radius = item.isPresent() ? Double.parseDouble(item.get().strip())
+                    : Double.NaN;
+            if (!(radius >= 0)) {
+                throw new NumberFormatException("radius");
+            }
+            return Optional.of(radius);
+        } catch (NumberFormatException unmatched) {
+            context.scope().warn("Tag <" + root + "> needs a radius at or above 0: " + tag);
+            return Optional.empty();
+        }
+    }
+
+    /** Positive whole max; warns on anything else. */
+    private static Optional<Integer> proximityMax(String tag, String segment, String root,
+            TagContext context) {
+        Optional<String> item = CommandPlaceholders.parsePickItem(segment);
+        try {
+            int max = item.isPresent() ? Integer.parseInt(item.get().strip()) : 0;
+            if (max <= 0) {
+                throw new NumberFormatException("max");
+            }
+            return Optional.of(max);
+        } catch (NumberFormatException unmatched) {
+            context.scope().warn("Tag <" + root + "> needs a positive whole max: " + tag);
+            return Optional.empty();
+        }
+    }
+
+    /** Fourth list item (world alias); empty when the list is not a full primitive. */
     private static Optional<String> dimension(String segment) {
         Optional<String> item = CommandPlaceholders.parsePickItem(segment);
         if (item.isEmpty()) {
@@ -111,7 +386,7 @@ public final class TagLocations {
         if (elements.size() < 6) {
             return Optional.empty();
         }
-        return Optional.of(elements.get(5).strip());
+        return Optional.of(elements.get(3).strip());
     }
 
     /** First three list items as doubles; empty when missing or non-numeric. */
