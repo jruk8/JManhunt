@@ -123,7 +123,7 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         int roll = ThreadLocalRandom.current().nextInt(FRIENDLY_FIRE_LINES);
-        game.sendToLobby(instance.originLobbyId(), friendlyFireKey(roll),
+        game.sendToInstance(instance, friendlyFireKey(roll),
                 Map.of("dead", victim.getName(), "killer", killer.getName()));
     }
 

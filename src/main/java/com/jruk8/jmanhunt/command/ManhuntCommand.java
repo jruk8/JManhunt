@@ -346,10 +346,12 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** One lobby queue: every online member grouped by role. */
+    /** One lobby queue: every online member outside matches, grouped by role. */
     private boolean statusLobby(CommandSender sender, Lobby lobby) {
         List<Player> players = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> lobby.contains(p.getUniqueId())).map(p -> (Player) p).toList();
+                .filter(p -> lobby.contains(p.getUniqueId()))
+                .filter(p -> game.instanceOf(p.getUniqueId()).isEmpty())
+                .map(p -> (Player) p).toList();
         message(sender, "manhunt.status-header", Map.of("status", "INACTIVE"));
         sendMatchRoleBlocks(sender, players, List.of());
         sendWinConditionLines(sender);
@@ -420,8 +422,9 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     /**
      * Every running match plus every populated lobby queue: ids with
      * active and assigned counts and durations first, then one line per
-     * lobby holding at least one online member. Quiet servers still print
-     * the games empty line so the lobby section never hides alone.
+     * lobby holding at least one queued member or match member. Quiet
+     * servers still print the games empty line so the lobby section
+     * never hides alone.
      */
     private boolean statusAll(CommandSender sender) {
         List<GameInstance> live = game.liveInstances();
@@ -444,7 +447,12 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** One line per lobby holding at least one online member, by lobby id. */
+    /**
+     * One line per lobby holding queued or match members, by lobby id.
+     * The in-match count unions active ids across the lobby's matches,
+     * so disconnected members read until they are kicked; the in-lobby
+     * count is online queue members outside any match.
+     */
     private void sendLobbyQueues(CommandSender sender) {
         List<Lobby> queued = new ArrayList<>();
         for (int id : lobbies.lobbyIds()) {
@@ -453,9 +461,15 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         queued.sort(Comparator.comparingInt(Lobby::id));
         boolean header = false;
         for (Lobby lobby : queued) {
-            long online = Bukkit.getOnlinePlayers().stream()
-                    .filter(player -> lobby.contains(player.getUniqueId())).count();
-            if (online < 1) {
+            Set<UUID> inMatch = new HashSet<>();
+            for (GameInstance instance : game.instancesForLobby(lobby.id())) {
+                inMatch.addAll(instance.activeIds());
+            }
+            long inLobby = Bukkit.getOnlinePlayers().stream()
+                    .filter(player -> lobby.contains(player.getUniqueId()))
+                    .filter(player -> game.instanceOf(player.getUniqueId()).isEmpty())
+                    .count();
+            if (inLobby < 1 && inMatch.isEmpty()) {
                 continue;
             }
             if (!header) {
@@ -464,7 +478,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             }
             message(sender, "manhunt.status-all-lobby-entry", Map.of(
                     "lobby", String.valueOf(lobby.id()),
-                    "count", String.valueOf(online)));
+                    "detail", StatusRosterService.lobbyDetail(inLobby, inMatch.size())));
         }
     }
 

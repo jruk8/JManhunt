@@ -72,7 +72,7 @@ public final class MatchLeaveService {
      * participants drop their gear when {@code dropGear} is true (voluntary
      * leave) or are wiped match-end style when false (auto-leave); pre-start
      * leavers keep everything. Hunter and speedrunner departures are
-     * announced to the lobby with the remaining role count. Returns the
+     * announced to the match with the remaining role count. Returns the
      * number removed. A last leaver ends the match for the other side.
      */
     public int leaveMatch(GameInstance instance, List<Player> leavers, boolean dropGear) {
@@ -167,16 +167,16 @@ public final class MatchLeaveService {
         }
     }
 
-    /** Announces hunter and speedrunner departures to the origin lobby. */
+    /** Announces hunter and speedrunner departures to the match compartment only. */
     private void announceLeaves(GameInstance instance, List<Role> leftRoles, List<String> leftNames) {
         for (int index = 0; index < leftRoles.size(); index++) {
             Role before = leftRoles.get(index);
             if (before == Role.HUNTER) {
-                messaging.sendToLobby(instance.originLobbyId(), "game.hunter-left",
+                messaging.sendToInstance(instance, "game.hunter-left",
                         Map.of("player", leftNames.get(index),
                                 "remaining", String.valueOf(store.activeHunterCount(instance))));
             } else if (before == Role.SPEEDRUNNER) {
-                messaging.sendToLobby(instance.originLobbyId(), "game.speedrunner-left",
+                messaging.sendToInstance(instance, "game.speedrunner-left",
                         Map.of("player", leftNames.get(index),
                                 "remaining", String.valueOf(store.activeRunnerCount(instance))));
             }

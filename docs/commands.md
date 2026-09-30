@@ -149,7 +149,7 @@ matches in their end delay cannot be joined.
 and speedrunners must run it twice within 10 seconds; they drop their gear
 and become spectators, or return to the lobby, depending on
 `settings.game-leave.destination`. Their departure is announced to the
-lobby with how many of their role remain, and if the last hunter or
+match with how many of their role remain, and if the last hunter or
 speedrunner leaves, the other side wins on the spot.
 
 ## Match Status
@@ -158,8 +158,10 @@ speedrunner leaves, the other side wins on the spot.
 queue. `/manhunt status [id|all]` needs `jmanhunt.command.status.other` on
 top of the base node: an id shows one match roster grouped by role with a
 spectator roll call whenever someone is watching, while `all` lists every
-running match first and then every lobby holding at least one player with
-its player count. Four extras can be toggled under
+running match first and then every lobby holding queued or match members,
+each with a split count (`1 in lobby, 4 in match`, `4 in match`, or
+`4 in lobby`). Members who disconnected but have not been kicked yet
+still count as in match. Four extras can be toggled under
 `settings.server.status`: the per-side win conditions
 (`show-win-conditions`), the running time (`show-elapsed-time`), the
 enabled modifiers (`show-modifiers`, hidden when none are enabled, listed
@@ -179,7 +181,10 @@ respawn delay carry an inline skull on their alive line instead.
 
 A match roster shows only that match's members (participants plus its
 spectators); lobby queues and queued spectators read in lobby status
-and join matches through `/manhunt game join`.
+and join matches through `/manhunt game join`. Match members never
+appear in a lobby roster: lobby status lists queue members only, and
+match traffic (leave lines, kill lines, friendly fire) reaches only
+the match compartment plus the console, never sibling lobbies.
 
 ## Lobby and Game Worlds
 

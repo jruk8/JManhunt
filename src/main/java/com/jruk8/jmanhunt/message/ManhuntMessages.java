@@ -403,7 +403,7 @@ public class ManhuntMessages extends OkaeriConfig {
     private String statusAllLobbiesHeader = "\n{prefix}\n<#de7766>Lobby queues:";
 
     @CustomKey("status-all-lobby-entry")
-    private String statusAllLobbyEntry = "<white>» Lobby {lobby} <gray>({count} players)";
+    private String statusAllLobbyEntry = "<white>» Lobby {lobby} <gray>({detail})";
 
     @CustomKey("invalid-instance-id")
     private String invalidInstanceId = "{prefix}<red>Unknown instance id.";

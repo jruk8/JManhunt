@@ -38,6 +38,20 @@ public final class StatusRosterService {
     }
 
     /**
+     * Lobby queue line detail: both halves when the lobby holds queued
+     * and match members, else whichever half is populated. Pure.
+     */
+    public static String lobbyDetail(long inLobby, int inMatch) {
+        if (inLobby > 0 && inMatch > 0) {
+            return inLobby + " in lobby, " + inMatch + " in match";
+        }
+        if (inMatch > 0) {
+            return inMatch + " in match";
+        }
+        return inLobby + " in lobby";
+    }
+
+    /**
      * Sends one role block: header, the truncated alive line, and the
      * role's dead line newest-first. Silent when the role holds nobody
      * and recorded no deaths. The dead list usually comes from the

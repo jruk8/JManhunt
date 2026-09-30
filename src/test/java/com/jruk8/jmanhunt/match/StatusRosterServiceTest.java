@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -150,5 +151,12 @@ class StatusRosterServiceTest {
         fixture.roster().sendSpectatorLine(fixture.recipient(), List.of(zed));
 
         verifyNoInteractions(fixture.messages());
+    }
+
+    @Test
+    void lobbyDetailSplitsLobbyAndMatch() {
+        assertEquals("1 in lobby, 4 in match", StatusRosterService.lobbyDetail(1, 4));
+        assertEquals("4 in match", StatusRosterService.lobbyDetail(0, 4));
+        assertEquals("4 in lobby", StatusRosterService.lobbyDetail(4, 0));
     }
 }
