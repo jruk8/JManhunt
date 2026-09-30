@@ -16,10 +16,10 @@ class ConfigPathMapperTest {
 
         assertEquals(true,
                 ConfigPathMapper.get(root, "settings.match.autostart.enabled"));
-        assertEquals("compass", ConfigPathMapper.get(root, "settings.compass.item"));
+        assertEquals("compass", ConfigPathMapper.get(root, "settings.compass.obtaining.item"));
         assertEquals(30,
                 ConfigPathMapper.get(root, "settings.match.autostart.countdown-seconds"));
-        assertEquals(10.0,
+        assertEquals(35.0,
                 ConfigPathMapper.get(root, "settings.compass.actions.auto.interval"));
         assertEquals(10, ConfigPathMapper.get(root, "config-version"));
     }
@@ -78,8 +78,8 @@ class ConfigPathMapperTest {
         assertEquals(60,
                 ConfigPathMapper.get(root, "settings.match.autostart.countdown-seconds"));
 
-        assertTrue(ConfigPathMapper.set(root, "settings.compass.item", "clock"));
-        assertEquals("clock", ConfigPathMapper.get(root, "settings.compass.item"));
+        assertTrue(ConfigPathMapper.set(root, "settings.compass.obtaining.item", "clock"));
+        assertEquals("clock", ConfigPathMapper.get(root, "settings.compass.obtaining.item"));
 
         assertTrue(ConfigPathMapper.set(root, "settings.match.autostart.enabled", false));
         assertEquals(false, ConfigPathMapper.get(root, "settings.match.autostart.enabled"));

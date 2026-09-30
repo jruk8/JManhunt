@@ -54,14 +54,14 @@ class ConfigServiceValuesTest {
     @Test
     void setValueEnforcesBounds() {
         ConfigService.SetOutcome outcome = service.setValue(
-                "settings.compass.signal-interference.light-level.min-sky-light", "16");
+                "settings.compass.signal.interference.light-level.min-sky-light", "16");
 
         assertFalse(outcome.ok());
         assertEquals("manhunt.setting-out-of-range", outcome.errorKey());
         assertEquals("0 to 15", outcome.slots().get("bounds"));
 
         assertTrue(service.setValue(
-                "settings.compass.signal-interference.light-level.min-sky-light", "15").ok());
+                "settings.compass.signal.interference.light-level.min-sky-light", "15").ok());
     }
 
     @Test
@@ -173,7 +173,7 @@ class ConfigServiceValuesTest {
         assertEquals(30, service.defaultValue("settings.match.autostart.countdown-seconds"));
         assertEquals("FORCE_START",
                 service.defaultValue("settings.match.start-on-speedrunner-damage.on-expire"));
-        assertEquals("compass", service.defaultValue("settings.compass.item"));
+        assertEquals("compass", service.defaultValue("settings.compass.obtaining.item"));
         assertNull(service.defaultValue("bogus.path"));
     }
 

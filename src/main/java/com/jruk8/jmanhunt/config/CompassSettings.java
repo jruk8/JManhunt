@@ -11,18 +11,7 @@ public class CompassSettings extends OkaeriConfig {
     @Comment("How holders get and keep their compass.")
     private Obtaining obtaining = new Obtaining();
 
-    @CustomKey("item")
-    @Comment({
-            "The item handed out as the tracking compass, in modern",
-            "minecraft:material_name format (the minecraft: namespace may be",
-            "omitted). Try \"clock\" or \"recovery_compass\" for a different look.",
-            "Anything unknown, or anything with placement functionality such as",
-            "dirt, signs, or redstone, falls back to \"compass\".",
-            "Default: compass"
-    })
-    private String item = "compass";
-
-    @CustomKey("must-be-inventory")
+    @CustomKey("lock-to-inventory")
     @Comment({
             "When true, the hunter compass must stay in the player's inventory and",
             "cannot be dropped or placed in chests. When false, the compass behaves",
@@ -32,7 +21,7 @@ public class CompassSettings extends OkaeriConfig {
             "inventory.",
             "Default: true"
     })
-    private Toggle mustBeInventory = new Toggle(true);
+    private boolean lockToInventory = true;
 
     @Comment("Automatic, manual, cycling, and teammate actions.")
     private Actions actions = new Actions();
@@ -44,16 +33,8 @@ public class CompassSettings extends OkaeriConfig {
     })
     private DistanceLimits distanceLimits = new DistanceLimits();
 
-    @CustomKey("signal-interference")
-    @Comment({
-            "Signal interference: when enabled, tracking can fail with a Bad",
-            "signal readout when the interference options say the signal is bad.",
-            "The signal is always good unless an option below says otherwise.",
-            "Works best with automatic refreshes off, analysis on, and",
-            "right-click refreshes on.",
-            "Default: false"
-    })
-    private SignalInterferenceSettings signalInterference = new SignalInterferenceSettings();
+    @Comment("Needle signal: interference jams, inaccuracy drifts.")
+    private Signal signal = new Signal();
 
     @Comment("Actionbar, chat, and other compass feedback.")
     private Feedback feedback = new Feedback();
@@ -66,20 +47,12 @@ public class CompassSettings extends OkaeriConfig {
         this.obtaining = obtaining;
     }
 
-    public String getItem() {
-        return item;
+    public boolean isLockToInventory() {
+        return lockToInventory;
     }
 
-    public void setItem(String item) {
-        this.item = item;
-    }
-
-    public Toggle getMustBeInventory() {
-        return mustBeInventory;
-    }
-
-    public void setMustBeInventory(Toggle mustBeInventory) {
-        this.mustBeInventory = mustBeInventory;
+    public void setLockToInventory(boolean lockToInventory) {
+        this.lockToInventory = lockToInventory;
     }
 
     public Actions getActions() {
@@ -98,12 +71,12 @@ public class CompassSettings extends OkaeriConfig {
         this.distanceLimits = distanceLimits;
     }
 
-    public SignalInterferenceSettings getSignalInterference() {
-        return signalInterference;
+    public Signal getSignal() {
+        return signal;
     }
 
-    public void setSignalInterference(SignalInterferenceSettings signalInterference) {
-        this.signalInterference = signalInterference;
+    public void setSignal(Signal signal) {
+        this.signal = signal;
     }
 
     public Feedback getFeedback() {
@@ -116,6 +89,17 @@ public class CompassSettings extends OkaeriConfig {
 
     @SuppressWarnings("FieldMayBeFinal")
     public static class Obtaining extends OkaeriConfig {
+
+        @CustomKey("item")
+        @Comment({
+                "The item handed out as the tracking compass, in modern",
+                "minecraft:material_name format (the minecraft: namespace may be",
+                "omitted). Try \"clock\" or \"recovery_compass\" for a different look.",
+                "Anything unknown, or anything with placement functionality such as",
+                "dirt, signs, or redstone, falls back to \"compass\".",
+                "Default: compass"
+        })
+        private String item = "compass";
 
         @CustomKey("given-to")
         @Comment({
@@ -134,6 +118,14 @@ public class CompassSettings extends OkaeriConfig {
                 "Default: true"
         })
         private Toggle dropOnDeath = new Toggle(true);
+
+        public String getItem() {
+            return item;
+        }
+
+        public void setItem(String item) {
+            this.item = item;
+        }
 
         public GivenTo getGivenTo() {
             return givenTo;
@@ -209,9 +201,9 @@ public class CompassSettings extends OkaeriConfig {
             @Comment({
                     "Seconds between automatic target/location refreshes.",
                     "Minimum: 0 (always due).",
-                    "Default: 10.0"
+                    "Default: 35.0"
             })
-            private double interval = 10.0;
+            private double interval = 35.0;
 
             @CustomKey("deviation")
             @Comment({
@@ -320,6 +312,29 @@ public class CompassSettings extends OkaeriConfig {
 
         public void setSpeedrunner(Tracker speedrunner) {
             this.speedrunner = speedrunner;
+        }
+    }
+
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Signal extends OkaeriConfig {
+
+        @CustomKey("interference")
+        @Comment({
+                "Signal interference: when enabled, tracking can fail with a Bad",
+                "signal readout when the interference options say the signal is bad.",
+                "The signal is always good unless an option below says otherwise.",
+                "Works best with automatic refreshes off, analysis on, and",
+                "right-click refreshes on.",
+                "Default: false"
+        })
+        private SignalInterferenceSettings interference = new SignalInterferenceSettings();
+
+        public SignalInterferenceSettings getInterference() {
+            return interference;
+        }
+
+        public void setInterference(SignalInterferenceSettings interference) {
+            this.interference = interference;
         }
     }
 

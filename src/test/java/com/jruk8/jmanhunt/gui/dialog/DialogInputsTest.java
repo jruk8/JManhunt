@@ -22,9 +22,9 @@ class DialogInputsTest {
     @Test
     void fullyBoundedNumbersUseTheSlider() {
         assertTrue(DialogInputs.useNumberRange(
-                SettingRegistry.byPath("settings.compass.signal-interference.light-level.min-sky-light")));
+                SettingRegistry.byPath("settings.compass.signal.interference.light-level.min-sky-light")));
         assertTrue(DialogInputs.useNumberRange(
-                SettingRegistry.byPath("settings.compass.signal-interference.chance-to-bypass")));
+                SettingRegistry.byPath("settings.compass.signal.interference.chance-to-bypass")));
     }
 
     @Test
@@ -34,31 +34,31 @@ class DialogInputsTest {
         assertFalse(DialogInputs.useNumberRange(
                 SettingRegistry.byPath("settings.compass.actions.auto.interval")));
         assertFalse(DialogInputs.useNumberRange(
-                SettingRegistry.byPath("settings.compass.signal-interference.required-to-fail")));
+                SettingRegistry.byPath("settings.compass.signal.interference.required-to-fail")));
         assertFalse(DialogInputs.useNumberRange(
-                SettingRegistry.byPath("settings.compass.item")));
+                SettingRegistry.byPath("settings.compass.obtaining.item")));
     }
 
     @Test
     void sliderResponsesConvertToSetterText() {
         assertEquals("3", DialogInputs.submitText(
-                SettingRegistry.byPath("settings.compass.signal-interference.underground.max-blocks-above"),
+                SettingRegistry.byPath("settings.compass.signal.interference.underground.max-blocks-above"),
                 2.6f));
         assertEquals("0.5", DialogInputs.submitText(
-                SettingRegistry.byPath("settings.compass.signal-interference.chance-to-bypass"),
+                SettingRegistry.byPath("settings.compass.signal.interference.chance-to-bypass"),
                 0.5f));
         assertNull(DialogInputs.submitText(
-                SettingRegistry.byPath("settings.compass.signal-interference.chance-to-bypass"),
+                SettingRegistry.byPath("settings.compass.signal.interference.chance-to-bypass"),
                 null));
     }
 
     @Test
     void sliderResponsesClampIntoBounds() {
         assertEquals("1.0", DialogInputs.submitText(
-                SettingRegistry.byPath("settings.compass.signal-interference.chance-to-bypass"),
+                SettingRegistry.byPath("settings.compass.signal.interference.chance-to-bypass"),
                 9.5f));
         assertEquals("0.0", DialogInputs.submitText(
-                SettingRegistry.byPath("settings.compass.signal-interference.chance-to-bypass"),
+                SettingRegistry.byPath("settings.compass.signal.interference.chance-to-bypass"),
                 -2.0f));
     }
 

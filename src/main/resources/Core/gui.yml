@@ -59,21 +59,21 @@ categories:
   compass/feedback/actionbar: GLOW_INK_SAC
   compass/feedback/actionbar/show-distance-delta: ARROW
   compass/feedback/chat-messages: NOTE_BLOCK
-  compass/signal-interference: REDSTONE_TORCH
-  compass/signal-interference/altitude: ELYTRA
-  compass/signal-interference/biome: GRASS_BLOCK
-  compass/signal-interference/invisible: GLASS_BOTTLE
-  compass/signal-interference/player-stats: GOLDEN_CARROT
-  compass/signal-interference/player-stats/health: APPLE
-  compass/signal-interference/player-stats/hunger: COOKED_BEEF
-  compass/signal-interference/player-stats/experience: EXPERIENCE_BOTTLE
-  compass/signal-interference/light-level: GLOWSTONE
-  compass/signal-interference/line-of-sight: ENDER_EYE
-  compass/signal-interference/movement: WIND_CHARGE
-  compass/signal-interference/underground: STONE
-  compass/signal-interference/underwater: WATER_BUCKET
-  compass/signal-interference/weather: LIGHTNING_ROD
-  compass/must-be-inventory: ENDER_CHEST
+  compass/signal: SCULK_SENSOR
+  compass/signal/interference: REDSTONE_TORCH
+  compass/signal/interference/altitude: ELYTRA
+  compass/signal/interference/biome: GRASS_BLOCK
+  compass/signal/interference/invisible: GLASS_BOTTLE
+  compass/signal/interference/player-stats: GOLDEN_CARROT
+  compass/signal/interference/player-stats/health: APPLE
+  compass/signal/interference/player-stats/hunger: COOKED_BEEF
+  compass/signal/interference/player-stats/experience: EXPERIENCE_BOTTLE
+  compass/signal/interference/light-level: GLOWSTONE
+  compass/signal/interference/line-of-sight: ENDER_EYE
+  compass/signal/interference/movement: WIND_CHARGE
+  compass/signal/interference/underground: STONE
+  compass/signal/interference/underwater: WATER_BUCKET
+  compass/signal/interference/weather: LIGHTNING_ROD
   players: PLAYER_HEAD
   players/respawn: TOTEM_OF_UNDYING
   players/respawn/hunter: RED_BED
@@ -179,20 +179,20 @@ descriptions:
   "settings.compass.feedback": "Actionbar, chat, and other compass feedback."
   "settings.compass.feedback.chat-messages": "Chat the holder about compass actions."
   "settings.compass.feedback.chat-messages.enabled": "Lock, switch, and died chat messages."
-  "settings.compass.must-be-inventory": "Force the compass to stay in the inventory."
-  "settings.compass.signal-interference": "Jam tracking by height, biome, light, and more."
-  "settings.compass.signal-interference.altitude": "Jam tracking outside a height band."
-  "settings.compass.signal-interference.biome": "Biomes that jam tracking."
-  "settings.compass.signal-interference.invisible": "Invisibility that jams tracking."
-  "settings.compass.signal-interference.player-stats": "Health, hunger, and level jams."
-  "settings.compass.signal-interference.player-stats.health": "Low health jams tracking."
-  "settings.compass.signal-interference.player-stats.hunger": "Low hunger jams tracking."
-  "settings.compass.signal-interference.player-stats.experience": "Low exp level jams tracking."
-  "settings.compass.signal-interference.light-level": "Light levels that jam tracking."
-  "settings.compass.signal-interference.line-of-sight": "Block tracking without line of sight."
-  "settings.compass.signal-interference.underground": "Jam tracking under too many blocks."
-  "settings.compass.signal-interference.underwater": "Jam tracking under too much water."
-  "settings.compass.signal-interference.weather": "Weather that jams tracking."
+  "settings.compass.signal": "Needle signal: interference and inaccuracy."
+  "settings.compass.signal.interference": "Jam tracking by height, biome, light, and more."
+  "settings.compass.signal.interference.altitude": "Jam tracking outside a height band."
+  "settings.compass.signal.interference.biome": "Biomes that jam tracking."
+  "settings.compass.signal.interference.invisible": "Invisibility that jams tracking."
+  "settings.compass.signal.interference.player-stats": "Health, hunger, and level jams."
+  "settings.compass.signal.interference.player-stats.health": "Low health jams tracking."
+  "settings.compass.signal.interference.player-stats.hunger": "Low hunger jams tracking."
+  "settings.compass.signal.interference.player-stats.experience": "Low exp level jams tracking."
+  "settings.compass.signal.interference.light-level": "Light levels that jam tracking."
+  "settings.compass.signal.interference.line-of-sight": "Block tracking without line of sight."
+  "settings.compass.signal.interference.underground": "Jam tracking under too many blocks."
+  "settings.compass.signal.interference.underwater": "Jam tracking under too much water."
+  "settings.compass.signal.interference.weather": "Weather that jams tracking."
   "settings.compass.actions.teammates": "Track teammates with shift-left-click."
   "settings.compass.actions.teammates.enabled": "Shift-left toggles teammate tracking."
   "settings.compass.actions.teammates.switch-cooldown": "Seconds between teammate switches."
@@ -271,8 +271,8 @@ descriptions:
   "settings.match.game-boosts.custom-piglin-barter": "Custom piglin barter odds for speedrunners."
   "settings.compass.obtaining.given-to.hunters": "Hunters receive a tracking compass."
   "settings.compass.obtaining.given-to.speedrunners": "Speedrunners receive a tracking compass."
-  "settings.compass.item": "Item handed out as the tracking compass."
-  "settings.compass.must-be-inventory.enabled": "Compass must stay in the inventory."
+  "settings.compass.obtaining.item": "Item handed out as the tracking compass."
+  "settings.compass.lock-to-inventory": "Lock the compass to the inventory."
   "settings.compass.obtaining.drop-on-death.enabled": "Compass survives death as a dropped item."
   "settings.compass.actions.auto.enabled": "Refresh on the automatic clock."
   "settings.compass.actions.auto.interval": "Seconds between automatic retargets."
@@ -323,50 +323,50 @@ descriptions:
   "settings.compass.feedback.actionbar.show-distance-delta.mode": "HOLD keeps the delta; BLINK flashes it."
   "settings.compass.feedback.actionbar.show-distance-delta.blink-duration-seconds": "Seconds a blink stays visible."
   "settings.compass.feedback.actionbar.show-distance-delta.reverse-on-hunter": "Hunters see green on closer."
-  "settings.compass.signal-interference.enabled": "Master switch for signal interference."
-  "settings.compass.signal-interference.required-to-fail": "Failed checks needed to jam tracking."
-  "settings.compass.signal-interference.chance-to-bypass": "Chance to ignore interference."
-  "settings.compass.signal-interference.show-reason-in-actionbar": "Name the cause of a bad signal."
-  "settings.compass.signal-interference.altitude.enabled": "Altitude can interfere with tracking."
-  "settings.compass.signal-interference.altitude.min-y": "Lowest clean altitude."
-  "settings.compass.signal-interference.altitude.max-y": "Highest clean altitude."
-  "settings.compass.signal-interference.altitude.two-way": "Target altitude must pass too."
-  "settings.compass.signal-interference.biome.enabled": "Biomes can interfere with tracking."
-  "settings.compass.signal-interference.biome.interfere-in": "Biomes that interfere."
-  "settings.compass.signal-interference.biome.two-way": "Target biome must pass too."
-  "settings.compass.signal-interference.light-level.enabled": "Light can interfere with tracking."
-  "settings.compass.signal-interference.light-level.interfere-when": "Light condition that interferes."
-  "settings.compass.signal-interference.light-level.min-block-light": "Lowest clean block light."
-  "settings.compass.signal-interference.light-level.min-sky-light": "Lowest clean sky light."
-  "settings.compass.signal-interference.light-level.two-way": "Target light must pass too."
-  "settings.compass.signal-interference.line-of-sight.enabled": "Line of sight can interfere."
-  "settings.compass.signal-interference.line-of-sight.interfere-when": "Sight condition that interferes."
-  "settings.compass.signal-interference.line-of-sight.max-ray-distance": "Longest clean sight ray."
-  "settings.compass.signal-interference.invisible.enabled": "Invisibility can interfere."
-  "settings.compass.signal-interference.invisible.mode": "Side whose invisibility interferes."
-  "settings.compass.signal-interference.invisible.two-way": "Both sides must pass too."
-  "settings.compass.signal-interference.player-stats.health.enabled": "Low health can interfere."
-  "settings.compass.signal-interference.player-stats.health.min-health": "Minimum health points."
-  "settings.compass.signal-interference.player-stats.health.two-way": "Target health must pass too."
-  "settings.compass.signal-interference.player-stats.hunger.enabled": "Low hunger can interfere."
-  "settings.compass.signal-interference.player-stats.hunger.min-hunger": "Minimum hunger bar level."
-  "settings.compass.signal-interference.player-stats.hunger.two-way": "Target hunger must pass too."
-  "settings.compass.signal-interference.player-stats.experience.enabled": "Low exp level can interfere."
-  "settings.compass.signal-interference.player-stats.experience.min-exp-level": "Minimum exp level."
-  "settings.compass.signal-interference.player-stats.experience.two-way": "Target level must pass too."
-  "settings.compass.signal-interference.movement.enabled": "Moving can interfere with tracking."
-  "settings.compass.signal-interference.movement.threshold-blocks": "Blocks moved before interference."
-  "settings.compass.signal-interference.movement.two-way": "Target movement must pass too."
-  "settings.compass.signal-interference.underground.enabled": "Depth can interfere with tracking."
-  "settings.compass.signal-interference.underground.ignore-transparent": "Glass and leaves do not count as cover."
-  "settings.compass.signal-interference.underground.max-blocks-above": "Most clean blocks overhead."
-  "settings.compass.signal-interference.underground.two-way": "Target cover must pass too."
-  "settings.compass.signal-interference.underwater.enabled": "Water can interfere with tracking."
-  "settings.compass.signal-interference.underwater.max-blocks-above": "Most clean water overhead."
-  "settings.compass.signal-interference.underwater.two-way": "Target water must pass too."
-  "settings.compass.signal-interference.weather.enabled": "Weather can interfere with tracking."
-  "settings.compass.signal-interference.weather.interfere-during": "Weather that interferes."
-  "settings.compass.signal-interference.weather.two-way": "Target weather must pass too."
+  "settings.compass.signal.interference.enabled": "Master switch for signal interference."
+  "settings.compass.signal.interference.required-to-fail": "Failed checks needed to jam tracking."
+  "settings.compass.signal.interference.chance-to-bypass": "Chance to ignore interference."
+  "settings.compass.signal.interference.show-reason-in-actionbar": "Name the cause of a bad signal."
+  "settings.compass.signal.interference.altitude.enabled": "Altitude can interfere with tracking."
+  "settings.compass.signal.interference.altitude.min-y": "Lowest clean altitude."
+  "settings.compass.signal.interference.altitude.max-y": "Highest clean altitude."
+  "settings.compass.signal.interference.altitude.two-way": "Target altitude must pass too."
+  "settings.compass.signal.interference.biome.enabled": "Biomes can interfere with tracking."
+  "settings.compass.signal.interference.biome.interfere-in": "Biomes that interfere."
+  "settings.compass.signal.interference.biome.two-way": "Target biome must pass too."
+  "settings.compass.signal.interference.light-level.enabled": "Light can interfere with tracking."
+  "settings.compass.signal.interference.light-level.interfere-when": "Light condition that interferes."
+  "settings.compass.signal.interference.light-level.min-block-light": "Lowest clean block light."
+  "settings.compass.signal.interference.light-level.min-sky-light": "Lowest clean sky light."
+  "settings.compass.signal.interference.light-level.two-way": "Target light must pass too."
+  "settings.compass.signal.interference.line-of-sight.enabled": "Line of sight can interfere."
+  "settings.compass.signal.interference.line-of-sight.interfere-when": "Sight condition that interferes."
+  "settings.compass.signal.interference.line-of-sight.max-ray-distance": "Longest clean sight ray."
+  "settings.compass.signal.interference.invisible.enabled": "Invisibility can interfere."
+  "settings.compass.signal.interference.invisible.mode": "Side whose invisibility interferes."
+  "settings.compass.signal.interference.invisible.two-way": "Both sides must pass too."
+  "settings.compass.signal.interference.player-stats.health.enabled": "Low health can interfere."
+  "settings.compass.signal.interference.player-stats.health.min-health": "Minimum health points."
+  "settings.compass.signal.interference.player-stats.health.two-way": "Target health must pass too."
+  "settings.compass.signal.interference.player-stats.hunger.enabled": "Low hunger can interfere."
+  "settings.compass.signal.interference.player-stats.hunger.min-hunger": "Minimum hunger bar level."
+  "settings.compass.signal.interference.player-stats.hunger.two-way": "Target hunger must pass too."
+  "settings.compass.signal.interference.player-stats.experience.enabled": "Low exp level can interfere."
+  "settings.compass.signal.interference.player-stats.experience.min-exp-level": "Minimum exp level."
+  "settings.compass.signal.interference.player-stats.experience.two-way": "Target level must pass too."
+  "settings.compass.signal.interference.movement.enabled": "Moving can interfere with tracking."
+  "settings.compass.signal.interference.movement.threshold-blocks": "Blocks moved before interference."
+  "settings.compass.signal.interference.movement.two-way": "Target movement must pass too."
+  "settings.compass.signal.interference.underground.enabled": "Depth can interfere with tracking."
+  "settings.compass.signal.interference.underground.ignore-transparent": "Glass and leaves do not count as cover."
+  "settings.compass.signal.interference.underground.max-blocks-above": "Most clean blocks overhead."
+  "settings.compass.signal.interference.underground.two-way": "Target cover must pass too."
+  "settings.compass.signal.interference.underwater.enabled": "Water can interfere with tracking."
+  "settings.compass.signal.interference.underwater.max-blocks-above": "Most clean water overhead."
+  "settings.compass.signal.interference.underwater.two-way": "Target water must pass too."
+  "settings.compass.signal.interference.weather.enabled": "Weather can interfere with tracking."
+  "settings.compass.signal.interference.weather.interfere-during": "Weather that interferes."
+  "settings.compass.signal.interference.weather.two-way": "Target weather must pass too."
   "settings.players.roles.reset-on-game-end.enabled": "Reset roles to NONE when a match ends."
   "settings.players.roles.reset-on-leave.enabled": "Reset leavers to NONE."
   "settings.players.roles.turn-nones-spectator.enabled": "Put NONE players in spectator mode."

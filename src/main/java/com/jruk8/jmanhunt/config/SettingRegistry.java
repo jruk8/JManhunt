@@ -26,8 +26,8 @@ public final class SettingRegistry {
             "settings.compass.actions.manual.analysis.debuffs.commands.player",
             "settings.compass.actions.manual.analysis.debuffs.commands.speedrunner",
             "settings.compass.actions.manual.analysis.debuffs.commands.hunter",
-            "settings.compass.signal-interference.weather.interfere-during",
-            "settings.compass.signal-interference.biome.interfere-in",
+            "settings.compass.signal.interference.weather.interfere-during",
+            "settings.compass.signal.interference.biome.interfere-in",
             "world-engine.preloading.commands",
             "settings.server.team-chat.prefixes",
             "settings.server.anti-spawn-camp.monitored-roles",
@@ -325,7 +325,7 @@ public final class SettingRegistry {
 
     private static int enabledInterferenceOptions(Function<String, Object> lookup) {
         int count = 0;
-        String base = "settings.compass.signal-interference.";
+        String base = "settings.compass.signal.interference.";
         for (String option : List.of("light-level", "underground", "underwater",
                 "altitude", "weather", "biome", "movement", "line-of-sight", "invisible")) {
             if (Boolean.TRUE.equals(lookup.apply(base + option + ".enabled"))) {

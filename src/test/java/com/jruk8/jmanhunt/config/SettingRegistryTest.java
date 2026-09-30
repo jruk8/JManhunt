@@ -59,7 +59,7 @@ class SettingRegistryTest {
 
     @Test
     void stringAcceptedTrimmed() {
-        var outcome = validate("settings.compass.item", "  clock  ");
+        var outcome = validate("settings.compass.obtaining.item", "  clock  ");
 
         assertTrue(outcome.ok());
         assertEquals("clock", outcome.value());
@@ -68,7 +68,7 @@ class SettingRegistryTest {
     @Test
     void nullRawFails() {
         assertFalse(SettingRegistry.validate(
-                SettingRegistry.byPath("settings.compass.item"), null, path -> null).ok());
+                SettingRegistry.byPath("settings.compass.obtaining.item"), null, path -> null).ok());
     }
 
     @Test
@@ -196,13 +196,13 @@ class SettingRegistryTest {
     @Test
     void intBoundsRejectOutsideWithBoundsText() {
         var outcome = validate(
-                "settings.compass.signal-interference.light-level.min-sky-light", "16");
+                "settings.compass.signal.interference.light-level.min-sky-light", "16");
 
         assertFalse(outcome.ok());
         assertEquals("manhunt.setting-out-of-range", outcome.errorKey());
         assertEquals("0 to 15", outcome.slots().get("bounds"));
         assertEquals(15, validate(
-                "settings.compass.signal-interference.light-level.min-sky-light", "15").value());
+                "settings.compass.signal.interference.light-level.min-sky-light", "15").value());
     }
 
     @Test
@@ -238,12 +238,12 @@ class SettingRegistryTest {
     @Test
     void dynamicEnabledCountCapsRequiredToFail() {
         Map<String, Object> values = new HashMap<>();
-        String base = "settings.compass.signal-interference.";
+        String base = "settings.compass.signal.interference.";
         values.put(base + "light-level.enabled", true);
         values.put(base + "underground.enabled", true);
         values.put(base + "underwater.enabled", true);
         SettingDescriptor descriptor =
-                SettingRegistry.byPath("settings.compass.signal-interference.required-to-fail");
+                SettingRegistry.byPath("settings.compass.signal.interference.required-to-fail");
 
         assertEquals(3, SettingRegistry.validate(descriptor, "3", lookup(values)).value());
         var outcome = SettingRegistry.validate(descriptor, "4", lookup(values));
@@ -305,12 +305,12 @@ class SettingRegistryTest {
 
     @Test
     void byPathIsCaseInsensitive() {
-        assertEquals("settings.compass.item",
-                SettingRegistry.byPath("Settings.Compass.Item").path());
+        assertEquals("settings.compass.obtaining.item",
+                SettingRegistry.byPath("Settings.Compass.Obtaining.Item").path());
         assertNull(SettingRegistry.byPath("bogus.path"));
         assertNull(SettingRegistry.byPath(null));
-        assertEquals("settings.compass.item",
-                SettingRegistry.canonicalPath("Settings.Compass.Item"));
+        assertEquals("settings.compass.obtaining.item",
+                SettingRegistry.canonicalPath("Settings.Compass.Obtaining.Item"));
         assertNull(SettingRegistry.canonicalPath("bogus"));
     }
 
@@ -318,7 +318,7 @@ class SettingRegistryTest {
     void sectionsDetected() {
         assertTrue(SettingRegistry.isSection("settings"));
         assertTrue(SettingRegistry.isSection("settings.match"));
-        assertFalse(SettingRegistry.isSection("settings.compass.item"));
+        assertFalse(SettingRegistry.isSection("settings.compass.obtaining.item"));
         assertFalse(SettingRegistry.isSection("bogus"));
     }
 

@@ -116,11 +116,11 @@ final class CompassSignalService {
             Boolean hasLineOfSight, Player seen, double holderMoved) {
         Integer lobby = lobbyOf(holder);
         if (!plugin.overrides().getBoolean(lobby,
-                "settings.compass.signal-interference.enabled", true)) {
+                "settings.compass.signal.interference.enabled", true)) {
             return Optional.empty();
         }
         boolean ignoreTransparent = plugin.overrides().getBoolean(lobby,
-                "settings.compass.signal-interference.underground.ignore-transparent", true);
+                "settings.compass.signal.interference.underground.ignore-transparent", true);
         SignalInterference.Snapshot targetSnapshot = targetSnapshot(target, targetPress,
                 ignoreTransparent, seen);
         return SignalInterference.lastReason(
@@ -190,7 +190,7 @@ final class CompassSignalService {
     }
 
     private SignalInterference.Config interferenceConfig(Integer lobby) {
-        String base = "settings.compass.signal-interference.";
+        String base = "settings.compass.signal.interference.";
         var overrides = plugin.overrides();
         Set<SignalInterference.Weather> during = interfereDuring(lobby, base);
         SignalInterference.InterfereWhen when = lightInterfereWhen(lobby, base);

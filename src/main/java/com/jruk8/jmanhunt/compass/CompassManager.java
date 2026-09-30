@@ -103,7 +103,7 @@ public final class CompassManager {
                         boolean autoEnabled = overrides.getBoolean(lobby,
                                 "settings.compass.actions.auto.enabled", true);
                         double intervalSeconds = overrides.getDouble(lobby,
-                                "settings.compass.actions.auto.interval", 10.0);
+                                "settings.compass.actions.auto.interval", 35.0);
                         double deviationSeconds = overrides.getDouble(lobby,
                                 "settings.compass.actions.auto.deviation", 0.0);
                         if (!autoRefreshDue(now, lastAutoRefresh.getOrDefault(id, 0L),
@@ -525,7 +525,7 @@ public final class CompassManager {
         spinNeedle(item, holder);
         holder.getInventory().setItem(slot, item);
         if (plugin.overrides().getBoolean(lobbyOf(holder),
-                "settings.compass.signal-interference.show-reason-in-actionbar", true)) {
+                "settings.compass.signal.interference.show-reason-in-actionbar", true)) {
             compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-reason-actionbar",
                     Map.of("reason", reasonText(reason))));
             return;

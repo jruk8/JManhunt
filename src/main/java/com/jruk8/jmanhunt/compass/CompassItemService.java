@@ -130,11 +130,11 @@ final class CompassItemService {
             return;
         }
         removeCompasses(player);
-        String configured =
-                plugin.overrides().getString(lobby, "settings.compass.item", "compass");
+        String configured = plugin.overrides().getString(lobby,
+                "settings.compass.obtaining.item", "compass");
         Material material = resolveCompassMaterial(configured);
         if (material == null) {
-            plugin.logger().warning("Unknown or placeable settings.compass.item '"
+            plugin.logger().warning("Unknown or placeable settings.compass.obtaining.item '"
                     + configured + "'. Using minecraft:compass.");
             material = Material.COMPASS;
         }
@@ -310,6 +310,6 @@ final class CompassItemService {
 
     boolean mustBeInventory(Integer lobby) {
         return plugin.overrides().getBoolean(lobby,
-                "settings.compass.must-be-inventory.enabled", true);
+                "settings.compass.lock-to-inventory", true);
     }
 }

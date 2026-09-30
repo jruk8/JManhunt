@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verdict matrix for the pure signal-interference core: each option,
+ * Verdict matrix for the pure signal interference core: each option,
  * required-to-fail combining, per-option two-way sides, bypass
  * boundaries, reason ids, and config clamping. No Bukkit server needed.
  */

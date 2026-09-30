@@ -26,7 +26,7 @@ public record SettingDescriptor(
         NONE,
         /** Half of world-engine.cell-size (tp-spread-radius cap). */
         CELL_HALF,
-        /** Enabled signal-interference option count, at least 1. */
+        /** Enabled signal interference option count, at least 1. */
         ENABLED_OPTION_COUNT
     }
 

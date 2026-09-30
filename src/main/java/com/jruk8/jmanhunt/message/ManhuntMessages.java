@@ -163,7 +163,7 @@ public class ManhuntMessages extends OkaeriConfig {
             "speedrunner hit a hunter on time.";
 
     @CustomKey("started-by-damage")
-    private String startedByDamage = "{prefix}<green>The Manhunt game has begun!";
+    private String startedByDamage = "{prefix}<green>The Manhunt has begun!";
 
     @CustomKey("headstart-active")
     private String headstartActive = "{prefix}<yellow>{role}s <yellow>are in spectator mode for " +

@@ -196,11 +196,11 @@ class ManhuntMenusTest {
 
     @Test
     void listMenuShowsEntriesPlusAdd() {
-        when(config.getStringList("settings.compass.signal-interference.weather.interfere-during"))
+        when(config.getStringList("settings.compass.signal.interference.weather.interfere-during"))
                 .thenReturn(List.of("a", "b"));
 
         Menu list = menus.listMenu(viewer,
-                "settings.compass.signal-interference.weather.interfere-during", () -> menus.rootMenu(viewer));
+                "settings.compass.signal.interference.weather.interfere-during", () -> menus.rootMenu(viewer));
 
         List<MenuButton> shown = shownButtons(list,
                 ScalingLayout.backSlot(list.layout().rowCount()));
@@ -213,11 +213,11 @@ class ManhuntMenusTest {
 
     @Test
     void weatherListButtonOpensInterfereDuringChecklist() {
-        String path = "settings.compass.signal-interference.weather.interfere-during";
+        String path = "settings.compass.signal.interference.weather.interfere-during";
         when(config.getStringList(path)).thenReturn(List.of("STORM"));
 
         Menu section = menus.sectionMenu(viewer,
-                "settings.compass.signal-interference.weather",
+                "settings.compass.signal.interference.weather",
                 () -> menus.settingsMenu(viewer));
         MenuButton button = findButton(section, "Interfere During");
 
@@ -292,13 +292,13 @@ class ManhuntMenusTest {
     @Test
     void backButtonsCarryTheirOwnMenu() {
         Player player = mock(Player.class);
-        when(config.getStringList("settings.compass.signal-interference.weather.interfere-during"))
+        when(config.getStringList("settings.compass.signal.interference.weather.interfere-during"))
                 .thenReturn(List.of("a", "b"));
 
         assertBackResolves(menus.settingsMenu(viewer), player);
         assertBackResolves(menus.sectionMenu(viewer, "settings.match", () -> menus.settingsMenu(viewer)), player);
         assertBackResolves(menus.listMenu(viewer,
-                "settings.compass.signal-interference.weather.interfere-during",
+                "settings.compass.signal.interference.weather.interfere-during",
                 () -> menus.settingsMenu(viewer)), player);
         assertBackResolves(ScrollList.menu(Component.text("Keys"), List::of,
                 () -> menus.settingsMenu(viewer), gui, messages), player);

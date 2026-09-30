@@ -8,7 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Pure signal-interference verdicts for compass tracking. Bukkit-free:
+ * Pure signal interference verdicts for compass tracking. Bukkit-free:
  * callers gather a snapshot per evaluated spot, resolve the config
  * values, and get a good/bad answer. Never returns interference when
  * no sub-option is enabled.

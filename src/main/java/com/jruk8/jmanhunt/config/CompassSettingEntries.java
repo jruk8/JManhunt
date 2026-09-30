@@ -9,7 +9,7 @@ import static com.jruk8.jmanhunt.config.SettingRegistry.string;
 
 import java.util.List;
 
-/** Compass and signal-interference registry entries. */
+/** Compass and signal interference registry entries. */
 final class CompassSettingEntries {
 
     private CompassSettingEntries() {
@@ -23,11 +23,11 @@ final class CompassSettingEntries {
 private static void addCompassEntries(List<SettingDescriptor> entries) {
     entries.add(bool("settings.compass.obtaining.given-to.hunters", true));
     entries.add(bool("settings.compass.obtaining.given-to.speedrunners", false));
-    entries.add(string("settings.compass.item", "compass"));
-    entries.add(bool("settings.compass.must-be-inventory.enabled", true));
+    entries.add(string("settings.compass.obtaining.item", "compass"));
+    entries.add(bool("settings.compass.lock-to-inventory", true));
     entries.add(bool("settings.compass.obtaining.drop-on-death.enabled", true));
     entries.add(bool("settings.compass.actions.auto.enabled", true));
-    entries.add(floatVal("settings.compass.actions.auto.interval", 10.0, 0.0, null));
+    entries.add(floatVal("settings.compass.actions.auto.interval", 35.0, 0.0, null));
     entries.add(floatVal("settings.compass.actions.auto.deviation", 0.0, 0.0, null));
     entries.add(bool("settings.compass.actions.manual.enabled", true));
     entries.add(floatVal("settings.compass.actions.manual.cooldown", 3.0, -1.0, null));
@@ -51,8 +51,8 @@ private static void addCompassEntries(List<SettingDescriptor> entries) {
 private static void addCompassAnalysisEntries(List<SettingDescriptor> entries) {
     String root = "settings.compass.actions.manual.analysis.";
     entries.add(bool(root + "enabled", true));
-    entries.add(floatVal(root + "delay-seconds", 6.0, 0.0, null));
-    entries.add(floatVal(root + "delay-deviation-seconds", 4.0, 0.0, null));
+    entries.add(floatVal(root + "delay-seconds", 5.0, 0.0, null));
+    entries.add(floatVal(root + "delay-deviation-seconds", 3.0, 0.0, null));
     entries.add(floatVal(root + "sound-interval-seconds", 0.5, 0.05, 3.0));
     entries.add(bool(root + "debuffs.enabled", true));
     addAnalysisCostEntries(entries, root + "cost.");
@@ -93,50 +93,50 @@ private static void addCompassActionbarEntries(List<SettingDescriptor> entries) 
 }
 
 private static void addSignalInterferenceEntries(List<SettingDescriptor> entries) {
-    entries.add(bool("settings.compass.signal-interference.enabled", true));
-    entries.add(intDynamic("settings.compass.signal-interference.required-to-fail", 1, 1,
+    entries.add(bool("settings.compass.signal.interference.enabled", true));
+    entries.add(intDynamic("settings.compass.signal.interference.required-to-fail", 1, 1,
             SettingDescriptor.DynamicBound.ENABLED_OPTION_COUNT));
-    entries.add(floatVal("settings.compass.signal-interference.chance-to-bypass", 0.0, 0.0, 1.0));
-    entries.add(bool("settings.compass.signal-interference.show-reason-in-actionbar", true));
-    entries.add(bool("settings.compass.signal-interference.light-level.enabled", false));
-    entries.add(intVal("settings.compass.signal-interference.light-level.min-sky-light", 10, 0, 15));
-    entries.add(intVal("settings.compass.signal-interference.light-level.min-block-light", 5, 0, 15));
-    entries.add(option("settings.compass.signal-interference.light-level.interfere-when", "BOTH_UNMET",
+    entries.add(floatVal("settings.compass.signal.interference.chance-to-bypass", 0.0, 0.0, 1.0));
+    entries.add(bool("settings.compass.signal.interference.show-reason-in-actionbar", true));
+    entries.add(bool("settings.compass.signal.interference.light-level.enabled", false));
+    entries.add(intVal("settings.compass.signal.interference.light-level.min-sky-light", 10, 0, 15));
+    entries.add(intVal("settings.compass.signal.interference.light-level.min-block-light", 5, 0, 15));
+    entries.add(option("settings.compass.signal.interference.light-level.interfere-when", "BOTH_UNMET",
             "ONE_UNMET", "BOTH_UNMET"));
-    entries.add(bool("settings.compass.signal-interference.light-level.two-way", false));
-    entries.add(bool("settings.compass.signal-interference.underground.enabled", false));
-    entries.add(intVal("settings.compass.signal-interference.underground.max-blocks-above", 3, 1, 380));
-    entries.add(bool("settings.compass.signal-interference.underground.ignore-transparent", true));
-    entries.add(bool("settings.compass.signal-interference.underground.two-way", false));
-    entries.add(bool("settings.compass.signal-interference.underwater.enabled", false));
-    entries.add(intVal("settings.compass.signal-interference.underwater.max-blocks-above", 2, 1, 380));
-    entries.add(bool("settings.compass.signal-interference.underwater.two-way", false));
-    entries.add(bool("settings.compass.signal-interference.altitude.enabled", false));
-    entries.add(intVal("settings.compass.signal-interference.altitude.min-y", -20, -64, 319));
-    entries.add(intVal("settings.compass.signal-interference.altitude.max-y", 120, -64, 319));
-    entries.add(bool("settings.compass.signal-interference.altitude.two-way", false));
-    entries.add(bool("settings.compass.signal-interference.weather.enabled", false));
-    entries.add(bool("settings.compass.signal-interference.weather.two-way", false));
-    entries.add(bool("settings.compass.signal-interference.biome.enabled", false));
-    entries.add(bool("settings.compass.signal-interference.biome.two-way", false));
-    entries.add(bool("settings.compass.signal-interference.movement.enabled", false));
-    entries.add(floatVal("settings.compass.signal-interference.movement.threshold-blocks",
+    entries.add(bool("settings.compass.signal.interference.light-level.two-way", false));
+    entries.add(bool("settings.compass.signal.interference.underground.enabled", false));
+    entries.add(intVal("settings.compass.signal.interference.underground.max-blocks-above", 3, 1, 380));
+    entries.add(bool("settings.compass.signal.interference.underground.ignore-transparent", true));
+    entries.add(bool("settings.compass.signal.interference.underground.two-way", false));
+    entries.add(bool("settings.compass.signal.interference.underwater.enabled", false));
+    entries.add(intVal("settings.compass.signal.interference.underwater.max-blocks-above", 2, 1, 380));
+    entries.add(bool("settings.compass.signal.interference.underwater.two-way", false));
+    entries.add(bool("settings.compass.signal.interference.altitude.enabled", false));
+    entries.add(intVal("settings.compass.signal.interference.altitude.min-y", -20, -64, 319));
+    entries.add(intVal("settings.compass.signal.interference.altitude.max-y", 120, -64, 319));
+    entries.add(bool("settings.compass.signal.interference.altitude.two-way", false));
+    entries.add(bool("settings.compass.signal.interference.weather.enabled", false));
+    entries.add(bool("settings.compass.signal.interference.weather.two-way", false));
+    entries.add(bool("settings.compass.signal.interference.biome.enabled", false));
+    entries.add(bool("settings.compass.signal.interference.biome.two-way", false));
+    entries.add(bool("settings.compass.signal.interference.movement.enabled", false));
+    entries.add(floatVal("settings.compass.signal.interference.movement.threshold-blocks",
             0.2, 0.0, null));
-    entries.add(bool("settings.compass.signal-interference.movement.two-way", false));
-    entries.add(bool("settings.compass.signal-interference.line-of-sight.enabled", false));
-    entries.add(option("settings.compass.signal-interference.line-of-sight.interfere-when", "NOT_VISIBLE",
+    entries.add(bool("settings.compass.signal.interference.movement.two-way", false));
+    entries.add(bool("settings.compass.signal.interference.line-of-sight.enabled", false));
+    entries.add(option("settings.compass.signal.interference.line-of-sight.interfere-when", "NOT_VISIBLE",
             "VISIBLE", "NOT_VISIBLE"));
-    entries.add(intVal("settings.compass.signal-interference.line-of-sight.max-ray-distance",
+    entries.add(intVal("settings.compass.signal.interference.line-of-sight.max-ray-distance",
             300, 1, 1000));
-    entries.add(bool("settings.compass.signal-interference.invisible.enabled", true));
-    entries.add(option("settings.compass.signal-interference.invisible.mode", "TARGET",
+    entries.add(bool("settings.compass.signal.interference.invisible.enabled", true));
+    entries.add(option("settings.compass.signal.interference.invisible.mode", "TARGET",
             "TARGET", "SELF"));
-    entries.add(bool("settings.compass.signal-interference.invisible.two-way", false));
+    entries.add(bool("settings.compass.signal.interference.invisible.two-way", false));
     addPlayerStatsEntries(entries);
 }
 
 private static void addPlayerStatsEntries(List<SettingDescriptor> entries) {
-    String root = "settings.compass.signal-interference.player-stats.";
+    String root = "settings.compass.signal.interference.player-stats.";
     entries.add(bool(root + "health.enabled", false));
     entries.add(intVal(root + "health.min-health", 8, 1, 100));
     entries.add(bool(root + "health.two-way", false));

@@ -153,12 +153,12 @@ class SettingFeedbackTest {
     @Test
     void failedReportsOnlyTheError() {
         ConfigService.SetOutcome outcome = config.setValue(
-                "settings.compass.signal-interference.light-level.min-sky-light", "16");
+                "settings.compass.signal.interference.light-level.min-sky-light", "16");
 
         feedback.failed(sender, outcome);
 
         assertEquals(1, sent.size());
-        assertEquals("[JManhunt] Value for settings.compass.signal-interference.light-level.min-sky-light"
+        assertEquals("[JManhunt] Value for settings.compass.signal.interference.light-level.min-sky-light"
                 + " must be 0 to 15.", plain(sent.get(0)));
         verifyNoInteractions(sounds);
     }

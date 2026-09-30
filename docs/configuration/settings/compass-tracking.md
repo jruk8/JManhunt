@@ -54,13 +54,14 @@ If you'd like to disable the compass entirely, set both to false.
 
 ## Compass Item
 
-Under `settings.compass.item`, you can choose which item is handed out as
+Under `settings.compass.obtaining.item`, you can choose which item is handed out as
 the tracking compass, in modern `minecraft:material_name` format (the
 `minecraft:` namespace may be omitted):
 
 ```yaml
 compass:
-  item: compass
+  obtaining:
+    item: compass
 ```
 
 The default is `compass`. Try `clock` or `recovery_compass` for a different
@@ -89,14 +90,14 @@ compass at all: the item is removed instead.
 
 ## Inventory Lock
 
-Under `settings.compass.must-be-inventory`, you can configure whether the
+Under `settings.compass.lock-to-inventory`, you can configure whether the
 compass must stay in the player's inventory. This allows the player to change
 its slot but not drop it or put it to a container. Dropping on death is
 controlled by the [Drop on Death](#drop-on-death) setting.
 
 ```yaml
-must-be-inventory:
-  enabled: true
+compass:
+  lock-to-inventory: true
 ```
 
 ## Drop on Death
@@ -126,7 +127,7 @@ the interval itself.
 actions:
   auto:
     enabled: true
-    interval: 10.0        # in seconds
+    interval: 35.0        # in seconds
     deviation: 0.0        # in seconds
 ```
 
@@ -299,8 +300,8 @@ actions:
   manual:
     analysis:
       enabled: true
-      delay-seconds: 6.0
-      delay-deviation-seconds: 4.0
+      delay-seconds: 5.0
+      delay-deviation-seconds: 3.0
 ```
 
 `delay-seconds` is how long each analysis takes, and
@@ -429,7 +430,7 @@ out-of-range message.
 
 ## Signal Interference
 
-Under `settings.compass.signal-interference`, you can make tracking fail
+Under `settings.compass.signal.interference`, you can make tracking fail
 with a gray Bad signal readout when conditions are bad. The master
 `enabled` switch defaults to on, with only the `invisible` option
 on, so invisibility interferes out of the box while everything else

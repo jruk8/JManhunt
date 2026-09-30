@@ -462,7 +462,7 @@ public class SignalInterferenceSettings extends OkaeriConfig {
 
         /** Config path of the weather enum array. */
         public static final transient String INTERFERE_DURING_PATH =
-                "settings.compass.signal-interference.weather.interfere-during";
+                "settings.compass.signal.interference.weather.interfere-during";
 
         private boolean enabled = false;
 

@@ -462,9 +462,9 @@ final class CompassLockService {
         var overrides = plugin.overrides();
         double effectiveDelay = AnalysisTiming.jitteredDelay(
                 overrides.getDouble(lobby,
-                        "settings.compass.actions.manual.analysis.delay-seconds", 6.0),
+                        "settings.compass.actions.manual.analysis.delay-seconds", 5.0),
                 overrides.getDouble(lobby,
-                        "settings.compass.actions.manual.analysis.delay-deviation-seconds", 4.0),
+                        "settings.compass.actions.manual.analysis.delay-deviation-seconds", 3.0),
                 ThreadLocalRandom.current().nextDouble());
         double multiplier = cancelEarlyMultiplier(lobby);
         if (analysisHost.analysisDoomed(holder)) {
