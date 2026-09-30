@@ -462,6 +462,9 @@ public final class MatchStartService {
         }
         messaging.sendToInstance(instance, "manhunt.started-by-damage", Map.of());
         messaging.playInstanceNeutral(instance);
+        // Dedicated begin cue, after any prestart window: begin runs once
+        // per match (the begun guard above), so this plays exactly once.
+        messaging.playInstanceSound(instance, "game.match-started");
         beginGameListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JGameBeginEvent(instance.matchId()));
         // AFTER pre-start-order modifiers waited out the pre-start window;

@@ -174,6 +174,11 @@ public class SoundsConfig extends OkaeriConfig {
         private SoundEntry cancelledSound =
                 SoundEntry.of("block.bubble_column.whirlpool_ambient", 0.9, 1.0);
 
+        @CustomKey("match-started")
+        @Comment("Runs when a match begins, after any prestart window")
+        private SoundEntry matchStarted =
+                SoundEntry.of("minecraft:entity.illusioner.ambient", 0.9, 1.0);
+
         public SoundEntry getAutostartCountdown() {
             return autostartCountdown;
         }
@@ -228,6 +233,14 @@ public class SoundsConfig extends OkaeriConfig {
 
         public void setCancelledSound(SoundEntry cancelledSound) {
             this.cancelledSound = cancelledSound;
+        }
+
+        public SoundEntry getMatchStarted() {
+            return matchStarted;
+        }
+
+        public void setMatchStarted(SoundEntry matchStarted) {
+            this.matchStarted = matchStarted;
         }
     }
 

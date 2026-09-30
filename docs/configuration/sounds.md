@@ -49,6 +49,7 @@ Under `game`, each entry plays at a fixed moment in the match:
 - `win-sound`: when the speedrunners win. Defaults to `block.beacon.activate` at pitch 1.1.
 - `fail-sound`: when the hunters win. Defaults to `block.skulk_shrieker.break` at pitch 0.7, volume 0.9.
 - `cancelled-sound`: when a match is cancelled. Defaults to the hunters win sound.
+- `match-started`: when a match begins, after any prestart window. Defaults to `entity.illusioner.ambient` at pitch 0.9.
 - `announce.hunter`: heard by each hunter when roles are announced.
 - `announce.speedrunner`: heard by each speedrunner when roles are announced.
 
