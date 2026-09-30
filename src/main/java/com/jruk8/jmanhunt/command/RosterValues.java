@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.command;
 
 import org.bukkit.Location;
+import org.bukkit.util.Vector;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,6 +60,15 @@ public interface RosterValues {
      * Defaults to empty.
      */
     default Optional<String> heldItem(String playerName) {
+        return Optional.empty();
+    }
+
+    /**
+     * Unit look direction for an online player (eye location, y-up),
+     * or empty when the player is offline or unknown. Defaults to
+     * empty.
+     */
+    default Optional<Vector> lookDirection(String playerName) {
         return Optional.empty();
     }
 

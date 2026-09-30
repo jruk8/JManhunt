@@ -122,6 +122,22 @@ see the Tags pages for full rules.
 | `<gcooldown.get:key,seconds>` | Seconds left, else `0`. |
 | `<gcooldown.reset:key>` | Clears, `true`. |
 
+### Vectors
+
+| Tag | Meaning |
+| --- | --- |
+| `<vec.add:a,b>` | Element-wise sum. |
+| `<vec.sub:a,b>` | A minus B. |
+| `<vec.mult:vec,scalar>` | Scaled vector. |
+| `<vec.normalize:vec>` | Unit vector (`[0, 0, 0]` for zero). |
+| `<vec.sqrdist:a,b>` | Squared distance. |
+| `<vec.dist:a,b>` | Euclidean distance. |
+| `<vec.dot:a,b>` | Dot product. |
+| `<vec.cross:a,b>` | Cross product. |
+| `<loc.shift:loc,dir,dist>` | Shifted location, world and angles carried. |
+| `<pdir:player>` | Unit look direction, else `null`. |
+| `<ploc:player>` | Alias of `<plocation:player>`. |
+
 ### Flags
 
 | Tag | Meaning |

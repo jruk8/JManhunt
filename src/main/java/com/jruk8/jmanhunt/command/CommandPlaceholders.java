@@ -537,7 +537,10 @@ public final class CommandPlaceholders {
             case "pheld" -> TagItems.held(tag, args, context);
             case "range" -> TagLists.range(tag, args, context);
             case "active-players" -> TagRoster.activePlayers(tag, args, context);
-            case "plocation" -> TagLocations.plocation(tag, args, context);
+            case "plocation", "ploc" -> TagLocations.plocation(tag, name, args, context);
+            case "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
+                    "vec.dot", "vec.cross", "loc.shift", "pdir" ->
+                    TagVectors.resolve(tag, name, args, context);
             case "prole" -> TagRoster.role(tag, args, context);
             case "overlap-players" -> TagLocations.overlapPlayers(tag, args, context);
             case "nearby-players" -> TagLocations.nearbyPlayers(tag, args, playerName, context);

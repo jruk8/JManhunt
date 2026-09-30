@@ -20,6 +20,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -261,6 +262,18 @@ public final class ModifierTestService {
                     return Optional.empty();
                 }
                 return Optional.of(held.getType().name());
+            }
+
+            @Override
+            public Optional<Vector> lookDirection(String playerName) {
+                if (!playerName.equalsIgnoreCase(name)) {
+                    return Optional.empty();
+                }
+                Location eye = sender.getEyeLocation();
+                if (eye == null) {
+                    return Optional.empty();
+                }
+                return Optional.of(eye.getDirection());
             }
         };
     }

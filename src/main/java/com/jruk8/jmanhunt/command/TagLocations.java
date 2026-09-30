@@ -56,18 +56,20 @@ public final class TagLocations {
      * {@code "null"} silently (routine runtime state, not a script
      * error); only blank or malformed args warn.
      */
-    static String plocation(String tag, String args, TagContext context) {
+    static String plocation(String tag, String name, String args, TagContext context) {
         List<String> parts = TagLists.splitTopLevel(args);
         if (parts.size() != 1) {
-            context.scope().warn("Tag <plocation> needs a player like <plocation:Steve>: " + tag);
+            context.scope().warn("Tag <" + name + "> needs a player like <" + name + ":Steve>: "
+                    + tag);
             return "null";
         }
-        Optional<String> name = CommandPlaceholders.parsePickItem(parts.get(0));
-        if (name.isEmpty() || name.get().isBlank()) {
-            context.scope().warn("Tag <plocation> needs a player like <plocation:Steve>: " + tag);
+        Optional<String> player = CommandPlaceholders.parsePickItem(parts.get(0));
+        if (player.isEmpty() || player.get().isBlank()) {
+            context.scope().warn("Tag <" + name + "> needs a player like <" + name + ":Steve>: "
+                    + tag);
             return "null";
         }
-        Optional<Location> location = context.roster().locationOf(name.get().strip());
+        Optional<Location> location = context.roster().locationOf(player.get().strip());
         if (location.isEmpty() || location.get().getWorld() == null) {
             return "null";
         }

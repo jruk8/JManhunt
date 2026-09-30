@@ -120,7 +120,18 @@ public final class PlaceholderCheatsheet {
             Map.entry("gcooldown.get", new String[]{"<gcooldown.get:key,seconds>", "seconds left, else 0"}),
             Map.entry("gcooldown.reset", new String[]{"<gcooldown.reset:key>", "clears, true"}),
             Map.entry("default", new String[]{"<default:value,fallback>", "fallback when blank/null"}),
-            Map.entry("pheld", new String[]{"<pheld:player>", "main-hand material, else null"}));
+            Map.entry("pheld", new String[]{"<pheld:player>", "main-hand material, else null"}),
+            Map.entry("vec.add", new String[]{"<vec.add:a,b>", "element-wise sum"}),
+            Map.entry("vec.sub", new String[]{"<vec.sub:a,b>", "A minus B"}),
+            Map.entry("vec.mult", new String[]{"<vec.mult:vec,scalar>", "scaled vector"}),
+            Map.entry("vec.normalize", new String[]{"<vec.normalize:vec>", "unit vector"}),
+            Map.entry("vec.sqrdist", new String[]{"<vec.sqrdist:a,b>", "squared distance"}),
+            Map.entry("vec.dist", new String[]{"<vec.dist:a,b>", "euclidean distance"}),
+            Map.entry("vec.dot", new String[]{"<vec.dot:a,b>", "dot product"}),
+            Map.entry("vec.cross", new String[]{"<vec.cross:a,b>", "cross product"}),
+            Map.entry("loc.shift", new String[]{"<loc.shift:loc,dir,dist>", "shifted location"}),
+            Map.entry("pdir", new String[]{"<pdir:player>", "look direction, unit"}),
+            Map.entry("ploc", new String[]{"<ploc:player>", "alias of plocation"}));
 
     private PlaceholderCheatsheet() {
     }

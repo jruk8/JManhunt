@@ -48,7 +48,9 @@ public final class CommandSyntax {
                 "while", "for", "i", "def", "run", "format",
                 "str.join", "str.split", "str.lower", "str.upper", "str.contains",
                 "pcooldown", "pcooldown.get", "pcooldown.reset",
-                "gcooldown", "gcooldown.get", "gcooldown.reset", "default", "pheld");
+                "gcooldown", "gcooldown.get", "gcooldown.reset", "default", "pheld",
+                "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
+                "vec.dot", "vec.cross", "loc.shift", "pdir", "ploc");
     }
 
     /**
@@ -264,8 +266,11 @@ public final class CommandSyntax {
                     "gcooldown.reset" -> TagCooldowns.syntaxError(name, args);
             case "default" -> topLevelArityError(name, args, 2, "<default:value,fallback>");
             case "active-players" -> activePlayersError(name, args);
-            case "plocation", "prole", "pworld", "world", "px", "py", "pz", "pyaw", "ppitch",
-                    "pheld" -> playerNameError(name, args);
+            case "plocation", "ploc", "prole", "pworld", "world", "px", "py", "pz", "pyaw",
+                    "ppitch", "pheld" -> playerNameError(name, args);
+            case "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
+                    "vec.dot", "vec.cross", "loc.shift", "pdir" ->
+                    TagVectors.opError(name, args);
             case "overlap-players", "nearby-players" -> proximityError(name, args);
             case "distance" -> topLevelArityError(name, args, 2, "<distance:loc1,loc2>");
             case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" -> mathUnaryError(name, args);

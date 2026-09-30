@@ -182,6 +182,40 @@ Player keys namespace below the lower-cased name, so `Steve` and
 `null`, as do blank players and keys. Stamps clear with the match
 on teardown.
 
+## Vectors
+
+Every `vec.` op reads its vectors from 3-element lists or
+6-element location primitives (first three indices); anything else
+warns and yields `null`. `<pdir:player>` is the player's unit look
+direction, y-up (straight up is `[0, 1, 0]`); offline or unknown
+players resolve `null` silently. Normalizing the zero vector
+yields `[0, 0, 0]` silently, never a warning.
+
+| Tag | Meaning |
+| --- | --- |
+| `<vec.add:a,b>` | `[a0+b0, a1+b1, a2+b2]`. |
+| `<vec.sub:a,b>` | A minus B: the direction from B to A. |
+| `<vec.mult:vec,scalar>` | `[v0*s, v1*s, v2*s]`; a non-numeric scalar warns plus `null`. |
+| `<vec.normalize:vec>` | The unit vector (`[0, 0, 0]` for zero). |
+| `<vec.sqrdist:a,b>` | Squared distance. |
+| `<vec.dist:a,b>` | Euclidean distance. |
+| `<vec.dot:a,b>` | Dot product scalar. |
+| `<vec.cross:a,b>` | Cross product vector. |
+| `<loc.shift:loc,dir,dist>` | Base plus direction times distance, as `[x, y, z, world, pitch, yaw]`. |
+| `<ploc:player>` | Alias of `<plocation:player>`. |
+
+`<loc.shift:location,direction,distance>` needs a full 6-element
+base and uses the direction as given, so callers normalize first
+when they need unit steps; world, pitch, and yaw carry over
+verbatim from the base. Aim from yourself at Alex, then spawn five
+blocks ahead of yourself:
+
+```yaml
+- '<gflag:aim,<vec.normalize:<vec.sub:<ploc:Alex>,<ploc:<p>>>>>'
+- '<gflag:ahead,<loc.shift:<plocation:<p>>,<pdir:<p>>,5>>'
+- 'summon minecraft:armor_stand <list.get:<gflag:ahead>,0> <list.get:<gflag:ahead>,1> <list.get:<gflag:ahead>,2>'
+```
+
 ## Loops
 
 `<for:list,body>` walks a list with each item behind `<i>`, and

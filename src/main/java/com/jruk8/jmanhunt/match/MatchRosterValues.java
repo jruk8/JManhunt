@@ -10,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -148,5 +149,18 @@ public final class MatchRosterValues implements RosterValues {
             return Optional.empty();
         }
         return Optional.of(held.getType().name());
+    }
+
+    @Override
+    public Optional<Vector> lookDirection(String playerName) {
+        Player found = NamedPlayerSinks.onlinePlayer(playerName);
+        if (found == null) {
+            return Optional.empty();
+        }
+        Location eye = found.getEyeLocation();
+        if (eye == null) {
+            return Optional.empty();
+        }
+        return Optional.of(eye.getDirection());
     }
 }
