@@ -228,6 +228,14 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <loc.shift:[0,64,0,world,0,0],[0,1,0],5> x").isEmpty());
         assertTrue(CommandSyntax.error("say <pdir:Steve> x").isEmpty());
         assertTrue(CommandSyntax.error("say <ploc:Steve> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <pstate:Steve,SNEAK> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <pstandingon:Steve> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <ptitle:Steve,Hi,Sub> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <ptitle:Steve,Hi,Sub,2> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <ptitle:Steve,Hi,Sub,2,0.4,0.4> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <pslot:Steve,helmet> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <pslot:Steve,0,[STONE,64]> x").isEmpty());
+        assertTrue(CommandSyntax.error("say <pstat:Steve,exp-level> x").isEmpty());
         assertTrue(CommandSyntax.error("say <floor:7/2> <ceil:1> <round:2> <abs:0> <sign:3> x").isEmpty());
         assertTrue(CommandSyntax.error("say <range:5> <range:1,5> <range:5,0,-1> x").isEmpty());
         assertTrue(CommandSyntax.error("say <while:true,x> <for:[a,b],x> <i> x").isEmpty());
@@ -320,6 +328,12 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <loc.shift:[0,64,0],[0,1,0]> x").isPresent());
         assertTrue(CommandSyntax.error("say <pdir> x").isPresent());
         assertTrue(CommandSyntax.error("say <ploc> x").isPresent());
+        assertTrue(CommandSyntax.error("say <pstate:Steve> x").isPresent());
+        assertTrue(CommandSyntax.error("say <pstandingon> x").isPresent());
+        assertTrue(CommandSyntax.error("say <ptitle:Steve,Hi> x").isPresent());
+        assertTrue(CommandSyntax.error("say <ptitle:Steve,Hi,Sub,1,2,3,4> x").isPresent());
+        assertTrue(CommandSyntax.error("say <pslot:Steve> x").isPresent());
+        assertTrue(CommandSyntax.error("say <pslot:Steve,helmet,[STONE,1],x> x").isPresent());
         assertTrue(CommandSyntax.error("say <floor> x").isPresent());
         assertTrue(CommandSyntax.error("say <sign:1,2> x").isPresent());
         assertTrue(CommandSyntax.error("say <range:> x").isPresent());

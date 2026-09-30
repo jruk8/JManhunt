@@ -72,6 +72,51 @@ public interface RosterValues {
         return Optional.empty();
     }
 
+    /**
+     * One body state for an online player, or empty when the player
+     * is offline or unknown. The state arrives canonical upper-case
+     * ({@code SNEAK}, {@code SPRINT}, {@code GLIDE}, {@code SWIM},
+     * {@code GROUND}); tags validate names before calling. Defaults
+     * to empty.
+     */
+    default Optional<Boolean> playerState(String playerName, String state) {
+        return Optional.empty();
+    }
+
+    /**
+     * Upper-case material of the block below an online player's
+     * feet, or empty when the player is offline or unknown. Over
+     * the void the block is air and backends report {@code AIR}.
+     * Defaults to empty.
+     */
+    default Optional<String> standingOn(String playerName) {
+        return Optional.empty();
+    }
+
+    /** One slot address: a named equipment slot or a raw index. */
+    sealed interface InventorySlot permits InventorySlot.Named, InventorySlot.Index {
+        /** Named equipment slot, canonical upper-case. */
+        record Named(String name) implements InventorySlot {
+        }
+
+        /** Raw player-inventory index, bounds-checked by callers. */
+        record Index(int index) implements InventorySlot {
+        }
+    }
+
+    /** One slot's contents: upper-case material plus quantity. */
+    record SlotContent(String material, int qty) {
+    }
+
+    /**
+     * One slot's contents for an online player, or empty when the
+     * player is offline or unknown, or the slot is empty. Defaults
+     * to empty.
+     */
+    default Optional<SlotContent> slotItem(String playerName, InventorySlot slot) {
+        return Optional.empty();
+    }
+
     /** Roster that resolves nothing. */
     static RosterValues inert() {
         return new RosterValues() {

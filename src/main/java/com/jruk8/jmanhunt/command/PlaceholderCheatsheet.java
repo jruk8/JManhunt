@@ -131,7 +131,11 @@ public final class PlaceholderCheatsheet {
             Map.entry("vec.cross", new String[]{"<vec.cross:a,b>", "cross product"}),
             Map.entry("loc.shift", new String[]{"<loc.shift:loc,dir,dist>", "shifted location"}),
             Map.entry("pdir", new String[]{"<pdir:player>", "look direction, unit"}),
-            Map.entry("ploc", new String[]{"<ploc:player>", "alias of plocation"}));
+            Map.entry("ploc", new String[]{"<ploc:player>", "alias of plocation"}),
+            Map.entry("pstate", new String[]{"<pstate:player,state>", "true/false body state"}),
+            Map.entry("pstandingon", new String[]{"<pstandingon:player>", "block below feet"}),
+            Map.entry("ptitle", new String[]{"<ptitle:player,title,sub>", "center title, empty"}),
+            Map.entry("pslot", new String[]{"<pslot:player,slot>", "get [MATERIAL, qty]"}));
 
     private PlaceholderCheatsheet() {
     }

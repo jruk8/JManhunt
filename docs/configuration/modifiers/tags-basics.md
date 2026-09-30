@@ -138,6 +138,7 @@ match- or world-wide ones. Keys match case-blindly:
 | `<pstat:<p>,max-health>` | The player's effective max health, normally 20. |
 | `<pstat:Steve,mobs-killed>` | Mobs the player killed this match. |
 | `<pstat:Steve,achievements-gained>` | Non-recipe advancements earned this match. |
+| `<pstat:Steve,exp-level>` | Vanilla experience level. |
 | `<gstat:duration>` | Whole seconds since the match began. |
 | `<gstat:daytime>` | The main world clock in ticks. |
 

@@ -1,10 +1,17 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.command.PlayerSinks;
+import com.jruk8.jmanhunt.command.RosterValues;
+import com.jruk8.jmanhunt.command.TagItems;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
+import java.time.Duration;
 import java.util.function.Consumer;
 
 /**
@@ -50,7 +57,64 @@ public final class NamedPlayerSinks {
                 sounds.playCustomSound(target, soundId, pitch, volume);
                 return true;
             }
+
+            @Override
+            public boolean title(String playerName, String title, String subtitle,
+                    double staySeconds, double inSeconds, double outSeconds) {
+                Player target = onlinePlayer(playerName);
+                if (target == null) {
+                    return false;
+                }
+                target.showTitle(Title.title(messages.parse(title), messages.parse(subtitle),
+                        Title.Times.times(
+                                ticksToDuration(inSeconds),
+                                ticksToDuration(staySeconds),
+                                ticksToDuration(outSeconds))));
+                return true;
+            }
+
+            @Override
+            public boolean setSlot(String playerName, RosterValues.InventorySlot slot,
+                    String materialKey, int qty) {
+                Player target = onlinePlayer(playerName);
+                if (target == null || target.getInventory() == null) {
+                    return false;
+                }
+                Material material =
+                        Material.matchMaterial(TagItems.normalizeMaterialKey(materialKey));
+                if (material == null) {
+                    return false;
+                }
+                int clamped = Math.min(Math.max(qty, 1), material.getMaxStackSize());
+                ItemStack stack = new ItemStack(material, clamped);
+                PlayerInventory inventory = target.getInventory();
+                if (slot instanceof RosterValues.InventorySlot.Named named) {
+                    switch (named.name()) {
+                        case "MAINHAND" -> inventory.setItemInMainHand(stack);
+                        case "OFFHAND" -> inventory.setItemInOffHand(stack);
+                        case "HELMET" -> inventory.setHelmet(stack);
+                        case "CHESTPLATE" -> inventory.setChestplate(stack);
+                        case "LEGGINGS" -> inventory.setLeggings(stack);
+                        default -> inventory.setBoots(stack);
+                    }
+                    return true;
+                }
+                if (slot instanceof RosterValues.InventorySlot.Index indexed) {
+                    int index = indexed.index();
+                    if (index < 0 || index >= inventory.getSize()) {
+                        return false;
+                    }
+                    inventory.setItem(index, stack);
+                    return true;
+                }
+                return false;
+            }
         };
+    }
+
+    /** Seconds through the shared tick converter, as a title duration. */
+    private static Duration ticksToDuration(double seconds) {
+        return Duration.ofMillis(ModifierTriggers.secondsToTicks(seconds) * 50);
     }
 
     /** Engine message format shared by modifier and debuff runs. */
@@ -66,6 +130,32 @@ public final class NamedPlayerSinks {
             if (player.getName().equalsIgnoreCase(playerName)) {
                 return player;
             }
+        }
+        return null;
+    }
+
+    /**
+     * One slot's raw stack, or null when the index falls outside the
+     * inventory. Shared by the live and test slot reads.
+     */
+    public static ItemStack slotStack(PlayerInventory inventory,
+            RosterValues.InventorySlot slot) {
+        if (slot instanceof RosterValues.InventorySlot.Named named) {
+            return switch (named.name()) {
+                case "MAINHAND" -> inventory.getItemInMainHand();
+                case "OFFHAND" -> inventory.getItemInOffHand();
+                case "HELMET" -> inventory.getHelmet();
+                case "CHESTPLATE" -> inventory.getChestplate();
+                case "LEGGINGS" -> inventory.getLeggings();
+                default -> inventory.getBoots();
+            };
+        }
+        if (slot instanceof RosterValues.InventorySlot.Index indexed) {
+            int index = indexed.index();
+            if (index < 0 || index >= inventory.getSize()) {
+                return null;
+            }
+            return inventory.getItem(index);
         }
         return null;
     }

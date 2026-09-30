@@ -9,6 +9,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.block.BlockFace;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import java.util.ArrayList;
@@ -162,5 +163,48 @@ public final class MatchRosterValues implements RosterValues {
             return Optional.empty();
         }
         return Optional.of(eye.getDirection());
+    }
+
+    @Override
+    public Optional<Boolean> playerState(String playerName, String state) {
+        Player found = NamedPlayerSinks.onlinePlayer(playerName);
+        if (found == null) {
+            return Optional.empty();
+        }
+        return Optional.of(switch (state) {
+            case "SNEAK" -> found.isSneaking();
+            case "SPRINT" -> found.isSprinting();
+            case "GLIDE" -> found.isGliding();
+            case "SWIM" -> found.isSwimming();
+            default -> found.isOnGround();
+        });
+    }
+
+    @Override
+    public Optional<String> standingOn(String playerName) {
+        Player found = NamedPlayerSinks.onlinePlayer(playerName);
+        if (found == null) {
+            return Optional.empty();
+        }
+        Location feet = found.getLocation();
+        if (feet == null) {
+            return Optional.empty();
+        }
+        return Optional.of(feet.getBlock().getRelative(BlockFace.DOWN).getType().name());
+    }
+
+    @Override
+    public Optional<RosterValues.SlotContent> slotItem(String playerName,
+            RosterValues.InventorySlot slot) {
+        Player found = NamedPlayerSinks.onlinePlayer(playerName);
+        if (found == null || found.getInventory() == null) {
+            return Optional.empty();
+        }
+        ItemStack stack = NamedPlayerSinks.slotStack(found.getInventory(), slot);
+        if (stack == null || stack.getType() == Material.AIR || stack.getAmount() <= 0) {
+            return Optional.empty();
+        }
+        return Optional.of(new RosterValues.SlotContent(stack.getType().name(),
+                stack.getAmount()));
     }
 }

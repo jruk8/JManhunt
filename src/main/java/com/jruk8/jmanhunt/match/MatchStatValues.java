@@ -40,6 +40,7 @@ public final class MatchStatValues implements StatValues {
         return switch (key) {
             case "health" -> Optional.of(TagMath.formatNumber(player.getHealth()));
             case "hunger" -> Optional.of(Integer.toString(player.getFoodLevel()));
+            case "exp-level" -> Optional.of(Integer.toString(player.getLevel()));
             case "max-health" -> Optional.of(TagMath.formatNumber(
                     player.getAttribute(Attribute.MAX_HEALTH).getValue()));
             case "mobs-killed", "achievements-gained" ->

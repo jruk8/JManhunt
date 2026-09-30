@@ -216,6 +216,37 @@ blocks ahead of yourself:
 - 'summon minecraft:armor_stand <list.get:<gflag:ahead>,0> <list.get:<gflag:ahead>,1> <list.get:<gflag:ahead>,2>'
 ```
 
+## Players
+
+`<pstate:player,state>` reads the live body: `SNEAK`, `SPRINT`,
+`GLIDE`, `SWIM`, or `GROUND` (any case), `true` or `false`.
+Unknown states warn, list the valid names, and yield `null`;
+offline or unknown players resolve `null` silently.
+`<pstandingon:player>` reports the upper-case material below the
+feet (`AIR` over the void), silent `null` when offline.
+`<pstat:player,exp-level>` reads the vanilla experience level.
+
+`<ptitle:player,title,subtitle,stay,in,out>` sends a center-screen
+title; the timings are seconds in written order (stay, fade in,
+fade out: never Paper order), trailing args may be omitted, and
+defaults are stay `2.0`, in `0.4`, out `0.4`. Seconds convert to
+ticks through the engine converter (0.05s per tick, minimum one
+tick). Title and subtitle parse like message text (MiniMessage
+plus legacy codes); blank parts are allowed. Bad timing warns
+plus `null` with nothing sent, as does an offline player; success
+returns empty.
+
+`<pslot:player,slot>` gets `[MATERIAL, qty]`, with `null` for an
+empty slot or an offline player. `<pslot:player,slot,newitem>`
+sets unconditionally and returns empty. Slots name equipment
+(`mainhand`, `offhand`, `helmet`, `chestplate`, `leggings`,
+`boots`, any case) or address the raw player inventory by index:
+0-8 hotbar, 9-35 main storage, 36-39 armor, 40 offhand. A
+`[material, qty]` list sets both, a bare material sets qty 1;
+materials match case-blind, qty clamps silently to 1 through the
+max stack, and anything invalid (unknown slot or material,
+non-integer qty, bad index) warns plus `null` with no change.
+
 ## Loops
 
 `<for:list,body>` walks a list with each item behind `<i>`, and

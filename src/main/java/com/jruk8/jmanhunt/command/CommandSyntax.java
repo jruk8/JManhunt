@@ -50,7 +50,8 @@ public final class CommandSyntax {
                 "pcooldown", "pcooldown.get", "pcooldown.reset",
                 "gcooldown", "gcooldown.get", "gcooldown.reset", "default", "pheld",
                 "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
-                "vec.dot", "vec.cross", "loc.shift", "pdir", "ploc");
+                "vec.dot", "vec.cross", "loc.shift", "pdir", "ploc",
+                "pstate", "pstandingon", "ptitle", "pslot");
     }
 
     /**
@@ -271,6 +272,7 @@ public final class CommandSyntax {
             case "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
                     "vec.dot", "vec.cross", "loc.shift", "pdir" ->
                     TagVectors.opError(name, args);
+            case "pstate", "pstandingon", "ptitle", "pslot" -> TagPlayers.opError(name, args);
             case "overlap-players", "nearby-players" -> proximityError(name, args);
             case "distance" -> topLevelArityError(name, args, 2, "<distance:loc1,loc2>");
             case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" -> mathUnaryError(name, args);

@@ -138,6 +138,17 @@ see the Tags pages for full rules.
 | `<pdir:player>` | Unit look direction, else `null`. |
 | `<ploc:player>` | Alias of `<plocation:player>`. |
 
+### Players
+
+| Tag | Meaning |
+| --- | --- |
+| `<pstate:player,state>` | `true`/`false` for SNEAK, SPRINT, GLIDE, SWIM, GROUND. |
+| `<pstandingon:player>` | Upper-case block below the feet (`AIR` over void). |
+| `<ptitle:player,title,sub>` | Center title, empty (optional stay, in, out seconds). |
+| `<pslot:player,slot>` | Get `[MATERIAL, qty]`, `null` when empty. |
+| `<pslot:player,slot,item>` | Set from `[material, qty]` or bare material, empty. |
+| `<pstat:player,exp-level>` | Vanilla experience level. |
+
 ### Flags
 
 | Tag | Meaning |

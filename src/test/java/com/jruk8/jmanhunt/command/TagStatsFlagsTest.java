@@ -190,11 +190,13 @@ class TagStatsFlagsTest {
         fixture.playerValues.put("Steve|max-health", "24");
         fixture.playerValues.put("Steve|mobs-killed", "3");
         fixture.playerValues.put("Steve|achievements-gained", "0");
+        fixture.playerValues.put("Steve|exp-level", "17");
         assertEquals("19.5", fixture.replace("<pstat:Steve,health>"));
         assertEquals("14", fixture.replace("<pstat:\"Steve\",\"HUNGER\">"));
         assertEquals("24", fixture.replace("<pstat:<p>,Max-Health>"));
         assertEquals("3", fixture.replace("<pstat:<p>,Mobs-Killed>"));
         assertEquals("0", fixture.replace("<pstat:Steve,achievements-gained>"));
+        assertEquals("17", fixture.replace("<pstat:Steve,Exp-Level>"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
     }
 

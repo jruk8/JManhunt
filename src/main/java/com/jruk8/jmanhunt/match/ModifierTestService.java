@@ -19,6 +19,7 @@ import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.block.BlockFace;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import java.util.ArrayList;
@@ -274,6 +275,46 @@ public final class ModifierTestService {
                     return Optional.empty();
                 }
                 return Optional.of(eye.getDirection());
+            }
+
+            @Override
+            public Optional<Boolean> playerState(String playerName, String state) {
+                if (!playerName.equalsIgnoreCase(name)) {
+                    return Optional.empty();
+                }
+                return Optional.of(switch (state) {
+                    case "SNEAK" -> sender.isSneaking();
+                    case "SPRINT" -> sender.isSprinting();
+                    case "GLIDE" -> sender.isGliding();
+                    case "SWIM" -> sender.isSwimming();
+                    default -> sender.isOnGround();
+                });
+            }
+
+            @Override
+            public Optional<String> standingOn(String playerName) {
+                if (!playerName.equalsIgnoreCase(name)) {
+                    return Optional.empty();
+                }
+                Location feet = sender.getLocation();
+                if (feet == null) {
+                    return Optional.empty();
+                }
+                return Optional.of(feet.getBlock().getRelative(BlockFace.DOWN).getType().name());
+            }
+
+            @Override
+            public Optional<RosterValues.SlotContent> slotItem(String playerName,
+                    RosterValues.InventorySlot slot) {
+                if (!playerName.equalsIgnoreCase(name) || sender.getInventory() == null) {
+                    return Optional.empty();
+                }
+                ItemStack stack = NamedPlayerSinks.slotStack(sender.getInventory(), slot);
+                if (stack == null || stack.getType() == Material.AIR || stack.getAmount() <= 0) {
+                    return Optional.empty();
+                }
+                return Optional.of(new RosterValues.SlotContent(stack.getType().name(),
+                        stack.getAmount()));
             }
         };
     }

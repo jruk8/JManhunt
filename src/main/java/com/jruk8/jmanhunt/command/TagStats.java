@@ -14,7 +14,8 @@ public final class TagStats {
 
     /** Player keys: live vitals plus match counters. */
     public static final List<String> PSTAT_KEYS =
-            List.of("health", "hunger", "max-health", "mobs-killed", "achievements-gained");
+            List.of("health", "hunger", "max-health", "mobs-killed", "achievements-gained",
+                    "exp-level");
 
     /** Global keys: the match clock plus the world clock. */
     public static final List<String> GSTAT_KEYS = List.of("duration", "daytime");

@@ -541,6 +541,8 @@ public final class CommandPlaceholders {
             case "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
                     "vec.dot", "vec.cross", "loc.shift", "pdir" ->
                     TagVectors.resolve(tag, name, args, context);
+            case "pstate", "pstandingon", "ptitle", "pslot" ->
+                    TagPlayers.resolve(tag, name, args, context);
             case "prole" -> TagRoster.role(tag, args, context);
             case "overlap-players" -> TagLocations.overlapPlayers(tag, args, context);
             case "nearby-players" -> TagLocations.nearbyPlayers(tag, args, playerName, context);
