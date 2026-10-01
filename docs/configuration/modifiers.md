@@ -1,12 +1,13 @@
 # Modifiers
 
-**Modifiers** are named command bundles in `modifiers.yml` that run
+**Modifiers** are named command bundles in `mods/modifiers/` that run
 console or per-player commands on match triggers. They are disabled
 by default; details live in [Behaviors](modifiers/behaviors.md),
 [Command Lists and Targeting](modifiers/command-lists.md),
 [Tags: Basics](modifiers/tags-basics.md),
-[Tags: Advanced](modifiers/tags-advanced.md), and
-[Creating and Sharing](modifiers/creating.md).
+[Tags: Advanced](modifiers/tags-advanced.md),
+[Creating and Sharing](modifiers/creating.md), and
+[Mod Files](mods-files.md).
 
 ## Tag cheat sheet
 
@@ -179,17 +180,19 @@ see the Tags pages for full rules.
 ## 3-minute quickstart
 
 1. Enable the bundled beef modifier:
-   `/manhunt config modifiers everyone-gets-beef enabled true`.
-2. In `plugins/JManhunt/modifiers.yml`, change
+   `/manhunt modifiers setmod everyone-gets-beef true`.
+2. In `plugins/JManhunt/mods/modifiers/everyone-gets-beef.yml`, change
    `give <p> minecraft:cooked_beef 8` to `... cooked_beef 16`.
 3. Run `/manhunt reload`.
 4. Start a match: every participant gets 16 steak.
 
 ## 20-minute JMHScript quickstart
 
-File layout: `plugins/JManhunt/modifiers.yml` holds a `modifiers:`
-map. Each entry has `enabled`, `meta:` (name, description, icon,
-author), and `behavior:` with numbered blocks.
+File layout: `plugins/JManhunt/mods/modifiers/` holds one `.yml`
+file per modifier, named after its id. Each file has `enabled`,
+`meta:` (name, description, icon, author), and `behavior:` with
+numbered blocks. See [Mod Files](mods-files.md) for subdirectories,
+load order, and file problems.
 
 Behavior anatomy: each block picks triggers under `runs-on:`
 (`ON_START`, `INTERVAL`, kill and portal events, ...), optional
@@ -219,26 +222,26 @@ button does the same per list.
 
 One complete modifier, annotated:
 
+`mods/modifiers/gapple-comeback.yml`:
+
 ```yaml
-modifiers:
-  gapple-comeback:
-    enabled: false
-    meta:
-      name: "Gapple Comeback"
-      description: "Low runners get a gapple every 10 seconds"
-      item: GOLDEN_APPLE
-      author: You
-    behavior:
-      0:
-        runs-on:
-          - INTERVAL
-        options:
-          interval-settings:
-            interval: 10
-        commands:
-          speedrunner:
-            # 6 health or less: hand a gapple, else stop the list
-            - '<if:"<pstat:<p>,health> le 6","give <p> golden_apple","exit">'
-            # only reached on a hit: confirm in yellow
-            - '<pmessage:<p>,\<yellow\>Second wind!'
+enabled: false
+meta:
+  name: "Gapple Comeback"
+  description: "Low runners get a gapple every 10 seconds"
+  item: GOLDEN_APPLE
+  author: You
+behavior:
+  0:
+    runs-on:
+      - INTERVAL
+    options:
+      interval-settings:
+        interval: 10
+    commands:
+      speedrunner:
+        # 6 health or less: hand a gapple, else stop the list
+        - '<if:"<pstat:<p>,health> le 6","give <p> golden_apple","exit">'
+        # only reached on a hit: confirm in yellow
+        - '<pmessage:<p>,\<yellow\>Second wind!'
 ```

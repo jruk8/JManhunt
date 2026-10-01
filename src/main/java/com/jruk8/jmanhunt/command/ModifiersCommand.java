@@ -155,7 +155,7 @@ public final class ModifiersCommand {
             return true;
         }
         String name = args[1];
-        if (!config.modifierNames().contains(name)) {
+        if (!config.hasModifier(name)) {
             messages.message(sender, "modifiers.unknown-modifier",
                     Map.of("name", name, "valid", ListFormatter.joinOxford(modifierNameOptions())));
             return true;
@@ -218,7 +218,7 @@ public final class ModifiersCommand {
             return true;
         }
         String id = args[1];
-        if (!config.presetNames().contains(id)) {
+        if (!config.hasPreset(id)) {
             messages.message(sender, "modifiers.unknown-preset",
                     Map.of("name", id, "valid", ListFormatter.joinOxford(presetIdOptions())));
             return true;

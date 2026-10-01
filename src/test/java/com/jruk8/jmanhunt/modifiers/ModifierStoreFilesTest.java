@@ -1,5 +1,7 @@
 package com.jruk8.jmanhunt.modifiers;
 
+import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
+import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.files.ModLoadResult;
 import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import com.jruk8.jmanhunt.modifiers.files.ModsLoader;
@@ -135,6 +137,69 @@ class ModifierStoreFilesTest {
     }
 
     @Test
+    void createAgainstNestedTakenIdNumbersAtRoot() throws Exception {
+        writeMod("sub/dup", "enabled: false\nmeta:\n  name: Sub Dup\n");
+        store.replaceAll(loadRoot());
+        byte[] nestedBefore = Files.readAllBytes(modsRoot.resolve("modifiers/sub/dup.yml"));
+
+        ModifierEntry entry = new ModifierEntry();
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName("Dup");
+        entry.setMeta(meta);
+
+        assertEquals("dup-2", store.addModifier("dup", entry));
+        assertTrue(Files.isRegularFile(modFile("dup-2")));
+        assertTrue(read(modFile("dup-2")).contains("Dup 2"));
+        assertTrue(Arrays.equals(nestedBefore,
+                Files.readAllBytes(modsRoot.resolve("modifiers/sub/dup.yml"))));
+    }
+
+    @Test
+    void renameRefusesNestedTakenId() throws Exception {
+        writeMod("sub/dup", "enabled: false\n");
+        writeMod("olive", "enabled: false\n");
+        store.replaceAll(loadRoot());
+
+        assertFalse(store.renameModifier("olive", "dup"));
+
+        assertTrue(Files.isRegularFile(modFile("olive")));
+        assertFalse(Files.exists(modsRoot.resolve("modifiers/dup-2.yml")));
+    }
+
+    @Test
+    void renamePreservesDirectory() throws Exception {
+        writeMod("sub/old", "enabled: true\nmeta:\n  name: Old\n");
+        writePreset("p", "modifiers:\n  - old\n");
+        store.replaceAll(loadRoot());
+
+        assertTrue(store.renameModifier("old", "new"));
+
+        assertFalse(Files.exists(modsRoot.resolve("modifiers/sub/old.yml")));
+        assertTrue(Files.isRegularFile(modsRoot.resolve("modifiers/sub/new.yml")));
+        assertFalse(Files.exists(modFile("new")));
+        assertEquals(List.of("new"), store.presetMembers("p"));
+        assertTrue(read(presetFile("p")).contains("- new"));
+    }
+
+    @Test
+    void deleteLeavesSiblingsAndEmptyDirs() throws Exception {
+        writeMod("sub/a", "enabled: false\n");
+        writeMod("sub/b", "enabled: false\n");
+        writeMod("keeper", "enabled: false\n");
+        store.replaceAll(loadRoot());
+
+        assertTrue(store.removeModifier("a"));
+        assertFalse(Files.exists(modsRoot.resolve("modifiers/sub/a.yml")));
+        assertTrue(Files.isRegularFile(modsRoot.resolve("modifiers/sub/b.yml")));
+
+        assertTrue(store.removeModifier("b"));
+
+        assertFalse(Files.exists(modsRoot.resolve("modifiers/sub/b.yml")));
+        assertTrue(Files.isDirectory(modsRoot.resolve("modifiers/sub")));
+        assertTrue(Files.isRegularFile(modFile("keeper")));
+    }
+
+    @Test
     void nestedFilesKeepTheirDirectoryOnSave() throws Exception {
         writeMod("sub/nest", "enabled: false\n");
         store.replaceAll(loadRoot());
@@ -152,6 +217,12 @@ class ModifierStoreFilesTest {
 
     private void writeMod(String id, String body) throws Exception {
         Path file = modFile(id);
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, body, StandardCharsets.UTF_8);
+    }
+
+    private void writePreset(String id, String body) throws Exception {
+        Path file = presetFile(id);
         Files.createDirectories(file.getParent());
         Files.writeString(file, body, StandardCharsets.UTF_8);
     }

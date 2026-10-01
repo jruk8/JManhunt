@@ -34,7 +34,7 @@ All commands are available under `/manhunt` and its alias `/mh`.
 | `/manhunt worldengine cellindex set <value>`      | Sets the world-engine cell index, clamped to the addressable grid. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt worldengine cellindex buffer`           | Lists the buffered ready-cell ids. | `jmanhunt.command.worldengine` (`jmanhunt.command.worldengine.cellindex`) |
 | `/manhunt debug [INFO\|WARN\|SEVERE]`              | Sets your debug level, or the console's when run from it; bare `/manhunt debug` toggles output on at INFO or off. SEVERE shows only severe lines, WARN adds warnings, INFO shows all. Nearby lobby bounds also draw as colored edge particles while debug is on, plus white draft boxes for your own pending lobby and schem corners. | `jmanhunt.command.debug` |
-| `/manhunt reload`                                 | Reloads `config.yml`, `messages.yml`, and `lobby-config.yml`. | `jmanhunt.command.reload` |
+| `/manhunt reload`                                 | Reloads the engine and mods, then reports new/removed ids plus file problems (see below). | `jmanhunt.command.reload` |
 
 Tab completion only suggests subcommands and worldengine actions the sender
 has permission to run.
@@ -298,14 +298,15 @@ clear variant asks once and deletes on an identical rerun within
 
 ## Modifiers
 
-Custom modifiers are named command bundles in `modifiers.yml`. They
-are disabled by default. A modifier can run commands when a match
-starts, on a recurring interval during the match, and when it ends,
-either from the console or once for each participating player.
+Custom modifiers are named command bundles in `mods/modifiers/`.
+They are disabled by default. A modifier can run commands when a
+match starts, on a recurring interval during the match, and when it
+ends, either from the console or once for each participating player.
 
 Browse and toggle them with `/manhunt modifiers`, through the
-[admin GUI](gui.md), or by editing `modifiers.yml` and running
-`/manhunt reload`. Share one with `export`, which prints a
+[admin GUI](gui.md), or by editing files under `mods/` and running
+`/manhunt reload` (see [Mod Files](configuration/mods-files.md)).
+Share one with `export`, which prints a
 click-to-copy string, and take one in with `import`:
 
 ```text
@@ -354,6 +355,24 @@ values are refused with an error, while unknown command tags only
 warn. The same creator lives in the GUI: a create button sits at the
 top-right of each list, and right-clicking any entry edits it (see
 [Creating Modifiers and Presets](configuration/modifiers/creating.md#creating-modifiers-and-presets)).
+
+`/manhunt reload` prints one confirmation line, then up to four
+report lines for the mods load (lines with nothing to report are
+skipped):
+
+```text
+Reloaded the Manhunt engine in 40ms.
+» 1 new modifier, removed 1 preset
+» Unknown files: notes.txt and 1 more
+» Failed to parse modifiers/presets: gear-dice.yml and 1 more
+» Duplicate id found: vanilla-plus
+```
+
+The first report line counts added and removed ids (a rename shows
+as one of each); the rest name unknown files, files that failed to
+parse, and duplicate ids. Each names the first entry in load order
+plus how many more follow. Every string is configurable under
+`manhunt.reload-*` in `messages.yml`.
 
 ### Full Reference
 

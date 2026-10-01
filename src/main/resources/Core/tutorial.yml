@@ -220,7 +220,7 @@ nodes:
         next: "EXIT"
   mod_create:
     question:
-      - "Open <gray>modifiers.yml</gray>, copy the <white>everyone-gets-beef</white> block, rename it, and change its behavior. Save, then run <white>/mh reload</white>."
+      - "Open <gray>mods/modifiers/everyone-gets-beef.yml</gray>, copy the file to a new name, and change its behavior. Save, then run <white>/mh reload</white>."
       - "Stuck? Grab ready-made ones from the community."
     answers:
       - text: "Get community modifiers on Discord."

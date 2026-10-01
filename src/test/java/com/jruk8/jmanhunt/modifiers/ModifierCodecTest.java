@@ -342,8 +342,17 @@ class ModifierCodecTest {
     void validIdMatchesCodecShape() {
         assertTrue(ModifierCodec.validId("good-id_1"));
         assertTrue(ModifierCodec.validId("a"));
+        assertTrue(ModifierCodec.validId("a".repeat(64)));
         assertFalse(ModifierCodec.validId("-lead"));
         assertFalse(ModifierCodec.validId("has space"));
+        assertFalse(ModifierCodec.validId("sub/dup"));
+        assertFalse(ModifierCodec.validId("sub\\dup"));
+        assertFalse(ModifierCodec.validId("has.dot"));
+        assertFalse(ModifierCodec.validId(".leading"));
+        assertFalse(ModifierCodec.validId(".."));
+        assertFalse(ModifierCodec.validId(""));
+        assertFalse(ModifierCodec.validId("   "));
+        assertFalse(ModifierCodec.validId("a".repeat(65)));
         assertFalse(ModifierCodec.validId(null));
     }
 }

@@ -11,12 +11,18 @@ import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.files.ModLoadResult;
 import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
+import com.jruk8.jmanhunt.modifiers.files.ModsLoader;
+import com.jruk8.jmanhunt.modifiers.files.ModsSeeder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -68,6 +74,44 @@ class ModifiersCommandTest {
 
         assertEquals(List.of("Alpha", "mike", "zeta"), command.modifierNameOptions());
         assertEquals(List.of("apple", "zulu"), command.presetIdOptions());
+    }
+
+    @TempDir
+    private Path tempDir;
+
+    @Test
+    void importAgainstNestedTakenIdNumbersAtRoot() throws Exception {
+        Path modsRoot = tempDir.resolve("mods");
+        Path nested = modsRoot.resolve("modifiers/sub/dup.yml");
+        Files.createDirectories(nested.getParent());
+        Files.writeString(nested, "enabled: false\nmeta:\n  name: Sub Dup\n",
+                StandardCharsets.UTF_8);
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ModifierStore store = new ModifierStore(ModifierFiles.fromLoad(modsRoot,
+                new ModsLoader(ModsSeeder.none(), log).load(modsRoot)), log);
+        ConfigService service = new ConfigService(null, store);
+        MessageService messages = new MessageService();
+        messages.reload(new MessagesConfig());
+        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
+        FakeSender sender = FakeSender.permitted();
+        byte[] nestedBefore = Files.readAllBytes(nested);
+
+        ModifierEntry entry = new ModifierEntry();
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName("Dup");
+        entry.setMeta(meta);
+        String payload = ModifierCodec.exportModifier("dup", entry);
+
+        assertTrue(command.execute(sender, new String[]{"import", "modifier", payload}));
+
+        assertEquals(messages.component("modifiers.imported", Map.of("name", "Dup 2")),
+                sender.received().get(0));
+        assertEquals(messages.component("modifiers.import-duplicate",
+                        Map.of("duplicate", "dup", "id", "dup-2")),
+                sender.received().get(1));
+        assertTrue(Files.isRegularFile(modsRoot.resolve("modifiers/dup-2.yml")));
+        assertTrue(Arrays.equals(nestedBefore, Files.readAllBytes(nested)));
     }
 
     @Test

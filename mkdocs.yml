@@ -75,6 +75,7 @@ nav:
           - Troubleshooting: configuration/world-engine/troubleshooting.md
       - Modifiers:
           - Overview: configuration/modifiers.md
+          - Mod Files: configuration/mods-files.md
           - Behaviors: configuration/modifiers/behaviors.md
           - Command Lists: configuration/modifiers/command-lists.md
           - Tags Basics: configuration/modifiers/tags-basics.md

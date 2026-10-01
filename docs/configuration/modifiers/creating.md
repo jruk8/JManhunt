@@ -1,20 +1,22 @@
 # Creating and Sharing Modifiers
 
-**Modifiers** are named command bundles you define in `modifiers.yml`
-under `modifiers`. They are disabled by default. A modifier can run
+**Modifiers** are named command bundles you define as one `.yml`
+file each under `mods/modifiers/`, with presets beside them under
+`mods/presets/`. They are disabled by default. A modifier can run
 commands when a match starts, on a recurring interval during the match, when
 specific game events happen, and when the match ends, either from the console
 or once for each participating player.
 
 All command examples are the default config settings. Refer to the latest
-version of `modifiers.yml` in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/modifiers.yml).
+bundled files in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/mods/).
 
-Settings for modifiers are categorized under `modifiers`:
+Each modifier is one file named after its id (full layout rules
+live in [Mod Files](../mods-files.md)):
+
+`mods/modifiers/everyone-gets-beef.yml`:
 
 ```yaml
-modifiers:
-  everyone-gets-beef:
-    enabled: false
+enabled: false
 ```
 
 Writing commands by hand is tedious. Use
@@ -24,9 +26,11 @@ then paste them into your modifier.
 ## Creating Modifiers and Presets
 
 Build entries in the GUI or inline from chat; both write the same
-`modifiers.yml` blocks that manual editing produces, and manual
+per-file entries that manual editing produces, and manual
 editing keeps working as before. Everything created this way starts
-disabled.
+disabled, and lands as a root-level file: `mods/modifiers/<id>.yml`
+or `mods/presets/<id>.yml`. Ids use letters, numbers, `-` and `_`
+(up to 64 chars); a name that is taken gets ` {n}` numbering.
 
 In the GUI, a create button sits at the top-right of the modifiers
 and presets lists. It prompts for a display name (you become the
@@ -63,16 +67,16 @@ then runs.
 Presets keep their display data under `meta:`, exactly like
 modifiers, with the member list beside it:
 
+`mods/presets/chaos-mode.yml`:
+
 ```yaml
-presets:
-  chaos-mode:
-    meta:
-      name: "Chaos Mode"
-      description: "Random mobs, random items, gear dice"
-      item: TNT
-    modifiers:
-      - random-mob-spawner
-      - random-item-giver
+meta:
+  name: "Chaos Mode"
+  description: "Random mobs, random items, gear dice"
+  item: TNT
+modifiers:
+  - random-mob-spawner
+  - random-item-giver
 ```
 
 Presets written in the old flat shape (name and friends next to
@@ -100,29 +104,28 @@ an export button that copies its own share string.
 
 A minimal modifier that hands every participant a starter kit looks like this:
 
+`mods/modifiers/starter-kit.yml`:
+
 ```yaml
-modifiers:
-  starter-kit:
-    enabled: false
-    behavior:
-      0:
-        commands:
-          player:
-            - "give <p> cooked_beef 8"
-          hunter: []
-          speedrunner: []
-          console: []
-          console-cleanup: []
-          player-cleanup: []
+enabled: false
+behavior:
+  0:
+    commands:
+      player:
+        - "give <p> cooked_beef 8"
+      hunter: []
+      speedrunner: []
+      console: []
+      console-cleanup: []
+      player-cleanup: []
 ```
 
-The default `modifiers.yml` ships more examples to copy from: `full-iron-kit`,
-`speedrunner-health-advantage`, `random-mob-spawner`, `random-item-giver`,
-`random-start-resources`, `gear-dice`, `regen-on-kill`, `diamond-on-advancement`,
-`fireres-on-nether-enter`, `hunter-start-debuffs` (slowness II plus
-weakness I on every hunter at match start), `hunter-post-start-speed`
-(speed for hunters once the game actually begins), `get-stronger-on-kill`,
-and `speedrunner-gapple-on-low-hp`.
+The bundled `mods/modifiers/` files ship more examples to copy from:
+`full-iron-kit`, `speedrunner-health-advantage`, `random-mob-spawner`,
+`random-item-giver`, `random-start-resources`, `gear-dice`,
+`regen-on-kill`, `diamond-on-advancement`, `fireres-on-nether-enter`,
+`hunter-start-debuffs` (slowness II plus weakness I on every hunter at
+match start), `get-stronger-on-kill`, and `speedrunner-gapple-on-low-hp`.
 
 ### Get Stronger On Kill
 

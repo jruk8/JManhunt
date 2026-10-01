@@ -412,6 +412,11 @@ public final class ConfigService {
         return modifiers.modifierNames();
     }
 
+    /** True when a modifier id is loaded (root or any subdir). */
+    public boolean hasModifier(String id) {
+        return modifiers.hasModifier(id);
+    }
+
     public boolean modifierEnabled(String name) {
         return modifiers.isEnabled(name);
     }
@@ -422,6 +427,11 @@ public final class ConfigService {
 
     public Set<String> presetNames() {
         return modifiers.presetNames();
+    }
+
+    /** True when a preset id is loaded (root or any subdir). */
+    public boolean hasPreset(String id) {
+        return modifiers.hasPreset(id);
     }
 
     public List<String> presetMembers(String id) {

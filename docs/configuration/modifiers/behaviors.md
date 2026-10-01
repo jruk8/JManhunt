@@ -2,14 +2,14 @@
 
 ## Enabling a Modifier
 
-Under `modifiers.<name>`, the `enabled` flag decides whether the
+In its file, the `enabled` flag decides whether the
 bundle runs at all. Toggle a bundle in-game with:
 
 ```text
-/manhunt config modifiers everyone-gets-beef enabled true
+/manhunt modifiers setmod everyone-gets-beef true
 ```
 
-You can also flip `enabled` in `modifiers.yml` directly, then run
+You can also flip `enabled` in the file directly, then run
 `/manhunt reload`. Create new ones with `/manhunt modifiers create`,
 through the admin GUI editor, or by copying an existing entry.
 
@@ -20,36 +20,36 @@ are skipped with a console warning.
 
 ## Behaviors
 
-Under `modifiers.<name>.behavior`, a modifier holds one behavior per
+Under the file's `behavior:` map, a modifier holds one behavior per
 index (`0`, `1`, ...). Each behavior has its own triggers, options,
 and command lists, and every behavior of an enabled modifier fires on
 its own triggers. Indexes need not be contiguous; a modifier with no
 behaviors does nothing:
 
+`mods/modifiers/everyone-gets-beef.yml`:
+
 ```yaml
-modifiers:
-  everyone-gets-beef:
-    enabled: false
-    behavior:
-      0:
-        runs-on:
-          - ON_START
-        commands:
-          player:
-            - "give <p> minecraft:cooked_beef 8"
-      1:
-        runs-on:
-          - INTERVAL
-        options:
-          interval-settings:
-            interval: 60
-        commands:
-          player:
-            - "give <p> minecraft:cooked_beef 1"
+enabled: false
+behavior:
+  0:
+    runs-on:
+      - ON_START
+    commands:
+      player:
+        - "give <p> minecraft:cooked_beef 8"
+  1:
+    runs-on:
+      - INTERVAL
+    options:
+      interval-settings:
+        interval: 60
+    commands:
+      player:
+        - "give <p> minecraft:cooked_beef 1"
 ```
 
 All trigger, option, and command paths below live under
-`modifiers.<name>.behavior.<index>`.
+`behavior.<index>`.
 
 ## Run Timing
 
@@ -86,15 +86,15 @@ Except for `ON_START`, every event trigger runs the `player`, `hunter`, and
 Under `on-start`, an `ON_START` modifier can wait
 out the pre-start window before running:
 
+`mods/modifiers/hunter-post-start-speed.yml`:
+
 ```yaml
-modifiers:
-  hunter-post-start-speed:
-    behavior:
-      0:
-        on-start:
-          # BEFORE runs at /manhunt start; AFTER waits until the speedrunner
-          # first hits a hunter (or the match force-starts). Defaults to BEFORE.
-          pre-start-order: AFTER
+behavior:
+  0:
+    on-start:
+      # BEFORE runs at /manhunt start; AFTER waits until the speedrunner
+      # first hits a hunter (or the match force-starts). Defaults to BEFORE.
+      pre-start-order: AFTER
 ```
 
 This only applies when `runs-on` contains `ON_START` or is omitted (which
@@ -106,19 +106,19 @@ there is no pre-start window, so both settings run at match start.
 Under `options.success-chance`, you can make the modifier
 run only sometimes:
 
+`mods/modifiers/gear-dice.yml`:
+
 ```yaml
-modifiers:
-  gear-dice:
-    behavior:
-      0:
-        options:
-          success-chance:
-            # Chance to run, from 0.0 (never) to 1.0 (always). This is a fraction,
-            # not a percent: use 0.5 for 50%. Defaults to 1.0.
-            chance: 0.5
-            # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls the console
-            # and each player separately. Defaults to PER_INVOKE.
-            behavior: PER_EXECUTOR
+behavior:
+  0:
+    options:
+      success-chance:
+        # Chance to run, from 0.0 (never) to 1.0 (always). This is a fraction,
+        # not a percent: use 0.5 for 50%. Defaults to 1.0.
+        chance: 0.5
+        # PER_INVOKE rolls once for everyone; PER_EXECUTOR rolls the console
+        # and each player separately. Defaults to PER_INVOKE.
+        behavior: PER_EXECUTOR
 ```
 
 Without this section the modifier always runs. The roll happens on every
@@ -130,22 +130,22 @@ never rolled.
 Under `options.execution`, you can run a random line
 from a command list instead of every line:
 
+`mods/modifiers/gear-dice.yml`:
+
 ```yaml
-modifiers:
-  gear-dice:
-    behavior:
-      0:
-        options:
-          execution:
-            # IN_ORDER runs every line. PICK_RANDOM runs a random few instead.
-            # Defaults to IN_ORDER.
-            selection: PICK_RANDOM
-            pick-random:
-              # How many lines to pick. Minimum 1. Defaults to 1.
-              count: 1
-              # PER_INVOKE picks once for everyone; PER_EXECUTOR picks separately
-              # for the console and each player. Defaults to PER_INVOKE.
-              behavior: PER_EXECUTOR
+behavior:
+  0:
+    options:
+      execution:
+        # IN_ORDER runs every line. PICK_RANDOM runs a random few instead.
+        # Defaults to IN_ORDER.
+        selection: PICK_RANDOM
+        pick-random:
+          # How many lines to pick. Minimum 1. Defaults to 1.
+          count: 1
+          # PER_INVOKE picks once for everyone; PER_EXECUTOR picks separately
+          # for the console and each player. Defaults to PER_INVOKE.
+          behavior: PER_EXECUTOR
 ```
 
 This applies to each command list on its own. If you ask for more lines than
@@ -158,24 +158,24 @@ Under `options.interval-settings`, you configure how
 often an `INTERVAL` modifier repeats. It only applies when `runs-on`
 contains `INTERVAL`:
 
+`mods/modifiers/random-mob-spawner.yml`:
+
 ```yaml
-modifiers:
-  random-mob-spawner:
-    enabled: false
-    behavior:
-      0:
-        runs-on:
-          - INTERVAL
-        options:
-          interval-settings:
-            # Interval duration in seconds.
-            interval: 60
-            # Random spread in seconds. 60 and 15 means every 45 to 75 seconds.
-            # Cannot go above interval. Defaults to 0.
-            deviation: 15
-            # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
-            # console their own timer. Defaults to PER_INVOKE.
-            behavior: PER_INVOKE
+enabled: false
+behavior:
+  0:
+    runs-on:
+      - INTERVAL
+    options:
+      interval-settings:
+        # Interval duration in seconds.
+        interval: 60
+        # Random spread in seconds. 60 and 15 means every 45 to 75 seconds.
+        # Cannot go above interval. Defaults to 0.
+        deviation: 15
+        # PER_INVOKE shares one timer; PER_EXECUTOR gives every player and the
+        # console their own timer. Defaults to PER_INVOKE.
+        behavior: PER_INVOKE
 ```
 
 Interval modifiers start counting when the game actually begins (when a
@@ -197,13 +197,13 @@ dead players waiting on a respawn, and players held in spectator mode
 Under `options.delay`, you can delay the modifier's
 commands by a number of ticks after they trigger:
 
+`mods/modifiers/everyone-gets-beef.yml`:
+
 ```yaml
-modifiers:
-  everyone-gets-beef:
-    behavior:
-      0:
-        options:
-          delay: 5
+behavior:
+  0:
+    options:
+      delay: 5
 ```
 
 The delay applies to start, interval, and event triggers, but never to

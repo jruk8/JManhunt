@@ -6,16 +6,16 @@ Under `commands`, you configure which commands run
 and for whom. The bundled `everyone-gets-beef` example gives every
 participating player eight steaks when the match starts:
 
+`mods/modifiers/everyone-gets-beef.yml`:
+
 ```yaml
-modifiers:
-  everyone-gets-beef:
-    enabled: false
-    behavior:
-      0:
-        commands:
-          player:
-            # Runs for every participating player (only hunters and speedrunners, not including NONE)
-            - "give <p> minecraft:cooked_beef 8"
+enabled: false
+behavior:
+  0:
+    commands:
+      player:
+        # Runs for every participating player (only hunters and speedrunners, not including NONE)
+        - "give <p> minecraft:cooked_beef 8"
 ```
 
 The available command lists are:
@@ -63,20 +63,20 @@ Manhunt roles mirror to vanilla scoreboard teams (`HUNTER`,
 `SPEEDRUNNER`, and `SPECTATOR`), so console commands can aim at a whole
 side with the `team` selector argument:
 
+`mods/modifiers/hunter-fear.yml`:
+
 ```yaml
-modifiers:
-  hunter-fear:
-    enabled: false
-    behavior:
-      0:
-        runs-on:
-          - INTERVAL
-        options:
-          interval-settings:
-            interval: 30
-        commands:
-          console:
-            - "effect give @a[team=HUNTER] minecraft:darkness 5 0"
+enabled: false
+behavior:
+  0:
+    runs-on:
+      - INTERVAL
+    options:
+      interval-settings:
+        interval: 30
+    commands:
+      console:
+        - "effect give @a[team=HUNTER] minecraft:darkness 5 0"
 ```
 
 `@a[team=HUNTER]` only covers hunters in the running match, so it
@@ -94,20 +94,20 @@ which makes them the right place to undo whatever the modifier changed. The
 bundled `perma-night` modifier, for example, re-enables daylight when the
 match is over:
 
+`mods/modifiers/perma-night.yml`:
+
 ```yaml
-modifiers:
-  perma-night:
-    enabled: false
-    behavior:
-      0:
-        commands:
-          console:
-            # Ran by the console when the match starts.
-            - "gamerule advance_time false"
-            - "time set midnight"
-          console-cleanup:
-            # Ran by the console when the match ends.
-            - "gamerule advance_time true"
+enabled: false
+behavior:
+  0:
+    commands:
+      console:
+        # Ran by the console when the match starts.
+        - "gamerule advance_time false"
+        - "time set midnight"
+      console-cleanup:
+        # Ran by the console when the match ends.
+        - "gamerule advance_time true"
 ```
 
 Similarly, `speedrunner-health-advantage` resets every participant's max health
