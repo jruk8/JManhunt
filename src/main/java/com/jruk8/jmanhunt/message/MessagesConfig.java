@@ -4,6 +4,7 @@ import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
+import lombok.Getter;
 
 /**
  * Typed root of messages.yml. Every chat, actionbar, title, and GUI
@@ -12,6 +13,7 @@ import eu.okaeri.configs.annotation.Header;
  * An explicitly empty string disables that message wherever it
  * would be sent.
  */
+@Getter
 @SuppressWarnings("FieldMayBeFinal")
 @Header({
         "JManhunt messages. Missing entries are added automatically on load and",

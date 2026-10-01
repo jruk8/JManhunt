@@ -18,6 +18,10 @@ dependencies {
     compileOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
     compileOnly 'org.postgresql:postgresql:42.7.13'
 
+    // Compile time only: trivial getters/setters generate into bytecode.
+    compileOnly 'org.projectlombok:lombok:1.18.46'
+    annotationProcessor 'org.projectlombok:lombok:1.18.46'
+
     // Tests exercise the real SQLite engine store, so the drivers must be
     // present at test runtime. The shipped plugin still loads them through
     // the plugin.yml libraries section instead of bundling them.

@@ -2,8 +2,10 @@ package com.jruk8.jmanhunt.message;
 
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
 
 /** One color tag per role. */
+@Getter
 @SuppressWarnings("FieldMayBeFinal")
 public class RoleColorsMessages extends OkaeriConfig {
 

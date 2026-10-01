@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.message;
 
+import com.jruk8.jmanhunt.config.SectionPinner;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
@@ -15,6 +16,7 @@ import java.io.File;
 public final class MessagesRegistrar {
 
     private final JavaPlugin plugin;
+    private final SectionPinner sections = new SectionPinner();
     private MessagesConfig messages;
 
     public MessagesRegistrar(JavaPlugin plugin) {
@@ -48,6 +50,7 @@ public final class MessagesRegistrar {
         try {
             messages.saveDefaults();
             messages.load(true);
+            sections.pin(messages);
         } catch (RuntimeException exception) {
             plugin.getLogger().warning("Could not load messages.yml (" + exception.getMessage()
                     + "); check the file, then run /mh reload.");

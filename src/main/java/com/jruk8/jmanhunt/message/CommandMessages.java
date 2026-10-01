@@ -2,8 +2,10 @@ package com.jruk8.jmanhunt.message;
 
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
 
 /** Shared command responses. */
+@Getter
 @SuppressWarnings("FieldMayBeFinal")
 public class CommandMessages extends OkaeriConfig {
 

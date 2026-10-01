@@ -2,8 +2,10 @@ package com.jruk8.jmanhunt.message;
 
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
 
 /** Spectator toolbar buttons, browser menus, and feedback. */
+@Getter
 @SuppressWarnings("FieldMayBeFinal")
 public class SpectatorMessages extends OkaeriConfig {
 

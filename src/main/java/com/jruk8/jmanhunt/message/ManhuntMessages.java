@@ -3,8 +3,10 @@ package com.jruk8.jmanhunt.message;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
 
 /** Core /manhunt command responses. */
+@Getter
 @SuppressWarnings("FieldMayBeFinal")
 public class ManhuntMessages extends OkaeriConfig {
 

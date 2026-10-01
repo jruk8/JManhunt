@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.Getter;
 
 /** Tracking compass names, lore, and actionbars. */
+@Getter
 @SuppressWarnings("FieldMayBeFinal")
 public class CompassMessages extends OkaeriConfig {
 

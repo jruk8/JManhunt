@@ -4,8 +4,10 @@ import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.CustomKey;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.Getter;
 
 /** Live match announcements and end-of-match stat lines. */
+@Getter
 @SuppressWarnings("FieldMayBeFinal")
 public class GameMessages extends OkaeriConfig {
 

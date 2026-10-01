@@ -62,6 +62,41 @@ public final class MessageService {
         return parse(rendered);
     }
 
+    /** True when raw text is null or empty, which disables the message everywhere it would be sent. */
+    public boolean blank(String raw) {
+        return raw == null || raw.isEmpty();
+    }
+
+    /** Renders one typed value (never a key) with placeholders. */
+    public Component componentRaw(String raw, Map<String, String> values) {
+        return renderLiteral(raw, values);
+    }
+
+    /** Sends one typed value to a sender, skipping blank values. */
+    public void messageRaw(CommandSender sender, String raw, Map<String, String> values) {
+        if (!blank(raw)) {
+            sender.sendMessage(componentRaw(raw, values));
+        }
+    }
+
+    /** Broadcasts one typed value, skipping blank values. */
+    public void broadcastRaw(String raw, Map<String, String> values) {
+        if (!blank(raw)) {
+            Bukkit.broadcast(componentRaw(raw, values));
+        }
+    }
+
+    /** Sends one typed value to exactly the given recipients, skipping blank values. */
+    public void sendToRaw(Collection<? extends Player> recipients, String raw, Map<String, String> values) {
+        if (blank(raw)) {
+            return;
+        }
+        Component rendered = componentRaw(raw, values);
+        for (Player recipient : recipients) {
+            recipient.sendMessage(rendered);
+        }
+    }
+
     /** Role display name prefixed with its configured color tag, without a reset. */
     public String roleName(Role role) {
         return roleColor(role) + role.displayName();
