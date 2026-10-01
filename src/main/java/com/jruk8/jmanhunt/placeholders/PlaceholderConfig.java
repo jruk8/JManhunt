@@ -5,6 +5,8 @@ import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.Header;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * PlaceholderAPI definitions: every built-in identifier with its toggle
@@ -19,6 +21,8 @@ import java.util.Map;
         "All placeholders must be used with the prefix %jmanhunt_<placeholder>%",
         "(e.g. %jmanhunt_total_kills%, %jmanhunt_game_phase_0%)."
 })
+@Getter
+@Setter
 public class PlaceholderConfig extends OkaeriConfig {
 
     @Comment("Placeholder definitions by identifier (without the jmanhunt_ prefix).")
@@ -26,22 +30,6 @@ public class PlaceholderConfig extends OkaeriConfig {
 
     @Comment("Phase names used by game_phase.")
     private PhaseNames phases = new PhaseNames();
-
-    public Map<String, PlaceholderEntry> getPlaceholders() {
-        return placeholders;
-    }
-
-    public void setPlaceholders(Map<String, PlaceholderEntry> placeholders) {
-        this.placeholders = placeholders;
-    }
-
-    public PhaseNames getPhases() {
-        return phases;
-    }
-
-    public void setPhases(PhaseNames phases) {
-        this.phases = phases;
-    }
 
     private static Map<String, PlaceholderEntry> defaultPlaceholders() {
         Map<String, PlaceholderEntry> defaults = new LinkedHashMap<>();

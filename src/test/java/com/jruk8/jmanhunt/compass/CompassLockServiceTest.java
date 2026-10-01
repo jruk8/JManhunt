@@ -31,6 +31,7 @@ import org.bukkit.World;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -461,6 +462,7 @@ class CompassLockServiceTest {
         when(targets.collectSightings(any(), any(), any(), any())).thenReturn(List.of());
         MessagesConfig texts = new MessagesConfig();
         CompassLockService locks = new CompassLockService(mock(JManhuntPlugin.class),
+                mock(CompassSettingsFacade.class),
                 new PlayerStateStore(), mock(SoundService.class), mock(MessageService.class),
                 texts.getCompass(), texts.getModifiers(),
                 targets, new HashMap<>(), mock(Consumer.class), mock(Consumer.class),
@@ -494,8 +496,11 @@ class CompassLockServiceTest {
                 new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.configService()).thenReturn(configService);
-        when(plugin.overrides()).thenReturn(
-                new OverrideService(configService, new LobbyConfig(), () -> { }));
+        OverrideService overrides =
+                new OverrideService(configService, new LobbyConfig(), () -> { });
+        when(plugin.overrides()).thenReturn(overrides);
+        CompassSettingsFacade settings =
+                new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
         when(plugin.fakeSpectators()).thenReturn(fakes);
         UUID holderId = UUID.randomUUID();
@@ -518,7 +523,7 @@ class CompassLockServiceTest {
         MessageService messages = mock(MessageService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         MessagesConfig texts = new MessagesConfig();
-        CompassLockService locks = new CompassLockService(plugin, playerStates,
+        CompassLockService locks = new CompassLockService(plugin, settings, playerStates,
                 sounds, messages, texts.getCompass(), texts.getModifiers(), targets,
                 new HashMap<>(), refresher, mock(Consumer.class), renderer,
                 ignored -> { }, new CompassCache(), sharedClicks, mock(AnalysisHost.class));
@@ -554,8 +559,8 @@ class CompassLockServiceTest {
                 new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.configService()).thenReturn(configService);
-        when(plugin.overrides()).thenReturn(
-                new OverrideService(configService, new LobbyConfig(), () -> { }));
+        var overrides = new OverrideService(configService, new LobbyConfig(), () -> { });
+        var settings = new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
         when(plugin.fakeSpectators()).thenReturn(fakes);
         UUID holderId = UUID.randomUUID();
@@ -578,7 +583,7 @@ class CompassLockServiceTest {
         MessageService messages = mock(MessageService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         MessagesConfig texts = new MessagesConfig();
-        CompassLockService locks = new CompassLockService(plugin, playerStates,
+        CompassLockService locks = new CompassLockService(plugin, settings, playerStates,
                 sounds, messages, texts.getCompass(), texts.getModifiers(), targets,
                 new HashMap<>(), refresher, mock(Consumer.class), renderer,
                 ignored -> { }, new CompassCache(), sharedClicks, mock(AnalysisHost.class));

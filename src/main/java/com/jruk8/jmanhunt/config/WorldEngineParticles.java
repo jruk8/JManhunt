@@ -3,8 +3,12 @@ package com.jruk8.jmanhunt.config;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Pseudoborder wall particles for concurrent matches. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class WorldEngineParticles extends OkaeriConfig {
 
@@ -89,83 +93,4 @@ public class WorldEngineParticles extends OkaeriConfig {
     })
     private int maxParticlesPerPlayer = 1000;
 
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public int getParticleSpacing() {
-        return particleSpacing;
-    }
-
-    public void setParticleSpacing(int particleSpacing) {
-        this.particleSpacing = particleSpacing;
-    }
-
-    public String getColor() {
-        return color;
-    }
-
-    public void setColor(String color) {
-        this.color = color;
-    }
-
-    public double getRenderRadius() {
-        return renderRadius;
-    }
-
-    public void setRenderRadius(double renderRadius) {
-        this.renderRadius = renderRadius;
-    }
-
-    public String getPulseMode() {
-        return pulseMode;
-    }
-
-    public void setPulseMode(String pulseMode) {
-        this.pulseMode = pulseMode;
-    }
-
-    public double getInterval() {
-        return interval;
-    }
-
-    public void setInterval(double interval) {
-        this.interval = interval;
-    }
-
-    public double getWaveDirectionAngle() {
-        return waveDirectionAngle;
-    }
-
-    public void setWaveDirectionAngle(double waveDirectionAngle) {
-        this.waveDirectionAngle = waveDirectionAngle;
-    }
-
-    public double getWaveLength() {
-        return waveLength;
-    }
-
-    public void setWaveLength(double waveLength) {
-        this.waveLength = waveLength;
-    }
-
-    public double getWaveSpeed() {
-        return waveSpeed;
-    }
-
-    public void setWaveSpeed(double waveSpeed) {
-        this.waveSpeed = waveSpeed;
-    }
-
-    public int getMaxParticlesPerPlayer() {
-        return maxParticlesPerPlayer;
-    }
-
-    public void setMaxParticlesPerPlayer(int maxParticlesPerPlayer) {
-        this.maxParticlesPerPlayer = maxParticlesPerPlayer;
-    }
 }

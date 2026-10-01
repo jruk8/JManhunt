@@ -2,9 +2,7 @@ package com.jruk8.jmanhunt.match.listeners;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -12,7 +10,8 @@ import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MatchConfig;
+import com.jruk8.jmanhunt.config.PlayerSettings;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
@@ -53,7 +52,8 @@ class PlayerConnectionListenerJoinTest {
         Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
         PlayerConnectionListener listener = new PlayerConnectionListener(plugin,
                 new PlayerStateStore(), game, mock(MessageService.class),
-                mock(ConfigService.class), lobbies, mock(LobbyTeleporter.class),
+                new PlayerSettings(), new MatchConfig.DisconnectHandling(), lobbies,
+                mock(LobbyTeleporter.class),
                 mock(WorldEngineService.class), mock(SpeedrunnerDisconnectTracker.class),
                 disconnectTasks, mock(CompassManager.class), new GameMessages());
 
@@ -63,7 +63,7 @@ class PlayerConnectionListenerJoinTest {
     }
 
     private record JoinFixture(PlayerConnectionListener listener, Player player, UUID playerId,
-            PlayerStateStore players, GameManager game, ConfigService config,
+            PlayerStateStore players, GameManager game, PlayerSettings config,
             FakeSpectatorService fakes) {
     }
 
@@ -87,9 +87,10 @@ class PlayerConnectionListenerJoinTest {
         when(lobbies.multiLobbyAllowed()).thenReturn(false);
         when(game.instanceForLobby(anyInt())).thenReturn(Optional.of(mock(GameInstance.class)));
         when(game.hasLobbyLocation(anyInt())).thenReturn(true);
-        ConfigService config = mock(ConfigService.class);
+        PlayerSettings config = new PlayerSettings();
         PlayerConnectionListener listener = new PlayerConnectionListener(plugin, players, game,
-                mock(MessageService.class), config, lobbies, mock(LobbyTeleporter.class),
+                mock(MessageService.class), config, new MatchConfig.DisconnectHandling(), lobbies,
+                mock(LobbyTeleporter.class),
                 mock(WorldEngineService.class), mock(SpeedrunnerDisconnectTracker.class),
                 new HashMap<>(), mock(CompassManager.class), new GameMessages());
         return new JoinFixture(listener, player, playerId, players, game, config, fakes);
@@ -131,7 +132,7 @@ class PlayerConnectionListenerJoinTest {
     @Test
     void noneTakesFakeModeWithToggle() {
         JoinFixture fixture = joinFixture(Role.NONE);
-        when(fixture.config().getBoolean(anyString(), anyBoolean())).thenReturn(true);
+        fixture.config().getRoles().getTurnNonesSpectator().setEnabled(true);
 
         join(fixture);
 

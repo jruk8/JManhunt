@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.CompassMessages;
@@ -21,7 +21,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CompassMeta;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,6 +33,7 @@ public final class CompassManager {
     private final ModifiersMessages modifiers;
     private final SoundService sounds;
     private final PlayerStateStore playerStates;
+    private final CompassSettingsFacade settings;
     private final CompassTargetService targets;
     private final CompassSignalService signal;
     private final HotspotService hotspots;
@@ -59,19 +59,22 @@ public final class CompassManager {
         this.modifiers = modifiers;
         this.sounds = sounds;
         this.playerStates = playerStates;
+        this.settings = new CompassSettingsFacade(plugin.overrides(),
+                plugin.configRoot().getSettings().getCompass());
         this.targets = new CompassTargetService(playerStates, plugin.fakeSpectators());
-        this.signal = new CompassSignalService(plugin, playerStates);
-        this.hotspots = new HotspotService(plugin, playerStates);
-        this.inaccuracy = new CompassInaccuracyService(plugin, hotspots);
-        this.items = new CompassItemService(plugin, messages, compass, playerStates, compassKey);
-        this.sessions = new CompassAnalysisSessions(plugin, messages, compass, playerStates, targets,
-                signal, items, compassActionbars, sounds);
-        this.locks = new CompassLockService(plugin, playerStates, sounds, messages, compass,
-                modifiers, targets, compassActionbars, this::refreshCompass,
+        this.signal = new CompassSignalService(plugin, settings, playerStates);
+        this.hotspots = new HotspotService(settings, playerStates);
+        this.inaccuracy = new CompassInaccuracyService(settings, hotspots);
+        this.items = new CompassItemService(plugin, settings, messages, compass,
+                playerStates, compassKey);
+        this.sessions = new CompassAnalysisSessions(plugin, settings, messages, compass,
+                playerStates, targets, signal, items, compassActionbars, sounds);
+        this.locks = new CompassLockService(plugin, settings, playerStates, sounds, messages,
+                compass, modifiers, targets, compassActionbars, this::refreshCompass,
                 this::resolveClickRefresh, this::renderFromCache, sessions::beginAnalysisSpot,
                 cache, lastClick, sessions);
         sessions.setLockService(locks);
-        this.deltas = new CompassDeltaRenderer(plugin, messages, compassActionbars);
+        this.deltas = new CompassDeltaRenderer(plugin, settings, messages, compassActionbars);
     }
 
     /** Wires the game after construction so targets resolve within one match. */
@@ -112,13 +115,11 @@ public final class CompassManager {
                             return;
                         }
                         Integer lobby = lobbyOf(holder);
-                        var overrides = plugin.overrides();
-                        boolean autoEnabled = overrides.getBoolean(lobby,
-                                "settings.compass.actions.auto.enabled", true);
-                        double intervalSeconds = overrides.getDouble(lobby,
-                                "settings.compass.actions.auto.interval", 35.0);
-                        double deviationSeconds = overrides.getDouble(lobby,
-                                "settings.compass.actions.auto.deviation", 0.0);
+                        boolean autoEnabled = settings.autoEnabled(lobby);
+                        double intervalSeconds =
+                                settings.autoIntervalSeconds(lobby);
+                        double deviationSeconds =
+                                settings.autoDeviationSeconds(lobby);
                         if (!autoRefreshDue(now, lastAutoRefresh.getOrDefault(id, 0L),
                                 autoEnabled, intervalSeconds, deviationSeconds,
                                 ThreadLocalRandom.current().nextDouble())) {
@@ -269,7 +270,7 @@ public final class CompassManager {
                 target.instance(), holder.getLocation());
         CompassLockService.LockedTargets narrowed = locks.narrowToLock(holder.getUniqueId(),
                 opponents, sightings);
-        CompassPick pick = resolveCompassPick(plugin.overrides(), target.instance().originLobbyId(),
+        CompassPick pick = resolveCompassPick(settings, target.instance().originLobbyId(),
                 target.holderRole(), narrowed.opponents(), narrowed.sightings());
         return renderCompassPick(holder, slot.get().item(), slot.get().slot(), pick,
                 target.targetRoleString(), narrowed.locked());
@@ -304,8 +305,8 @@ public final class CompassManager {
      * funnels through here, so clicks always read a fresh cache.
      */
     private void writeCache(Player holder, GameInstance instance) {
-        int cap = CompassCache.clampMaxTargets(plugin.overrides()
-                .getInt(lobbyOf(holder), "settings.compass.actions.target-cycling.max-targets", 5));
+        int cap = CompassCache.clampMaxTargets(
+                settings.targetCyclingMaxTargets(lobbyOf(holder)));
         cache.replace(holder.getUniqueId(), holder.getLocation().clone(),
                 targets.collectSnapshots(holder, Role.HUNTER, instance, cap),
                 targets.collectSnapshots(holder, Role.SPEEDRUNNER, instance, cap));
@@ -339,17 +340,19 @@ public final class CompassManager {
     }
 
     /** Resolves the compass pick for the narrowed targets. */
-    static CompassPick resolveCompassPick(OverrideService overrides, Integer lobby, Role holderRole,
-            List<CompassCandidate> opponents, List<CompassSighting> sightings) {
-        String roleBase = "settings.compass.distance-limits."
-                + holderRole.name().toLowerCase(Locale.ROOT) + ".";
-        boolean nearbyEnabled = overrides.getBoolean(lobby, roleBase + "min-distance.enabled", true);
-        double nearbyThreshold = overrides.getDouble(lobby, roleBase + "min-distance.distance", 25.0);
-        double trackingDistance = overrides.getBoolean(lobby, roleBase + "max-distance.enabled", true)
-                ? overrides.getDouble(lobby, roleBase + "max-distance.distance", -1.0)
-                : -1.0;
-        return CompassPick.resolve(opponents, sightings, nearbyEnabled, nearbyThreshold,
-                trackingDistance);
+    static CompassPick resolveCompassPick(CompassSettingsFacade settings, Integer lobby,
+            Role holderRole, List<CompassCandidate> opponents,
+            List<CompassSighting> sightings) {
+        boolean hunter = holderRole == Role.HUNTER;
+        boolean minOn = hunter ? settings.hunterMinDistanceEnabled(lobby)
+                : settings.speedrunnerMinDistanceEnabled(lobby);
+        double min = hunter ? settings.hunterMinDistance(lobby)
+                : settings.speedrunnerMinDistance(lobby);
+        boolean maxOn = hunter ? settings.hunterMaxDistanceEnabled(lobby)
+                : settings.speedrunnerMaxDistanceEnabled(lobby);
+        double max = maxOn ? (hunter ? settings.hunterMaxDistance(lobby)
+                : settings.speedrunnerMaxDistance(lobby)) : -1.0;
+        return CompassPick.resolve(opponents, sightings, minOn, min, max);
     }
 
     /**
@@ -409,13 +412,13 @@ public final class CompassManager {
             return;
         }
         RefreshMatch target = match.get();
-        int maxTargets = CompassCache.clampMaxTargets(plugin.overrides()
-                .getInt(lobbyOf(holder), "settings.compass.actions.target-cycling.max-targets", 5));
+        int maxTargets = CompassCache.clampMaxTargets(
+                settings.targetCyclingMaxTargets(lobbyOf(holder)));
         CompassLockService.CachedCycle cycle =
                 locks.buildCycle(holder, target.instance(), target.targetRole(), maxTargets);
         CompassLockService.LockedTargets narrowed = locks.narrowToLockCached(holder.getUniqueId(),
                 cycle.cached(), cycle.sightings(), cycle.trackableIds());
-        CompassPick pick = resolveCompassPick(plugin.overrides(), target.instance().originLobbyId(),
+        CompassPick pick = resolveCompassPick(settings, target.instance().originLobbyId(),
                 target.holderRole(), narrowed.opponents(), narrowed.sightings());
         renderCachedPick(holder, slot.get().item(), slot.get().slot(), pick,
                 target.targetRoleString(), narrowed.locked());
@@ -562,8 +565,7 @@ public final class CompassManager {
             SignalInterference.Reason reason) {
         spinNeedle(item, holder);
         holder.getInventory().setItem(slot, item);
-        if (plugin.overrides().getBoolean(lobbyOf(holder),
-                "settings.compass.signal.interference.show-reason-in-actionbar", true)) {
+        if (settings.showReasonInActionbar(lobbyOf(holder))) {
             compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getBadSignalReasonActionbar(),
                     Map.of("reason", reasonText(reason))));
             return;
@@ -663,8 +665,7 @@ public final class CompassManager {
             return;
         }
         Integer lobby = lobbyOf(player);
-        if (!plugin.overrides()
-                .getBoolean(lobby, "settings.compass.actions.manual.enabled", false)) {
+        if (!settings.manualEnabled(lobby)) {
             return;
         }
         if (plugin.fakeSpectators().isFakeSpectator(player)) {
@@ -674,8 +675,7 @@ public final class CompassManager {
             return;
         }
         long now = System.currentTimeMillis();
-        long cooldownMs = (long) (plugin.overrides()
-                .getDouble(lobby, "settings.compass.actions.manual.cooldown", 3.0) * 1000);
+        long cooldownMs = (long) (settings.manualCooldownSeconds(lobby) * 1000);
         if (!shouldRefresh(now, lastClick.getOrDefault(player.getUniqueId(), 0L), cooldownMs)) {
             return;
         }

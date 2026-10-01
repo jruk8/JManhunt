@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.api.events;
 
+import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
@@ -12,15 +13,12 @@ import org.bukkit.event.HandlerList;
 public class JMatchCancelEvent extends Event {
 
     private static final HandlerList HANDLERS = new HandlerList();
+    /** Returns the id of the match that was cancelled. */
+    @Getter
     private final long matchId;
 
     public JMatchCancelEvent(long matchId) {
         this.matchId = matchId;
-    }
-
-    /** Returns the id of the match that was cancelled. */
-    public long getMatchId() {
-        return matchId;
     }
 
     @Override

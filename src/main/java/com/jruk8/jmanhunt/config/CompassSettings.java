@@ -3,8 +3,12 @@ package com.jruk8.jmanhunt.config;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Compass tracking settings. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class CompassSettings extends OkaeriConfig {
 
@@ -39,54 +43,8 @@ public class CompassSettings extends OkaeriConfig {
     @Comment("Actionbar, chat, and other compass feedback.")
     private Feedback feedback = new Feedback();
 
-    public Obtaining getObtaining() {
-        return obtaining;
-    }
-
-    public void setObtaining(Obtaining obtaining) {
-        this.obtaining = obtaining;
-    }
-
-    public boolean isLockToInventory() {
-        return lockToInventory;
-    }
-
-    public void setLockToInventory(boolean lockToInventory) {
-        this.lockToInventory = lockToInventory;
-    }
-
-    public Actions getActions() {
-        return actions;
-    }
-
-    public void setActions(Actions actions) {
-        this.actions = actions;
-    }
-
-    public DistanceLimits getDistanceLimits() {
-        return distanceLimits;
-    }
-
-    public void setDistanceLimits(DistanceLimits distanceLimits) {
-        this.distanceLimits = distanceLimits;
-    }
-
-    public Signal getSignal() {
-        return signal;
-    }
-
-    public void setSignal(Signal signal) {
-        this.signal = signal;
-    }
-
-    public Feedback getFeedback() {
-        return feedback;
-    }
-
-    public void setFeedback(Feedback feedback) {
-        this.feedback = feedback;
-    }
-
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Obtaining extends OkaeriConfig {
 
@@ -119,31 +77,10 @@ public class CompassSettings extends OkaeriConfig {
         })
         private Toggle dropOnDeath = new Toggle(true);
 
-        public String getItem() {
-            return item;
-        }
-
-        public void setItem(String item) {
-            this.item = item;
-        }
-
-        public GivenTo getGivenTo() {
-            return givenTo;
-        }
-
-        public void setGivenTo(GivenTo givenTo) {
-            this.givenTo = givenTo;
-        }
-
-        public Toggle getDropOnDeath() {
-            return dropOnDeath;
-        }
-
-        public void setDropOnDeath(Toggle dropOnDeath) {
-            this.dropOnDeath = dropOnDeath;
-        }
     }
 
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Actions extends OkaeriConfig {
 
@@ -159,38 +96,8 @@ public class CompassSettings extends OkaeriConfig {
         @CustomKey("teammates")
         private Teammates teammates = new Teammates();
 
-        public Auto getAuto() {
-            return auto;
-        }
-
-        public void setAuto(Auto auto) {
-            this.auto = auto;
-        }
-
-        public Manual getManual() {
-            return manual;
-        }
-
-        public void setManual(Manual manual) {
-            this.manual = manual;
-        }
-
-        public LeftClick getTargetCycling() {
-            return targetCycling;
-        }
-
-        public void setTargetCycling(LeftClick targetCycling) {
-            this.targetCycling = targetCycling;
-        }
-
-        public Teammates getTeammates() {
-            return teammates;
-        }
-
-        public void setTeammates(Teammates teammates) {
-            this.teammates = teammates;
-        }
-
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Auto extends OkaeriConfig {
 
@@ -214,31 +121,10 @@ public class CompassSettings extends OkaeriConfig {
             })
             private double deviation = 0.0;
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public double getInterval() {
-                return interval;
-            }
-
-            public void setInterval(double interval) {
-                this.interval = interval;
-            }
-
-            public double getDeviation() {
-                return deviation;
-            }
-
-            public void setDeviation(double deviation) {
-                this.deviation = deviation;
-            }
         }
 
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Manual extends OkaeriConfig {
 
@@ -264,32 +150,11 @@ public class CompassSettings extends OkaeriConfig {
             })
             private CompassAnalysisSettings analysis = new CompassAnalysisSettings();
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public double getCooldown() {
-                return cooldown;
-            }
-
-            public void setCooldown(double cooldown) {
-                this.cooldown = cooldown;
-            }
-
-            public CompassAnalysisSettings getAnalysis() {
-                return analysis;
-            }
-
-            public void setAnalysis(CompassAnalysisSettings analysis) {
-                this.analysis = analysis;
-            }
         }
     }
 
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class DistanceLimits extends OkaeriConfig {
 
@@ -298,23 +163,10 @@ public class CompassSettings extends OkaeriConfig {
         @Comment("Same as hunter, but for the opposite role.")
         private Tracker speedrunner = new Tracker();
 
-        public Tracker getHunter() {
-            return hunter;
-        }
-
-        public void setHunter(Tracker hunter) {
-            this.hunter = hunter;
-        }
-
-        public Tracker getSpeedrunner() {
-            return speedrunner;
-        }
-
-        public void setSpeedrunner(Tracker speedrunner) {
-            this.speedrunner = speedrunner;
-        }
     }
 
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Signal extends OkaeriConfig {
 
@@ -339,23 +191,10 @@ public class CompassSettings extends OkaeriConfig {
         })
         private SignalInterferenceSettings interference = new SignalInterferenceSettings();
 
-        public SignalInaccuracySettings getInaccuracy() {
-            return inaccuracy;
-        }
-
-        public void setInaccuracy(SignalInaccuracySettings inaccuracy) {
-            this.inaccuracy = inaccuracy;
-        }
-
-        public SignalInterferenceSettings getInterference() {
-            return interference;
-        }
-
-        public void setInterference(SignalInterferenceSettings interference) {
-            this.interference = interference;
-        }
     }
 
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Feedback extends OkaeriConfig {
 
@@ -365,47 +204,21 @@ public class CompassSettings extends OkaeriConfig {
         @CustomKey("chat-messages")
         private ChatMessages chatMessages = new ChatMessages();
 
-        public CompassActionbarSettings getActionbar() {
-            return actionbar;
-        }
-
-        public void setActionbar(CompassActionbarSettings actionbar) {
-            this.actionbar = actionbar;
-        }
-
-        public ChatMessages getChatMessages() {
-            return chatMessages;
-        }
-
-        public void setChatMessages(ChatMessages chatMessages) {
-            this.chatMessages = chatMessages;
-        }
     }
 
     /** Which roles receive a compass. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class GivenTo extends OkaeriConfig {
         private boolean hunters = true;
         private boolean speedrunners = false;
 
-        public boolean isHunters() {
-            return hunters;
-        }
-
-        public void setHunters(boolean hunters) {
-            this.hunters = hunters;
-        }
-
-        public boolean isSpeedrunners() {
-            return speedrunners;
-        }
-
-        public void setSpeedrunners(boolean speedrunners) {
-            this.speedrunners = speedrunners;
-        }
     }
 
     /** Left-click manual target lock. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class LeftClick extends OkaeriConfig {
 
@@ -442,32 +255,11 @@ public class CompassSettings extends OkaeriConfig {
         })
         private double scrollCooldown = 0.5;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getMaxTargets() {
-            return maxTargets;
-        }
-
-        public void setMaxTargets(int maxTargets) {
-            this.maxTargets = maxTargets;
-        }
-
-        public double getScrollCooldown() {
-            return scrollCooldown;
-        }
-
-        public void setScrollCooldown(double scrollCooldown) {
-            this.scrollCooldown = scrollCooldown;
-        }
     }
 
     /** Shift-left-click teammate tracking toggle. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Teammates extends OkaeriConfig {
 
@@ -490,24 +282,11 @@ public class CompassSettings extends OkaeriConfig {
         })
         private double switchCooldown = 0.5;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public double getSwitchCooldown() {
-            return switchCooldown;
-        }
-
-        public void setSwitchCooldown(double switchCooldown) {
-            this.switchCooldown = switchCooldown;
-        }
     }
 
     /** Compass action chat messages. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class ChatMessages extends OkaeriConfig {
 
@@ -519,16 +298,11 @@ public class CompassSettings extends OkaeriConfig {
         })
         private boolean enabled = true;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
     }
 
     /** Per-role tracking distances. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Tracker extends OkaeriConfig {
 
@@ -550,23 +324,9 @@ public class CompassSettings extends OkaeriConfig {
         })
         private MaxLimit maxDistance = new MaxLimit(true, -1.0);
 
-        public Limit getMinDistance() {
-            return minDistance;
-        }
-
-        public void setMinDistance(Limit minDistance) {
-            this.minDistance = minDistance;
-        }
-
-        public MaxLimit getMaxDistance() {
-            return maxDistance;
-        }
-
-        public void setMaxDistance(MaxLimit maxDistance) {
-            this.maxDistance = maxDistance;
-        }
-
         /** Minimum tracking distance. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Limit extends OkaeriConfig {
             private boolean enabled;
@@ -586,24 +346,11 @@ public class CompassSettings extends OkaeriConfig {
                 this.distance = distance;
             }
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public double getDistance() {
-                return distance;
-            }
-
-            public void setDistance(double distance) {
-                this.distance = distance;
-            }
         }
 
         /** Maximum tracking distance. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class MaxLimit extends OkaeriConfig {
             private boolean enabled;
@@ -623,21 +370,6 @@ public class CompassSettings extends OkaeriConfig {
                 this.distance = distance;
             }
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public double getDistance() {
-                return distance;
-            }
-
-            public void setDistance(double distance) {
-                this.distance = distance;
-            }
         }
     }
 

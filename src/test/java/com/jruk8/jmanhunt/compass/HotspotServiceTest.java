@@ -9,6 +9,7 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
@@ -45,10 +46,13 @@ class HotspotServiceTest {
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.overrides()).thenReturn(
-                new OverrideService(configService, new LobbyConfig(), () -> { }));
+        OverrideService overrides =
+                new OverrideService(configService, new LobbyConfig(), () -> { });
+        when(plugin.overrides()).thenReturn(overrides);
+        CompassSettingsFacade settings =
+                new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         PlayerStateStore players = new PlayerStateStore();
-        HotspotService hotspots = new HotspotService(plugin, players);
+        HotspotService hotspots = new HotspotService(settings, players);
         GameManager game = mock(GameManager.class);
         GameInstance instance = mock(GameInstance.class);
         when(instance.originLobbyId()).thenReturn(0);

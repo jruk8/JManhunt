@@ -10,6 +10,8 @@ import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.core.PlaceholderPass;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MiscConfig;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.JManhuntPlugin;
@@ -29,13 +31,12 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Executes game rules and modifiers at match state transitions. */
 public final class GameStateCommandManager implements ModifierToggleService.Commands {
-    /** Config path of the modifier command blacklist. */
-    private static final String BLACKLISTED_COMMANDS_PATH =
-            "advanced.misc.interop.blacklisted-modifier-commands";
 
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
     private final ConfigService configService;
+    private final MiscConfig.Interop interop;
+    private final PlayersSettingsFacade players;
     private final MessageService messages;
     private final SoundService sounds;
     private final GameManager game;
@@ -46,11 +47,14 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     private final ModifierTagSinks sinks;
 
     public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
-                                   ConfigService configService, MessageService messages,
+                                   ConfigService configService, MiscConfig.Interop interop,
+                                   PlayersSettingsFacade players, MessageService messages,
                                    SoundService sounds, GameManager game) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.configService = configService;
+        this.interop = interop;
+        this.players = players;
         this.messages = messages;
         this.sounds = sounds;
         this.game = game;
@@ -58,9 +62,9 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                 this::dispatchModifier);
         this.toggles = new ModifierToggleService(plugin, configService, game, intervals, this);
         this.wipes = new PlayerWipeService(plugin, new PlayerResetService(plugin.overrides()));
-        this.defaults = new MatchDefaultsService(plugin, playerStates, wipes);
+        this.defaults = new MatchDefaultsService(plugin, players, playerStates, wipes);
         this.sinks = new ModifierTagSinks(plugin, messages, messages.modifiers(), sounds, game,
-                playerStates, configService);
+                playerStates, interop);
     }
 
     public void runStart(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId) {
@@ -366,7 +370,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      */
     void runCommandList(List<String> commands, Player player, TagContext context,
             TagContext.Provenance base) {
-        Collection<String> blocked = configService.getStringList(BLACKLISTED_COMMANDS_PATH);
+        Collection<String> blocked = interop.getBlacklistedModifierCommands();
         for (int lineIndex = 0; lineIndex < commands.size(); lineIndex++) {
             String command = commands.get(lineIndex);
             context.setProvenance(base.withLine(lineIndex));

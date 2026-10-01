@@ -5,35 +5,25 @@ import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Power-user toggles that rarely need changing. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class MiscConfig extends OkaeriConfig {
 
     @Comment("Advanced server interop toggles.")
     private Interop interop = new Interop();
 
-    public Interop getInterop() {
-        return interop;
-    }
-
-    public void setInterop(Interop interop) {
-        this.interop = interop;
-    }
-
     @CustomKey("modifier-editor")
     @Comment("Modifier editor toggles.")
     private ModifierEditor modifierEditor = new ModifierEditor();
 
-    public ModifierEditor getModifierEditor() {
-        return modifierEditor;
-    }
-
-    public void setModifierEditor(ModifierEditor modifierEditor) {
-        this.modifierEditor = modifierEditor;
-    }
-
     /** Advanced server interop toggles. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Interop extends OkaeriConfig {
 
@@ -53,14 +43,6 @@ public class MiscConfig extends OkaeriConfig {
         })
         private boolean disableWorldeditNavwand = true;
 
-        public boolean isDisableWorldeditNavwand() {
-            return disableWorldeditNavwand;
-        }
-
-        public void setDisableWorldeditNavwand(boolean disableWorldeditNavwand) {
-            this.disableWorldeditNavwand = disableWorldeditNavwand;
-        }
-
         @CustomKey("blacklisted-modifier-commands")
         @Comment({
                 "Command roots modifiers may never dispatch, matched against the",
@@ -74,16 +56,11 @@ public class MiscConfig extends OkaeriConfig {
                 "stop", "restart", "reload", "luckperms", "lp", "permissions", "ban", "kick",
                 "whitelist"));
 
-        public List<String> getBlacklistedModifierCommands() {
-            return blacklistedModifierCommands;
-        }
-
-        public void setBlacklistedModifierCommands(List<String> blacklistedModifierCommands) {
-            this.blacklistedModifierCommands = blacklistedModifierCommands;
-        }
     }
 
     /** Modifier editor toggles. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class ModifierEditor extends OkaeriConfig {
 
@@ -96,14 +73,6 @@ public class MiscConfig extends OkaeriConfig {
         })
         private boolean validateCommands = true;
 
-        public boolean isValidateCommands() {
-            return validateCommands;
-        }
-
-        public void setValidateCommands(boolean validateCommands) {
-            this.validateCommands = validateCommands;
-        }
-
         @CustomKey("remember-gui-commands")
         @Comment({
                 "When true, the Test-a-Command dialog starts with its",
@@ -112,14 +81,6 @@ public class MiscConfig extends OkaeriConfig {
                 "Default: false"
         })
         private boolean rememberGuiCommands = false;
-
-        public boolean isRememberGuiCommands() {
-            return rememberGuiCommands;
-        }
-
-        public void setRememberGuiCommands(boolean rememberGuiCommands) {
-            this.rememberGuiCommands = rememberGuiCommands;
-        }
 
         @CustomKey("prevent-duplicate-toggle")
         @Comment({
@@ -131,13 +92,6 @@ public class MiscConfig extends OkaeriConfig {
         })
         private boolean preventDuplicateToggle = true;
 
-        public boolean isPreventDuplicateToggle() {
-            return preventDuplicateToggle;
-        }
-
-        public void setPreventDuplicateToggle(boolean preventDuplicateToggle) {
-            this.preventDuplicateToggle = preventDuplicateToggle;
-        }
     }
 
 }

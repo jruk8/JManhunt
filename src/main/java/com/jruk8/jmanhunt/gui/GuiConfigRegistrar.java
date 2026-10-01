@@ -1,8 +1,10 @@
 package com.jruk8.jmanhunt.gui;
 
+import com.jruk8.jmanhunt.config.SectionPinner;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
+import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,6 +19,8 @@ import java.io.UncheckedIOException;
 public final class GuiConfigRegistrar {
 
     private final JavaPlugin plugin;
+    private final SectionPinner sections = new SectionPinner();
+    @Getter
     private GuiConfig guiConfig;
 
     public GuiConfigRegistrar(JavaPlugin plugin) {
@@ -31,10 +35,6 @@ public final class GuiConfigRegistrar {
         reload();
     }
 
-    public GuiConfig getGuiConfig() {
-        return guiConfig;
-    }
-
     public void reload() {
         if (this.guiConfig == null) {
             return;
@@ -44,6 +44,7 @@ public final class GuiConfigRegistrar {
                 throw new IOException("bundled Core/gui.yml is missing");
             }
             this.guiConfig.load(bundled);
+            sections.pin(this.guiConfig);
         } catch (IOException exception) {
             throw new UncheckedIOException("Could not load the bundled GUI data.", exception);
         }

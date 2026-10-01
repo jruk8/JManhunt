@@ -19,10 +19,14 @@ import com.jruk8.jmanhunt.world.WorldEngineConfig;
 /** Lobby teleports plus shared spawn and coordinate math. Public for GameManager. */
 public final class MatchTeleportService implements LobbyTeleporter {
     private final JManhuntPlugin plugin;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
     private final LobbyWorldService lobbyWorlds;
 
-    public MatchTeleportService(JManhuntPlugin plugin, LobbyWorldService lobbyWorlds) {
+    public MatchTeleportService(JManhuntPlugin plugin,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            LobbyWorldService lobbyWorlds) {
         this.plugin = plugin;
+        this.engineSettings = engineSettings;
         this.lobbyWorlds = lobbyWorlds;
     }
 
@@ -37,7 +41,7 @@ public final class MatchTeleportService implements LobbyTeleporter {
     }
 
     private boolean teleportToLobby(List<Player> targets, int lobbyId, boolean announce) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled()) {
             return false;
         }
@@ -66,7 +70,7 @@ public final class MatchTeleportService implements LobbyTeleporter {
     }
 
     private boolean setSpawnToLobby(List<Player> targets, int lobbyId, boolean announce) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled()) {
             return false;
         }
@@ -87,7 +91,7 @@ public final class MatchTeleportService implements LobbyTeleporter {
      * the lobby (or a fallback lobby) has a valid teleport.
      */
     public boolean hasLobbyLocation(int lobbyId) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         return config.enabled() && lobbyWorlds.resolveLobby(lobbyId, false) != null;
     }
 

@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.ServerSettings;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
@@ -20,16 +20,16 @@ public final class MatchMessaging {
     private final MessageService messages;
     private final ManhuntMessages manhunt;
     private final SoundService sounds;
-    private final ConfigService configService;
+    private final ServerSettings server;
     private final MatchStore store;
     private final LobbyService lobbies;
 
     public MatchMessaging(MessageService messages, ManhuntMessages manhunt, SoundService sounds,
-            ConfigService configService, MatchStore store, LobbyService lobbies) {
+            ServerSettings server, MatchStore store, LobbyService lobbies) {
         this.messages = messages;
         this.manhunt = manhunt;
         this.sounds = sounds;
-        this.configService = configService;
+        this.server = server;
         this.store = store;
         this.lobbies = lobbies;
     }
@@ -74,7 +74,7 @@ public final class MatchMessaging {
      * changes stay silent. Only the active side of the change is named.
      */
     public void announceRoleChange(Player player, Role from, Role to) {
-        if (!configService.getBoolean("settings.server.announce-role-changes", false)) {
+        if (!server.isAnnounceRoleChanges()) {
             return;
         }
         if (from.isParticipant() == to.isParticipant()) {

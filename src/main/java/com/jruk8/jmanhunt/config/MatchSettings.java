@@ -5,8 +5,12 @@ import com.jruk8.jmanhunt.match.prestart.OnExpire;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Match flow settings. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class MatchSettings extends OkaeriConfig {
 
@@ -56,55 +60,9 @@ public class MatchSettings extends OkaeriConfig {
     })
     private GameBoosts gameBoosts = new GameBoosts();
 
-    public Autostart getAutostart() {
-        return autostart;
-    }
-
-    public void setAutostart(Autostart autostart) {
-        this.autostart = autostart;
-    }
-
-    public StartOnSpeedrunnerDamage getStartOnSpeedrunnerDamage() {
-        return startOnSpeedrunnerDamage;
-    }
-
-    public void setStartOnSpeedrunnerDamage(StartOnSpeedrunnerDamage startOnSpeedrunnerDamage) {
-        this.startOnSpeedrunnerDamage = startOnSpeedrunnerDamage;
-    }
-
-    public Headstarts getHeadstarts() {
-        return headstarts;
-    }
-
-    public void setHeadstarts(Headstarts headstarts) {
-        this.headstarts = headstarts;
-    }
-
-    public GameLeave getGameLeave() {
-        return gameLeave;
-    }
-
-    public void setGameLeave(GameLeave gameLeave) {
-        this.gameLeave = gameLeave;
-    }
-
-    public WinConditionsSettings getWinConditions() {
-        return winConditions;
-    }
-
-    public void setWinConditions(WinConditionsSettings winConditions) {
-        this.winConditions = winConditions;
-    }
-
-    public GameBoosts getGameBoosts() {
-        return gameBoosts;
-    }
-
-    public void setGameBoosts(GameBoosts gameBoosts) {
-        this.gameBoosts = gameBoosts;
-    }
-
     /** Automatic match start. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Autostart extends OkaeriConfig {
         private boolean enabled = true;
@@ -149,101 +107,29 @@ public class MatchSettings extends OkaeriConfig {
         })
         private BroadcastRequirements broadcastRequirements = new BroadcastRequirements();
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getCountdownSeconds() {
-            return countdownSeconds;
-        }
-
-        public void setCountdownSeconds(int countdownSeconds) {
-            this.countdownSeconds = countdownSeconds;
-        }
-
-        public String getCountdownStyle() {
-            return countdownStyle;
-        }
-
-        public void setCountdownStyle(String countdownStyle) {
-            this.countdownStyle = countdownStyle;
-        }
-
-        public Minimums getMinimums() {
-            return minimums;
-        }
-
-        public void setMinimums(Minimums minimums) {
-            this.minimums = minimums;
-        }
-
-        public Maximums getMaximums() {
-            return maximums;
-        }
-
-        public void setMaximums(Maximums maximums) {
-            this.maximums = maximums;
-        }
-
-        public BroadcastRequirements getBroadcastRequirements() {
-            return broadcastRequirements;
-        }
-
-        public void setBroadcastRequirements(BroadcastRequirements broadcastRequirements) {
-            this.broadcastRequirements = broadcastRequirements;
-        }
-
         /** Minimum queued players per role. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Minimums extends OkaeriConfig {
             private int hunter = 1;
             private int speedrunner = 1;
 
-            public int getHunter() {
-                return hunter;
-            }
-
-            public void setHunter(int hunter) {
-                this.hunter = hunter;
-            }
-
-            public int getSpeedrunner() {
-                return speedrunner;
-            }
-
-            public void setSpeedrunner(int speedrunner) {
-                this.speedrunner = speedrunner;
-            }
         }
 
         /** Maximum queued players per role; -1 disables per role. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Maximums extends OkaeriConfig {
             private int hunter = -1;
             private int speedrunner = -1;
 
-            public int getHunter() {
-                return hunter;
-            }
-
-            public void setHunter(int hunter) {
-                this.hunter = hunter;
-            }
-
-            public int getSpeedrunner() {
-                return speedrunner;
-            }
-
-            public void setSpeedrunner(int speedrunner) {
-                this.speedrunner = speedrunner;
-            }
         }
 
         /** Shortfall broadcasts. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class BroadcastRequirements extends OkaeriConfig {
             private boolean enabled = false;
@@ -255,25 +141,12 @@ public class MatchSettings extends OkaeriConfig {
             })
             private int intervalSeconds = 60;
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public int getIntervalSeconds() {
-                return intervalSeconds;
-            }
-
-            public void setIntervalSeconds(int intervalSeconds) {
-                this.intervalSeconds = intervalSeconds;
-            }
         }
     }
 
     /** Pre-start wait for the first speedrunner hit. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class StartOnSpeedrunnerDamage extends OkaeriConfig {
         private boolean enabled = true;
@@ -305,40 +178,11 @@ public class MatchSettings extends OkaeriConfig {
         })
         private boolean startInAdventureMode = true;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getDelaySeconds() {
-            return delaySeconds;
-        }
-
-        public void setDelaySeconds(int delaySeconds) {
-            this.delaySeconds = delaySeconds;
-        }
-
-        public OnExpire getOnExpire() {
-            return onExpire;
-        }
-
-        public void setOnExpire(OnExpire onExpire) {
-            this.onExpire = onExpire;
-        }
-
-        public boolean isStartInAdventureMode() {
-            return startInAdventureMode;
-        }
-
-        public void setStartInAdventureMode(boolean startInAdventureMode) {
-            this.startInAdventureMode = startInAdventureMode;
-        }
     }
 
     /** Per-side head starts. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Headstarts extends OkaeriConfig {
 
@@ -355,23 +199,9 @@ public class MatchSettings extends OkaeriConfig {
         })
         private Headstart hunter = new Headstart();
 
-        public Headstart getSpeedrunner() {
-            return speedrunner;
-        }
-
-        public void setSpeedrunner(Headstart speedrunner) {
-            this.speedrunner = speedrunner;
-        }
-
-        public Headstart getHunter() {
-            return hunter;
-        }
-
-        public void setHunter(Headstart hunter) {
-            this.hunter = hunter;
-        }
-
         /** One side's head start. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Headstart extends OkaeriConfig {
             private boolean enabled = false;
@@ -383,39 +213,21 @@ public class MatchSettings extends OkaeriConfig {
             })
             private int delaySeconds = 30;
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public int getDelaySeconds() {
-                return delaySeconds;
-            }
-
-            public void setDelaySeconds(int delaySeconds) {
-                this.delaySeconds = delaySeconds;
-            }
         }
     }
 
     /** Match leave destination. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class GameLeave extends OkaeriConfig {
         private LeaveDestination destination = LeaveDestination.SPECTATOR;
 
-        public LeaveDestination getDestination() {
-            return destination;
-        }
-
-        public void setDestination(LeaveDestination destination) {
-            this.destination = destination;
-        }
     }
 
     /** World generation and loot boosts. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class GameBoosts extends OkaeriConfig {
 
@@ -462,36 +274,5 @@ public class MatchSettings extends OkaeriConfig {
         })
         private boolean customPiglinBarter = true;
 
-        public Toggle getNetherStructures() {
-            return netherStructures;
-        }
-
-        public void setNetherStructures(Toggle netherStructures) {
-            this.netherStructures = netherStructures;
-        }
-
-        public Toggle getDisableBrutes() {
-            return disableBrutes;
-        }
-
-        public void setDisableBrutes(Toggle disableBrutes) {
-            this.disableBrutes = disableBrutes;
-        }
-
-        public Toggle getOverworldStructures() {
-            return overworldStructures;
-        }
-
-        public void setOverworldStructures(Toggle overworldStructures) {
-            this.overworldStructures = overworldStructures;
-        }
-
-        public boolean isCustomPiglinBarter() {
-            return customPiglinBarter;
-        }
-
-        public void setCustomPiglinBarter(boolean customPiglinBarter) {
-            this.customPiglinBarter = customPiglinBarter;
-        }
     }
 }

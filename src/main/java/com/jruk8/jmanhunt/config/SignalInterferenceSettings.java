@@ -6,8 +6,12 @@ import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Signal interference options. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class SignalInterferenceSettings extends OkaeriConfig {
     private boolean enabled = true;
@@ -107,119 +111,9 @@ public class SignalInterferenceSettings extends OkaeriConfig {
     })
     private PlayerStatsSettings playerStats = new PlayerStatsSettings();
 
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public int getRequiredToFail() {
-        return requiredToFail;
-    }
-
-    public void setRequiredToFail(int requiredToFail) {
-        this.requiredToFail = requiredToFail;
-    }
-
-    public double getChanceToBypass() {
-        return chanceToBypass;
-    }
-
-    public void setChanceToBypass(double chanceToBypass) {
-        this.chanceToBypass = chanceToBypass;
-    }
-
-    public boolean isShowReasonInActionbar() {
-        return showReasonInActionbar;
-    }
-
-    public void setShowReasonInActionbar(boolean showReasonInActionbar) {
-        this.showReasonInActionbar = showReasonInActionbar;
-    }
-
-    public LightLevel getLightLevel() {
-        return lightLevel;
-    }
-
-    public void setLightLevel(LightLevel lightLevel) {
-        this.lightLevel = lightLevel;
-    }
-
-    public Underground getUnderground() {
-        return underground;
-    }
-
-    public void setUnderground(Underground underground) {
-        this.underground = underground;
-    }
-
-    public Underwater getUnderwater() {
-        return underwater;
-    }
-
-    public void setUnderwater(Underwater underwater) {
-        this.underwater = underwater;
-    }
-
-    public Altitude getAltitude() {
-        return altitude;
-    }
-
-    public void setAltitude(Altitude altitude) {
-        this.altitude = altitude;
-    }
-
-    public Weather getWeather() {
-        return weather;
-    }
-
-    public void setWeather(Weather weather) {
-        this.weather = weather;
-    }
-
-    public Biome getBiome() {
-        return biome;
-    }
-
-    public void setBiome(Biome biome) {
-        this.biome = biome;
-    }
-
-    public Movement getMovement() {
-        return movement;
-    }
-
-    public void setMovement(Movement movement) {
-        this.movement = movement;
-    }
-
-    public LineOfSight getLineOfSight() {
-        return lineOfSight;
-    }
-
-    public void setLineOfSight(LineOfSight lineOfSight) {
-        this.lineOfSight = lineOfSight;
-    }
-
-    public Invisible getInvisible() {
-        return invisible;
-    }
-
-    public void setInvisible(Invisible invisible) {
-        this.invisible = invisible;
-    }
-
-    public PlayerStatsSettings getPlayerStats() {
-        return playerStats;
-    }
-
-    public void setPlayerStats(PlayerStatsSettings playerStats) {
-        this.playerStats = playerStats;
-    }
-
     /** Light-level interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class LightLevel extends OkaeriConfig {
         private boolean enabled = false;
@@ -255,48 +149,11 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getMinSkyLight() {
-            return minSkyLight;
-        }
-
-        public void setMinSkyLight(int minSkyLight) {
-            this.minSkyLight = minSkyLight;
-        }
-
-        public int getMinBlockLight() {
-            return minBlockLight;
-        }
-
-        public void setMinBlockLight(int minBlockLight) {
-            this.minBlockLight = minBlockLight;
-        }
-
-        public SignalInterference.InterfereWhen getInterfereWhen() {
-            return interfereWhen;
-        }
-
-        public void setInterfereWhen(SignalInterference.InterfereWhen interfereWhen) {
-            this.interfereWhen = interfereWhen;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 
     /** Underground cover interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Underground extends OkaeriConfig {
         private boolean enabled = false;
@@ -324,40 +181,11 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getMaxBlocksAbove() {
-            return maxBlocksAbove;
-        }
-
-        public void setMaxBlocksAbove(int maxBlocksAbove) {
-            this.maxBlocksAbove = maxBlocksAbove;
-        }
-
-        public boolean isIgnoreTransparent() {
-            return ignoreTransparent;
-        }
-
-        public void setIgnoreTransparent(boolean ignoreTransparent) {
-            this.ignoreTransparent = ignoreTransparent;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 
     /** Underwater fluid interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Underwater extends OkaeriConfig {
         private boolean enabled = false;
@@ -378,32 +206,11 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getMaxBlocksAbove() {
-            return maxBlocksAbove;
-        }
-
-        public void setMaxBlocksAbove(int maxBlocksAbove) {
-            this.maxBlocksAbove = maxBlocksAbove;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 
     /** Altitude band interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Altitude extends OkaeriConfig {
         private boolean enabled = false;
@@ -427,40 +234,11 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getMinY() {
-            return minY;
-        }
-
-        public void setMinY(int minY) {
-            this.minY = minY;
-        }
-
-        public int getMaxY() {
-            return maxY;
-        }
-
-        public void setMaxY(int maxY) {
-            this.maxY = maxY;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 
     /** Weather interference, always evaluated at the holder's spot. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Weather extends OkaeriConfig {
 
@@ -478,24 +256,11 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private List<String> interfereDuring = new ArrayList<>(List.of("STORM", "RAIN"));
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public List<String> getInterfereDuring() {
-            return interfereDuring;
-        }
-
-        public void setInterfereDuring(List<String> interfereDuring) {
-            this.interfereDuring = interfereDuring;
-        }
     }
 
     /** Biome interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Biome extends OkaeriConfig {
         private boolean enabled = false;
@@ -522,32 +287,11 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public List<String> getInterfereIn() {
-            return interfereIn;
-        }
-
-        public void setInterfereIn(List<String> interfereIn) {
-            this.interfereIn = interfereIn;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 
     /** Movement interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Movement extends OkaeriConfig {
         private boolean enabled = false;
@@ -567,32 +311,11 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public double getThresholdBlocks() {
-            return thresholdBlocks;
-        }
-
-        public void setThresholdBlocks(double thresholdBlocks) {
-            this.thresholdBlocks = thresholdBlocks;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 
     /** Line-of-sight interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class LineOfSight extends OkaeriConfig {
         private boolean enabled = false;
@@ -614,32 +337,11 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private int maxRayDistance = 300;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public SignalInterference.InterfereWhenVisible getInterfereWhen() {
-            return interfereWhen;
-        }
-
-        public void setInterfereWhen(SignalInterference.InterfereWhenVisible interfereWhen) {
-            this.interfereWhen = interfereWhen;
-        }
-
-        public int getMaxRayDistance() {
-            return maxRayDistance;
-        }
-
-        public void setMaxRayDistance(int maxRayDistance) {
-            this.maxRayDistance = maxRayDistance;
-        }
     }
 
     /** Invisibility interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Invisible extends OkaeriConfig {
         private boolean enabled = true;
@@ -652,21 +354,6 @@ public class SignalInterferenceSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.BOTH;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 
 }

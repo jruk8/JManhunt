@@ -4,8 +4,12 @@ import com.jruk8.jmanhunt.compass.SignalInaccuracy;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Signal inaccuracy options. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class SignalInaccuracySettings extends OkaeriConfig {
     private boolean enabled = false;
@@ -51,55 +55,9 @@ public class SignalInaccuracySettings extends OkaeriConfig {
     })
     private Hotspot accuracyHotspot = new Hotspot();
 
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public double getInnerDeadzone() {
-        return innerDeadzone;
-    }
-
-    public void setInnerDeadzone(double innerDeadzone) {
-        this.innerDeadzone = innerDeadzone;
-    }
-
-    public double getDriftRadius() {
-        return driftRadius;
-    }
-
-    public void setDriftRadius(double driftRadius) {
-        this.driftRadius = driftRadius;
-    }
-
-    public Thresholds getThresholds() {
-        return thresholds;
-    }
-
-    public void setThresholds(Thresholds thresholds) {
-        this.thresholds = thresholds;
-    }
-
-    public SignalInaccuracy.InaccurateOn getInaccurateOn() {
-        return inaccurateOn;
-    }
-
-    public void setInaccurateOn(SignalInaccuracy.InaccurateOn inaccurateOn) {
-        this.inaccurateOn = inaccurateOn;
-    }
-
-    public Hotspot getAccuracyHotspot() {
-        return accuracyHotspot;
-    }
-
-    public void setAccuracyHotspot(Hotspot accuracyHotspot) {
-        this.accuracyHotspot = accuracyHotspot;
-    }
-
     /** Range gate for the error. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Thresholds extends OkaeriConfig {
 
@@ -121,24 +79,11 @@ public class SignalInaccuracySettings extends OkaeriConfig {
         })
         private double maxDistance = 1000.0;
 
-        public double getMinDistance() {
-            return minDistance;
-        }
-
-        public void setMinDistance(double minDistance) {
-            this.minDistance = minDistance;
-        }
-
-        public double getMaxDistance() {
-            return maxDistance;
-        }
-
-        public void setMaxDistance(double maxDistance) {
-            this.maxDistance = maxDistance;
-        }
     }
 
     /** Hotspot accuracy. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Hotspot extends OkaeriConfig {
         private boolean enabled = false;
@@ -183,52 +128,5 @@ public class SignalInaccuracySettings extends OkaeriConfig {
         })
         private double maxReduction = 0.9;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public double getHotspotRadius() {
-            return hotspotRadius;
-        }
-
-        public void setHotspotRadius(double hotspotRadius) {
-            this.hotspotRadius = hotspotRadius;
-        }
-
-        public int getSampleInterval() {
-            return sampleInterval;
-        }
-
-        public void setSampleInterval(int sampleInterval) {
-            this.sampleInterval = sampleInterval;
-        }
-
-        public int getMaxPoints() {
-            return maxPoints;
-        }
-
-        public void setMaxPoints(int maxPoints) {
-            this.maxPoints = maxPoints;
-        }
-
-        public double getFullAccuracyFraction() {
-            return fullAccuracyFraction;
-        }
-
-        public void setFullAccuracyFraction(double fullAccuracyFraction) {
-            this.fullAccuracyFraction = fullAccuracyFraction;
-        }
-
-        public double getMaxReduction() {
-            return maxReduction;
-        }
-
-        public void setMaxReduction(double maxReduction) {
-            this.maxReduction = maxReduction;
-        }
     }
 }

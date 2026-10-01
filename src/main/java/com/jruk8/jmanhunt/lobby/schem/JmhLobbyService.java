@@ -216,7 +216,7 @@ public final class JmhLobbyService {
     public BuiltCounts buildIntoLobbyConfig(JmhLobbyBundle bundle,
             int pasteX, int pasteY, int pasteZ) {
         LobbyConfig lobbyConfig = plugin.lobbyConfig();
-        boolean multiLobby = plugin.configService().getBoolean("world-engine.enabled", false);
+        boolean multiLobby = plugin.configRoot().getWorldEngine().isEnabled();
         Set<Integer> overwritten = overwrittenIds(lobbyConfig.getLobbies(), bundle, multiLobby);
         if (!overwritten.isEmpty()) {
             plugin.logger().warning("Lobby bundle overwrites stored lobby "
@@ -262,7 +262,7 @@ public final class JmhLobbyService {
 
     /** Configured lobby world name for the paste gate. */
     public String lobbyWorldName() {
-        return plugin.configService().getString("advanced.lobbies.lobby-world-name", "jmh_lobby");
+        return plugin.configRoot().getAdvanced().getLobbies().getLobbyWorldName();
     }
 
     private static LobbyConfig.LobbyEntry entryFor(LobbyConfig lobbyConfig, int lobbyId) {

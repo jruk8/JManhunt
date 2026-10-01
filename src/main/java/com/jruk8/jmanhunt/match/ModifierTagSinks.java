@@ -5,7 +5,7 @@ import com.jruk8.jmanhunt.command.CommandSyntax;
 import com.jruk8.jmanhunt.command.EngineEscapes;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MiscConfig;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -24,28 +24,24 @@ import java.util.Optional;
  * console dispatch with the command blacklist enforced.
  */
 public final class ModifierTagSinks {
-    /** Config path of the modifier command blacklist. */
-    private static final String BLACKLISTED_COMMANDS_PATH =
-            "advanced.misc.interop.blacklisted-modifier-commands";
-
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final ModifiersMessages texts;
     private final SoundService sounds;
     private final GameManager game;
     private final PlayerStateStore playerStates;
-    private final ConfigService configService;
+    private final MiscConfig.Interop interop;
 
     public ModifierTagSinks(JManhuntPlugin plugin, MessageService messages, ModifiersMessages texts,
             SoundService sounds,
-            GameManager game, PlayerStateStore playerStates, ConfigService configService) {
+            GameManager game, PlayerStateStore playerStates, MiscConfig.Interop interop) {
         this.plugin = plugin;
         this.messages = messages;
         this.texts = texts;
         this.sounds = sounds;
         this.game = game;
         this.playerStates = playerStates;
-        this.configService = configService;
+        this.interop = interop;
     }
 
     String formatEngineMessage(String text) {
@@ -59,7 +55,7 @@ public final class ModifierTagSinks {
      */
     void runTagCommand(String line, String provenance) {
         String restored = EngineEscapes.restore(line);
-        Collection<String> blocked = configService.getStringList(BLACKLISTED_COMMANDS_PATH);
+        Collection<String> blocked = interop.getBlacklistedModifierCommands();
         if (CommandSyntax.isBlockedCommand(restored, blocked)) {
             plugin.logger().severe("Blocked blacklisted modifier command '"
                     + restored + "' at " + provenance + ".");

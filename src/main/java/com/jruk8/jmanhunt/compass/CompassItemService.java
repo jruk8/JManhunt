@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -24,15 +25,18 @@ import java.util.Set;
 /** Compass items: giving, finding, identifying, and restamping. */
 final class CompassItemService {
     private final JManhuntPlugin plugin;
+    private final CompassSettingsFacade settings;
     private final MessageService messages;
     private final CompassMessages compass;
     private final PlayerStateStore playerStates;
     private final NamespacedKey compassKey;
     private GameManager game;
 
-    CompassItemService(JManhuntPlugin plugin, MessageService messages, CompassMessages compass,
+    CompassItemService(JManhuntPlugin plugin, CompassSettingsFacade settings,
+            MessageService messages, CompassMessages compass,
             PlayerStateStore playerStates, NamespacedKey compassKey) {
         this.plugin = plugin;
+        this.settings = settings;
         this.messages = messages;
         this.compass = compass;
         this.playerStates = playerStates;
@@ -50,16 +54,11 @@ final class CompassItemService {
     }
 
     boolean shouldReceiveCompass(Integer lobby, Role role) {
-        String key = switch (role) {
-            case HUNTER -> "hunters";
-            case SPEEDRUNNER -> "speedrunners";
-            default -> null;
+        return switch (role) {
+            case HUNTER -> settings.givenToHunters(lobby);
+            case SPEEDRUNNER -> settings.givenToSpeedrunners(lobby);
+            default -> false;
         };
-        if (key == null) {
-            return false;
-        }
-        return plugin.overrides().getBoolean(lobby, "settings.compass.obtaining.given-to." + key,
-                role == Role.HUNTER);
     }
 
     private static final Set<String> PLACEABLE_SUFFIXES =
@@ -134,8 +133,7 @@ final class CompassItemService {
             return;
         }
         removeCompasses(player);
-        String configured = plugin.overrides().getString(lobby,
-                "settings.compass.obtaining.item", "compass");
+        String configured = settings.obtainingItem(lobby);
         Material material = resolveCompassMaterial(configured);
         if (material == null) {
             plugin.logger().warning("Unknown or placeable settings.compass.obtaining.item '"
@@ -145,7 +143,7 @@ final class CompassItemService {
         ItemStack item = new ItemStack(material);
         applyCompassIdentity(item, playerStates.role(player));
         ItemMeta meta = item.getItemMeta();
-        if (plugin.overrides().getBoolean(lobby, "settings.compass.obtaining.drop-on-death.enabled", false)) {
+        if (settings.dropOnDeathEnabled(lobby)) {
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
         } else {
             meta.addEnchant(Enchantment.VANISHING_CURSE, 1, true);
@@ -311,7 +309,6 @@ final class CompassItemService {
     }
 
     boolean mustBeInventory(Integer lobby) {
-        return plugin.overrides().getBoolean(lobby,
-                "settings.compass.lock-to-inventory", true);
+        return settings.lockToInventory(lobby);
     }
 }

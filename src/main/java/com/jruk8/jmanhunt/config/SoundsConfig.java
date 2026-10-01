@@ -5,6 +5,7 @@ import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Typed root of sounds.yml. Mirrors the former {@code sounds} block of
@@ -20,6 +21,8 @@ import lombok.Getter;
         "It's recommended to use a sound explorer like",
         "https://mudkipdev.github.io/minecraft-sound-explorer/"
 })
+@Getter
+@Setter
 public class SoundsConfig extends OkaeriConfig {
 
     @CustomKey("sounds-version")
@@ -38,54 +41,6 @@ public class SoundsConfig extends OkaeriConfig {
     @Comment("Chat sounds.")
     private Chat chat = new Chat();
 
-    public int getSoundsVersion() {
-        return soundsVersion;
-    }
-
-    public void setSoundsVersion(int soundsVersion) {
-        this.soundsVersion = soundsVersion;
-    }
-
-    public Game getGame() {
-        return game;
-    }
-
-    public void setGame(Game game) {
-        this.game = game;
-    }
-
-    public Announce getAnnounce() {
-        return announce;
-    }
-
-    public void setAnnounce(Announce announce) {
-        this.announce = announce;
-    }
-
-    public Compass getCompass() {
-        return compass;
-    }
-
-    public void setCompass(Compass compass) {
-        this.compass = compass;
-    }
-
-    public Ui getUi() {
-        return ui;
-    }
-
-    public void setUi(Ui ui) {
-        this.ui = ui;
-    }
-
-    public Chat getChat() {
-        return chat;
-    }
-
-    public void setChat(Chat chat) {
-        this.chat = chat;
-    }
-
     /**
      * Sound entry for one dotted key (for example
      * {@code game.speedrunner-death}), or null when the key resolves to
@@ -99,6 +54,7 @@ public class SoundsConfig extends OkaeriConfig {
 
     /** One sound: toggle, namespaced key, pitch, and volume. */
     @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class SoundEntry extends OkaeriConfig {
         private boolean enabled = true;
@@ -114,24 +70,11 @@ public class SoundsConfig extends OkaeriConfig {
             return entry;
         }
 
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public void setSound(String sound) {
-            this.sound = sound;
-        }
-
-        public void setPitch(double pitch) {
-            this.pitch = pitch;
-        }
-
-        public void setVolume(double volume) {
-            this.volume = volume;
-        }
     }
 
     /** Chat sounds. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Chat extends OkaeriConfig {
 
@@ -139,16 +82,11 @@ public class SoundsConfig extends OkaeriConfig {
         @Comment("Heard by team chat recipients on each message.")
         private SoundEntry teamChat = SoundEntry.of("block.calcite.place", 1.3, 0.8);
 
-        public SoundEntry getTeamChat() {
-            return teamChat;
-        }
-
-        public void setTeamChat(SoundEntry teamChat) {
-            this.teamChat = teamChat;
-        }
     }
 
     /** Match sounds. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Game extends OkaeriConfig {
 
@@ -190,75 +128,14 @@ public class SoundsConfig extends OkaeriConfig {
         private SoundEntry matchStarted =
                 SoundEntry.of("minecraft:entity.illusioner.ambient", 0.9, 1.0);
 
-        public SoundEntry getAutostartCountdown() {
-            return autostartCountdown;
-        }
-
-        public void setAutostartCountdown(SoundEntry autostartCountdown) {
-            this.autostartCountdown = autostartCountdown;
-        }
-
-        public SoundEntry getAutostartCancelled() {
-            return autostartCancelled;
-        }
-
-        public void setAutostartCancelled(SoundEntry autostartCancelled) {
-            this.autostartCancelled = autostartCancelled;
-        }
-
-        public SoundEntry getSpeedrunnerDeath() {
-            return speedrunnerDeath;
-        }
-
-        public void setSpeedrunnerDeath(SoundEntry speedrunnerDeath) {
-            this.speedrunnerDeath = speedrunnerDeath;
-        }
-
-        public SoundEntry getHunterDeath() {
-            return hunterDeath;
-        }
-
-        public void setHunterDeath(SoundEntry hunterDeath) {
-            this.hunterDeath = hunterDeath;
-        }
-
-        public SoundEntry getWinSound() {
-            return winSound;
-        }
-
-        public void setWinSound(SoundEntry winSound) {
-            this.winSound = winSound;
-        }
-
-        public SoundEntry getFailSound() {
-            return failSound;
-        }
-
-        public void setFailSound(SoundEntry failSound) {
-            this.failSound = failSound;
-        }
-
-        public SoundEntry getCancelledSound() {
-            return cancelledSound;
-        }
-
-        public void setCancelledSound(SoundEntry cancelledSound) {
-            this.cancelledSound = cancelledSound;
-        }
-
-        public SoundEntry getMatchStarted() {
-            return matchStarted;
-        }
-
-        public void setMatchStarted(SoundEntry matchStarted) {
-            this.matchStarted = matchStarted;
-        }
     }
 
     /**
      * Per-role sounds for the start-of-match role announcement. Each participant
      * hears their own role's sound.
      */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Announce extends OkaeriConfig {
 
@@ -271,32 +148,11 @@ public class SoundsConfig extends OkaeriConfig {
         @Comment("Heard by each spectator when roles are announced.")
         private SoundEntry spectator = SoundEntry.of("block.note_block.chime", 1.0, 0.8);
 
-        public SoundEntry getHunter() {
-            return hunter;
-        }
-
-        public void setHunter(SoundEntry hunter) {
-            this.hunter = hunter;
-        }
-
-        public SoundEntry getSpeedrunner() {
-            return speedrunner;
-        }
-
-        public void setSpeedrunner(SoundEntry speedrunner) {
-            this.speedrunner = speedrunner;
-        }
-
-        public SoundEntry getSpectator() {
-            return spectator;
-        }
-
-        public void setSpectator(SoundEntry spectator) {
-            this.spectator = spectator;
-        }
     }
 
     /** Compass interaction sounds. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Compass extends OkaeriConfig {
 
@@ -343,72 +199,11 @@ public class SoundsConfig extends OkaeriConfig {
         private SoundEntry costUsedSaturation =
                 SoundEntry.of("entity.splash_potion.break", 1.2, 1.0);
 
-        public SoundEntry getLeftClick() {
-            return leftClick;
-        }
-
-        public void setLeftClick(SoundEntry leftClick) {
-            this.leftClick = leftClick;
-        }
-
-        public SoundEntry getRightClick() {
-            return rightClick;
-        }
-
-        public void setRightClick(SoundEntry rightClick) {
-            this.rightClick = rightClick;
-        }
-
-        public SoundEntry getAnalysis() {
-            return analysis;
-        }
-
-        public void setAnalysis(SoundEntry analysis) {
-            this.analysis = analysis;
-        }
-
-        public SoundEntry getFailure() {
-            return failure;
-        }
-
-        public void setFailure(SoundEntry failure) {
-            this.failure = failure;
-        }
-
-        public SoundEntry getCostTooHigh() {
-            return costTooHigh;
-        }
-
-        public void setCostTooHigh(SoundEntry costTooHigh) {
-            this.costTooHigh = costTooHigh;
-        }
-
-        public SoundEntry getCostUsedExp() {
-            return costUsedExp;
-        }
-
-        public void setCostUsedExp(SoundEntry costUsedExp) {
-            this.costUsedExp = costUsedExp;
-        }
-
-        public SoundEntry getCostUsedHealth() {
-            return costUsedHealth;
-        }
-
-        public void setCostUsedHealth(SoundEntry costUsedHealth) {
-            this.costUsedHealth = costUsedHealth;
-        }
-
-        public SoundEntry getCostUsedSaturation() {
-            return costUsedSaturation;
-        }
-
-        public void setCostUsedSaturation(SoundEntry costUsedSaturation) {
-            this.costUsedSaturation = costUsedSaturation;
-        }
     }
 
     /** Shared interface feedback for commands, GUIs, and the tutorial. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Ui extends OkaeriConfig {
 
@@ -427,28 +222,5 @@ public class SoundsConfig extends OkaeriConfig {
         private SoundEntry destructiveSound =
                 SoundEntry.of("block.cherry_wood_hanging_sign.step", 0.8, 1.0);
 
-        public SoundEntry getNeutralSound() {
-            return neutralSound;
-        }
-
-        public void setNeutralSound(SoundEntry neutralSound) {
-            this.neutralSound = neutralSound;
-        }
-
-        public SoundEntry getAngrySound() {
-            return angrySound;
-        }
-
-        public void setAngrySound(SoundEntry angrySound) {
-            this.angrySound = angrySound;
-        }
-
-        public SoundEntry getDestructiveSound() {
-            return destructiveSound;
-        }
-
-        public void setDestructiveSound(SoundEntry destructiveSound) {
-            this.destructiveSound = destructiveSound;
-        }
     }
 }

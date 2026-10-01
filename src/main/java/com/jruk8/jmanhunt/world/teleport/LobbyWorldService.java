@@ -25,16 +25,20 @@ public final class LobbyWorldService {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
     private final ManhuntMessages manhunt;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
     private final LobbyWorldManager lobbyWorlds;
     /** Last lobby-care sweep, for the configured repeat interval. */
     private long lastCareMillis;
 
     public LobbyWorldService(JManhuntPlugin plugin, MessageService messages,
-            ManhuntMessages manhunt) {
+            ManhuntMessages manhunt,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            com.jruk8.jmanhunt.config.LobbiesConfig lobbySettings) {
         this.plugin = plugin;
         this.messages = messages;
         this.manhunt = manhunt;
-        this.lobbyWorlds = new LobbyWorldManager(plugin);
+        this.engineSettings = engineSettings;
+        this.lobbyWorlds = new LobbyWorldManager(plugin, lobbySettings, engineSettings);
     }
 
     /** Configured lobby world name. */
@@ -88,7 +92,7 @@ public final class LobbyWorldService {
         }
         String name = world.getName();
         return name.equals(lobbyWorldName())
-                && !name.equals(plugin.configService().getString("world-engine.world-name", "world"));
+                && !name.equals(engineSettings.getWorldName());
     }
 
     /**
@@ -174,7 +178,7 @@ public final class LobbyWorldService {
 
     /** True when lobby-world-name collides with the game world name. */
     public boolean lobbyWorldNameClashes() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         return LobbyWorldManager.namesClash(lobbyWorlds.lobbyWorldName(), config.worldName());
     }
 
@@ -187,7 +191,7 @@ public final class LobbyWorldService {
         if (!lobbyWorldNameClashes()) {
             return true;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         plugin.logger().warning("advanced.lobbies.lobby-world-name '" + lobbyWorlds.lobbyWorldName()
                 + "' matches the game world '" + config.worldName()
                 + "'. Lobby world loading stays disabled until it is renamed.");

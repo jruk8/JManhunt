@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.MatchConfig;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
@@ -17,12 +18,14 @@ import java.util.List;
  */
 public final class MatchDefaultsService {
     private final JManhuntPlugin plugin;
+    private final PlayersSettingsFacade players;
     private final PlayerStateStore playerStates;
     private final PlayerWipeService wipes;
 
-    public MatchDefaultsService(JManhuntPlugin plugin, PlayerStateStore playerStates,
-            PlayerWipeService wipes) {
+    public MatchDefaultsService(JManhuntPlugin plugin, PlayersSettingsFacade players,
+            PlayerStateStore playerStates, PlayerWipeService wipes) {
         this.plugin = plugin;
+        this.players = players;
         this.playerStates = playerStates;
         this.wipes = wipes;
     }
@@ -81,8 +84,7 @@ public final class MatchDefaultsService {
             List<Player> lobbySpectators, int lobbyId) {
         // AFK players are skipped above and always left alone; NONEs follow
         // the toggle, keeping their mode like AFK when it is off.
-        boolean setNoneSpectator = plugin.overrides().getBoolean(lobbyId,
-                "settings.players.roles.turn-nones-spectator.enabled", false);
+        boolean setNoneSpectator = players.turnNonesSpectator(lobbyId);
         for (Player player : participants) {
             plugin.fakeSpectators().disable(player);
         }

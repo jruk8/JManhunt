@@ -3,7 +3,7 @@ package com.jruk8.jmanhunt.match.lifecycle;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.LeaveDestination;
@@ -37,7 +37,8 @@ public final class MatchLeaveService {
     private final PlayerStateStore playerStates;
     private final CompassManager compass;
     private final GameStateCommandManager stateCommands;
-    private final ConfigService configService;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
+    private final MatchSettingsFacade match;
     private final WorldEngineService worldEngine;
     private final MatchStore store;
     private final MatchMessaging messaging;
@@ -46,7 +47,9 @@ public final class MatchLeaveService {
 
     public MatchLeaveService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
             PlayerStateStore playerStates, CompassManager compass,
-            GameStateCommandManager stateCommands, ConfigService configService,
+            GameStateCommandManager stateCommands,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            MatchSettingsFacade match,
             WorldEngineService worldEngine, MatchStore store, MatchMessaging messaging,
             FlagStore flagStore, Consumer<GameInstance> afterLeave) {
         this.plugin = plugin;
@@ -55,7 +58,8 @@ public final class MatchLeaveService {
         this.playerStates = playerStates;
         this.compass = compass;
         this.stateCommands = stateCommands;
-        this.configService = configService;
+        this.engineSettings = engineSettings;
+        this.match = match;
         this.worldEngine = worldEngine;
         this.store = store;
         this.messaging = messaging;
@@ -65,8 +69,7 @@ public final class MatchLeaveService {
 
     /** Configured leave destination, SPECTATOR by default. */
     public LeaveDestination leaveDestination(Integer lobby) {
-        return LeaveDestination.parse(plugin.overrides()
-                .getString(lobby, "settings.match.game-leave.destination", "SPECTATOR"));
+        return LeaveDestination.parse(match.gameLeaveDestination(lobby));
     }
 
     /**
@@ -214,7 +217,7 @@ public final class MatchLeaveService {
         if (environment != World.Environment.NORMAL && environment != World.Environment.NETHER) {
             return false;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled() || instance.cellIndex().isEmpty()) {
             return false;
         }

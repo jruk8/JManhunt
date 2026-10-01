@@ -6,8 +6,9 @@ import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
 import com.jruk8.jmanhunt.api.events.JMatchStartEvent;
 import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.Lobby;
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.SubLobby;
 import com.jruk8.jmanhunt.message.DebugMessages;
@@ -65,7 +66,9 @@ public final class MatchStartService {
     private final CompassManager compass;
     private final StatsManager stats;
     private final GameStateCommandManager stateCommands;
-    private final ConfigService configService;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
+    private final MatchSettingsFacade match;
+    private final PlayersSettingsFacade players;
     private final WorldEngineService worldEngine;
     private final LobbyService lobbies;
     private final MatchStore store;
@@ -81,7 +84,9 @@ public final class MatchStartService {
     public MatchStartService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
             ManhuntMessages manhunt, SoundService sounds,
             PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
-            GameStateCommandManager stateCommands, ConfigService configService,
+            GameStateCommandManager stateCommands,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            MatchSettingsFacade match, PlayersSettingsFacade players,
             WorldEngineService worldEngine, LobbyService lobbies, MatchStore store,
             MatchMessaging messaging, TimeLimitService timeLimits, PrestartService prestart,
             AutostartService autostart) {
@@ -93,7 +98,9 @@ public final class MatchStartService {
         this.compass = compass;
         this.stats = stats;
         this.stateCommands = stateCommands;
-        this.configService = configService;
+        this.engineSettings = engineSettings;
+        this.match = match;
+        this.players = players;
         this.worldEngine = worldEngine;
         this.lobbies = lobbies;
         this.store = store;
@@ -101,7 +108,8 @@ public final class MatchStartService {
         this.timeLimits = timeLimits;
         this.prestart = prestart;
         this.autostart = autostart;
-        this.announce = new MatchAnnounceService(plugin, messages, sounds,
+        this.announce = new MatchAnnounceService(plugin, players,
+                messages, sounds,
                 playerStates, store, new StatusRosterService(messages, manhunt, playerStates),
                 manhunt);
         this.quickStart = new QuickStartService(plugin, lobbies, playerStates, store, autostart,
@@ -191,7 +199,7 @@ public final class MatchStartService {
      */
     private Location engineOffStartCenter(List<Player> participants, Location surroundOrigin,
             OptionalLong matchCell) {
-        if (matchCell.isPresent() || configService.getBoolean("world-engine.enabled", false)) {
+        if (matchCell.isPresent() || engineSettings.isEnabled()) {
             return null;
         }
         return surroundParticipants(participants, surroundOrigin);
@@ -285,10 +293,8 @@ public final class MatchStartService {
         // Set participants to adventure mode during the pre-start window if
         // configured, preventing block breaking while waiting for the first
         // speedrunner hit.
-        if (plugin.overrides().getBoolean(lobbyId,
-                        "settings.match.start-on-speedrunner-damage.enabled", false)
-                && plugin.overrides().getBoolean(lobbyId,
-                        "settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
+        if (match.startOnDamageEnabled(lobbyId)
+                && match.startInAdventureMode(lobbyId)) {
             for (Player player : players) {
                 player.setGameMode(GameMode.ADVENTURE);
             }
@@ -315,16 +321,14 @@ public final class MatchStartService {
         // start-on-speedrunner-damage is enabled, that happens only after
         // the speedrunner first damages a hunter.
         prestart.armHeadstarts(instance);
-        boolean gated = plugin.overrides().getBoolean(lobby,
-                "settings.match.start-on-speedrunner-damage.enabled", false);
+        boolean gated = match.startOnDamageEnabled(lobby);
         if (!gated) {
             prestart.beginHeadstarts(instance);
         }
         // load waiting delay configuration (enforces a 5 second minimum;
         // -1 waits indefinitely)
         instance.setWaitingDelayConfigured(WaitingReminder.clampDelay(
-                plugin.overrides().getInt(lobby,
-                        "settings.match.start-on-speedrunner-damage.delay-seconds", 30)));
+                match.startOnDamageDelaySeconds(lobby)));
         if (gated) {
             prestart.scheduleWaitingReminder(instance);
         } else {
@@ -350,7 +354,7 @@ public final class MatchStartService {
         World world = center.getWorld();
         int centerX = center.getBlockX();
         int centerZ = center.getBlockZ();
-        WorldEngineConfig spawnConfig = WorldEngineConfig.fromConfig(configService);
+        WorldEngineConfig spawnConfig = WorldEngineConfig.fromSettings(engineSettings);
         List<Location> spawns = MatchTeleportService.spreadSpawnsForConfig(world, centerX, centerZ,
                 SURROUND_RADIUS, participants, spawnConfig);
         for (int index = 0; index < participants.size(); index++) {
@@ -361,7 +365,7 @@ public final class MatchStartService {
 
     /** Random origin in the game world for executor-less starts. */
     private Location fallbackOrigin() {
-        World world = Bukkit.getWorld(configService.getString("world-engine.world-name", "world"));
+        World world = Bukkit.getWorld(engineSettings.getWorldName());
         if (world == null) {
             return null;
         }
@@ -421,13 +425,11 @@ public final class MatchStartService {
         if (role == Role.SPECTATOR
                 // NONE joiners take fake spectator mode only with the toggle;
                 // AFK cannot join at all (rejected in gameJoin).
-                || (!role.isParticipant() && plugin.overrides().getBoolean(lobby,
-                        "settings.players.roles.turn-nones-spectator.enabled", false))) {
+                || (!role.isParticipant() && players.turnNonesSpectator(lobby))) {
             plugin.fakeSpectators().enable(player);
         }
         if (!instance.begun()
-                && plugin.overrides().getBoolean(lobby,
-                        "settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)
+                && match.startInAdventureMode(lobby)
                 && role.isParticipant()
                 && !instance.headstart(role.opposite()).armed()) {
             player.setGameMode(GameMode.ADVENTURE);
@@ -460,8 +462,7 @@ public final class MatchStartService {
         // Restore participants to survival when the game begins if they were
         // set to adventure mode during the pre-start window. Held headstart
         // sides stay out: their countdown moves them to fake spectator below.
-        if (plugin.overrides().getBoolean(instance.originLobbyId(),
-                "settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true)) {
+        if (match.startInAdventureMode(instance.originLobbyId())) {
             for (Player player : store.onlineActivePlayers(instance)) {
                 Role playerRole = playerStates.role(player);
                 if (playerRole.isParticipant() && !instance.headstart(playerRole.opposite()).armed()) {
@@ -497,8 +498,8 @@ public final class MatchStartService {
     /** Configured starting lives for a role. -1 means unlimited. */
     private int livesFor(Integer lobby, Role role) {
         return switch (role) {
-            case HUNTER -> plugin.overrides().getInt(lobby, "settings.players.respawn.hunter.lives", -1);
-            case SPEEDRUNNER -> plugin.overrides().getInt(lobby, "settings.players.respawn.speedrunner.lives", 1);
+            case HUNTER -> players.hunterLives(lobby);
+            case SPEEDRUNNER -> players.speedrunnerLives(lobby);
             default -> -1;
         };
     }
@@ -531,7 +532,7 @@ public final class MatchStartService {
     }
 
     private void teleportToGameWorldSpawn(Player player) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         World world = Bukkit.getWorld(config.worldName());
         Location spawn = world != null ? world.getSpawnLocation() : player.getWorld().getSpawnLocation();
         player.teleport(spawn);

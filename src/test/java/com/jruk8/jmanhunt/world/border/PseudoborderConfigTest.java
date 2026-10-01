@@ -1,26 +1,21 @@
 package com.jruk8.jmanhunt.world.border;
 
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
-import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
-import java.util.logging.Logger;
+import com.jruk8.jmanhunt.config.WorldEngineParticles;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class PseudoborderConfigTest {
     private static final String BASE = "world-engine.world-border.particles.";
 
-    private static ConfigService service(JManhuntConfig root) {
-        Logger log = Logger.getAnonymousLogger();
-        log.setUseParentHandlers(false);
-        return new ConfigService(root, new ModifierStore(ModifierFiles.inMemory(), log));
+    private static WorldEngineParticles particles(JManhuntConfig root) {
+        return root.getWorldEngine().getWorldBorder().getParticles();
     }
 
     @Test
     void defaultsMatchSpec() {
-        PseudoborderConfig config = PseudoborderConfig.fromConfig(service(new JManhuntConfig()));
+        PseudoborderConfig config = PseudoborderConfig.fromSettings(particles(new JManhuntConfig()));
 
         assertEquals(PseudoBorderParticle.DUST, config.type());
         assertEquals(1, config.particleSpacing());
@@ -47,7 +42,7 @@ class PseudoborderConfigTest {
         ConfigPathMapper.set(root, BASE + "wave-length", 16.0);
         ConfigPathMapper.set(root, BASE + "wave-speed", 1.0);
         ConfigPathMapper.set(root, BASE + "max-particles-per-player", 50);
-        PseudoborderConfig config = PseudoborderConfig.fromConfig(service(root));
+        PseudoborderConfig config = PseudoborderConfig.fromSettings(particles(root));
 
         assertEquals(PseudoBorderParticle.HEART, config.type());
         assertEquals(4, config.particleSpacing());
@@ -72,7 +67,7 @@ class PseudoborderConfigTest {
         ConfigPathMapper.set(root, BASE + "wave-length", 1.0);
         ConfigPathMapper.set(root, BASE + "wave-speed", 0.0);
         ConfigPathMapper.set(root, BASE + "max-particles-per-player", 0);
-        PseudoborderConfig low = PseudoborderConfig.fromConfig(service(root));
+        PseudoborderConfig low = PseudoborderConfig.fromSettings(particles(root));
 
         assertEquals(1, low.particleSpacing());
         assertEquals(0.0, low.renderRadius(), 0.0);
@@ -89,7 +84,7 @@ class PseudoborderConfigTest {
         ConfigPathMapper.set(high, BASE + "wave-direction-angle", -5.0);
         ConfigPathMapper.set(high, BASE + "wave-length", 100.0);
         ConfigPathMapper.set(high, BASE + "wave-speed", 9.0);
-        PseudoborderConfig clamped = PseudoborderConfig.fromConfig(service(high));
+        PseudoborderConfig clamped = PseudoborderConfig.fromSettings(particles(high));
 
         assertEquals(8, clamped.particleSpacing());
         assertEquals(0.0, clamped.intervalSeconds(), 0.0);

@@ -24,8 +24,7 @@ public abstract class LootTableListener<T extends Event> implements Listener, Se
         if (!game.isActive()) {
             return false;
         }
-        return plugin.configService().getBoolean("settings.match.game-boosts.%s".formatted(getConfigKey()), true)
-                && customFile.exists();
+        return isBoostEnabled() && customFile.exists();
     }
 
     protected abstract void handleEvent(T event);
@@ -33,7 +32,8 @@ public abstract class LootTableListener<T extends Event> implements Listener, Se
     // As in resources/settings/loot-tables/<loot_table_name>.json.
     protected abstract String getLootTableName();
 
-    protected abstract String getConfigKey();
+    /** True when this table's game boost is on. */
+    protected abstract boolean isBoostEnabled();
 
     private void reloadTable() {
         String name = getLootTableName();

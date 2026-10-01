@@ -8,6 +8,7 @@ import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.config.SignalInaccuracySettings;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -133,10 +134,13 @@ class SignalInaccuracyTest {
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.overrides()).thenReturn(
-                new OverrideService(configService, new LobbyConfig(), () -> { }));
-        HotspotService hotspots = new HotspotService(plugin, new PlayerStateStore());
-        return new ServiceFixture(new CompassInaccuracyService(plugin, hotspots),
+        OverrideService overrides =
+                new OverrideService(configService, new LobbyConfig(), () -> { });
+        when(plugin.overrides()).thenReturn(overrides);
+        CompassSettingsFacade settings =
+                new CompassSettingsFacade(overrides, root.getSettings().getCompass());
+        HotspotService hotspots = new HotspotService(settings, new PlayerStateStore());
+        return new ServiceFixture(new CompassInaccuracyService(settings, hotspots),
                 root, hotspots, mock(World.class));
     }
 

@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -19,7 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.lobby.LobbyService;
-import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
@@ -60,7 +58,7 @@ class SpectatorToolbarServiceTest {
     }
 
     private SpectatorToolbarService toolbar(NamespacedKey key) {
-        return new SpectatorToolbarService(mock(OverrideService.class),
+        return new SpectatorToolbarService(mock(PlayersSettingsFacade.class),
                 mock(MessageService.class), new SpectatorMessages(), new CommandMessages(),
                 mock(SoundService.class), new PlayerStateStore(),
                 mock(FakeSpectatorService.class), mock(GameManager.class),
@@ -145,26 +143,20 @@ class SpectatorToolbarServiceTest {
     }
 
     private SnowballFixture snowballFixture(int lobby, Boolean enabled, Integer seconds) {
-        OverrideService overrides = mock(OverrideService.class);
+        PlayersSettingsFacade settings = mock(PlayersSettingsFacade.class);
         GameManager game = mock(GameManager.class);
         Player player = mock(Player.class);
         UUID id = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(id);
         when(game.lobbyOfPlayer(id)).thenReturn(lobby);
         if (enabled == null || seconds == null) {
-            when(overrides.getBoolean(eq(lobby), anyString(), anyBoolean()))
-                    .thenAnswer(invocation -> invocation.getArgument(2));
-            when(overrides.getInt(eq(lobby), anyString(), anyInt()))
-                    .thenAnswer(invocation -> invocation.getArgument(2));
+            when(settings.snowballEnabled(lobby)).thenReturn(true);
+            when(settings.snowballCooldownSeconds(lobby)).thenReturn(8);
         } else {
-            when(overrides.getBoolean(eq(lobby),
-                    eq(SpectatorToolbarService.SNOWBALL_ENABLED_PATH), eq(true)))
-                    .thenReturn(enabled);
-            when(overrides.getInt(eq(lobby),
-                    eq(SpectatorToolbarService.SNOWBALL_COOLDOWN_PATH), eq(8)))
-                    .thenReturn(seconds);
+            when(settings.snowballEnabled(lobby)).thenReturn(enabled);
+            when(settings.snowballCooldownSeconds(lobby)).thenReturn(seconds);
         }
-        SpectatorToolbarService toolbar = new SpectatorToolbarService(overrides,
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(settings,
                 mock(MessageService.class), new SpectatorMessages(), new CommandMessages(),
                 mock(SoundService.class), new PlayerStateStore(),
                 mock(FakeSpectatorService.class), game,
@@ -328,7 +320,7 @@ class SpectatorToolbarServiceTest {
     void modeChangeSkipsDeployForParticipants() {
         PlayerStateStore players = new PlayerStateStore();
         SpectatorToolbarService toolbar = spy(new SpectatorToolbarService(
-                mock(OverrideService.class), mock(MessageService.class), new SpectatorMessages(),
+                mock(PlayersSettingsFacade.class), mock(MessageService.class), new SpectatorMessages(),
                 new CommandMessages(), mock(SoundService.class), players, mock(FakeSpectatorService.class),
                 mock(GameManager.class), mock(LobbyService.class),
                 new NamespacedKey("jmanhunt", "spectator_toolbar")));
@@ -350,7 +342,7 @@ class SpectatorToolbarServiceTest {
     void modeDisableWithoutDeployIsNoop() {
         PlayerStateStore players = new PlayerStateStore();
         SpectatorToolbarService toolbar = new SpectatorToolbarService(
-                mock(OverrideService.class), mock(MessageService.class), new SpectatorMessages(),
+                mock(PlayersSettingsFacade.class), mock(MessageService.class), new SpectatorMessages(),
                 new CommandMessages(), mock(SoundService.class), players, mock(FakeSpectatorService.class),
                 mock(GameManager.class), mock(LobbyService.class),
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
@@ -376,7 +368,7 @@ class SpectatorToolbarServiceTest {
         MessageService messages = mock(MessageService.class);
         SoundService sounds = mock(SoundService.class);
         SpectatorToolbarService toolbar = new SpectatorToolbarService(
-                mock(OverrideService.class), messages, texts(), new CommandMessages(), sounds,
+                mock(PlayersSettingsFacade.class), messages, texts(), new CommandMessages(), sounds,
                 new PlayerStateStore(),
                 mock(FakeSpectatorService.class), game, lobbies,
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
@@ -443,8 +435,10 @@ class SpectatorToolbarServiceTest {
 
     @Test
     void teleportRelockMessagesInsteadOfTeleporting() {
-        OverrideService overrides = mock(OverrideService.class);
-        when(overrides.getBoolean(any(), anyString(), anyBoolean())).thenReturn(true);
+        PlayersSettingsFacade overrides = mock(PlayersSettingsFacade.class);
+        when(overrides.toolbarLockOn(any())).thenReturn(true);
+        when(overrides.toolbarLayout(any()))
+                .thenReturn(SpectatorToolbarService.DEFAULT_LAYOUT);
         MessageService messages = mock(MessageService.class);
         when(messages.roleName(any())).thenReturn("Hunter");
         SoundService sounds = mock(SoundService.class);

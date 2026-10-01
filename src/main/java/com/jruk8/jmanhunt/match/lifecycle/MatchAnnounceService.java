@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.StatusRosterService;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
@@ -22,6 +23,7 @@ import java.util.function.Predicate;
  */
 public final class MatchAnnounceService {
     private final JManhuntPlugin plugin;
+    private final PlayersSettingsFacade playerSettings;
     private final MessageService messages;
     private final SoundService sounds;
     private final PlayerStateStore playerStates;
@@ -29,10 +31,12 @@ public final class MatchAnnounceService {
     private final StatusRosterService roster;
     private final ManhuntMessages manhunt;
 
-    public MatchAnnounceService(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
+    public MatchAnnounceService(JManhuntPlugin plugin, PlayersSettingsFacade playerSettings,
+            MessageService messages, SoundService sounds,
             PlayerStateStore playerStates, MatchStore store, StatusRosterService roster,
             ManhuntMessages manhunt) {
         this.plugin = plugin;
+        this.playerSettings = playerSettings;
         this.messages = messages;
         this.sounds = sounds;
         this.playerStates = playerStates;
@@ -49,21 +53,15 @@ public final class MatchAnnounceService {
      * when both chat and title are disabled, nothing plays at all.
      */
     public void announceRoles(int lobbyId, List<Player> players, List<Player> spectators) {
-        boolean chat = plugin.overrides()
-                .getBoolean(lobbyId, "settings.players.announce-roles.chat.enabled", true);
-        boolean title = plugin.overrides()
-                .getBoolean(lobbyId, "settings.players.announce-roles.title.enabled", true);
+        boolean chat = playerSettings.announceRolesChat(lobbyId);
+        boolean title = playerSettings.announceRolesTitle(lobbyId);
         if (!chat && !title) {
             return;
         }
-        boolean soundsEnabled = plugin.overrides()
-                .getBoolean(lobbyId, "settings.players.announce-roles.sounds.enabled", true);
-        long fadeIn = toMillis(plugin.overrides()
-                .getDouble(lobbyId, "settings.players.announce-roles.title.fade-in-seconds", 0.5));
-        long stay = toMillis(plugin.overrides()
-                .getDouble(lobbyId, "settings.players.announce-roles.title.stay-seconds", 3.0));
-        long fadeOut = toMillis(plugin.overrides().getDouble(lobbyId,
-                "settings.players.announce-roles.title.fade-out-seconds", 0.5));
+        boolean soundsEnabled = playerSettings.announceRolesSounds(lobbyId);
+        long fadeIn = toMillis(playerSettings.announceTitleFadeInSeconds(lobbyId));
+        long stay = toMillis(playerSettings.announceTitleStaySeconds(lobbyId));
+        long fadeOut = toMillis(playerSettings.announceTitleFadeOutSeconds(lobbyId));
         Title.Times times = Title.Times.times(
                 Duration.ofMillis(fadeIn), Duration.ofMillis(stay), Duration.ofMillis(fadeOut));
         for (Player player : players) {

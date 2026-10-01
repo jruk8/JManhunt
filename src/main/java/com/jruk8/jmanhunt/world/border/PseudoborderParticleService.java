@@ -1,7 +1,6 @@
 package com.jruk8.jmanhunt.world.border;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
@@ -29,16 +28,17 @@ public final class PseudoborderParticleService {
     private static final double NETHER_SCALE = 8.0;
 
     private final JManhuntPlugin plugin;
-    private final ConfigService configService;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
     private final MatchStore store;
     private final WorldEngineService worldEngine;
     /** Shared clock: ticks since enable, driving both pulse modes. */
     private long tick;
 
-    public PseudoborderParticleService(JManhuntPlugin plugin, ConfigService configService, MatchStore store,
+    public PseudoborderParticleService(JManhuntPlugin plugin,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings, MatchStore store,
             WorldEngineService worldEngine) {
         this.plugin = plugin;
-        this.configService = configService;
+        this.engineSettings = engineSettings;
         this.store = store;
         this.worldEngine = worldEngine;
         Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
@@ -46,11 +46,12 @@ public final class PseudoborderParticleService {
 
     private void tick() {
         tick++;
-        WorldEngineConfig engine = WorldEngineConfig.fromConfig(configService);
+        WorldEngineConfig engine = WorldEngineConfig.fromSettings(engineSettings);
         if (!engine.enabled() || !engine.worldBorderEnabled()) {
             return;
         }
-        PseudoborderConfig particles = PseudoborderConfig.fromConfig(configService);
+        PseudoborderConfig particles = PseudoborderConfig.fromSettings(
+                engineSettings.getWorldBorder().getParticles());
         if (particles.renderRadius() <= 0.0) {
             return;
         }

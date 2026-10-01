@@ -5,8 +5,12 @@ import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Server settings. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class ServerSettings extends OkaeriConfig {
 
@@ -42,47 +46,9 @@ public class ServerSettings extends OkaeriConfig {
     @Comment("Team chat (@team ...) for match participants.")
     private TeamChat teamChat = new TeamChat();
 
-    public boolean isAnnounceConfigChanges() {
-        return announceConfigChanges;
-    }
-
-    public void setAnnounceConfigChanges(boolean announceConfigChanges) {
-        this.announceConfigChanges = announceConfigChanges;
-    }
-
-    public boolean isAnnounceRoleChanges() {
-        return announceRoleChanges;
-    }
-
-    public void setAnnounceRoleChanges(boolean announceRoleChanges) {
-        this.announceRoleChanges = announceRoleChanges;
-    }
-
-    public AntiSpawnCamp getAntiSpawnCamp() {
-        return antiSpawnCamp;
-    }
-
-    public void setAntiSpawnCamp(AntiSpawnCamp antiSpawnCamp) {
-        this.antiSpawnCamp = antiSpawnCamp;
-    }
-
-    public Status getStatus() {
-        return status;
-    }
-
-    public void setStatus(Status status) {
-        this.status = status;
-    }
-
-    public TeamChat getTeamChat() {
-        return teamChat;
-    }
-
-    public void setTeamChat(TeamChat teamChat) {
-        this.teamChat = teamChat;
-    }
-
     /** Team chat for match participants. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class TeamChat extends OkaeriConfig {
 
@@ -110,32 +76,11 @@ public class ServerSettings extends OkaeriConfig {
         })
         private boolean spectatorsSee = true;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public List<String> getPrefixes() {
-            return prefixes;
-        }
-
-        public void setPrefixes(List<String> prefixes) {
-            this.prefixes = prefixes;
-        }
-
-        public boolean isSpectatorsSee() {
-            return spectatorsSee;
-        }
-
-        public void setSpectatorsSee(boolean spectatorsSee) {
-            this.spectatorsSee = spectatorsSee;
-        }
     }
 
     /** Anti-spawn-camp guard. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class AntiSpawnCamp extends OkaeriConfig {
 
@@ -179,56 +124,11 @@ public class ServerSettings extends OkaeriConfig {
         })
         private List<String> monitoredRoles = new ArrayList<>(List.of("SPEEDRUNNER"));
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getKills() {
-            return kills;
-        }
-
-        public void setKills(int kills) {
-            this.kills = kills;
-        }
-
-        public double getWindowSeconds() {
-            return windowSeconds;
-        }
-
-        public void setWindowSeconds(double windowSeconds) {
-            this.windowSeconds = windowSeconds;
-        }
-
-        public String getFirstPunishment() {
-            return firstPunishment;
-        }
-
-        public void setFirstPunishment(String firstPunishment) {
-            this.firstPunishment = firstPunishment;
-        }
-
-        public boolean isKillOnSecondTime() {
-            return killOnSecondTime;
-        }
-
-        public void setKillOnSecondTime(boolean killOnSecondTime) {
-            this.killOnSecondTime = killOnSecondTime;
-        }
-
-        public List<String> getMonitoredRoles() {
-            return monitoredRoles;
-        }
-
-        public void setMonitoredRoles(List<String> monitoredRoles) {
-            this.monitoredRoles = monitoredRoles;
-        }
     }
 
     /** Optional status extras. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Status extends OkaeriConfig {
 
@@ -254,30 +154,6 @@ public class ServerSettings extends OkaeriConfig {
         })
         private boolean showModifiers = false;
 
-        public boolean isShowWinConditions() {
-            return showWinConditions;
-        }
-
-        public void setShowWinConditions(boolean showWinConditions) {
-            this.showWinConditions = showWinConditions;
-        }
-
-        public boolean isShowElapsedTime() {
-            return showElapsedTime;
-        }
-
-        public void setShowElapsedTime(boolean showElapsedTime) {
-            this.showElapsedTime = showElapsedTime;
-        }
-
-        public boolean isShowModifiers() {
-            return showModifiers;
-        }
-
-        public void setShowModifiers(boolean showModifiers) {
-            this.showModifiers = showModifiers;
-        }
-
         @CustomKey("show-ids")
         @Comment({
                 "Show lobby and game ids as L{lobby}|G{game}.",
@@ -286,12 +162,5 @@ public class ServerSettings extends OkaeriConfig {
         })
         private boolean showIds = false;
 
-        public boolean isShowIds() {
-            return showIds;
-        }
-
-        public void setShowIds(boolean showIds) {
-            this.showIds = showIds;
-        }
     }
 }

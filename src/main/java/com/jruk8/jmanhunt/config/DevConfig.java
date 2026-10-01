@@ -9,12 +9,16 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Typed root of the internal Core/dev.yml: lobby presets for fresh
  * lobby-world generation. Jar-loaded and never user editable; the file
  * in the jar is the source of truth, so preset changes ship with builds.
  */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class DevConfig extends OkaeriConfig {
 
@@ -27,14 +31,6 @@ public class DevConfig extends OkaeriConfig {
             "Do not touch unless you know what you are doing."
     })
     private Map<String, LobbyPresetEntry> lobbyPresets = defaultPresets();
-
-    public Map<String, LobbyPresetEntry> getLobbyPresets() {
-        return lobbyPresets;
-    }
-
-    public void setLobbyPresets(Map<String, LobbyPresetEntry> lobbyPresets) {
-        this.lobbyPresets = lobbyPresets;
-    }
 
     /** Preset keys in file order, for completion and error text. */
     public Set<String> presetKeys() {
@@ -84,6 +80,8 @@ public class DevConfig extends OkaeriConfig {
     }
 
     /** One lobby preset: schematic plus console commands. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class LobbyPresetEntry extends OkaeriConfig {
         private String schematic = "";
@@ -95,20 +93,5 @@ public class DevConfig extends OkaeriConfig {
             return entry;
         }
 
-        public String getSchematic() {
-            return schematic;
-        }
-
-        public void setSchematic(String schematic) {
-            this.schematic = schematic;
-        }
-
-        public List<String> getCommands() {
-            return commands;
-        }
-
-        public void setCommands(List<String> commands) {
-            this.commands = commands;
-        }
     }
 }

@@ -20,7 +20,7 @@ public final class JManhuntExpansion extends PlaceholderExpansion {
             PlaceholderConfig placeholderConfig) {
         this.plugin = plugin;
         this.placeholders = new JManhuntPlaceholders(stats, messages, game, playerStates,
-                winConditions, placeholderConfig, plugin.configService());
+                winConditions, placeholderConfig, game.matchSettings());
     }
 
     @Override public String getIdentifier() { return "jmanhunt"; }

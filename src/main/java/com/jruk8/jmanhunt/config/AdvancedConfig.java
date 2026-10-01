@@ -3,8 +3,12 @@ package com.jruk8.jmanhunt.config;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Advanced controls: match lifecycle, lobbies, and misc power toggles. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class AdvancedConfig extends OkaeriConfig {
 
@@ -25,27 +29,4 @@ public class AdvancedConfig extends OkaeriConfig {
     @Comment("Power-user toggles that rarely need changing.")
     private MiscConfig misc = new MiscConfig();
 
-    public MatchConfig getAdvancedMatchControls() {
-        return advancedMatchControls;
-    }
-
-    public void setAdvancedMatchControls(MatchConfig advancedMatchControls) {
-        this.advancedMatchControls = advancedMatchControls;
-    }
-
-    public LobbiesConfig getLobbies() {
-        return lobbies;
-    }
-
-    public void setLobbies(LobbiesConfig lobbies) {
-        this.lobbies = lobbies;
-    }
-
-    public MiscConfig getMisc() {
-        return misc;
-    }
-
-    public void setMisc(MiscConfig misc) {
-        this.misc = misc;
-    }
 }

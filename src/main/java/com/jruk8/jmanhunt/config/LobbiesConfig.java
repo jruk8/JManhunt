@@ -5,8 +5,12 @@ import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Lobby queues. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class LobbiesConfig extends OkaeriConfig {
 
@@ -93,71 +97,9 @@ public class LobbiesConfig extends OkaeriConfig {
     })
     private boolean disablePlayerCollisions = true;
 
-    public int getDefaultLobbyId() {
-        return defaultLobbyId;
-    }
-
-    public void setDefaultLobbyId(int defaultLobbyId) {
-        this.defaultLobbyId = defaultLobbyId;
-    }
-
-    public boolean isJoinTeleportsToLobby() {
-        return joinTeleportsToLobby;
-    }
-
-    public void setJoinTeleportsToLobby(boolean joinTeleportsToLobby) {
-        this.joinTeleportsToLobby = joinTeleportsToLobby;
-    }
-
-    public AnnounceMode getAnnounceLobbyChanges() {
-        return announceLobbyChanges;
-    }
-
-    public void setAnnounceLobbyChanges(AnnounceMode announceLobbyChanges) {
-        this.announceLobbyChanges = announceLobbyChanges;
-    }
-
-    public Bounds getBounds() {
-        return bounds;
-    }
-
-    public void setBounds(Bounds bounds) {
-        this.bounds = bounds;
-    }
-
-    public MidMatchPolicy getMidMatchSetplayer() {
-        return midMatchSetplayer;
-    }
-
-    public void setMidMatchSetplayer(MidMatchPolicy midMatchSetplayer) {
-        this.midMatchSetplayer = midMatchSetplayer;
-    }
-
-    public QueueCaps getQueueCaps() {
-        return queueCaps;
-    }
-
-    public void setQueueCaps(QueueCaps queueCaps) {
-        this.queueCaps = queueCaps;
-    }
-
-    public String getLobbyWorldName() {
-        return lobbyWorldName;
-    }
-
-    public void setLobbyWorldName(String lobbyWorldName) {
-        this.lobbyWorldName = lobbyWorldName;
-    }
-
-    public boolean isDisablePlayerCollisions() {
-        return disablePlayerCollisions;
-    }
-
-    public void setDisablePlayerCollisions(boolean disablePlayerCollisions) {
-        this.disablePlayerCollisions = disablePlayerCollisions;
-    }
-
     /** Lobby bounds exit routing. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Bounds extends OkaeriConfig {
         @CustomKey("exit-lobby-id")
@@ -173,24 +115,11 @@ public class LobbiesConfig extends OkaeriConfig {
         })
         private String exitBehavior = "KEEP_IN_LOBBY";
 
-        public int getExitLobbyId() {
-            return exitLobbyId;
-        }
-
-        public void setExitLobbyId(int exitLobbyId) {
-            this.exitLobbyId = exitLobbyId;
-        }
-
-        public String getExitBehavior() {
-            return exitBehavior;
-        }
-
-        public void setExitBehavior(String exitBehavior) {
-            this.exitBehavior = exitBehavior;
-        }
     }
 
     /** Per-role queue caps. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class QueueCaps extends OkaeriConfig {
         @Comment({
@@ -205,21 +134,6 @@ public class LobbiesConfig extends OkaeriConfig {
         })
         private int hunter = -1;
 
-        public int getSpeedrunner() {
-            return speedrunner;
-        }
-
-        public void setSpeedrunner(int speedrunner) {
-            this.speedrunner = speedrunner;
-        }
-
-        public int getHunter() {
-            return hunter;
-        }
-
-        public void setHunter(int hunter) {
-            this.hunter = hunter;
-        }
     }
 
     @CustomKey("role-pads")
@@ -232,15 +146,9 @@ public class LobbiesConfig extends OkaeriConfig {
     })
     private RolePads rolePads = new RolePads();
 
-    public RolePads getRolePads() {
-        return rolePads;
-    }
-
-    public void setRolePads(RolePads rolePads) {
-        this.rolePads = rolePads;
-    }
-
     /** Stand-on role pads. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class RolePads extends OkaeriConfig {
         private boolean enabled = true;
@@ -257,31 +165,9 @@ public class LobbiesConfig extends OkaeriConfig {
         @Comment("Concrete block per role.")
         private RolePadBlocks blocks = new RolePadBlocks();
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public boolean isSilentRoleAssignment() {
-            return silentRoleAssignment;
-        }
-
-        public void setSilentRoleAssignment(boolean silentRoleAssignment) {
-            this.silentRoleAssignment = silentRoleAssignment;
-        }
-
-        public RolePadBlocks getBlocks() {
-            return blocks;
-        }
-
-        public void setBlocks(RolePadBlocks blocks) {
-            this.blocks = blocks;
-        }
-
         /** Block per role, as Bukkit Material names. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class RolePadBlocks extends OkaeriConfig {
             private String speedrunner = "LIME_CONCRETE";
@@ -290,45 +176,6 @@ public class LobbiesConfig extends OkaeriConfig {
             private String spectator = "LIGHT_GRAY_CONCRETE";
             private String none = "GRAY_CONCRETE";
 
-            public String getSpeedrunner() {
-                return speedrunner;
-            }
-
-            public void setSpeedrunner(String speedrunner) {
-                this.speedrunner = speedrunner;
-            }
-
-            public String getHunter() {
-                return hunter;
-            }
-
-            public void setHunter(String hunter) {
-                this.hunter = hunter;
-            }
-
-            public String getAfk() {
-                return afk;
-            }
-
-            public void setAfk(String afk) {
-                this.afk = afk;
-            }
-
-            public String getSpectator() {
-                return spectator;
-            }
-
-            public void setSpectator(String spectator) {
-                this.spectator = spectator;
-            }
-
-            public String getNone() {
-                return none;
-            }
-
-            public void setNone(String none) {
-                this.none = none;
-            }
         }
     }
 

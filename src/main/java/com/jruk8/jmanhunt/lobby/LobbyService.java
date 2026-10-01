@@ -1,6 +1,8 @@
 package com.jruk8.jmanhunt.lobby;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.LobbiesConfig;
+import com.jruk8.jmanhunt.config.WorldEngineConfig;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import java.util.Collection;
@@ -26,13 +28,18 @@ public final class LobbyService {
     public static final String COLLISIONS_PATH = "advanced.lobbies.disable-player-collisions";
 
     private final JManhuntPlugin plugin;
+    private final LobbiesConfig lobbySettings;
+    private final WorldEngineConfig engineSettings;
     private final ManhuntMessages manhunt;
     private final Map<Integer, Lobby> lobbies = new HashMap<>();
     private final Map<UUID, Integer> membership = new HashMap<>();
     private final Map<Integer, Integer> nextSubIds = new HashMap<>();
 
-    public LobbyService(JManhuntPlugin plugin, ManhuntMessages manhunt) {
+    public LobbyService(JManhuntPlugin plugin, LobbiesConfig lobbySettings,
+            WorldEngineConfig engineSettings, ManhuntMessages manhunt) {
         this.plugin = plugin;
+        this.lobbySettings = lobbySettings;
+        this.engineSettings = engineSettings;
         this.manhunt = manhunt;
     }
 
@@ -59,14 +66,14 @@ public final class LobbyService {
     }
 
     public int defaultLobbyId() {
-        return plugin.configService().getInt("advanced.lobbies.default-lobby-id", 0);
+        return lobbySettings.getDefaultLobbyId();
     }
 
     /**
      * Multiple lobbies exist only with the world engine on.
      */
     public boolean multiLobbyAllowed() {
-        return plugin.configService().getBoolean("world-engine.enabled", false);
+        return engineSettings.isEnabled();
     }
 
     /**
@@ -74,8 +81,7 @@ public final class LobbyService {
      * reader of the path; every policy consumer calls this.
      */
     public MidMatchPolicy midMatchPolicy() {
-        return MidMatchPolicy.parse(plugin.configService()
-                .getString("advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"));
+        return lobbySettings.getMidMatchSetplayer();
     }
 
     /**
@@ -139,7 +145,7 @@ public final class LobbyService {
      * everyone when the toggle is off.
      */
     public void applyLobbyCollisions(Player player) {
-        if (!plugin.configService().getBoolean(COLLISIONS_PATH, true)) {
+        if (!lobbySettings.isDisablePlayerCollisions()) {
             return;
         }
         if (plugin.game().instanceOf(player.getUniqueId()).isPresent()) {
@@ -176,7 +182,7 @@ public final class LobbyService {
      * unit tests can exercise it without a running server.
      */
     void reapplyCollisions(Collection<? extends Player> onlinePlayers) {
-        boolean disabled = plugin.configService().getBoolean(COLLISIONS_PATH, true);
+        boolean disabled = lobbySettings.isDisablePlayerCollisions();
         for (Player online : onlinePlayers) {
             if (plugin.fakeSpectators().isFakeSpectator(online)) {
                 online.setCollidable(false);
@@ -197,8 +203,7 @@ public final class LobbyService {
         if (oldId.equals(newId)) {
             return;
         }
-        AnnounceMode mode = plugin.configService().getEnum(
-                "advanced.lobbies.announce-lobby-changes", AnnounceMode.class, AnnounceMode.ALL);
+        AnnounceMode mode = lobbySettings.getAnnounceLobbyChanges();
         boolean toSelf = mode.tellsSelf();
         boolean toMembers = mode.tellsMembers();
         if (!toSelf && !toMembers) {

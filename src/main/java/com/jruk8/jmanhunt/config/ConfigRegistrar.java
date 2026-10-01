@@ -4,6 +4,7 @@ import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
+import lombok.Getter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -24,7 +25,10 @@ public final class ConfigRegistrar {
             Set.of("match", "compass", "players", "server");
 
     private final JavaPlugin plugin;
+    private final SectionPinner sections = new SectionPinner();
+    @Getter
     private JManhuntConfig root;
+    @Getter
     private SoundsConfig sounds;
 
     public ConfigRegistrar(JavaPlugin plugin) {
@@ -54,14 +58,6 @@ public final class ConfigRegistrar {
         reload();
     }
 
-    public JManhuntConfig getRoot() {
-        return root;
-    }
-
-    public SoundsConfig getSounds() {
-        return sounds;
-    }
-
     /**
      * Saves defaults when missing, then loads and repairs both files.
      * A damaged file logs instead of crashing; previously loaded
@@ -70,6 +66,8 @@ public final class ConfigRegistrar {
     public void reload() {
         load(root, "config.yml");
         load(sounds, "sounds.yml");
+        sections.pin(root);
+        sections.pin(sounds);
     }
 
     /**

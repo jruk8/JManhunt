@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.config;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
+import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,6 +17,8 @@ import java.io.UncheckedIOException;
 public final class DevConfigRegistrar {
 
     private final JavaPlugin plugin;
+    private final SectionPinner sections = new SectionPinner();
+    @Getter
     private DevConfig devConfig;
 
     public DevConfigRegistrar(JavaPlugin plugin) {
@@ -30,10 +33,6 @@ public final class DevConfigRegistrar {
         reload();
     }
 
-    public DevConfig getDevConfig() {
-        return devConfig;
-    }
-
     public void reload() {
         if (this.devConfig == null) {
             return;
@@ -43,6 +42,7 @@ public final class DevConfigRegistrar {
                 throw new IOException("bundled Core/dev.yml is missing");
             }
             this.devConfig.load(bundled);
+            sections.pin(this.devConfig);
         } catch (IOException exception) {
             throw new UncheckedIOException("Could not load the bundled dev data.", exception);
         }

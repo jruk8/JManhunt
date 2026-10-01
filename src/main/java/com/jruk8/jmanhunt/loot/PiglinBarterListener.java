@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.loot;
 
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.MatchSettings;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.PiglinBarterEvent;
 
@@ -9,8 +10,12 @@ import org.bukkit.event.entity.PiglinBarterEvent;
  * Listens for PiglinBarterEvent and replaces the default loot with custom loot from a JSON file.
  */
 public class PiglinBarterListener extends LootTableListener<PiglinBarterEvent> {
-    public PiglinBarterListener(JManhuntPlugin plugin, GameManager game) {
+    private final MatchSettings.GameBoosts boosts;
+
+    public PiglinBarterListener(JManhuntPlugin plugin, GameManager game,
+            MatchSettings.GameBoosts boosts) {
         super(plugin, game);
+        this.boosts = boosts;
     }
 
     @EventHandler
@@ -32,7 +37,7 @@ public class PiglinBarterListener extends LootTableListener<PiglinBarterEvent> {
     }
 
     @Override
-    protected String getConfigKey() {
-        return "custom-piglin-barter";
+    protected boolean isBoostEnabled() {
+        return boosts.isCustomPiglinBarter();
     }
 }

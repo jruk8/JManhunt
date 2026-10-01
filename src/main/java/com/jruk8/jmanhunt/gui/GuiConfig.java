@@ -4,6 +4,8 @@ import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.Getter;
+import lombok.Setter;
 import org.bukkit.Material;
 
 /**
@@ -11,6 +13,8 @@ import org.bukkit.Material;
  * setting descriptions for setting-button lore. Jar-loaded and never
  * user editable; a unit test pins every settings path present.
  */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class GuiConfig extends OkaeriConfig {
 
@@ -23,22 +27,6 @@ public class GuiConfig extends OkaeriConfig {
 
     @Comment("Full setting path to its one-line lore description.")
     private Map<String, String> descriptions = new LinkedHashMap<>();
-
-    public Map<String, String> getCategories() {
-        return categories;
-    }
-
-    public void setCategories(Map<String, String> categories) {
-        this.categories = categories;
-    }
-
-    public Map<String, String> getDescriptions() {
-        return descriptions;
-    }
-
-    public void setDescriptions(Map<String, String> descriptions) {
-        this.descriptions = descriptions;
-    }
 
     /** Icon for a settings category, paper when unknown. */
     public Material categoryItem(String category) {

@@ -12,8 +12,8 @@ import static org.mockito.Mockito.when;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
-import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
@@ -49,9 +49,8 @@ class MatchLeaveServiceTest {
 
     private static Fixture fixture(Role role) {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        OverrideService overrides = mock(OverrideService.class);
-        when(overrides.getString(any(), anyString(), anyString())).thenReturn("SPECTATOR");
-        when(plugin.overrides()).thenReturn(overrides);
+        MatchSettingsFacade match = mock(MatchSettingsFacade.class);
+        when(match.gameLeaveDestination(any())).thenReturn("SPECTATOR");
         when(plugin.roleTeams()).thenReturn(mock(RoleTeamService.class));
         when(plugin.fakeSpectators()).thenReturn(mock(FakeSpectatorService.class));
         PlayerStateStore players = new PlayerStateStore();
@@ -63,7 +62,8 @@ class MatchLeaveServiceTest {
         Consumer<GameInstance> afterLeave = mock(Consumer.class);
         MatchLeaveService leaves = new MatchLeaveService(plugin, mock(MessageService.class), texts(),
                 players, mock(CompassManager.class), mock(GameStateCommandManager.class),
-                mock(ConfigService.class), mock(WorldEngineService.class), store, messaging,
+                new JManhuntConfig().getWorldEngine(), match,
+                mock(WorldEngineService.class), store, messaging,
                 mock(FlagStore.class), afterLeave);
         GameInstance instance = mock(GameInstance.class);
         when(instance.active()).thenReturn(true);

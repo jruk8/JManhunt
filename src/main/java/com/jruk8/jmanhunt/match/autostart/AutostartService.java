@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match.autostart;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -34,6 +35,7 @@ import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
  */
 public final class AutostartService {
     private final JManhuntPlugin plugin;
+    private final MatchSettingsFacade settings;
     private final MessageService messages;
     private final PlayerStateStore playerStates;
     private final LobbyService lobbies;
@@ -56,10 +58,12 @@ public final class AutostartService {
         int configured;
     }
 
-    public AutostartService(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
+    public AutostartService(JManhuntPlugin plugin, MatchSettingsFacade settings,
+            MessageService messages, PlayerStateStore playerStates,
             LobbyService lobbies, WorldEngineService worldEngine, MatchStore store,
             MatchMessaging messaging, ManhuntMessages manhunt, MatchControl control) {
         this.plugin = plugin;
+        this.settings = settings;
         this.messages = messages;
         this.playerStates = playerStates;
         this.lobbies = lobbies;
@@ -100,15 +104,14 @@ public final class AutostartService {
             cancelAutostartCountdown(lobbyId, true);
             return;
         }
-        if (!plugin.overrides().getBoolean(lobbyId, "settings.match.autostart.enabled", false)) {
+        if (!settings.autostartEnabled(lobbyId)) {
             cancelAutostartCountdown(lobbyId, true);
             return;
         }
         if (autostartCountdowns.containsKey(lobbyId)) {
             return;
         }
-        int configured = Math.max(0, plugin.overrides()
-                .getInt(lobbyId, "settings.match.autostart.countdown-seconds", 60));
+        int configured = Math.max(0, settings.autostartCountdownSeconds(lobbyId));
         if (configured == 0) {
             control.start(lobbyId);
             return;
@@ -169,8 +172,7 @@ public final class AutostartService {
     }
 
     private String countdownStyle(int lobbyId) {
-        return plugin.overrides().getString(lobbyId,
-                "settings.match.autostart.countdown-style", "VERSUS");
+        return settings.autostartCountdownStyle(lobbyId);
     }
 
     private String hunterColor() {
@@ -306,20 +308,16 @@ public final class AutostartService {
     private Map<Role, Integer> shortfallFor(Lobby lobby) {
         int[] counts = countQueuedRoles(lobby);
         return autostartShortfall(counts[0], counts[1],
-                plugin.overrides().getInt(lobby.id(),
-                        "settings.match.autostart.minimums.hunter", 1),
-                plugin.overrides().getInt(lobby.id(),
-                        "settings.match.autostart.minimums.speedrunner", 1));
+                settings.autostartMinimumHunters(lobby.id()),
+                settings.autostartMinimumSpeedrunners(lobby.id()));
     }
 
     /** Per-role overfill of a lobby's online members against the autostart maximums. */
     private Map<Role, Integer> overfillFor(Lobby lobby) {
         int[] counts = countQueuedRoles(lobby);
         return autostartOverfill(counts[0], counts[1],
-                plugin.overrides().getInt(lobby.id(),
-                        "settings.match.autostart.maximums.hunter", -1),
-                plugin.overrides().getInt(lobby.id(),
-                        "settings.match.autostart.maximums.speedrunner", -1));
+                settings.autostartMaximumHunters(lobby.id()),
+                settings.autostartMaximumSpeedrunners(lobby.id()));
     }
 
     /**
@@ -381,15 +379,14 @@ public final class AutostartService {
         if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
             return;
         }
-        if (!plugin.overrides().getBoolean(lobbyId, "settings.match.autostart.enabled", false)) {
+        if (!settings.autostartEnabled(lobbyId)) {
             return;
         }
-        if (!plugin.overrides().getBoolean(lobbyId,
-                "settings.match.autostart.broadcast-requirements.enabled", false)) {
+        if (!settings.autostartBroadcastEnabled(lobbyId)) {
             return;
         }
-        int intervalSeconds = Math.max(1, plugin.overrides().getInt(lobbyId,
-                "settings.match.autostart.broadcast-requirements.interval-seconds", 60));
+        int intervalSeconds =
+                Math.max(1, settings.autostartBroadcastIntervalSeconds(lobbyId));
         Optional<Lobby> lobby = lobbies.get(lobbyId);
         if (lobby.isEmpty() || liveMatchBlocks(lobbyId)
                 || autostartCountdowns.containsKey(lobbyId)) {

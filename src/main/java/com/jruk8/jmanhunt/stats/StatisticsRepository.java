@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.stats;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.StatisticsConfig;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.File;
@@ -23,31 +24,33 @@ public final class StatisticsRepository implements AutoCloseable {
         this.dataSource = dataSource;
     }
 
-    public static StatisticsRepository open(JManhuntPlugin plugin) throws SQLException {
-        String type = plugin.configService().getString("statistics.type", "sqlite").toLowerCase();
+    public static StatisticsRepository open(JManhuntPlugin plugin, StatisticsConfig statistics)
+            throws SQLException {
+        String type = statistics.getType().toLowerCase();
         if (type.equals("sqlite")) {
-            String file = plugin.configService().getString("statistics.sqlite.file", "statistics.db");
+            String file = statistics.getSqlite().getFile();
             File database = new File(plugin.getDataFolder(), file);
             if (database.getParentFile() != null) {
                 database.getParentFile().mkdirs();
             }
             StatisticsRepository repository = new StatisticsRepository(plugin, false,
                     dataSource("jdbc:sqlite:" + database, "", "",
-                            plugin.configService().getInt("statistics.pool-size", 4)));
+                            statistics.getPoolSize()));
             repository.initialize();
             return repository;
         }
         if (type.equals("postgresql") || type.equals("postgres")) {
-            String host = plugin.configService().getString("statistics.postgresql.host", "localhost");
-            int port = plugin.configService().getInt("statistics.postgresql.port", 5432);
-            String database = plugin.configService().getString("statistics.postgresql.database", "jmanhunt");
-            String user = plugin.configService().getString("statistics.postgresql.username", "jmanhunt");
-            String pass = plugin.configService().getString("statistics.postgresql.password", "change-me");
-            boolean ssl = plugin.configService().getBoolean("statistics.postgresql.ssl", false);
+            var postgres = statistics.getPostgresql();
+            String host = postgres.getHost();
+            int port = postgres.getPort();
+            String database = postgres.getDatabase();
+            String user = postgres.getUsername();
+            String pass = postgres.getPassword();
+            boolean ssl = postgres.isSsl();
             String jdbc = "jdbc:postgresql://" + host + ":" + port + "/" + database + "?sslmode="
                     + (ssl ? "require" : "disable");
             StatisticsRepository repository = new StatisticsRepository(plugin, true,
-                    dataSource(jdbc, user, pass, plugin.configService().getInt("statistics.pool-size", 4)));
+                    dataSource(jdbc, user, pass, statistics.getPoolSize()));
             repository.initialize();
             return repository;
         }

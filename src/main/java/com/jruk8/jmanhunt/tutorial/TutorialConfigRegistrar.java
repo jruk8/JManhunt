@@ -1,9 +1,11 @@
 package com.jruk8.jmanhunt.tutorial;
 
+import com.jruk8.jmanhunt.config.SectionPinner;
 import com.jruk8.jmanhunt.tutorial.config.TutorialConfig;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
+import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
@@ -19,6 +21,8 @@ import java.io.UncheckedIOException;
 public final class TutorialConfigRegistrar {
 
     private final JavaPlugin plugin;
+    private final SectionPinner sections = new SectionPinner();
+    @Getter
     private TutorialConfig tutorialConfig;
 
     public TutorialConfigRegistrar(JavaPlugin plugin) {
@@ -38,10 +42,6 @@ public final class TutorialConfigRegistrar {
         reload();
     }
 
-    public TutorialConfig getTutorialConfig() {
-        return tutorialConfig;
-    }
-
     public void reload() {
         if (this.tutorialConfig == null) {
             return;
@@ -51,6 +51,7 @@ public final class TutorialConfigRegistrar {
                 throw new IOException("bundled Core/tutorial.yml is missing");
             }
             this.tutorialConfig.load(bundled);
+            sections.pin(this.tutorialConfig);
         } catch (IOException exception) {
             throw new UncheckedIOException("Could not load the bundled setup dialogue.", exception);
         }

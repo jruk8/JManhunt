@@ -13,6 +13,7 @@ import com.jruk8.jmanhunt.config.CompassAnalysisSettings;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -179,13 +180,16 @@ class CompassAnalysisSessionsTest {
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.overrides()).thenReturn(
-                new OverrideService(configService, new LobbyConfig(), () -> { }));
+        OverrideService overrides =
+                new OverrideService(configService, new LobbyConfig(), () -> { });
+        when(plugin.overrides()).thenReturn(overrides);
+        CompassSettingsFacade settings =
+                new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         MessageService messages = new MessageService();
         MessagesConfig texts = new MessagesConfig();
         messages.reload(texts);
         SoundService sounds = mock(SoundService.class);
-        CompassAnalysisSessions sessions = new CompassAnalysisSessions(plugin, messages,
+        CompassAnalysisSessions sessions = new CompassAnalysisSessions(plugin, settings, messages,
                 texts.getCompass(), new PlayerStateStore(), mock(CompassTargetService.class),
                 mock(CompassSignalService.class), mock(CompassItemService.class),
                 new HashMap<UUID, Component>(), sounds);

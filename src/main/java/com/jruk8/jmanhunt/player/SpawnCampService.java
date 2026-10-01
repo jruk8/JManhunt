@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.player;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.ServerSettings;
 import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 
@@ -45,6 +46,7 @@ public final class SpawnCampService {
     }
 
     private final JManhuntPlugin plugin;
+    private final ServerSettings.AntiSpawnCamp antiSpawnCamp;
     private final MessageService messages;
     private final GameMessages game;
     private final Map<KillKey, Deque<Long>> kills = new HashMap<>();
@@ -53,13 +55,15 @@ public final class SpawnCampService {
     private final Set<String> warnedRoles = new HashSet<>();
     private final LongSupplier clock;
 
-    public SpawnCampService(JManhuntPlugin plugin, MessageService messages, GameMessages game) {
-        this(plugin, messages, game, System::currentTimeMillis);
+    public SpawnCampService(JManhuntPlugin plugin, ServerSettings.AntiSpawnCamp antiSpawnCamp,
+            MessageService messages, GameMessages game) {
+        this(plugin, antiSpawnCamp, messages, game, System::currentTimeMillis);
     }
 
-    SpawnCampService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
-            LongSupplier clock) {
+    SpawnCampService(JManhuntPlugin plugin, ServerSettings.AntiSpawnCamp antiSpawnCamp,
+            MessageService messages, GameMessages game, LongSupplier clock) {
         this.plugin = plugin;
+        this.antiSpawnCamp = antiSpawnCamp;
         this.messages = messages;
         this.game = game;
         this.clock = clock;
@@ -89,18 +93,17 @@ public final class SpawnCampService {
      * warning, no punishment.
      */
     public void handleKill(long matchId, Player attacker, Player victim, Role attackerRole) {
-        if (!plugin.configService().getBoolean("settings.server.anti-spawn-camp.enabled", true)) {
+        if (!antiSpawnCamp.isEnabled()) {
             return;
         }
-        List<String> monitoredRoles = plugin.configService()
-                .getStringList("settings.server.anti-spawn-camp.monitored-roles");
+        List<String> monitoredRoles = antiSpawnCamp.getMonitoredRoles();
         warnUnknownRoles(monitoredRoles);
         if (!isMonitored(attackerRole, monitoredRoles)) {
             return;
         }
-        int limit = plugin.configService().getInt("settings.server.anti-spawn-camp.kills", 3);
-        long windowMillis = (long) (plugin.configService()
-                .getDouble("settings.server.anti-spawn-camp.window-seconds", 120.0) * 1000.0);
+        int limit = antiSpawnCamp.getKills();
+        long windowMillis =
+                (long) (antiSpawnCamp.getWindowSeconds() * 1000.0);
         int count = recordKill(matchId, attacker.getUniqueId(), victim.getUniqueId(), windowMillis);
         if (count < Math.max(1, limit)) {
             if (shouldWarn(count, limit)) {
@@ -109,10 +112,8 @@ public final class SpawnCampService {
             }
             return;
         }
-        Punishment first = Punishment.parse(plugin.configService()
-                .getString("settings.server.anti-spawn-camp.first-punishment", "GEAR-WIPE"));
-        boolean killOnSecond = plugin.configService()
-                .getBoolean("settings.server.anti-spawn-camp.kill-on-second-time", true);
+        Punishment first = Punishment.parse(antiSpawnCamp.getFirstPunishment());
+        boolean killOnSecond = antiSpawnCamp.isKillOnSecondTime();
         int offense = recordOffense(matchId, attacker.getUniqueId());
         if (offense >= 2 && killOnSecond) {
             quietKill(attacker);

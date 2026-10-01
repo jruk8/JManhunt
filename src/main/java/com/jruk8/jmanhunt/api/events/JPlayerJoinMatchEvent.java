@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.api.events;
 
 import com.jruk8.jmanhunt.api.PlayerRole;
+import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import java.util.UUID;
@@ -14,29 +15,20 @@ import java.util.UUID;
 public class JPlayerJoinMatchEvent extends Event {
 
     private static final HandlerList HANDLERS = new HandlerList();
+    /** Returns the id of the match that was joined. */
+    @Getter
     private final long matchId;
+    /** Returns the id of the player that joined. */
+    @Getter
     private final UUID playerId;
+    /** Returns the role the player joined with. */
+    @Getter
     private final PlayerRole role;
 
     public JPlayerJoinMatchEvent(long matchId, UUID playerId, PlayerRole role) {
         this.matchId = matchId;
         this.playerId = playerId;
         this.role = role;
-    }
-
-    /** Returns the id of the match that was joined. */
-    public long getMatchId() {
-        return matchId;
-    }
-
-    /** Returns the id of the player that joined. */
-    public UUID getPlayerId() {
-        return playerId;
-    }
-
-    /** Returns the role the player joined with. */
-    public PlayerRole getRole() {
-        return role;
     }
 
     @Override

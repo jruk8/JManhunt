@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.lobby.SubLobby;
 import com.jruk8.jmanhunt.player.Role;
+import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayList;
@@ -23,25 +24,41 @@ public final class GameInstance {
     private final long matchId;
     private final int originLobbyId;
     private final OptionalLong cellIndex;
+    /** Re-anchors the match clock, used once when the game begins. */
+    @Setter
     private long startedAtMillis;
+    @Setter
     private SubLobby subLobby;
     private final Set<UUID> assigned = new HashSet<>();
     private final Set<UUID> activeParticipants = new HashSet<>();
+    @Setter
     private boolean active = true;
+    @Setter
     private boolean begun;
+    @Setter
     private boolean ending;
+    @Setter
     private boolean endPhaseDone;
+    @Setter
     private boolean endStatsShown;
     private final HeadstartState hunterHeadstart = new HeadstartState();
     private final HeadstartState runnerHeadstart = new HeadstartState();
+    @Setter
     private BukkitTask waitingReminderTask;
+    @Setter
     private BukkitTask waitingExpiryTask;
+    @Setter
     private int waitingDelayConfigured;
+    @Setter
     private long waitingStartTime;
+    @Setter
     private BukkitTask timeLimitTask;
     private final java.util.Set<Long> timeAnnounced = new java.util.HashSet<>();
+    @Setter
     private boolean runnerUnlimitedAnnounced;
+    @Setter
     private boolean hunterUnlimitedAnnounced;
+    @Setter
     private Location startCenter;
     private long cachedElapsedMillis;
     /** Modifiers already ON_START-fired by mid-match toggles this match. */
@@ -50,7 +67,6 @@ public final class GameInstance {
     private final Set<String> toggleCleanedModifiers = new HashSet<>();
     /** Permanent deaths in death order (oldest first). */
     private final List<DeadPlayer> deadPlayers = new ArrayList<>();
-
 
     public GameInstance(long matchId, int originLobbyId, OptionalLong cellIndex, long startedAtMillis) {
         this.matchId = matchId;
@@ -78,21 +94,12 @@ public final class GameInstance {
         return startedAtMillis;
     }
 
-    /** Re-anchors the match clock, used once when the game begins. */
-    public void setStartedAtMillis(long startedAtMillis) {
-        this.startedAtMillis = startedAtMillis;
-    }
-
     /**
      * Sublobby this match runs as, or null when the parent lobby hosts
      * directly (engine off, or a non-SUBLOBBY policy).
      */
     public SubLobby subLobby() {
         return subLobby;
-    }
-
-    public void setSubLobby(SubLobby subLobby) {
-        this.subLobby = subLobby;
     }
 
     /** Lobby tag for status output: L{id}, or L{id}-{sub} when sublobbed. */
@@ -163,16 +170,8 @@ public final class GameInstance {
         return active;
     }
 
-    public void setActive(boolean active) {
-        this.active = active;
-    }
-
     public boolean begun() {
         return begun;
-    }
-
-    public void setBegun(boolean begun) {
-        this.begun = begun;
     }
 
     public boolean ending() {
@@ -195,24 +194,12 @@ public final class GameInstance {
         return toggleCleanedModifiers.add(name);
     }
 
-    public void setEnding(boolean ending) {
-        this.ending = ending;
-    }
-
     public boolean endPhaseDone() {
         return endPhaseDone;
     }
 
-    public void setEndPhaseDone(boolean endPhaseDone) {
-        this.endPhaseDone = endPhaseDone;
-    }
-
     public boolean endStatsShown() {
         return endStatsShown;
-    }
-
-    public void setEndStatsShown(boolean endStatsShown) {
-        this.endStatsShown = endStatsShown;
     }
 
     public HeadstartState hunterHeadstart() {
@@ -231,40 +218,20 @@ public final class GameInstance {
         return waitingReminderTask;
     }
 
-    public void setWaitingReminderTask(BukkitTask waitingReminderTask) {
-        this.waitingReminderTask = waitingReminderTask;
-    }
-
     public BukkitTask waitingExpiryTask() {
         return waitingExpiryTask;
-    }
-
-    public void setWaitingExpiryTask(BukkitTask waitingExpiryTask) {
-        this.waitingExpiryTask = waitingExpiryTask;
     }
 
     public int waitingDelayConfigured() {
         return waitingDelayConfigured;
     }
 
-    public void setWaitingDelayConfigured(int waitingDelayConfigured) {
-        this.waitingDelayConfigured = waitingDelayConfigured;
-    }
-
     public long waitingStartTime() {
         return waitingStartTime;
     }
 
-    public void setWaitingStartTime(long waitingStartTime) {
-        this.waitingStartTime = waitingStartTime;
-    }
-
     public BukkitTask timeLimitTask() {
         return timeLimitTask;
-    }
-
-    public void setTimeLimitTask(BukkitTask timeLimitTask) {
-        this.timeLimitTask = timeLimitTask;
     }
 
     /** Announced countdown thresholds, in whole seconds remaining. */
@@ -277,17 +244,9 @@ public final class GameInstance {
         return runnerUnlimitedAnnounced;
     }
 
-    public void setRunnerUnlimitedAnnounced(boolean announced) {
-        this.runnerUnlimitedAnnounced = announced;
-    }
-
     /** Whether the side's unlimited-lives line has fired this match. */
     public boolean hunterUnlimitedAnnounced() {
         return hunterUnlimitedAnnounced;
-    }
-
-    public void setHunterUnlimitedAnnounced(boolean announced) {
-        this.hunterUnlimitedAnnounced = announced;
     }
 
     /** Elapsed millis between match start and the given moment; frozen once the match ends. */
@@ -322,7 +281,4 @@ public final class GameInstance {
         return startCenter;
     }
 
-    public void setStartCenter(Location startCenter) {
-        this.startCenter = startCenter;
-    }
 }

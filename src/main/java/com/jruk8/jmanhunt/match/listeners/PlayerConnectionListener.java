@@ -2,7 +2,8 @@ package com.jruk8.jmanhunt.match.listeners;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MatchConfig;
+import com.jruk8.jmanhunt.config.PlayerSettings;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.message.GameMessages;
@@ -33,7 +34,8 @@ public final class PlayerConnectionListener implements Listener {
     private final PlayerStateStore playerStates;
     private final GameManager game;
     private final MessageService messages;
-    private final ConfigService config;
+    private final PlayerSettings players;
+    private final MatchConfig.DisconnectHandling disconnectHandling;
     private final LobbyService lobbies;
     private final LobbyTeleporter lobbyTeleporter;
     private final WorldEngineService worldEngine;
@@ -43,7 +45,8 @@ public final class PlayerConnectionListener implements Listener {
     private final GameMessages gameTexts;
 
     public PlayerConnectionListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
-            MessageService messages, ConfigService config, LobbyService lobbies,
+            MessageService messages, PlayerSettings players,
+            MatchConfig.DisconnectHandling disconnectHandling, LobbyService lobbies,
             LobbyTeleporter lobbyTeleporter, WorldEngineService worldEngine,
             SpeedrunnerDisconnectTracker disconnects, Map<UUID, BukkitTask> disconnectTasks,
             CompassManager compass, GameMessages gameTexts) {
@@ -51,7 +54,8 @@ public final class PlayerConnectionListener implements Listener {
         this.playerStates = playerStates;
         this.game = game;
         this.messages = messages;
-        this.config = config;
+        this.players = players;
+        this.disconnectHandling = disconnectHandling;
         this.lobbies = lobbies;
         this.lobbyTeleporter = lobbyTeleporter;
         this.worldEngine = worldEngine;
@@ -108,7 +112,7 @@ public final class PlayerConnectionListener implements Listener {
         if (playerStates.role(player) != Role.AFK && !game.hasLobbyLocation(lobbyId)) {
             game.joinLeastTimeMatch(player);
         } else if (playerStates.role(player) == Role.NONE
-                && config.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
+                && players.getRoles().getTurnNonesSpectator().isEnabled()) {
             // Joining NONEs take fake spectator mode only with the
             // toggle; AFK players keep their role and their mode.
             plugin.fakeSpectators().enable(player);
@@ -120,7 +124,7 @@ public final class PlayerConnectionListener implements Listener {
         plugin.roleTeams().remove(player);
         int lobbyId = lobbyIdFor(player.getUniqueId());
         lobbies.remove(player.getUniqueId());
-        if (config.getBoolean("settings.players.roles.reset-on-leave.enabled", true)
+        if (players.getRoles().getResetOnLeave().isEnabled()
                 && playerStates.role(player) != Role.AFK
                 && (lobbyId < 0 || game.instanceForLobby(lobbyId).isEmpty())) {
             playerStates.setRole(player.getUniqueId(), Role.NONE);
@@ -176,10 +180,11 @@ public final class PlayerConnectionListener implements Listener {
         if (match.isEmpty()) {
             return;
         }
-        String roleKey = role == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
-        String handling = "advanced.advanced-match-controls.disconnect-handling." + roleKey + ".";
-        int maxStrikes = config.getInt(handling + "max-strikes", 3);
-        int graceSeconds = Math.max(0, config.getInt(handling + "reconnect-grace-seconds", 60));
+        var rules = role == Role.SPEEDRUNNER
+                ? disconnectHandling.getSpeedrunner()
+                : disconnectHandling.getHunter();
+        int maxStrikes = rules.getMaxStrikes();
+        int graceSeconds = Math.max(0, rules.getReconnectGraceSeconds());
         DisconnectDecision decision =
                 disconnects.registerDisconnect(player.getUniqueId(), matchId, maxStrikes);
         cancelDisconnectTask(disconnectTasks, player.getUniqueId());
@@ -221,7 +226,7 @@ public final class PlayerConnectionListener implements Listener {
         // Disconnect removal always lands on NONE; the toggle decides the
         // mode. AFK players are never tracked, so they keep theirs.
         Player onlinePlayer = Bukkit.getPlayer(playerId);
-        if (onlinePlayer != null && config.getBoolean("settings.players.roles.turn-nones-spectator.enabled", false)) {
+        if (onlinePlayer != null && players.getRoles().getTurnNonesSpectator().isEnabled()) {
             plugin.fakeSpectators().enable(onlinePlayer);
         }
         if (onlinePlayer != null) {

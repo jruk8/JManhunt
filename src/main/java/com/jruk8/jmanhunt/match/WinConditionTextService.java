@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.match;
 
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.DurationFormat;
+import com.jruk8.jmanhunt.config.PlayerSettings;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.WinconMessages;
@@ -16,14 +16,14 @@ import java.util.Map;
 public final class WinConditionTextService {
     private final MessageService messages;
     private final WinconMessages wincon;
-    private final ConfigService configService;
+    private final PlayerSettings.Respawn respawn;
     private final WinConditionEngine winConditionEngine;
 
     public WinConditionTextService(MessageService messages, WinconMessages wincon,
-            ConfigService configService, WinConditionEngine winConditionEngine) {
+            PlayerSettings.Respawn respawn, WinConditionEngine winConditionEngine) {
         this.messages = messages;
         this.wincon = wincon;
-        this.configService = configService;
+        this.respawn = respawn;
         this.winConditionEngine = winConditionEngine;
     }
 
@@ -32,7 +32,7 @@ public final class WinConditionTextService {
         // Hunters with infinite lives can never be eliminated, so the
         // elimination line hides instead of promising an un-winnable goal.
         List<String> conditions = new ArrayList<>();
-        int hunterLives = configService.getInt("settings.players.respawn.hunter.lives", -1);
+        int hunterLives = respawn.getHunter().getLives();
         if (hunterLives != -1) {
             conditions.add(winconFragment(wincon.getEliminateHunters(), Map.of()));
         }

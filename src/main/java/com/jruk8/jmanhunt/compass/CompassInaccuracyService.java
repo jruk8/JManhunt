@@ -1,16 +1,16 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import org.bukkit.Location;
 import java.util.UUID;
 
 /** Signal inaccuracy verdicts and donut samples for tracking attempts. */
 final class CompassInaccuracyService {
-    private final JManhuntPlugin plugin;
+    private final CompassSettingsFacade settings;
     private final HotspotService hotspots;
 
-    CompassInaccuracyService(JManhuntPlugin plugin, HotspotService hotspots) {
-        this.plugin = plugin;
+    CompassInaccuracyService(CompassSettingsFacade settings, HotspotService hotspots) {
+        this.settings = settings;
         this.hotspots = hotspots;
     }
 
@@ -25,16 +25,13 @@ final class CompassInaccuracyService {
      * {@link #resolve}.
      */
     SignalInaccuracy.Config config(Integer lobby) {
-        String base = "settings.compass.signal.inaccuracy.";
-        var overrides = plugin.overrides();
         return new SignalInaccuracy.Config(
-                overrides.getBoolean(lobby, base + "enabled", false),
-                overrides.getDouble(lobby, base + "inner-deadzone", 0.4),
-                overrides.getDouble(lobby, base + "drift-radius", 0.6),
-                overrides.getDouble(lobby, base + "thresholds.min-distance", 100.0),
-                overrides.getDouble(lobby, base + "thresholds.max-distance", 1000.0),
-                SignalInaccuracy.parseTarget(
-                        overrides.getString(lobby, base + "inaccurate-on", "BOTH")));
+                settings.inaccuracyEnabled(lobby),
+                settings.inaccuracyInnerDeadzone(lobby),
+                settings.inaccuracyDriftRadius(lobby),
+                settings.inaccuracyMinDistance(lobby),
+                settings.inaccuracyMaxDistance(lobby),
+                SignalInaccuracy.parseTarget(settings.inaccuracyTarget(lobby)));
     }
 
     /**
@@ -52,8 +49,7 @@ final class CompassInaccuracyService {
                 && config.target() != SignalInaccuracy.InaccurateOn.BOTH)) {
             return false;
         }
-        String item = plugin.overrides().getString(lobby,
-                "settings.compass.obtaining.item", "compass");
+        String item = settings.obtainingItem(lobby);
         return item != null && item.trim().equals("compass");
     }
 
@@ -72,11 +68,8 @@ final class CompassInaccuracyService {
                 && config.target() != SignalInaccuracy.InaccurateOn.BOTH)) {
             return false;
         }
-        var overrides = plugin.overrides();
-        return overrides.getBoolean(lobby,
-                "settings.compass.feedback.actionbar.show-distance", true)
-                || overrides.getBoolean(lobby,
-                        "settings.compass.feedback.actionbar.show-distance-delta.enabled", true);
+        return settings.actionbarShowDistance(lobby)
+                || settings.deltaEnabled(lobby);
     }
 
     /**

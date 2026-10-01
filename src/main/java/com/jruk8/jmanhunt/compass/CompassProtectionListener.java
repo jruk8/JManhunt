@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.MiscConfig;
 import com.jruk8.jmanhunt.match.GameManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -22,11 +23,14 @@ import org.bukkit.inventory.ItemStack;
 
 public final class CompassProtectionListener implements Listener {
     private final JManhuntPlugin plugin;
+    private final MiscConfig.Interop interop;
     private final CompassManager compass;
     private final GameManager game;
 
-    public CompassProtectionListener(JManhuntPlugin plugin, CompassManager compass, GameManager game) {
+    public CompassProtectionListener(JManhuntPlugin plugin, MiscConfig.Interop interop,
+            CompassManager compass, GameManager game) {
         this.plugin = plugin;
+        this.interop = interop;
         this.compass = compass;
         this.game = game;
     }
@@ -149,8 +153,7 @@ public final class CompassProtectionListener implements Listener {
      */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onNavwand(PlayerInteractEvent event) {
-        if (!plugin.configService()
-                .getBoolean("advanced.misc.interop.disable-worldedit-navwand", true)) {
+        if (!interop.isDisableWorldeditNavwand()) {
             return;
         }
         ItemStack item = event.getItem();

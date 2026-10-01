@@ -1,6 +1,8 @@
 package com.jruk8.jmanhunt.lobby.world;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.LobbiesConfig;
+import com.jruk8.jmanhunt.config.WorldEngineConfig;
 import com.jruk8.jmanhunt.world.DimensionWorlds;
 import org.bukkit.Bukkit;
 import org.bukkit.Difficulty;
@@ -29,6 +31,8 @@ public final class LobbyWorldManager {
     public static final long CONFIRM_TIMEOUT_MILLIS = 10_000L;
 
     private final JManhuntPlugin plugin;
+    private final LobbiesConfig lobbySettings;
+    private final WorldEngineConfig engineSettings;
     private final LongSupplier clock;
     /** Sender keys with an armed generation confirmation. */
     private final Map<String, Pending> pending = new HashMap<>();
@@ -37,23 +41,29 @@ public final class LobbyWorldManager {
     private record Pending(String worldName, long expiresAt) {
     }
 
-    public LobbyWorldManager(JManhuntPlugin plugin) {
-        this(plugin, System::currentTimeMillis);
+    public LobbyWorldManager(JManhuntPlugin plugin, LobbiesConfig lobbySettings,
+            WorldEngineConfig engineSettings) {
+        this(plugin, lobbySettings, engineSettings, System::currentTimeMillis);
     }
 
-    public LobbyWorldManager(JManhuntPlugin plugin, LongSupplier clock) {
+    public LobbyWorldManager(JManhuntPlugin plugin, LobbiesConfig lobbySettings,
+            WorldEngineConfig engineSettings, LongSupplier clock) {
         this.plugin = plugin;
+        this.lobbySettings = lobbySettings;
+        this.engineSettings = engineSettings;
         this.clock = clock;
     }
 
     public LobbyWorldManager(LongSupplier clock) {
         this.plugin = null;
+        this.lobbySettings = null;
+        this.engineSettings = null;
         this.clock = clock;
     }
 
     /** Configured lobby world name, live-read so renames apply on reload. */
     public String lobbyWorldName() {
-        return plugin.configService().getString("advanced.lobbies.lobby-world-name", "jmh_lobby");
+        return lobbySettings.getLobbyWorldName();
     }
 
     /** True when the lobby world name collides with the game world name. Pure for tests. */
@@ -65,7 +75,7 @@ public final class LobbyWorldManager {
     /** True when a world with the lobby name is loaded or has a folder waiting. */
     public boolean lobbyWorldExists() {
         return DimensionWorlds.exists(plugin.getServer().getWorldContainer(),
-                plugin.configService().getString("world-engine.world-name", "world"),
+                engineSettings.getWorldName(),
                 lobbyWorldName());
     }
 
@@ -103,7 +113,7 @@ public final class LobbyWorldManager {
      */
     public Optional<LobbyWorld> ensureLobbyWorld(Optional<LobbyPreset> presetOverride) {
         String name = lobbyWorldName();
-        if (namesClash(name, plugin.configService().getString("world-engine.world-name", "world"))) {
+        if (namesClash(name, engineSettings.getWorldName())) {
             plugin.logger().warning("Refusing to load lobby world '" + name
                     + "': it matches the game world. Rename advanced.lobbies.lobby-world-name.");
             return Optional.empty();
@@ -113,7 +123,7 @@ public final class LobbyWorldManager {
             return Optional.of(new LobbyWorld(loaded, false, false));
         }
         File container = plugin.getServer().getWorldContainer();
-        String gameWorld = plugin.configService().getString("world-engine.world-name", "world");
+        String gameWorld = engineSettings.getWorldName();
         boolean fresh = !DimensionWorlds.folderExists(container, gameWorld, name);
         World world;
         try {
@@ -151,7 +161,7 @@ public final class LobbyWorldManager {
      * misconfiguration can never freeze time and weather where matches run.
      */
     private void applyLobbyDefaults(World world) {
-        String gameWorldName = plugin.configService().getString("world-engine.world-name", "world");
+        String gameWorldName = engineSettings.getWorldName();
         if (namesClash(world.getName(), gameWorldName)) {
             plugin.logger().warning("Refusing to apply lobby defaults to '" + world.getName()
                     + "': it matches the game world. Rename advanced.lobbies.lobby-world-name.");

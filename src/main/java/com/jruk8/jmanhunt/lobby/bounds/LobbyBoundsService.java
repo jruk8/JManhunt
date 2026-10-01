@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.lobby.bounds;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -40,6 +41,7 @@ import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 public final class LobbyBoundsService implements Listener {
 
     private final JManhuntPlugin plugin;
+    private final LobbiesConfig.Bounds boundsSettings;
     private final LobbyService lobbies;
     private final PlayerStateStore playerStates;
     private final GameManager game;
@@ -54,12 +56,14 @@ public final class LobbyBoundsService implements Listener {
     /** Last checked block position per player, packed for one-lookup exits. */
     private final Map<UUID, Long> lastChecked = new HashMap<>();
 
-    public LobbyBoundsService(JManhuntPlugin plugin, LobbyService lobbies, PlayerStateStore playerStates,
+    public LobbyBoundsService(JManhuntPlugin plugin, LobbiesConfig.Bounds boundsSettings,
+            LobbyService lobbies, PlayerStateStore playerStates,
             GameManager game, MessageService messages, SoundService sounds, Supplier<String> lobbyWorldName,
             DebugService debug, Supplier<Map<UUID, Location>> boundPos1,
             Supplier<Map<UUID, Location>> boundPos2, Supplier<Map<UUID, Location>> devPos1,
             Supplier<Map<UUID, Location>> devPos2) {
         this.plugin = plugin;
+        this.boundsSettings = boundsSettings;
         this.lobbies = lobbies;
         this.playerStates = playerStates;
         this.game = game;
@@ -206,7 +210,7 @@ public final class LobbyBoundsService implements Listener {
             game.updateAutostartState();
             return;
         }
-        int target = plugin.configService().getInt("advanced.lobbies.bounds.exit-lobby-id", -1);
+        int target = boundsSettings.getExitLobbyId();
         int destination = exitDestination(lobbyId, target, lobbies.multiLobbyAllowed());
         if (destination == lobbyId) {
             return;
@@ -222,8 +226,7 @@ public final class LobbyBoundsService implements Listener {
     }
 
     private LobbyBoundsExitBehavior exitBehavior() {
-        return LobbyBoundsExitBehavior.parse(
-                plugin.configService().getString("advanced.lobbies.bounds.exit-behavior", "KEEP_IN_LOBBY"));
+        return LobbyBoundsExitBehavior.parse(boundsSettings.getExitBehavior());
     }
 
     /**

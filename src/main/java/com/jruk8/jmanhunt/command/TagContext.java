@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import lombok.Setter;
 
 /**
  * Evaluation context for extended tags: the match scope plus the
@@ -81,7 +82,14 @@ public final class TagContext {
     private final BiConsumer<String, String> roleMessage;
     private final RoleSoundSink roleSound;
     private final BiConsumer<String, String> commandRun;
+    /** Stamps the source line; managers call this per line. */
+    @Setter
     private Provenance provenance;
+    /**
+     * Points this run at the shared match store; managers call this
+     * per run. Fresh contexts start with a private empty store.
+     */
+    @Setter
     private TagCooldownStore cooldowns = new TagCooldownStore();
     private int stepBudget = TagLoops.LOOP_LIMIT;
     private boolean limitFired;
@@ -232,14 +240,6 @@ public final class TagContext {
         return cooldowns;
     }
 
-    /**
-     * Points this run at the shared match store; managers call this
-     * per run. Fresh contexts start with a private empty store.
-     */
-    public void setCooldowns(TagCooldownStore cooldowns) {
-        this.cooldowns = cooldowns;
-    }
-
     public String containerId() {
         return containerId;
     }
@@ -312,11 +312,6 @@ public final class TagContext {
     /** Source line stamped by the manager before each evaluation. */
     public Provenance provenance() {
         return provenance;
-    }
-
-    /** Stamps the source line; managers call this per line. */
-    public void setProvenance(Provenance provenance) {
-        this.provenance = provenance;
     }
 
     /** Pushes one for-loop item; nested loops see the innermost. */

@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.api.events;
 
 import com.jruk8.jmanhunt.api.PlayerRole;
+import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
@@ -12,22 +13,16 @@ import org.bukkit.event.HandlerList;
 public class JMatchEndEvent extends Event {
 
     private static final HandlerList HANDLERS = new HandlerList();
+    /** Returns the id of the match that ended. */
+    @Getter
     private final long matchId;
+    /** Returns the winning role ({@link PlayerRole#HUNTER} or {@link PlayerRole#SPEEDRUNNER}). */
+    @Getter
     private final PlayerRole winner;
 
     public JMatchEndEvent(long matchId, PlayerRole winner) {
         this.matchId = matchId;
         this.winner = winner;
-    }
-
-    /** Returns the id of the match that ended. */
-    public long getMatchId() {
-        return matchId;
-    }
-
-    /** Returns the winning role ({@link PlayerRole#HUNTER} or {@link PlayerRole#SPEEDRUNNER}). */
-    public PlayerRole getWinner() {
-        return winner;
     }
 
     @Override

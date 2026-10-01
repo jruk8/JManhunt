@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Interactive setup tutorial: dialogue format, sounds, fixed messages, and
@@ -25,6 +27,8 @@ import java.util.Map;
         "Going back is automatic from the visit stack; 'b' on the first",
         "dialogue quits like 'q'."
 })
+@Getter
+@Setter
 public class TutorialConfig extends OkaeriConfig {
 
     @Comment("Dialogue line templates and the recommendation tag.")
@@ -39,39 +43,9 @@ public class TutorialConfig extends OkaeriConfig {
     @Comment("Dialogue nodes by id. The tutorial starts at 'start'.")
     private Map<String, TutorialNode> nodes = new LinkedHashMap<>();
 
-    public TutorialFormat getFormat() {
-        return format;
-    }
-
-    public void setFormat(TutorialFormat format) {
-        this.format = format;
-    }
-
-    public TutorialSounds getSounds() {
-        return sounds;
-    }
-
-    public void setSounds(TutorialSounds sounds) {
-        this.sounds = sounds;
-    }
-
-    public TutorialMessages getMessages() {
-        return messages;
-    }
-
-    public void setMessages(TutorialMessages messages) {
-        this.messages = messages;
-    }
-
-    public Map<String, TutorialNode> getNodes() {
-        return nodes;
-    }
-
-    public void setNodes(Map<String, TutorialNode> nodes) {
-        this.nodes = nodes;
-    }
-
     /** Dialogue line templates. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class TutorialFormat extends OkaeriConfig {
 
@@ -98,64 +72,11 @@ public class TutorialConfig extends OkaeriConfig {
         @Comment("Inserted as {notrecommended} for discouraged answers.")
         private String notrecommended = "<red>(not recommended)</red> ";
 
-        public List<String> getHeader() {
-            return header;
-        }
-
-        public void setHeader(List<String> header) {
-            this.header = header;
-        }
-
-        public String getQuestion() {
-            return question;
-        }
-
-        public void setQuestion(String question) {
-            this.question = question;
-        }
-
-        public String getAnswer() {
-            return answer;
-        }
-
-        public void setAnswer(String answer) {
-            this.answer = answer;
-        }
-
-        public String getSeparator() {
-            return separator;
-        }
-
-        public void setSeparator(String separator) {
-            this.separator = separator;
-        }
-
-        public String getFooter() {
-            return footer;
-        }
-
-        public void setFooter(String footer) {
-            this.footer = footer;
-        }
-
-        public String getRecommendation() {
-            return recommendation;
-        }
-
-        public void setRecommendation(String recommendation) {
-            this.recommendation = recommendation;
-        }
-
-        public String getNotrecommended() {
-            return notrecommended;
-        }
-
-        public void setNotrecommended(String notrecommended) {
-            this.notrecommended = notrecommended;
-        }
     }
 
     /** One feedback sound. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class TutorialSound extends OkaeriConfig {
 
@@ -176,40 +97,11 @@ public class TutorialConfig extends OkaeriConfig {
             return sound;
         }
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        public float getVolume() {
-            return volume;
-        }
-
-        public void setVolume(float volume) {
-            this.volume = volume;
-        }
-
-        public float getPitch() {
-            return pitch;
-        }
-
-        public void setPitch(float pitch) {
-            this.pitch = pitch;
-        }
     }
 
     /** Path-completion feedback sound. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class TutorialSounds extends OkaeriConfig {
 
@@ -217,16 +109,11 @@ public class TutorialConfig extends OkaeriConfig {
         private TutorialSound congratulations =
                 TutorialSound.of("entity.player.levelup", 1.0f, 0.8f);
 
-        public TutorialSound getCongratulations() {
-            return congratulations;
-        }
-
-        public void setCongratulations(TutorialSound congratulations) {
-            this.congratulations = congratulations;
-        }
     }
 
     /** Fixed engine messages. {prefix} resolves in the adapter. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class TutorialMessages extends OkaeriConfig {
 
@@ -242,40 +129,11 @@ public class TutorialConfig extends OkaeriConfig {
         @Comment("Sent when the node graph is broken (missing node).")
         private String broken = "{prefix}<red>Setup is broken: tell an admin to check Core/tutorial.yml.";
 
-        public String getInvalid() {
-            return invalid;
-        }
-
-        public void setInvalid(String invalid) {
-            this.invalid = invalid;
-        }
-
-        public String getTimeout() {
-            return timeout;
-        }
-
-        public void setTimeout(String timeout) {
-            this.timeout = timeout;
-        }
-
-        public String getQuit() {
-            return quit;
-        }
-
-        public void setQuit(String quit) {
-            this.quit = quit;
-        }
-
-        public String getBroken() {
-            return broken;
-        }
-
-        public void setBroken(String broken) {
-            this.broken = broken;
-        }
     }
 
     /** One dialogue: question lines plus numbered answers. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class TutorialNode extends OkaeriConfig {
 
@@ -283,32 +141,11 @@ public class TutorialConfig extends OkaeriConfig {
         private List<TutorialAnswer> answers = new ArrayList<>();
         private boolean celebrate = false;
 
-        public List<String> getQuestion() {
-            return question;
-        }
-
-        public void setQuestion(List<String> question) {
-            this.question = question;
-        }
-
-        public List<TutorialAnswer> getAnswers() {
-            return answers;
-        }
-
-        public void setAnswers(List<TutorialAnswer> answers) {
-            this.answers = answers;
-        }
-
-        public boolean isCelebrate() {
-            return celebrate;
-        }
-
-        public void setCelebrate(boolean celebrate) {
-            this.celebrate = celebrate;
-        }
     }
 
     /** One answer: label, optional commands, and where it leads. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class TutorialAnswer extends OkaeriConfig {
 
@@ -318,44 +155,5 @@ public class TutorialConfig extends OkaeriConfig {
         private List<String> commands = new ArrayList<>();
         private String next = "EXIT";
 
-        public String getText() {
-            return text;
-        }
-
-        public void setText(String text) {
-            this.text = text;
-        }
-
-        public boolean isRecommended() {
-            return recommended;
-        }
-
-        public void setRecommended(boolean recommended) {
-            this.recommended = recommended;
-        }
-
-        public boolean isNotrecommended() {
-            return notrecommended;
-        }
-
-        public void setNotrecommended(boolean notrecommended) {
-            this.notrecommended = notrecommended;
-        }
-
-        public List<String> getCommands() {
-            return commands;
-        }
-
-        public void setCommands(List<String> commands) {
-            this.commands = commands;
-        }
-
-        public String getNext() {
-            return next;
-        }
-
-        public void setNext(String next) {
-            this.next = next;
-        }
     }
 }

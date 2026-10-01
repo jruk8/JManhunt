@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.api.events;
 
+import lombok.Getter;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import java.util.OptionalLong;
@@ -13,8 +14,14 @@ import java.util.OptionalLong;
 public class JMatchStartEvent extends Event {
 
     private static final HandlerList HANDLERS = new HandlerList();
+    /** Returns the id of the match that just started. */
+    @Getter
     private final long matchId;
+    /** Returns the lobby the match was started from, or -1 when unknown. */
+    @Getter
     private final int originLobbyId;
+    /** Returns the world-engine cell backing the match, or empty when the engine is off. */
+    @Getter
     private final OptionalLong cellIndex;
 
     public JMatchStartEvent(long matchId) {
@@ -31,21 +38,6 @@ public class JMatchStartEvent extends Event {
         this.matchId = matchId;
         this.originLobbyId = originLobbyId;
         this.cellIndex = cellIndex == null ? OptionalLong.empty() : cellIndex;
-    }
-
-    /** Returns the id of the match that just started. */
-    public long getMatchId() {
-        return matchId;
-    }
-
-    /** Returns the lobby the match was started from, or -1 when unknown. */
-    public int getOriginLobbyId() {
-        return originLobbyId;
-    }
-
-    /** Returns the world-engine cell backing the match, or empty when the engine is off. */
-    public OptionalLong getCellIndex() {
-        return cellIndex;
     }
 
     @Override

@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.PlayerSettings;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -56,8 +56,12 @@ class PlayerCombatListenerKillTest {
         when(killer.getName()).thenReturn("Steve");
         players.setRole(killer, Role.HUNTER);
         when(game.instanceOf(killerId)).thenReturn(Optional.of(instance));
+        PlayerSettings settings = new PlayerSettings();
+        settings.getFriendlyFire().setHunter(false);
+        settings.getFriendlyFire().setSpeedrunner(false);
+        settings.getRespawn().getHunter().setEnabled(false);
         PlayerCombatListener listener = new PlayerCombatListener(plugin, players, game,
-                mock(ConfigService.class), mock(CompassManager.class), mock(StatsManager.class),
+                settings, mock(CompassManager.class), mock(StatsManager.class),
                 mock(LobbyService.class), mock(WorldEngineService.class),
                 mock(WinConditionEngine.class), mock(PlayerRespawnListener.class),
                 mock(SpeedrunnerDisconnectTracker.class), new HashMap<>(), new GameMessages());

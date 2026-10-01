@@ -17,7 +17,7 @@ import static org.mockito.Mockito.when;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.PlayerSettings;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -86,8 +86,10 @@ class PlayerCombatListenerDeathTest {
         }
         instance.activate(victimId);
         when(game.instanceOf(victimId)).thenReturn(Optional.of(instance));
+        PlayerSettings settings = new PlayerSettings();
+        settings.getRespawn().getHunter().setEnabled(false);
         PlayerCombatListener listener = new PlayerCombatListener(plugin, players, game,
-                mock(ConfigService.class), compass, stats, mock(LobbyService.class),
+                settings, compass, stats, mock(LobbyService.class),
                 mock(WorldEngineService.class), mock(WinConditionEngine.class), respawn,
                 mock(SpeedrunnerDisconnectTracker.class), new HashMap<>(), texts());
         return new Fixture(listener, victim, victimId, players, instance, compass, fakes,

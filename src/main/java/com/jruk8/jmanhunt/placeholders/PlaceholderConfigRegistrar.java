@@ -1,9 +1,11 @@
 package com.jruk8.jmanhunt.placeholders;
 
+import com.jruk8.jmanhunt.config.SectionPinner;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
+import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 
@@ -15,6 +17,8 @@ import java.io.File;
 public final class PlaceholderConfigRegistrar {
 
     private final JavaPlugin plugin;
+    private final SectionPinner sections = new SectionPinner();
+    @Getter
     private PlaceholderConfig placeholderConfig;
 
     public PlaceholderConfigRegistrar(JavaPlugin plugin) {
@@ -31,10 +35,6 @@ public final class PlaceholderConfigRegistrar {
         });
     }
 
-    public PlaceholderConfig getPlaceholderConfig() {
-        return placeholderConfig;
-    }
-
     public void reload() {
         if (this.placeholderConfig == null) {
             return;
@@ -42,8 +42,9 @@ public final class PlaceholderConfigRegistrar {
         saveAndLoad(this.placeholderConfig);
     }
 
-    private static void saveAndLoad(OkaeriConfig config) {
+    private void saveAndLoad(OkaeriConfig config) {
         config.saveDefaults();
         config.load(true);
+        sections.pin(config);
     }
 }

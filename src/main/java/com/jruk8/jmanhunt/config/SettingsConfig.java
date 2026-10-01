@@ -2,12 +2,16 @@ package com.jruk8.jmanhunt.config;
 
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * The settings block of config.yml, grouped into four categories: match
  * flow, compass tracking, players, and server. Every key keeps its relative
  * path below its category; only the category parents are new.
  */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class SettingsConfig extends OkaeriConfig {
 
@@ -32,37 +36,5 @@ public class SettingsConfig extends OkaeriConfig {
 
     @Comment("Server: config and role announcements, spawn-camp guard, and status extras.")
     private ServerSettings server = new ServerSettings();
-
-    public MatchSettings getMatch() {
-        return match;
-    }
-
-    public void setMatch(MatchSettings match) {
-        this.match = match;
-    }
-
-    public CompassSettings getCompass() {
-        return compass;
-    }
-
-    public void setCompass(CompassSettings compass) {
-        this.compass = compass;
-    }
-
-    public PlayerSettings getPlayers() {
-        return players;
-    }
-
-    public void setPlayers(PlayerSettings players) {
-        this.players = players;
-    }
-
-    public ServerSettings getServer() {
-        return server;
-    }
-
-    public void setServer(ServerSettings server) {
-        this.server = server;
-    }
 
 }

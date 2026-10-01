@@ -15,6 +15,7 @@ import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.MatchRosterValues;
@@ -35,7 +36,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -51,6 +51,7 @@ import java.util.function.Function;
  */
 final class CompassLockService {
     private final JManhuntPlugin plugin;
+    private final CompassSettingsFacade settings;
     private final PlayerStateStore playerStates;
     private final SoundService sounds;
     private final MessageService messages;
@@ -84,7 +85,8 @@ final class CompassLockService {
     private final Map<UUID, Long> sharedClicks;
     private GameManager game;
 
-    CompassLockService(JManhuntPlugin plugin, PlayerStateStore playerStates, SoundService sounds,
+    CompassLockService(JManhuntPlugin plugin, CompassSettingsFacade settings,
+            PlayerStateStore playerStates, SoundService sounds,
             MessageService messages, CompassMessages compass, ModifiersMessages modifiers,
             CompassTargetService targets,
             Map<UUID, Component> actionbars, Consumer<Player> refresher,
@@ -92,6 +94,7 @@ final class CompassLockService {
             Consumer<Player> analysisStarter, CompassCache cache,
             Map<UUID, Long> sharedClicks, AnalysisHost analysisHost) {
         this.plugin = plugin;
+        this.settings = settings;
         this.playerStates = playerStates;
         this.sounds = sounds;
         this.messages = messages;
@@ -288,8 +291,8 @@ final class CompassLockService {
         }
         // Stamped before target checks so failed clicks throttle too.
         lastScroll.put(player.getUniqueId(), now);
-        int maxTargets = CompassCache.clampMaxTargets(plugin.overrides()
-                .getInt(lobbyOf(player), "settings.compass.actions.target-cycling.max-targets", 5));
+        int maxTargets = CompassCache.clampMaxTargets(
+                settings.targetCyclingMaxTargets(lobbyOf(player)));
         CachedCycle cycle =
                 buildCycle(player, match.get(), targetRole(player), maxTargets);
         if (cycle.ordered().size() <= 1) {
@@ -302,8 +305,7 @@ final class CompassLockService {
     /** Resolves the scroll match, applying the enabled, throttle, and membership gates. */
     private Optional<GameInstance> scrollMatch(Player player, long now) {
         Integer lobby = lobbyOf(player);
-        if (!plugin.overrides()
-                .getBoolean(lobby, "settings.compass.actions.target-cycling.enabled", false)) {
+        if (!settings.targetCyclingEnabled(lobby)) {
             return Optional.empty();
         }
         if (plugin.fakeSpectators().isFakeSpectator(player)) {
@@ -312,8 +314,8 @@ final class CompassLockService {
         if (analyzing.contains(player.getUniqueId())) {
             return Optional.empty();
         }
-        long cooldownMs = (long) (Math.max(0.0, plugin.overrides()
-                .getDouble(lobby, "settings.compass.actions.target-cycling.scroll-cooldown", 0.5)) * 1000);
+        long cooldownMs = (long) (Math.max(0.0,
+                settings.targetCyclingScrollCooldownSeconds(lobby)) * 1000);
         // Shared pure helper lives on the facade.
         if (!CompassManager.shouldRefresh(now, lastScroll.getOrDefault(player.getUniqueId(), 0L),
                 cooldownMs)) {
@@ -343,8 +345,7 @@ final class CompassLockService {
             return;
         }
         Integer lobby = lobbyOf(player);
-        if (!plugin.overrides()
-                .getBoolean(lobby, "settings.compass.actions.teammates.enabled", true)) {
+        if (!settings.teammatesEnabled(lobby)) {
             handleLeftClick(player);
             return;
         }
@@ -353,8 +354,8 @@ final class CompassLockService {
             return;
         }
         long now = System.currentTimeMillis();
-        long switchMs = (long) (Math.max(0.0, plugin.overrides().getDouble(lobby,
-                "settings.compass.actions.teammates.switch-cooldown", 0.5)) * 1000);
+        long switchMs = (long) (Math.max(0.0,
+                settings.teammateSwitchCooldownSeconds(lobby)) * 1000);
         // Shared pure helper lives on the facade.
         if (!CompassManager.shouldRefresh(now,
                 lastSwitch.getOrDefault(player.getUniqueId(), 0L), switchMs)) {
@@ -407,8 +408,7 @@ final class CompassLockService {
 
     /** True when compass chat messages are enabled for one lobby. */
     private boolean chatMessagesEnabled(Integer lobby) {
-        return plugin.overrides()
-                .getBoolean(lobby, "settings.compass.feedback.chat-messages.enabled", true);
+        return settings.chatMessagesEnabled(lobby);
     }
 
     /**
@@ -466,12 +466,9 @@ final class CompassLockService {
         analysisStarter.accept(holder);
         long generation = generations.merge(id, 1L, Long::sum);
         Integer lobby = lobbyOf(holder);
-        var overrides = plugin.overrides();
         double effectiveDelay = AnalysisTiming.jitteredDelay(
-                overrides.getDouble(lobby,
-                        "settings.compass.actions.manual.analysis.delay-seconds", 5.0),
-                overrides.getDouble(lobby,
-                        "settings.compass.actions.manual.analysis.delay-deviation-seconds", 3.0),
+                settings.analysisDelaySeconds(lobby),
+                settings.analysisDelayDeviationSeconds(lobby),
                 ThreadLocalRandom.current().nextDouble());
         double multiplier = cancelEarlyMultiplier(lobby);
         if (analysisHost.analysisDoomed(holder)) {
@@ -480,9 +477,8 @@ final class CompassLockService {
         runAnalysisDebuffs(holder, effectiveDelay);
         actionbars.put(id, messages.componentRaw(compass.getAnalyzingActionbar()));
         sounds.playSound(holder, "compass.analysis");
-        long intervalTicks = AnalysisTiming.analysisTickInterval(clampedSoundInterval(overrides
-                .getDouble(lobby, "settings.compass.actions.manual.analysis.sound-interval-seconds",
-                        0.5)));
+        long intervalTicks = AnalysisTiming.analysisTickInterval(
+                clampedSoundInterval(settings.analysisSoundIntervalSeconds(lobby)));
         long[] remaining = {AnalysisTiming.analyzeDelayTicks(effectiveDelay)};
         long[] elapsed = {0L};
         boolean[] doomed = {false};
@@ -562,12 +558,10 @@ final class CompassLockService {
 
     /** Cancel-early multiplier: 1.0 when the option is disabled. */
     private double cancelEarlyMultiplier(Integer lobby) {
-        if (!plugin.overrides().getBoolean(lobby,
-                "settings.compass.actions.manual.analysis.cancel-early.enabled", true)) {
+        if (!settings.cancelEarlyEnabled(lobby)) {
             return 1.0;
         }
-        double multiplier = plugin.overrides().getDouble(lobby,
-                "settings.compass.actions.manual.analysis.cancel-early.time-multiplier", 0.3);
+        double multiplier = settings.cancelEarlyTimeMultiplier(lobby);
         return Math.min(1.0, Math.max(0.0, multiplier));
     }
 
@@ -597,8 +591,7 @@ final class CompassLockService {
      */
     private void runAnalysisDebuffs(Player holder, double effectiveDelaySeconds) {
         Integer lobby = lobbyOf(holder);
-        if (!plugin.overrides().getBoolean(lobby,
-                "settings.compass.actions.manual.analysis.debuffs.enabled", false)) {
+        if (!settings.analysisDebuffsEnabled(lobby)) {
             return;
         }
         Role holderRole = playerStates.role(holder);
@@ -662,11 +655,11 @@ final class CompassLockService {
 
     /** Shared player debuffs plus the holder's own role list. */
     private List<String> debuffCommands(Integer lobby, Role holderRole) {
-        String base = "settings.compass.actions.manual.analysis.debuffs.commands.";
         List<String> commands = new ArrayList<>(
-                plugin.overrides().getStringList(lobby, base + "player"));
-        commands.addAll(plugin.overrides().getStringList(lobby,
-                base + holderRole.name().toLowerCase(Locale.ROOT)));
+                settings.debuffCommandsPlayer(lobby));
+        commands.addAll(holderRole == Role.HUNTER
+                ? settings.debuffCommandsHunter(lobby)
+                : settings.debuffCommandsSpeedrunner(lobby));
         return commands;
     }
 
@@ -745,6 +738,6 @@ final class CompassLockService {
     }
 
     boolean analyzeEnabled(Integer lobby) {
-        return plugin.overrides().getBoolean(lobby, "settings.compass.actions.manual.analysis.enabled", true);
+        return settings.analysisEnabled(lobby);
     }
 }

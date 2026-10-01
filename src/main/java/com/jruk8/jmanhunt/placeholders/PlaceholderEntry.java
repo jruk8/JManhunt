@@ -2,8 +2,12 @@ package com.jruk8.jmanhunt.placeholders;
 
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
+import lombok.Getter;
+import lombok.Setter;
 
 /** One placeholder definition: toggle, format, type, and description. */
+@Getter
+@Setter
 public class PlaceholderEntry extends OkaeriConfig {
 
     @Comment("When false, the placeholder resolves to an empty string.")
@@ -26,35 +30,4 @@ public class PlaceholderEntry extends OkaeriConfig {
         this.description = description;
     }
 
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public String getFormat() {
-        return format;
-    }
-
-    public void setFormat(String format) {
-        this.format = format;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
 }

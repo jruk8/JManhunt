@@ -2,8 +2,13 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MatchConfig;
+import com.jruk8.jmanhunt.config.PlayerSettings;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
+import com.jruk8.jmanhunt.lobby.config.WinConditionsSettingsFacade;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
@@ -38,8 +43,13 @@ import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartService;
 import com.jruk8.jmanhunt.match.lifecycle.TimeLimitService;
+import com.jruk8.jmanhunt.match.listeners.PlayerCombatListener;
+import com.jruk8.jmanhunt.match.listeners.PlayerConnectionListener;
+import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
+import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
 import com.jruk8.jmanhunt.match.prestart.PrestartService;
 import com.jruk8.jmanhunt.world.border.PseudoborderParticleService;
+import org.bukkit.scheduler.BukkitTask;
 
 public final class GameManager implements MatchControl {
     private final JManhuntPlugin plugin;
@@ -62,6 +72,9 @@ public final class GameManager implements MatchControl {
     private final TagCooldownStore cooldownStore;
     private final StatsManager stats;
     private final WinConditionTextService winConditions;
+    private final MatchSettingsFacade matchSettings;
+    private final PlayersSettingsFacade playersSettings;
+    private final WinConditionsSettingsFacade winConditionsSettings;
 
     public GameManager(JManhuntPlugin plugin, MessageService messages, ManhuntMessages manhunt,
                        GameMessages gameTexts, WinconMessages wincon, SoundService sounds,
@@ -73,44 +86,44 @@ public final class GameManager implements MatchControl {
         this.playerStates = playerStates;
         this.configService = configService;
         this.worldEngine = worldEngine;
+        var root = plugin.configRoot();
+        var match = root.getSettings().getMatch();
+        var players = root.getSettings().getPlayers();
+        var engine = root.getWorldEngine();
+        this.matchSettings = new MatchSettingsFacade(plugin.overrides(), match);
+        this.playersSettings = new PlayersSettingsFacade(plugin.overrides(), players);
+        this.winConditionsSettings =
+                new WinConditionsSettingsFacade(plugin.overrides(), match.getWinConditions());
         this.winConditionEngine = winConditionEngine;
         this.lobbies = lobbyService;
+        var interop = root.getAdvanced().getMisc().getInterop();
         this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService,
-                messages, sounds, this);
+                interop, playersSettings, messages, sounds, this);
         this.store = new MatchStore(playerStates);
         this.flagStore = new FlagStore();
         this.cooldownStore = new TagCooldownStore();
         this.stats = stats;
-        this.messaging = new MatchMessaging(messages, manhunt, sounds, configService, store, lobbies);
-        this.timeLimits = new TimeLimitService(plugin, winConditionEngine, store, messaging, gameTexts,
-                this);
-        this.prestart = new PrestartService(plugin, configService, messages, playerStates,
+        this.messaging = new MatchMessaging(messages, manhunt, sounds,
+                root.getSettings().getServer(), store, lobbies);
+        this.timeLimits = new TimeLimitService(plugin, winConditionEngine, store, messaging, gameTexts, this);
+        this.prestart = new PrestartService(plugin, match.getHeadstarts(),
+                matchSettings, playersSettings, messages, playerStates,
                 stats, stateCommands, store, messaging, manhunt, this);
-        this.autostart = new AutostartService(plugin, messages, playerStates, lobbies,
-                worldEngine, store, messaging, manhunt, this);
-        this.matchFinish = new MatchFinishService(plugin, messages, gameTexts, playerStates, compass,
-                stats, stateCommands, configService, worldEngine, store, messaging, timeLimits,
-                prestart, autostart, flagStore, cooldownStore);
+        this.autostart = new AutostartService(plugin, matchSettings, messages,
+                playerStates, lobbies, worldEngine, store, messaging, manhunt, this);
+        this.matchFinish = new MatchFinishService(plugin, messages, gameTexts, playerStates,
+                compass, stats, stateCommands, engine, playersSettings, matchSettings,
+                worldEngine, store, messaging, timeLimits, prestart, autostart, flagStore,
+                cooldownStore);
         this.matchStart = new MatchStartService(plugin, messages, gameTexts, manhunt, sounds,
-                playerStates, compass, stats, stateCommands, configService, worldEngine, lobbies,
+                playerStates, compass, stats, stateCommands, engine,
+                matchSettings, playersSettings, worldEngine, lobbies,
                 store, messaging, timeLimits, prestart, autostart);
-        this.pseudoborderParticles = new PseudoborderParticleService(plugin, configService, store,
-                worldEngine);
-        this.winConditions = new WinConditionTextService(messages, wincon, configService,
-                winConditionEngine);
-
-        // assign events
-        configService.onChange("settings.match.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
-        configService.onChange("world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
-        // Structure datapacks refresh exactly like the world-engine datapack:
-        // toggling in-game applies or removes the files immediately instead of
-        // waiting for a restart.
-        configService.onChange("settings.match.game-boosts.nether-structures.enabled",
-                (oldValue, newValue) -> worldEngine.onReload());
-        configService.onChange("settings.match.game-boosts.overworld-structures.enabled",
-                (oldValue, newValue) -> worldEngine.onReload());
-        configService.onChange(LobbyService.COLLISIONS_PATH,
-                (oldValue, newValue) -> lobbies.reapplyCollisions());
+        this.pseudoborderParticles =
+                new PseudoborderParticleService(plugin, engine, store, worldEngine);
+        this.winConditions = new WinConditionTextService(messages, wincon,
+                players.getRespawn(), winConditionEngine);
+        subscribeSettingChanges();
     }
 
     /** True while any match runs, including end-delay phases. */
@@ -170,6 +183,55 @@ public final class GameManager implements MatchControl {
     /** Match-scoped messaging; listeners announce through this. */
     public MatchMessaging messaging() {
         return messaging;
+    }
+
+    public MatchSettingsFacade matchSettings() {
+        return matchSettings;
+    }
+
+    public PlayersSettingsFacade playersSettings() {
+        return playersSettings;
+    }
+
+    public WinConditionsSettingsFacade winConditionsSettings() {
+        return winConditionsSettings;
+    }
+
+    /** Live-reacts to the toggles this manager owns. */
+    private void subscribeSettingChanges() {
+        // assign events
+        configService.onChange("settings.match.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
+        configService.onChange("world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
+        // Structure datapacks refresh exactly like the world-engine datapack:
+        // toggling in-game applies or removes the files immediately instead of
+        // waiting for a restart.
+        configService.onChange("settings.match.game-boosts.nether-structures.enabled",
+                (oldValue, newValue) -> worldEngine.onReload());
+        configService.onChange("settings.match.game-boosts.overworld-structures.enabled",
+                (oldValue, newValue) -> worldEngine.onReload());
+        configService.onChange(LobbyService.COLLISIONS_PATH,
+                (oldValue, newValue) -> lobbies.reapplyCollisions());
+    }
+
+    /** Connection listener with typed player and disconnect sections. */
+    public PlayerConnectionListener connectionListener(PlayerSettings players,
+            MatchConfig.DisconnectHandling handling, PlayerRespawnListener respawn,
+            SpeedrunnerDisconnectTracker disconnects,
+            Map<UUID, BukkitTask> disconnectTasks, CompassManager compass,
+            GameMessages gameTexts) {
+        return new PlayerConnectionListener(plugin, playerStates, this, messages, players,
+                handling, lobbies, worldEngine.teleportService(), worldEngine,
+                disconnects, disconnectTasks, compass, gameTexts);
+    }
+
+    /** Combat listener with the typed player section. */
+    public PlayerCombatListener combatListener(PlayerSettings players,
+            PlayerRespawnListener respawn, SpeedrunnerDisconnectTracker disconnects,
+            Map<UUID, BukkitTask> disconnectTasks, CompassManager compass,
+            GameMessages gameTexts) {
+        return new PlayerCombatListener(plugin, playerStates, this, players, compass, stats,
+                lobbies, worldEngine, winConditionEngine, respawn, disconnects,
+                disconnectTasks, gameTexts);
     }
 
     public void updateAutostartState() { autostart.updateAutostartState(); }

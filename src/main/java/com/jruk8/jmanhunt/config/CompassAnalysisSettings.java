@@ -5,8 +5,12 @@ import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Refresh analysis lag and debuffs. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class CompassAnalysisSettings extends OkaeriConfig {
 
@@ -64,85 +68,17 @@ public class CompassAnalysisSettings extends OkaeriConfig {
     })
     private CancelEarly cancelEarly = new CancelEarly();
 
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public double getDelaySeconds() {
-        return delaySeconds;
-    }
-
-    public void setDelaySeconds(double delaySeconds) {
-        this.delaySeconds = delaySeconds;
-    }
-
-    public double getDelayDeviationSeconds() {
-        return delayDeviationSeconds;
-    }
-
-    public void setDelayDeviationSeconds(double delayDeviationSeconds) {
-        this.delayDeviationSeconds = delayDeviationSeconds;
-    }
-
-    public double getSoundIntervalSeconds() {
-        return soundIntervalSeconds;
-    }
-
-    public void setSoundIntervalSeconds(double soundIntervalSeconds) {
-        this.soundIntervalSeconds = soundIntervalSeconds;
-    }
-
-    public Debuffs getDebuffs() {
-        return debuffs;
-    }
-
-    public void setDebuffs(Debuffs debuffs) {
-        this.debuffs = debuffs;
-    }
-
-    public Cost getCost() {
-        return cost;
-    }
-
-    public void setCost(Cost cost) {
-        this.cost = cost;
-    }
-
-    public CancelEarly getCancelEarly() {
-        return cancelEarly;
-    }
-
-    public void setCancelEarly(CancelEarly cancelEarly) {
-        this.cancelEarly = cancelEarly;
-    }
-
     /** Analysis console commands. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Debuffs extends OkaeriConfig {
         private boolean enabled = true;
         private DebuffCommands commands = new DebuffCommands();
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public DebuffCommands getCommands() {
-            return commands;
-        }
-
-        public void setCommands(DebuffCommands commands) {
-            this.commands = commands;
-        }
-
         /** Command lists per audience. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class DebuffCommands extends OkaeriConfig {
             private List<String> player = new ArrayList<>(List.of(
@@ -150,33 +86,12 @@ public class CompassAnalysisSettings extends OkaeriConfig {
             private List<String> speedrunner = new ArrayList<>();
             private List<String> hunter = new ArrayList<>();
 
-            public List<String> getPlayer() {
-                return player;
-            }
-
-            public void setPlayer(List<String> player) {
-                this.player = player;
-            }
-
-            public List<String> getSpeedrunner() {
-                return speedrunner;
-            }
-
-            public void setSpeedrunner(List<String> speedrunner) {
-                this.speedrunner = speedrunner;
-            }
-
-            public List<String> getHunter() {
-                return hunter;
-            }
-
-            public void setHunter(List<String> hunter) {
-                this.hunter = hunter;
-            }
         }
     }
 
     /** Analysis charges. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Cost extends OkaeriConfig {
         @Comment({
@@ -199,39 +114,9 @@ public class CompassAnalysisSettings extends OkaeriConfig {
         @CustomKey("poverty-behavior")
         private PovertyBehavior povertyBehavior = new PovertyBehavior();
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public String getCostOn() {
-            return costOn;
-        }
-
-        public void setCostOn(String costOn) {
-            this.costOn = costOn;
-        }
-
-        public Payment getPayment() {
-            return payment;
-        }
-
-        public void setPayment(Payment payment) {
-            this.payment = payment;
-        }
-
-        public PovertyBehavior getPovertyBehavior() {
-            return povertyBehavior;
-        }
-
-        public void setPovertyBehavior(PovertyBehavior povertyBehavior) {
-            this.povertyBehavior = povertyBehavior;
-        }
-
         /** One container per charge. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Payment extends OkaeriConfig {
             private Saturation saturation = new Saturation();
@@ -249,39 +134,9 @@ public class CompassAnalysisSettings extends OkaeriConfig {
             })
             private double failureCooldown = 1.0;
 
-            public Saturation getSaturation() {
-                return saturation;
-            }
-
-            public void setSaturation(Saturation saturation) {
-                this.saturation = saturation;
-            }
-
-            public Health getHealth() {
-                return health;
-            }
-
-            public void setHealth(Health health) {
-                this.health = health;
-            }
-
-            public ExpLevel getExpLevel() {
-                return expLevel;
-            }
-
-            public void setExpLevel(ExpLevel expLevel) {
-                this.expLevel = expLevel;
-            }
-
-            public double getFailureCooldown() {
-                return failureCooldown;
-            }
-
-            public void setFailureCooldown(double failureCooldown) {
-                this.failureCooldown = failureCooldown;
-            }
-
             /** Saturation charge. */
+            @Getter
+            @Setter
             @SuppressWarnings("FieldMayBeFinal")
             public static class Saturation extends OkaeriConfig {
                 private boolean enabled = false;
@@ -295,24 +150,11 @@ public class CompassAnalysisSettings extends OkaeriConfig {
                 })
                 private int value = 3;
 
-                public boolean isEnabled() {
-                    return enabled;
-                }
-
-                public void setEnabled(boolean enabled) {
-                    this.enabled = enabled;
-                }
-
-                public int getValue() {
-                    return value;
-                }
-
-                public void setValue(int value) {
-                    this.value = value;
-                }
             }
 
             /** Health charge. */
+            @Getter
+            @Setter
             @SuppressWarnings("FieldMayBeFinal")
             public static class Health extends OkaeriConfig {
                 private boolean enabled = false;
@@ -333,32 +175,11 @@ public class CompassAnalysisSettings extends OkaeriConfig {
                 })
                 private boolean canKill = true;
 
-                public boolean isEnabled() {
-                    return enabled;
-                }
-
-                public void setEnabled(boolean enabled) {
-                    this.enabled = enabled;
-                }
-
-                public int getValue() {
-                    return value;
-                }
-
-                public void setValue(int value) {
-                    this.value = value;
-                }
-
-                public boolean isCanKill() {
-                    return canKill;
-                }
-
-                public void setCanKill(boolean canKill) {
-                    this.canKill = canKill;
-                }
             }
 
             /** Experience charge. */
+            @Getter
+            @Setter
             @SuppressWarnings("FieldMayBeFinal")
             public static class ExpLevel extends OkaeriConfig {
                 private boolean enabled = true;
@@ -370,25 +191,12 @@ public class CompassAnalysisSettings extends OkaeriConfig {
                 })
                 private int value = 1;
 
-                public boolean isEnabled() {
-                    return enabled;
-                }
-
-                public void setEnabled(boolean enabled) {
-                    this.enabled = enabled;
-                }
-
-                public int getValue() {
-                    return value;
-                }
-
-                public void setValue(int value) {
-                    this.value = value;
-                }
             }
         }
 
         /** What happens when the holder cannot pay. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class PovertyBehavior extends OkaeriConfig {
 
@@ -408,25 +216,12 @@ public class CompassAnalysisSettings extends OkaeriConfig {
             })
             private boolean showReason = true;
 
-            public boolean isCancelWhenPoor() {
-                return cancelWhenPoor;
-            }
-
-            public void setCancelWhenPoor(boolean cancelWhenPoor) {
-                this.cancelWhenPoor = cancelWhenPoor;
-            }
-
-            public boolean isShowReason() {
-                return showReason;
-            }
-
-            public void setShowReason(boolean showReason) {
-                this.showReason = showReason;
-            }
         }
     }
 
     /** Shorter waits for doomed analyses. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class CancelEarly extends OkaeriConfig {
 
@@ -446,20 +241,5 @@ public class CompassAnalysisSettings extends OkaeriConfig {
         })
         private double timeMultiplier = 0.3;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public double getTimeMultiplier() {
-            return timeMultiplier;
-        }
-
-        public void setTimeMultiplier(double timeMultiplier) {
-            this.timeMultiplier = timeMultiplier;
-        }
     }
 }

@@ -4,6 +4,8 @@ import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Typed root of config.yml. Every key keeps its current path except the
@@ -41,6 +43,8 @@ import eu.okaeri.configs.annotation.Header;
         "**--**--**--**--**--**--**--**--**--**--**--**--**--**--**",
         ""
 })
+@Getter
+@Setter
 public class JManhuntConfig extends OkaeriConfig {
 
     @CustomKey("config-version")
@@ -96,61 +100,5 @@ public class JManhuntConfig extends OkaeriConfig {
             "Default: false"
     })
     private WorldEngineConfig worldEngine = new WorldEngineConfig();
-
-    public int getConfigVersion() {
-        return configVersion;
-    }
-
-    public void setConfigVersion(int configVersion) {
-        this.configVersion = configVersion;
-    }
-
-    public boolean isSendAnonymousStatistics() {
-        return sendAnonymousStatistics;
-    }
-
-    public void setSendAnonymousStatistics(boolean sendAnonymousStatistics) {
-        this.sendAnonymousStatistics = sendAnonymousStatistics;
-    }
-
-    public UpdateCheckerConfig getUpdateChecker() {
-        return updateChecker;
-    }
-
-    public void setUpdateChecker(UpdateCheckerConfig updateChecker) {
-        this.updateChecker = updateChecker;
-    }
-
-    public StatisticsConfig getStatistics() {
-        return statistics;
-    }
-
-    public void setStatistics(StatisticsConfig statistics) {
-        this.statistics = statistics;
-    }
-
-    public AdvancedConfig getAdvanced() {
-        return advanced;
-    }
-
-    public void setAdvanced(AdvancedConfig advanced) {
-        this.advanced = advanced;
-    }
-
-    public SettingsConfig getSettings() {
-        return settings;
-    }
-
-    public void setSettings(SettingsConfig settings) {
-        this.settings = settings;
-    }
-
-    public WorldEngineConfig getWorldEngine() {
-        return worldEngine;
-    }
-
-    public void setWorldEngine(WorldEngineConfig worldEngine) {
-        this.worldEngine = worldEngine;
-    }
 
 }

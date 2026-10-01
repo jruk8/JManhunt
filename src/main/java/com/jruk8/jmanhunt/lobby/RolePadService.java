@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.lobby;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
@@ -42,6 +43,7 @@ public final class RolePadService implements Listener {
     static final int PAD_REACH = 4;
 
     private final JManhuntPlugin plugin;
+    private final LobbiesConfig lobbySettings;
     private final LobbyService lobbies;
     private final PlayerStateStore playerStates;
     private final GameManager game;
@@ -54,10 +56,12 @@ public final class RolePadService implements Listener {
     /** Pad keys already warned about, so bad materials warn once per run. */
     private final Set<String> warnedMaterials = new HashSet<>();
 
-    public RolePadService(JManhuntPlugin plugin, LobbyService lobbies, PlayerStateStore playerStates,
+    public RolePadService(JManhuntPlugin plugin, LobbiesConfig lobbySettings,
+            LobbyService lobbies, PlayerStateStore playerStates,
             GameManager game, MessageService messages, ManhuntMessages manhunt, SoundService sounds,
             Supplier<String> lobbyWorldName) {
         this.plugin = plugin;
+        this.lobbySettings = lobbySettings;
         this.lobbies = lobbies;
         this.playerStates = playerStates;
         this.game = game;
@@ -83,7 +87,7 @@ public final class RolePadService implements Listener {
     }
 
     private void check(Player player) {
-        if (!plugin.configService().getBoolean("advanced.lobbies.role-pads.enabled", true)) {
+        if (!lobbySettings.getRolePads().isEnabled()) {
             return;
         }
         if (!player.getWorld().getName().equals(lobbyWorldName.get())) {
@@ -139,7 +143,14 @@ public final class RolePadService implements Listener {
     }
 
     private void matchPad(Map<Material, Role> pads, String key, Role role) {
-        String raw = plugin.configService().getString("advanced.lobbies.role-pads.blocks." + key, "");
+        var blocks = lobbySettings.getRolePads().getBlocks();
+        String raw = switch (role) {
+            case SPEEDRUNNER -> blocks.getSpeedrunner();
+            case HUNTER -> blocks.getHunter();
+            case AFK -> blocks.getAfk();
+            case SPECTATOR -> blocks.getSpectator();
+            case NONE -> blocks.getNone();
+        };
         Material material = parsePadMaterial(raw);
         if (material == null) {
             if (raw != null && !raw.isBlank() && warnedMaterials.add(key)) {
@@ -227,7 +238,7 @@ public final class RolePadService implements Listener {
 
     /** True when pads assign roles quietly. */
     private boolean padSilent() {
-        return plugin.configService().getBoolean("advanced.lobbies.role-pads.silent-role-assignment", false);
+        return lobbySettings.getRolePads().isSilentRoleAssignment();
     }
 
     private boolean capAllows(Optional<Lobby> lobby, Role role) {
@@ -241,8 +252,9 @@ public final class RolePadService implements Listener {
                 count++;
             }
         }
-        return CapLimits.allows(count, plugin.configService()
-                .getInt("advanced.lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1));
+        var caps = lobbySettings.getQueueCaps();
+        int cap = role == Role.HUNTER ? caps.getHunter() : caps.getSpeedrunner();
+        return CapLimits.allows(count, cap);
     }
 
 }

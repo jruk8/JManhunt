@@ -9,8 +9,9 @@ import com.jruk8.jmanhunt.world.end.EndResetManager;
 import com.jruk8.jmanhunt.world.structure.NetherStructuresDatapackManager;
 import com.jruk8.jmanhunt.world.structure.OverworldStructuresDatapackManager;
 import com.jruk8.jmanhunt.world.structure.StrongholdDatapackManager;
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
+import com.jruk8.jmanhunt.config.LobbiesConfig;
+import com.jruk8.jmanhunt.config.MatchSettings;
 import com.jruk8.jmanhunt.config.SettingsListener;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Bukkit;
@@ -30,7 +31,8 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 
 public final class WorldEngineService implements SettingsListener {
     private final JManhuntPlugin plugin;
-    private final ConfigService configService;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
+    private final MatchSettings.GameBoosts boosts;
     private final StrongholdDatapackManager strongholdDatapackManager;
     private final NetherStructuresDatapackManager netherStructuresDatapackManager;
     private final OverworldStructuresDatapackManager overworldStructuresDatapackManager;
@@ -40,18 +42,23 @@ public final class WorldEngineService implements SettingsListener {
     private final MatchTeleportService teleport;
     private final LobbyWorldService lobbyWorlds;
 
-    public WorldEngineService(JManhuntPlugin plugin, MessageService messages, ConfigService configService,
+    public WorldEngineService(JManhuntPlugin plugin, MessageService messages,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            MatchSettings.GameBoosts boosts, LobbiesConfig lobbySettings,
             EngineStateRepository engineState, PlayerStateStore playerStates) {
         this.plugin = plugin;
-        this.configService = configService;
+        this.engineSettings = engineSettings;
+        this.boosts = boosts;
         this.strongholdDatapackManager = new StrongholdDatapackManager(plugin);
         this.netherStructuresDatapackManager = new NetherStructuresDatapackManager(plugin);
         this.overworldStructuresDatapackManager = new OverworldStructuresDatapackManager(plugin);
         this.endResetManager = new EndResetManager(plugin);
         this.endCells = new EndCellManager(plugin, engineState);
-        this.cells = new WorldCellService(plugin, engineState, endCells, playerStates);
-        this.lobbyWorlds = new LobbyWorldService(plugin, messages, messages.manhunt());
-        this.teleport = new MatchTeleportService(plugin, lobbyWorlds);
+        this.cells = new WorldCellService(plugin, engineSettings, engineState, endCells,
+                playerStates);
+        this.lobbyWorlds = new LobbyWorldService(plugin, messages, messages.manhunt(),
+                engineSettings, lobbySettings);
+        this.teleport = new MatchTeleportService(plugin, engineSettings, lobbyWorlds);
     }
 
     /** Wires the match-running check behind the NO_MATCH_RUNNING refill policy. */
@@ -105,7 +112,7 @@ public final class WorldEngineService implements SettingsListener {
     }
 
     public void onMatchEnd(List<Player> participants, List<Player> spectators, int lobbyId, long matchId) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled()) {
             return;
         }
@@ -191,7 +198,7 @@ public final class WorldEngineService implements SettingsListener {
      * cannot serve the match; the caller then leaves the portal alone.
      */
     public Optional<World> assignMatchEndWorld(long matchId) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled()) {
             return Optional.empty();
         }
@@ -294,7 +301,7 @@ public final class WorldEngineService implements SettingsListener {
      * restarts or crashes plus stray folders from older versions.
      */
     public void deleteOrphanedEndCells() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         int deleted = endCells.deleteOrphans(config);
         if (deleted > 0) {
             plugin.logger().info("Deleted " + deleted + " orphaned end dimension(s).");
@@ -331,19 +338,18 @@ public final class WorldEngineService implements SettingsListener {
      * enabled state.
      */
     private void refreshDatapacks() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
-        boolean worldEnabled = configService.getBoolean("world-engine.enabled", false);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
+        boolean worldEnabled = engineSettings.isEnabled();
         strongholdDatapackManager.apply(config.worldName(), worldEnabled);
         if (!worldEnabled) {
             strongholdDatapackManager.remove(config.worldName(), false);
         }
-        boolean netherEnabled = configService.getBoolean("settings.match.game-boosts.nether-structures.enabled", false);
+        boolean netherEnabled = boosts.getNetherStructures().isEnabled();
         netherStructuresDatapackManager.apply(config.worldName(), netherEnabled);
         if (!netherEnabled) {
             netherStructuresDatapackManager.remove(config.worldName(), false);
         }
-        boolean overworldEnabled = configService.getBoolean(
-                "settings.match.game-boosts.overworld-structures.enabled", false);
+        boolean overworldEnabled = boosts.getOverworldStructures().isEnabled();
         overworldStructuresDatapackManager.apply(config.worldName(), overworldEnabled);
         if (!overworldEnabled) {
             overworldStructuresDatapackManager.remove(config.worldName(), false);

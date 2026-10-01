@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.config.SectionPinner;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
+import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 
@@ -17,7 +18,8 @@ public final class MessagesRegistrar {
 
     private final JavaPlugin plugin;
     private final SectionPinner sections = new SectionPinner();
-    private MessagesConfig messages;
+    @Getter
+    private MessagesConfig messagesConfig;
 
     public MessagesRegistrar(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -25,7 +27,7 @@ public final class MessagesRegistrar {
 
     public void register() {
         File file = new File(plugin.getDataFolder(), "messages.yml");
-        this.messages = ConfigManager.create(MessagesConfig.class, it -> {
+        this.messagesConfig = ConfigManager.create(MessagesConfig.class, it -> {
             it.withConfigurer(new YamlBukkitConfigurer(), new SerdesBukkit());
             it.withBindFile(file);
             it.withRemoveOrphans(true);
@@ -34,23 +36,19 @@ public final class MessagesRegistrar {
         reload();
     }
 
-    public MessagesConfig getMessagesConfig() {
-        return messages;
-    }
-
     /**
      * Saves defaults when missing, then loads and repairs the file.
      * A damaged file logs instead of crashing; previously loaded
      * values stay live until the file is fixed and reloaded.
      */
     public void reload() {
-        if (messages == null) {
+        if (messagesConfig == null) {
             return;
         }
         try {
-            messages.saveDefaults();
-            messages.load(true);
-            sections.pin(messages);
+            messagesConfig.saveDefaults();
+            messagesConfig.load(true);
+            sections.pin(messagesConfig);
         } catch (RuntimeException exception) {
             plugin.getLogger().warning("Could not load messages.yml (" + exception.getMessage()
                     + "); check the file, then run /mh reload.");

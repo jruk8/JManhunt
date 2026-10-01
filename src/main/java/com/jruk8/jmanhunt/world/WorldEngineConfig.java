@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.world;
 
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.WorldEngineConfig.SpawnpointAlgorithm;
+import com.jruk8.jmanhunt.config.WorldEngineConfig.WorldBorder;
 import java.util.List;
 
 public record WorldEngineConfig(
@@ -22,69 +23,50 @@ public record WorldEngineConfig(
         int startBorderRadius,
         String endBaseName,
         int endBuffer) {
-    private static final int DEFAULT_CELL_SIZE = 10_000;
     private static final int MAX_CELL_SIZE = 50_000;
-    private static final int DEFAULT_START_BORDER_RADIUS = 10;
-    private static final double DEFAULT_DAMAGE_BUFFER = 5.0;
-    private static final double DEFAULT_DAMAGE_AMOUNT = 1.0;
     private static final String DEFAULT_END_BASE_NAME = "jmh_end";
-    private static final int DEFAULT_END_BUFFER = 3;
+    private static final List<String> DEFAULT_STRUCTURE_WORDS =
+            List.of("VILLAGE", "TEMPLE", "SHIPWRECK", "RUINED_PORTAL");
 
     private record SpawnpointSettings(boolean enabled, int maxRetries, int yTolerance,
             boolean closeToEnabled, List<String> closeToWords, int closeToAttempts,
             int closeToMaxDistance) {
     }
 
-    private static SpawnpointSettings spawnpointSettings(ConfigService config, String spawnpointBase) {
-        boolean enabled = config.getBoolean(spawnpointBase + "enabled", true);
-        int maxRetries = Math.max(0, config.getInt(spawnpointBase + "max-retries", 8));
-        int yTolerance = Math.max(0, config.getInt(spawnpointBase + "y-tolerance", 7));
-        String closeToBase = spawnpointBase + "spawn-close-to-structure.";
-        boolean closeToEnabled = config.getBoolean(closeToBase + "enabled", false);
-        List<String> closeToWords = config.getStringList(closeToBase + "structures");
+    private static SpawnpointSettings spawnpointSettings(SpawnpointAlgorithm spawnpoint) {
+        var closeTo = spawnpoint.getSpawnCloseToStructure();
+        List<String> closeToWords = closeTo.getStructures();
         if (closeToWords.isEmpty()) {
-            closeToWords = List.of("VILLAGE", "TEMPLE", "SHIPWRECK", "RUINED_PORTAL");
+            closeToWords = DEFAULT_STRUCTURE_WORDS;
         }
-        int closeToAttempts = Math.clamp(config.getInt(closeToBase + "attempts", 3), 1, 5);
-        int closeToMaxDistance =
-                Math.clamp(config.getInt(closeToBase + "max-distance", 125), 50, 200);
-        return new SpawnpointSettings(enabled, maxRetries, yTolerance, closeToEnabled,
-                closeToWords, closeToAttempts, closeToMaxDistance);
+        return new SpawnpointSettings(spawnpoint.isEnabled(),
+                Math.max(0, spawnpoint.getMaxRetries()),
+                Math.max(0, spawnpoint.getYTolerance()),
+                closeTo.isEnabled(),
+                closeToWords,
+                Math.clamp(closeTo.getAttempts(), 1, 5),
+                Math.clamp(closeTo.getMaxDistance(), 50, 200));
     }
 
-    private record EndSettings(String baseName, int buffer) {
-    }
-
-    private static EndSettings endSettings(ConfigService config, String base) {
-        String endBase = base + "end.";
-        String baseName = config.getString(endBase + "base-name", DEFAULT_END_BASE_NAME);
-        if (baseName.isBlank()) {
-            baseName = DEFAULT_END_BASE_NAME;
-        }
-        int buffer = Math.max(1, config.getInt(endBase + "buffer", DEFAULT_END_BUFFER));
-        return new EndSettings(baseName, buffer);
-    }
-
-    public static WorldEngineConfig fromConfig(ConfigService config) {
-        String base = "world-engine.";
-        int configuredCellSize = config.getInt(base + "cell-size", DEFAULT_CELL_SIZE);
-        int cellSize = Math.clamp(configuredCellSize, 1, MAX_CELL_SIZE);
-        int spreadRadius = Math.clamp(config.getInt(base + "tp-spread-radius", 5), 0, cellSize / 2);
-        String worldName = config.getString(base + "world-name", "world");
+    public static WorldEngineConfig fromSettings(
+            com.jruk8.jmanhunt.config.WorldEngineConfig settings) {
+        int cellSize = Math.clamp(settings.getCellSize(), 1, MAX_CELL_SIZE);
+        int spreadRadius = Math.clamp(settings.getTpSpreadRadius(), 0, cellSize / 2);
+        String worldName = settings.getWorldName();
         if (worldName.isBlank()) {
             worldName = "world";
         }
-        SpawnpointSettings spawnpoint = spawnpointSettings(config, base + "spawnpoint-algorithm.");
-        String borderBase = base + "world-border.";
-        boolean worldBorderEnabled = config.getBoolean(borderBase + "enabled", false);
-        double damageBuffer = Math.max(0, config.getDouble(borderBase + "damage.buffer", DEFAULT_DAMAGE_BUFFER));
-        double damageAmount = Math.max(0, config.getDouble(borderBase + "damage.amount", DEFAULT_DAMAGE_AMOUNT));
-        String startBorderBase = borderBase + "start-border.";
-        boolean startBorderEnabled = config.getBoolean(startBorderBase + "enabled", false);
-        int startBorderRadius = config.getInt(startBorderBase + "radius", DEFAULT_START_BORDER_RADIUS);
-        EndSettings end = endSettings(config, base);
+        SpawnpointSettings spawnpoint = spawnpointSettings(settings.getSpawnpointAlgorithm());
+        WorldBorder border = settings.getWorldBorder();
+        var damage = border.getDamage();
+        var startBorder = border.getStartBorder();
+        var end = settings.getEnd();
+        String baseName = end.getBaseName();
+        if (baseName.isBlank()) {
+            baseName = DEFAULT_END_BASE_NAME;
+        }
         return new WorldEngineConfig(
-                config.getBoolean(base + "enabled", false),
+                settings.isEnabled(),
                 worldName,
                 cellSize,
                 spreadRadius,
@@ -95,13 +77,13 @@ public record WorldEngineConfig(
                 spawnpoint.closeToWords(),
                 spawnpoint.closeToAttempts(),
                 spawnpoint.closeToMaxDistance(),
-                worldBorderEnabled,
-                damageBuffer,
-                damageAmount,
-                startBorderEnabled,
-                startBorderRadius,
-                end.baseName(),
-                end.buffer()
+                border.isEnabled(),
+                Math.max(0, damage.getBuffer()),
+                Math.max(0, damage.getAmount()),
+                startBorder.isEnabled(),
+                startBorder.getRadius(),
+                baseName,
+                Math.max(1, end.getBuffer())
         );
     }
 

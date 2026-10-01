@@ -1,11 +1,7 @@
 package com.jruk8.jmanhunt.world;
 
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
-import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
-import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -13,15 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WorldEngineConfigTest {
 
-    private static ConfigService service(JManhuntConfig root) {
-        Logger log = Logger.getAnonymousLogger();
-        log.setUseParentHandlers(false);
-        return new ConfigService(root, new ModifierStore(ModifierFiles.inMemory(), log));
-    }
-
     @Test
     void spawnpointAlgorithmDefaultsToEnabledWithEightRetries() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(new JManhuntConfig()));
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(new JManhuntConfig().getWorldEngine());
 
         assertTrue(config.spawnpointAlgorithmEnabled());
         assertEquals(8, config.spawnpointMaxRetries());
@@ -33,7 +23,7 @@ class WorldEngineConfigTest {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.enabled", false);
         ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.max-retries", 2);
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(root.getWorldEngine());
 
         assertFalse(config.spawnpointAlgorithmEnabled());
         assertEquals(2, config.spawnpointMaxRetries());
@@ -43,7 +33,7 @@ class WorldEngineConfigTest {
     void spawnpointRetriesClampAtZero() {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.max-retries", -3);
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(root.getWorldEngine());
 
         assertEquals(0, config.spawnpointMaxRetries());
     }
@@ -52,16 +42,16 @@ class WorldEngineConfigTest {
     void spawnpointYToleranceReadsAndClamps() {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.y-tolerance", 12);
-        assertEquals(12, WorldEngineConfig.fromConfig(service(root)).spawnpointYTolerance());
+        assertEquals(12, WorldEngineConfig.fromSettings(root.getWorldEngine()).spawnpointYTolerance());
 
         ConfigPathMapper.set(root, "world-engine.spawnpoint-algorithm.y-tolerance", -4);
-        assertEquals(0, WorldEngineConfig.fromConfig(service(root)).spawnpointYTolerance());
+        assertEquals(0, WorldEngineConfig.fromSettings(root.getWorldEngine()).spawnpointYTolerance());
     }
 
 
     @Test
     void endPoolDefaultsToJmhEndWithBufferThree() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(new JManhuntConfig()));
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(new JManhuntConfig().getWorldEngine());
 
         assertEquals("jmh_end", config.endBaseName());
         assertEquals(3, config.endBuffer());
@@ -72,7 +62,7 @@ class WorldEngineConfigTest {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "world-engine.end.base-name", "custom_end");
         ConfigPathMapper.set(root, "world-engine.end.buffer", 5);
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(root.getWorldEngine());
 
         assertEquals("custom_end", config.endBaseName());
         assertEquals(5, config.endBuffer());
@@ -83,7 +73,7 @@ class WorldEngineConfigTest {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "world-engine.end.buffer", 0);
         ConfigPathMapper.set(root, "world-engine.end.base-name", "  ");
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(root.getWorldEngine());
 
         assertEquals(1, config.endBuffer());
         assertEquals("jmh_end", config.endBaseName());
@@ -130,7 +120,7 @@ class WorldEngineConfigTest {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "world-engine.world-border.enabled", true);
         ConfigPathMapper.set(root, "world-engine.world-border.start-border.enabled", true);
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(root.getWorldEngine());
 
         assertTrue(config.useStartBorder(false));
         assertFalse(config.useStartBorder(true));
@@ -141,7 +131,7 @@ class WorldEngineConfigTest {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "world-engine.world-border.enabled", true);
         ConfigPathMapper.set(root, "world-engine.world-border.start-border.enabled", false);
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(root.getWorldEngine());
 
         assertFalse(config.useStartBorder(false));
     }
@@ -151,7 +141,7 @@ class WorldEngineConfigTest {
         JManhuntConfig root = new JManhuntConfig();
         ConfigPathMapper.set(root, "world-engine.world-border.enabled", false);
         ConfigPathMapper.set(root, "world-engine.world-border.start-border.enabled", true);
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(service(root));
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(root.getWorldEngine());
 
         assertFalse(config.useStartBorder(false));
     }

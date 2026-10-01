@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.bounds.LobbyBounds;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
@@ -121,9 +121,9 @@ class JmhLobbyServiceTest {
         LobbyConfig lobbyConfig = mock(LobbyConfig.class);
         when(lobbyConfig.getLobbies()).thenReturn(stored);
         when(plugin.lobbyConfig()).thenReturn(lobbyConfig);
-        ConfigService config = mock(ConfigService.class);
-        when(config.getBoolean("world-engine.enabled", false)).thenReturn(true);
-        when(plugin.configService()).thenReturn(config);
+        JManhuntConfig root = new JManhuntConfig();
+        root.getWorldEngine().setEnabled(true);
+        when(plugin.configRoot()).thenReturn(root);
         when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
         JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),
                 List.of(new BoundEntry(0, new Offset(0, 0, 0), new Offset(9, 9, 9))),
@@ -190,9 +190,9 @@ class JmhLobbyServiceTest {
         LobbyConfig lobbyConfig = mock(LobbyConfig.class);
         when(lobbyConfig.getLobbies()).thenReturn(stored);
         when(plugin.lobbyConfig()).thenReturn(lobbyConfig);
-        ConfigService config = mock(ConfigService.class);
-        when(config.getBoolean("world-engine.enabled", false)).thenReturn(true);
-        when(plugin.configService()).thenReturn(config);
+        JManhuntConfig root = new JManhuntConfig();
+        root.getWorldEngine().setEnabled(true);
+        when(plugin.configRoot()).thenReturn(root);
         JManhuntLogger logger = mock(JManhuntLogger.class);
         when(plugin.logger()).thenReturn(logger);
         JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),
@@ -213,9 +213,9 @@ class JmhLobbyServiceTest {
         LobbyConfig lobbyConfig = mock(LobbyConfig.class);
         when(lobbyConfig.getLobbies()).thenReturn(stored);
         when(plugin.lobbyConfig()).thenReturn(lobbyConfig);
-        ConfigService config = mock(ConfigService.class);
-        when(config.getBoolean("world-engine.enabled", false)).thenReturn(false);
-        when(plugin.configService()).thenReturn(config);
+        JManhuntConfig root = new JManhuntConfig();
+        root.getWorldEngine().setEnabled(false);
+        when(plugin.configRoot()).thenReturn(root);
         JManhuntLogger logger = mock(JManhuntLogger.class);
         when(plugin.logger()).thenReturn(logger);
         JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),

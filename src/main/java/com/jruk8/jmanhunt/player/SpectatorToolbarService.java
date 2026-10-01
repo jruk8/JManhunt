@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.player;
 
 import com.jruk8.jmanhunt.lobby.LobbyService;
-import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.CommandMessages;
@@ -44,15 +44,6 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     /** Permission to swap to another lobby's match from the toolbar. */
     public static final String SWAP_LOBBY_PERMISSION = "jmanhunt.spectator.swaplobby";
 
-    /** Hotbar layout path: 9 characters, one per slot 0 to 8. */
-    public static final String LAYOUT_PATH = "settings.players.spectator.toolbar.layout";
-
-    /** Lock-on follow toggle path. */
-    public static final String LOCK_ON_PATH = "settings.players.spectator.toolbar.lock-on";
-
-    /** Lock-on follow distance path, in blocks. */
-    public static final String TP_DISTANCE_PATH = "settings.players.spectator.toolbar.tp-distance";
-
     /** Fallback layout when the configured one is not 9 characters. */
     public static final String DEFAULT_LAYOUT = "cp##s###b";
 
@@ -91,7 +82,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     public record PlayerEntry(UUID id, String name, Role role, boolean locked) {
     }
 
-    private final OverrideService overrides;
+    private final PlayersSettingsFacade settings;
     private final MessageService messages;
     private final SpectatorMessages spectator;
     private final CommandMessages command;
@@ -106,11 +97,11 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     private final Map<UUID, Long> lastSneaks = new HashMap<>();
     private final Map<UUID, ItemStack> previousHelmets = new HashMap<>();
 
-    public SpectatorToolbarService(OverrideService overrides, MessageService messages,
+    public SpectatorToolbarService(PlayersSettingsFacade settings, MessageService messages,
             SpectatorMessages spectator, CommandMessages command,
             SoundService sounds, PlayerStateStore playerStates, FakeSpectatorService fakes,
             GameManager game, LobbyService lobbies, NamespacedKey toolbarKey) {
-        this.overrides = overrides;
+        this.settings = settings;
         this.messages = messages;
         this.spectator = spectator;
         this.command = command;
@@ -319,17 +310,17 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
 
     /** Effective hotbar layout for the spectator. */
     ToolbarButton[] layout(Player spectator) {
-        return parseLayout(overrides.getString(lobbyOf(spectator), LAYOUT_PATH, DEFAULT_LAYOUT));
+        return parseLayout(settings.toolbarLayout(lobbyOf(spectator)));
     }
 
     /** True when lock-on follow applies to the spectator. */
     boolean lockOn(Player spectator) {
-        return overrides.getBoolean(lobbyOf(spectator), LOCK_ON_PATH, true);
+        return settings.toolbarLockOn(lobbyOf(spectator));
     }
 
     /** Follow teleport distance for the spectator, at least 1 block. */
     int tpDistance(Player spectator) {
-        return Math.max(1, overrides.getInt(lobbyOf(spectator), TP_DISTANCE_PATH, 25));
+        return Math.max(1, settings.toolbarTpDistance(lobbyOf(spectator)));
     }
 
     /**
@@ -609,22 +600,14 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         };
     }
 
-    /** Snowball section toggle path. */
-    public static final String SNOWBALL_ENABLED_PATH =
-            "settings.players.spectator.toolbar.snowball.enabled";
-
-    /** Snowball cooldown path, in seconds. */
-    public static final String SNOWBALL_COOLDOWN_PATH =
-            "settings.players.spectator.toolbar.snowball.cooldown-seconds";
-
     /** True when the snowball button deploys for the spectator. */
     public boolean snowballEnabled(Player spectator) {
-        return overrides.getBoolean(lobbyOf(spectator), SNOWBALL_ENABLED_PATH, true);
+        return settings.snowballEnabled(lobbyOf(spectator));
     }
 
     /** Snowball recharge time in seconds, never negative. */
     public int snowballCooldownSeconds(Player spectator) {
-        return Math.max(0, overrides.getInt(lobbyOf(spectator), SNOWBALL_COOLDOWN_PATH, 8));
+        return Math.max(0, settings.snowballCooldownSeconds(lobbyOf(spectator)));
     }
 
     /** Hotbar slot holding the snowball in a parsed layout, or -1 when absent. Pure for tests. */

@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.match.listeners;
 
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.PlayerSettings;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
@@ -43,7 +43,7 @@ public final class PlayerCombatListener implements Listener {
     private final JManhuntPlugin plugin;
     private final PlayerStateStore playerStates;
     private final GameManager game;
-    private final ConfigService config;
+    private final PlayerSettings players;
     private final CompassManager compass;
     private final StatsManager stats;
     private final LobbyService lobbies;
@@ -56,14 +56,14 @@ public final class PlayerCombatListener implements Listener {
     private long lastVoidRescueWarning;
 
     public PlayerCombatListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
-            ConfigService config, CompassManager compass, StatsManager stats, LobbyService lobbies,
+            PlayerSettings players, CompassManager compass, StatsManager stats, LobbyService lobbies,
             WorldEngineService worldEngine, WinConditionEngine winConditionEngine,
             PlayerRespawnListener respawn, SpeedrunnerDisconnectTracker disconnects,
             Map<UUID, BukkitTask> disconnectTasks, GameMessages gameTexts) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.game = game;
-        this.config = config;
+        this.players = players;
         this.compass = compass;
         this.stats = stats;
         this.lobbies = lobbies;
@@ -122,7 +122,7 @@ public final class PlayerCombatListener implements Listener {
                 killer.getUniqueId().equals(victim.getUniqueId()))) {
             return;
         }
-        if (!config.getBoolean("settings.players.friendly-fire.broadcast-kills", true)) {
+        if (!players.getFriendlyFire().isBroadcastKills()) {
             return;
         }
         int roll = ThreadLocalRandom.current().nextInt(FRIENDLY_FIRE_LINES);
@@ -150,9 +150,9 @@ public final class PlayerCombatListener implements Listener {
         playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
         long matchId = instance.matchId();
         int lives = playerStates.getLives(player.getUniqueId());
+        var speedrunnerRespawn = players.getRespawn().getSpeedrunner();
         int delaySeconds = PlayerRespawnListener.effectiveRespawnDelay(
-                config.getBoolean("settings.players.respawn.speedrunner.enabled", false),
-                config.getInt("settings.players.respawn.speedrunner.delay-seconds", 60));
+                speedrunnerRespawn.isEnabled(), speedrunnerRespawn.getDelaySeconds());
         if (lives != -1) {
             playerStates.decrementLives(player.getUniqueId());
             if (playerStates.getLives(player.getUniqueId()) <= 0) {
@@ -260,9 +260,9 @@ public final class PlayerCombatListener implements Listener {
         disconnects.clear(player.getUniqueId());
         long matchId = instance.matchId();
         int lives = playerStates.getLives(player.getUniqueId());
+        var hunterRespawn = players.getRespawn().getHunter();
         int delaySeconds = PlayerRespawnListener.effectiveRespawnDelay(
-                config.getBoolean("settings.players.respawn.hunter.enabled", false),
-                config.getInt("settings.players.respawn.hunter.delay-seconds", 60));
+                hunterRespawn.isEnabled(), hunterRespawn.getDelaySeconds());
         if (lives != -1) {
             playerStates.decrementLives(player.getUniqueId());
             if (playerStates.getLives(player.getUniqueId()) <= 0) {
@@ -306,7 +306,7 @@ public final class PlayerCombatListener implements Listener {
         // pre-start window below blocks those, to avoid glitches.
         if (!playerStates.role(victim).isParticipant()
                 && event.getCause() != EntityDamageEvent.DamageCause.SUICIDE
-                && config.getBoolean("settings.players.invulnerability.none-players.enabled", true)) {
+                && players.getInvulnerability().getNonePlayers().isEnabled()) {
             event.setCancelled(true);
             return;
         }
@@ -466,9 +466,10 @@ public final class PlayerCombatListener implements Listener {
         if (playerStates.role(attacker) != playerStates.role(victim)) {
             return false;
         }
+        var fire = players.getFriendlyFire();
         boolean friendlyFire = playerStates.role(attacker) == Role.HUNTER
-                ? config.getBoolean("settings.players.friendly-fire.hunter", false)
-                : config.getBoolean("settings.players.friendly-fire.speedrunner", false);
+                ? fire.isHunter()
+                : fire.isSpeedrunner();
         if (!friendlyFire) {
             event.setCancelled(true);
             return true;

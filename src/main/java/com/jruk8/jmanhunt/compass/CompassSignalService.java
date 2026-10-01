@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import org.bukkit.Bukkit;
@@ -20,10 +21,13 @@ import java.util.concurrent.ThreadLocalRandom;
 /** Signal interference verdicts for tracking attempts and scrolls. */
 final class CompassSignalService {
     private final JManhuntPlugin plugin;
+    private final CompassSettingsFacade settings;
     private final PlayerStateStore playerStates;
 
-    CompassSignalService(JManhuntPlugin plugin, PlayerStateStore playerStates) {
+    CompassSignalService(JManhuntPlugin plugin, CompassSettingsFacade settings,
+            PlayerStateStore playerStates) {
         this.plugin = plugin;
+        this.settings = settings;
         this.playerStates = playerStates;
     }
 
@@ -115,12 +119,10 @@ final class CompassSignalService {
             Location target, Location targetPress, SignalInterference.Config interference,
             Boolean hasLineOfSight, Player seen, double holderMoved) {
         Integer lobby = lobbyOf(holder);
-        if (!plugin.overrides().getBoolean(lobby,
-                "settings.compass.signal.interference.enabled", true)) {
+        if (!settings.interferenceEnabled(lobby)) {
             return Optional.empty();
         }
-        boolean ignoreTransparent = plugin.overrides().getBoolean(lobby,
-                "settings.compass.signal.interference.underground.ignore-transparent", true);
+        boolean ignoreTransparent = settings.undergroundIgnoreTransparent(lobby);
         SignalInterference.Snapshot targetSnapshot = targetSnapshot(target, targetPress,
                 ignoreTransparent, seen);
         return SignalInterference.lastReason(
@@ -190,77 +192,62 @@ final class CompassSignalService {
     }
 
     private SignalInterference.Config interferenceConfig(Integer lobby) {
-        String base = "settings.compass.signal.interference.";
-        var overrides = plugin.overrides();
-        Set<SignalInterference.Weather> during = interfereDuring(lobby, base);
-        SignalInterference.InterfereWhen when = lightInterfereWhen(lobby, base);
-        SignalInterference.InterfereWhenVisible losWhen = losInterfereWhen(lobby, base);
-        SignalInterference.StatThresholds stats = statThresholds(lobby, base);
+        Set<SignalInterference.Weather> during = interfereDuring(lobby);
+        SignalInterference.StatThresholds stats = statThresholds(lobby);
         return new SignalInterference.Config(
-                overrides.getBoolean(lobby, base + "light-level.enabled", false),
-                overrides.getInt(lobby, base + "light-level.min-sky-light", 10),
-                overrides.getInt(lobby, base + "light-level.min-block-light", 5),
-                when,
-                checkOn(lobby, base + "light-level.check-on",
-                        SignalInterference.CheckOn.SELF),
-                overrides.getBoolean(lobby, base + "underground.enabled", false),
-                overrides.getInt(lobby, base + "underground.max-blocks-above", 3),
-                checkOn(lobby, base + "underground.check-on",
-                        SignalInterference.CheckOn.BOTH),
-                overrides.getBoolean(lobby, base + "underwater.enabled", false),
-                overrides.getInt(lobby, base + "underwater.max-blocks-above", 2),
-                checkOn(lobby, base + "underwater.check-on",
-                        SignalInterference.CheckOn.BOTH),
-                overrides.getBoolean(lobby, base + "altitude.enabled", false),
-                overrides.getInt(lobby, base + "altitude.min-y", -20),
-                overrides.getInt(lobby, base + "altitude.max-y", 120),
-                checkOn(lobby, base + "altitude.check-on",
-                        SignalInterference.CheckOn.BOTH),
-                overrides.getBoolean(lobby, base + "weather.enabled", false),
+                settings.lightLevelEnabled(lobby),
+                settings.lightLevelMinSkyLight(lobby),
+                settings.lightLevelMinBlockLight(lobby),
+                settings.lightLevelInterfereWhen(lobby),
+                settings.lightLevelCheckOn(lobby),
+                settings.undergroundEnabled(lobby),
+                settings.undergroundMaxBlocksAbove(lobby),
+                settings.undergroundCheckOn(lobby),
+                settings.underwaterEnabled(lobby),
+                settings.underwaterMaxBlocksAbove(lobby),
+                settings.underwaterCheckOn(lobby),
+                settings.altitudeEnabled(lobby),
+                settings.altitudeMinY(lobby),
+                settings.altitudeMaxY(lobby),
+                settings.altitudeCheckOn(lobby),
+                settings.weatherEnabled(lobby),
                 during,
-                overrides.getBoolean(lobby, base + "biome.enabled", false),
-                new HashSet<>(overrides.getStringList(lobby, base + "biome.interfere-in")),
-                checkOn(lobby, base + "biome.check-on",
-                        SignalInterference.CheckOn.BOTH),
-                overrides.getBoolean(lobby, base + "movement.enabled", false),
-                overrides.getDouble(lobby, base + "movement.threshold-blocks", 0.2),
-                checkOn(lobby, base + "movement.check-on",
-                        SignalInterference.CheckOn.SELF),
-                overrides.getBoolean(lobby, base + "line-of-sight.enabled", false),
-                losWhen,
-                overrides.getInt(lobby, base + "line-of-sight.max-ray-distance", 300),
-                overrides.getBoolean(lobby, base + "invisible.enabled", true),
-                checkOn(lobby, base + "invisible.check-on",
-                        SignalInterference.CheckOn.BOTH),
+                settings.biomeEnabled(lobby),
+                new HashSet<>(settings.biomeInterfereIn(lobby)),
+                settings.biomeCheckOn(lobby),
+                settings.movementEnabled(lobby),
+                settings.movementThresholdBlocks(lobby),
+                settings.movementCheckOn(lobby),
+                settings.lineOfSightEnabled(lobby),
+                settings.lineOfSightInterfereWhen(lobby),
+                settings.lineOfSightMaxRayDistance(lobby),
+                settings.invisibleEnabled(lobby),
+                settings.invisibleCheckOn(lobby),
                 stats.healthEnabled(), stats.minHealth(), stats.healthCheckOn(),
                 stats.hungerEnabled(), stats.minHunger(), stats.hungerCheckOn(),
                 stats.expEnabled(), stats.minExpLevel(), stats.expCheckOn(),
-                overrides.getInt(lobby, base + "required-to-fail", 1),
-                overrides.getDouble(lobby, base + "chance-to-bypass", 0.0));
+                settings.requiredToFail(lobby),
+                settings.chanceToBypass(lobby));
     }
 
     /** Resolved player-stats thresholds for one lobby. */
-    private SignalInterference.StatThresholds statThresholds(Integer lobby, String base) {
-        var overrides = plugin.overrides();
+    private SignalInterference.StatThresholds statThresholds(Integer lobby) {
         return new SignalInterference.StatThresholds(
-                overrides.getBoolean(lobby, base + "player-stats.health.enabled", false),
-                overrides.getInt(lobby, base + "player-stats.health.min-health", 8),
-                checkOn(lobby, base + "player-stats.health.check-on",
-                        SignalInterference.CheckOn.SELF),
-                overrides.getBoolean(lobby, base + "player-stats.hunger.enabled", false),
-                overrides.getInt(lobby, base + "player-stats.hunger.min-hunger", 10),
-                checkOn(lobby, base + "player-stats.hunger.check-on",
-                        SignalInterference.CheckOn.SELF),
-                overrides.getBoolean(lobby, base + "player-stats.experience.enabled", false),
-                overrides.getInt(lobby, base + "player-stats.experience.min-exp-level", 5),
-                checkOn(lobby, base + "player-stats.experience.check-on",
-                        SignalInterference.CheckOn.SELF));
+                settings.statsHealthEnabled(lobby),
+                settings.statsMinHealth(lobby),
+                settings.statsHealthCheckOn(lobby),
+                settings.statsHungerEnabled(lobby),
+                settings.statsMinHunger(lobby),
+                settings.statsHungerCheckOn(lobby),
+                settings.statsExperienceEnabled(lobby),
+                settings.statsMinExpLevel(lobby),
+                settings.statsExperienceCheckOn(lobby));
     }
 
     /** Parses the weather buckets that interfere, ignoring unknown values. */
-    private Set<SignalInterference.Weather> interfereDuring(Integer lobby, String base) {
+    private Set<SignalInterference.Weather> interfereDuring(Integer lobby) {
         Set<SignalInterference.Weather> during = new HashSet<>();
-        for (String raw : plugin.overrides().getStringList(lobby, base + "weather.interfere-during")) {
+        for (String raw : settings.weatherInterfereDuring(lobby)) {
             try {
                 during.add(SignalInterference.Weather.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
             } catch (IllegalArgumentException e) {
@@ -268,42 +255,6 @@ final class CompassSignalService {
             }
         }
         return during;
-    }
-
-    /** Parses the light-level interfere-when mode, defaulting to BOTH_UNMET. */
-    private SignalInterference.InterfereWhen lightInterfereWhen(Integer lobby, String base) {
-        try {
-            String raw = plugin.overrides()
-                    .getString(lobby, base + "light-level.interfere-when", "BOTH_UNMET");
-            return SignalInterference.InterfereWhen.valueOf(
-                    (raw == null ? "BOTH_UNMET" : raw).trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            return SignalInterference.InterfereWhen.BOTH_UNMET;
-        }
-    }
-
-    /** Parses the line-of-sight interfere-when mode, defaulting to VISIBLE. */
-    private SignalInterference.InterfereWhenVisible losInterfereWhen(Integer lobby, String base) {
-        try {
-            String raw = plugin.overrides()
-                    .getString(lobby, base + "line-of-sight.interfere-when", "VISIBLE");
-            return SignalInterference.InterfereWhenVisible.valueOf(
-                    (raw == null ? "VISIBLE" : raw).trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            return SignalInterference.InterfereWhenVisible.VISIBLE;
-        }
-    }
-
-    /** Parses a check-on side gate, defaulting to the per-option default. */
-    private SignalInterference.CheckOn checkOn(Integer lobby, String path,
-            SignalInterference.CheckOn fallback) {
-        try {
-            String raw = plugin.overrides().getString(lobby, path, fallback.name());
-            return SignalInterference.CheckOn.valueOf(
-                    (raw == null ? fallback.name() : raw).trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            return fallback;
-        }
     }
 
     /** Signal snapshot for a spot, read from its feet block plus side stats. */

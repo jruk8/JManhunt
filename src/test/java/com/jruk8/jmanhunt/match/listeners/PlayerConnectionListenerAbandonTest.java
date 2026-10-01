@@ -9,7 +9,8 @@ import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MatchConfig;
+import com.jruk8.jmanhunt.config.PlayerSettings;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -61,8 +62,11 @@ class PlayerConnectionListenerAbandonTest {
         players.setRole(quitterId, Role.SPECTATOR);
         when(game.instanceOf(quitterId)).thenReturn(Optional.of(instance));
         Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
+        PlayerSettings settings = new PlayerSettings();
+        settings.getRoles().getResetOnLeave().setEnabled(false);
         PlayerConnectionListener listener = new PlayerConnectionListener(plugin, players, game,
-                mock(MessageService.class), mock(ConfigService.class), lobbies,
+                mock(MessageService.class), settings, new MatchConfig.DisconnectHandling(),
+                lobbies,
                 mock(LobbyTeleporter.class), mock(WorldEngineService.class),
                 mock(SpeedrunnerDisconnectTracker.class), disconnectTasks,
                 mock(CompassManager.class), new GameMessages());

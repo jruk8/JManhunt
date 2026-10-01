@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -19,7 +19,7 @@ import java.util.UUID;
  * squared distances with the radius squared at call time.
  */
 final class HotspotService {
-    private final JManhuntPlugin plugin;
+    private final CompassSettingsFacade settings;
     private final PlayerStateStore playerStates;
     /** Past positions per player, oldest first, x/z pairs only. */
     private final Map<UUID, ArrayDeque<double[]>> histories = new HashMap<>();
@@ -27,8 +27,8 @@ final class HotspotService {
     private final Map<Integer, Long> lastSampleByLobby = new HashMap<>();
     private GameManager game;
 
-    HotspotService(JManhuntPlugin plugin, PlayerStateStore playerStates) {
-        this.plugin = plugin;
+    HotspotService(CompassSettingsFacade settings, PlayerStateStore playerStates) {
+        this.settings = settings;
         this.playerStates = playerStates;
     }
 
@@ -54,21 +54,19 @@ final class HotspotService {
 
     /** Samples one match when its lobby interval is due. */
     private void tickLobby(GameInstance instance, long nowMillis) {
-        String base = "settings.compass.signal.inaccuracy.accuracy-hotspot.";
-        var overrides = plugin.overrides();
         Integer lobby = instance.originLobbyId();
-        if (!overrides.getBoolean(lobby, base + "enabled", false)) {
+        if (!settings.hotspotEnabled(lobby)) {
             return;
         }
         int interval = SignalInaccuracy.clampSampleInterval(
-                overrides.getInt(lobby, base + "sample-interval", 10));
+                settings.hotspotSampleInterval(lobby));
         long last = lastSampleByLobby.getOrDefault(lobby, 0L);
         if (nowMillis - last < (long) interval * 1000L) {
             return;
         }
         lastSampleByLobby.put(lobby, nowMillis);
         int maxPoints = SignalInaccuracy.clampMaxPoints(
-                overrides.getInt(lobby, base + "max-points", 40));
+                settings.hotspotMaxPoints(lobby));
         for (Player player : game.onlineActivePlayers(instance)) {
             if (!playerStates.role(player).isParticipant()) {
                 continue;
@@ -98,9 +96,7 @@ final class HotspotService {
      * the feature is off or the target has no history.
      */
     double reductionFor(UUID targetId, double x, double z, Integer lobby) {
-        String base = "settings.compass.signal.inaccuracy.accuracy-hotspot.";
-        var overrides = plugin.overrides();
-        if (targetId == null || !overrides.getBoolean(lobby, base + "enabled", false)) {
+        if (targetId == null || !settings.hotspotEnabled(lobby)) {
             return 0.0;
         }
         Deque<double[]> history = histories.get(targetId);
@@ -108,13 +104,13 @@ final class HotspotService {
             return 0.0;
         }
         double radius = SignalInaccuracy.clampRadius(
-                overrides.getDouble(lobby, base + "hotspot-radius", 50.0));
+                settings.hotspotRadius(lobby));
         int maxPoints = SignalInaccuracy.clampMaxPoints(
-                overrides.getInt(lobby, base + "max-points", 40));
+                settings.hotspotMaxPoints(lobby));
         double fraction = SignalInaccuracy.clampFraction(
-                overrides.getDouble(lobby, base + "full-accuracy-fraction", 0.5));
+                settings.hotspotFullAccuracyFraction(lobby));
         double maxReduction = SignalInaccuracy.clampMaxReduction(
-                overrides.getDouble(lobby, base + "max-reduction", 0.9));
+                settings.hotspotMaxReduction(lobby));
         int inside = 0;
         for (double[] point : history) {
             if (SignalInaccuracy.countsInside(point[0], point[1], x, z, radius)) {

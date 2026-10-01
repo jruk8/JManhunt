@@ -1,31 +1,20 @@
 package com.jruk8.jmanhunt.match;
 
-import com.jruk8.jmanhunt.config.ConfigPathMapper;
-import com.jruk8.jmanhunt.config.ConfigService;
-import com.jruk8.jmanhunt.config.JManhuntConfig;
-import com.jruk8.jmanhunt.modifiers.ModifierStore;
-import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
+import com.jruk8.jmanhunt.config.MatchSettings;
 import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
-import java.util.logging.Logger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import com.jruk8.jmanhunt.match.prestart.Headstart;
 
 class HeadstartTest {
 
-    private static ConfigService service(JManhuntConfig root) {
-        Logger log = Logger.getAnonymousLogger();
-        log.setUseParentHandlers(false);
-        return new ConfigService(root, new ModifierStore(ModifierFiles.inMemory(), log));
-    }
-
     @Test
     void defaultsAreDisabledThirtySeconds() {
-        ConfigService config = service(new JManhuntConfig());
+        MatchSettings.Headstarts headstarts = new MatchSettings.Headstarts();
 
-        Headstart hunter = Headstart.parse(config, "hunter");
-        Headstart runner = Headstart.parse(config, "speedrunner");
+        Headstart hunter = Headstart.parse(headstarts, "hunter");
+        Headstart runner = Headstart.parse(headstarts, "speedrunner");
 
         assertFalse(hunter.enabled());
         assertEquals(30, hunter.delaySeconds());
@@ -35,17 +24,16 @@ class HeadstartTest {
 
     @Test
     void sidesParseIndependently() {
-        JManhuntConfig root = new JManhuntConfig();
-        ConfigPathMapper.set(root, "settings.match.headstarts.hunter.enabled", true);
-        ConfigPathMapper.set(root, "settings.match.headstarts.hunter.delay-seconds", 45);
-        ConfigPathMapper.set(root, "settings.match.headstarts.speedrunner.enabled", true);
-        ConfigPathMapper.set(root, "settings.match.headstarts.speedrunner.delay-seconds", 10);
-        ConfigService config = service(root);
+        MatchSettings.Headstarts headstarts = new MatchSettings.Headstarts();
+        headstarts.getHunter().setEnabled(true);
+        headstarts.getHunter().setDelaySeconds(45);
+        headstarts.getSpeedrunner().setEnabled(true);
+        headstarts.getSpeedrunner().setDelaySeconds(10);
 
         assertEquals(new Headstart(true, 45),
-                Headstart.parse(config, "hunter"));
+                Headstart.parse(headstarts, "hunter"));
         assertEquals(new Headstart(true, 10),
-                Headstart.parse(config, "speedrunner"));
+                Headstart.parse(headstarts, "speedrunner"));
     }
 
     @Test

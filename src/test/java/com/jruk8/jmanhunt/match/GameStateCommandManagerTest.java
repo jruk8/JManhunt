@@ -8,6 +8,8 @@ import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MiscConfig;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
@@ -185,7 +187,8 @@ class GameStateCommandManagerTest {
         JManhuntLogger logger = mock(JManhuntLogger.class);
         when(plugin.logger()).thenReturn(logger);
         GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), mock(ConfigService.class), mock(MessageService.class),
+                new PlayerStateStore(), mock(ConfigService.class), new MiscConfig.Interop(),
+                mock(PlayersSettingsFacade.class), mock(MessageService.class),
                 mock(SoundService.class), mock(GameManager.class));
         List<String> warnings = new ArrayList<>();
         TagContext context = TagContext.run(
@@ -210,7 +213,8 @@ class GameStateCommandManagerTest {
         JManhuntLogger logger = mock(JManhuntLogger.class);
         when(plugin.logger()).thenReturn(logger);
         GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), mock(ConfigService.class), mock(MessageService.class),
+                new PlayerStateStore(), mock(ConfigService.class), new MiscConfig.Interop(),
+                mock(PlayersSettingsFacade.class), mock(MessageService.class),
                 mock(SoundService.class), mock(GameManager.class));
         List<String> warnings = new ArrayList<>();
         TagContext context = TagContext.run(
@@ -241,7 +245,8 @@ class GameStateCommandManagerTest {
         when(config.getStringList(anyString())).thenReturn(List.of("stop"));
         MessageService messages = mock(MessageService.class);
         GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), config, messages,
+                new PlayerStateStore(), config, new MiscConfig.Interop(),
+                mock(PlayersSettingsFacade.class), messages,
                 mock(SoundService.class), mock(GameManager.class));
         List<String> warnings = new ArrayList<>();
         TagContext context = TagContext.run(
@@ -280,7 +285,8 @@ class GameStateCommandManagerTest {
         MessageService messages = mock(MessageService.class);
         stubEngineTexts(messages);
         GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), config, messages,
+                new PlayerStateStore(), config, new MiscConfig.Interop(),
+                mock(PlayersSettingsFacade.class), messages,
                 mock(SoundService.class), game);
 
         manager.runConsoleCleanup(7L);
@@ -312,7 +318,8 @@ class GameStateCommandManagerTest {
         MessageService messages = mock(MessageService.class);
         stubEngineTexts(messages);
         GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), config, messages,
+                new PlayerStateStore(), config, new MiscConfig.Interop(),
+                mock(PlayersSettingsFacade.class), messages,
                 mock(SoundService.class), game);
 
         manager.runConsoleCleanup(7L);
@@ -368,6 +375,7 @@ class GameStateCommandManagerTest {
         stubEngineTexts(messages);
         SoundService sounds = mock(SoundService.class);
         return new RoleTagHarness(new GameStateCommandManager(plugin, playerStates, config,
+                new MiscConfig.Interop(), mock(PlayersSettingsFacade.class),
                 messages, sounds, game), messages, sounds, logger);
     }
 
@@ -469,7 +477,8 @@ class GameStateCommandManagerTest {
 
     private static GameStateCommandManager wipeManager(JManhuntPlugin plugin) {
         return new GameStateCommandManager(plugin,
-                new PlayerStateStore(), mock(ConfigService.class), mock(MessageService.class),
+                new PlayerStateStore(), mock(ConfigService.class), new MiscConfig.Interop(),
+                mock(PlayersSettingsFacade.class), mock(MessageService.class),
                 mock(SoundService.class), mock(GameManager.class));
     }
 

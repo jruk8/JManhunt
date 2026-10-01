@@ -6,8 +6,12 @@ import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Grid-based single-world manhunt engine. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class WorldEngineConfig extends OkaeriConfig {
 
@@ -59,71 +63,9 @@ public class WorldEngineConfig extends OkaeriConfig {
     @Comment("Shared pool of reusable end dimensions.")
     private End end = new End();
 
-    public boolean isEnabled() {
-        return enabled;
-    }
-
-    public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public String getWorldName() {
-        return worldName;
-    }
-
-    public void setWorldName(String worldName) {
-        this.worldName = worldName;
-    }
-
-    public int getCellSize() {
-        return cellSize;
-    }
-
-    public void setCellSize(int cellSize) {
-        this.cellSize = cellSize;
-    }
-
-    public int getTpSpreadRadius() {
-        return tpSpreadRadius;
-    }
-
-    public void setTpSpreadRadius(int tpSpreadRadius) {
-        this.tpSpreadRadius = tpSpreadRadius;
-    }
-
-    public SpawnpointAlgorithm getSpawnpointAlgorithm() {
-        return spawnpointAlgorithm;
-    }
-
-    public void setSpawnpointAlgorithm(SpawnpointAlgorithm spawnpointAlgorithm) {
-        this.spawnpointAlgorithm = spawnpointAlgorithm;
-    }
-
-    public Preloading getPreloading() {
-        return preloading;
-    }
-
-    public void setPreloading(Preloading preloading) {
-        this.preloading = preloading;
-    }
-
-    public WorldBorder getWorldBorder() {
-        return worldBorder;
-    }
-
-    public void setWorldBorder(WorldBorder worldBorder) {
-        this.worldBorder = worldBorder;
-    }
-
-    public End getEnd() {
-        return end;
-    }
-
-    public void setEnd(End end) {
-        this.end = end;
-    }
-
     /** Validated spawnpoint algorithm. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class SpawnpointAlgorithm extends OkaeriConfig {
 
@@ -161,39 +103,9 @@ public class WorldEngineConfig extends OkaeriConfig {
         })
         private SpawnCloseToStructure spawnCloseToStructure = new SpawnCloseToStructure();
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getMaxRetries() {
-            return maxRetries;
-        }
-
-        public void setMaxRetries(int maxRetries) {
-            this.maxRetries = maxRetries;
-        }
-
-        public int getYTolerance() {
-            return yTolerance;
-        }
-
-        public void setYTolerance(int yTolerance) {
-            this.yTolerance = yTolerance;
-        }
-
-        public SpawnCloseToStructure getSpawnCloseToStructure() {
-            return spawnCloseToStructure;
-        }
-
-        public void setSpawnCloseToStructure(SpawnCloseToStructure spawnCloseToStructure) {
-            this.spawnCloseToStructure = spawnCloseToStructure;
-        }
-
         /** Spawn cells near a listed structure. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class SpawnCloseToStructure extends OkaeriConfig {
 
@@ -232,41 +144,12 @@ public class WorldEngineConfig extends OkaeriConfig {
             })
             private int maxDistance = 125;
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public List<String> getStructures() {
-                return structures;
-            }
-
-            public void setStructures(List<String> structures) {
-                this.structures = structures;
-            }
-
-            public int getAttempts() {
-                return attempts;
-            }
-
-            public void setAttempts(int attempts) {
-                this.attempts = attempts;
-            }
-
-            public int getMaxDistance() {
-                return maxDistance;
-            }
-
-            public void setMaxDistance(int maxDistance) {
-                this.maxDistance = maxDistance;
-            }
         }
     }
 
     /** Cell preloading commands and ready-cell buffer. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Preloading extends OkaeriConfig {
 
@@ -288,23 +171,9 @@ public class WorldEngineConfig extends OkaeriConfig {
         @Comment("Ready-cell buffer kept ahead of match starts.")
         private CellBuffer cellBuffer = new CellBuffer();
 
-        public List<String> getCommands() {
-            return commands;
-        }
-
-        public void setCommands(List<String> commands) {
-            this.commands = commands;
-        }
-
-        public CellBuffer getCellBuffer() {
-            return cellBuffer;
-        }
-
-        public void setCellBuffer(CellBuffer cellBuffer) {
-            this.cellBuffer = cellBuffer;
-        }
-
         /** Ready-cell buffer size and refill policy. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class CellBuffer extends OkaeriConfig {
 
@@ -323,25 +192,12 @@ public class WorldEngineConfig extends OkaeriConfig {
             })
             private BufferRefillPolicy incrementWhen = BufferRefillPolicy.ALWAYS;
 
-            public int getStoredCellsBuffer() {
-                return storedCellsBuffer;
-            }
-
-            public void setStoredCellsBuffer(int storedCellsBuffer) {
-                this.storedCellsBuffer = storedCellsBuffer;
-            }
-
-            public BufferRefillPolicy getIncrementWhen() {
-                return incrementWhen;
-            }
-
-            public void setIncrementWhen(BufferRefillPolicy incrementWhen) {
-                this.incrementWhen = incrementWhen;
-            }
         }
     }
 
     /** World border cell confinement. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class WorldBorder extends OkaeriConfig {
 
@@ -371,39 +227,9 @@ public class WorldEngineConfig extends OkaeriConfig {
         @Comment("Pseudoborder wall particles for every match.")
         private WorldEngineParticles particles = new WorldEngineParticles();
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public BorderDamage getDamage() {
-            return damage;
-        }
-
-        public void setDamage(BorderDamage damage) {
-            this.damage = damage;
-        }
-
-        public StartBorder getStartBorder() {
-            return startBorder;
-        }
-
-        public void setStartBorder(StartBorder startBorder) {
-            this.startBorder = startBorder;
-        }
-
-        public WorldEngineParticles getParticles() {
-            return particles;
-        }
-
-        public void setParticles(WorldEngineParticles particles) {
-            this.particles = particles;
-        }
-
         /** Border damage buffer and amount. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class BorderDamage extends OkaeriConfig {
 
@@ -419,24 +245,11 @@ public class WorldEngineConfig extends OkaeriConfig {
             })
             private double amount = 1.0;
 
-            public double getBuffer() {
-                return buffer;
-            }
-
-            public void setBuffer(double buffer) {
-                this.buffer = buffer;
-            }
-
-            public double getAmount() {
-                return amount;
-            }
-
-            public void setAmount(double amount) {
-                this.amount = amount;
-            }
         }
 
         /** Smaller initial border that expands on game begin. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class StartBorder extends OkaeriConfig {
 
@@ -455,26 +268,13 @@ public class WorldEngineConfig extends OkaeriConfig {
             })
             private int radius = 10;
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public int getRadius() {
-                return radius;
-            }
-
-            public void setRadius(int radius) {
-                this.radius = radius;
-            }
         }
 
     }
 
     /** Shared pool of reusable end dimensions. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class End extends OkaeriConfig {
 
@@ -495,20 +295,5 @@ public class WorldEngineConfig extends OkaeriConfig {
         })
         private int buffer = 3;
 
-        public String getBaseName() {
-            return baseName;
-        }
-
-        public void setBaseName(String baseName) {
-            this.baseName = baseName;
-        }
-
-        public int getBuffer() {
-            return buffer;
-        }
-
-        public void setBuffer(int buffer) {
-            this.buffer = buffer;
-        }
     }
 }

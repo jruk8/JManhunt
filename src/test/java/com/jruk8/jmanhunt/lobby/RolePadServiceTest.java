@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.lobby;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -45,9 +45,7 @@ class RolePadServiceTest {
     @Test
     void fakeSpectatorNeverTriggersPads() {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        ConfigService config = mock(ConfigService.class);
-        when(plugin.configService()).thenReturn(config);
-        when(config.getBoolean("advanced.lobbies.role-pads.enabled", true)).thenReturn(true);
+        LobbiesConfig lobbySettings = new LobbiesConfig();
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
         when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore playerStates = mock(PlayerStateStore.class);
@@ -59,7 +57,7 @@ class RolePadServiceTest {
         when(playerStates.role(player)).thenReturn(Role.HUNTER);
         PlayerMoveEvent event = mock(PlayerMoveEvent.class);
         when(event.getPlayer()).thenReturn(player);
-        RolePadService pads = new RolePadService(plugin, mock(LobbyService.class),
+        RolePadService pads = new RolePadService(plugin, lobbySettings, mock(LobbyService.class),
                 playerStates, mock(GameManager.class), mock(MessageService.class),
                 new ManhuntMessages(), mock(SoundService.class), () -> "jmh-lobby");
 
@@ -72,9 +70,13 @@ class RolePadServiceTest {
     @Test
     void spectatorRoleWithoutFakeModePassesThePadGate() {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        ConfigService config = mock(ConfigService.class);
-        when(plugin.configService()).thenReturn(config);
-        when(config.getBoolean("advanced.lobbies.role-pads.enabled", true)).thenReturn(true);
+        LobbiesConfig lobbySettings = new LobbiesConfig();
+        var blocks = lobbySettings.getRolePads().getBlocks();
+        blocks.setSpeedrunner("");
+        blocks.setHunter("");
+        blocks.setAfk("");
+        blocks.setSpectator("");
+        blocks.setNone("");
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
         when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore playerStates = mock(PlayerStateStore.class);
@@ -87,7 +89,7 @@ class RolePadServiceTest {
         when(playerStates.role(player)).thenReturn(Role.SPECTATOR);
         PlayerMoveEvent event = mock(PlayerMoveEvent.class);
         when(event.getPlayer()).thenReturn(player);
-        RolePadService pads = new RolePadService(plugin, mock(LobbyService.class),
+        RolePadService pads = new RolePadService(plugin, lobbySettings, mock(LobbyService.class),
                 playerStates, mock(GameManager.class), mock(MessageService.class),
                 new ManhuntMessages(), mock(SoundService.class), () -> "jmh-lobby");
 

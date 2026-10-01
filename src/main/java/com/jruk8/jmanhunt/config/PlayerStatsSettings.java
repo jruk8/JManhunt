@@ -4,39 +4,21 @@ import com.jruk8.jmanhunt.compass.SignalInterference;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Health, hunger, and experience interference. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class PlayerStatsSettings extends OkaeriConfig {
     private Health health = new Health();
     private Hunger hunger = new Hunger();
     private Experience experience = new Experience();
 
-    public Health getHealth() {
-        return health;
-    }
-
-    public void setHealth(Health health) {
-        this.health = health;
-    }
-
-    public Hunger getHunger() {
-        return hunger;
-    }
-
-    public void setHunger(Hunger hunger) {
-        this.hunger = hunger;
-    }
-
-    public Experience getExperience() {
-        return experience;
-    }
-
-    public void setExperience(Experience experience) {
-        this.experience = experience;
-    }
-
     /** Health interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Health extends OkaeriConfig {
         private boolean enabled = false;
@@ -57,32 +39,11 @@ public class PlayerStatsSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getMinHealth() {
-            return minHealth;
-        }
-
-        public void setMinHealth(int minHealth) {
-            this.minHealth = minHealth;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 
     /** Hunger interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Hunger extends OkaeriConfig {
         private boolean enabled = false;
@@ -102,32 +63,11 @@ public class PlayerStatsSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getMinHunger() {
-            return minHunger;
-        }
-
-        public void setMinHunger(int minHunger) {
-            this.minHunger = minHunger;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 
     /** Experience interference. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Experience extends OkaeriConfig {
         private boolean enabled = false;
@@ -147,28 +87,5 @@ public class PlayerStatsSettings extends OkaeriConfig {
         })
         private SignalInterference.CheckOn checkOn = SignalInterference.CheckOn.SELF;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getMinExpLevel() {
-            return minExpLevel;
-        }
-
-        public void setMinExpLevel(int minExpLevel) {
-            this.minExpLevel = minExpLevel;
-        }
-
-        public SignalInterference.CheckOn getCheckOn() {
-            return checkOn;
-        }
-
-        public void setCheckOn(SignalInterference.CheckOn checkOn) {
-            this.checkOn = checkOn;
-        }
     }
 }

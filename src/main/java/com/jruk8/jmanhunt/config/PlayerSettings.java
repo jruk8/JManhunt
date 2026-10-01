@@ -3,8 +3,13 @@ package com.jruk8.jmanhunt.config;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Player settings. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class PlayerSettings extends OkaeriConfig {
 
@@ -38,55 +43,9 @@ public class PlayerSettings extends OkaeriConfig {
     })
     private AnnounceRoles announceRoles = new AnnounceRoles();
 
-    public Roles getRoles() {
-        return roles;
-    }
-
-    public void setRoles(Roles roles) {
-        this.roles = roles;
-    }
-
-    public Respawn getRespawn() {
-        return respawn;
-    }
-
-    public void setRespawn(Respawn respawn) {
-        this.respawn = respawn;
-    }
-
-    public FriendlyFire getFriendlyFire() {
-        return friendlyFire;
-    }
-
-    public void setFriendlyFire(FriendlyFire friendlyFire) {
-        this.friendlyFire = friendlyFire;
-    }
-
-    public Invulnerability getInvulnerability() {
-        return invulnerability;
-    }
-
-    public void setInvulnerability(Invulnerability invulnerability) {
-        this.invulnerability = invulnerability;
-    }
-
-    public Spectator getSpectator() {
-        return spectator;
-    }
-
-    public void setSpectator(Spectator spectator) {
-        this.spectator = spectator;
-    }
-
-    public AnnounceRoles getAnnounceRoles() {
-        return announceRoles;
-    }
-
-    public void setAnnounceRoles(AnnounceRoles announceRoles) {
-        this.announceRoles = announceRoles;
-    }
-
     /** Role assignment and reset. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Roles extends OkaeriConfig {
 
@@ -117,32 +76,11 @@ public class PlayerSettings extends OkaeriConfig {
         })
         private Toggle turnNonesSpectator = new Toggle(false);
 
-        public Toggle getResetOnGameEnd() {
-            return resetOnGameEnd;
-        }
-
-        public void setResetOnGameEnd(Toggle resetOnGameEnd) {
-            this.resetOnGameEnd = resetOnGameEnd;
-        }
-
-        public Toggle getResetOnLeave() {
-            return resetOnLeave;
-        }
-
-        public void setResetOnLeave(Toggle resetOnLeave) {
-            this.resetOnLeave = resetOnLeave;
-        }
-
-        public Toggle getTurnNonesSpectator() {
-            return turnNonesSpectator;
-        }
-
-        public void setTurnNonesSpectator(Toggle turnNonesSpectator) {
-            this.turnNonesSpectator = turnNonesSpectator;
-        }
     }
 
     /** Per-role respawn delay and lives. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Respawn extends OkaeriConfig {
 
@@ -152,23 +90,9 @@ public class PlayerSettings extends OkaeriConfig {
         @Comment("Delayed speedrunner respawn and speedrunner lives.")
         private SpeedrunnerRespawn speedrunner = new SpeedrunnerRespawn();
 
-        public HunterRespawn getHunter() {
-            return hunter;
-        }
-
-        public void setHunter(HunterRespawn hunter) {
-            this.hunter = hunter;
-        }
-
-        public SpeedrunnerRespawn getSpeedrunner() {
-            return speedrunner;
-        }
-
-        public void setSpeedrunner(SpeedrunnerRespawn speedrunner) {
-            this.speedrunner = speedrunner;
-        }
-
         /** Hunter respawn delay and lives. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class HunterRespawn extends OkaeriConfig {
 
@@ -194,32 +118,11 @@ public class PlayerSettings extends OkaeriConfig {
             })
             private int lives = -1;
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public int getDelaySeconds() {
-                return delaySeconds;
-            }
-
-            public void setDelaySeconds(int delaySeconds) {
-                this.delaySeconds = delaySeconds;
-            }
-
-            public int getLives() {
-                return lives;
-            }
-
-            public void setLives(int lives) {
-                this.lives = lives;
-            }
         }
 
         /** Speedrunner respawn delay and lives. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class SpeedrunnerRespawn extends OkaeriConfig {
 
@@ -246,33 +149,12 @@ public class PlayerSettings extends OkaeriConfig {
             })
             private int lives = 1;
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public int getDelaySeconds() {
-                return delaySeconds;
-            }
-
-            public void setDelaySeconds(int delaySeconds) {
-                this.delaySeconds = delaySeconds;
-            }
-
-            public int getLives() {
-                return lives;
-            }
-
-            public void setLives(int lives) {
-                this.lives = lives;
-            }
         }
     }
 
     /** Friendly fire per role. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class FriendlyFire extends OkaeriConfig {
         private boolean speedrunner = true;
@@ -286,32 +168,11 @@ public class PlayerSettings extends OkaeriConfig {
         })
         private boolean broadcastKills = true;
 
-        public boolean isSpeedrunner() {
-            return speedrunner;
-        }
-
-        public void setSpeedrunner(boolean speedrunner) {
-            this.speedrunner = speedrunner;
-        }
-
-        public boolean isHunter() {
-            return hunter;
-        }
-
-        public void setHunter(boolean hunter) {
-            this.hunter = hunter;
-        }
-
-        public boolean isBroadcastKills() {
-            return broadcastKills;
-        }
-
-        public void setBroadcastKills(boolean broadcastKills) {
-            this.broadcastKills = broadcastKills;
-        }
     }
 
     /** Invulnerability rules. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Invulnerability extends OkaeriConfig {
 
@@ -330,24 +191,11 @@ public class PlayerSettings extends OkaeriConfig {
         })
         private Toggle nonePlayers = new Toggle(true);
 
-        public Toggle getOnGameEnd() {
-            return onGameEnd;
-        }
-
-        public void setOnGameEnd(Toggle onGameEnd) {
-            this.onGameEnd = onGameEnd;
-        }
-
-        public Toggle getNonePlayers() {
-            return nonePlayers;
-        }
-
-        public void setNonePlayers(Toggle nonePlayers) {
-            this.nonePlayers = nonePlayers;
-        }
     }
 
     /** Spectator toolbar and lock-on follow. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Spectator extends OkaeriConfig {
 
@@ -357,23 +205,9 @@ public class PlayerSettings extends OkaeriConfig {
         @Comment("Travel limit keeping spectators near the action.")
         private Travel travel = new Travel();
 
-        public Toolbar getToolbar() {
-            return toolbar;
-        }
-
-        public void setToolbar(Toolbar toolbar) {
-            this.toolbar = toolbar;
-        }
-
-        public Travel getTravel() {
-            return travel;
-        }
-
-        public void setTravel(Travel travel) {
-            this.travel = travel;
-        }
-
         /** Spectator travel limit. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Travel extends OkaeriConfig {
 
@@ -392,24 +226,11 @@ public class PlayerSettings extends OkaeriConfig {
             })
             private double maxDistance = 125.0;
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public double getMaxDistance() {
-                return maxDistance;
-            }
-
-            public void setMaxDistance(double maxDistance) {
-                this.maxDistance = maxDistance;
-            }
         }
 
         /** Spectator hotbar toolbar. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Toolbar extends OkaeriConfig {
 
@@ -444,9 +265,13 @@ public class PlayerSettings extends OkaeriConfig {
                     "and applies no knockback to anything it hits."
             })
             @CustomKey("snowball")
+            @Getter(AccessLevel.NONE)
+            @Setter(AccessLevel.NONE)
             public Snowball snowball = new Snowball();
 
             /** Spectator snowball fun item. */
+            @Getter
+            @Setter
             @SuppressWarnings("FieldMayBeFinal")
             public static class Snowball extends OkaeriConfig {
                 @Comment({"Show the snowball on the toolbar.", "Default: true"})
@@ -457,50 +282,14 @@ public class PlayerSettings extends OkaeriConfig {
                 @CustomKey("cooldown-seconds")
                 private int cooldownSeconds = 8;
 
-                public boolean isEnabled() {
-                    return enabled;
-                }
-
-                public void setEnabled(boolean enabled) {
-                    this.enabled = enabled;
-                }
-
-                public int getCooldownSeconds() {
-                    return cooldownSeconds;
-                }
-
-                public void setCooldownSeconds(int cooldownSeconds) {
-                    this.cooldownSeconds = cooldownSeconds;
-                }
             }
 
-            public String getLayout() {
-                return layout;
-            }
-
-            public void setLayout(String layout) {
-                this.layout = layout;
-            }
-
-            public boolean isLockOn() {
-                return lockOn;
-            }
-
-            public void setLockOn(boolean lockOn) {
-                this.lockOn = lockOn;
-            }
-
-            public int getTpDistance() {
-                return tpDistance;
-            }
-
-            public void setTpDistance(int tpDistance) {
-                this.tpDistance = tpDistance;
-            }
         }
     }
 
     /** Start-of-match role announcements. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class AnnounceRoles extends OkaeriConfig {
 
@@ -508,31 +297,9 @@ public class PlayerSettings extends OkaeriConfig {
         private Title title = new Title();
         private Toggle sounds = new Toggle(true);
 
-        public Toggle getChat() {
-            return chat;
-        }
-
-        public void setChat(Toggle chat) {
-            this.chat = chat;
-        }
-
-        public Toggle getSounds() {
-            return sounds;
-        }
-
-        public void setSounds(Toggle sounds) {
-            this.sounds = sounds;
-        }
-
-        public Title getTitle() {
-            return title;
-        }
-
-        public void setTitle(Title title) {
-            this.title = title;
-        }
-
         /** Title announcement and timing. */
+        @Getter
+        @Setter
         @SuppressWarnings("FieldMayBeFinal")
         public static class Title extends OkaeriConfig {
             private boolean enabled = true;
@@ -547,37 +314,6 @@ public class PlayerSettings extends OkaeriConfig {
             @CustomKey("fade-out-seconds")
             private double fadeOutSeconds = 0.5;
 
-            public boolean isEnabled() {
-                return enabled;
-            }
-
-            public void setEnabled(boolean enabled) {
-                this.enabled = enabled;
-            }
-
-            public double getFadeInSeconds() {
-                return fadeInSeconds;
-            }
-
-            public void setFadeInSeconds(double fadeInSeconds) {
-                this.fadeInSeconds = fadeInSeconds;
-            }
-
-            public double getStaySeconds() {
-                return staySeconds;
-            }
-
-            public void setStaySeconds(double staySeconds) {
-                this.staySeconds = staySeconds;
-            }
-
-            public double getFadeOutSeconds() {
-                return fadeOutSeconds;
-            }
-
-            public void setFadeOutSeconds(double fadeOutSeconds) {
-                this.fadeOutSeconds = fadeOutSeconds;
-            }
         }
     }
 }

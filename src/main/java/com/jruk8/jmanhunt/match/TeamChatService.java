@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.match;
 
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.ServerSettings;
 import com.jruk8.jmanhunt.message.ChatMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -25,18 +25,18 @@ public final class TeamChatService {
     private final GameManager game;
     private final PlayerStateStore playerStates;
     private final FakeSpectatorService fakes;
-    private final ConfigService config;
+    private final ServerSettings.TeamChat teamChat;
     private final MessageService messages;
     private final ChatMessages chat;
     private final SoundService sounds;
 
     public TeamChatService(GameManager game, PlayerStateStore playerStates,
-            FakeSpectatorService fakes, ConfigService config,
+            FakeSpectatorService fakes, ServerSettings.TeamChat teamChat,
             MessageService messages, ChatMessages chat, SoundService sounds) {
         this.game = game;
         this.playerStates = playerStates;
         this.fakes = fakes;
-        this.config = config;
+        this.teamChat = teamChat;
         this.messages = messages;
         this.chat = chat;
         this.sounds = sounds;
@@ -99,16 +99,16 @@ public final class TeamChatService {
     }
 
     public boolean enabled() {
-        return config.getBoolean("settings.server.team-chat.enabled", true);
+        return teamChat.isEnabled();
     }
 
     public List<String> prefixes() {
-        List<String> prefixes = config.getStringList("settings.server.team-chat.prefixes");
+        List<String> prefixes = teamChat.getPrefixes();
         return prefixes.isEmpty() ? List.of("@team", "@t") : prefixes;
     }
 
     public boolean spectatorsSee() {
-        return config.getBoolean("settings.server.team-chat.spectators-see", true);
+        return teamChat.isSpectatorsSee();
     }
 
     /** Eligible senders: participants inside a match. Nobody else. */

@@ -8,7 +8,8 @@ import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.TagCooldownStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.match.LeaveDestination;
 import com.jruk8.jmanhunt.message.DebugMessages;
 import com.jruk8.jmanhunt.message.GameMessages;
@@ -56,7 +57,9 @@ public final class MatchFinishService {
     private final PlayerStateStore playerStates;
     private final StatsManager stats;
     private final GameStateCommandManager stateCommands;
-    private final ConfigService configService;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
+    private final PlayersSettingsFacade players;
+    private final MatchSettingsFacade match;
     private final WorldEngineService worldEngine;
     private final MatchStore store;
     private final MatchMessaging messaging;
@@ -72,7 +75,9 @@ public final class MatchFinishService {
     public MatchFinishService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
             PlayerStateStore playerStates,
             CompassManager compass, StatsManager stats, GameStateCommandManager stateCommands,
-            ConfigService configService, WorldEngineService worldEngine, MatchStore store,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            PlayersSettingsFacade players, MatchSettingsFacade match,
+            WorldEngineService worldEngine, MatchStore store,
             MatchMessaging messaging, TimeLimitService timeLimits, PrestartService prestart,
             AutostartService autostart, FlagStore flagStore, TagCooldownStore cooldowns) {
         this.plugin = plugin;
@@ -81,7 +86,9 @@ public final class MatchFinishService {
         this.playerStates = playerStates;
         this.stats = stats;
         this.stateCommands = stateCommands;
-        this.configService = configService;
+        this.engineSettings = engineSettings;
+        this.players = players;
+        this.match = match;
         this.worldEngine = worldEngine;
         this.store = store;
         this.messaging = messaging;
@@ -93,12 +100,15 @@ public final class MatchFinishService {
         this.elimination = new MatchEliminationService(plugin, playerStates, compass, store,
                 messaging, flagStore, this::finishIfBucketEmpty);
         this.leave = new MatchLeaveService(plugin, messages, game, playerStates, compass, stateCommands,
-                configService, worldEngine, store, messaging, flagStore, instance -> {
+                engineSettings, match,
+                worldEngine, store, messaging, flagStore, instance -> {
                     compass.reconcileTeammateModes(instance);
                     finishIfBucketEmpty(instance);
                     cancelIfPreStartUnviable(instance);
                 });
-        new MatchBorderEnforcer(plugin, configService, store, worldEngine, playerStates);
+        new MatchBorderEnforcer(plugin, plugin.configRoot().getWorldEngine(),
+                plugin.configRoot().getSettings().getPlayers().getSpectator().getTravel(),
+                store, worldEngine, playerStates);
     }
 
     public void addGameEndListener(Consumer<GameInstance> listener) {
@@ -252,8 +262,7 @@ public final class MatchFinishService {
         stats.completeMatch(instance.matchId(), winner);
 
         // Make all players invulnerable on game end if configured
-        if (plugin.overrides().getBoolean(instance.originLobbyId(),
-                "settings.players.invulnerability.on-game-end.enabled", true)) {
+        if (players.invulnerabilityOnGameEnd(instance.originLobbyId())) {
             store.onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 
@@ -314,8 +323,7 @@ public final class MatchFinishService {
         scatterEngineOffEnd(instance, participants);
         worldEngine.onMatchEnd(participants, returning, instance.originLobbyId(), teardownId);
         markOfflineEndWipes(instance);
-        if (plugin.overrides().getBoolean(instance.originLobbyId(),
-                "settings.players.roles.reset-on-game-end.enabled", true)) {
+        if (players.rolesResetOnGameEnd(instance.originLobbyId())) {
             Set<UUID> resetIds = new HashSet<>(instance.assignedPlayerIds());
             resetIds.removeAll(transferred);
             playerStates.resetRoles(resetIds);
@@ -421,13 +429,13 @@ public final class MatchFinishService {
     private void scatterEngineOffEnd(GameInstance instance, List<Player> participants) {
         Location center = instance.startCenter();
         if (participants.isEmpty() || center == null || center.getWorld() == null
-                || configService.getBoolean("world-engine.enabled", false)) {
+                || engineSettings.isEnabled()) {
             return;
         }
         World world = center.getWorld();
         int centerX = center.getBlockX();
         int centerZ = center.getBlockZ();
-        WorldEngineConfig spawnConfig = WorldEngineConfig.fromConfig(configService);
+        WorldEngineConfig spawnConfig = WorldEngineConfig.fromSettings(engineSettings);
         List<Location> spawns = MatchTeleportService.spreadSpawnsForConfig(world, centerX, centerZ,
                 MatchStartService.SURROUND_RADIUS, participants, spawnConfig);
         for (int index = 0; index < participants.size(); index++) {
@@ -509,8 +517,7 @@ public final class MatchFinishService {
         messaging.playInstanceSound(instance, "game.cancelled-sound");
 
         // Make all players invulnerable on cancel if configured
-        if (plugin.overrides().getBoolean(instance.originLobbyId(),
-                "settings.players.invulnerability.on-game-end.enabled", true)) {
+        if (players.invulnerabilityOnGameEnd(instance.originLobbyId())) {
             store.onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 

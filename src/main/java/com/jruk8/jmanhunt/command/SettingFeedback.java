@@ -213,7 +213,7 @@ public final class SettingFeedback {
 
     private void announce(CommandSender sender, String keySlot, String valueSlot) {
         ManhuntCommand.announceSettingChange(messages,
-                config.getBoolean("settings.server.announce-config-changes", false),
+                config.server().isAnnounceConfigChanges(),
                 sender, manhunt.getSettingChangeAnnounced(), keySlot, valueSlot);
     }
 

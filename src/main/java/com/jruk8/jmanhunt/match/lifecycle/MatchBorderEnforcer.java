@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.PlayerSettings;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -28,15 +28,19 @@ public final class MatchBorderEnforcer {
     private static final long ENFORCE_PERIOD_TICKS = 5L;
 
     private final JManhuntPlugin plugin;
-    private final ConfigService configService;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
+    private final PlayerSettings.Spectator.Travel travel;
     private final MatchStore store;
     private final WorldEngineService worldEngine;
     private final PlayerStateStore playerStates;
 
-    public MatchBorderEnforcer(JManhuntPlugin plugin, ConfigService configService, MatchStore store,
+    public MatchBorderEnforcer(JManhuntPlugin plugin,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            PlayerSettings.Spectator.Travel travel, MatchStore store,
             WorldEngineService worldEngine, PlayerStateStore playerStates) {
         this.plugin = plugin;
-        this.configService = configService;
+        this.engineSettings = engineSettings;
+        this.travel = travel;
         this.store = store;
         this.worldEngine = worldEngine;
         this.playerStates = playerStates;
@@ -61,7 +65,7 @@ public final class MatchBorderEnforcer {
      * non-Nether worlds the surface treatment.
      */
     private void enforcePseudoBorders() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(configService);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled() || !config.worldBorderEnabled()) {
             return;
         }
@@ -106,11 +110,10 @@ public final class MatchBorderEnforcer {
      * when no anchor exists. Silent: no message, no sound.
      */
     private void enforceSpectatorTravel() {
-        if (!configService.getBoolean("settings.players.spectator.travel.enabled", true)) {
+        if (!travel.isEnabled()) {
             return;
         }
-        double maxDistance = configService.getDouble(
-                "settings.players.spectator.travel.max-distance", 125.0);
+        double maxDistance = travel.getMaxDistance();
         if (maxDistance <= 0.0) {
             return;
         }

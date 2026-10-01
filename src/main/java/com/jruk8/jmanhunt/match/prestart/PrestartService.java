@@ -1,7 +1,9 @@
 package com.jruk8.jmanhunt.match.prestart;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.MatchSettings;
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
+import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -27,7 +29,9 @@ import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
  */
 public final class PrestartService {
     private final JManhuntPlugin plugin;
-    private final ConfigService configService;
+    private final MatchSettings.Headstarts headstarts;
+    private final MatchSettingsFacade match;
+    private final PlayersSettingsFacade players;
     private final MessageService messages;
     private final PlayerStateStore playerStates;
     private final StatsManager stats;
@@ -37,11 +41,14 @@ public final class PrestartService {
     private final ManhuntMessages manhunt;
     private final MatchControl control;
 
-    public PrestartService(JManhuntPlugin plugin, ConfigService configService, MessageService messages,
+    public PrestartService(JManhuntPlugin plugin, MatchSettings.Headstarts headstarts,
+            MatchSettingsFacade match, PlayersSettingsFacade players, MessageService messages,
             PlayerStateStore playerStates, StatsManager stats, GameStateCommandManager stateCommands,
             MatchStore store, MatchMessaging messaging, ManhuntMessages manhunt, MatchControl control) {
         this.plugin = plugin;
-        this.configService = configService;
+        this.headstarts = headstarts;
+        this.match = match;
+        this.players = players;
         this.messages = messages;
         this.playerStates = playerStates;
         this.stats = stats;
@@ -53,8 +60,8 @@ public final class PrestartService {
     }
 
     public void armHeadstarts(GameInstance instance) {
-        armHeadstartSide(instance, Role.HUNTER, Headstart.parse(configService, "hunter"));
-        armHeadstartSide(instance, Role.SPEEDRUNNER, Headstart.parse(configService, "speedrunner"));
+        armHeadstartSide(instance, Role.HUNTER, Headstart.parse(headstarts, "hunter"));
+        armHeadstartSide(instance, Role.SPEEDRUNNER, Headstart.parse(headstarts, "speedrunner"));
     }
 
     private void armHeadstartSide(GameInstance instance, Role role, Headstart side) {
@@ -233,9 +240,8 @@ public final class PrestartService {
                     instance.waitingReminderTask().cancel();
                     instance.setWaitingReminderTask(null);
                 }
-                boolean forceStart = plugin.overrides().getEnum(instance.originLobbyId(),
-                        "settings.match.start-on-speedrunner-damage.on-expire",
-                        OnExpire.class, OnExpire.FORCE_START) == OnExpire.FORCE_START;
+                boolean forceStart = match.startOnDamageOnExpire(instance.originLobbyId())
+                        == OnExpire.FORCE_START;
                 if (forceStart) {
                     messaging.sendToInstance(instance, manhunt.getWaitingForDamageForceStarted(), Map.of());
                 } else {
@@ -262,8 +268,7 @@ public final class PrestartService {
         stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
         List<Player> assigned = store.onlineAssignedPlayers(instance);
         control.teardownNow(instance);
-        if (plugin.overrides().getBoolean(instance.originLobbyId(),
-                "settings.players.invulnerability.on-game-end.enabled", true)) {
+        if (players.invulnerabilityOnGameEnd(instance.originLobbyId())) {
             assigned.forEach(p -> p.setInvulnerable(true));
         }
     }

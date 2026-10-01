@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.message.DebugMessages;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.world.end.EndCellManager;
+import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
@@ -31,6 +32,7 @@ public final class WorldCellService {
     private static final int MAX_CELL_ALLOCATE_ATTEMPTS = 20;
 
     private final JManhuntPlugin plugin;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
     private final WorldCellAllocator cellAllocator;
     private final EndCellManager endCells;
     private final PlayerStateStore playerStates;
@@ -38,19 +40,19 @@ public final class WorldCellService {
     // allocation or pregeneration.
     private final Deque<CellOrigin> cellBuffer = new ArrayDeque<>();
     private BukkitTask refillRetryTask;
-    private BooleanSupplier matchRunning = () -> false;
+    /** Wires the match-running check behind the NO_MATCH_RUNNING refill policy. */
+    @Setter
+    private BooleanSupplier matchRunningSupplier = () -> false;
 
-    public WorldCellService(JManhuntPlugin plugin, EngineStateRepository engineState,
+    public WorldCellService(JManhuntPlugin plugin,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            EngineStateRepository engineState,
             EndCellManager endCells, PlayerStateStore playerStates) {
         this.plugin = plugin;
+        this.engineSettings = engineSettings;
         this.cellAllocator = new WorldCellAllocator(engineState);
         this.endCells = endCells;
         this.playerStates = playerStates;
-    }
-
-    /** Wires the match-running check behind the NO_MATCH_RUNNING refill policy. */
-    public void setMatchRunningSupplier(BooleanSupplier matchRunning) {
-        this.matchRunning = matchRunning;
     }
 
     /**
@@ -61,7 +63,7 @@ public final class WorldCellService {
      * when borders are off.
      */
     public OptionalLong onMatchStart(List<Player> participants, int lobbyId) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled() || participants.isEmpty()) {
             return OptionalLong.empty();
         }
@@ -104,7 +106,7 @@ public final class WorldCellService {
         List<Player> watchers = joiners.stream()
                 .filter(joiner -> !playerStates.role(joiner).isParticipant()).toList();
         if (!participants.isEmpty()) {
-            WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+            WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
             World world = center.get().getWorld();
             CellCoordinate grid = SpiralCoordinateMapper.toCoordinate(cellIndex);
             int originX = MatchTeleportService.toBlockCoordinate(grid.x() * config.cellSize());
@@ -135,7 +137,7 @@ public final class WorldCellService {
      * is missing.
      */
     public Optional<Location> cellCenter(long cellIndex) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled()) {
             return Optional.empty();
         }
@@ -162,13 +164,12 @@ public final class WorldCellService {
      * failed fetches after a delay instead of spinning.
      */
     public void refillBuffer() {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled()) {
             return;
         }
-        if (BufferRefillPolicy.parse(plugin.configService()
-                .getString("world-engine.preloading.cell-buffer.increment-when", "ALWAYS"))
-                == BufferRefillPolicy.NO_MATCH_RUNNING && matchRunning.getAsBoolean()) {
+        if (engineSettings.getPreloading().getCellBuffer().getIncrementWhen()
+                == BufferRefillPolicy.NO_MATCH_RUNNING && matchRunningSupplier.getAsBoolean()) {
             return;
         }
         // The end pool shares this buffer event: one refill policy drives
@@ -196,8 +197,8 @@ public final class WorldCellService {
 
     /** Ready cells to keep on hand. Minimum 1. */
     private int bufferTarget() {
-        return Math.max(1, plugin.configService()
-                .getInt("world-engine.preloading.cell-buffer.stored-cells-buffer", 3));
+        return Math.max(1,
+                engineSettings.getPreloading().getCellBuffer().getStoredCellsBuffer());
     }
 
     /** Allocates one valid cell, logging it for debug recipients. */
@@ -224,7 +225,7 @@ public final class WorldCellService {
 
     /** Surface center of a match cell, for end-exit routing. */
     public Optional<Location> cellRoot(long cellIndex) {
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled()) {
             return Optional.empty();
         }
@@ -255,7 +256,7 @@ public final class WorldCellService {
 
     /** Current cell index cap for the live configuration. */
     public long cellIndexCap() {
-        return maxCellIndex(WorldEngineConfig.fromConfig(plugin.configService()).cellSize());
+        return maxCellIndex(WorldEngineConfig.fromSettings(engineSettings).cellSize());
     }
 
     /** Current cell index, or empty when the engine store is unavailable. */
@@ -368,7 +369,7 @@ public final class WorldCellService {
      * as Chunky before players teleport in.
      */
     private void runPreloadingCommands(WorldEngineConfig config, CellOrigin origin) {
-        List<String> commands = plugin.configService().getStringList("world-engine.preloading.commands");
+        List<String> commands = engineSettings.getPreloading().getCommands();
         if (commands.isEmpty()) {
             return;
         }

@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.gui;
 
+import lombok.Getter;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 
@@ -12,6 +13,7 @@ import org.bukkit.inventory.InventoryHolder;
 public final class MenuHolder implements InventoryHolder {
 
     private final Menu menu;
+    @Getter
     private Inventory inventory;
 
     public MenuHolder(Menu menu) {
@@ -20,11 +22,6 @@ public final class MenuHolder implements InventoryHolder {
 
     public Menu menu() {
         return menu;
-    }
-
-    @Override
-    public Inventory getInventory() {
-        return inventory;
     }
 
     void setInventory(Inventory inventory) {

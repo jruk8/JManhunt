@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -156,14 +157,17 @@ class CompassDeltaRendererTest {
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.overrides()).thenReturn(
-                new OverrideService(configService, new LobbyConfig(), () -> { }));
+        OverrideService overrides =
+                new OverrideService(configService, new LobbyConfig(), () -> { });
+        when(plugin.overrides()).thenReturn(overrides);
+        CompassSettingsFacade settings =
+                new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         MessageService messages = new MessageService();
         messages.reload(new MessagesConfig());
         Map<UUID, Component> bars = new HashMap<>();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(UUID.randomUUID());
-        return new Fixture(new CompassDeltaRenderer(plugin, messages, bars), player, bars);
+        return new Fixture(new CompassDeltaRenderer(plugin, settings, messages, bars), player, bars);
     }
 
     private static String text(Component component) {
@@ -210,13 +214,16 @@ class CompassDeltaRendererTest {
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.overrides()).thenReturn(
-                new OverrideService(configService, new LobbyConfig(), () -> { }));
+        OverrideService overrides =
+                new OverrideService(configService, new LobbyConfig(), () -> { });
+        when(plugin.overrides()).thenReturn(overrides);
+        CompassSettingsFacade settings =
+                new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         MessageService messages = new MessageService();
         messages.reload(new MessagesConfig());
         Map<UUID, Component> bars = new HashMap<>();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(UUID.randomUUID());
-        return new Fixture(new CompassDeltaRenderer(plugin, messages, bars), player, bars);
+        return new Fixture(new CompassDeltaRenderer(plugin, settings, messages, bars), player, bars);
     }
 }

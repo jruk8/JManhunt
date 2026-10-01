@@ -43,6 +43,14 @@ public final class ConfigService {
         this.saver = saver;
     }
 
+    /**
+     * Live server section for announce toggles. Consumers built inside the
+     * frozen command file read through this instead of taking the section.
+     */
+    public ServerSettings server() {
+        return root == null ? new ServerSettings() : root.getSettings().getServer();
+    }
+
     /** Registers a callback fired whenever the given setting is changed via a boolean write. */
     public void onChange(String setting, BiConsumer<Boolean, Boolean> listener) {
         listeners.computeIfAbsent(setting, k -> new ArrayList<>()).add(listener);

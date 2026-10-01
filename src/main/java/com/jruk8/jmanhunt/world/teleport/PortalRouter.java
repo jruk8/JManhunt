@@ -28,11 +28,14 @@ public final class PortalRouter implements Listener {
     private final JManhuntPlugin plugin;
     private final GameManager game;
     private final WorldEngineService worldEngine;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
 
-    public PortalRouter(JManhuntPlugin plugin, GameManager game, WorldEngineService worldEngine) {
+    public PortalRouter(JManhuntPlugin plugin, GameManager game, WorldEngineService worldEngine,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings) {
         this.plugin = plugin;
         this.game = game;
         this.worldEngine = worldEngine;
+        this.engineSettings = engineSettings;
     }
 
     @EventHandler public void onPortal(PlayerPortalEvent event) {
@@ -44,7 +47,7 @@ public final class PortalRouter implements Listener {
         if (match.isEmpty() || match.get().cellIndex().isEmpty()) {
             return;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromConfig(plugin.configService());
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         if (!config.enabled()) {
             return;
         }

@@ -3,6 +3,8 @@ package com.jruk8.jmanhunt.modifiers.files;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import java.io.IOException;
+import lombok.Getter;
+import lombok.Setter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -18,7 +20,13 @@ import java.util.logging.Logger;
 public final class ModifierFiles {
 
     private final Path root;
+    /** Live modifier map, in load order. */
+    @Getter
+    @Setter
     private Map<String, ModifierEntry> modifiers = new LinkedHashMap<>();
+    /** Live preset map, in load order. */
+    @Getter
+    @Setter
     private Map<String, ModifierPreset> presets = new LinkedHashMap<>();
     private final Map<String, Path> modifierPaths = new LinkedHashMap<>();
     private final Map<String, Path> presetPaths = new LinkedHashMap<>();
@@ -42,24 +50,6 @@ public final class ModifierFiles {
         ModifierFiles files = new ModifierFiles(root);
         files.replaceAll(result);
         return files;
-    }
-
-    /** Live modifier map, in load order. */
-    public Map<String, ModifierEntry> getModifiers() {
-        return modifiers;
-    }
-
-    public void setModifiers(Map<String, ModifierEntry> modifiers) {
-        this.modifiers = modifiers;
-    }
-
-    /** Live preset map, in load order. */
-    public Map<String, ModifierPreset> getPresets() {
-        return presets;
-    }
-
-    public void setPresets(Map<String, ModifierPreset> presets) {
-        this.presets = presets;
     }
 
     /** Mods root, or null when in-memory. */

@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.world.border;
 
-import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.WorldEngineParticles;
 
 /** Pseudoborder wall particles for concurrent matches. */
 public record PseudoborderConfig(
@@ -18,18 +18,17 @@ public record PseudoborderConfig(
     /** Default wall color: the plugin brand color. */
     public static final String DEFAULT_COLOR_HEX = "#de7766";
 
-    public static PseudoborderConfig fromConfig(ConfigService config) {
-        String base = "world-engine.world-border.particles.";
+    public static PseudoborderConfig fromSettings(WorldEngineParticles settings) {
         return new PseudoborderConfig(
-                PseudoBorderParticle.parse(config.getString(base + "type", "DUST")),
-                Math.clamp(config.getInt(base + "particle-spacing", 1), 1, 8),
-                config.getString(base + "color", DEFAULT_COLOR_HEX),
-                Math.max(0.0, config.getDouble(base + "render-radius", 10.0)),
-                PulseMode.parse(config.getString(base + "pulse-mode", "SINE_WAVE")),
-                Math.clamp(config.getDouble(base + "interval", 0.5), 0.0, 3.0),
-                Math.clamp(config.getDouble(base + "wave-direction-angle", 0.0), 0.0, 360.0),
-                Math.clamp(config.getDouble(base + "wave-length", 8.0), 2.0, 64.0),
-                Math.clamp(config.getDouble(base + "wave-speed", 0.5), 0.05, 3.0),
-                Math.max(1, config.getInt(base + "max-particles-per-player", 1000)));
+                PseudoBorderParticle.parse(settings.getType()),
+                Math.clamp(settings.getParticleSpacing(), 1, 8),
+                settings.getColor(),
+                Math.max(0.0, settings.getRenderRadius()),
+                PulseMode.parse(settings.getPulseMode()),
+                Math.clamp(settings.getInterval(), 0.0, 3.0),
+                Math.clamp(settings.getWaveDirectionAngle(), 0.0, 360.0),
+                Math.clamp(settings.getWaveLength(), 2.0, 64.0),
+                Math.clamp(settings.getWaveSpeed(), 0.05, 3.0),
+                Math.max(1, settings.getMaxParticlesPerPlayer()));
     }
 }

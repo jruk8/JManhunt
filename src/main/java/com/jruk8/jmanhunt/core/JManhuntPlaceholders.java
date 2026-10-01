@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.core;
 
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.DurationFormat;
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.WinCondition;
@@ -34,18 +34,18 @@ public final class JManhuntPlaceholders {
     private final PlayerStateStore playerStates;
     private final WinConditionEngine winConditions;
     private final PlaceholderConfig placeholders;
-    private final ConfigService config;
+    private final MatchSettingsFacade match;
 
     public JManhuntPlaceholders(StatsManager stats, MessageService messages, GameManager game,
             PlayerStateStore playerStates, WinConditionEngine winConditions,
-            PlaceholderConfig placeholders, ConfigService config) {
+            PlaceholderConfig placeholders, MatchSettingsFacade match) {
         this.stats = stats;
         this.messages = messages;
         this.game = game;
         this.playerStates = playerStates;
         this.winConditions = winConditions;
         this.placeholders = placeholders;
-        this.config = config;
+        this.match = match;
     }
 
     /**
@@ -160,7 +160,7 @@ public final class JManhuntPlaceholders {
     }
 
     private boolean prestartEnabled() {
-        return config.getBoolean("settings.match.start-on-speedrunner-damage.enabled", false);
+        return match.startOnDamageEnabled(null);
     }
 
     /** Survive clock left in milliseconds, or -1 when none runs. */

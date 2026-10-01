@@ -1,11 +1,13 @@
 package com.jruk8.jmanhunt.lobby.config;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.SectionPinner;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
 import java.io.File;
+import lombok.Getter;
 
 /**
  * Creates and reloads the Okaeri lobby store, mirroring the
@@ -16,6 +18,8 @@ import java.io.File;
 public final class LobbyConfigRegistrar {
 
     private final JManhuntPlugin plugin;
+    private final SectionPinner sections = new SectionPinner();
+    @Getter
     private LobbyConfig lobbyConfig;
 
     public LobbyConfigRegistrar(JManhuntPlugin plugin) {
@@ -29,10 +33,6 @@ public final class LobbyConfigRegistrar {
             parent.mkdirs();
         }
         this.lobbyConfig = createConfig(LobbyConfig.class, file);
-    }
-
-    public LobbyConfig getLobbyConfig() {
-        return lobbyConfig;
     }
 
     public void reload() {
@@ -51,8 +51,9 @@ public final class LobbyConfigRegistrar {
         });
     }
 
-    private static void saveAndLoad(OkaeriConfig config) {
+    private void saveAndLoad(OkaeriConfig config) {
         config.saveDefaults();
         config.load(true);
+        sections.pin(config);
     }
 }

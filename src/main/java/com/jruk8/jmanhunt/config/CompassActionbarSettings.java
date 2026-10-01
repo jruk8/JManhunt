@@ -3,8 +3,12 @@ package com.jruk8.jmanhunt.config;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Actionbar push rate and distance delta. */
+@Getter
+@Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class CompassActionbarSettings extends OkaeriConfig {
 
@@ -32,39 +36,9 @@ public class CompassActionbarSettings extends OkaeriConfig {
     @Comment("Stepped accuracy percent after the tracked name.")
     private ShowAccuracy showAccuracy = new ShowAccuracy();
 
-    public int getRefreshTicks() {
-        return refreshTicks;
-    }
-
-    public void setRefreshTicks(int refreshTicks) {
-        this.refreshTicks = refreshTicks;
-    }
-
-    public boolean isShowDistance() {
-        return showDistance;
-    }
-
-    public void setShowDistance(boolean showDistance) {
-        this.showDistance = showDistance;
-    }
-
-    public ShowDistanceDelta getShowDistanceDelta() {
-        return showDistanceDelta;
-    }
-
-    public void setShowDistanceDelta(ShowDistanceDelta showDistanceDelta) {
-        this.showDistanceDelta = showDistanceDelta;
-    }
-
-    public ShowAccuracy getShowAccuracy() {
-        return showAccuracy;
-    }
-
-    public void setShowAccuracy(ShowAccuracy showAccuracy) {
-        this.showAccuracy = showAccuracy;
-    }
-
     /** Stepped accuracy percent. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class ShowAccuracy extends OkaeriConfig {
 
@@ -91,32 +65,11 @@ public class CompassActionbarSettings extends OkaeriConfig {
         })
         private String inaccurateColor = "#cc472d";
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public String getAccurateColor() {
-            return accurateColor;
-        }
-
-        public void setAccurateColor(String accurateColor) {
-            this.accurateColor = accurateColor;
-        }
-
-        public String getInaccurateColor() {
-            return inaccurateColor;
-        }
-
-        public void setInaccurateColor(String inaccurateColor) {
-            this.inaccurateColor = inaccurateColor;
-        }
     }
 
     /** Distance delta triangles. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class ShowDistanceDelta extends OkaeriConfig {
 
@@ -176,68 +129,5 @@ public class CompassActionbarSettings extends OkaeriConfig {
         })
         private boolean reverseOnHunter = true;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public String getFurtherFormat() {
-            return furtherFormat;
-        }
-
-        public void setFurtherFormat(String furtherFormat) {
-            this.furtherFormat = furtherFormat;
-        }
-
-        public String getCloserFormat() {
-            return closerFormat;
-        }
-
-        public void setCloserFormat(String closerFormat) {
-            this.closerFormat = closerFormat;
-        }
-
-        public double getMaxDistance() {
-            return maxDistance;
-        }
-
-        public void setMaxDistance(double maxDistance) {
-            this.maxDistance = maxDistance;
-        }
-
-        public double getMinDeltaToShow() {
-            return minDeltaToShow;
-        }
-
-        public void setMinDeltaToShow(double minDeltaToShow) {
-            this.minDeltaToShow = minDeltaToShow;
-        }
-
-        public String getMode() {
-            return mode;
-        }
-
-        public void setMode(String mode) {
-            this.mode = mode;
-        }
-
-        public double getBlinkDurationSeconds() {
-            return blinkDurationSeconds;
-        }
-
-        public void setBlinkDurationSeconds(double blinkDurationSeconds) {
-            this.blinkDurationSeconds = blinkDurationSeconds;
-        }
-
-        public boolean isReverseOnHunter() {
-            return reverseOnHunter;
-        }
-
-        public void setReverseOnHunter(boolean reverseOnHunter) {
-            this.reverseOnHunter = reverseOnHunter;
-        }
     }
 }

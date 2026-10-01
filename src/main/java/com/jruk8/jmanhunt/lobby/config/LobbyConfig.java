@@ -6,6 +6,8 @@ import eu.okaeri.configs.annotation.CustomKey;
 import eu.okaeri.configs.annotation.Header;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Lobby teleport points and boundary boxes, stored per lobby id. The world
@@ -24,6 +26,8 @@ import java.util.Map;
         "setlobbytp|setbounds|deletelobby <id>.",
         ""
 })
+@Getter
+@Setter
 public class LobbyConfig extends OkaeriConfig {
 
     @Comment({
@@ -55,38 +59,6 @@ public class LobbyConfig extends OkaeriConfig {
     })
     private CareData care = new CareData();
 
-    public Map<String, LobbyEntry> getLobbies() {
-        return lobbies;
-    }
-
-    public void setLobbies(Map<String, LobbyEntry> lobbies) {
-        this.lobbies = lobbies;
-    }
-
-    public boolean isProtectedWorld() {
-        return protectedWorld;
-    }
-
-    public void setProtectedWorld(boolean protectedWorld) {
-        this.protectedWorld = protectedWorld;
-    }
-
-    public boolean isVoidRescue() {
-        return voidRescue;
-    }
-
-    public void setVoidRescue(boolean voidRescue) {
-        this.voidRescue = voidRescue;
-    }
-
-    public CareData getCare() {
-        return care;
-    }
-
-    public void setCare(CareData care) {
-        this.care = care;
-    }
-
     private static Map<String, LobbyEntry> defaultLobbies() {
         LobbyEntry zero = new LobbyEntry();
         zero.setLobbytp(LobbyTp.of(0.0, 65.0, 0.0, 0.0f, 0.0f));
@@ -96,6 +68,8 @@ public class LobbyConfig extends OkaeriConfig {
     }
 
     /** One lobby's teleport point plus its optional boundary box. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class LobbyEntry extends OkaeriConfig {
 
@@ -124,29 +98,6 @@ public class LobbyConfig extends OkaeriConfig {
         })
         private OverridesData overrides = new OverridesData();
 
-        public LobbyTp getLobbytp() {
-            return lobbytp;
-        }
-
-        public void setLobbytp(LobbyTp lobbytp) {
-            this.lobbytp = lobbytp;
-        }
-
-        public BoundsData getBounds() {
-            return bounds;
-        }
-
-        public void setBounds(BoundsData bounds) {
-            this.bounds = bounds;
-        }
-
-        public OverridesData getOverrides() {
-            return overrides;
-        }
-
-        public void setOverrides(OverridesData overrides) {
-            this.overrides = overrides;
-        }
     }
 
     /**
@@ -155,30 +106,19 @@ public class LobbyConfig extends OkaeriConfig {
      * so the file reads in write order. Absent entries mean no
      * override: readers fall back to the globals.
      */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class OverridesData extends OkaeriConfig {
 
         private Map<String, Object> settings = new LinkedHashMap<>();
         private Map<String, Boolean> modifiers = new LinkedHashMap<>();
 
-        public Map<String, Object> getSettings() {
-            return settings;
-        }
-
-        public void setSettings(Map<String, Object> settings) {
-            this.settings = settings;
-        }
-
-        public Map<String, Boolean> getModifiers() {
-            return modifiers;
-        }
-
-        public void setModifiers(Map<String, Boolean> modifiers) {
-            this.modifiers = modifiers;
-        }
     }
 
     /** A lobby teleport point: coordinates plus look direction. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class LobbyTp extends OkaeriConfig {
 
@@ -198,72 +138,22 @@ public class LobbyConfig extends OkaeriConfig {
             return point;
         }
 
-        public double getX() {
-            return x;
-        }
-
-        public void setX(double x) {
-            this.x = x;
-        }
-
-        public double getY() {
-            return y;
-        }
-
-        public void setY(double y) {
-            this.y = y;
-        }
-
-        public double getZ() {
-            return z;
-        }
-
-        public void setZ(double z) {
-            this.z = z;
-        }
-
-        public float getYaw() {
-            return yaw;
-        }
-
-        public void setYaw(float yaw) {
-            this.yaw = yaw;
-        }
-
-        public float getPitch() {
-            return pitch;
-        }
-
-        public void setPitch(float pitch) {
-            this.pitch = pitch;
-        }
     }
 
     /** A lobby boundary box: two opposite corners, block coordinates. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class BoundsData extends OkaeriConfig {
 
         private Position pos1;
         private Position pos2;
 
-        public Position getPos1() {
-            return pos1;
-        }
-
-        public void setPos1(Position pos1) {
-            this.pos1 = pos1;
-        }
-
-        public Position getPos2() {
-            return pos2;
-        }
-
-        public void setPos2(Position pos2) {
-            this.pos2 = pos2;
-        }
     }
 
     /** Lobby-world upkeep: instant heal and feed toggles plus the repeat. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class CareData extends OkaeriConfig {
 
@@ -276,47 +166,21 @@ public class LobbyConfig extends OkaeriConfig {
         @Comment("Seconds between top-ups for everyone in the lobby world.")
         private int interval = 15;
 
-        public CareToggle getHeal() {
-            return heal;
-        }
-
-        public void setHeal(CareToggle heal) {
-            this.heal = heal;
-        }
-
-        public CareToggle getSaturate() {
-            return saturate;
-        }
-
-        public void setSaturate(CareToggle saturate) {
-            this.saturate = saturate;
-        }
-
-        public int getInterval() {
-            return interval;
-        }
-
-        public void setInterval(int interval) {
-            this.interval = interval;
-        }
     }
 
     /** One upkeep switch. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class CareToggle extends OkaeriConfig {
 
         private boolean enabled = true;
 
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
     }
 
     /** One box corner: x, y, and z block coordinates, nothing else. */
+    @Getter
+    @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Position extends OkaeriConfig {
 
@@ -332,28 +196,5 @@ public class LobbyConfig extends OkaeriConfig {
             return position;
         }
 
-        public double getX() {
-            return x;
-        }
-
-        public void setX(double x) {
-            this.x = x;
-        }
-
-        public double getY() {
-            return y;
-        }
-
-        public void setY(double y) {
-            this.y = y;
-        }
-
-        public double getZ() {
-            return z;
-        }
-
-        public void setZ(double z) {
-            this.z = z;
-        }
     }
 }

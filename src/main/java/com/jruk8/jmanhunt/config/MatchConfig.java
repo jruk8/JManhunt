@@ -5,6 +5,8 @@ import eu.okaeri.configs.annotation.Comment;
 import eu.okaeri.configs.annotation.CustomKey;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Getter;
+import lombok.Setter;
 
 /** Match lifecycle settings. */
 @SuppressWarnings("FieldMayBeFinal")
@@ -12,6 +14,8 @@ public class MatchConfig extends OkaeriConfig {
 
     @CustomKey("game-rules")
     @Comment("Built-in game-state actions applied at match start and match end.")
+    @Getter
+    @Setter
     private GameRules gameRules = new GameRules();
 
     @CustomKey("end-delay")
@@ -21,6 +25,8 @@ public class MatchConfig extends OkaeriConfig {
             "Set to -1 to skip the delay (cleanup is immediate); other negative values are",
             "also treated as zero."
     })
+    @Getter
+    @Setter
     private double endDelay = 10.0;
 
     @CustomKey("start-reminder-interval")
@@ -31,10 +37,14 @@ public class MatchConfig extends OkaeriConfig {
             "the repeat interval when delay-seconds is -1 (wait indefinitely).",
             "Set to -1 to disable the reminders entirely while still waiting for damage."
     })
+    @Getter
+    @Setter
     private double startReminderInterval = 30.0;
 
     @CustomKey("disconnect-handling")
     @Comment("Disconnect rules for active participants.")
+    @Getter
+    @Setter
     private DisconnectHandling disconnectHandling = new DisconnectHandling();
 
     @CustomKey("end-statistics")
@@ -43,48 +53,10 @@ public class MatchConfig extends OkaeriConfig {
             "HUNTER_FINAL_KILLS, SPEEDRUNNER_KILLS, and PROGRESSION. Progression is based",
             "on reliable vanilla advancements and is calculated only at match end."
     })
+    @Getter
+    @Setter
     private List<String> endStatistics = new ArrayList<>(List.of(
             "DAMAGE_DEALT", "HUNTER_FINAL_KILLS", "SPEEDRUNNER_KILLS", "PROGRESSION"));
-
-    public GameRules getGameRules() {
-        return gameRules;
-    }
-
-    public void setGameRules(GameRules gameRules) {
-        this.gameRules = gameRules;
-    }
-
-    public double getEndDelay() {
-        return endDelay;
-    }
-
-    public void setEndDelay(double endDelay) {
-        this.endDelay = endDelay;
-    }
-
-    public double getStartReminderInterval() {
-        return startReminderInterval;
-    }
-
-    public void setStartReminderInterval(double startReminderInterval) {
-        this.startReminderInterval = startReminderInterval;
-    }
-
-    public DisconnectHandling getDisconnectHandling() {
-        return disconnectHandling;
-    }
-
-    public void setDisconnectHandling(DisconnectHandling disconnectHandling) {
-        this.disconnectHandling = disconnectHandling;
-    }
-
-    public List<String> getEndStatistics() {
-        return endStatistics;
-    }
-
-    public void setEndStatistics(List<String> endStatistics) {
-        this.endStatistics = endStatistics;
-    }
 
     /** Built-in game-state actions. */
     @SuppressWarnings("FieldMayBeFinal")
@@ -113,6 +85,8 @@ public class MatchConfig extends OkaeriConfig {
                 "DISABLE_WANDERING_TRADER");
 
         @Comment("if false, nothing runs.")
+        @Getter
+        @Setter
         private boolean enabled = true;
 
         @Comment({
@@ -120,23 +94,9 @@ public class MatchConfig extends OkaeriConfig {
                 "Known: DISABLE_LOCATOR_BAR, SET_RESPAWN_IMMEDIATE, SET_DAYTIME,",
                 "DISABLE_PHANTOMS, DISABLE_PILLAGER_PATROLS, DISABLE_WANDERING_TRADER."
         })
+        @Getter
+        @Setter
         private List<String> rules = new ArrayList<>(DEFAULT_RULES);
-
-        public boolean isEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public List<String> getRules() {
-            return rules;
-        }
-
-        public void setRules(List<String> rules) {
-            this.rules = rules;
-        }
 
         /** Case-insensitive membership for the rules array. Pure for tests. */
         public static boolean isRuleEnabled(List<String> rules, String key) {
@@ -155,24 +115,12 @@ public class MatchConfig extends OkaeriConfig {
     /** Per-role disconnect rules. */
     @SuppressWarnings("FieldMayBeFinal")
     public static class DisconnectHandling extends OkaeriConfig {
+        @Getter
+        @Setter
         private DisconnectRules speedrunner = new DisconnectRules();
+        @Getter
+        @Setter
         private DisconnectRules hunter = new DisconnectRules();
-
-        public DisconnectRules getSpeedrunner() {
-            return speedrunner;
-        }
-
-        public void setSpeedrunner(DisconnectRules speedrunner) {
-            this.speedrunner = speedrunner;
-        }
-
-        public DisconnectRules getHunter() {
-            return hunter;
-        }
-
-        public void setHunter(DisconnectRules hunter) {
-            this.hunter = hunter;
-        }
 
         /** Reconnect grace and strike limit for one role. */
         @SuppressWarnings("FieldMayBeFinal")
@@ -182,6 +130,8 @@ public class MatchConfig extends OkaeriConfig {
                     "Seconds a disconnected player has to rejoin before they are treated",
                     "as dead and removed from the match."
             })
+            @Getter
+            @Setter
             private int reconnectGraceSeconds = 60;
 
             @CustomKey("max-strikes")
@@ -189,23 +139,10 @@ public class MatchConfig extends OkaeriConfig {
                     "Disconnect strike limit before the player instantly loses.",
                     "Set to 1 to disable retries entirely."
             })
+            @Getter
+            @Setter
             private int maxStrikes = 3;
 
-            public int getReconnectGraceSeconds() {
-                return reconnectGraceSeconds;
-            }
-
-            public void setReconnectGraceSeconds(int reconnectGraceSeconds) {
-                this.reconnectGraceSeconds = reconnectGraceSeconds;
-            }
-
-            public int getMaxStrikes() {
-                return maxStrikes;
-            }
-
-            public void setMaxStrikes(int maxStrikes) {
-                this.maxStrikes = maxStrikes;
-            }
         }
     }
 }

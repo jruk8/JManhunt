@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.CompassMessages;
@@ -27,8 +28,8 @@ import java.util.stream.Collectors;
  */
 final class CompassAnalysisSessions implements AnalysisHost {
 
-    private static final String COST_BASE = "settings.compass.actions.manual.analysis.cost.";
     private final JManhuntPlugin plugin;
+    private final CompassSettingsFacade settings;
     private final MessageService messages;
     private final CompassMessages compass;
     private final PlayerStateStore playerStates;
@@ -48,11 +49,13 @@ final class CompassAnalysisSessions implements AnalysisHost {
     private CompassLockService locks;
     private GameManager game;
 
-    CompassAnalysisSessions(JManhuntPlugin plugin, MessageService messages, CompassMessages compass,
+    CompassAnalysisSessions(JManhuntPlugin plugin, CompassSettingsFacade settings,
+            MessageService messages, CompassMessages compass,
             PlayerStateStore playerStates, CompassTargetService targets,
             CompassSignalService signal, CompassItemService items,
             Map<UUID, Component> compassActionbars, SoundService sounds) {
         this.plugin = plugin;
+        this.settings = settings;
         this.messages = messages;
         this.compass = compass;
         this.playerStates = playerStates;
@@ -132,8 +135,8 @@ void beginAnalysisSpot(Player holder) {
     if (match.isEmpty()) {
         return;
     }
-    int cap = CompassCache.clampMaxTargets(plugin.overrides()
-            .getInt(lobbyOf(holder), "settings.compass.actions.target-cycling.max-targets", 5));
+    int cap = CompassCache.clampMaxTargets(
+            settings.targetCyclingMaxTargets(lobbyOf(holder)));
     Map<UUID, Location> spots = new HashMap<>();
     for (CompassSnapshot snap : targets.collectSnapshots(holder, Role.HUNTER, match.get(), cap)) {
         spots.put(snap.id(), snap.location());
@@ -186,7 +189,7 @@ public boolean analysisDoomed(Player holder) {
     UUID id = holder.getUniqueId();
     CompassLockService.LockedTargets narrowed =
             locks.narrowToLock(id, opponents, sightings);
-    CompassPick pick = CompassManager.resolveCompassPick(plugin.overrides(),
+    CompassPick pick = CompassManager.resolveCompassPick(settings,
             match.get().originLobbyId(), holderRole, narrowed.opponents(),
             narrowed.sightings());
     Location targetPress = pick.id() == null ? null
@@ -230,21 +233,18 @@ boolean tryInitiateCost(Player holder) {
  */
 private boolean tryCost(Player holder, String point) {
     Integer lobby = lobbyOf(holder);
-    var overrides = plugin.overrides();
-    if (!overrides.getBoolean(lobby, COST_BASE + "enabled", false)) {
+    if (!settings.analysisCostEnabled(lobby)) {
         return true;
     }
-    if (!AnalysisCost.chargesAt(overrides.getString(lobby, COST_BASE + "cost-on", "INITIATE"), point)) {
+    if (!AnalysisCost.chargesAt(settings.analysisCostOn(lobby), point)) {
         return true;
     }
     AnalysisCost.Payment payment = costPayment(lobby);
     AnalysisCost.Stats stats = new AnalysisCost.Stats(holder.getHealth(),
             holder.getSaturation(), holder.getFoodLevel(), holder.getLevel());
     List<String> lacking = AnalysisCost.lacking(stats, payment);
-    if (!lacking.isEmpty()
-            && overrides.getBoolean(lobby, COST_BASE + "poverty-behavior.cancel-when-poor", true)) {
-        showCostTooHigh(holder, lacking, overrides.getBoolean(lobby,
-                COST_BASE + "poverty-behavior.show-reason", true));
+    if (!lacking.isEmpty() && settings.povertyCancelWhenPoor(lobby)) {
+        showCostTooHigh(holder, lacking, settings.povertyShowReason(lobby));
         sounds.playSound(holder, "compass.cost-too-high");
         recordFailure(holder.getUniqueId(), lobby);
         return false;
@@ -266,7 +266,7 @@ private boolean tryCost(Player holder, String point) {
     }
 
     private double failureCooldownSeconds(Integer lobby) {
-        return plugin.overrides().getDouble(lobby, COST_BASE + "payment.failure-cooldown", 1.0);
+        return settings.analysisFailureCooldownSeconds(lobby);
     }
 
     /** Plays exactly one used sound for the applied cost types, picked at random. */
@@ -288,15 +288,14 @@ private boolean tryCost(Player holder, String point) {
 
 /** Resolved payment containers for one charge. */
 private AnalysisCost.Payment costPayment(Integer lobby) {
-    var overrides = plugin.overrides();
     return new AnalysisCost.Payment(
-            overrides.getBoolean(lobby, COST_BASE + "payment.saturation.enabled", true),
-            overrides.getInt(lobby, COST_BASE + "payment.saturation.value", 3),
-            overrides.getBoolean(lobby, COST_BASE + "payment.health.enabled", true),
-            overrides.getInt(lobby, COST_BASE + "payment.health.value", 4),
-            overrides.getBoolean(lobby, COST_BASE + "payment.health.can-kill", true),
-            overrides.getBoolean(lobby, COST_BASE + "payment.exp-level.enabled", true),
-            overrides.getInt(lobby, COST_BASE + "payment.exp-level.value", 1));
+            settings.saturationChargeEnabled(lobby),
+            settings.saturationChargeValue(lobby),
+            settings.healthChargeEnabled(lobby),
+            settings.healthChargeValue(lobby),
+            settings.healthChargeCanKill(lobby),
+            settings.expChargeEnabled(lobby),
+            settings.expChargeValue(lobby));
 }
 
 /**

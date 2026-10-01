@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.loot;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.MatchSettings;
 import org.bukkit.entity.EntityType;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -12,15 +12,14 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
  * spawners, and commands still work. Checked live on every spawn.
  */
 public final class BruteSpawnListener implements Listener {
-    private final JManhuntPlugin plugin;
+    private final MatchSettings.GameBoosts boosts;
 
-    public BruteSpawnListener(JManhuntPlugin plugin) {
-        this.plugin = plugin;
+    public BruteSpawnListener(MatchSettings.GameBoosts boosts) {
+        this.boosts = boosts;
     }
 
     @EventHandler public void onSpawn(CreatureSpawnEvent event) {
-        boolean enabled = plugin.configService().getBoolean(
-                "settings.match.game-boosts.disable-brutes.enabled", true);
+        boolean enabled = boosts.getDisableBrutes().isEnabled();
         if (shouldCancel(event.getEntityType(), event.getSpawnReason(), enabled)) {
             event.setCancelled(true);
         }

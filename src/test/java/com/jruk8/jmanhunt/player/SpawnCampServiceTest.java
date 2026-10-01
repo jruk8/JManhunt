@@ -16,7 +16,7 @@ class SpawnCampServiceTest {
     @Test
     void countsKillsInsideRollingWindow() {
         AtomicLong clock = new AtomicLong(1_000L);
-        SpawnCampService service = new SpawnCampService(null, null, null, clock::get);
+        SpawnCampService service = new SpawnCampService(null, null, null, null, clock::get);
         UUID attacker = UUID.randomUUID();
         UUID victim = UUID.randomUUID();
 
@@ -30,7 +30,7 @@ class SpawnCampServiceTest {
     @Test
     void oldKillsFallOutOfWindow() {
         AtomicLong clock = new AtomicLong(1_000L);
-        SpawnCampService service = new SpawnCampService(null, null, null, clock::get);
+        SpawnCampService service = new SpawnCampService(null, null, null, null, clock::get);
         UUID attacker = UUID.randomUUID();
         UUID victim = UUID.randomUUID();
 
@@ -42,7 +42,7 @@ class SpawnCampServiceTest {
     @Test
     void tracksPairsAndMatchesSeparately() {
         AtomicLong clock = new AtomicLong(1_000L);
-        SpawnCampService service = new SpawnCampService(null, null, null, clock::get);
+        SpawnCampService service = new SpawnCampService(null, null, null, null, clock::get);
         UUID attacker = UUID.randomUUID();
         UUID victim = UUID.randomUUID();
         UUID other = UUID.randomUUID();
@@ -56,7 +56,7 @@ class SpawnCampServiceTest {
     @Test
     void clearMatchDropsOnlyThatMatch() {
         AtomicLong clock = new AtomicLong(1_000L);
-        SpawnCampService service = new SpawnCampService(null, null, null, clock::get);
+        SpawnCampService service = new SpawnCampService(null, null, null, null, clock::get);
         UUID attacker = UUID.randomUUID();
         UUID victim = UUID.randomUUID();
 
@@ -70,7 +70,7 @@ class SpawnCampServiceTest {
     @Test
     void offensesCountPerAttackerAcrossVictimsAndMatches() {
         AtomicLong clock = new AtomicLong(1_000L);
-        SpawnCampService service = new SpawnCampService(null, null, null, clock::get);
+        SpawnCampService service = new SpawnCampService(null, null, null, null, clock::get);
         UUID attacker = UUID.randomUUID();
         UUID other = UUID.randomUUID();
 
@@ -83,7 +83,7 @@ class SpawnCampServiceTest {
     @Test
     void clearMatchDropsOffenses() {
         AtomicLong clock = new AtomicLong(1_000L);
-        SpawnCampService service = new SpawnCampService(null, null, null, clock::get);
+        SpawnCampService service = new SpawnCampService(null, null, null, null, clock::get);
         UUID attacker = UUID.randomUUID();
 
         service.recordOffense(1L, attacker);
