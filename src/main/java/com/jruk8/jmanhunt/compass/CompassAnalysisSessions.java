@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.compass;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -29,6 +30,7 @@ final class CompassAnalysisSessions implements AnalysisHost {
     private static final String COST_BASE = "settings.compass.actions.manual.analysis.cost.";
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final CompassMessages compass;
     private final PlayerStateStore playerStates;
     private final CompassTargetService targets;
     private final CompassSignalService signal;
@@ -46,12 +48,13 @@ final class CompassAnalysisSessions implements AnalysisHost {
     private CompassLockService locks;
     private GameManager game;
 
-    CompassAnalysisSessions(JManhuntPlugin plugin, MessageService messages,
+    CompassAnalysisSessions(JManhuntPlugin plugin, MessageService messages, CompassMessages compass,
             PlayerStateStore playerStates, CompassTargetService targets,
             CompassSignalService signal, CompassItemService items,
             Map<UUID, Component> compassActionbars, SoundService sounds) {
         this.plugin = plugin;
         this.messages = messages;
+        this.compass = compass;
         this.playerStates = playerStates;
         this.targets = targets;
         this.signal = signal;
@@ -301,10 +304,10 @@ private AnalysisCost.Payment costPayment(Integer lobby) {
  * when show-reason holds. Never chats.
  */
 private void showCostTooHigh(Player holder, List<String> lacking, boolean showReason) {
-    String text = messages.string("compass.analysis-cost-too-high", "<gray>Cost too high!");
+    String text = compass.getAnalysisCostTooHigh();
     if (showReason && !lacking.isEmpty()) {
         String reasons = lacking.stream()
-                .map(id -> messages.string("compass.signal-reason." + id, id))
+                .map(id -> compass.getSignalReason().getOrDefault(id, id))
                 .collect(Collectors.joining(", "));
         text += " (" + reasons + ")";
     }

@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.gui;
 
+import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import java.util.HashMap;
 import java.util.List;
@@ -30,36 +31,34 @@ public final class ScrollList {
      * @return the scroll list menu
      */
     public static Menu menu(Component title, Supplier<List<MenuButton>> content,
-            Supplier<Menu> parent, GuiService gui, MessageService messages) {
+            Supplier<Menu> parent, GuiService gui, MessageService messages,
+            ManhuntGuiMessages guiTexts) {
         MenuLayout layout = MenuLayout.parse(
                 "xxxxxxxxu", "xxxxxxxx#", "xxxxxxxxb",
                 "xxxxxxxx#", "xxxxxxxx#", "xxxxxxxxd");
         final Menu[] self = new Menu[1];
         self[0] = new Menu(title, layout,
-                () -> scrollStatic(self, messages, gui),
+                () -> scrollStatic(self, messages, gui, guiTexts),
                 content::get, parent);
         return self[0];
     }
 
     private static Map<Integer, MenuButton> scrollStatic(Menu[] self,
-            MessageService messages, GuiService gui) {
+            MessageService messages, GuiService gui, ManhuntGuiMessages guiTexts) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
-        fixed.put(8, scrollButton(messages, self,
-                "manhunt-gui.scroll-up", "Scroll up", -1));
+        fixed.put(8, scrollButton(messages, self, guiTexts.getScrollUp(), "Scroll up", -1));
         fixed.put(26, new MenuButton(Material.PAPER,
-                GuiTexts.name(messages,
-                        messages.string("manhunt-gui.back", "Back"), "Back"),
+                GuiTexts.name(messages, guiTexts.getBack(), "Back"),
                 null, false, false,
                 player -> gui.back(player, self[0])));
-        fixed.put(53, scrollButton(messages, self,
-                "manhunt-gui.scroll-down", "Scroll down", 1));
+        fixed.put(53, scrollButton(messages, self, guiTexts.getScrollDown(), "Scroll down", 1));
         return fixed;
     }
 
     private static MenuButton scrollButton(MessageService messages,
-            Menu[] self, String labelKey, String fallback, int delta) {
+            Menu[] self, String label, String fallback, int delta) {
         return new MenuButton(Material.ARROW,
-                GuiTexts.name(messages, messages.string(labelKey, fallback), fallback),
+                GuiTexts.name(messages, label, fallback),
                 null, false, false,
                 player -> self[0].window().scrollLine(delta));
     }

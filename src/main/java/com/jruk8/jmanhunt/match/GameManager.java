@@ -7,13 +7,15 @@ import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
+import com.jruk8.jmanhunt.message.GameMessages;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.message.WinconMessages;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.WorldEngineService;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import java.util.Collection;
@@ -61,7 +63,8 @@ public final class GameManager implements MatchControl {
     private final StatsManager stats;
     private final WinConditionTextService winConditions;
 
-    public GameManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
+    public GameManager(JManhuntPlugin plugin, MessageService messages, ManhuntMessages manhunt,
+                       GameMessages gameTexts, WinconMessages wincon, SoundService sounds,
                        PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
                        ConfigService configService, WorldEngineService worldEngine,
                        WinConditionEngine winConditionEngine, LobbyService lobbyService) {
@@ -78,21 +81,23 @@ public final class GameManager implements MatchControl {
         this.flagStore = new FlagStore();
         this.cooldownStore = new TagCooldownStore();
         this.stats = stats;
-        this.messaging = new MatchMessaging(messages, sounds, configService, store, lobbies);
-        this.timeLimits = new TimeLimitService(plugin, winConditionEngine, store, messaging, this);
+        this.messaging = new MatchMessaging(messages, manhunt, sounds, configService, store, lobbies);
+        this.timeLimits = new TimeLimitService(plugin, winConditionEngine, store, messaging, gameTexts,
+                this);
         this.prestart = new PrestartService(plugin, configService, messages, playerStates,
-                stats, stateCommands, store, messaging, this);
+                stats, stateCommands, store, messaging, manhunt, this);
         this.autostart = new AutostartService(plugin, messages, playerStates, lobbies,
-                worldEngine, store, messaging, this);
-        this.matchFinish = new MatchFinishService(plugin, messages, playerStates, compass, stats,
-                stateCommands, configService, worldEngine, store, messaging, timeLimits, prestart,
-                autostart, flagStore, cooldownStore);
-        this.matchStart = new MatchStartService(plugin, messages, sounds, playerStates, compass, stats,
-                stateCommands, configService, worldEngine, lobbies, store, messaging, timeLimits,
-                prestart, autostart);
+                worldEngine, store, messaging, manhunt, this);
+        this.matchFinish = new MatchFinishService(plugin, messages, gameTexts, playerStates, compass,
+                stats, stateCommands, configService, worldEngine, store, messaging, timeLimits,
+                prestart, autostart, flagStore, cooldownStore);
+        this.matchStart = new MatchStartService(plugin, messages, gameTexts, manhunt, sounds,
+                playerStates, compass, stats, stateCommands, configService, worldEngine, lobbies,
+                store, messaging, timeLimits, prestart, autostart);
         this.pseudoborderParticles = new PseudoborderParticleService(plugin, configService, store,
                 worldEngine);
-        this.winConditions = new WinConditionTextService(messages, configService, winConditionEngine);
+        this.winConditions = new WinConditionTextService(messages, wincon, configService,
+                winConditionEngine);
 
         // assign events
         configService.onChange("settings.match.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
@@ -162,33 +167,9 @@ public final class GameManager implements MatchControl {
     /** Live hunters of a match holding the role. */
     public int activeHunterCount(GameInstance instance) { return store.activeHunterCount(instance); }
 
-    /** Sends a message to a match plus the console, never other matches. */
-    public void sendToInstance(GameInstance instance, String key, Map<String, String> values) {
-        messaging.sendToInstance(instance, key, values);
-    }
-    /** Sends a message to every online member of one lobby. */
-    public void sendToLobby(int lobbyId, String key, Map<String, String> values) {
-        messaging.sendToLobby(lobbyId, key, values);
-    }
-    /** Plays a match sound for a match's online players. */
-    public void playInstanceSound(GameInstance instance, String key) {
-        messaging.playInstanceSound(instance, key);
-    }
-    /** Plays the neutral click for a match's online players. */
-    public void playInstanceNeutral(GameInstance instance) {
-        messaging.playInstanceNeutral(instance);
-    }
-    /** Sends a pre-rendered message to a match plus the console, never other matches. */
-    public void sendToInstanceComponent(GameInstance instance, Component rendered) {
-        messaging.sendToInstanceComponent(instance, rendered);
-    }
-    /**
-     * Announces a passive&lt;-&gt;active role change to the player's lobby
-     * mates, excluding the player and anyone in a live match. Same-class
-     * changes stay silent. Only the active side of the change is named.
-     */
-    public void announceRoleChange(Player player, Role from, Role to) {
-        messaging.announceRoleChange(player, from, to);
+    /** Match-scoped messaging; listeners announce through this. */
+    public MatchMessaging messaging() {
+        return messaging;
     }
 
     public void updateAutostartState() { autostart.updateAutostartState(); }

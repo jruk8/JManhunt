@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
 import com.jruk8.jmanhunt.message.ListFormatter;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -25,10 +26,13 @@ import org.bukkit.entity.Player;
  */
 public final class StatusRosterService {
     private final MessageService messages;
+    private final ManhuntMessages manhunt;
     private final PlayerStateStore playerStates;
 
-    public StatusRosterService(MessageService messages, PlayerStateStore playerStates) {
+    public StatusRosterService(MessageService messages, ManhuntMessages manhunt,
+            PlayerStateStore playerStates) {
         this.messages = messages;
+        this.manhunt = manhunt;
         this.playerStates = playerStates;
     }
 
@@ -58,7 +62,7 @@ public final class StatusRosterService {
      * match; lobbies pass an empty list.
      */
     public void sendRoleSection(CommandSender recipient, List<Player> players, Role role,
-            String headerKey, List<GameInstance.DeadPlayer> dead, Predicate<UUID> respawning) {
+            String headerTemplate, List<GameInstance.DeadPlayer> dead, Predicate<UUID> respawning) {
         List<String> names = players.stream()
                 .filter(player -> playerStates.role(player) == role)
                 .sorted(Comparator.comparing(Player::getName))
@@ -74,13 +78,13 @@ public final class StatusRosterService {
         if (names.isEmpty() && ghosts.isEmpty()) {
             return;
         }
-        messages.message(recipient, headerKey, Map.of());
+        messages.messageRaw(recipient, headerTemplate, Map.of());
         if (!names.isEmpty()) {
-            messages.message(recipient, "manhunt.status-player",
+            messages.messageRaw(recipient, manhunt.getStatusPlayer(),
                     Map.of("player", aliveLine(names, role)));
         }
         if (!ghosts.isEmpty()) {
-            messages.message(recipient, "manhunt.status-dead-line",
+            messages.messageRaw(recipient, manhunt.getStatusDeadLine(),
                     Map.of("dead_players", deadLine(ghosts)));
         }
     }
@@ -98,7 +102,7 @@ public final class StatusRosterService {
         if (names.isEmpty()) {
             return;
         }
-        messages.message(recipient, "manhunt.spectators-line",
+        messages.messageRaw(recipient, manhunt.getSpectatorsLine(),
                 Map.of("value", aliveLine(names, Role.SPECTATOR)));
     }
 
@@ -115,45 +119,45 @@ public final class StatusRosterService {
     }
 
     private String deadLine(List<String> ghosts) {
-        return ListFormatter.joinOxfordTruncated(ghosts, limit("manhunt.status-limit-dead", 3),
+        return ListFormatter.joinOxfordTruncated(ghosts, limit(manhunt.getStatusLimitDead(), 3),
                 comma(), and(), more(), deadWord());
     }
 
     private int limitFor(Role role) {
         return switch (role) {
-            case SPEEDRUNNER -> limit("manhunt.status-limit-speedrunners", 5);
-            case HUNTER -> limit("manhunt.status-limit-hunters", 10);
-            case AFK -> limit("manhunt.status-limit-afk", 2);
-            case NONE -> limit("manhunt.status-limit-none", 20);
-            case SPECTATOR -> limit("manhunt.status-limit-spectators", 5);
+            case SPEEDRUNNER -> limit(manhunt.getStatusLimitSpeedrunners(), 5);
+            case HUNTER -> limit(manhunt.getStatusLimitHunters(), 10);
+            case AFK -> limit(manhunt.getStatusLimitAfk(), 2);
+            case NONE -> limit(manhunt.getStatusLimitNone(), 20);
+            case SPECTATOR -> limit(manhunt.getStatusLimitSpectators(), 5);
         };
     }
 
-    private int limit(String key, int fallback) {
+    private int limit(String raw, int fallback) {
         try {
-            return Math.max(0, Integer.parseInt(messages.string(key, String.valueOf(fallback)).trim()));
+            return Math.max(0, Integer.parseInt(raw.trim()));
         } catch (NumberFormatException bad) {
             return fallback;
         }
     }
 
     private String comma() {
-        return messages.string("manhunt.status-comma", "<gray>,</gray>");
+        return manhunt.getStatusComma();
     }
 
     private String and() {
-        return messages.string("manhunt.status-and", "<gray>and</gray>");
+        return manhunt.getStatusAnd();
     }
 
     private String more() {
-        return messages.string("manhunt.status-more", "more");
+        return manhunt.getStatusMore();
     }
 
     private String deadWord() {
-        return messages.string("manhunt.status-dead-word", "dead");
+        return manhunt.getStatusDeadWord();
     }
 
     private String skull() {
-        return messages.string("manhunt.status-skull", "💀");
+        return manhunt.getStatusSkull();
     }
 }

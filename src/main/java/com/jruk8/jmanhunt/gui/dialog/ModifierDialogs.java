@@ -6,7 +6,9 @@ import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.match.ModifierTriggers;
+import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersGuiMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.Role;
 import io.papermc.paper.dialog.Dialog;
@@ -44,13 +46,17 @@ import org.bukkit.plugin.Plugin;
 public final class ModifierDialogs implements ModifierDialog {
 
     private final MessageService messages;
+    private final ModifiersGuiMessages modifiersGui;
+    private final ManhuntGuiMessages manhuntGui;
     private final SoundService sounds;
     private final GuiService gui;
     private final Plugin plugin;
 
-    public ModifierDialogs(MessageService messages, SoundService sounds,
-            GuiService gui, Plugin plugin) {
+    public ModifierDialogs(MessageService messages, ModifiersGuiMessages modifiersGui,
+            ManhuntGuiMessages manhuntGui, SoundService sounds, GuiService gui, Plugin plugin) {
         this.messages = messages;
+        this.modifiersGui = modifiersGui;
+        this.manhuntGui = manhuntGui;
         this.sounds = sounds;
         this.gui = gui;
         this.plugin = plugin;
@@ -59,19 +65,15 @@ public final class ModifierDialogs implements ModifierDialog {
     @Override
     public void openRunsOn(Player player, List<String> current,
             Consumer<Set<String>> onSubmit, Runnable reopen) {
-        openChecklist(player, knownTriggers(),
-                "modifiers-gui.runs-on-title", "Runs On",
-                "modifiers-gui.runs-on-hint", "Tick the events this modifier runs on.",
-                current, onSubmit, reopen);
+        openChecklist(player, knownTriggers(), modifiersGui.getRunsOnTitle(),
+                modifiersGui.getRunsOnHint(), current, onSubmit, reopen);
     }
 
     @Override
     public void openGameRules(Player player, List<String> current,
             Consumer<Set<String>> onSubmit, Runnable reopen) {
-        openChecklist(player, MatchConfig.GameRules.KNOWN,
-                "manhunt-gui.game-rules-title", "Game Rules",
-                "manhunt-gui.game-rules-hint", "Tick the game-state rules this server applies.",
-                current, onSubmit, reopen);
+        openChecklist(player, MatchConfig.GameRules.KNOWN, manhuntGui.getGameRulesTitle(),
+                manhuntGui.getGameRulesHint(), current, onSubmit, reopen);
     }
 
     @Override
@@ -81,11 +83,8 @@ public final class ModifierDialogs implements ModifierDialog {
         for (SignalInterference.Weather bucket : SignalInterference.Weather.values()) {
             known.add(bucket.name());
         }
-        openChecklist(player, known,
-                "manhunt-gui.interfere-during-title", "Interfere During",
-                "manhunt-gui.interfere-during-hint",
-                "Tick the weather that interferes with tracking.",
-                current, onSubmit, reopen);
+        openChecklist(player, known, manhuntGui.getInterfereDuringTitle(),
+                manhuntGui.getInterfereDuringHint(), current, onSubmit, reopen);
     }
 
     @Override
@@ -96,8 +95,7 @@ public final class ModifierDialogs implements ModifierDialog {
             body.add(DialogBody.plainMessage(messages.parse(line)));
         }
         Dialog dialog = Dialog.create(factory -> factory.empty()
-                .base(DialogBase.builder(GuiTexts.title(messages, messages
-                                .string("modifiers-gui.test-title", "Test a Command")))
+                .base(DialogBase.builder(GuiTexts.title(messages, modifiersGui.getTestTitle()))
                         .body(body)
                         .inputs(testInputs(initial))
                         .canCloseWithEscape(true)
@@ -122,12 +120,12 @@ public final class ModifierDialogs implements ModifierDialog {
         List<DialogInput> inputs = new ArrayList<>();
         inputs.add(DialogInput.bool(DialogInputs.TEST_REMEMBER_KEY,
                 GuiTexts.name(messages,
-                        messages.string("modifiers-gui.test-remember", "Remember Commands"),
+                        modifiersGui.getTestRemember(),
                         "Remember Commands"))
                 .initial(initial.remember()).build());
         inputs.add(DialogInput.singleOption(DialogInputs.TEST_ROLE_KEY,
                 GuiTexts.name(messages,
-                        messages.string("modifiers-gui.test-role", "Role"), "Role"),
+                        modifiersGui.getTestRole(), "Role"),
                 List.of(
                         SingleOptionDialogInput.OptionEntry.create("SPEEDRUNNER",
                                 messages.parse(messages.roleName(Role.SPEEDRUNNER)),
@@ -137,7 +135,7 @@ public final class ModifierDialogs implements ModifierDialog {
                                 "HUNTER".equals(initial.role()))))
                 .build());
         for (int index = 0; index < DialogInputs.TEST_COMMAND_BOXES; index++) {
-            String label = messages.string("modifiers-gui.test-command-box", "Command {n}")
+            String label = modifiersGui.getTestCommandBox()
                     .replace("{n}", String.valueOf(index + 1));
             String value = index < initial.commands().size() ? initial.commands().get(index) : "";
             inputs.add(DialogInput.text(DialogInputs.testCommandKey(index),
@@ -154,11 +152,9 @@ public final class ModifierDialogs implements ModifierDialog {
         return DialogInputs.readTestSubmission(bool, text);
     }
 
-    private void openChecklist(Player player, List<String> known,
-            String titleKey, String titleFallback, String hintKey, String hintFallback,
+    private void openChecklist(Player player, List<String> known, String title, String hint,
             List<String> current, Consumer<Set<String>> onSubmit, Runnable reopen) {
-        List<DialogBody> body = List.of(DialogBody.plainMessage(messages.parse(messages
-                .string(hintKey, hintFallback))));
+        List<DialogBody> body = List.of(DialogBody.plainMessage(messages.parse(hint)));
         List<DialogInput> inputs = new ArrayList<>();
         for (int index = 0; index < known.size(); index++) {
             String value = known.get(index);
@@ -167,8 +163,7 @@ public final class ModifierDialogs implements ModifierDialog {
                     .initial(checked).build());
         }
         Dialog dialog = Dialog.create(factory -> factory.empty()
-                .base(DialogBase.builder(GuiTexts.title(messages, messages
-                                .string(titleKey, titleFallback)))
+                .base(DialogBase.builder(GuiTexts.title(messages, title))
                         .body(body)
                         .inputs(inputs)
                         .canCloseWithEscape(true)
@@ -206,8 +201,8 @@ public final class ModifierDialogs implements ModifierDialog {
 
     private ActionButton confirmButton(DialogAction action, boolean submit) {
         String text = submit
-                ? messages.string("manhunt-gui.dialog-submit", "Submit")
-                : messages.string("manhunt-gui.dialog-cancel", "Cancel");
+                ? manhuntGui.getDialogSubmit()
+                : manhuntGui.getDialogCancel();
         return ActionButton.builder(GuiTexts.name(messages, text, text))
                 .action(action)
                 .build();

@@ -143,13 +143,13 @@ class LobbyServiceTest {
         when(plugin.configService()).thenReturn(config);
         when(config.getString("advanced.lobbies.mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS"))
                 .thenReturn("hold");
-        LobbyService lobbies = new LobbyService(plugin);
+        LobbyService lobbies = new LobbyService(plugin, null);
 
         assertEquals(MidMatchPolicy.HOLD, lobbies.midMatchPolicy());
     }
 
     private static LobbyService service() {
-        return new LobbyService(null);
+        return new LobbyService(null, null);
     }
 
     @Test
@@ -241,7 +241,7 @@ class LobbyServiceTest {
         when(player.getUniqueId()).thenReturn(id);
         when(game.instanceOf(id)).thenReturn(Optional.empty());
         when(fakes.isFakeSpectator(player)).thenReturn(false);
-        return new Fixture(new LobbyService(plugin), player, id, game, fakes);
+        return new Fixture(new LobbyService(plugin, null), player, id, game, fakes);
     }
 
     private record Fixture(LobbyService lobbies, Player player, UUID id,

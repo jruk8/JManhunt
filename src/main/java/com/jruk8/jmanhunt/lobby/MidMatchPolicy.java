@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.lobby;
 
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.player.Role;
 
 /**
@@ -55,11 +56,11 @@ public enum MidMatchPolicy {
     }
 
     /**
-     * Held message key for a role that queues instead of joining: the
-     * sublobby queue line under sublobby policies, the in-progress line
-     * otherwise. Pure for tests.
+     * Held message template for a role that queues instead of joining:
+     * the sublobby queue line under sublobby policies, the in-progress
+     * line otherwise. Pure for tests.
      */
-    public String queueMessageKey() {
-        return usesSubLobbies() ? "manhunt.setplayer-queued-sublobby" : "manhunt.setplayer-held";
+    public String queueMessageTemplate(ManhuntMessages manhunt) {
+        return usesSubLobbies() ? manhunt.getSetplayerQueuedSublobby() : manhunt.getSetplayerHeld();
     }
 }

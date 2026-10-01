@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.stats;
 
-import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.Locale;
 import java.util.UUID;
@@ -40,12 +40,12 @@ public final class Stats {
         };
     }
 
-    public String displayValue(String statistic, MessageService messages) {
+    public String displayValue(String statistic, GameMessages game) {
         if (statistic.equalsIgnoreCase("DAMAGE_DEALT")) {
             return String.format(Locale.ROOT, "%.1f Hearts", value(statistic));
         }
         if (statistic.equalsIgnoreCase("PROGRESSION")) {
-            return messages.string("game.progression-names." + progressionKey, progressionKey);
+            return game.getProgressionNames().getOrDefault(progressionKey, progressionKey);
         }
         return String.valueOf((int) value(statistic));
     }

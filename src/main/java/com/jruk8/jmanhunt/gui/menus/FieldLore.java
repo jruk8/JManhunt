@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.gui.menus;
 
-import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -34,21 +34,17 @@ public final class FieldLore {
     }
 
     /** Raw lore lines in schema order; callers render them as components. */
-    public static List<String> lines(MessageService messages, Field field) {
+    public static List<String> lines(ManhuntGuiMessages guiTexts, Field field) {
         List<String> lines = new ArrayList<>();
         if (field.description() != null && !field.description().isBlank()) {
             lines.add(field.description());
             lines.add("");
         }
-        lines.add(template(messages, "manhunt-gui.setting-value",
-                "Value: <white>{value}", field.value()));
-        lines.add(template(messages, "manhunt-gui.setting-path",
-                "Path: <white>{path}", field.path()));
-        lines.add(template(messages, "manhunt-gui.setting-type",
-                "Type: <white>{type}", field.type()));
+        lines.add(template(guiTexts.getSettingValue(), field.value()));
+        lines.add(template(guiTexts.getSettingPath(), field.path()));
+        lines.add(template(guiTexts.getSettingType(), field.type()));
         if (field.allowed() != null) {
-            lines.add(template(messages, "manhunt-gui.dialog-bounds",
-                    "Allowed: <white>{bounds}", field.allowed()));
+            lines.add(template(guiTexts.getDialogBounds(), field.allowed()));
         }
         if (field.options() != null) {
             for (String option : field.options()) {
@@ -59,21 +55,17 @@ public final class FieldLore {
                 }
             }
         }
-        lines.add(template(messages, "manhunt-gui.setting-default",
-                "Default: <white>{value}", field.defaultText()));
+        lines.add(template(guiTexts.getSettingDefault(), field.defaultText()));
         if (field.restartRequired()) {
-            lines.add(messages.string("manhunt-gui.setting-restart-required",
-                    "<gray>(requires a server restart)"));
+            lines.add(guiTexts.getSettingRestartRequired());
         }
         lines.add("");
         lines.add(field.hint());
-        lines.add(messages.string("manhunt-gui.setting-hint-reset", "Right-click to reset"));
+        lines.add(guiTexts.getSettingHintReset());
         return lines;
     }
 
-    private static String template(MessageService messages, String key,
-            String fallback, String value) {
-        String line = messages.string(key, fallback);
+    private static String template(String line, String value) {
         return value == null ? line : line.replace("{value}", value)
                 .replace("{path}", value).replace("{type}", value).replace("{bounds}", value);
     }

@@ -10,6 +10,8 @@ import com.jruk8.jmanhunt.command.TagCooldownStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.LeaveDestination;
+import com.jruk8.jmanhunt.message.DebugMessages;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -50,6 +52,7 @@ import com.jruk8.jmanhunt.match.prestart.PrestartService;
 public final class MatchFinishService {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final GameMessages game;
     private final PlayerStateStore playerStates;
     private final StatsManager stats;
     private final GameStateCommandManager stateCommands;
@@ -66,13 +69,15 @@ public final class MatchFinishService {
     private final MatchLeaveService leave;
     private final List<Consumer<GameInstance>> gameEndListeners = new ArrayList<>();
 
-    public MatchFinishService(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
+    public MatchFinishService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
+            PlayerStateStore playerStates,
             CompassManager compass, StatsManager stats, GameStateCommandManager stateCommands,
             ConfigService configService, WorldEngineService worldEngine, MatchStore store,
             MatchMessaging messaging, TimeLimitService timeLimits, PrestartService prestart,
             AutostartService autostart, FlagStore flagStore, TagCooldownStore cooldowns) {
         this.plugin = plugin;
         this.messages = messages;
+        this.game = game;
         this.playerStates = playerStates;
         this.stats = stats;
         this.stateCommands = stateCommands;
@@ -87,7 +92,7 @@ public final class MatchFinishService {
         this.cooldowns = cooldowns;
         this.elimination = new MatchEliminationService(plugin, playerStates, compass, store,
                 messaging, flagStore, this::finishIfBucketEmpty);
-        this.leave = new MatchLeaveService(plugin, messages, playerStates, compass, stateCommands,
+        this.leave = new MatchLeaveService(plugin, messages, game, playerStates, compass, stateCommands,
                 configService, worldEngine, store, messaging, flagStore, instance -> {
                     compass.reconcileTeammateModes(instance);
                     finishIfBucketEmpty(instance);
@@ -328,7 +333,8 @@ public final class MatchFinishService {
         flagStore.clearMatch(teardownId);
         cooldowns.clearMatch(teardownId);
         store.removeInstance(teardownId);
-        plugin.logger().debug(DebugLevel.INFO, "debug.match-end", Map.of("index", GameManager.cellString(instance)));
+        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getMatchEnd,
+                Map.of("index", GameManager.cellString(instance)));
         worldEngine.prepareNextCell();
         autostart.updateAutostartState();
     }
@@ -367,7 +373,7 @@ public final class MatchFinishService {
             plugin.roleTeams().sync(spectator);
             Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(destination.matchId(),
                     playerId, GameManager.roleToPlayerRole(Role.SPECTATOR)));
-            messaging.sendToInstance(destination, "game.join-announce",
+            messaging.sendToInstance(destination, game.getJoinAnnounce(),
                     Map.of("player", spectator.getName(), "role", messages.roleName(Role.SPECTATOR)));
             moved.add(playerId);
         }
@@ -494,9 +500,9 @@ public final class MatchFinishService {
         prestart.cancelHeadstarts(instance);
         timeLimits.cancelTimeLimit(instance);
 
-        messaging.sendToInstance(instance, "game.cancelled", Map.of());
+        messaging.sendToInstance(instance, game.getCancelled(), Map.of());
         for (Player player : store.onlineAssignedPlayers(instance)) {
-            player.showTitle(Title.title(messages.component("game.cancelled-title"), Component.empty(),
+            player.showTitle(Title.title(messages.componentRaw(game.getCancelledTitle()), Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
         playerStates.resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());

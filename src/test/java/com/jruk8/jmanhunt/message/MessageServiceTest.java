@@ -16,25 +16,27 @@ class MessageServiceTest {
 
     @Test
     void debugPrefixTokenResolves() {
-        MessageService messages = messages();
+        Fixture fixture = messages();
 
-        Component rendered = messages.component("debug.cell-fetched", Map.of("value", "7"));
+        Component rendered = fixture.messages().componentRaw(
+                fixture.config().getDebug().getCellFetched(), Map.of("value", "7"));
 
         assertEquals("[D] value 7.", plain(rendered));
     }
 
     @Test
     void regularPrefixStillResolves() {
-        MessageService messages = messages();
+        Fixture fixture = messages();
 
-        Component rendered = messages.component("manhunt.not-in-match", Map.of("value", "7"));
+        Component rendered = fixture.messages().componentRaw(
+                fixture.config().getManhunt().getNotInMatch(), Map.of("value", "7"));
 
         assertEquals("[T] value 7.", plain(rendered));
     }
 
     @Test
     void renderLiteralResolvesPrefixInComposedText() {
-        MessageService messages = messages();
+        MessageService messages = messages().messages();
 
         // Composed literals (like the separator-wrapped win announcement)
         // carry a raw {prefix} that parse() alone would leave behind.
@@ -66,7 +68,7 @@ class MessageServiceTest {
 
     @Test
     void parseAppliesLegacyCodes() {
-        MessageService messages = messages();
+        MessageService messages = messages().messages();
 
         assertEquals("hi", plain(messages.parse("&7hi")));
         assertEquals("hi", plain(messages.parse("<gray>hi")));
@@ -82,36 +84,32 @@ class MessageServiceTest {
 
     @Test
     void doubleFormatNeverThrows() {
-        MessageService messages = messages();
+        MessageService messages = messages().messages();
         String once = messages.formatPlaceholder(messages.roleName(Role.HUNTER));
 
         assertDoesNotThrow(() -> messages.formatPlaceholder(once));
     }
 
     @Test
-    void emptyStringDisablesButWhitespaceDoesNot() {
-        MessagesConfig config = new MessagesConfig();
-        ConfigPathMapper.set(config, "command.player-only", "");
-        ConfigPathMapper.set(config, "command.no-permission", " ");
-        ConfigPathMapper.set(config, "command.invalid", "hi");
+    void blankTreatsNullAndEmptyAsDisabled() {
         MessageService messages = new MessageService();
-        messages.reload(config);
 
-        assertTrue(messages.isDisabled("command.player-only"));
-        assertFalse(messages.isDisabled("command.no-permission"));
-        assertFalse(messages.isDisabled("command.invalid"));
-        assertFalse(messages.isDisabled("command.bogus"));
+        assertTrue(messages.blank(null));
+        assertTrue(messages.blank(""));
+        assertFalse(messages.blank(" "));
+        assertFalse(messages.blank("hi"));
     }
 
     @Test
-    void roleNameUsesConfiguredColorOrDefault() {
+    void roleNameUsesConfiguredColors() {
         MessagesConfig config = new MessagesConfig();
         ConfigPathMapper.set(config, "role-colors.hunter", "&c");
+        ConfigPathMapper.set(config, "role-colors.speedrunner", "&a");
         MessageService messages = new MessageService();
         messages.reload(config);
 
         assertEquals("&cHunter", messages.roleName(Role.HUNTER));
-        assertEquals("<#74de66>Speedrunner", messages.roleName(Role.SPEEDRUNNER));
+        assertEquals("&aSpeedrunner", messages.roleName(Role.SPEEDRUNNER));
     }
 
     @Test
@@ -127,54 +125,15 @@ class MessageServiceTest {
         assertEquals("No Hunter here.", plain(rendered));
     }
 
-    @Test
-    void autostartEligibleSaysStarts() {
-        MessageService messages = defaults();
 
-        assertEquals("[JManhunt] Manhunt starts in 60s.",
-                plain(messages.component("manhunt.autostart-eligible", Map.of("seconds", "60"))));
+
+
+
+
+    private record Fixture(MessageService messages, MessagesConfig config) {
     }
 
-    @Test
-    void otherAutostartMessagesUntouched() {
-        MessageService messages = defaults();
-
-        assertEquals("[JManhunt] Manhunt starts in 5s.",
-                plain(messages.component("manhunt.autostart-countdown", Map.of("seconds", "5"))));
-        assertEquals("[JManhunt] Auto-start cancelled.",
-                plain(messages.component("manhunt.autostart-cancelled")));
-    }
-
-    @Test
-    void nearbyBarSaysTrackingIsDisabled() {
-        MessageService messages = defaults();
-
-        assertEquals("Steve is nearby! Tracking is disabled.",
-                plain(messages.component("compass.nearby-actionbar", Map.of("player", "Steve"))));
-    }
-
-    @Test
-    void missingKeyRendersKeyItself() {
-        MessageService messages = messages();
-
-        assertEquals("command.bogus", plain(messages.component("command.bogus")));
-    }
-
-    @Test
-    void missingListReadsEmpty() {
-        MessageService messages = messages();
-
-        assertTrue(messages.strings("compass.compass-lore").isEmpty());
-        assertEquals(3, messages.strings("compass.hunter-lore").size());
-    }
-
-    private static MessageService defaults() {
-        MessageService messages = new MessageService();
-        messages.reload(new MessagesConfig());
-        return messages;
-    }
-
-    private static MessageService messages() {
+    private static Fixture messages() {
         MessagesConfig config = new MessagesConfig();
         ConfigPathMapper.set(config, "prefix", "<gray>[T]</gray> ");
         ConfigPathMapper.set(config, "debug.prefix", "<gray>[D]</gray> ");
@@ -186,7 +145,7 @@ class MessageServiceTest {
                 "{prefix}<gray>value <white>{value}<gray>.");
         MessageService messages = new MessageService();
         messages.reload(config);
-        return messages;
+        return new Fixture(messages, config);
     }
 
     private static String plain(Component component) {

@@ -4,6 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.message.GameMessages;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 
@@ -27,10 +30,15 @@ class PlayerCombatListenerFriendlyFireTest {
     }
 
     @Test
-    void friendlyFireKeysCycleThreeLines() {
-        assertEquals("game.friendly-fire-1", PlayerCombatListener.friendlyFireKey(0));
-        assertEquals("game.friendly-fire-2", PlayerCombatListener.friendlyFireKey(1));
-        assertEquals("game.friendly-fire-3", PlayerCombatListener.friendlyFireKey(2));
-        assertEquals("game.friendly-fire-1", PlayerCombatListener.friendlyFireKey(3));
+    void friendlyFireTemplatesCycleThreeLines() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "game.friendly-fire-1", "line one");
+        ConfigPathMapper.set(config, "game.friendly-fire-2", "line two");
+        ConfigPathMapper.set(config, "game.friendly-fire-3", "line three");
+        GameMessages texts = config.getGame();
+        assertEquals("line one", PlayerCombatListener.friendlyFireTemplate(texts, 0));
+        assertEquals("line two", PlayerCombatListener.friendlyFireTemplate(texts, 1));
+        assertEquals("line three", PlayerCombatListener.friendlyFireTemplate(texts, 2));
+        assertEquals("line one", PlayerCombatListener.friendlyFireTemplate(texts, 3));
     }
 }

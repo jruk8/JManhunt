@@ -11,6 +11,7 @@ import com.jruk8.jmanhunt.config.SettingType;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
+import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import io.papermc.paper.dialog.Dialog;
@@ -56,6 +57,7 @@ public final class SettingDialogs implements SettingDialog {
     private final ConfigService config;
     private final OverrideService overrides;
     private final MessageService messages;
+    private final ManhuntGuiMessages guiTexts;
     private final SoundService sounds;
     private final GuiService gui;
     private final SettingFeedback feedback;
@@ -63,11 +65,12 @@ public final class SettingDialogs implements SettingDialog {
     private final Plugin plugin;
 
     public SettingDialogs(ConfigService config, OverrideService overrides, MessageService messages,
-            SoundService sounds, GuiService gui, SettingFeedback feedback, GuiConfig guiData,
-            Plugin plugin) {
+            ManhuntGuiMessages guiTexts, SoundService sounds, GuiService gui, SettingFeedback feedback,
+            GuiConfig guiData, Plugin plugin) {
         this.config = config;
         this.overrides = overrides;
         this.messages = messages;
+        this.guiTexts = guiTexts;
         this.sounds = sounds;
         this.gui = gui;
         this.feedback = feedback;
@@ -301,12 +304,11 @@ public final class SettingDialogs implements SettingDialog {
         if (descriptor.type() == SettingType.STRING) {
             lines.addAll(iconBody(currentText(lobby, descriptor)));
         }
-        String current = messages
-                .string("manhunt-gui.dialog-current", "Current value: <white>{value}")
+        String current = guiTexts.getDialogCurrent()
                 .replace("{value}", escape(displayCurrent(lobby, descriptor)));
         String bounds = null;
         if (SettingRegistry.hasBounds(descriptor)) {
-            bounds = messages.string("manhunt-gui.dialog-bounds", "Allowed: {bounds}")
+            bounds = guiTexts.getDialogBounds()
                     .replace("{bounds}", escape(SettingRegistry.boundsText(
                             descriptor, path -> overrides.effectiveRaw(lobby, path))));
         }
@@ -325,7 +327,7 @@ public final class SettingDialogs implements SettingDialog {
         if (initial != null && initial.length() <= TEXT_MAX_LENGTH) {
             return false;
         }
-        messages.message(player, "manhunt-gui.dialog-too-long", Map.of(
+        messages.messageRaw(player, guiTexts.getDialogTooLong(), Map.of(
                 "length", String.valueOf(initial == null ? 0 : initial.length()),
                 "max", String.valueOf(TEXT_MAX_LENGTH)));
         sounds.playAngrySound(player);
@@ -358,8 +360,8 @@ public final class SettingDialogs implements SettingDialog {
 
     private ActionButton confirmButton(DialogAction action, boolean submit) {
         String text = submit
-                ? messages.string("manhunt-gui.dialog-submit", "Submit")
-                : messages.string("manhunt-gui.dialog-cancel", "Cancel");
+                ? guiTexts.getDialogSubmit()
+                : guiTexts.getDialogCancel();
         return ActionButton.builder(GuiTexts.name(messages, text, text))
                 .action(action)
                 .build();

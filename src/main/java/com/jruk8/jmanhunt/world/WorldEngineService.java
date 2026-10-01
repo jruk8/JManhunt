@@ -50,7 +50,7 @@ public final class WorldEngineService implements SettingsListener {
         this.endResetManager = new EndResetManager(plugin);
         this.endCells = new EndCellManager(plugin, engineState);
         this.cells = new WorldCellService(plugin, engineState, endCells, playerStates);
-        this.lobbyWorlds = new LobbyWorldService(plugin, messages);
+        this.lobbyWorlds = new LobbyWorldService(plugin, messages, messages.manhunt());
         this.teleport = new MatchTeleportService(plugin, lobbyWorlds);
     }
 

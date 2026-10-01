@@ -56,7 +56,7 @@ class DevSchemCommandTest {
         when(plugin.getDataFolder()).thenReturn(dir.toFile());
 
         List<String> names =
-                new DevSchemCommand(plugin, mock(MessageService.class)).schematicNames();
+                new DevSchemCommand(plugin, mock(MessageService.class), null, null).schematicNames();
 
         assertEquals(List.of("arena", "both", "old"), names);
     }

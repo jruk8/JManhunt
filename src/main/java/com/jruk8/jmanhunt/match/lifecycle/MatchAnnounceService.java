@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.match.lifecycle;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.StatusRosterService;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -26,15 +27,18 @@ public final class MatchAnnounceService {
     private final PlayerStateStore playerStates;
     private final MatchStore store;
     private final StatusRosterService roster;
+    private final ManhuntMessages manhunt;
 
     public MatchAnnounceService(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
-            PlayerStateStore playerStates, MatchStore store, StatusRosterService roster) {
+            PlayerStateStore playerStates, MatchStore store, StatusRosterService roster,
+            ManhuntMessages manhunt) {
         this.plugin = plugin;
         this.messages = messages;
         this.sounds = sounds;
         this.playerStates = playerStates;
         this.store = store;
         this.roster = roster;
+        this.manhunt = manhunt;
     }
 
     /**
@@ -69,14 +73,15 @@ public final class MatchAnnounceService {
             }
             Map<String, String> values = Map.of("role", messages.roleName(playerRole));
             if (chat) {
-                messages.message(player, "manhunt.role-announce-chat", values);
+                messages.messageRaw(player, manhunt.getRoleAnnounceChat(), values);
             }
             if (title) {
-                String subtitleKey = playerRole == Role.HUNTER
-                        ? "manhunt.role-announce-subtitle-hunter" : "manhunt.role-announce-subtitle-speedrunner";
+                String subtitle = playerRole == Role.HUNTER
+                        ? manhunt.getRoleAnnounceSubtitleHunter()
+                        : manhunt.getRoleAnnounceSubtitleSpeedrunner();
                 player.showTitle(Title.title(
-                        messages.component("manhunt.role-announce-title", values),
-                        messages.component(subtitleKey), times));
+                        messages.componentRaw(manhunt.getRoleAnnounceTitle(), values),
+                        messages.componentRaw(subtitle), times));
             }
             if (soundsEnabled) {
                 sounds.playSound(player,
@@ -95,12 +100,12 @@ public final class MatchAnnounceService {
         }
         Map<String, String> values = Map.of("role", messages.roleName(Role.SPECTATOR));
         if (chat) {
-            messages.message(spectator, "manhunt.role-announce-chat", values);
+            messages.messageRaw(spectator, manhunt.getRoleAnnounceChat(), values);
         }
         if (title) {
             spectator.showTitle(Title.title(
-                    messages.component("manhunt.role-announce-title", values),
-                    messages.component("manhunt.role-announce-subtitle-spectator"), times));
+                    messages.componentRaw(manhunt.getRoleAnnounceTitle(), values),
+                    messages.componentRaw(manhunt.getRoleAnnounceSubtitleSpectator()), times));
         }
         if (soundsEnabled) {
             sounds.playSound(spectator, "announce.spectator");
@@ -119,14 +124,14 @@ public final class MatchAnnounceService {
     public void showStatusToInstance(GameInstance instance, List<Player> players) {
         Predicate<UUID> respawning = StatusRosterService.respawning(plugin.respawnListener());
         for (Player recipient : store.onlineAssignedPlayers(instance)) {
-            messages.message(recipient, "manhunt.status-header", Map.of("status", "ACTIVE"));
+            messages.messageRaw(recipient, manhunt.getStatusHeader(), Map.of("status", "ACTIVE"));
             roster.sendRoleSection(recipient, players, Role.SPEEDRUNNER,
-                    "manhunt.speedrunners-header", instance.deadPlayers(), respawning);
-            roster.sendRoleSection(recipient, players, Role.HUNTER, "manhunt.hunters-header",
+                    manhunt.getSpeedrunnersHeader(), instance.deadPlayers(), respawning);
+            roster.sendRoleSection(recipient, players, Role.HUNTER, manhunt.getHuntersHeader(),
                     instance.deadPlayers(), respawning);
-            roster.sendRoleSection(recipient, players, Role.AFK, "manhunt.afk-header",
+            roster.sendRoleSection(recipient, players, Role.AFK, manhunt.getAfkHeader(),
                     instance.deadPlayers(), respawning);
-            roster.sendRoleSection(recipient, players, Role.NONE, "manhunt.none-header",
+            roster.sendRoleSection(recipient, players, Role.NONE, manhunt.getNoneHeader(),
                     instance.deadPlayers(), respawning);
             roster.sendSpectatorLine(recipient, players);
         }

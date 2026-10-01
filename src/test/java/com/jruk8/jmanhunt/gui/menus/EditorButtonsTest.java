@@ -20,16 +20,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class EditorButtonsTest {
 
     private MessageService messages;
+    private MessagesConfig texts;
 
     @BeforeEach
     void setup() {
         messages = new MessageService();
-        messages.reload(new MessagesConfig());
+        texts = new MessagesConfig();
+        messages.reload(texts);
     }
 
     @Test
     void valueButtonShowsOneCurrentLineAndStaysSilent() {
-        MenuButton button = EditorButtons.valueButton(messages, Material.NAME_TAG,
+        MenuButton button = EditorButtons.valueButton(messages, texts.getModifiersGui(), Material.NAME_TAG,
                 "Name", "Speedy", "Click to edit", player -> {});
 
         assertEquals(List.of("Current: Speedy", "Click to edit"), plain(button.lore()));
@@ -39,7 +41,7 @@ class EditorButtonsTest {
 
     @Test
     void currentLineUsesGrayPrefixWithWhiteValue() {
-        MenuButton button = EditorButtons.valueButton(messages, Material.NAME_TAG,
+        MenuButton button = EditorButtons.valueButton(messages, texts.getModifiersGui(), Material.NAME_TAG,
                 "Name", "Speedy", "Click to edit", player -> {});
 
         assertEquals(messages.nonItalic(messages.parse("<gray>Current: <white>Speedy")),
@@ -48,7 +50,7 @@ class EditorButtonsTest {
 
     @Test
     void valueButtonHonorsGlow() {
-        MenuButton button = EditorButtons.valueButton(messages, Material.LEVER,
+        MenuButton button = EditorButtons.valueButton(messages, texts.getModifiersGui(), Material.LEVER,
                 "Enabled", "Enabled", "Click to toggle", true, player -> {});
 
         assertTrue(button.glow());

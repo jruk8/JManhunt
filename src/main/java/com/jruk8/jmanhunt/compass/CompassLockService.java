@@ -19,7 +19,9 @@ import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.MatchRosterValues;
 import com.jruk8.jmanhunt.match.NamedPlayerSinks;
+import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -52,6 +54,8 @@ final class CompassLockService {
     private final PlayerStateStore playerStates;
     private final SoundService sounds;
     private final MessageService messages;
+    private final CompassMessages compass;
+    private final ModifiersMessages modifiers;
     private final CompassTargetService targets;
     private final Map<UUID, Component> actionbars;
     private final Consumer<Player> refresher;
@@ -81,7 +85,8 @@ final class CompassLockService {
     private GameManager game;
 
     CompassLockService(JManhuntPlugin plugin, PlayerStateStore playerStates, SoundService sounds,
-            MessageService messages, CompassTargetService targets,
+            MessageService messages, CompassMessages compass, ModifiersMessages modifiers,
+            CompassTargetService targets,
             Map<UUID, Component> actionbars, Consumer<Player> refresher,
             Consumer<Player> clickResolver, Consumer<Player> cacheRenderer,
             Consumer<Player> analysisStarter, CompassCache cache,
@@ -90,6 +95,8 @@ final class CompassLockService {
         this.playerStates = playerStates;
         this.sounds = sounds;
         this.messages = messages;
+        this.compass = compass;
+        this.modifiers = modifiers;
         this.targets = targets;
         this.actionbars = actionbars;
         this.refresher = refresher;
@@ -384,7 +391,7 @@ final class CompassLockService {
         } else {
             Role holderRole = playerStates.role(player);
             if (targets.collectIdentities(player, holderRole, match).isEmpty()) {
-                messages.message(player, "compass.no-teammates");
+                messages.messageRaw(player, compass.getNoTeammates());
                 sounds.playAngrySound(player);
                 return false;
             }
@@ -392,8 +399,8 @@ final class CompassLockService {
             entering = true;
         }
         if (chatMessagesEnabled(lobbyOf(player))) {
-            messages.message(player,
-                    entering ? "compass.teammate-on-chat" : "compass.teammate-off-chat");
+            messages.messageRaw(player,
+                    entering ? compass.getTeammateOnChat() : compass.getTeammateOffChat());
         }
         return true;
     }
@@ -419,7 +426,7 @@ final class CompassLockService {
             if (holder == null || !chatMessagesEnabled(lobbyOf(holder))) {
                 continue;
             }
-            messages.message(holder, "compass.locked-target-died-chat");
+            messages.messageRaw(holder, compass.getLockedTargetDiedChat());
         }
     }
 
@@ -437,7 +444,7 @@ final class CompassLockService {
         locks.put(player.getUniqueId(), next);
         if (chatMessagesEnabled(lobbyOf(player))) {
             String name = cycle.names().getOrDefault(next, playerStates.playerName(next));
-            messages.message(player, "compass.locked-chat", Map.of("player", name));
+            messages.messageRaw(player, compass.getLockedChat(), Map.of("player", name));
         }
     }
 
@@ -471,7 +478,7 @@ final class CompassLockService {
             effectiveDelay = effectiveDelay * multiplier;
         }
         runAnalysisDebuffs(holder, effectiveDelay);
-        actionbars.put(id, messages.component("compass.analyzing-actionbar"));
+        actionbars.put(id, messages.componentRaw(compass.getAnalyzingActionbar()));
         sounds.playSound(holder, "compass.analysis");
         long intervalTicks = AnalysisTiming.analysisTickInterval(clampedSoundInterval(overrides
                 .getDouble(lobby, "settings.compass.actions.manual.analysis.sound-interval-seconds",
@@ -528,8 +535,8 @@ final class CompassLockService {
         generations.merge(id, 1L, Long::sum);
         sharedClicks.put(id, System.currentTimeMillis());
         analysisHost.cancelAnalysisSnapshots(id);
-        actionbars.put(id, messages.component("compass.bad-signal-reason-actionbar", Map.of(
-                "reason", messages.string("compass.signal-reason.cancelled", "cancelled"))));
+        actionbars.put(id, messages.componentRaw(compass.getBadSignalReasonActionbar(), Map.of(
+                "reason", compass.getSignalReason().getOrDefault("cancelled", "cancelled"))));
         if (holder.isOnline()) {
             holder.sendActionBar(actionbars.get(id));
             sounds.playSound(holder, "compass.failure");
@@ -678,7 +685,7 @@ final class CompassLockService {
         RosterValues roster = game == null ? RosterValues.inert()
                 : new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId);
         TagBackends backends = new TagBackends(stats, flags, placeholderPass, roster,
-                NamedPlayerSinks.of(messages, sounds, plugin.logger()::warning, "debuffs"));
+                NamedPlayerSinks.of(messages, modifiers, sounds, plugin.logger()::warning, "debuffs"));
         return TagContext.run(scope, "debuffs",
                 text -> messages.broadcastText(formatEngineMessage(text)),
                 text -> messages.sendText(holder, formatEngineMessage(text)),
@@ -711,9 +718,7 @@ final class CompassLockService {
         if (instance.isEmpty()) {
             return;
         }
-        String text = messages.string("modifiers.loop-limit",
-                "{prefix}<red>A modifier loop exceeded its step limit and the match was cancelled. "
-                        + "Please tell an administrator.");
+        String text = modifiers.getLoopLimit();
         for (Player player : game.onlineParticipants(matchId)) {
             messages.sendText(player, text);
         }
@@ -721,7 +726,7 @@ final class CompassLockService {
     }
 
     private String formatEngineMessage(String text) {
-        return NamedPlayerSinks.formatEngineMessage(messages, text);
+        return NamedPlayerSinks.formatEngineMessage(modifiers, messages, text);
     }
 
     private void playGlobalSound(String soundId, float pitch, float volume) {

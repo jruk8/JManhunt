@@ -46,6 +46,7 @@ class ModifierEditorMenusTest {
     private ModifierEditorMenus editor;
     private ModifierDetailMenus detail;
     private MessageService messages;
+    private MessagesConfig texts;
 
     private static Component plain(String text, TextColor color) {
         return Component.text(text, color).decoration(TextDecoration.ITALIC, false);
@@ -94,10 +95,14 @@ class ModifierEditorMenusTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         messages = new MessageService();
-        messages.reload(new MessagesConfig());
+        texts = new MessagesConfig();
+        messages.reload(texts);
         store = new ModifierStore(config, log);
-        editor = new ModifierEditorMenus(store, messages, null, null, null, null, null, null);
-        detail = new ModifierDetailMenus(store, messages, null, null, null, null, null);
+        editor = new ModifierEditorMenus(store, messages, texts.getModifiersGui(),
+                texts.getManhuntGui(), texts.getModifiers(), texts.getCommand(), null, null,
+                null, null, null, null);
+        detail = new ModifierDetailMenus(store, messages, texts.getModifiersGui(),
+                texts.getModifiers(), texts.getCommand(), null, null, null, null, null);
     }
 
     @Test
@@ -231,9 +236,8 @@ class ModifierEditorMenusTest {
 
         assertEquals("2nd", values.get("ordinal"));
         assertEquals("player", values.get("list"));
-        Component rendered = messages.component("modifiers.edit-command-set", values);
-        assertTrue(textOf(rendered)
-                .endsWith("2nd command for player set to give <p> <red>apple"));
+        Component rendered = messages.componentRaw("{ordinal}|{list}|{command}", values);
+        assertEquals("2nd|player|give <p> <red>apple", textOf(rendered));
     }
 
     @Test
@@ -255,7 +259,7 @@ class ModifierEditorMenusTest {
 
         menu.window().visibleEntries().get(0).shiftAction().accept(viewer);
 
-        verify(viewer).sendMessage(messages.component("command.no-permission"));
+        verify(viewer).sendMessage(messages.componentRaw(texts.getCommand().getNoPermission()));
     }
 
     @Test
@@ -265,10 +269,12 @@ class ModifierEditorMenusTest {
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(12L, List.of(),
                 List.of(), List.of(), null, null);
         when(service.run(any(), eq("HUNTER"), eq(List.of("give <p> apple")))).thenReturn(result);
-        ModifiersCommand toggles = new ModifiersCommand(null, messages, null, null, null,
+        ModifiersCommand toggles = new ModifiersCommand(null, messages,
+                texts.getModifiers(), texts.getCommand(), null, null, null,
                 service);
-        ModifierDetailMenus wired = new ModifierDetailMenus(store, messages, null, null, null,
-                null, toggles);
+        ModifierDetailMenus wired = new ModifierDetailMenus(store, messages,
+                texts.getModifiersGui(), texts.getModifiers(), texts.getCommand(), null, null,
+                null, null, toggles);
         Player viewer = mock(Player.class);
         when(viewer.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
         when(viewer.getName()).thenReturn("Steve");

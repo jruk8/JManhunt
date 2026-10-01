@@ -10,6 +10,9 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.SubLobby;
+import com.jruk8.jmanhunt.message.DebugMessages;
+import com.jruk8.jmanhunt.message.GameMessages;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -56,6 +59,8 @@ public final class MatchStartService {
 
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final GameMessages game;
+    private final ManhuntMessages manhunt;
     private final PlayerStateStore playerStates;
     private final CompassManager compass;
     private final StatsManager stats;
@@ -73,7 +78,8 @@ public final class MatchStartService {
     private final List<Consumer<GameInstance>> gameStartListeners = new ArrayList<>();
     private final List<Consumer<GameInstance>> beginGameListeners = new ArrayList<>();
 
-    public MatchStartService(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
+    public MatchStartService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
+            ManhuntMessages manhunt, SoundService sounds,
             PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
             GameStateCommandManager stateCommands, ConfigService configService,
             WorldEngineService worldEngine, LobbyService lobbies, MatchStore store,
@@ -81,6 +87,8 @@ public final class MatchStartService {
             AutostartService autostart) {
         this.plugin = plugin;
         this.messages = messages;
+        this.game = game;
+        this.manhunt = manhunt;
         this.playerStates = playerStates;
         this.compass = compass;
         this.stats = stats;
@@ -94,7 +102,8 @@ public final class MatchStartService {
         this.prestart = prestart;
         this.autostart = autostart;
         this.announce = new MatchAnnounceService(plugin, messages, sounds,
-                playerStates, store, new StatusRosterService(messages, playerStates));
+                playerStates, store, new StatusRosterService(messages, manhunt, playerStates),
+                manhunt);
         this.quickStart = new QuickStartService(plugin, lobbies, playerStates, store, autostart,
                 this::start);
     }
@@ -171,7 +180,7 @@ public final class MatchStartService {
         applyStartState(instance, participants, spectators, lobbyId);
         publishMatchStart(instance, participants, spectators, lobbyId, matchCell);
         beginMatchPlay(instance);
-        plugin.logger().debug(DebugLevel.INFO, "debug.match-start",
+        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getMatchStart,
                 Map.of("lobby", String.valueOf(lobbyId), "index", GameManager.cellString(instance)));
         return true;
     }
@@ -289,7 +298,7 @@ public final class MatchStartService {
     /** Broadcasts the match start to players, listeners, and the API event. */
     private void publishMatchStart(GameInstance instance, List<Player> players,
             List<Player> spectators, int lobbyId, OptionalLong matchCell) {
-        messaging.sendToInstance(instance, "manhunt.start-success", Map.of());
+        messaging.sendToInstance(instance, manhunt.getStartSuccess(), Map.of());
         gameStartListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchStartEvent(instance.matchId(), lobbyId, matchCell));
         messaging.playInstanceNeutral(instance);
@@ -400,7 +409,7 @@ public final class MatchStartService {
         applyJoinGameMode(instance, player, role);
         Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(
                 instance.matchId(), playerId, GameManager.roleToPlayerRole(role)));
-        messaging.sendToInstance(instance, "game.join-announce",
+        messaging.sendToInstance(instance, game.getJoinAnnounce(),
                 Map.of("player", player.getName(), "role", messages.roleName(role)));
         stateCommands.trackMatchEntry(List.of(playerId));
         return true;
@@ -460,7 +469,7 @@ public final class MatchStartService {
                 }
             }
         }
-        messaging.sendToInstance(instance, "manhunt.started-by-damage", Map.of());
+        messaging.sendToInstance(instance, manhunt.getStartedByDamage(), Map.of());
         messaging.playInstanceNeutral(instance);
         // Dedicated begin cue, after any prestart window: begin runs once
         // per match (the begun guard above), so this plays exactly once.

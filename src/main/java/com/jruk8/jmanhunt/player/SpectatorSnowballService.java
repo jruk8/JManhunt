@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.player;
 
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.SpectatorMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -28,13 +29,15 @@ public class SpectatorSnowballService {
     private final Plugin plugin;
     private final SpectatorToolbarService toolbar;
     private final MessageService messages;
+    private final SpectatorMessages spectator;
     private final SoundService sounds;
 
     public SpectatorSnowballService(Plugin plugin, SpectatorToolbarService toolbar,
-            MessageService messages, SoundService sounds) {
+            MessageService messages, SpectatorMessages spectator, SoundService sounds) {
         this.plugin = plugin;
         this.toolbar = toolbar;
         this.messages = messages;
+        this.spectator = spectator;
         this.sounds = sounds;
     }
 
@@ -77,7 +80,7 @@ public class SpectatorSnowballService {
         if (shooter.hasCooldown(Material.SNOWBALL)) {
             event.setCancelled(true);
             int seconds = Math.max(1, (shooter.getCooldown(Material.SNOWBALL) + 19) / 20);
-            messages.message(shooter, "spectator.snowball-cooldown",
+            messages.messageRaw(shooter, spectator.getSnowballCooldown(),
                     Map.of("seconds", String.valueOf(seconds)));
             sounds.playNeutralSound(shooter);
             return;

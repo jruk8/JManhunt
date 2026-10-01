@@ -42,6 +42,7 @@ class MetaQuadTest {
 
     private MetaQuad meta;
     private MessageService messages;
+    private MessagesConfig texts;
 
     private static Component plain(String text, NamedTextColor color) {
         return Component.text(text, color).decoration(TextDecoration.ITALIC, false);
@@ -126,8 +127,10 @@ class MetaQuadTest {
     @BeforeEach
     void setup() {
         messages = new MessageService();
-        messages.reload(new MessagesConfig());
-        meta = new MetaQuad(messages, null, null, null);
+        texts = new MessagesConfig();
+        messages.reload(texts);
+        meta = new MetaQuad(messages, texts.getModifiersGui(), texts.getModifiers(),
+                texts.getCommand(), null, null, null);
     }
 
     @Test
@@ -168,8 +171,8 @@ class MetaQuadTest {
     @SuppressWarnings("unchecked")
     void idRenameMessageShowsIdNotDisplayName() {
         SettingDialog dialogs = mock(SettingDialog.class);
-        MetaQuad quad = new MetaQuad(messages, mock(SoundService.class),
-                mock(GuiService.class), dialogs);
+        MetaQuad quad = new MetaQuad(messages, texts.getModifiersGui(), texts.getModifiers(),
+                texts.getCommand(), mock(SoundService.class), mock(GuiService.class), dialogs);
         Menu menu = quad.menu(target(), null, id -> null);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
@@ -191,8 +194,8 @@ class MetaQuadTest {
     @Test
     void iconEditShowsSpriteWhileOtherFieldsStayPlain() {
         SettingDialog dialogs = mock(SettingDialog.class);
-        MetaQuad quad = new MetaQuad(messages, mock(SoundService.class),
-                mock(GuiService.class), dialogs);
+        MetaQuad quad = new MetaQuad(messages, texts.getModifiersGui(), texts.getModifiers(),
+                texts.getCommand(), mock(SoundService.class), mock(GuiService.class), dialogs);
         Menu menu = quad.menu(target(), null, id -> null);
         Player player = mock(Player.class);
 

@@ -70,7 +70,7 @@ class ModifiersCommandTest {
         // Nulls are never touched: options read the store, messages unused.
         ModifiersCommand command = new ModifiersCommand(
                 new ConfigService(null, new ModifierStore(config, log)), null, null, null, null,
-                null);
+                null, null, null);
 
         assertEquals(List.of("Alpha", "mike", "zeta"), command.modifierNameOptions());
         assertEquals(List.of("apple", "zulu"), command.presetIdOptions());
@@ -92,8 +92,10 @@ class ModifiersCommandTest {
                 new ModsLoader(ModsSeeder.none(), log).load(modsRoot)), log);
         ConfigService service = new ConfigService(null, store);
         MessageService messages = new MessageService();
-        messages.reload(new MessagesConfig());
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
+        MessagesConfig texts = new MessagesConfig();
+        messages.reload(texts);
+        ModifiersCommand command = new ModifiersCommand(service, messages,
+                texts.getModifiers(), texts.getCommand(), null, null, null, null);
         FakeSender sender = FakeSender.permitted();
         byte[] nestedBefore = Files.readAllBytes(nested);
 
@@ -105,9 +107,9 @@ class ModifiersCommandTest {
 
         assertTrue(command.execute(sender, new String[]{"import", "modifier", payload}));
 
-        assertEquals(messages.component("modifiers.imported", Map.of("name", "Dup 2")),
+        assertEquals(messages.componentRaw(texts.getModifiers().getImported(), Map.of("name", "Dup 2")),
                 sender.received().get(0));
-        assertEquals(messages.component("modifiers.import-duplicate",
+        assertEquals(messages.componentRaw(texts.getModifiers().getImportDuplicate(),
                         Map.of("duplicate", "dup", "id", "dup-2")),
                 sender.received().get(1));
         assertTrue(Files.isRegularFile(modsRoot.resolve("modifiers/dup-2.yml")));
@@ -124,7 +126,7 @@ class ModifiersCommandTest {
         ModifierStore store = new ModifierStore(config, log);
         // Nulls are never touched: options read the store, messages unused.
         ModifiersCommand command = new ModifiersCommand(
-                new ConfigService(null, store), null, null, null, null, null);
+                new ConfigService(null, store), null, null, null, null, null, null, null);
         assertEquals(List.of("alpha"), command.modifierNameOptions());
         assertEquals(List.of("zed"), command.presetIdOptions());
 
@@ -166,9 +168,10 @@ class ModifiersCommandTest {
         assertTrue(fixture.service().modifierNames().contains("beef-2"));
         assertEquals("Beef 2", fixture.service().modifiers().metaName("beef-2"));
         assertEquals(2, importer.received().size());
-        assertEquals(fixture.messages().component("modifiers.imported", Map.of("name", "Beef 2")),
+        assertEquals(fixture.messages().componentRaw(
+                fixture.texts().getModifiers().getImported(), Map.of("name", "Beef 2")),
                 importer.received().get(0));
-        assertEquals(fixture.messages().component("modifiers.import-duplicate",
+        assertEquals(fixture.messages().componentRaw(fixture.texts().getModifiers().getImportDuplicate(),
                 Map.of("duplicate", "beef", "id", "beef-2")), importer.received().get(1));
     }
 
@@ -183,7 +186,7 @@ class ModifiersCommandTest {
 
         assertTrue(fixture.command().execute(sender, new String[]{"import", "preset", payload}));
         assertEquals(3, sender.received().size());
-        assertEquals(fixture.messages().component("modifiers.import-duplicate",
+        assertEquals(fixture.messages().componentRaw(fixture.texts().getModifiers().getImportDuplicate(),
                 Map.of("duplicate", "pack", "id", "pack-2")), sender.received().get(2));
     }
 
@@ -200,8 +203,10 @@ class ModifiersCommandTest {
         assertTrue(fixture.command().execute(sender, new String[]{"export", "modifier", "nope"}));
 
         assertEquals(3, sender.received().size());
-        assertEquals(fixture.messages().component("modifiers.import-failed"), sender.received().get(0));
-        assertEquals(fixture.messages().component("modifiers.import-failed"), sender.received().get(1));
+        assertEquals(fixture.messages().componentRaw(
+                fixture.texts().getModifiers().getImportFailed()), sender.received().get(0));
+        assertEquals(fixture.messages().componentRaw(
+                fixture.texts().getModifiers().getImportFailed()), sender.received().get(1));
         assertEquals(1, fixture.service().modifierNames().size());
     }
 
@@ -213,20 +218,23 @@ class ModifiersCommandTest {
         log.setUseParentHandlers(false);
         ConfigService service = new ConfigService(null, new ModifierStore(config, log));
         MessageService messages = new MessageService();
-        messages.reload(new MessagesConfig());
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
+        MessagesConfig texts = new MessagesConfig();
+        messages.reload(texts);
+        ModifiersCommand command = new ModifiersCommand(service, messages,
+                texts.getModifiers(), texts.getCommand(), null, null, null, null);
         FakeSender sender = FakeSender.denied();
         boolean before = service.modifierEnabled("beef");
 
         assertTrue(command.execute(sender, new String[]{"setmod", "beef", "true"}));
         assertTrue(command.execute(sender, new String[]{"setpreset", "speed", "true"}));
 
-        Component denied = messages.component("command.no-permission");
+        Component denied = messages.componentRaw(texts.getCommand().getNoPermission());
         assertEquals(List.of(denied, denied), sender.received());
         assertEquals(before, service.modifierEnabled("beef"));
     }
 
-    private record Fixture(ModifiersCommand command, ConfigService service, MessageService messages) {
+    private record Fixture(ModifiersCommand command, ConfigService service, MessageService messages,
+            MessagesConfig texts) {
     }
 
     private static Fixture fixture() {
@@ -242,9 +250,11 @@ class ModifiersCommandTest {
         log.setUseParentHandlers(false);
         ConfigService service = new ConfigService(null, new ModifierStore(config, log));
         MessageService messages = new MessageService();
-        messages.reload(new MessagesConfig());
-        return new Fixture(new ModifiersCommand(service, messages, null, null, null, null),
-                service, messages);
+        MessagesConfig texts = new MessagesConfig();
+        messages.reload(texts);
+        return new Fixture(new ModifiersCommand(service, messages,
+                texts.getModifiers(), texts.getCommand(), null, null, null, null),
+                service, messages, texts);
     }
 
     private static ModifierPreset preset(String name) {
@@ -277,7 +287,7 @@ class ModifiersCommandTest {
 
         assertTrue(fixture.command().execute(sender, new String[]{"test", "hunter", "say hi"}));
 
-        assertEquals(List.of(fixture.messages().component("command.player-only")),
+        assertEquals(List.of(fixture.messages().componentRaw(fixture.texts().getCommand().getPlayerOnly())),
                 sender.received());
     }
 
@@ -291,7 +301,7 @@ class ModifiersCommandTest {
 
         ArgumentCaptor<Component> sent = ArgumentCaptor.forClass(Component.class);
         verify(player).sendMessage(sent.capture());
-        assertEquals(fixture.messages().component("modifiers.test-usage"), sent.getValue());
+        assertEquals(fixture.messages().componentRaw(fixture.texts().getModifiers().getTestUsage()), sent.getValue());
     }
 
     @Test
@@ -302,6 +312,7 @@ class ModifiersCommandTest {
                 List.of(), List.of(), null, null);
         when(service.run(any(), eq("HUNTER"), eq(List.of("say hi")))).thenReturn(result);
         ModifiersCommand command = new ModifiersCommand(fixture.service(), fixture.messages(),
+                fixture.texts().getModifiers(), fixture.texts().getCommand(),
                 null, null, null, service);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);

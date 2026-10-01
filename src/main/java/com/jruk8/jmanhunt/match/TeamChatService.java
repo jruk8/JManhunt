@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.message.ChatMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
@@ -26,16 +27,18 @@ public final class TeamChatService {
     private final FakeSpectatorService fakes;
     private final ConfigService config;
     private final MessageService messages;
+    private final ChatMessages chat;
     private final SoundService sounds;
 
     public TeamChatService(GameManager game, PlayerStateStore playerStates,
             FakeSpectatorService fakes, ConfigService config,
-            MessageService messages, SoundService sounds) {
+            MessageService messages, ChatMessages chat, SoundService sounds) {
         this.game = game;
         this.playerStates = playerStates;
         this.fakes = fakes;
         this.config = config;
         this.messages = messages;
+        this.chat = chat;
         this.sounds = sounds;
     }
 
@@ -140,7 +143,7 @@ public final class TeamChatService {
     /** Renders once, then sends to recipients plus the console with a bump sound. */
     public void deliver(Player sender, String body) {
         Role role = playerStates.role(sender);
-        Component rendered = messages.component("chat.team-chat-format", Map.of(
+        Component rendered = messages.componentRaw(chat.getTeamChatFormat(), Map.of(
                 "role", messages.roleName(role),
                 "rolecolor", messages.roleColor(role),
                 "player", sender.getName(),
@@ -154,7 +157,7 @@ public final class TeamChatService {
 
     /** Usage hint for a bare prefix. The raw line stays cancelled. */
     public void usage(Player sender) {
-        messages.message(sender, "chat.team-chat-usage");
+        messages.messageRaw(sender, chat.getTeamChatUsage());
         sounds.playAngrySound(sender);
     }
 }

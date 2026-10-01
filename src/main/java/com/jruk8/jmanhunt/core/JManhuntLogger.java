@@ -1,10 +1,12 @@
 package com.jruk8.jmanhunt.core;
 
+import com.jruk8.jmanhunt.message.DebugMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,12 +25,15 @@ public final class JManhuntLogger {
     private final Logger console;
     private final DebugService debug;
     private final MessageService messages;
+    private final DebugMessages debugMessages;
     private final DebugSink sink;
 
-    public JManhuntLogger(Logger console, DebugService debug, MessageService messages, DebugSink sink) {
+    public JManhuntLogger(Logger console, DebugService debug, MessageService messages,
+            DebugMessages debugMessages, DebugSink sink) {
         this.console = console;
         this.debug = debug;
         this.messages = messages;
+        this.debugMessages = debugMessages;
         this.sink = sink;
     }
 
@@ -63,23 +68,24 @@ public final class JManhuntLogger {
         log(Level.SEVERE, message, error);
     }
 
-    /** Sends a debug.* message to recipients whose level shows it; silent when none exist. */
-    public void debug(DebugLevel level, String key) {
-        debug(level, key, Map.of());
+    /** Sends a debug message to recipients whose level shows it; silent when none exist. */
+    public void debug(DebugLevel level, Function<DebugMessages, String> template) {
+        debug(level, template, Map.of());
     }
 
-    /** Sends a debug.* message to recipients whose level shows it; silent when none exist. */
-    public void debug(DebugLevel level, String key, Map<String, String> values) {
+    /** Sends a debug message to recipients whose level shows it; silent when none exist. */
+    public void debug(DebugLevel level, Function<DebugMessages, String> template,
+            Map<String, String> values) {
         if (!debug.hasRecipients()) {
             return;
         }
         // The debug prefix leads, then the level tag, then the body: the
         // templates carry {debug-prefix} themselves, so render the body
         // with it blanked to avoid doubling the prefix.
-        Component rendered = messages.component("debug.prefix")
+        Component rendered = messages.componentRaw(debugMessages.getPrefix(), Map.of())
                 .append(messages.miniMessage(levelTag(level)))
                 .append(messages.renderLiteral(
-                        messages.string(key, key).replace("{debug-prefix}", ""), values));
+                        template.apply(debugMessages).replace("{debug-prefix}", ""), values));
         sendRendered(level, rendered);
     }
 
@@ -89,7 +95,7 @@ public final class JManhuntLogger {
             return;
         }
         DebugLevel debugLevel = debugLevel(level);
-        Component rendered = messages.component("debug.prefix")
+        Component rendered = messages.componentRaw(debugMessages.getPrefix(), Map.of())
                 .append(messages.miniMessage(levelTag(debugLevel)))
                 .append(Component.text(truncate(singleLine(message, error))));
         sendRendered(debugLevel, rendered);

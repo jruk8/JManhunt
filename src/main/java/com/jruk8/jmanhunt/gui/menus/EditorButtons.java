@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.gui.menus;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersGuiMessages;
 import java.util.List;
 import java.util.function.Consumer;
 import org.bukkit.Material;
@@ -23,10 +24,10 @@ public final class EditorButtons {
     }
 
     /** Value button without glow. */
-    public static MenuButton valueButton(MessageService messages, Material material,
-            String label, String value, String hint,
+    public static MenuButton valueButton(MessageService messages, ModifiersGuiMessages guiTexts,
+            Material material, String label, String value, String hint,
             Consumer<Player> action) {
-        return valueButton(messages, material, label, value, hint, false, action);
+        return valueButton(messages, guiTexts, material, label, value, hint, false, action);
     }
 
     /**
@@ -34,13 +35,13 @@ public final class EditorButtons {
      * @param hint affordance line such as Click to edit
      * @param glow true to force the enchantment glint
      */
-    public static MenuButton valueButton(MessageService messages, Material material,
-            String label, String value, String hint, boolean glow,
+    public static MenuButton valueButton(MessageService messages, ModifiersGuiMessages guiTexts,
+            Material material, String label, String value, String hint, boolean glow,
             Consumer<Player> action) {
         return new MenuButton(material,
                 GuiTexts.name(messages, label, label),
                 GuiTexts.lore(messages, List.of(
-                        currentLine(messages, value),
+                        currentLine(guiTexts, value),
                         hint)),
                 glow, false, action).silent();
     }
@@ -66,8 +67,7 @@ public final class EditorButtons {
     }
 
     /** Single Current line; the only place the prefix is built. */
-    static String currentLine(MessageService messages, String value) {
-        return messages.string("modifiers-gui.editor-current", "Current: <white>{value}")
-                .replace("{value}", value);
+    static String currentLine(ModifiersGuiMessages guiTexts, String value) {
+        return guiTexts.getEditorCurrent().replace("{value}", value);
     }
 }

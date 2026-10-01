@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.lobby;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,12 +26,14 @@ public final class LobbyService {
     public static final String COLLISIONS_PATH = "advanced.lobbies.disable-player-collisions";
 
     private final JManhuntPlugin plugin;
+    private final ManhuntMessages manhunt;
     private final Map<Integer, Lobby> lobbies = new HashMap<>();
     private final Map<UUID, Integer> membership = new HashMap<>();
     private final Map<Integer, Integer> nextSubIds = new HashMap<>();
 
-    public LobbyService(JManhuntPlugin plugin) {
+    public LobbyService(JManhuntPlugin plugin, ManhuntMessages manhunt) {
         this.plugin = plugin;
+        this.manhunt = manhunt;
     }
 
     /**
@@ -213,26 +216,26 @@ public final class LobbyService {
     private void announceLeave(Player subject, int lobbyId, boolean toSelf,
             boolean toMembers, MessageService messages) {
         if (toSelf) {
-            messages.message(subject, "manhunt.lobby-left",
+            messages.messageRaw(subject, manhunt.getLobbyLeft(),
                     Map.of("lobby", String.valueOf(lobbyId)));
         }
         if (toMembers) {
-            announceToMembers(lobbyId, subject, "manhunt.lobby-left-member", messages);
+            announceToMembers(lobbyId, subject, manhunt.getLobbyLeftMember(), messages);
         }
     }
 
     private void announceJoin(Player subject, int lobbyId, boolean toSelf,
             boolean toMembers, MessageService messages) {
         if (toSelf) {
-            messages.message(subject, "manhunt.lobby-joined",
+            messages.messageRaw(subject, manhunt.getLobbyJoined(),
                     Map.of("lobby", String.valueOf(lobbyId)));
         }
         if (toMembers) {
-            announceToMembers(lobbyId, subject, "manhunt.lobby-joined-member", messages);
+            announceToMembers(lobbyId, subject, manhunt.getLobbyJoinedMember(), messages);
         }
     }
 
-    private void announceToMembers(int lobbyId, Player subject, String key,
+    private void announceToMembers(int lobbyId, Player subject, String template,
             MessageService messages) {
         Lobby lobby = lobbies.get(lobbyId);
         if (lobby == null) {
@@ -244,7 +247,7 @@ public final class LobbyService {
             }
             Player member = Bukkit.getPlayer(memberId);
             if (member != null) {
-                messages.message(member, key, Map.of("player", subject.getName(),
+                messages.messageRaw(member, template, Map.of("player", subject.getName(),
                         "lobby", String.valueOf(lobbyId)));
             }
         }

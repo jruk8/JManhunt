@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 class SettingFeedbackTest {
 
     private MessageService messages;
+    private MessagesConfig texts;
     private ConfigService config;
     private SoundService sounds;
     private SettingFeedback feedback;
@@ -39,13 +40,14 @@ class SettingFeedbackTest {
     @BeforeEach
     void setup() throws Exception {
         messages = new MessageService();
-        messages.reload(new MessagesConfig());
+        texts = new MessagesConfig();
+        messages.reload(texts);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         config = new ConfigService(new JManhuntConfig(),
                 new ModifierStore(ModifierFiles.inMemory(), log), () -> {});
         sounds = mock(SoundService.class);
-        feedback = new SettingFeedback(messages, config, sounds);
+        feedback = new SettingFeedback(messages, texts.getManhunt(), config, sounds);
         sent = new ArrayList<>();
         sender = mock(Player.class);
         org.mockito.Mockito.doAnswer(call -> {

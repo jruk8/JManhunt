@@ -15,7 +15,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.command.TagContext;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -49,10 +52,20 @@ class ModifierTestServiceTest {
                 ModifierTestService.parseCommandLines("[say one, \"\"]"));
     }
 
+    private static ModifiersMessages texts() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "modifiers.test-success", "success tpl");
+        ConfigPathMapper.set(config, "modifiers.test-failure", "failure tpl");
+        ConfigPathMapper.set(config, "modifiers.test-error-line", "error line tpl");
+        ConfigPathMapper.set(config, "modifiers.test-error", "error tpl");
+        return config.getModifiers();
+    }
+
     @Test
     void roleForPrefersListAudience() {
         ModifierTestService service = new ModifierTestService(mock(GameStateCommandManager.class),
-                new PlayerStateStore(), mock(MessageService.class), mock(SoundService.class));
+                new PlayerStateStore(), mock(MessageService.class), new ModifiersMessages(),
+                mock(SoundService.class));
         Player viewer = mock(Player.class);
 
         assertEquals("HUNTER", service.roleFor(viewer, "hunter"));
@@ -63,7 +76,7 @@ class ModifierTestServiceTest {
     void roleForFallsBackToViewerThenHunter() {
         PlayerStateStore states = new PlayerStateStore();
         ModifierTestService service = new ModifierTestService(mock(GameStateCommandManager.class),
-                states, mock(MessageService.class), mock(SoundService.class));
+                states, mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
         Player viewer = mock(Player.class);
         UUID id = UUID.randomUUID();
         when(viewer.getUniqueId()).thenReturn(id);
@@ -79,7 +92,7 @@ class ModifierTestServiceTest {
     void runUsesMockStatsAndRoster() {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
-                mock(MessageService.class), mock(SoundService.class));
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
         Player sender = mock(Player.class);
         when(sender.getName()).thenReturn("Steve");
         List<String> lines = List.of("say hi");
@@ -103,7 +116,7 @@ class ModifierTestServiceTest {
     void runDelegatesNestedCommandsToManager() {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
-                mock(MessageService.class), mock(SoundService.class));
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
         Player sender = mock(Player.class);
         when(sender.getName()).thenReturn("Steve");
         service.run(sender, "HUNTER", List.of("say hi"));
@@ -129,7 +142,7 @@ class ModifierTestServiceTest {
             return null;
         }).when(commands).runCommandList(any(), any(), any(), any());
         ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
-                mock(MessageService.class), mock(SoundService.class));
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
         Player sender = mock(Player.class);
         when(sender.getName()).thenReturn("Steve");
         org.bukkit.World world = mock(org.bukkit.World.class);
@@ -154,7 +167,7 @@ class ModifierTestServiceTest {
         when(sounds.isValidSound("good")).thenReturn(true);
         when(sounds.isValidSound("bad")).thenReturn(false);
         ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
-                messages, sounds);
+                messages, texts(), sounds);
         Player sender = mock(Player.class);
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(12L, List.of(),
                 List.of("hello"), List.of(new ModifierTestService.CapturedSound("good", 1, 1),
@@ -166,7 +179,7 @@ class ModifierTestServiceTest {
         verify(messages).sendText(sender, "FMT:hello");
         verify(sounds).playCustomSound(sender, "good", 1, 1);
         verify(sounds, never()).playCustomSound(eq(sender), eq("bad"), anyFloat(), anyFloat());
-        verify(messages).message(sender, "modifiers.test-success", Map.of("elapsed", "12"));
+        verify(messages).messageRaw(sender, "success tpl", Map.of("elapsed", "12"));
     }
 
     @Test
@@ -178,7 +191,7 @@ class ModifierTestServiceTest {
             throw new IllegalStateException("boom");
         }).when(commands).runCommandList(any(), any(), any(), any());
         ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
-                mock(MessageService.class), mock(SoundService.class));
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
         Player sender = mock(Player.class);
         when(sender.getName()).thenReturn("Steve");
 
@@ -199,7 +212,7 @@ class ModifierTestServiceTest {
             throw new AssertionError("fatal");
         }).when(commands).runCommandList(any(), any(), any(), any());
         ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
-                mock(MessageService.class), mock(SoundService.class));
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
         Player sender = mock(Player.class);
         when(sender.getName()).thenReturn("Steve");
 
@@ -213,7 +226,7 @@ class ModifierTestServiceTest {
     void runLeavesErrorInfoNullWhenClean() {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
-                mock(MessageService.class), mock(SoundService.class));
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
         Player sender = mock(Player.class);
         when(sender.getName()).thenReturn("Steve");
 
@@ -228,7 +241,7 @@ class ModifierTestServiceTest {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         MessageService messages = mock(MessageService.class);
         ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
-                messages, mock(SoundService.class));
+                messages, texts(), mock(SoundService.class));
         Player sender = mock(Player.class);
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(7L,
                 List.of(), List.of("partial"), List.of(), 2, "java.lang.Boom: bang");
@@ -236,11 +249,11 @@ class ModifierTestServiceTest {
         service.report(sender, result);
 
         InOrder order = inOrder(messages);
-        order.verify(messages).message(sender, "modifiers.test-error-line",
+        order.verify(messages).messageRaw(sender, "error line tpl",
                 Map.of("line", "2", "exception", "java.lang.Boom: bang"));
-        order.verify(messages).message(sender, "modifiers.test-error", Map.of("time", "7"));
-        verify(messages, never()).message(eq(sender), eq("modifiers.test-success"), any());
-        verify(messages, never()).message(eq(sender), eq("modifiers.test-failure"), any());
+        order.verify(messages).messageRaw(sender, "error tpl", Map.of("time", "7"));
+        verify(messages, never()).messageRaw(eq(sender), eq("success tpl"), any());
+        verify(messages, never()).messageRaw(eq(sender), eq("failure tpl"), any());
         verify(messages, never()).sendText(eq(sender), anyString());
     }
 
@@ -249,15 +262,15 @@ class ModifierTestServiceTest {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         MessageService messages = mock(MessageService.class);
         ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
-                messages, mock(SoundService.class));
+                messages, texts(), mock(SoundService.class));
         Player sender = mock(Player.class);
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(3L,
                 List.of("first", "second"), List.of(), List.of(), null, null);
 
         service.report(sender, result);
 
-        verify(messages).message(sender, "modifiers.test-failure",
+        verify(messages).messageRaw(sender, "failure tpl",
                 Map.of("error", "first; second"));
-        verify(messages, never()).message(eq(sender), eq("modifiers.test-success"), any());
+        verify(messages, never()).messageRaw(eq(sender), eq("success tpl"), any());
     }
 }

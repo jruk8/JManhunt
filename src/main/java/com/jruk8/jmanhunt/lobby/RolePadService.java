@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.lobby;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.CapLimits;
@@ -45,6 +46,7 @@ public final class RolePadService implements Listener {
     private final PlayerStateStore playerStates;
     private final GameManager game;
     private final MessageService messages;
+    private final ManhuntMessages manhunt;
     private final SoundService sounds;
     private final Supplier<String> lobbyWorldName;
     /** Last checked block position per player, packed for one-lookup exits. */
@@ -53,12 +55,14 @@ public final class RolePadService implements Listener {
     private final Set<String> warnedMaterials = new HashSet<>();
 
     public RolePadService(JManhuntPlugin plugin, LobbyService lobbies, PlayerStateStore playerStates,
-            GameManager game, MessageService messages, SoundService sounds, Supplier<String> lobbyWorldName) {
+            GameManager game, MessageService messages, ManhuntMessages manhunt, SoundService sounds,
+            Supplier<String> lobbyWorldName) {
         this.plugin = plugin;
         this.lobbies = lobbies;
         this.playerStates = playerStates;
         this.game = game;
         this.messages = messages;
+        this.manhunt = manhunt;
         this.sounds = sounds;
         this.lobbyWorldName = lobbyWorldName;
     }
@@ -193,7 +197,7 @@ public final class RolePadService implements Listener {
             }
             setPadRole(player, role);
             if (!member && !padSilent()) {
-                messages.message(player, policy.queueMessageKey(),
+                messages.messageRaw(player, policy.queueMessageTemplate(manhunt),
                         Map.of("role", messages.roleName(role)));
             }
             return;
@@ -209,14 +213,14 @@ public final class RolePadService implements Listener {
         playerStates.setRole(player, role);
         plugin.roleTeams().sync(player);
         if (!padSilent()) {
-            messages.message(player, "manhunt.role-assigned",
+            messages.messageRaw(player, manhunt.getRoleAssigned(),
                     Map.of("role", messages.roleName(role)));
             sounds.playNeutralSound(player);
         }
         if (from != role) {
             game.updateAutostartState();
             if (!padSilent()) {
-                game.announceRoleChange(player, from, role);
+                game.messaging().announceRoleChange(player, from, role);
             }
         }
     }

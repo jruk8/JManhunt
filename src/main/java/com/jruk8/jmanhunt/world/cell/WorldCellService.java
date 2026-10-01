@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.world.cell;
 
 import com.jruk8.jmanhunt.core.DebugLevel;
+import com.jruk8.jmanhunt.message.DebugMessages;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.world.end.EndCellManager;
@@ -186,7 +187,7 @@ public final class WorldCellService {
             }
             cellBuffer.add(fetched.get());
             runPreloadingCommands(config, fetched.get());
-            plugin.logger().debug(DebugLevel.INFO, "debug.cell-buffer-add", Map.of(
+            plugin.logger().debug(DebugLevel.INFO, DebugMessages::getCellBufferAdd, Map.of(
                     "index", String.valueOf(fetched.get().index()),
                     "count", String.valueOf(cellBuffer.size()),
                     "target", String.valueOf(target)));
@@ -202,7 +203,7 @@ public final class WorldCellService {
     /** Allocates one valid cell, logging it for debug recipients. */
     private Optional<CellOrigin> fetchCell(World world, WorldEngineConfig config) {
         Optional<CellOrigin> origin = findValidOrigin(world, config);
-        origin.ifPresent(cell -> plugin.logger().debug(DebugLevel.INFO, "debug.cell-fetched", Map.of(
+        origin.ifPresent(cell -> plugin.logger().debug(DebugLevel.INFO, DebugMessages::getCellFetched, Map.of(
                 "index", String.valueOf(cell.index()),
                 "x", String.valueOf(cell.x()),
                 "z", String.valueOf(cell.z()))));
@@ -214,7 +215,7 @@ public final class WorldCellService {
         if (refillRetryTask != null) {
             return;
         }
-        plugin.logger().debug(DebugLevel.SEVERE, "debug.cell-fetch-failed", Map.of("seconds", "30"));
+        plugin.logger().debug(DebugLevel.SEVERE, DebugMessages::getCellFetchFailed, Map.of("seconds", "30"));
         refillRetryTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
             refillRetryTask = null;
             refillBuffer();

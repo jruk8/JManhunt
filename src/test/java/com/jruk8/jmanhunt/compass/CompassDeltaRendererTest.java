@@ -28,17 +28,21 @@ import static org.mockito.Mockito.when;
 
 class CompassDeltaRendererTest {
 
+    private static final MessagesConfig TEXTS = new MessagesConfig();
+
     private static final Map<String, String> EXPECTED_HIDDEN = Map.of(
-            "compass.compass-actionbar", "Tracking victim",
-            "compass.compass-last-seen-actionbar", "Tracking victim's Last Seen (Log-Out)",
-            "compass.compass-locked-actionbar", "Tracking victim [LOCKED]",
-            "compass.compass-last-seen-locked-actionbar",
+            TEXTS.getCompass().getCompassActionbar(), "Tracking victim",
+            TEXTS.getCompass().getCompassLastSeenActionbar(),
+            "Tracking victim's Last Seen (Log-Out)",
+            TEXTS.getCompass().getCompassLockedActionbar(), "Tracking victim [LOCKED]",
+            TEXTS.getCompass().getCompassLastSeenLockedActionbar(),
             "Tracking victim's Last Seen (Log-Out) [LOCKED]",
-            "compass.teammate-actionbar", "Tracking teammate victim",
-            "compass.teammate-last-seen-actionbar",
+            TEXTS.getCompass().getTeammateActionbar(), "Tracking teammate victim",
+            TEXTS.getCompass().getTeammateLastSeenActionbar(),
             "Tracking teammate victim's Last Seen (Log-Out)",
-            "compass.teammate-locked-actionbar", "Tracking teammate victim [LOCKED]",
-            "compass.teammate-last-seen-locked-actionbar",
+            TEXTS.getCompass().getTeammateLockedActionbar(),
+            "Tracking teammate victim [LOCKED]",
+            TEXTS.getCompass().getTeammateLastSeenLockedActionbar(),
             "Tracking teammate victim's Last Seen (Log-Out) [LOCKED]");
 
     @Test
@@ -46,10 +50,11 @@ class CompassDeltaRendererTest {
         Fixture fixture = fixture(false);
 
         for (Map.Entry<String, String> bar : EXPECTED_HIDDEN.entrySet()) {
-            Map<String, String> extra = bar.getKey().contains("last-seen")
-                    ? Map.of("reason", "Log-Out") : Map.of();
+            // Only last-seen templates carry {reason}; the extra is
+            // ignored everywhere else.
             fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
-                    bar.getKey(), "victim", UUID.randomUUID(), 120.0, extra, exact());
+                    bar.getKey(), "victim", UUID.randomUUID(), 120.0,
+                    Map.of("reason", "Log-Out"), exact());
 
             String text = text(fixture.bars().get(fixture.player().getUniqueId()));
             assertEquals(bar.getValue(), text, bar.getKey());
@@ -62,7 +67,7 @@ class CompassDeltaRendererTest {
         Fixture fixture = fixture(true);
 
         fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
-                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                TEXTS.getCompass().getCompassActionbar(), "victim", UUID.randomUUID(), 120.0, Map.of(),
                 exact());
 
         assertEquals("Tracking victim • 120m",
@@ -74,7 +79,7 @@ class CompassDeltaRendererTest {
         Fixture fixture = accuracyFixture(true, "#63d42a", "#cc472d");
 
         fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
-                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                TEXTS.getCompass().getCompassActionbar(), "victim", UUID.randomUUID(), 120.0, Map.of(),
                 drift(300.0, 600.0));
 
         assertEquals("Tracking victim (50%) • 120m",
@@ -86,7 +91,7 @@ class CompassDeltaRendererTest {
         Fixture fixture = accuracyFixture(true, "#63d42a", "#cc472d");
 
         fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
-                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                TEXTS.getCompass().getCompassActionbar(), "victim", UUID.randomUUID(), 120.0, Map.of(),
                 exact());
 
         assertEquals("Tracking victim (100%) • 120m",
@@ -98,7 +103,7 @@ class CompassDeltaRendererTest {
         Fixture fixture = accuracyHiddenFixture();
 
         fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
-                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                TEXTS.getCompass().getCompassActionbar(), "victim", UUID.randomUUID(), 120.0, Map.of(),
                 exact());
 
         assertEquals("Tracking victim (100%)",
@@ -110,7 +115,7 @@ class CompassDeltaRendererTest {
         Fixture fixture = accuracyFixture(true, "bogus", "#123");
 
         fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
-                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                TEXTS.getCompass().getCompassActionbar(), "victim", UUID.randomUUID(), 120.0, Map.of(),
                 drift(300.0, 600.0));
 
         assertEquals("Tracking victim (50%) • 120m",
@@ -122,7 +127,7 @@ class CompassDeltaRendererTest {
         Fixture fixture = accuracyFixture(true, "#63d42a", "#cc472d");
 
         fixture.deltas().putTrackingBar(fixture.player(), Role.HUNTER, null,
-                "compass.compass-actionbar", "victim", UUID.randomUUID(), 120.0, Map.of(),
+                TEXTS.getCompass().getCompassActionbar(), "victim", UUID.randomUUID(), 120.0, Map.of(),
                 drift(300.0, 600.0));
 
         String mini = mini(fixture.bars().get(fixture.player().getUniqueId()));

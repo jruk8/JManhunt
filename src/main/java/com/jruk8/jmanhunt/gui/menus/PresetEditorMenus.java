@@ -9,7 +9,10 @@ import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.MenuLayout;
 import com.jruk8.jmanhunt.gui.QuadPanel;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
+import com.jruk8.jmanhunt.message.CommandMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersGuiMessages;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierFieldEdits;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -34,6 +37,9 @@ public final class PresetEditorMenus {
 
     private final ModifierStore store;
     private final MessageService messages;
+    private final ModifiersGuiMessages modifiersGui;
+    private final ModifiersMessages modifiers;
+    private final CommandMessages command;
     private final SoundService sounds;
     private final GuiService gui;
     private final ModifiersCommand commands;
@@ -45,15 +51,19 @@ public final class PresetEditorMenus {
      *        dialogs are only touched inside click actions, so builders
      *        tolerate them as null
      */
-    public PresetEditorMenus(ModifierStore store, MessageService messages, SoundService sounds,
-            GuiService gui, ModifiersCommand commands, SettingDialogs dialogs) {
+    public PresetEditorMenus(ModifierStore store, MessageService messages,
+            ModifiersGuiMessages modifiersGui, ModifiersMessages modifiers, CommandMessages command,
+            SoundService sounds, GuiService gui, ModifiersCommand commands, SettingDialogs dialogs) {
         this.store = store;
         this.messages = messages;
+        this.modifiersGui = modifiersGui;
+        this.modifiers = modifiers;
+        this.command = command;
         this.sounds = sounds;
         this.gui = gui;
         this.commands = commands;
         this.dialogs = dialogs;
-        this.meta = new MetaQuad(messages, sounds, gui, dialogs);
+        this.meta = new MetaQuad(messages, modifiersGui, modifiers, command, sounds, gui, dialogs);
     }
 
     private MetaTarget presetTarget(String id) {
@@ -142,8 +152,8 @@ public final class PresetEditorMenus {
             return;
         }
         dialogs.prompt(player,
-                text("create-preset-name-title", "Name your preset"),
-                List.of(text("create-name-prompt", "Type a display name.")),
+                modifiersGui.getCreatePresetNameTitle(),
+                List.of(modifiersGui.getCreateNamePrompt()),
                 raw -> {
                     ModifierFieldEdits.Parsed<String> name = ModifierFieldEdits.name(raw);
                     if (!name.ok()) {
@@ -152,7 +162,7 @@ public final class PresetEditorMenus {
                         return;
                     }
                     String id = store.createPreset(name.value(), player.getName());
-                    messages.message(player, "modifiers.create-success",
+                    messages.messageRaw(player, modifiers.getCreateSuccess(),
                             Map.of("type", "preset", "name", store.presetName(id)));
                     sounds.playNeutralSound(player);
                     gui.navigate(player, editor(id, listMenu));
@@ -164,18 +174,18 @@ public final class PresetEditorMenus {
     public Menu editor(String id, Supplier<Menu> parent) {
         final Menu[] self = new Menu[1];
         self[0] = QuadPanel.menu(
-                GuiTexts.title(messages, text("editor-title-preset", "Edit Preset")),
+                GuiTexts.title(messages, modifiersGui.getEditorTitlePreset()),
                 List.of(
                         EditorButtons.actionButton(messages, Material.NAME_TAG,
-                                text("meta-title", "Meta"),
-                                List.of(text("meta-lore", "Name, description, icon, author"),
-                                        text("editor-click-open", "Click to open")),
+                                modifiersGui.getMetaTitle(),
+                                List.of(modifiersGui.getMetaLore(),
+                                        modifiersGui.getEditorClickOpen()),
                                 player -> openMeta(player, id, parent, () -> self[0])),
                         EditorButtons.actionButton(messages, Material.FILLED_MAP,
-                                text("modifiers-title", "Modifiers"),
-                                List.of(text("members-lore", "{total} members").replace("{total}",
+                                modifiersGui.getModifiersTitle(),
+                                List.of(modifiersGui.getMembersLore().replace("{total}",
                                                 String.valueOf(store.presetMembers(id).size())),
-                                        text("editor-click-open", "Click to open")),
+                                        modifiersGui.getEditorClickOpen()),
                                 player -> {
                                     if (denied(player)) {
                                         return;
@@ -184,13 +194,13 @@ public final class PresetEditorMenus {
                                             membersMenu(id, () -> editor(id, parent)));
                                 }),
                         EditorButtons.actionButton(messages, Material.LOOM,
-                                text("editor-export", "Export"),
-                                List.of(text("editor-export-lore", "Copy a share string"),
-                                        text("editor-click-copy", "Click to copy")),
+                                modifiersGui.getEditorExport(),
+                                List.of(modifiersGui.getEditorExportLore(),
+                                        modifiersGui.getEditorClickCopy()),
                                 player -> commands.exportEntry(player, "preset", id)).silent(),
                         deleteButton(id, parent, () -> self[0])),
                 gui,
-                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
                 parent);
         return self[0];
     }
@@ -213,10 +223,9 @@ public final class PresetEditorMenus {
 
     private MenuButton deleteButton(String id, Supplier<Menu> parent, Supplier<Menu> editor) {
         return EditorButtons.actionButton(messages, Material.TNT,
-                text("editor-delete-preset", "Delete Preset"),
-                List.of(text("editor-delete-preset-lore",
-                                "Removes this preset forever"),
-                        text("editor-click-delete", "Click to delete")),
+                modifiersGui.getEditorDeletePreset(),
+                List.of(modifiersGui.getEditorDeletePresetLore(),
+                        modifiersGui.getEditorClickDelete()),
                 player -> {
                     if (denied(player)) {
                         return;
@@ -230,7 +239,7 @@ public final class PresetEditorMenus {
         MenuLayout layout = MenuLayout.parse(
                 "##xxxxxx#", "u#xxxxxx#", "b#xxxxxxt", "d#xxxxxx#", "##xxxxxx#");
         final Menu[] self = new Menu[1];
-        self[0] = new Menu(GuiTexts.title(messages, text("modifiers-title", "Modifiers")),
+        self[0] = new Menu(GuiTexts.title(messages, modifiersGui.getModifiersTitle()),
                 layout, () -> membersStatic(self),
                 () -> memberButtons(id, layout.contentColumns()), parent);
         return self[0];
@@ -238,12 +247,12 @@ public final class PresetEditorMenus {
 
     private Map<Integer, MenuButton> membersStatic(Menu[] self) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
-        fixed.put(9, scrollButton("scroll-up", "Scroll up", self, -1));
+        fixed.put(9, scrollButton(modifiersGui.getScrollUp(), "Scroll up", self, -1));
         fixed.put(18, new MenuButton(Material.PAPER,
-                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
                 null, false, false,
                 player -> gui.back(player, self[0])));
-        fixed.put(27, scrollButton("scroll-down", "Scroll down", self, 1));
+        fixed.put(27, scrollButton(modifiersGui.getScrollDown(), "Scroll down", self, 1));
         return fixed;
     }
 
@@ -270,8 +279,8 @@ public final class PresetEditorMenus {
     private MenuButton memberButton(String id, String member, boolean on) {
         return EditorButtons.actionButton(messages, store.metaItem(member),
                 store.metaName(member),
-                List.of(on ? text("state-on", "Enabled") : text("state-off", "Disabled"),
-                        text("editor-click-toggle", "Click to toggle")),
+                List.of(on ? modifiersGui.getStateOn() : modifiersGui.getStateOff(),
+                        modifiersGui.getEditorClickToggle()),
                 on,
                 player -> toggleMember(player, id, member, on)).silent();
     }
@@ -292,16 +301,15 @@ public final class PresetEditorMenus {
         String name = store.presetName(id);
         Menu confirm = ConfirmMenu.create(
                 GuiTexts.title(messages,
-                        text("editor-delete-title", "Delete {name}?").replace("{name}", name)),
+                        modifiersGui.getEditorDeleteTitle().replace("{name}", name)),
                 Material.TNT, null,
-                GuiTexts.lore(messages, text("editor-delete-confirm",
-                        "This cannot be undone.")),
-                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                GuiTexts.lore(messages, modifiersGui.getEditorDeleteConfirm()),
+                GuiTexts.name(messages, modifiersGui.getCancel(), "Cancel"),
                 back -> gui.navigate(back, editor.get()),
-                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                GuiTexts.name(messages, modifiersGui.getConfirm(), "Confirm"),
                 done -> {
                     store.removePreset(id);
-                    messages.message(done, "modifiers.edit-deleted", Map.of("name", name));
+                    messages.messageRaw(done, modifiers.getEditDeleted(), Map.of("name", name));
                     sounds.playDestructiveSound(done);
                     gui.navigate(done, parent.get());
                 },
@@ -309,9 +317,9 @@ public final class PresetEditorMenus {
         gui.navigate(player, confirm);
     }
 
-    private MenuButton scrollButton(String nameKey, String fallback, Menu[] self, int delta) {
+    private MenuButton scrollButton(String name, String fallback, Menu[] self, int delta) {
         return new MenuButton(Material.ARROW,
-                GuiTexts.name(messages, text(nameKey, fallback), fallback),
+                GuiTexts.name(messages, name, fallback),
                 null, false, false,
                 player -> self[0].window().scrollLine(delta));
     }
@@ -320,16 +328,14 @@ public final class PresetEditorMenus {
         if (player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
             return false;
         }
-        messages.message(player, "command.no-permission");
+        messages.messageRaw(player, command.getNoPermission());
         return true;
     }
 
     private void invalid(Player player, String error) {
-        messages.message(player, "modifiers.edit-invalid", Map.of("error", error));
+        messages.messageRaw(player, modifiers.getEditInvalid(), Map.of("error", error));
         sounds.playAngrySound(player);
     }
 
-    private String text(String key, String fallback) {
-        return messages.string("modifiers-gui." + key, fallback);
-    }
+
 }

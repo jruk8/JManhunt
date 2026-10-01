@@ -51,18 +51,17 @@ final class CompassDeltaRenderer {
      * drift record feeds the optional accuracy segment; the blink
      * revert reuses the same template so the segment survives it.
      */
-    void putTrackingBar(Player holder, Role holderRole, Integer lobby, String key, String playerName,
+    void putTrackingBar(Player holder, Role holderRole, Integer lobby, String template, String playerName,
             UUID targetId, double distance, Map<String, String> extra,
             CompassInaccuracyService.Result drift) {
         boolean showDistance = plugin.overrides().getBoolean(lobby,
                 "settings.compass.feedback.actionbar.show-distance", true);
         DistanceRender render = showDistance
-                ? distanceRender(holder, holderRole, lobby, key, targetId, distance)
+                ? distanceRender(holder, holderRole, lobby, template, targetId, distance)
                 : new DistanceRender("", "", false);
         Map<String, String> slots = new HashMap<>(extra);
         slots.put("player", playerName);
         slots.put("distance", render.text());
-        String template = messages.string(key, key);
         if (!showDistance) {
             template = stripDistanceSegment(template);
         }

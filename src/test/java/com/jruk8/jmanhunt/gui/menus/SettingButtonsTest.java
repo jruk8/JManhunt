@@ -50,6 +50,7 @@ class SettingButtonsTest {
     private ConfigService config;
     private GuiConfig guiData;
     private MessageService messages;
+    private MessagesConfig texts;
     private SettingButtons buttons;
     private GuiService gui;
     private OverrideService overrides;
@@ -58,7 +59,8 @@ class SettingButtonsTest {
     @BeforeEach
     void setup() throws Exception {
         messages = new MessageService();
-        messages.reload(new MessagesConfig());
+        texts = new MessagesConfig();
+        messages.reload(texts);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         root = new JManhuntConfig();
@@ -73,7 +75,7 @@ class SettingButtonsTest {
         overrides = new OverrideService(config, new LobbyConfig(), () -> {});
         viewer = mock(Player.class);
         buttons = new SettingButtons(config, overrides, guiData, messages,
-                null, gui, null, null);
+                texts.getManhuntGui(), null, gui, null, null);
     }
 
     @Test
@@ -166,7 +168,7 @@ class SettingButtonsTest {
         assertTrue(ConfigPathMapper.set(root,
                 "settings.match.autostart.enabled", false));
         SettingButtons withGui = new SettingButtons(config, overrides, guiData,
-                messages, null, gui, null, null);
+                messages, texts.getManhuntGui(), null, gui, null, null);
         MenuButton button = withGui.settingButton(viewer,
                 "settings.match.autostart.enabled", () -> null);
         Player player = mock(Player.class);

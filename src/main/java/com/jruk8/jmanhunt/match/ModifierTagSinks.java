@@ -7,6 +7,7 @@ import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -29,15 +30,18 @@ public final class ModifierTagSinks {
 
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final ModifiersMessages texts;
     private final SoundService sounds;
     private final GameManager game;
     private final PlayerStateStore playerStates;
     private final ConfigService configService;
 
-    public ModifierTagSinks(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
+    public ModifierTagSinks(JManhuntPlugin plugin, MessageService messages, ModifiersMessages texts,
+            SoundService sounds,
             GameManager game, PlayerStateStore playerStates, ConfigService configService) {
         this.plugin = plugin;
         this.messages = messages;
+        this.texts = texts;
         this.sounds = sounds;
         this.game = game;
         this.playerStates = playerStates;
@@ -45,7 +49,7 @@ public final class ModifierTagSinks {
     }
 
     String formatEngineMessage(String text) {
-        return NamedPlayerSinks.formatEngineMessage(messages, text);
+        return NamedPlayerSinks.formatEngineMessage(texts, messages, text);
     }
 
     /**
@@ -142,9 +146,7 @@ public final class ModifierTagSinks {
         if (instance.isEmpty()) {
             return;
         }
-        String text = messages.string("modifiers.loop-limit",
-                "{prefix}<red>A modifier loop exceeded its step limit and the match was cancelled. "
-                        + "Please tell an administrator.");
+        String text = texts.getLoopLimit();
         for (Player player : game.onlineParticipants(matchId)) {
             messages.sendText(player, text);
         }

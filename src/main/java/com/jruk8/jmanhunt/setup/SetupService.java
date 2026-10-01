@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.Map;
@@ -28,14 +29,16 @@ public final class SetupService {
     private final JManhuntPlugin plugin;
     private final GameManager game;
     private final MessageService messages;
+    private final ManhuntMessages manhunt;
     private final SoundService sounds;
     private final SettingFeedback feedback;
 
     public SetupService(JManhuntPlugin plugin, GameManager game, MessageService messages,
-            SoundService sounds, SettingFeedback feedback) {
+            ManhuntMessages manhunt, SoundService sounds, SettingFeedback feedback) {
         this.plugin = plugin;
         this.game = game;
         this.messages = messages;
+        this.manhunt = manhunt;
         this.sounds = sounds;
         this.feedback = feedback;
     }
@@ -49,17 +52,17 @@ public final class SetupService {
         }
         plugin.observeWorldEngine();
         if (game.lobbyWorldNameClashes()) {
-            messages.message(clicker, "manhunt.worldengine-tpto-lobby-world-clash");
+            messages.messageRaw(clicker, manhunt.getWorldengineTptoLobbyWorldClash());
             return;
         }
         String worldName = game.lobbyWorldName();
         if (!game.lobbyWorldExists()) {
-            messages.message(clicker, "manhunt.worldengine-tpto-creating",
+            messages.messageRaw(clicker, manhunt.getWorldengineTptoCreating(),
                     Map.of("world", worldName));
         }
         Optional<LobbyWorld> ensured = game.ensureLobbyWorld();
         if (ensured.isEmpty()) {
-            messages.message(clicker, "manhunt.worldengine-tpto-failed",
+            messages.messageRaw(clicker, manhunt.getWorldengineTptoFailed(),
                     Map.of("world", worldName));
             return;
         }
@@ -67,7 +70,7 @@ public final class SetupService {
         Location spawn = world.getSpawnLocation();
         boolean zeroSet = ensured.get().lobbyZeroSet() || game.ensureLobbyZero(spawn);
         if (zeroSet) {
-            messages.message(clicker, "manhunt.worldengine-lobbyconfig-setlobbytp-success",
+            messages.messageRaw(clicker, manhunt.getWorldengineLobbyconfigSetlobbytpSuccess(),
                     Map.of("lobby", "0",
                             "location", ManhuntCommand.formatLocation(spawn)));
         }
@@ -76,10 +79,10 @@ public final class SetupService {
             target.teleport(spawn);
             teleported++;
         }
-        messages.message(clicker, "manhunt.worldengine-tpto-success",
+        messages.messageRaw(clicker, manhunt.getWorldengineTptoSuccess(),
                 Map.of("count", String.valueOf(teleported), "world", worldName));
         plugin.markSetupDone();
-        messages.message(clicker, "manhunt.setup-oneclick-done",
+        messages.messageRaw(clicker, manhunt.getSetupOneclickDone(),
                 Map.of("count", String.valueOf(teleported)));
         sounds.playNeutralSound(clicker);
     }

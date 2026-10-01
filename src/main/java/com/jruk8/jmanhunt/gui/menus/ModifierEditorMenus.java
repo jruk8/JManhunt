@@ -12,7 +12,11 @@ import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.gui.TwinPanel;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
+import com.jruk8.jmanhunt.message.CommandMessages;
+import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersGuiMessages;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierFieldEdits;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -38,6 +42,10 @@ public final class ModifierEditorMenus {
 
     private final ModifierStore store;
     private final MessageService messages;
+    private final ModifiersGuiMessages modifiersGui;
+    private final ManhuntGuiMessages manhuntGui;
+    private final ModifiersMessages modifiers;
+    private final CommandMessages command;
     private final SoundService sounds;
     private final GuiService gui;
     private final ModifiersCommand commands;
@@ -51,20 +59,26 @@ public final class ModifierEditorMenus {
      *        dialogs, and commandValidation are only touched inside click
      *        actions, so builders tolerate them as null
      */
-    public ModifierEditorMenus(ModifierStore store, MessageService messages, SoundService sounds,
+    public ModifierEditorMenus(ModifierStore store, MessageService messages,
+            ModifiersGuiMessages modifiersGui, ManhuntGuiMessages manhuntGui,
+            ModifiersMessages modifiers, CommandMessages command, SoundService sounds,
             GuiService gui, ModifiersCommand commands, SettingDialogs dialogs,
             ModifierDialog modifierDialogs, BooleanSupplier commandValidation) {
         this.store = store;
         this.messages = messages;
+        this.modifiersGui = modifiersGui;
+        this.manhuntGui = manhuntGui;
+        this.modifiers = modifiers;
+        this.command = command;
         this.sounds = sounds;
         this.gui = gui;
         this.commands = commands;
         this.dialogs = dialogs;
-        this.detail = new ModifierDetailMenus(store, messages, sounds, gui, dialogs,
-                commandValidation, commands);
-        this.options = new BehaviorOptionsMenus(store, messages, sounds, gui,
-                dialogs, modifierDialogs);
-        this.meta = new MetaQuad(messages, sounds, gui, dialogs);
+        this.detail = new ModifierDetailMenus(store, messages, modifiersGui, modifiers, command,
+                sounds, gui, dialogs, commandValidation, commands);
+        this.options = new BehaviorOptionsMenus(store, messages, modifiersGui, manhuntGui,
+                modifiers, command, sounds, gui, dialogs, modifierDialogs);
+        this.meta = new MetaQuad(messages, modifiersGui, modifiers, command, sounds, gui, dialogs);
     }
 
     /**
@@ -77,8 +91,8 @@ public final class ModifierEditorMenus {
             return;
         }
         dialogs.prompt(player,
-                text("create-name-title", "Name your modifier"),
-                List.of(text("create-name-prompt", "Type a display name.")),
+                modifiersGui.getCreateNameTitle(),
+                List.of(modifiersGui.getCreateNamePrompt()),
                 raw -> {
                     ModifierFieldEdits.Parsed<String> name = ModifierFieldEdits.name(raw);
                     if (!name.ok()) {
@@ -87,7 +101,7 @@ public final class ModifierEditorMenus {
                         return;
                     }
                     String id = store.createModifier(name.value(), player.getName());
-                    messages.message(player, "modifiers.create-success",
+                    messages.messageRaw(player, modifiers.getCreateSuccess(),
                             Map.of("type", "modifier", "name", store.metaName(id)));
                     sounds.playNeutralSound(player);
                     gui.navigate(player, editor(id, listMenu));
@@ -99,17 +113,17 @@ public final class ModifierEditorMenus {
     public Menu editor(String id, Supplier<Menu> parent) {
         final Menu[] self = new Menu[1];
         self[0] = QuadPanel.menu(
-                GuiTexts.title(messages, text("editor-title-modifier", "Edit Modifier")),
+                GuiTexts.title(messages, modifiersGui.getEditorTitleModifier()),
                 List.of(
                         EditorButtons.actionButton(messages, Material.NAME_TAG,
-                                text("meta-title", "Meta"),
-                                List.of(text("meta-lore", "Name, description, icon, author"),
-                                        text("editor-click-open", "Click to open")),
+                                modifiersGui.getMetaTitle(),
+                                List.of(modifiersGui.getMetaLore(),
+                                        modifiersGui.getEditorClickOpen()),
                                 player -> openMeta(player, id, parent, () -> self[0])),
                         EditorButtons.actionButton(messages, Material.SCULK_SENSOR,
-                                text("behavior-title", "Behavior"),
-                                List.of(text("behavior-lore", "Triggers, options, commands"),
-                                        text("editor-click-open", "Click to open")),
+                                modifiersGui.getBehaviorTitle(),
+                                List.of(modifiersGui.getBehaviorLore(),
+                                        modifiersGui.getEditorClickOpen()),
                                 player -> {
                                     if (denied(player)) {
                                         return;
@@ -117,13 +131,13 @@ public final class ModifierEditorMenus {
                                     gui.navigate(player, behaviorMenu(id, () -> self[0]));
                                 }),
                         EditorButtons.actionButton(messages, Material.LOOM,
-                                text("editor-export", "Export"),
-                                List.of(text("editor-export-lore", "Copy a share string"),
-                                        text("editor-click-copy", "Click to copy")),
+                                modifiersGui.getEditorExport(),
+                                List.of(modifiersGui.getEditorExportLore(),
+                                        modifiersGui.getEditorClickCopy()),
                                 player -> commands.exportEntry(player, "modifier", id)).silent(),
                         deleteButton(id, parent, () -> self[0])),
                 gui,
-                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
                 parent);
         return self[0];
     }
@@ -146,10 +160,9 @@ public final class ModifierEditorMenus {
 
     private MenuButton deleteButton(String id, Supplier<Menu> parent, Supplier<Menu> editor) {
         return EditorButtons.actionButton(messages, Material.TNT,
-                text("editor-delete-modifier", "Delete Modifier"),
-                List.of(text("editor-delete-lore",
-                                "Removes this modifier forever"),
-                        text("editor-click-delete", "Click to delete")),
+                modifiersGui.getEditorDeleteModifier(),
+                List.of(modifiersGui.getEditorDeleteLore(),
+                        modifiersGui.getEditorClickDelete()),
                 player -> {
                     if (denied(player)) {
                         return;
@@ -164,11 +177,11 @@ public final class ModifierEditorMenus {
         Supplier<List<MenuButton>> content = () -> behaviorButtons(id, () -> self[0]);
         MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(content.get().size()));
         self[0] = new Menu(
-                GuiTexts.title(messages, text("behaviors-title", "Behaviors")),
+                GuiTexts.title(messages, "Behaviors"),
                 layout,
                 () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
                         new MenuButton(Material.PAPER,
-                                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
                                 null, false, false,
                                 player -> gui.back(player, self[0]))),
                 content::get, parent);
@@ -180,17 +193,17 @@ public final class ModifierEditorMenus {
         for (int index : store.behaviorIndexes(id)) {
             List<String> triggers = store.runsOn(id, index);
             String summary = triggers.isEmpty()
-                    ? text("behaviors-no-triggers", "No triggers")
+                    ? "No triggers"
                     : String.join(", ", triggers);
             buttons.add(new MenuButton(Material.TRIPWIRE_HOOK,
                     GuiTexts.name(messages,
-                            text("behaviors-entry", "Behavior {index}")
+                            "Behavior {index}"
                                     .replace("{index}", String.valueOf(index)),
                             "Behavior " + index),
                     GuiTexts.lore(messages, List.of(
                             summary,
-                            text("editor-click-open", "Click to open"),
-                            text("behaviors-delete-hint", "Right-click to delete"))),
+                            modifiersGui.getEditorClickOpen(),
+                            "Right-click to delete")),
                     false, false,
                     player -> {
                         if (denied(player)) {
@@ -206,8 +219,8 @@ public final class ModifierEditorMenus {
                     }).silent());
         }
         buttons.add(AddStick.button(messages,
-                text("behaviors-add", "Add Behavior"),
-                List.of(text("editor-click-open", "Click to open")),
+                "Add Behavior",
+                List.of(modifiersGui.getEditorClickOpen()),
                 player -> {
                     if (denied(player)) {
                         return;
@@ -220,14 +233,13 @@ public final class ModifierEditorMenus {
 
     private void deleteBehaviorConfirm(Player player, String id, int index, Supplier<Menu> self) {
         Menu confirm = ConfirmMenu.create(
-                GuiTexts.title(messages, text("behaviors-delete-title", "Delete behavior {index}?")
+                GuiTexts.title(messages, "Delete behavior {index}?"
                         .replace("{index}", String.valueOf(index))),
                 Material.TRIPWIRE_HOOK, null,
-                GuiTexts.lore(messages, text("editor-delete-confirm",
-                        "This cannot be undone.")),
-                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                GuiTexts.lore(messages, modifiersGui.getEditorDeleteConfirm()),
+                GuiTexts.name(messages, modifiersGui.getCancel(), "Cancel"),
                 back -> gui.navigate(back, self.get()),
-                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                GuiTexts.name(messages, modifiersGui.getConfirm(), "Confirm"),
                 done -> {
                     store.removeBehavior(id, index);
                     sounds.playNeutralSound(done);
@@ -241,12 +253,11 @@ public final class ModifierEditorMenus {
     public Menu behaviorTwin(String id, int index, Supplier<Menu> parent) {
         final Menu[] self = new Menu[1];
         self[0] = TwinPanel.menu(
-                GuiTexts.title(messages, text("behavior-title", "Behavior")),
+                GuiTexts.title(messages, modifiersGui.getBehaviorTitle()),
                 EditorButtons.actionButton(messages, Material.TRIPWIRE_HOOK,
-                        text("behavior-options-title", "Behavior Options"),
-                        List.of(text("behavior-options-lore",
-                                        "Triggers, cadence, execution, chance"),
-                                text("editor-click-open", "Click to open")),
+                        modifiersGui.getBehaviorOptionsTitle(),
+                        List.of(modifiersGui.getBehaviorOptionsLore(),
+                                modifiersGui.getEditorClickOpen()),
                         player -> {
                             if (denied(player)) {
                                 return;
@@ -254,9 +265,9 @@ public final class ModifierEditorMenus {
                             gui.navigate(player, options.optionsMenu(id, index, () -> self[0]));
                         }),
                 EditorButtons.actionButton(messages, Material.CHAIN_COMMAND_BLOCK,
-                        text("commands-title", "Command Lists"),
-                        List.of(text("commands-lore", "Runner commands and cleanup"),
-                                text("editor-click-open", "Click to open")),
+                        modifiersGui.getCommandsTitle(),
+                        List.of(modifiersGui.getCommandsLore(),
+                                modifiersGui.getEditorClickOpen()),
                         player -> {
                             if (denied(player)) {
                                 return;
@@ -265,7 +276,7 @@ public final class ModifierEditorMenus {
                                     detail.commandsMenu(id, index, () -> self[0]));
                         }),
                 gui,
-                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
                 parent);
         return self[0];
     }
@@ -355,16 +366,15 @@ public final class ModifierEditorMenus {
         String name = store.metaName(id);
         Menu confirm = ConfirmMenu.create(
                 GuiTexts.title(messages,
-                        text("editor-delete-title", "Delete {name}?").replace("{name}", name)),
+                        modifiersGui.getEditorDeleteTitle().replace("{name}", name)),
                 Material.TNT, null,
-                GuiTexts.lore(messages, text("editor-delete-confirm",
-                        "This cannot be undone.")),
-                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                GuiTexts.lore(messages, modifiersGui.getEditorDeleteConfirm()),
+                GuiTexts.name(messages, modifiersGui.getCancel(), "Cancel"),
                 back -> gui.navigate(back, editor.get()),
-                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                GuiTexts.name(messages, modifiersGui.getConfirm(), "Confirm"),
                 done -> {
                     store.removeModifier(id);
-                    messages.message(done, "modifiers.edit-deleted", Map.of("name", name));
+                    messages.messageRaw(done, modifiers.getEditDeleted(), Map.of("name", name));
                     sounds.playDestructiveSound(done);
                     gui.navigate(done, parent.get());
                 },
@@ -376,16 +386,14 @@ public final class ModifierEditorMenus {
         if (player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
             return false;
         }
-        messages.message(player, "command.no-permission");
+        messages.messageRaw(player, command.getNoPermission());
         return true;
     }
 
     private void invalid(Player player, String error) {
-        messages.message(player, "modifiers.edit-invalid", Map.of("error", error));
+        messages.messageRaw(player, modifiers.getEditInvalid(), Map.of("error", error));
         sounds.playAngrySound(player);
     }
 
-    private String text(String key, String fallback) {
-        return messages.string("modifiers-gui." + key, fallback);
-    }
+
 }

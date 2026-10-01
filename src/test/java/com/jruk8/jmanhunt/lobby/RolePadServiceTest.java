@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.lobby;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
@@ -60,7 +61,7 @@ class RolePadServiceTest {
         when(event.getPlayer()).thenReturn(player);
         RolePadService pads = new RolePadService(plugin, mock(LobbyService.class),
                 playerStates, mock(GameManager.class), mock(MessageService.class),
-                mock(SoundService.class), () -> "jmh-lobby");
+                new ManhuntMessages(), mock(SoundService.class), () -> "jmh-lobby");
 
         pads.onMove(event);
 
@@ -88,7 +89,7 @@ class RolePadServiceTest {
         when(event.getPlayer()).thenReturn(player);
         RolePadService pads = new RolePadService(plugin, mock(LobbyService.class),
                 playerStates, mock(GameManager.class), mock(MessageService.class),
-                mock(SoundService.class), () -> "jmh-lobby");
+                new ManhuntMessages(), mock(SoundService.class), () -> "jmh-lobby");
 
         pads.onMove(event);
 

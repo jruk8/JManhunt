@@ -13,6 +13,7 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -91,12 +92,14 @@ class CompassLockServiceTest {
         Fixture fixture = teammateFixture(List.of(), true, Role.HUNTER, 10.0);
 
         fixture.locks().handleShiftLeft(fixture.player());
-        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.no-teammates");
+        verify(fixture.messages(), times(1)).messageRaw(fixture.player(),
+                fixture.texts().getCompass().getNoTeammates());
         when(fixture.targets().collectIdentities(any(), any(), any())).thenReturn(List.of(
                 new CompassIdentity(UUID.randomUUID(), "a")));
         fixture.locks().handleShiftLeft(fixture.player());
 
-        verify(fixture.messages(), never()).message(fixture.player(), "compass.teammate-on-chat");
+        verify(fixture.messages(), never()).messageRaw(fixture.player(),
+                fixture.texts().getCompass().getTeammateOnChat());
         verify(fixture.renderer(), never()).accept(any(Player.class));
     }
 
@@ -205,7 +208,7 @@ class CompassLockServiceTest {
 
         fixture.locks().handleLeftClick(fixture.player());
 
-        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.locked-chat",
+        verify(fixture.messages(), times(1)).messageRaw(fixture.player(), fixture.texts().getCompass().getLockedChat(),
                 Map.of("player", "a"));
     }
 
@@ -220,8 +223,8 @@ class CompassLockServiceTest {
         fixture.locks().handleLeftClick(fixture.player());
 
         verify(fixture.renderer(), times(3)).accept(fixture.player());
-        verify(fixture.messages(), times(2)).message(eq(fixture.player()),
-                eq("compass.locked-chat"), any());
+        verify(fixture.messages(), times(2)).messageRaw(eq(fixture.player()),
+                eq(fixture.texts().getCompass().getLockedChat()), any());
     }
 
     @Test
@@ -232,8 +235,10 @@ class CompassLockServiceTest {
         fixture.locks().handleShiftLeft(fixture.player());
         fixture.locks().handleShiftLeft(fixture.player());
 
-        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.teammate-on-chat");
-        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.teammate-off-chat");
+        verify(fixture.messages(), times(1)).messageRaw(fixture.player(),
+                fixture.texts().getCompass().getTeammateOnChat());
+        verify(fixture.messages(), times(1)).messageRaw(fixture.player(),
+                fixture.texts().getCompass().getTeammateOffChat());
     }
 
     @Test
@@ -246,12 +251,12 @@ class CompassLockServiceTest {
         fixture.locks().handleLeftClick(fixture.player());
         fixture.locks().handleShiftLeft(fixture.player());
 
-        verify(fixture.messages(), never()).message(eq(fixture.player()),
-                eq("compass.locked-chat"), any());
+        verify(fixture.messages(), never()).messageRaw(eq(fixture.player()),
+                eq(fixture.texts().getCompass().getLockedChat()), any());
         verify(fixture.messages(), never())
-                .message(fixture.player(), "compass.teammate-on-chat");
+                .messageRaw(fixture.player(), fixture.texts().getCompass().getTeammateOnChat());
         verify(fixture.messages(), never())
-                .message(fixture.player(), "compass.teammate-off-chat");
+                .messageRaw(fixture.player(), fixture.texts().getCompass().getTeammateOffChat());
     }
 
     @Test
@@ -266,7 +271,7 @@ class CompassLockServiceTest {
         fixture.locks().clearLocksOnTargetDeath(locked, id -> fixture.player());
 
         verify(fixture.messages(), times(1))
-                .message(fixture.player(), "compass.locked-target-died-chat");
+                .messageRaw(fixture.player(), fixture.texts().getCompass().getLockedTargetDiedChat());
         assertFalse(fixture.locks().narrowToLock(fixture.player().getUniqueId(),
                 List.of(new CompassCandidate(locked, "a", 10.0, 10.0)), List.of()).locked());
     }
@@ -281,8 +286,8 @@ class CompassLockServiceTest {
 
         fixture.locks().clearLocksOnTargetDeath(locked, id -> null);
 
-        verify(fixture.messages(), never())
-                .message(any(Player.class), eq("compass.locked-target-died-chat"));
+        verify(fixture.messages(), never()).messageRaw(any(Player.class),
+                eq(fixture.texts().getCompass().getLockedTargetDiedChat()));
         assertFalse(fixture.locks().narrowToLock(fixture.player().getUniqueId(),
                 List.of(new CompassCandidate(locked, "a", 10.0, 10.0)), List.of()).locked());
     }
@@ -401,7 +406,8 @@ class CompassLockServiceTest {
 
         assertFalse(fixture.locks().teammateMode(fixture.player().getUniqueId()));
         assertEquals(Role.SPEEDRUNNER, fixture.locks().targetRole(fixture.player()));
-        verify(fixture.messages(), times(1)).message(fixture.player(), "compass.no-teammates");
+        verify(fixture.messages(), times(1)).messageRaw(fixture.player(),
+                fixture.texts().getCompass().getNoTeammates());
         verify(fixture.sounds(), times(1)).playAngrySound(fixture.player());
         verify(fixture.renderer(), never()).accept(any(Player.class));
     }
@@ -453,8 +459,10 @@ class CompassLockServiceTest {
         when(targets.collectIdentities(any(), any(), any()))
                 .thenReturn(List.of(new CompassIdentity(targetId, "victim")));
         when(targets.collectSightings(any(), any(), any(), any())).thenReturn(List.of());
+        MessagesConfig texts = new MessagesConfig();
         CompassLockService locks = new CompassLockService(mock(JManhuntPlugin.class),
                 new PlayerStateStore(), mock(SoundService.class), mock(MessageService.class),
+                texts.getCompass(), texts.getModifiers(),
                 targets, new HashMap<>(), mock(Consumer.class), mock(Consumer.class),
                 mock(Consumer.class), ignored -> { }, cache, new HashMap<>(),
                 mock(AnalysisHost.class));
@@ -472,7 +480,7 @@ class CompassLockServiceTest {
     private record Fixture(CompassLockService locks, Player player, Consumer<Player> refresher,
             Consumer<Player> renderer, GameManager game, SoundService sounds,
             FakeSpectatorService fakes, MessageService messages, CompassTargetService targets,
-            Map<UUID, Long> sharedClicks, PlayerStateStore players) {
+            Map<UUID, Long> sharedClicks, PlayerStateStore players, MessagesConfig texts) {
     }
 
     @SuppressWarnings("unchecked")
@@ -509,13 +517,14 @@ class CompassLockServiceTest {
         SoundService sounds = mock(SoundService.class);
         MessageService messages = mock(MessageService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
+        MessagesConfig texts = new MessagesConfig();
         CompassLockService locks = new CompassLockService(plugin, playerStates,
-                sounds, messages, targets,
+                sounds, messages, texts.getCompass(), texts.getModifiers(), targets,
                 new HashMap<>(), refresher, mock(Consumer.class), renderer,
                 ignored -> { }, new CompassCache(), sharedClicks, mock(AnalysisHost.class));
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
-                messages, targets, sharedClicks, playerStates);
+                messages, targets, sharedClicks, playerStates, texts);
     }
 
     @SuppressWarnings("unchecked")
@@ -568,13 +577,14 @@ class CompassLockServiceTest {
         SoundService sounds = mock(SoundService.class);
         MessageService messages = mock(MessageService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
+        MessagesConfig texts = new MessagesConfig();
         CompassLockService locks = new CompassLockService(plugin, playerStates,
-                sounds, messages, targets,
+                sounds, messages, texts.getCompass(), texts.getModifiers(), targets,
                 new HashMap<>(), refresher, mock(Consumer.class), renderer,
                 ignored -> { }, new CompassCache(), sharedClicks, mock(AnalysisHost.class));
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
-                messages, targets, sharedClicks, playerStates);
+                messages, targets, sharedClicks, playerStates, texts);
     }
 
     @Test

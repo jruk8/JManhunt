@@ -37,9 +37,6 @@ public final class WaitingReminder {
      * @param forceStart true when on-expire is set to force start
      * @return the message key to broadcast
      */
-    public static String expiryMessageKey(boolean forceStart) {
-        return forceStart ? "manhunt.waiting-for-damage-force-started" : "manhunt.waiting-for-damage-exhausted";
-    }
 
     public static int sliceSeconds(int effectiveDelay) {
         if (effectiveDelay <= 0) {

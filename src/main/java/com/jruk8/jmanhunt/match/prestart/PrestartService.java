@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match.prestart;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -33,11 +34,12 @@ public final class PrestartService {
     private final GameStateCommandManager stateCommands;
     private final MatchStore store;
     private final MatchMessaging messaging;
+    private final ManhuntMessages manhunt;
     private final MatchControl control;
 
     public PrestartService(JManhuntPlugin plugin, ConfigService configService, MessageService messages,
             PlayerStateStore playerStates, StatsManager stats, GameStateCommandManager stateCommands,
-            MatchStore store, MatchMessaging messaging, MatchControl control) {
+            MatchStore store, MatchMessaging messaging, ManhuntMessages manhunt, MatchControl control) {
         this.plugin = plugin;
         this.configService = configService;
         this.messages = messages;
@@ -46,6 +48,7 @@ public final class PrestartService {
         this.stateCommands = stateCommands;
         this.store = store;
         this.messaging = messaging;
+        this.manhunt = manhunt;
         this.control = control;
     }
 
@@ -90,7 +93,7 @@ public final class PrestartService {
                 plugin.fakeSpectators().enable(player);
             }
         }
-        messaging.sendToInstance(instance, "manhunt.headstart-active",
+        messaging.sendToInstance(instance, manhunt.getHeadstartActive(),
                 Map.of("seconds", String.valueOf(state.remaining()), "role", messages.roleName(held)));
         long headstartMatchId = instance.matchId();
         state.setTask(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
@@ -102,7 +105,7 @@ public final class PrestartService {
             if (state.remaining() <= 0) {
                 endHeadstart(instance, role);
             } else if (state.remaining() <= 5) {
-                messaging.sendToInstance(instance, "manhunt.headstart-ending",
+                messaging.sendToInstance(instance, manhunt.getHeadstartEnding(),
                         Map.of("seconds", String.valueOf(state.remaining()),
                                 "role", messages.roleName(role.opposite())));
                 messaging.playInstanceSound(instance, "game.autostart-countdown");
@@ -129,7 +132,7 @@ public final class PrestartService {
             }
         }
         state.returnPoints().clear();
-        messaging.sendToInstance(instance, "manhunt.headstart-ended", Map.of("role", messages.roleName(held)));
+        messaging.sendToInstance(instance, manhunt.getHeadstartEnded(), Map.of("role", messages.roleName(held)));
         messaging.playInstanceNeutral(instance);
     }
 
@@ -183,7 +186,7 @@ public final class PrestartService {
         List<Integer> checkpoints = List.of(configured,
                 Math.max(1, configured - slice),
                 Math.max(1, configured - 2 * slice));
-        messaging.sendToInstance(instance, "manhunt.waiting-for-damage",
+        messaging.sendToInstance(instance, manhunt.getWaitingForDamage(),
                 Map.of("seconds", String.valueOf(configured)));
         instance.setWaitingReminderTask(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (store.instance(instance.matchId()).orElse(null) != instance || instance.begun()) {
@@ -192,7 +195,7 @@ public final class PrestartService {
             long elapsedMillis = System.currentTimeMillis() - instance.waitingStartTime();
             int remaining = (int) Math.round(configured - elapsedMillis / 1000.0);
             if (remaining > 0 && checkpoints.contains(remaining)) {
-                messaging.sendToInstance(instance, "manhunt.waiting-for-damage",
+                messaging.sendToInstance(instance, manhunt.getWaitingForDamage(),
                         Map.of("seconds", String.valueOf(remaining)));
             }
         }, 20L, 20L));
@@ -209,11 +212,11 @@ public final class PrestartService {
             return false;
         }
         long delay = Math.max(1L, Math.round(interval * 20.0));
-        messaging.sendToInstance(instance, "manhunt.waiting-for-damage-indefinite", Map.of());
+        messaging.sendToInstance(instance, manhunt.getWaitingForDamageIndefinite(), Map.of());
         instance.setWaitingReminderTask(Bukkit.getScheduler().runTaskTimer(plugin,
                 () -> {
                     if (store.instance(instance.matchId()).orElse(null) == instance && !instance.begun()) {
-                        messaging.sendToInstance(instance, "manhunt.waiting-for-damage-indefinite", Map.of());
+                        messaging.sendToInstance(instance, manhunt.getWaitingForDamageIndefinite(), Map.of());
                     }
                 }, delay, delay));
         return true;
@@ -234,9 +237,9 @@ public final class PrestartService {
                         "settings.match.start-on-speedrunner-damage.on-expire",
                         OnExpire.class, OnExpire.FORCE_START) == OnExpire.FORCE_START;
                 if (forceStart) {
-                    messaging.sendToInstance(instance, WaitingReminder.expiryMessageKey(true), Map.of());
+                    messaging.sendToInstance(instance, manhunt.getWaitingForDamageForceStarted(), Map.of());
                 } else {
-                    messaging.sendToInstance(instance, WaitingReminder.expiryMessageKey(false),
+                    messaging.sendToInstance(instance, manhunt.getWaitingForDamageExhausted(),
                             Map.of("seconds", String.valueOf(configured)));
                 }
                 // end match as cancelled if configured

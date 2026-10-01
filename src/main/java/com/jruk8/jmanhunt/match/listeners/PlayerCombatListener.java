@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 
 /** Deaths, damage, kills, and item/advancement win triggers. */
@@ -51,13 +52,14 @@ public final class PlayerCombatListener implements Listener {
     private final PlayerRespawnListener respawn;
     private final SpeedrunnerDisconnectTracker disconnects;
     private final Map<UUID, BukkitTask> disconnectTasks;
+    private final GameMessages gameTexts;
     private long lastVoidRescueWarning;
 
     public PlayerCombatListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
             ConfigService config, CompassManager compass, StatsManager stats, LobbyService lobbies,
             WorldEngineService worldEngine, WinConditionEngine winConditionEngine,
             PlayerRespawnListener respawn, SpeedrunnerDisconnectTracker disconnects,
-            Map<UUID, BukkitTask> disconnectTasks) {
+            Map<UUID, BukkitTask> disconnectTasks, GameMessages gameTexts) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.game = game;
@@ -70,6 +72,7 @@ public final class PlayerCombatListener implements Listener {
         this.respawn = respawn;
         this.disconnects = disconnects;
         this.disconnectTasks = disconnectTasks;
+        this.gameTexts = gameTexts;
     }
 
     @EventHandler public void onDeath(PlayerDeathEvent event) {
@@ -123,7 +126,7 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         int roll = ThreadLocalRandom.current().nextInt(FRIENDLY_FIRE_LINES);
-        game.sendToInstance(instance, friendlyFireKey(roll),
+        game.messaging().sendToInstance(instance, friendlyFireTemplate(gameTexts, roll),
                 Map.of("dead", victim.getName(), "killer", killer.getName()));
     }
 
@@ -133,8 +136,12 @@ public final class PlayerCombatListener implements Listener {
     }
 
     /** Friendly fire line key for a roll in [0, 3). Pure for tests. */
-    static String friendlyFireKey(int roll) {
-        return "game.friendly-fire-" + (Math.floorMod(roll, FRIENDLY_FIRE_LINES) + 1);
+    static String friendlyFireTemplate(GameMessages texts, int roll) {
+        return switch (Math.floorMod(roll, FRIENDLY_FIRE_LINES)) {
+            case 0 -> texts.getFriendlyFire1();
+            case 1 -> texts.getFriendlyFire2();
+            default -> texts.getFriendlyFire3();
+        };
     }
 
     private void handleSpeedrunnerDeath(Player player, GameInstance instance, boolean quiet) {
@@ -166,7 +173,7 @@ public final class PlayerCombatListener implements Listener {
         // mirroring the speedrunner elimination.
         creditHunterFinalKill(matchId, player);
         if (!quiet) {
-            game.sendToInstance(instance, "game.hunter-out-of-lives", Map.of());
+            game.messaging().sendToInstance(instance, gameTexts.getHunterOutOfLives(), Map.of());
         }
         instance.recordDeath(player.getUniqueId(), player.getName(), Role.HUNTER);
         playerStates.setRole(player.getUniqueId(), Role.SPECTATOR);
@@ -179,7 +186,7 @@ public final class PlayerCombatListener implements Listener {
             compass.removeCompasses(player);
         });
         checkHuntersRemaining(instance);
-        game.playInstanceSound(instance, "game.hunter-death");
+        game.messaging().playInstanceSound(instance, "game.hunter-death");
     }
 
     /** Eliminates a speedrunner out of lives and finishes when none remain. */
@@ -205,20 +212,20 @@ public final class PlayerCombatListener implements Listener {
             compass.removeCompasses(player);
         });
         if (!quiet) {
-            game.sendToInstance(instance, "game.speedrunner-out-of-lives", Map.of());
+            game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnerOutOfLives(), Map.of());
         }
         // When nobody remains the win line follows, so no last-died
         // line is sent: the win is the announcement.
         int playerCount = game.activeRunnerCount(instance);
         if (playerCount > 0) {
             if (!quiet) {
-                game.sendToInstance(instance, "game.speedrunner-death",
+                game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnerDeath(),
                         Map.of("value", Integer.toString(playerCount)));
             }
         } else {
             game.finishLater(instance, Role.HUNTER, "All speedrunners eliminated");
         }
-        game.playInstanceSound(instance, "game.speedrunner-death");
+        game.messaging().playInstanceSound(instance, "game.speedrunner-death");
     }
 
     /** Announces a survived speedrunner death and schedules the respawn. */
@@ -227,12 +234,12 @@ public final class PlayerCombatListener implements Listener {
         if (!quiet) {
             // The dying runner is already flagged not-alive but will respawn, so count them.
             int remaining = game.activeRunnerCount(instance) + 1;
-            game.sendToInstance(instance, "game.speedrunner-death",
+            game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnerDeath(),
                     Map.of("value", Integer.toString(remaining)));
         }
-        game.playInstanceSound(instance, "game.speedrunner-death");
+        game.messaging().playInstanceSound(instance, "game.speedrunner-death");
         respawn.scheduleRespawn(player, instance, quiet, delaySeconds,
-                "game.speedrunner-respawn-scheduled", matchId);
+                gameTexts.getSpeedrunnerRespawnScheduled(), matchId);
     }
 
     /** Handles a speedrunner death with unlimited lives. */
@@ -243,7 +250,7 @@ public final class PlayerCombatListener implements Listener {
         // send nor consume it.
         if (!quiet && !instance.runnerUnlimitedAnnounced()) {
             instance.setRunnerUnlimitedAnnounced(true);
-            game.sendToInstance(instance, "game.speedrunners-unlimited-lives", Map.of());
+            game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnersUnlimitedLives(), Map.of());
         }
         surviveRunnerDeath(player, instance, quiet, matchId, delaySeconds);
     }
@@ -264,18 +271,18 @@ public final class PlayerCombatListener implements Listener {
             }
         }
         if (!quiet) {
-            game.sendToInstance(instance, "game.hunter-death", Map.of());
+            game.messaging().sendToInstance(instance, gameTexts.getHunterDeath(), Map.of());
         }
-        game.playInstanceSound(instance, "game.hunter-death");
+        game.messaging().playInstanceSound(instance, "game.hunter-death");
         if (lives == -1 && !quiet && !instance.hunterUnlimitedAnnounced()) {
             instance.setHunterUnlimitedAnnounced(true);
-            game.sendToInstance(instance, "game.hunters-unlimited-lives", Map.of());
+            game.messaging().sendToInstance(instance, gameTexts.getHuntersUnlimitedLives(), Map.of());
         }
         // Undelayed hunters respawn through vanilla mechanics; only a
         // positive delay routes them through the spectator revive.
         if (delaySeconds > 0) {
             respawn.scheduleRespawn(player, instance, quiet, delaySeconds,
-                    "game.hunter-respawn-scheduled", matchId);
+                    gameTexts.getHunterRespawnScheduled(), matchId);
         }
     }
 

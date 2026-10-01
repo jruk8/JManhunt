@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.core;
 
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.message.DebugMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import net.kyori.adventure.text.Component;
@@ -75,7 +76,7 @@ class JManhuntLoggerTest {
         RecordingSink sink = sink();
         JManhuntLogger logger = logger(Logger.getAnonymousLogger(), new DebugService(), sink);
 
-        logger.debug(DebugLevel.INFO, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.INFO, DebugMessages::getCellFetched, Map.of("value", "7"));
 
         assertTrue(sink.console().isEmpty());
         assertTrue(sink.players().isEmpty());
@@ -88,10 +89,12 @@ class JManhuntLoggerTest {
         UUID player = UUID.randomUUID();
         debug.setConsoleLevel(DebugLevel.INFO);
         debug.setPlayerLevel(player, DebugLevel.INFO);
-        MessageService messages = messages();
-        JManhuntLogger logger = new JManhuntLogger(Logger.getAnonymousLogger(), debug, messages, sink);
+        FixtureText fixture = fixtureTexts();
+        MessageService messages = fixture.service();
+        JManhuntLogger logger = new JManhuntLogger(Logger.getAnonymousLogger(), debug, messages,
+                fixture.texts().getDebug(), sink);
 
-        logger.debug(DebugLevel.INFO, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.INFO, DebugMessages::getCellFetched, Map.of("value", "7"));
 
         assertEquals(1, sink.console().size());
         assertEquals("[D] [INFO] value 7.", plain(sink.console().get(0)));
@@ -107,8 +110,8 @@ class JManhuntLoggerTest {
         debug.setConsoleLevel(DebugLevel.INFO);
         JManhuntLogger logger = logger(Logger.getAnonymousLogger(), debug, sink);
 
-        logger.debug(DebugLevel.WARN, "debug.cell-fetched", Map.of("value", "7"));
-        logger.debug(DebugLevel.SEVERE, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.WARN, DebugMessages::getCellFetched, Map.of("value", "7"));
+        logger.debug(DebugLevel.SEVERE, DebugMessages::getCellFetched, Map.of("value", "7"));
 
         assertEquals(2, sink.console().size());
         assertEquals("[D] [WARN] value 7.", plain(sink.console().get(0)));
@@ -122,9 +125,9 @@ class JManhuntLoggerTest {
         debug.setConsoleLevel(DebugLevel.INFO);
         JManhuntLogger logger = logger(Logger.getAnonymousLogger(), debug, sink);
 
-        logger.debug(DebugLevel.INFO, "debug.cell-fetched", Map.of("value", "7"));
-        logger.debug(DebugLevel.WARN, "debug.cell-fetched", Map.of("value", "7"));
-        logger.debug(DebugLevel.SEVERE, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.INFO, DebugMessages::getCellFetched, Map.of("value", "7"));
+        logger.debug(DebugLevel.WARN, DebugMessages::getCellFetched, Map.of("value", "7"));
+        logger.debug(DebugLevel.SEVERE, DebugMessages::getCellFetched, Map.of("value", "7"));
 
         assertEquals(3, sink.console().size());
         assertEquals(NamedTextColor.GRAY, tagColor(sink.console().get(0), "[INFO] "));
@@ -143,15 +146,15 @@ class JManhuntLoggerTest {
         debug.setPlayerLevel(infoPlayer, DebugLevel.INFO);
         JManhuntLogger logger = logger(Logger.getAnonymousLogger(), debug, sink);
 
-        logger.debug(DebugLevel.INFO, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.INFO, DebugMessages::getCellFetched, Map.of("value", "7"));
         assertTrue(sink.console().isEmpty());
         assertEquals(List.of(infoPlayer), sink.players());
 
-        logger.debug(DebugLevel.WARN, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.WARN, DebugMessages::getCellFetched, Map.of("value", "7"));
         assertEquals(1, sink.console().size());
         assertEquals(List.of(infoPlayer, infoPlayer), sink.players());
 
-        logger.debug(DebugLevel.SEVERE, "debug.cell-fetched", Map.of("value", "7"));
+        logger.debug(DebugLevel.SEVERE, DebugMessages::getCellFetched, Map.of("value", "7"));
         assertEquals(2, sink.console().size());
         assertEquals(4, sink.players().size());
         assertTrue(sink.players().contains(severePlayer));
@@ -245,14 +248,23 @@ class JManhuntLoggerTest {
     }
 
     private static JManhuntLogger logger(Logger jul, DebugService debug, RecordingSink sink) {
-        return new JManhuntLogger(jul, debug, messages(), sink);
+        MessagesConfig texts = new MessagesConfig();
+        ConfigPathMapper.set(texts, "debug.prefix", "<gray>[D]</gray> ");
+        ConfigPathMapper.set(texts, "debug.cell-fetched",
+                "{debug-prefix}<gray>value <white>{value}<gray>.");
+        MessageService service = new MessageService();
+        service.reload(texts);
+        return new JManhuntLogger(jul, debug, service, texts.getDebug(), sink);
     }
 
     private static RecordingSink sink() {
         return new RecordingSink(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     }
 
-    private static MessageService messages() {
+    private record FixtureText(MessageService service, MessagesConfig texts) {
+    }
+
+    private static FixtureText fixtureTexts() {
         MessagesConfig config = new MessagesConfig();
         ConfigPathMapper.set(config, "prefix", "<gray>[T]</gray> ");
         ConfigPathMapper.set(config, "debug.prefix", "<gray>[D]</gray> ");
@@ -260,6 +272,6 @@ class JManhuntLoggerTest {
                 "{debug-prefix}<gray>value <white>{value}<gray>.");
         MessageService messages = new MessageService();
         messages.reload(config);
-        return messages;
+        return new FixtureText(messages, config);
     }
 }

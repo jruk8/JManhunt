@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.message;
 
-import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -32,24 +31,78 @@ public final class MessageService {
         messages = configuration == null ? new MessagesConfig() : configuration;
     }
 
-    public Component component(String key) {
-        return component(key, Map.of());
+    /**
+     * Typed section reads for wiring only (rule M1 keeps
+     * ManhuntCommand's constructor frozen, so it and the plugin plus
+     * service wiring read sections here). Every other consumer
+     * receives its minimal section through its own constructor.
+     */
+    public String prefix() {
+        return messages.getPrefix();
     }
 
-    public Component component(String key, Map<String, String> values) {
-        return renderLiteral(raw(key, key), values);
+    public CommandMessages command() {
+        return messages.getCommand();
+    }
+
+    public ManhuntMessages manhunt() {
+        return messages.getManhunt();
+    }
+
+    public GameMessages game() {
+        return messages.getGame();
+    }
+
+    public CompassMessages compass() {
+        return messages.getCompass();
+    }
+
+    public ChatMessages chat() {
+        return messages.getChat();
+    }
+
+    public RoleColorsMessages roleColors() {
+        return messages.getRoleColors();
+    }
+
+    public WinconMessages wincon() {
+        return messages.getWincon();
+    }
+
+    public DebugMessages debug() {
+        return messages.getDebug();
+    }
+
+    public DevMessages dev() {
+        return messages.getDev();
+    }
+
+    public ModifiersMessages modifiers() {
+        return messages.getModifiers();
+    }
+
+    public ModifiersGuiMessages modifiersGui() {
+        return messages.getModifiersGui();
+    }
+
+    public ManhuntGuiMessages manhuntGui() {
+        return messages.getManhuntGui();
+    }
+
+    public SpectatorMessages spectator() {
+        return messages.getSpectator();
     }
 
     /**
      * Renders pre-composed text that still carries placeholders: substitutes
      * the prefixes and custom values, then parses as MiniMessage (legacy
-     * &amp; codes convert first). For messages assembled from multiple keys
-     * (like the win announcement) that can never pass through
-     * {@link #component(String, Map)}.
+     * &amp; codes convert first). For messages assembled from multiple
+     * values (like the win announcement) that can never pass through
+     * {@link #componentRaw(String, Map)}.
      */
     public Component renderLiteral(String raw, Map<String, String> values) {
-        String rendered = raw.replace("{prefix}", string("prefix", ""))
-                .replace("{debug-prefix}", string("debug.prefix", ""));
+        String rendered = raw.replace("{prefix}", messages.getPrefix())
+                .replace("{debug-prefix}", messages.getDebug().getPrefix());
         for (Map.Entry<String, String> entry : values.entrySet()) {
             rendered = rendered.replace("{" + entry.getKey() + "}", entry.getValue());
         }
@@ -57,7 +110,7 @@ public final class MessageService {
         // fragments passed as {conditions}) picks them up too.
         for (Role role : Role.values()) {
             rendered = rendered.replace("{role-color-" + role.name().toLowerCase(Locale.ROOT) + "}",
-                    string("role-colors." + role.name().toLowerCase(Locale.ROOT), defaultRoleColor(role)));
+                    roleColor(role));
         }
         return parse(rendered);
     }
@@ -72,6 +125,11 @@ public final class MessageService {
         return renderLiteral(raw, values);
     }
 
+    /** Renders one typed value without placeholders. */
+    public Component componentRaw(String raw) {
+        return componentRaw(raw, Map.of());
+    }
+
     /** Sends one typed value to a sender, skipping blank values. */
     public void messageRaw(CommandSender sender, String raw, Map<String, String> values) {
         if (!blank(raw)) {
@@ -79,11 +137,21 @@ public final class MessageService {
         }
     }
 
+    /** Sends one typed value to a sender without placeholders, skipping blank values. */
+    public void messageRaw(CommandSender sender, String raw) {
+        messageRaw(sender, raw, Map.of());
+    }
+
     /** Broadcasts one typed value, skipping blank values. */
     public void broadcastRaw(String raw, Map<String, String> values) {
         if (!blank(raw)) {
             Bukkit.broadcast(componentRaw(raw, values));
         }
+    }
+
+    /** Broadcasts one typed value without placeholders, skipping blank values. */
+    public void broadcastRaw(String raw) {
+        broadcastRaw(raw, Map.of());
     }
 
     /** Sends one typed value to exactly the given recipients, skipping blank values. */
@@ -97,6 +165,11 @@ public final class MessageService {
         }
     }
 
+    /** Sends one typed value to exactly the given recipients without placeholders. */
+    public void sendToRaw(Collection<? extends Player> recipients, String raw) {
+        sendToRaw(recipients, raw, Map.of());
+    }
+
     /** Role display name prefixed with its configured color tag, without a reset. */
     public String roleName(Role role) {
         return roleColor(role) + role.displayName();
@@ -104,7 +177,14 @@ public final class MessageService {
 
     /** Configured color tag for one role, without any reset. */
     public String roleColor(Role role) {
-        return string("role-colors." + role.name().toLowerCase(Locale.ROOT), defaultRoleColor(role));
+        RoleColorsMessages colors = messages.getRoleColors();
+        return switch (role) {
+            case SPEEDRUNNER -> colors.getSpeedrunner();
+            case HUNTER -> colors.getHunter();
+            case SPECTATOR -> colors.getSpectator();
+            case AFK -> colors.getAfk();
+            case NONE -> colors.getNone();
+        };
     }
 
     /**
@@ -115,11 +195,9 @@ public final class MessageService {
      * tag inside a custom override still dominates it.
      */
     public String winAnnouncement(Role winner) {
-        String title = winner == Role.HUNTER
-                ? string("game.hunters-win", "Hunters Win!")
-                : string("game.speedrunners-win", "Speedrunners Win!");
-        return winBlock(string("game.separator", ""), roleColor(winner) + title,
-                string("game.win-reason", "{rolecolor}🏆 {wincon}"));
+        GameMessages game = messages.getGame();
+        String title = winner == Role.HUNTER ? game.getHuntersWin() : game.getSpeedrunnersWin();
+        return winBlock(game.getSeparator(), roleColor(winner) + title, game.getWinReason());
     }
 
     /**
@@ -132,28 +210,9 @@ public final class MessageService {
 
     /** Role-colored fullscreen win title for one winner. */
     public Component winTitle(Role winner) {
-        String key = winner == Role.HUNTER ? "game.hunters-title" : "game.speedrunners-title";
-        String fallback = winner == Role.HUNTER ? "Hunters Win!" : "Speedrunners Win!";
-        return renderLiteral(roleColor(winner) + string(key, fallback), Map.of());
-    }
-
-    private static String defaultRoleColor(Role role) {
-        return switch (role) {
-            case SPEEDRUNNER -> "<#74de66>";
-            case HUNTER -> "<#de666e>";
-            case SPECTATOR -> "<#6e728a>";
-            case AFK -> "<#d19e28>";
-            case NONE -> "<#7d7d7d>";
-        };
-    }
-
-    /**
-     * True when a message key is explicitly set to the empty string, which
-     * disables that message everywhere it would be sent.
-     */
-    public boolean isDisabled(String key) {
-        Object raw = ConfigPathMapper.get(messages, key);
-        return raw instanceof String text && text.isEmpty();
+        GameMessages game = messages.getGame();
+        String title = winner == Role.HUNTER ? game.getHuntersTitle() : game.getSpeedrunnersTitle();
+        return renderLiteral(roleColor(winner) + title, Map.of());
     }
 
     /**
@@ -257,34 +316,6 @@ public final class MessageService {
         return component.decoration(TextDecoration.ITALIC, false);
     }
 
-    public String string(String path, String fallback) {
-        return raw(path, fallback);
-    }
-
-    public java.util.List<String> strings(String path) {
-        Object value = ConfigPathMapper.get(messages, path);
-        if (!(value instanceof java.util.List<?> list)) {
-            return java.util.List.of();
-        }
-        java.util.List<String> lines = new java.util.ArrayList<>(list.size());
-        for (Object entry : list) {
-            lines.add(String.valueOf(entry));
-        }
-        return lines;
-    }
-
-    /** Stored string at the path, or the fallback when it does not resolve to text. */
-    private String raw(String path, String fallback) {
-        Object value = ConfigPathMapper.get(messages, path);
-        return value instanceof String text ? text : fallback;
-    }
-
-    public void broadcast(String key) {
-        if (!isDisabled(key)) {
-            Bukkit.broadcast(component(key));
-        }
-    }
-
     /** Broadcasts raw text (already formatted) from engine tags. */
     public void broadcastText(String text) {
         Bukkit.broadcast(parse(text));
@@ -293,37 +324,5 @@ public final class MessageService {
     /** Sends raw text (already formatted) to one player from engine tags. */
     public void sendText(Player player, String text) {
         player.sendMessage(parse(text));
-    }
-    public void broadcast(String key, Map<String, String> values) {
-        if (!isDisabled(key)) {
-            Bukkit.broadcast(component(key, values));
-        }
-    }
-
-    /** Sends a message to exactly the given recipients (lobby or instance members). */
-    public void sendTo(Collection<? extends Player> recipients, String key) {
-        sendTo(recipients, key, Map.of());
-    }
-
-    /** Sends a message to exactly the given recipients (lobby or instance members). */
-    public void sendTo(Collection<? extends Player> recipients, String key, Map<String, String> values) {
-        if (isDisabled(key)) {
-            return;
-        }
-        Component rendered = component(key, values);
-        for (Player recipient : recipients) {
-            recipient.sendMessage(rendered);
-        }
-    }
-
-    public void message(CommandSender sender, String key) {
-        if (!isDisabled(key)) {
-            sender.sendMessage(component(key));
-        }
-    }
-    public void message(CommandSender sender, String key, Map<String, String> values) {
-        if (!isDisabled(key)) {
-            sender.sendMessage(component(key, values));
-        }
     }
 }

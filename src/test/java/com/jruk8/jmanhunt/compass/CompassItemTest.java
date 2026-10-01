@@ -134,7 +134,7 @@ class CompassItemTest {
     @Test
     void deduplicateCollapsesStackedCompassAndClearsExtraSlots() {
         CompassItemService items = new CompassItemService(mock(JManhuntPlugin.class),
-                mock(MessageService.class), mock(PlayerStateStore.class),
+                mock(MessageService.class), null, mock(PlayerStateStore.class),
                 new NamespacedKey("jmanhunt", "hunters_compass"));
         Player player = mock(Player.class);
         PlayerInventory inventory = mock(PlayerInventory.class);
@@ -192,7 +192,7 @@ class CompassItemTest {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.overrides()).thenReturn(
                 new OverrideService(configService, new LobbyConfig(), () -> { }));
-        CompassItemService items = new CompassItemService(plugin, mock(MessageService.class),
+        CompassItemService items = new CompassItemService(plugin, mock(MessageService.class), null,
                 mock(PlayerStateStore.class), new NamespacedKey("jmanhunt", "hunters_compass"));
 
         assertTrue(items.shouldReceiveCompass(null, Role.HUNTER));
@@ -215,7 +215,7 @@ class CompassItemTest {
         GameManager game = mock(GameManager.class);
         when(game.instanceOf(uuid)).thenReturn(match);
         CompassItemService items = new CompassItemService(mock(JManhuntPlugin.class),
-                mock(MessageService.class), playerStates,
+                mock(MessageService.class), null, playerStates,
                 new NamespacedKey("jmanhunt", "hunters_compass"));
         items.setGameManager(game);
         return items;

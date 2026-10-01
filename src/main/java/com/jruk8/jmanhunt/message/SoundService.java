@@ -1,7 +1,6 @@
 package com.jruk8.jmanhunt.message;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.SoundsConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -119,8 +118,8 @@ public class SoundService {
     }
 
     private SoundSettings getSoundSettings(String configKey) {
-        Object node = sounds == null ? null : ConfigPathMapper.get(sounds, configKey);
-        if (!(node instanceof SoundsConfig.SoundEntry entry)) {
+        SoundsConfig.SoundEntry entry = sounds == null ? null : sounds.entry(configKey);
+        if (entry == null) {
             return new SoundSettings(configKey, false, FALLBACK_SOUND, 1.0f, 1.0f);
         }
         boolean isEnabled = entry.isEnabled();

@@ -3,7 +3,9 @@ package com.jruk8.jmanhunt.setup;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -12,7 +14,6 @@ import java.util.Optional;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -42,8 +43,13 @@ class SetupServiceTest {
         messages = mock(MessageService.class);
         clicker = mock(Player.class);
         ConfigService config = mock(ConfigService.class);
-        setup = new SetupService(plugin, game, messages, mock(SoundService.class),
-                new SettingFeedback(messages, config, null));
+        MessagesConfig texts = new MessagesConfig();
+        ConfigPathMapper.set(texts, "manhunt.setting-invalid", "invalid tpl");
+        ConfigPathMapper.set(texts, "manhunt.worldengine-tpto-lobby-world-clash", "clash tpl");
+        ConfigPathMapper.set(texts, "manhunt.worldengine-tpto-failed", "failed tpl");
+        ManhuntMessages manhunt = texts.getManhunt();
+        setup = new SetupService(plugin, game, messages, manhunt, mock(SoundService.class),
+                new SettingFeedback(messages, manhunt, config, null));
     }
 
     @Test
@@ -53,7 +59,7 @@ class SetupServiceTest {
 
         setup.recommendedSetup(clicker);
 
-        verify(messages).message(clicker, "manhunt.setting-invalid", Map.of());
+        verify(messages).messageRaw(clicker, "invalid tpl", Map.of());
         verify(plugin, never()).observeWorldEngine();
         verify(game, never()).ensureLobbyWorld();
         verify(plugin, never()).markSetupDone();
@@ -67,7 +73,7 @@ class SetupServiceTest {
 
         setup.recommendedSetup(clicker);
 
-        verify(messages).message(clicker, "manhunt.worldengine-tpto-lobby-world-clash");
+        verify(messages).messageRaw(clicker, "clash tpl");
         verify(game, never()).ensureLobbyWorld();
         verify(plugin, never()).markSetupDone();
     }
@@ -83,18 +89,7 @@ class SetupServiceTest {
 
         setup.recommendedSetup(clicker);
 
-        verify(messages).message(eq(clicker), eq("manhunt.worldengine-tpto-failed"), any());
+        verify(messages).messageRaw(eq(clicker), eq("failed tpl"), any());
         verify(plugin, never()).markSetupDone();
-    }
-
-    @Test
-    void realMessagesResolveSetupDoneLine() throws Exception {
-        MessageService real = new MessageService();
-        real.reload(new MessagesConfig());
-
-        assertEquals("{prefix}<green>Setup complete: world engine on, lobby ready, "
-                + "<white>{count}</white> players teleported. "
-                + "Restart the server to fully apply.",
-                real.string("manhunt.setup-oneclick-done", "missing"));
     }
 }

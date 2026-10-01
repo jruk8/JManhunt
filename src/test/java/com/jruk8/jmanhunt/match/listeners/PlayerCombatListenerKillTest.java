@@ -17,6 +17,7 @@ import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
@@ -59,7 +60,7 @@ class PlayerCombatListenerKillTest {
                 mock(ConfigService.class), mock(CompassManager.class), mock(StatsManager.class),
                 mock(LobbyService.class), mock(WorldEngineService.class),
                 mock(WinConditionEngine.class), mock(PlayerRespawnListener.class),
-                mock(SpeedrunnerDisconnectTracker.class), new HashMap<>());
+                mock(SpeedrunnerDisconnectTracker.class), new HashMap<>(), new GameMessages());
         return new Fixture(listener, killer, players, game, instance, commands);
     }
 

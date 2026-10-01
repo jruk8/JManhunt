@@ -9,6 +9,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.junit.jupiter.api.Test;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -231,7 +232,7 @@ class ManhuntCommandTest {
 
         assertEquals(5, lines.size());
         assertEquals(Component.empty(), lines.get(0));
-        assertEquals(messages.component("prefix"), lines.get(1));
+        assertEquals(messages.componentRaw(messages.prefix(), Map.of()), lines.get(1));
         assertEquals("[T] ", PlainTextComponentSerializer.plainText().serialize(lines.get(1)));
     }
 }

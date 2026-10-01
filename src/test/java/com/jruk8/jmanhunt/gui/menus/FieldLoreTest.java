@@ -15,11 +15,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class FieldLoreTest {
 
     private MessageService messages;
+    private MessagesConfig texts;
 
     @BeforeEach
     void setup() {
         messages = new MessageService();
-        messages.reload(new MessagesConfig());
+        texts = new MessagesConfig();
+        messages.reload(texts);
     }
 
     @Test
@@ -39,7 +41,7 @@ class FieldLoreTest {
                 "",
                 "Click to edit",
                 "Right-click to reset"),
-                FieldLore.lines(messages, field));
+                FieldLore.lines(texts.getManhuntGui(), field));
     }
 
     @Test
@@ -59,7 +61,7 @@ class FieldLoreTest {
                 "",
                 "Click to cycle",
                 "Right-click to reset"),
-                FieldLore.lines(messages, field));
+                FieldLore.lines(texts.getManhuntGui(), field));
     }
 
     @Test
@@ -79,7 +81,7 @@ class FieldLoreTest {
                 "",
                 "Click to toggle",
                 "Right-click to reset"),
-                FieldLore.lines(messages, field));
+                FieldLore.lines(texts.getManhuntGui(), field));
     }
 
     @Test
@@ -103,6 +105,6 @@ class FieldLoreTest {
                 "",
                 "Click to open",
                 "Right-click to reset"),
-                FieldLore.lines(messages, field));
+                FieldLore.lines(texts.getManhuntGui(), field));
     }
 }

@@ -7,6 +7,7 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.LeaveDestination;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.PlayerResetService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -32,6 +33,7 @@ import java.util.function.Consumer;
 public final class MatchLeaveService {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final GameMessages game;
     private final PlayerStateStore playerStates;
     private final CompassManager compass;
     private final GameStateCommandManager stateCommands;
@@ -42,13 +44,14 @@ public final class MatchLeaveService {
     private final FlagStore flagStore;
     private final Consumer<GameInstance> afterLeave;
 
-    public MatchLeaveService(JManhuntPlugin plugin, MessageService messages,
+    public MatchLeaveService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
             PlayerStateStore playerStates, CompassManager compass,
             GameStateCommandManager stateCommands, ConfigService configService,
             WorldEngineService worldEngine, MatchStore store, MatchMessaging messaging,
             FlagStore flagStore, Consumer<GameInstance> afterLeave) {
         this.plugin = plugin;
         this.messages = messages;
+        this.game = game;
         this.playerStates = playerStates;
         this.compass = compass;
         this.stateCommands = stateCommands;
@@ -123,7 +126,7 @@ public final class MatchLeaveService {
         compass.removeCompasses(player);
         applyLeaveDestination(instance, player, dropGear, destination);
         plugin.roleTeams().sync(player);
-        messages.message(player, "game.leave-success", Map.of());
+        messages.messageRaw(player, game.getLeaveSuccess(), Map.of());
         return before;
     }
 
@@ -172,11 +175,11 @@ public final class MatchLeaveService {
         for (int index = 0; index < leftRoles.size(); index++) {
             Role before = leftRoles.get(index);
             if (before == Role.HUNTER) {
-                messaging.sendToInstance(instance, "game.hunter-left",
+                messaging.sendToInstance(instance, game.getHunterLeft(),
                         Map.of("player", leftNames.get(index),
                                 "remaining", String.valueOf(store.activeHunterCount(instance))));
             } else if (before == Role.SPEEDRUNNER) {
-                messaging.sendToInstance(instance, "game.speedrunner-left",
+                messaging.sendToInstance(instance, game.getSpeedrunnerLeft(),
                         Map.of("player", leftNames.get(index),
                                 "remaining", String.valueOf(store.activeRunnerCount(instance))));
             }
@@ -200,7 +203,7 @@ public final class MatchLeaveService {
         }
         GameInstance instance = match.get();
         if (at.getWorld() != null && at.getWorld().getName().equals(worldEngine.lobbyWorldName())) {
-            messages.message(player, "game.auto-left-lobby-world", Map.of());
+            messages.messageRaw(player, game.getAutoLeftLobbyWorld(), Map.of());
             leaveMatch(instance, List.of(player), false);
             return true;
         }
@@ -227,7 +230,7 @@ public final class MatchLeaveService {
         if (bounds.contains(at.getX(), at.getZ(), nether)) {
             return false;
         }
-        messages.message(player, "game.auto-left-bounds", Map.of());
+        messages.messageRaw(player, game.getAutoLeftBounds(), Map.of());
         leaveMatch(instance, List.of(player), false);
         return true;
     }

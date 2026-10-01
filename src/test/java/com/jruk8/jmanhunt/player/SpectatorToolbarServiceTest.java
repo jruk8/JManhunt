@@ -22,8 +22,12 @@ import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.message.CommandMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.message.SpectatorMessages;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,9 +50,19 @@ import org.mockito.MockedStatic;
 /** Spectator toolbar layout, targeting, lock breaks, and item identity. */
 class SpectatorToolbarServiceTest {
 
+    private static SpectatorMessages texts() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "spectator.already-in-match", "already in tpl");
+        ConfigPathMapper.set(config, "spectator.match-gone", "gone tpl");
+        ConfigPathMapper.set(config, "spectator.now-spectating", "now tpl");
+        ConfigPathMapper.set(config, "spectator.already-spectating", "already tpl");
+        return config.getSpectator();
+    }
+
     private SpectatorToolbarService toolbar(NamespacedKey key) {
         return new SpectatorToolbarService(mock(OverrideService.class),
-                mock(MessageService.class), mock(SoundService.class), new PlayerStateStore(),
+                mock(MessageService.class), new SpectatorMessages(), new CommandMessages(),
+                mock(SoundService.class), new PlayerStateStore(),
                 mock(FakeSpectatorService.class), mock(GameManager.class),
                 mock(LobbyService.class), key);
     }
@@ -151,7 +165,8 @@ class SpectatorToolbarServiceTest {
                     .thenReturn(seconds);
         }
         SpectatorToolbarService toolbar = new SpectatorToolbarService(overrides,
-                mock(MessageService.class), mock(SoundService.class), new PlayerStateStore(),
+                mock(MessageService.class), new SpectatorMessages(), new CommandMessages(),
+                mock(SoundService.class), new PlayerStateStore(),
                 mock(FakeSpectatorService.class), game,
                 mock(LobbyService.class),
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
@@ -313,8 +328,8 @@ class SpectatorToolbarServiceTest {
     void modeChangeSkipsDeployForParticipants() {
         PlayerStateStore players = new PlayerStateStore();
         SpectatorToolbarService toolbar = spy(new SpectatorToolbarService(
-                mock(OverrideService.class), mock(MessageService.class),
-                mock(SoundService.class), players, mock(FakeSpectatorService.class),
+                mock(OverrideService.class), mock(MessageService.class), new SpectatorMessages(),
+                new CommandMessages(), mock(SoundService.class), players, mock(FakeSpectatorService.class),
                 mock(GameManager.class), mock(LobbyService.class),
                 new NamespacedKey("jmanhunt", "spectator_toolbar")));
         ItemStack head = mock(ItemStack.class);
@@ -335,8 +350,8 @@ class SpectatorToolbarServiceTest {
     void modeDisableWithoutDeployIsNoop() {
         PlayerStateStore players = new PlayerStateStore();
         SpectatorToolbarService toolbar = new SpectatorToolbarService(
-                mock(OverrideService.class), mock(MessageService.class),
-                mock(SoundService.class), players, mock(FakeSpectatorService.class),
+                mock(OverrideService.class), mock(MessageService.class), new SpectatorMessages(),
+                new CommandMessages(), mock(SoundService.class), players, mock(FakeSpectatorService.class),
                 mock(GameManager.class), mock(LobbyService.class),
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
         Player hunter = mock(Player.class);
@@ -361,7 +376,8 @@ class SpectatorToolbarServiceTest {
         MessageService messages = mock(MessageService.class);
         SoundService sounds = mock(SoundService.class);
         SpectatorToolbarService toolbar = new SpectatorToolbarService(
-                mock(OverrideService.class), messages, sounds, new PlayerStateStore(),
+                mock(OverrideService.class), messages, texts(), new CommandMessages(), sounds,
+                new PlayerStateStore(),
                 mock(FakeSpectatorService.class), game, lobbies,
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
         Player spectator = mock(Player.class);
@@ -387,7 +403,7 @@ class SpectatorToolbarServiceTest {
 
         assertTrue(fixture.toolbar().swapSpectator(fixture.spectator(), 7L));
 
-        verify(fixture.messages()).message(fixture.spectator(), "spectator.already-in-match");
+        verify(fixture.messages()).messageRaw(fixture.spectator(), "already in tpl");
         verify(fixture.sounds()).playNeutralSound(fixture.spectator());
         verify(fixture.spectator()).closeInventory();
         verify(fixture.game(), never()).leaveMatch(any(), any(), anyBoolean());
@@ -420,7 +436,7 @@ class SpectatorToolbarServiceTest {
 
         assertFalse(fixture.toolbar().swapSpectator(fixture.spectator(), 7L));
 
-        verify(fixture.messages()).message(fixture.spectator(), "spectator.match-gone");
+        verify(fixture.messages()).messageRaw(fixture.spectator(), "gone tpl");
         verify(fixture.sounds()).playAngrySound(fixture.spectator());
         verify(fixture.spectator()).closeInventory();
     }
@@ -435,8 +451,8 @@ class SpectatorToolbarServiceTest {
         PlayerStateStore players = new PlayerStateStore();
         GameManager game = mock(GameManager.class);
         when(game.instanceOf(any())).thenReturn(Optional.empty());
-        SpectatorToolbarService toolbar = new SpectatorToolbarService(overrides, messages,
-                sounds, players, mock(FakeSpectatorService.class), game,
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(overrides, messages, texts(),
+                new CommandMessages(), sounds, players, mock(FakeSpectatorService.class), game,
                 mock(LobbyService.class),
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
         Player spectator = mock(Player.class);
@@ -456,9 +472,9 @@ class SpectatorToolbarServiceTest {
         }
 
         verify(spectator, times(1)).teleport(any(Location.class));
-        verify(messages, times(1)).message(eq(spectator), eq("spectator.now-spectating"),
+        verify(messages, times(1)).messageRaw(eq(spectator), eq("now tpl"),
                 any());
-        verify(messages).message(spectator, "spectator.already-spectating",
+        verify(messages).messageRaw(spectator, "already tpl",
                 Map.of("player", "Alex"));
         verify(sounds, times(2)).playNeutralSound(spectator);
         verify(spectator, times(2)).closeInventory();

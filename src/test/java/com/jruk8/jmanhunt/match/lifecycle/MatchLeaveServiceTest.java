@@ -16,7 +16,10 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -37,6 +40,13 @@ class MatchLeaveServiceTest {
             Player player) {
     }
 
+    private static GameMessages texts() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "game.hunter-left", "hunter left tpl");
+        ConfigPathMapper.set(config, "game.speedrunner-left", "runner left tpl");
+        return config.getGame();
+    }
+
     private static Fixture fixture(Role role) {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         OverrideService overrides = mock(OverrideService.class);
@@ -51,7 +61,7 @@ class MatchLeaveServiceTest {
         MatchMessaging messaging = mock(MatchMessaging.class);
         @SuppressWarnings("unchecked")
         Consumer<GameInstance> afterLeave = mock(Consumer.class);
-        MatchLeaveService leaves = new MatchLeaveService(plugin, mock(MessageService.class),
+        MatchLeaveService leaves = new MatchLeaveService(plugin, mock(MessageService.class), texts(),
                 players, mock(CompassManager.class), mock(GameStateCommandManager.class),
                 mock(ConfigService.class), mock(WorldEngineService.class), store, messaging,
                 mock(FlagStore.class), afterLeave);
@@ -77,7 +87,7 @@ class MatchLeaveServiceTest {
         assertEquals(1, fixture.leaves().leaveMatch(fixture.instance(),
                 List.of(fixture.player()), false));
 
-        verify(fixture.messaging()).sendToInstance(fixture.instance(), "game.hunter-left",
+        verify(fixture.messaging()).sendToInstance(fixture.instance(), "hunter left tpl",
                 Map.of("player", "Alex", "remaining", "1"));
         verify(fixture.messaging(), never()).sendToLobby(anyInt(), anyString(), any());
     }
@@ -89,7 +99,7 @@ class MatchLeaveServiceTest {
         assertEquals(1, fixture.leaves().leaveMatch(fixture.instance(),
                 List.of(fixture.player()), false));
 
-        verify(fixture.messaging()).sendToInstance(fixture.instance(), "game.speedrunner-left",
+        verify(fixture.messaging()).sendToInstance(fixture.instance(), "runner left tpl",
                 Map.of("player", "Alex", "remaining", "2"));
         verify(fixture.messaging(), never()).sendToLobby(anyInt(), anyString(), any());
     }

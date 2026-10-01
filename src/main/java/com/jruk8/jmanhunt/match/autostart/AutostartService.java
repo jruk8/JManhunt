@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.match.autostart;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.NumberWords;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -39,6 +40,7 @@ public final class AutostartService {
     private final WorldEngineService worldEngine;
     private final MatchStore store;
     private final MatchMessaging messaging;
+    private final ManhuntMessages manhunt;
     private final MatchControl control;
     /** Per-lobby autostart countdowns, keyed by lobby id. */
     private final Map<Integer, AutostartCountdown> autostartCountdowns = new HashMap<>();
@@ -56,7 +58,7 @@ public final class AutostartService {
 
     public AutostartService(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
             LobbyService lobbies, WorldEngineService worldEngine, MatchStore store,
-            MatchMessaging messaging, MatchControl control) {
+            MatchMessaging messaging, ManhuntMessages manhunt, MatchControl control) {
         this.plugin = plugin;
         this.messages = messages;
         this.playerStates = playerStates;
@@ -64,6 +66,7 @@ public final class AutostartService {
         this.worldEngine = worldEngine;
         this.store = store;
         this.messaging = messaging;
+        this.manhunt = manhunt;
         this.control = control;
     }
 
@@ -142,11 +145,11 @@ public final class AutostartService {
         }
         if (isVersusStyle(countdownStyle(lobbyId))) {
             int[] counts = countQueuedRoles(lobby);
-            messaging.sendToLobby(lobbyId, "manhunt.autostart-versus-countdown",
+            messaging.sendToLobby(lobbyId, manhunt.getAutostartVersusCountdown(),
                     versusValues(remainingSeconds, counts[0], hunterColor(),
                             counts[1], runnerColor()));
         } else {
-            messaging.sendToLobby(lobbyId, "manhunt.autostart-countdown",
+            messaging.sendToLobby(lobbyId, manhunt.getAutostartCountdown(),
                     Map.of("seconds", String.valueOf(remainingSeconds)));
         }
         messaging.playLobbySound(lobbyId, "game.autostart-countdown");
@@ -156,12 +159,12 @@ public final class AutostartService {
     private void sendAutostartEligible(Lobby lobby, int configured) {
         if (isVersusStyle(countdownStyle(lobby.id()))) {
             int[] counts = countQueuedRoles(lobby);
-            messaging.sendToLobby(lobby.id(), "manhunt.autostart-versus-eligible",
+            messaging.sendToLobby(lobby.id(), manhunt.getAutostartVersusEligible(),
                     versusValues(configured, counts[0], hunterColor(),
                             counts[1], runnerColor()));
             return;
         }
-        messaging.sendToLobby(lobby.id(), "manhunt.autostart-eligible",
+        messaging.sendToLobby(lobby.id(), manhunt.getAutostartEligible(),
                 Map.of("seconds", String.valueOf(configured)));
     }
 
@@ -255,7 +258,7 @@ public final class AutostartService {
                 countdown.task.cancel();
             }
             if (announce) {
-                messaging.sendToLobby(lobbyId, "manhunt.autostart-cancelled", Map.of());
+                messaging.sendToLobby(lobbyId, manhunt.getAutostartCancelled(), Map.of());
                 messaging.playLobbySound(lobbyId, "game.autostart-cancelled");
             }
         }
@@ -422,11 +425,11 @@ public final class AutostartService {
     private void sendRequirementNag(List<Player> recipients,
             Map<Role, Integer> missing, Map<Role, Integer> excess) {
         if (!excess.isEmpty()) {
-            messages.sendTo(recipients, "manhunt.autostart-too-many",
+            messages.sendToRaw(recipients, manhunt.getAutostartTooMany(),
                     Map.of("details", countDetails(excess, "extra")));
             return;
         }
-        messages.sendTo(recipients, "manhunt.autostart-needs-more",
+        messages.sendToRaw(recipients, manhunt.getAutostartNeedsMore(),
                 Map.of("details", countDetails(missing, "more")));
     }
 

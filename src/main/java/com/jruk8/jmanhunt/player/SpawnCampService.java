@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.player;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 
 import org.bukkit.entity.Player;
@@ -45,19 +46,22 @@ public final class SpawnCampService {
 
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final GameMessages game;
     private final Map<KillKey, Deque<Long>> kills = new HashMap<>();
     private final Map<OffenseKey, Integer> offenses = new HashMap<>();
     private final Set<UUID> quietPunishment = new HashSet<>();
     private final Set<String> warnedRoles = new HashSet<>();
     private final LongSupplier clock;
 
-    public SpawnCampService(JManhuntPlugin plugin, MessageService messages) {
-        this(plugin, messages, System::currentTimeMillis);
+    public SpawnCampService(JManhuntPlugin plugin, MessageService messages, GameMessages game) {
+        this(plugin, messages, game, System::currentTimeMillis);
     }
 
-    SpawnCampService(JManhuntPlugin plugin, MessageService messages, LongSupplier clock) {
+    SpawnCampService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
+            LongSupplier clock) {
         this.plugin = plugin;
         this.messages = messages;
+        this.game = game;
         this.clock = clock;
     }
 
@@ -100,7 +104,7 @@ public final class SpawnCampService {
         int count = recordKill(matchId, attacker.getUniqueId(), victim.getUniqueId(), windowMillis);
         if (count < Math.max(1, limit)) {
             if (shouldWarn(count, limit)) {
-                messages.message(attacker, "game.spawncamp-warning",
+                messages.messageRaw(attacker, game.getSpawncampWarning(),
                         Map.of("victim", victim.getName()));
             }
             return;
@@ -112,13 +116,13 @@ public final class SpawnCampService {
         int offense = recordOffense(matchId, attacker.getUniqueId());
         if (offense >= 2 && killOnSecond) {
             quietKill(attacker);
-            broadcast("game.spawncamp-kill", attacker, victim, count);
+            broadcast(game.getSpawncampKill(), attacker, victim, count);
         } else if (first == Punishment.GEAR_WIPE) {
             wipeGear(attacker);
-            broadcast("game.spawncamp-gear-wipe", attacker, victim, count);
+            broadcast(game.getSpawncampGearWipe(), attacker, victim, count);
         } else {
             quietKill(attacker);
-            broadcast("game.spawncamp-kill", attacker, victim, count);
+            broadcast(game.getSpawncampKill(), attacker, victim, count);
         }
     }
 
@@ -205,8 +209,8 @@ public final class SpawnCampService {
         player.getInventory().setItemInMainHand(null);
     }
 
-    private void broadcast(String key, Player attacker, Player victim, int count) {
-        messages.broadcast(key, Map.of("player", attacker.getName(),
+    private void broadcast(String template, Player attacker, Player victim, int count) {
+        messages.broadcastRaw(template, Map.of("player", attacker.getName(),
                 "victim", victim.getName(), "count", String.valueOf(count)));
     }
 }

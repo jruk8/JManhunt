@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.compass;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -17,20 +18,23 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /** Compass items: giving, finding, identifying, and restamping. */
 final class CompassItemService {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final CompassMessages compass;
     private final PlayerStateStore playerStates;
     private final NamespacedKey compassKey;
     private GameManager game;
 
-    CompassItemService(JManhuntPlugin plugin, MessageService messages, PlayerStateStore playerStates,
-            NamespacedKey compassKey) {
+    CompassItemService(JManhuntPlugin plugin, MessageService messages, CompassMessages compass,
+            PlayerStateStore playerStates, NamespacedKey compassKey) {
         this.plugin = plugin;
         this.messages = messages;
+        this.compass = compass;
         this.playerStates = playerStates;
         this.compassKey = compassKey;
     }
@@ -273,39 +277,37 @@ final class CompassItemService {
      */
     private void applyCompassIdentity(ItemStack item, Role holderRole) {
         ItemMeta meta = item.getItemMeta();
-        String nameKey = compassNameKey(holderRole);
-        if (messages.string(nameKey, null) == null) {
-            nameKey = "compass.compass-name";
-        }
-        meta.displayName(messages.nonItalic(messages.component(nameKey)));
-        List<String> lore = messages.strings(compassLoreKey(holderRole));
-        if (lore.isEmpty()) {
-            lore = messages.strings("compass.compass-lore");
-        }
+        meta.displayName(messages.nonItalic(
+                messages.componentRaw(compassName(compass, holderRole), Map.of())));
+        List<String> lore = compassLore(compass, holderRole);
         meta.lore(lore.stream().map(messages::parse).map(messages::nonItalic).toList());
         item.setItemMeta(meta);
     }
 
-    /** Message key for a role's compass name. Pure for tests. */
-    static String compassNameKey(Role holderRole) {
+    /**
+     * Compass name for a role. Other roles render the legacy key text,
+     * matching the old lookup of the unresolvable compass-name key.
+     * Pure for tests.
+     */
+    static String compassName(CompassMessages compass, Role holderRole) {
         if (holderRole == Role.SPEEDRUNNER) {
-            return "compass.speedrunner-name";
+            return compass.getSpeedrunnerName();
         }
         if (holderRole == Role.HUNTER) {
-            return "compass.hunter-name";
+            return compass.getHunterName();
         }
         return "compass.compass-name";
     }
 
-    /** Message key for a role's compass lore. Pure for tests. */
-    static String compassLoreKey(Role holderRole) {
+    /** Compass lore for a role; other roles get no lore. Pure for tests. */
+    static List<String> compassLore(CompassMessages compass, Role holderRole) {
         if (holderRole == Role.SPEEDRUNNER) {
-            return "compass.speedrunner-lore";
+            return compass.getSpeedrunnerLore();
         }
         if (holderRole == Role.HUNTER) {
-            return "compass.hunter-lore";
+            return compass.getHunterLore();
         }
-        return "compass.compass-lore";
+        return List.of();
     }
 
     boolean mustBeInventory(Integer lobby) {

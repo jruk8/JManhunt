@@ -33,6 +33,7 @@ import com.jruk8.jmanhunt.match.listeners.PrestartTargetListener;
 import com.jruk8.jmanhunt.match.listeners.TeamChatListener;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.message.MessagesRegistrar;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
@@ -168,10 +169,9 @@ public final class JManhuntPlugin extends JavaPlugin {
     /** Creates messaging, logging, lobby, and tutorial configuration services. */
     private void bootstrapCore() {
         messages = new MessageService();
-        spawnCamp = new SpawnCampService(this, messages);
+        spawnCamp = new SpawnCampService(this, messages, messages.game());
         debugService = new DebugService();
-        logger = new JManhuntLogger(getLogger(), debugService, messages, BukkitDebugSink.INSTANCE);
-        lobbyService = new LobbyService(this);
+        lobbyService = new LobbyService(this, messages.manhunt());
         lobbyConfigs = new LobbyConfigRegistrar(this);
         lobbyConfigs.register();
         tutorialConfigs = new TutorialConfigRegistrar(this);
@@ -186,6 +186,8 @@ public final class JManhuntPlugin extends JavaPlugin {
         configRegistrar.register();
         messageConfigs = new MessagesRegistrar(this);
         messageConfigs.register();
+        logger = new JManhuntLogger(getLogger(), debugService, messages,
+                messageConfigs.getMessagesConfig().getDebug(), BukkitDebugSink.INSTANCE);
         reload();
     }
 
@@ -200,7 +202,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         fakeSpectators = new FakeSpectatorService(this, playerStates);
         setupStatistics();
         setupEngineState();
-        stats = new StatsManager(this, messages, statistics);
+        stats = new StatsManager(this, messages, messages.game(), statistics);
         stats.loadLobbySessionsAsync();
         guiService = new GuiService(sounds);
         tutorialService = new TutorialService(tutorialConfigs.getTutorialConfig(),
@@ -208,8 +210,9 @@ public final class JManhuntPlugin extends JavaPlugin {
                 new JManhuntTutorialSounds(tutorialConfigs.getTutorialConfig(), sounds),
                 new JManhuntTutorialCommands(sounds),
                 new JManhuntTutorialLogger(logger));
-        compass = new CompassManager(this, messages, sounds, playerStates,
-                new NamespacedKey(this, "hunters_compass"));
+        MessagesConfig texts = messageConfigs.getMessagesConfig();
+        compass = new CompassManager(this, messages, texts.getCompass(), texts.getModifiers(),
+                sounds, playerStates, new NamespacedKey(this, "hunters_compass"));
         worldEngine = new WorldEngineService(this, messages, configService, engineState, playerStates);
         worldEngine.deleteOrphanedEndCells();
         loadLobbyWorldOnBoot();
@@ -244,8 +247,10 @@ public final class JManhuntPlugin extends JavaPlugin {
     /** Creates the game manager and wires it to the compass, world engine, and listeners. */
     private void bootstrapGame() {
         winConditionEngine = new WinConditionEngine(overrideService);
+        MessagesConfig gameTexts = messageConfigs.getMessagesConfig();
         game = new GameManager(
-                this, messages, sounds, playerStates, compass, stats,
+                this, messages, gameTexts.getManhunt(), gameTexts.getGame(), gameTexts.getWincon(),
+                sounds, playerStates, compass, stats,
                 configService, worldEngine, winConditionEngine, lobbyService);
         game.loadCrashCleanup();
         compass.setGameManager(game);
@@ -349,10 +354,11 @@ public final class JManhuntPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(
                 this, playerStates, game, messages, configService, lobbyService,
                 worldEngine.teleportService(), worldEngine, disconnects, disconnectTasks,
-                compass), this);
+                compass, messageConfigs.getMessagesConfig().getGame()), this);
         getServer().getPluginManager().registerEvents(new PlayerCombatListener(
                 this, playerStates, game, configService, compass, stats, lobbyService,
-                worldEngine, winConditionEngine, respawn, disconnects, disconnectTasks), this);
+                worldEngine, winConditionEngine, respawn, disconnects, disconnectTasks,
+                messageConfigs.getMessagesConfig().getGame()), this);
         setupChatListeners();
         getServer().getPluginManager().registerEvents(new PlayerMovementListener(
                 playerStates, game, winConditionEngine, worldEngine, fakeSpectators), this);
@@ -362,7 +368,7 @@ public final class JManhuntPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(piglinBarter, this);
         getServer().getPluginManager().registerEvents(new BruteSpawnListener(this), this);
         getServer().getPluginManager().registerEvents(new RolePadService(
-                this, lobbyService, playerStates, game, messages, sounds,
+                this, lobbyService, playerStates, game, messages, messages.manhunt(), sounds,
                 worldEngine::lobbyWorldName), this);
         getServer().getPluginManager().registerEvents(new LobbyProtectionService(
                 this, worldEngine::lobbyWorldName), this);
@@ -378,7 +384,8 @@ public final class JManhuntPlugin extends JavaPlugin {
 
     /** Creates the respawn router and keeps it for roster skull lookups. */
     private PlayerRespawnListener createRespawnListener() {
-        respawnListener = new PlayerRespawnListener(this, playerStates, game, compass);
+        respawnListener = new PlayerRespawnListener(this, playerStates, game, compass,
+                messageConfigs.getMessagesConfig().getGame());
         return respawnListener;
     }
 
@@ -393,7 +400,7 @@ public final class JManhuntPlugin extends JavaPlugin {
     private void setupChatListeners() {
         getServer().getPluginManager().registerEvents(new TeamChatListener(this,
                 new TeamChatService(game, playerStates, fakeSpectators, configService,
-                        messages, sounds)), this);
+                        messages, messages.chat(), sounds)), this);
         getServer().getPluginManager().registerEvents(new TutorialChatListener(this, tutorialService), this);
     }
 
@@ -406,13 +413,15 @@ public final class JManhuntPlugin extends JavaPlugin {
                 lobbyService.applyLobbyCollisions(player);
             }
         });
-        spectatorToolbar = new SpectatorToolbarService(overrideService, messages, sounds, playerStates,
+        spectatorToolbar = new SpectatorToolbarService(overrideService, messages, messages.spectator(),
+                messages.command(), sounds, playerStates,
                 fakeSpectators, game, lobbyService, new NamespacedKey(this, "spectator_toolbar"));
-        SpectatorMenus menus = new SpectatorMenus(messages, guiService, spectatorToolbar);
+        SpectatorMenus menus = new SpectatorMenus(messages,
+                messageConfigs.getMessagesConfig().getSpectator(), guiService, spectatorToolbar);
         getServer().getPluginManager().registerEvents(
                 new SpectatorToolbarListener(spectatorToolbar, menus), this);
         SpectatorSnowballService snowballs = new SpectatorSnowballService(
-                this, spectatorToolbar, messages, sounds);
+                this, spectatorToolbar, messages, messages.spectator(), sounds);
         getServer().getPluginManager().registerEvents(new SpectatorSnowballListener(snowballs), this);
     }
 

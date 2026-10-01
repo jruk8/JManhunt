@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.stats;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
@@ -19,6 +20,7 @@ import java.util.Set;
 public final class StatsManager {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final GameMessages gameTexts;
     private final StatisticsRepository repository;
     private final Map<Long, Map<UUID, Stats>> matchStats = new HashMap<>();
     private final Map<UUID, CareerStats> career = new ConcurrentHashMap<>();
@@ -27,9 +29,11 @@ public final class StatsManager {
     private final Set<UUID> careerLoaded = ConcurrentHashMap.newKeySet();
     private final Set<CompletableFuture<Void>> pendingSaves = ConcurrentHashMap.newKeySet();
 
-    public StatsManager(JManhuntPlugin plugin, MessageService messages, StatisticsRepository repository) {
+    public StatsManager(JManhuntPlugin plugin, MessageService messages, GameMessages gameTexts,
+            StatisticsRepository repository) {
         this.plugin = plugin;
         this.messages = messages;
+        this.gameTexts = gameTexts;
         this.repository = repository;
     }
 
@@ -349,15 +353,16 @@ public final class StatsManager {
             if (ranked.isEmpty()) {
                 continue;
             }
-            String displayName = messages.string("game.stat-names." + statistic, statistic);
-            String prefix = messages.string("game.stat-header-prefix", "<#de7766>");
-            sendStat(recipients, "game.stat-header", Map.of("stat-prefix", prefix, "stat", displayName));
+            String displayName = gameTexts.getStatNames().getOrDefault(statistic, statistic);
+            String prefix = gameTexts.getStatHeaderPrefix();
+            sendStat(recipients, gameTexts.getStatHeader(), Map.of("stat-prefix", prefix, "stat", displayName));
             for (int i = 0; i < ranked.size(); i++) {
                 Stats stat = ranked.get(i);
                 String placement = getPlacementName(i);
-                var rankColor = messages.string("game.rank-colors." + placement, "&f");
-                sendStat(recipients, "game.stat-entry", Map.of("rank-color", rankColor, "rank", String.valueOf(i + 1),
-                        "player", stat.player, "value", stat.displayValue(statistic, messages)));
+                var rankColor = gameTexts.getRankColors().getOrDefault(placement, "&f");
+                sendStat(recipients, gameTexts.getStatEntry(),
+                        Map.of("rank-color", rankColor, "rank", String.valueOf(i + 1),
+                        "player", stat.player, "value", stat.displayValue(statistic, gameTexts)));
             }
         }
     }
@@ -366,8 +371,9 @@ public final class StatsManager {
         return switch (index) { case 0 -> "first"; case 1 -> "second"; case 2 -> "third"; default -> "other"; };
     }
 
-    private void sendStat(Collection<? extends Player> recipients, String key, Map<String, String> values) {
-        Component rendered = messages.component(key, values);
+    private void sendStat(Collection<? extends Player> recipients, String template,
+            Map<String, String> values) {
+        Component rendered = messages.componentRaw(template, values);
         for (Player recipient : recipients) {
             recipient.sendMessage(rendered);
         }

@@ -12,7 +12,11 @@ import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.match.ModifierTriggers;
+import com.jruk8.jmanhunt.message.CommandMessages;
+import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersGuiMessages;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierFieldEdits;
 import com.jruk8.jmanhunt.modifiers.ModifierOptionDescriptors;
@@ -52,6 +56,10 @@ public final class BehaviorOptionsMenus {
 
     private final ModifierStore store;
     private final MessageService messages;
+    private final ModifiersGuiMessages modifiersGui;
+    private final ManhuntGuiMessages manhuntGui;
+    private final ModifiersMessages modifiers;
+    private final CommandMessages command;
     private final SoundService sounds;
     private final GuiService gui;
     private final SettingDialogs dialogs;
@@ -63,10 +71,15 @@ public final class BehaviorOptionsMenus {
      *        builders tolerate them as null
      */
     public BehaviorOptionsMenus(ModifierStore store, MessageService messages,
-            SoundService sounds, GuiService gui,
-            SettingDialogs dialogs, ModifierDialog modifierDialogs) {
+            ModifiersGuiMessages modifiersGui, ManhuntGuiMessages manhuntGui,
+            ModifiersMessages modifiers, CommandMessages command, SoundService sounds,
+            GuiService gui, SettingDialogs dialogs, ModifierDialog modifierDialogs) {
         this.store = store;
         this.messages = messages;
+        this.modifiersGui = modifiersGui;
+        this.manhuntGui = manhuntGui;
+        this.modifiers = modifiers;
+        this.command = command;
         this.sounds = sounds;
         this.gui = gui;
         this.dialogs = dialogs;
@@ -79,7 +92,7 @@ public final class BehaviorOptionsMenus {
         Supplier<List<MenuButton>> content = () -> optionButtons(id, index, () -> self[0]);
         MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(content.get().size()));
         self[0] = new Menu(
-                GuiTexts.title(messages, text("behavior-options-title", "Behavior Options")),
+                GuiTexts.title(messages, modifiersGui.getBehaviorOptionsTitle()),
                 layout, () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
                         Panels.backButton(gui, backName(), self)),
                 content::get, parent);
@@ -90,15 +103,15 @@ public final class BehaviorOptionsMenus {
         List<MenuButton> buttons = new ArrayList<>();
         buttons.add(runsOnRow(id, index, self));
         buttons.add(EditorButtons.actionButton(messages, Material.REPEATER,
-                text("interval-settings-title", "Interval Settings"),
-                List.of(text("interval-settings-lore", "Cadence, jitter, and scope"),
-                        text("editor-click-open", "Click to open")),
+                modifiersGui.getIntervalSettingsTitle(),
+                List.of(modifiersGui.getIntervalSettingsLore(),
+                        modifiersGui.getEditorClickOpen()),
                 ModifiedGlow.behaviorIntervalGroup(store, id, index),
                 player -> openInterval(player, id, index, self.get())).silent());
         buttons.add(EditorButtons.actionButton(messages, Material.BELL,
-                text("execution-title", "Execution"),
-                List.of(text("execution-lore", "Line selection and order"),
-                        text("editor-click-open", "Click to open")),
+                modifiersGui.getExecutionTitle(),
+                List.of(modifiersGui.getExecutionLore(),
+                        modifiersGui.getEditorClickOpen()),
                 ModifiedGlow.behaviorExecutionGroup(store, id, index),
                 player -> {
                     if (denied(player)) {
@@ -112,9 +125,9 @@ public final class BehaviorOptionsMenus {
                         raw -> submitDelay(id, index, raw)),
                 () -> delayPatch(id, index, null)));
         buttons.add(EditorButtons.actionButton(messages, Material.HOPPER,
-                text("chance-title", "Success Chance"),
-                List.of(text("chance-lore", "Roll chance and scope"),
-                        text("editor-click-open", "Click to open")),
+                modifiersGui.getChanceTitle(),
+                List.of(modifiersGui.getChanceLore(),
+                        modifiersGui.getEditorClickOpen()),
                 ModifiedGlow.behaviorChanceGroup(store, id, index),
                 player -> {
                     if (denied(player)) {
@@ -128,7 +141,7 @@ public final class BehaviorOptionsMenus {
     private MenuButton runsOnRow(String id, int index, Supplier<Menu> self) {
         List<String> triggers = store.runsOn(id, index);
         return leafRow(id, index, self, "runs-on",
-                text("runs-on-title", "Runs On"), runsOnValue(triggers),
+                modifiersGui.getRunsOnTitle(), runsOnValue(triggers),
                 ModifierTriggers.KNOWN, runsOnMarked(triggers),
                 ModifiedGlow.behaviorRunsOn(store, id, index),
                 player -> {
@@ -148,7 +161,7 @@ public final class BehaviorOptionsMenus {
         Supplier<List<MenuButton>> content = () -> intervalButtons(id, index, () -> self[0]);
         MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(content.get().size()));
         self[0] = new Menu(
-                GuiTexts.title(messages, text("interval-settings-title", "Interval Settings")),
+                GuiTexts.title(messages, modifiersGui.getIntervalSettingsTitle()),
                 layout, () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
                         Panels.backButton(gui, backName(), self)),
                 content::get, parent);
@@ -188,7 +201,7 @@ public final class BehaviorOptionsMenus {
         Supplier<List<MenuButton>> content = () -> executionButtons(id, index, () -> self[0]);
         MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(content.get().size()));
         self[0] = new Menu(
-                GuiTexts.title(messages, text("execution-title", "Execution")),
+                GuiTexts.title(messages, modifiersGui.getExecutionTitle()),
                 layout, () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
                         Panels.backButton(gui, backName(), self)),
                 content::get, parent);
@@ -244,7 +257,7 @@ public final class BehaviorOptionsMenus {
         Supplier<List<MenuButton>> content = () -> chanceButtons(id, index, () -> self[0]);
         MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(content.get().size()));
         self[0] = new Menu(
-                GuiTexts.title(messages, text("chance-title", "Success Chance")),
+                GuiTexts.title(messages, modifiersGui.getChanceTitle()),
                 layout, () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
                         Panels.backButton(gui, backName(), self)),
                 content::get, parent);
@@ -291,7 +304,7 @@ public final class BehaviorOptionsMenus {
                 descriptor.defaultText(), hintFor(descriptor.kind()), false);
         return FieldButtons.field(messages, descriptor.icon(),
                 label == null ? descriptor.label() : label,
-                FieldLore.lines(messages, field), glow,
+                FieldLore.lines(manhuntGui, field), glow,
                 click, player -> resetLeaf(player, id, index, self, optionKey, value, clear));
     }
 
@@ -310,10 +323,10 @@ public final class BehaviorOptionsMenus {
     private String hintFor(ModifierOptionDescriptors.Kind kind) {
         return switch (kind) {
             case NUMBER, INTEGER ->
-                    messages.string("manhunt-gui.setting-hint-edit", "Click to edit");
+                    manhuntGui.getSettingHintEdit();
             case CHOICE ->
-                    messages.string("manhunt-gui.setting-hint-cycle", "Click to cycle");
-            case TRIGGERS -> text("editor-click-open", "Click to open");
+                    manhuntGui.getSettingHintCycle();
+            case TRIGGERS -> modifiersGui.getEditorClickOpen();
         };
     }
 
@@ -328,19 +341,18 @@ public final class BehaviorOptionsMenus {
             return;
         }
         if (!leafModified(id, index, optionKey)) {
-            messages.message(player, "modifiers-gui.editor-already-default");
+            messages.messageRaw(player, modifiersGui.getEditorAlreadyDefault());
             return;
         }
         ModifierOptionDescriptors.Descriptor descriptor =
                 ModifierOptionDescriptors.byKey(optionKey);
         Menu confirm = ConfirmMenu.create(
-                GuiTexts.title(messages, text("editor-reset-title", "Reset {name}?")
-                        .replace("{name}", descriptor.label())),
+                GuiTexts.title(messages, modifiersGui.getEditorResetTitle().replace("{name}", descriptor.label())),
                 Material.PAPER, null,
                 GuiTexts.lore(messages, List.of(value + " -> " + descriptor.defaultText())),
-                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                GuiTexts.name(messages, modifiersGui.getCancel(), "Cancel"),
                 back -> gui.navigate(back, self.get()),
-                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                GuiTexts.name(messages, modifiersGui.getConfirm(), "Confirm"),
                 done -> {
                     clear.run();
                     if (sounds != null) {
@@ -396,8 +408,7 @@ public final class BehaviorOptionsMenus {
         if (triggers.isEmpty()) {
             return "Default (ON_START)";
         }
-        return text("runs-on-count", "{total} selected")
-                .replace("{total}", String.valueOf(triggers.size()));
+        return modifiersGui.getRunsOnCount().replace("{total}", String.valueOf(triggers.size()));
     }
 
     /** Stored triggers uppercased for bullet marking. */
@@ -414,7 +425,7 @@ public final class BehaviorOptionsMenus {
             return;
         }
         if (!hasInterval(id, index)) {
-            invalid(player, text("interval-gated", "Add the INTERVAL trigger in Runs On first."));
+            invalid(player, modifiersGui.getIntervalGated());
             return;
         }
         gui.navigate(player, intervalMenu(id, index, () -> self));
@@ -457,8 +468,8 @@ public final class BehaviorOptionsMenus {
 
     private void fieldPrompt(Player player, Supplier<Menu> reopen, String label, String current,
             boolean clearable, FieldPrompts.Submit submit) {
-        FieldPrompts.prompt(dialogs, gui, messages, sounds, player, reopen,
-                text("editor-prompt-title", "Edit {label}").replace("{label}", label),
+        FieldPrompts.prompt(dialogs, gui, messages, modifiersGui, modifiers, sounds, player, reopen,
+                modifiersGui.getEditorPromptTitle().replace("{label}", label),
                 current, clearable, submit);
     }
 
@@ -620,7 +631,7 @@ public final class BehaviorOptionsMenus {
 
     private String orUnset(String value) {
         return value == null || value.isBlank()
-                ? text("editor-unset", "Not set") : value;
+                ? modifiersGui.getEditorUnset() : value;
     }
 
     private Double intervalOf(String id, int index) {
@@ -719,23 +730,21 @@ public final class BehaviorOptionsMenus {
     }
 
     private Component backName() {
-        return GuiTexts.name(messages, text("back", "Back"), "Back");
+        return GuiTexts.name(messages, modifiersGui.getBack(), "Back");
     }
 
     private boolean denied(Player player) {
         if (player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
             return false;
         }
-        messages.message(player, "command.no-permission");
+        messages.messageRaw(player, command.getNoPermission());
         return true;
     }
 
     private void invalid(Player player, String error) {
-        messages.message(player, "modifiers.edit-invalid", Map.of("error", error));
+        messages.messageRaw(player, modifiers.getEditInvalid(), Map.of("error", error));
         sounds.playAngrySound(player);
     }
 
-    private String text(String key, String fallback) {
-        return messages.string("modifiers-gui." + key, fallback);
-    }
+
 }

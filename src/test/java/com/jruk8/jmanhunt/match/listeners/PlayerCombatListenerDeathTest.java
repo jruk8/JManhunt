@@ -23,6 +23,10 @@ import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
+import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.message.GameMessages;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -63,6 +67,7 @@ class PlayerCombatListenerDeathTest {
         GameManager game = mock(GameManager.class);
         when(game.stateCommands()).thenReturn(mock(GameStateCommandManager.class));
         when(game.flagStore()).thenReturn(mock(FlagStore.class));
+        when(game.messaging()).thenReturn(mock(MatchMessaging.class));
         StatsManager stats = mock(StatsManager.class);
         when(stats.getOrCreate(anyLong(), any(UUID.class))).thenAnswer(invocation -> new Stats());
         CompassManager compass = mock(CompassManager.class);
@@ -84,9 +89,15 @@ class PlayerCombatListenerDeathTest {
         PlayerCombatListener listener = new PlayerCombatListener(plugin, players, game,
                 mock(ConfigService.class), compass, stats, mock(LobbyService.class),
                 mock(WorldEngineService.class), mock(WinConditionEngine.class), respawn,
-                mock(SpeedrunnerDisconnectTracker.class), new HashMap<>());
+                mock(SpeedrunnerDisconnectTracker.class), new HashMap<>(), texts());
         return new Fixture(listener, victim, victimId, players, instance, compass, fakes,
                 respawn);
+    }
+
+    private static GameMessages texts() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "game.speedrunner-respawn-scheduled", "respawn tpl");
+        return config.getGame();
     }
 
     /** Runs the death with an immediately executing scheduler. */
@@ -144,7 +155,7 @@ class PlayerCombatListenerDeathTest {
         assertTrue(fixture.instance().isActive(fixture.victimId()));
         assertTrue(fixture.instance().deadPlayers().isEmpty());
         verify(fixture.respawn()).scheduleRespawn(fixture.victim(), fixture.instance(), false,
-                0, "game.speedrunner-respawn-scheduled", 7L);
+                0, "respawn tpl", 7L);
         verify(fixture.fakes(), never()).enable(any(Player.class));
     }
 

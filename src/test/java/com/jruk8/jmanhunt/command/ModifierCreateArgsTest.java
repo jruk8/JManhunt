@@ -1,5 +1,8 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.message.MessagesConfig;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import java.util.Set;
@@ -13,25 +16,41 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ModifierCreateArgsTest {
     private static final Set<String> KNOWN = Set.of("beef", "swords");
 
+    private static ModifiersMessages texts() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "modifiers.create-usage", "usage tpl");
+        ConfigPathMapper.set(config, "modifiers.create-unknown-flag", "flag tpl");
+        ConfigPathMapper.set(config, "modifiers.create-missing-value", "missing tpl");
+        ConfigPathMapper.set(config, "modifiers.create-unknown-trigger", "trigger tpl");
+        ConfigPathMapper.set(config, "modifiers.create-unknown-member", "member tpl");
+        ConfigPathMapper.set(config, "modifiers.create-bad-command", "command tpl");
+        ConfigPathMapper.set(config, "modifiers.create-bad-item", "item tpl");
+        ConfigPathMapper.set(config, "modifiers.create-deviation-range", "deviation tpl");
+        ConfigPathMapper.set(config, "modifiers.create-bad-enum", "enum tpl");
+        ConfigPathMapper.set(config, "modifiers.create-bad-number", "number tpl");
+        return config.getModifiers();
+    }
+
     @Test
     void missingOrBadTypeShowsUsage() {
-        assertEquals("modifiers.create-usage", ModifierCreateArgs.parse(new String[]{}, KNOWN).messageKey());
-        assertEquals("modifiers.create-usage",
-                ModifierCreateArgs.parse(new String[]{"thing", "Foo"}, KNOWN).messageKey());
+        assertEquals("usage tpl", ModifierCreateArgs.parse(new String[]{}, KNOWN, texts()).messageTemplate());
+        assertEquals("usage tpl",
+                ModifierCreateArgs.parse(new String[]{"thing", "Foo"}, KNOWN, texts()).messageTemplate());
     }
 
     @Test
     void missingNameShowsUsage() {
-        assertEquals("modifiers.create-usage",
-                ModifierCreateArgs.parse(new String[]{"modifier"}, KNOWN).messageKey());
-        assertEquals("modifiers.create-usage",
-                ModifierCreateArgs.parse(new String[]{"modifier", "--chance", "0.5"}, KNOWN).messageKey());
+        assertEquals("usage tpl",
+                ModifierCreateArgs.parse(new String[]{"modifier"}, KNOWN, texts()).messageTemplate());
+        assertEquals("usage tpl",
+                ModifierCreateArgs.parse(new String[]{"modifier", "--chance", "0.5"}, KNOWN,
+                        texts()).messageTemplate());
     }
 
     @Test
     void minimalModifierHasNoSections() {
         ModifierCreateArgs.Result result =
-                ModifierCreateArgs.parse(new String[]{"modifier", "Beef", "Party"}, KNOWN);
+                ModifierCreateArgs.parse(new String[]{"modifier", "Beef", "Party"}, KNOWN, texts());
         assertTrue(result.success());
         assertEquals("Beef Party", result.plan().name());
         assertFalse(result.plan().preset());
@@ -45,26 +64,26 @@ class ModifierCreateArgsTest {
     @Test
     void unknownFlagFails() {
         ModifierCreateArgs.Result result =
-                ModifierCreateArgs.parse(new String[]{"modifier", "Foo", "--bogus", "x"}, KNOWN);
+                ModifierCreateArgs.parse(new String[]{"modifier", "Foo", "--bogus", "x"}, KNOWN, texts());
         assertFalse(result.success());
-        assertEquals("modifiers.create-unknown-flag", result.messageKey());
+        assertEquals("flag tpl", result.messageTemplate());
         assertEquals("--bogus", result.params().get("flag"));
     }
 
     @Test
     void modifierFlagOnPresetFails() {
         ModifierCreateArgs.Result result =
-                ModifierCreateArgs.parse(new String[]{"preset", "Foo", "--trigger", "ON_START"}, KNOWN);
+                ModifierCreateArgs.parse(new String[]{"preset", "Foo", "--trigger", "ON_START"}, KNOWN, texts());
         assertFalse(result.success());
-        assertEquals("modifiers.create-unknown-flag", result.messageKey());
+        assertEquals("flag tpl", result.messageTemplate());
     }
 
     @Test
     void missingValueFails() {
         ModifierCreateArgs.Result result =
-                ModifierCreateArgs.parse(new String[]{"modifier", "Foo", "--chance"}, KNOWN);
+                ModifierCreateArgs.parse(new String[]{"modifier", "Foo", "--chance"}, KNOWN, texts());
         assertFalse(result.success());
-        assertEquals("modifiers.create-missing-value", result.messageKey());
+        assertEquals("missing tpl", result.messageTemplate());
     }
 
     @Test
@@ -75,7 +94,7 @@ class ModifierCreateArgsTest {
                 "--interval-scope", "per_executor", "--chance", "0.5", "--chance-scope", "per_invoke",
                 "--selection", "pick_random", "--pick-count", "2", "--pick-scope", "per_executor",
                 "--delay", "100", "--console", "say hi <p>", "--player", "give <p> apple"};
-        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(args, KNOWN);
+        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(args, KNOWN, texts());
         assertTrue(result.success());
         assertTrue(result.warnings().isEmpty());
         ModifierCreateArgs.Plan plan = result.plan();
@@ -122,44 +141,44 @@ class ModifierCreateArgsTest {
 
     @Test
     void badNumbersFail() {
-        assertEquals("modifiers.create-bad-number", failKey("modifier", "Foo", "--chance", "nope"));
-        assertEquals("modifiers.create-bad-number", failKey("modifier", "Foo", "--chance", "2"));
-        assertEquals("modifiers.create-bad-number", failKey("modifier", "Foo", "--interval", "-1"));
-        assertEquals("modifiers.create-bad-number", failKey("modifier", "Foo", "--pick-count", "0"));
-        assertEquals("modifiers.create-bad-number",
-                failKey("modifier", "Foo", "--pick-count", "99999999999"));
-        assertEquals("modifiers.create-bad-number", failKey("modifier", "Foo", "--delay", "-5"));
+        assertEquals("number tpl", failTemplate("modifier", "Foo", "--chance", "nope"));
+        assertEquals("number tpl", failTemplate("modifier", "Foo", "--chance", "2"));
+        assertEquals("number tpl", failTemplate("modifier", "Foo", "--interval", "-1"));
+        assertEquals("number tpl", failTemplate("modifier", "Foo", "--pick-count", "0"));
+        assertEquals("number tpl",
+                failTemplate("modifier", "Foo", "--pick-count", "99999999999"));
+        assertEquals("number tpl", failTemplate("modifier", "Foo", "--delay", "-5"));
     }
 
     @Test
     void badEnumsFail() {
-        assertEquals("modifiers.create-bad-enum", failKey("modifier", "Foo", "--selection", "maybe"));
-        assertEquals("modifiers.create-bad-enum", failKey("modifier", "Foo", "--chance-scope", "all"));
-        assertEquals("modifiers.create-bad-enum", failKey("modifier", "Foo", "--on-start", "now"));
+        assertEquals("enum tpl", failTemplate("modifier", "Foo", "--selection", "maybe"));
+        assertEquals("enum tpl", failTemplate("modifier", "Foo", "--chance-scope", "all"));
+        assertEquals("enum tpl", failTemplate("modifier", "Foo", "--on-start", "now"));
     }
 
     @Test
     void unknownTriggerFails() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(
-                new String[]{"modifier", "Foo", "--trigger", "ON_TUESDAY"}, KNOWN);
+                new String[]{"modifier", "Foo", "--trigger", "ON_TUESDAY"}, KNOWN, texts());
         assertFalse(result.success());
-        assertEquals("modifiers.create-unknown-trigger", result.messageKey());
+        assertEquals("trigger tpl", result.messageTemplate());
         assertTrue(result.params().get("valid").contains("ON_START"));
     }
 
     @Test
     void unknownMemberFails() {
         ModifierCreateArgs.Result result =
-                ModifierCreateArgs.parse(new String[]{"preset", "Foo", "--member", "nope"}, KNOWN);
+                ModifierCreateArgs.parse(new String[]{"preset", "Foo", "--member", "nope"}, KNOWN, texts());
         assertFalse(result.success());
-        assertEquals("modifiers.create-unknown-member", result.messageKey());
+        assertEquals("member tpl", result.messageTemplate());
     }
 
     @Test
     void presetPlanBuildsMembers() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(
                 new String[]{"preset", "Pack", "--desc", "Both", "--member", "beef", "--member", "swords"},
-                KNOWN);
+                KNOWN, texts());
         assertTrue(result.success());
         assertTrue(result.plan().preset());
         ModifierPreset preset = result.plan().toPreset("Bea");
@@ -172,7 +191,7 @@ class ModifierCreateArgsTest {
     @Test
     void presetAcceptsAuthorFlag() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(
-                new String[] {"preset", "Pack", "--author", "Bea", "--member", "beef"}, KNOWN);
+                new String[] {"preset", "Pack", "--author", "Bea", "--member", "beef"}, KNOWN, texts());
         assertTrue(result.success());
         assertEquals("Bea", result.plan().author());
         assertEquals("Bea", result.plan().toPreset(result.plan().author()).getMeta().getAuthor());
@@ -181,21 +200,21 @@ class ModifierCreateArgsTest {
     @Test
     void triggersAndMembersDedupe() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(new String[]{"modifier", "Foo",
-                "--trigger", "ON_START", "--trigger", "on_start"}, KNOWN);
+                "--trigger", "ON_START", "--trigger", "on_start"}, KNOWN, texts());
         assertTrue(result.success());
         assertEquals(java.util.List.of("ON_START"), result.plan().triggers());
     }
 
     @Test
     void badItemFails() {
-        assertEquals("modifiers.create-bad-item", failKey("modifier", "Foo", "--item", "not_a_mat"));
-        assertEquals("modifiers.create-bad-item", failKey("modifier", "Foo", "--item", "air"));
+        assertEquals("item tpl", failTemplate("modifier", "Foo", "--item", "not_a_mat"));
+        assertEquals("item tpl", failTemplate("modifier", "Foo", "--item", "air"));
     }
 
     @Test
     void itemPrefixesNormalize() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(
-                new String[]{"modifier", "Foo", "--item", "minecraft:stone"}, KNOWN);
+                new String[]{"modifier", "Foo", "--item", "minecraft:stone"}, KNOWN, texts());
         assertTrue(result.success());
         assertEquals("STONE", result.plan().item());
     }
@@ -203,16 +222,16 @@ class ModifierCreateArgsTest {
     @Test
     void badCommandFailsWithList() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(
-                new String[]{"modifier", "Foo", "--player", "give <p apple"}, KNOWN);
+                new String[]{"modifier", "Foo", "--player", "give <p apple"}, KNOWN, texts());
         assertFalse(result.success());
-        assertEquals("modifiers.create-bad-command", result.messageKey());
+        assertEquals("command tpl", result.messageTemplate());
         assertEquals("player", result.params().get("list"));
     }
 
     @Test
     void commandWarningsPassThrough() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(
-                new String[]{"modifier", "Foo", "--console", "say <bogus>"}, KNOWN);
+                new String[]{"modifier", "Foo", "--console", "say <bogus>"}, KNOWN, texts());
         assertTrue(result.success());
         assertEquals(1, result.warnings().size());
     }
@@ -220,7 +239,7 @@ class ModifierCreateArgsTest {
     @Test
     void definedCallsWarnNowhereInScope() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(new String[]{"modifier", "Foo",
-                "--player", "say <fact:5>", "--hunter", "<def:fact,<fact:x>,x>"}, KNOWN);
+                "--player", "say <fact:5>", "--hunter", "<def:fact,<fact:x>,x>"}, KNOWN, texts());
         assertTrue(result.success());
         assertTrue(result.warnings().isEmpty(), result.warnings().toString());
     }
@@ -228,7 +247,7 @@ class ModifierCreateArgsTest {
     @Test
     void consoleDefsStayOutOfPlayerScope() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(new String[]{"modifier", "Foo",
-                "--player", "say <fact:5>", "--console", "<def:fact,<fact:x>,x>"}, KNOWN);
+                "--player", "say <fact:5>", "--console", "<def:fact,<fact:x>,x>"}, KNOWN, texts());
         assertTrue(result.success());
         assertEquals(1, result.warnings().size());
     }
@@ -236,7 +255,7 @@ class ModifierCreateArgsTest {
     @Test
     void greedyValuesKeepSpacesUntilNextFlag() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(new String[]{"modifier", "Foo",
-                "--console", "say hello brave world", "--chance", "0.5"}, KNOWN);
+                "--console", "say hello brave world", "--chance", "0.5"}, KNOWN, texts());
         assertTrue(result.success());
         assertEquals(java.util.List.of("say hello brave world"), result.plan().commands().get("console"));
         assertEquals(0.5, result.plan().chance());
@@ -245,7 +264,7 @@ class ModifierCreateArgsTest {
     @Test
     void repeatListFlagsAccumulate() {
         ModifierCreateArgs.Result result = ModifierCreateArgs.parse(new String[]{"modifier", "Foo",
-                "--player", "give <p> apple", "--player", "give <p> bread"}, KNOWN);
+                "--player", "give <p> apple", "--player", "give <p> bread"}, KNOWN, texts());
         assertTrue(result.success());
         assertEquals(java.util.List.of("give <p> apple", "give <p> bread"),
                 result.plan().commands().get("player"));
@@ -253,10 +272,10 @@ class ModifierCreateArgsTest {
 
     @Test
     void deviationNeedsIntervalAndCap() {
-        assertEquals("modifiers.create-deviation-range",
-                failKey("modifier", "Foo", "--deviation", "5"));
-        assertEquals("modifiers.create-deviation-range",
-                failKey("modifier", "Foo", "--interval", "5", "--deviation", "9"));
+        assertEquals("deviation tpl",
+                failTemplate("modifier", "Foo", "--deviation", "5"));
+        assertEquals("deviation tpl",
+                failTemplate("modifier", "Foo", "--interval", "5", "--deviation", "9"));
     }
 
     @Test
@@ -266,9 +285,9 @@ class ModifierCreateArgsTest {
         assertFalse(ModifierCreateArgs.flagsFor(true).contains("--chance"));
     }
 
-    private static String failKey(String... args) {
-        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(args, KNOWN);
+    private static String failTemplate(String... args) {
+        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(args, KNOWN, texts());
         assertFalse(result.success());
-        return result.messageKey();
+        return result.messageTemplate();
     }
 }

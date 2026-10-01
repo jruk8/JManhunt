@@ -14,6 +14,7 @@ import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpectatorToolbarService;
 import java.util.List;
@@ -32,8 +33,6 @@ class SpectatorMenusTest {
 
     private static Fixture fixture() {
         MessageService messages = mock(MessageService.class);
-        when(messages.string(anyString(), anyString()))
-                .thenAnswer(invocation -> invocation.getArgument(1));
         when(messages.parse(anyString()))
                 .thenAnswer(invocation ->
                         Component.text(invocation.getArgument(0, String.class)));
@@ -44,7 +43,8 @@ class SpectatorMenusTest {
         GuiService gui = mock(GuiService.class);
         Player spectator = mock(Player.class);
         when(spectator.getUniqueId()).thenReturn(UUID.randomUUID());
-        return new Fixture(new SpectatorMenus(messages, gui, toolbar), gui, messages,
+        return new Fixture(new SpectatorMenus(messages, new MessagesConfig().getSpectator(), gui,
+                toolbar), gui, messages,
                 toolbar, spectator);
     }
 
@@ -94,7 +94,8 @@ class SpectatorMenusTest {
 
         fixture.menus().openLobbiesMenu(fixture.spectator());
 
-        verify(fixture.messages()).message(fixture.spectator(), "spectator.no-matches");
+        verify(fixture.messages()).messageRaw(fixture.spectator(),
+                new MessagesConfig().getSpectator().getNoMatches());
         verify(fixture.gui(), never()).open(any(), any());
     }
 
@@ -105,7 +106,8 @@ class SpectatorMenusTest {
 
         fixture.menus().openPlayersMenu(fixture.spectator());
 
-        verify(fixture.messages()).message(fixture.spectator(), "spectator.no-players");
+        verify(fixture.messages()).messageRaw(fixture.spectator(),
+                new MessagesConfig().getSpectator().getNoPlayers());
         verify(fixture.gui(), never()).open(any(), any());
     }
 }

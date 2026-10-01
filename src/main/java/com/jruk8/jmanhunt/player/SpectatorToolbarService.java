@@ -4,8 +4,10 @@ import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.CommandMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.message.SpectatorMessages;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -91,6 +93,8 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
 
     private final OverrideService overrides;
     private final MessageService messages;
+    private final SpectatorMessages spectator;
+    private final CommandMessages command;
     private final SoundService sounds;
     private final PlayerStateStore playerStates;
     private final FakeSpectatorService fakes;
@@ -103,10 +107,13 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     private final Map<UUID, ItemStack> previousHelmets = new HashMap<>();
 
     public SpectatorToolbarService(OverrideService overrides, MessageService messages,
+            SpectatorMessages spectator, CommandMessages command,
             SoundService sounds, PlayerStateStore playerStates, FakeSpectatorService fakes,
             GameManager game, LobbyService lobbies, NamespacedKey toolbarKey) {
         this.overrides = overrides;
         this.messages = messages;
+        this.spectator = spectator;
+        this.command = command;
         this.sounds = sounds;
         this.playerStates = playerStates;
         this.fakes = fakes;
@@ -294,7 +301,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         }
         Player target = Bukkit.getPlayer(targetId);
         String name = target != null ? target.getName() : playerStates.playerName(targetId);
-        messages.message(spectator, "spectator.follow-exited", Map.of("player", name));
+        messages.messageRaw(spectator, this.spectator.getFollowExited(), Map.of("player", name));
         sounds.playNeutralSound(spectator);
         spectator.sendActionBar(Component.empty());
         return true;
@@ -350,7 +357,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             if (!from.getWorld().equals(to.getWorld()) || from.distance(to) > tpDistance(spectator)) {
                 spectator.teleport(to);
             }
-            spectator.sendActionBar(messages.component("spectator.following-actionbar",
+            spectator.sendActionBar(messages.componentRaw(this.spectator.getFollowingActionbar(),
                     Map.of("role", messages.roleName(playerStates.role(target)),
                             "player", target.getName())));
         }
@@ -383,14 +390,14 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         Optional<GameInstance> target = game.instance(matchId)
                 .filter(instance -> instance.active() && !instance.ending());
         if (target.isEmpty()) {
-            messages.message(spectator, "spectator.match-gone");
+            messages.messageRaw(spectator, this.spectator.getMatchGone());
             sounds.playAngrySound(spectator);
             spectator.closeInventory();
             return false;
         }
         Optional<GameInstance> current = game.instanceOf(spectator.getUniqueId());
         if (current.isPresent() && current.get().matchId() == matchId) {
-            messages.message(spectator, "spectator.already-in-match");
+            messages.messageRaw(spectator, this.spectator.getAlreadyInMatch());
             sounds.playNeutralSound(spectator);
             spectator.closeInventory();
             return true;
@@ -401,13 +408,13 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
                 .orElse(null);
         if (fromLobby != null && fromLobby != target.get().originLobbyId()
                 && !spectator.hasPermission(SWAP_LOBBY_PERMISSION)) {
-            messages.message(spectator, "command.no-permission");
+            messages.messageRaw(spectator, command.getNoPermission());
             sounds.playAngrySound(spectator);
             return false;
         }
         current.ifPresent(old -> game.leaveMatch(old, List.of(spectator), false));
         if (game.joinPlayers(target.get(), List.of(spectator), Role.SPECTATOR) == 0) {
-            messages.message(spectator, "spectator.match-gone");
+            messages.messageRaw(spectator, this.spectator.getMatchGone());
             sounds.playAngrySound(spectator);
             spectator.closeInventory();
             return false;
@@ -465,7 +472,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             return false;
         }
         if (lockOn(spectator) && targetId.equals(lockedTarget(spectator.getUniqueId()))) {
-            messages.message(spectator, "spectator.already-spectating",
+            messages.messageRaw(spectator, this.spectator.getAlreadySpectating(),
                     Map.of("player", target.getName()));
             sounds.playNeutralSound(spectator);
             spectator.closeInventory();
@@ -477,7 +484,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         } else {
             locks.remove(spectator.getUniqueId());
         }
-        messages.message(spectator, "spectator.now-spectating",
+        messages.messageRaw(spectator, this.spectator.getNowSpectating(),
                 Map.of("role", messages.roleName(playerStates.role(target)),
                         "player", target.getName()));
         sounds.playNeutralSound(spectator);
@@ -591,19 +598,13 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
 
     private ItemStack buttonItem(Player player, ToolbarButton button) {
         return switch (button) {
-            case LOBBIES -> toolbarItem(Material.COMPASS, 'c',
-                    "spectator.toolbar-lobbies-name", "Browse Matches",
-                    "spectator.toolbar-lobbies-lore",
-                    "Right-click to spectate\\nanother match");
-            case PLAYERS -> toolbarItem(Material.BLAZE_ROD, 'p',
-                    "spectator.toolbar-players-name", "Spectate Player",
-                    "spectator.toolbar-players-lore",
-                    "Teleport to a player\\nand follow them");
+            case LOBBIES -> toolbarItem(Material.COMPASS, 'c', spectator.getToolbarLobbiesName(),
+                    spectator.getToolbarLobbiesLore());
+            case PLAYERS -> toolbarItem(Material.BLAZE_ROD, 'p', spectator.getToolbarPlayersName(),
+                    spectator.getToolbarPlayersLore());
             case SNOWBALL -> snowballItem(snowballCooldownSeconds(player));
-            case BACK -> toolbarItem(Material.PAPER, 'b',
-                    "spectator.toolbar-back-name", "Back to Lobby",
-                    "spectator.toolbar-back-lore",
-                    "Return to your lobby\\nLeave spectator mode");
+            case BACK -> toolbarItem(Material.PAPER, 'b', spectator.getToolbarBackName(),
+                    spectator.getToolbarBackLore());
             case EMPTY -> null;
         };
     }
@@ -642,10 +643,8 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
      * cooldown state is needed for honest clients.
      */
     public ItemStack snowballItem(int cooldownSeconds) {
-        ItemStack item = toolbarItem(Material.SNOWBALL, 's',
-                "spectator.toolbar-snowball-name", "Snowball Toss",
-                "spectator.toolbar-snowball-lore",
-                "Harmless fun for spectators\\nZero damage, zero knockback");
+        ItemStack item = toolbarItem(Material.SNOWBALL, 's', spectator.getToolbarSnowballName(),
+                spectator.getToolbarSnowballLore());
         if (cooldownSeconds > 0) {
             item.setData(DataComponentTypes.USE_COOLDOWN,
                     UseCooldown.useCooldown((float) cooldownSeconds).build());
@@ -653,14 +652,11 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         return item;
     }
 
-    private ItemStack toolbarItem(Material material, char button,
-            String nameKey, String nameFallback, String loreKey, String loreFallback) {
+    private ItemStack toolbarItem(Material material, char button, String name, String loreText) {
         ItemStack item = new ItemStack(material, 1);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(messages.nonItalic(messages.parse(
-                "<white>" + messages.string(nameKey, nameFallback))));
-        List<String> lines = new ArrayList<>(List.of(
-                messages.string(loreKey, loreFallback).split("\\\\n|\n", -1)));
+        meta.displayName(messages.nonItalic(messages.parse("<white>" + name)));
+        List<String> lines = new ArrayList<>(List.of(loreText.split("\\\\n|\n", -1)));
         List<Component> lore = new ArrayList<>();
         for (String line : lines) {
             lore.add(messages.nonItalic(messages.parse("<gray>" + line)));

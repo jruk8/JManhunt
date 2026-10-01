@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.DisconnectDecision;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
@@ -39,12 +40,13 @@ public final class PlayerConnectionListener implements Listener {
     private final SpeedrunnerDisconnectTracker disconnects;
     private final Map<UUID, BukkitTask> disconnectTasks;
     private final CompassManager compass;
+    private final GameMessages gameTexts;
 
     public PlayerConnectionListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
             MessageService messages, ConfigService config, LobbyService lobbies,
             LobbyTeleporter lobbyTeleporter, WorldEngineService worldEngine,
             SpeedrunnerDisconnectTracker disconnects, Map<UUID, BukkitTask> disconnectTasks,
-            CompassManager compass) {
+            CompassManager compass, GameMessages gameTexts) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.game = game;
@@ -56,6 +58,7 @@ public final class PlayerConnectionListener implements Listener {
         this.disconnects = disconnects;
         this.disconnectTasks = disconnectTasks;
         this.compass = compass;
+        this.gameTexts = gameTexts;
     }
 
     @EventHandler public void onJoin(PlayerJoinEvent event) {
@@ -184,7 +187,9 @@ public final class PlayerConnectionListener implements Listener {
             eliminateDisconnectedPlayer(player.getUniqueId(), matchId, role);
             return;
         }
-        game.sendToInstance(match.get(), "game." + roleKey + "-disconnect-warning",
+        String warning = role == Role.SPEEDRUNNER ? gameTexts.getSpeedrunnerDisconnectWarning()
+                : gameTexts.getHunterDisconnectWarning();
+        game.messaging().sendToInstance(match.get(), warning,
                 Map.of("seconds", Integer.toString(graceSeconds)));
         BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin,
                 () -> eliminateDisconnectedPlayer(player.getUniqueId(), matchId, role), graceSeconds * 20L);
@@ -228,8 +233,9 @@ public final class PlayerConnectionListener implements Listener {
 
     /** Announces a disconnect removal and finishes when its bucket emptied. */
     private void announceDisconnectRemoval(GameInstance instance, Role role) {
-        String roleKey = role == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
-        game.sendToInstance(instance, "game." + roleKey + "-disconnect-removed", Map.of());
+        String removed = role == Role.SPEEDRUNNER ? gameTexts.getSpeedrunnerDisconnectRemoved()
+                : gameTexts.getHunterDisconnectRemoved();
+        game.messaging().sendToInstance(instance, removed, Map.of());
 
         // No last-died lines: the win that follows is the announcement.
         // Unbegun matches never crown a winner: they cancel instead.
@@ -248,7 +254,7 @@ public final class PlayerConnectionListener implements Listener {
         }
 
         String soundKey = role == Role.SPEEDRUNNER ? "game.speedrunner-death" : "game.hunter-death";
-        game.playInstanceSound(instance, soundKey);
+        game.messaging().playInstanceSound(instance, soundKey);
     }
 
     private void handleRejoin(Player player) {
@@ -260,12 +266,13 @@ public final class PlayerConnectionListener implements Listener {
         // Strikes are intentionally NOT cleared here so that repeated
         // disconnect/reconnect cycles accumulate toward the max-strikes limit.
         Role role = playerStates.role(player);
-        String roleKey = role == Role.SPEEDRUNNER ? "speedrunner" : "hunter";
+        String cancelled = role == Role.SPEEDRUNNER ? gameTexts.getSpeedrunnerDisconnectCancelled()
+                : gameTexts.getHunterDisconnectCancelled();
         Optional<GameInstance> match = game.instanceOf(playerId);
         if (match.isPresent()) {
-            game.sendToInstance(match.get(), "game." + roleKey + "-disconnect-cancelled", Map.of());
+            game.messaging().sendToInstance(match.get(), cancelled, Map.of());
         } else {
-            messages.broadcast("game." + roleKey + "-disconnect-cancelled");
+            messages.broadcastRaw(cancelled);
         }
     }
 

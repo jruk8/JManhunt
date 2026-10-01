@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.WinconMessages;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,12 +15,14 @@ import java.util.Map;
  */
 public final class WinConditionTextService {
     private final MessageService messages;
+    private final WinconMessages wincon;
     private final ConfigService configService;
     private final WinConditionEngine winConditionEngine;
 
-    public WinConditionTextService(MessageService messages, ConfigService configService,
-            WinConditionEngine winConditionEngine) {
+    public WinConditionTextService(MessageService messages, WinconMessages wincon,
+            ConfigService configService, WinConditionEngine winConditionEngine) {
         this.messages = messages;
+        this.wincon = wincon;
         this.configService = configService;
         this.winConditionEngine = winConditionEngine;
     }
@@ -31,25 +34,25 @@ public final class WinConditionTextService {
         List<String> conditions = new ArrayList<>();
         int hunterLives = configService.getInt("settings.players.respawn.hunter.lives", -1);
         if (hunterLives != -1) {
-            conditions.add(winconFragment("eliminate-hunters", Map.of()));
+            conditions.add(winconFragment(wincon.getEliminateHunters(), Map.of()));
         }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.EXIT_END)) {
-            conditions.add(winconFragment("credits", Map.of()));
+            conditions.add(winconFragment(wincon.getCredits(), Map.of()));
         }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME)) {
-            conditions.add(winconFragment("survive", Map.of("time",
+            conditions.add(winconFragment(wincon.getSurvive(), Map.of("time",
                     DurationFormat.format((long) winConditionEngine.time(Role.SPEEDRUNNER)))));
         }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.ACQUIRE_ITEM)) {
-            conditions.add(winconFragment("acquired", Map.of("item",
+            conditions.add(winconFragment(wincon.getAcquired(), Map.of("item",
                     WinConditionEngine.prettyKey(winConditionEngine.item(Role.SPEEDRUNNER)))));
         }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.REACH_ADVANCEMENT)) {
-            conditions.add(winconFragment("advancement",
+            conditions.add(winconFragment(wincon.getAdvancement(),
                     Map.of("advancement", winConditionEngine.advancement(Role.SPEEDRUNNER))));
         }
         if (winConditionEngine.enabled(Role.SPEEDRUNNER, WinCondition.KILL_MOB)) {
-            conditions.add(winconFragment("killed", Map.of("mob",
+            conditions.add(winconFragment(wincon.getKilled(), Map.of("mob",
                     WinConditionEngine.prettyKey(winConditionEngine.mob(Role.SPEEDRUNNER)))));
         }
         return ListFormatter.joinOxford(conditions);
@@ -57,21 +60,21 @@ public final class WinConditionTextService {
 
     /** Status text for the hunter win conditions: base plus enabled alternates. */
     public String hunterWinConditions() {
-        List<String> conditions = new ArrayList<>(List.of(winconFragment("eliminate-speedrunners", Map.of())));
+        List<String> conditions = new ArrayList<>(List.of(winconFragment(wincon.getEliminateSpeedrunners(), Map.of())));
         if (winConditionEngine.enabled(Role.HUNTER, WinCondition.TIME_LIMIT)) {
-            conditions.add(winconFragment("time-limit", Map.of("time",
+            conditions.add(winconFragment(wincon.getTimeLimit(), Map.of("time",
                     DurationFormat.format((long) winConditionEngine.time(Role.HUNTER)))));
         }
         if (winConditionEngine.enabled(Role.HUNTER, WinCondition.ACQUIRE_ITEM)) {
-            conditions.add(winconFragment("acquired", Map.of("item",
+            conditions.add(winconFragment(wincon.getAcquired(), Map.of("item",
                     WinConditionEngine.prettyKey(winConditionEngine.item(Role.HUNTER)))));
         }
         if (winConditionEngine.enabled(Role.HUNTER, WinCondition.REACH_ADVANCEMENT)) {
-            conditions.add(winconFragment("advancement",
+            conditions.add(winconFragment(wincon.getAdvancement(),
                     Map.of("advancement", winConditionEngine.advancement(Role.HUNTER))));
         }
         if (winConditionEngine.enabled(Role.HUNTER, WinCondition.KILL_MOB)) {
-            conditions.add(winconFragment("killed", Map.of("mob",
+            conditions.add(winconFragment(wincon.getKilled(), Map.of("mob",
                     WinConditionEngine.prettyKey(winConditionEngine.mob(Role.HUNTER)))));
         }
         return ListFormatter.joinOxford(conditions);
@@ -82,8 +85,8 @@ public final class WinConditionTextService {
      * stay unparsed here; they are substituted into the status-win lines and
      * parsed once with them.
      */
-    private String winconFragment(String key, Map<String, String> values) {
-        String raw = messages.string("wincon." + key, key);
+    private String winconFragment(String template, Map<String, String> values) {
+        String raw = template;
         for (Map.Entry<String, String> entry : values.entrySet()) {
             raw = raw.replace("{" + entry.getKey() + "}", entry.getValue());
         }

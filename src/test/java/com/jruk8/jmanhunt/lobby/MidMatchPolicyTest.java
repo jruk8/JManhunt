@@ -1,5 +1,8 @@
 package com.jruk8.jmanhunt.lobby;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 
@@ -84,13 +87,17 @@ class MidMatchPolicyTest {
     }
 
     @Test
-    void queueMessageKeyNamesSublobbyQueueUnderSublobbyPolicies() {
-        assertEquals("manhunt.setplayer-queued-sublobby",
-                MidMatchPolicy.SUBLOBBY.queueMessageKey());
-        assertEquals("manhunt.setplayer-queued-sublobby",
-                MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS.queueMessageKey());
-        assertEquals("manhunt.setplayer-held", MidMatchPolicy.HOLD.queueMessageKey());
-        assertEquals("manhunt.setplayer-held", MidMatchPolicy.JOIN_ANY.queueMessageKey());
-        assertEquals("manhunt.setplayer-held", MidMatchPolicy.JOIN_SPECTATORS.queueMessageKey());
+    void queueMessageTemplateNamesSublobbyQueueUnderSublobbyPolicies() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "manhunt.setplayer-queued-sublobby", "queued tpl");
+        ConfigPathMapper.set(config, "manhunt.setplayer-held", "held tpl");
+        ManhuntMessages texts = config.getManhunt();
+        assertEquals("queued tpl",
+                MidMatchPolicy.SUBLOBBY.queueMessageTemplate(texts));
+        assertEquals("queued tpl",
+                MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS.queueMessageTemplate(texts));
+        assertEquals("held tpl", MidMatchPolicy.HOLD.queueMessageTemplate(texts));
+        assertEquals("held tpl", MidMatchPolicy.JOIN_ANY.queueMessageTemplate(texts));
+        assertEquals("held tpl", MidMatchPolicy.JOIN_SPECTATORS.queueMessageTemplate(texts));
     }
 }

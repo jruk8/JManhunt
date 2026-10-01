@@ -4,7 +4,9 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -28,6 +30,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class CompassManager {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final CompassMessages compass;
+    private final ModifiersMessages modifiers;
     private final SoundService sounds;
     private final PlayerStateStore playerStates;
     private final CompassTargetService targets;
@@ -46,22 +50,26 @@ public final class CompassManager {
     private final CompassAnalysisSessions sessions;
     private GameManager game;
 
-    public CompassManager(JManhuntPlugin plugin, MessageService messages, SoundService sounds,
-                          PlayerStateStore playerStates, NamespacedKey compassKey) {
+    public CompassManager(JManhuntPlugin plugin, MessageService messages, CompassMessages compass,
+            ModifiersMessages modifiers, SoundService sounds, PlayerStateStore playerStates,
+            NamespacedKey compassKey) {
         this.plugin = plugin;
         this.messages = messages;
+        this.compass = compass;
+        this.modifiers = modifiers;
         this.sounds = sounds;
         this.playerStates = playerStates;
         this.targets = new CompassTargetService(playerStates, plugin.fakeSpectators());
         this.signal = new CompassSignalService(plugin, playerStates);
         this.hotspots = new HotspotService(plugin, playerStates);
         this.inaccuracy = new CompassInaccuracyService(plugin, hotspots);
-        this.items = new CompassItemService(plugin, messages, playerStates, compassKey);
-        this.sessions = new CompassAnalysisSessions(plugin, messages, playerStates, targets,
+        this.items = new CompassItemService(plugin, messages, compass, playerStates, compassKey);
+        this.sessions = new CompassAnalysisSessions(plugin, messages, compass, playerStates, targets,
                 signal, items, compassActionbars, sounds);
-        this.locks = new CompassLockService(plugin, playerStates, sounds, messages, targets,
-                compassActionbars, this::refreshCompass, this::resolveClickRefresh,
-                this::renderFromCache, sessions::beginAnalysisSpot, cache, lastClick, sessions);
+        this.locks = new CompassLockService(plugin, playerStates, sounds, messages, compass,
+                modifiers, targets, compassActionbars, this::refreshCompass,
+                this::resolveClickRefresh, this::renderFromCache, sessions::beginAnalysisSpot,
+                cache, lastClick, sessions);
         sessions.setLockService(locks);
         this.deltas = new CompassDeltaRenderer(plugin, messages, compassActionbars);
     }
@@ -160,7 +168,7 @@ public final class CompassManager {
                         return;
                     }
                     p.sendActionBar(compassActionbars.getOrDefault(p.getUniqueId(),
-                            component("compass.no-target-actionbar",
+                            messages.componentRaw(compass.getNoTargetActionbar(),
                                     Map.of("role", messages.roleName(locks.targetRole(p))))));
                 });
     }
@@ -367,14 +375,14 @@ public final class CompassManager {
             case NEARBY -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
-                compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
+                compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getNearbyActionbar(),
                         Map.of("player", pick.name())));
                 yield false;
             }
             case TOO_FAR -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
-                compassActionbars.put(holder.getUniqueId(), component("compass.too-far-actionbar",
+                compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getTooFarActionbar(),
                         Map.of("player", pick.name())));
                 yield false;
             }
@@ -428,13 +436,13 @@ public final class CompassManager {
             case NEARBY -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
-                compassActionbars.put(holder.getUniqueId(), component("compass.nearby-actionbar",
+                compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getNearbyActionbar(),
                         Map.of("player", pick.name())));
             }
             case TOO_FAR -> {
                 spinNeedle(item, holder);
                 holder.getInventory().setItem(slot, item);
-                compassActionbars.put(holder.getUniqueId(), component("compass.too-far-actionbar",
+                compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getTooFarActionbar(),
                         Map.of("player", pick.name())));
             }
             case NONE -> showCacheBadSignal(holder, item, slot);
@@ -456,8 +464,8 @@ public final class CompassManager {
                 resolveInaccuracy(holder, origin, spot, pick.id());
         setLodestone(item, drifted.needleSpot());
         holder.getInventory().setItem(slot, item);
-        String key = trackingKey(holder, locked, false);
-        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
+        String template = trackingTemplate(holder, locked, false);
+        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), template, pick.name(), pick.id(),
                 drifted.feedbackDistance(), Map.of(), drifted);
     }
 
@@ -483,24 +491,24 @@ public final class CompassManager {
     private void showCacheBadSignal(Player holder, ItemStack item, int slot) {
         spinNeedle(item, holder);
         holder.getInventory().setItem(slot, item);
-        compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-actionbar"));
+        compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getBadSignalActionbar()));
     }
 
     /** Tracking actionbar key for the holder's mode, lock, and sighting state. */
-    private String trackingKey(Player holder, boolean locked, boolean lastSeen) {
+    private String trackingTemplate(Player holder, boolean locked, boolean lastSeen) {
         boolean teammate = locks.teammateMode(holder.getUniqueId());
         if (lastSeen) {
             if (teammate) {
-                return locked ? "compass.teammate-last-seen-locked-actionbar"
-                        : "compass.teammate-last-seen-actionbar";
+                return locked ? compass.getTeammateLastSeenLockedActionbar()
+                        : compass.getTeammateLastSeenActionbar();
             }
-            return locked ? "compass.compass-last-seen-locked-actionbar"
-                    : "compass.compass-last-seen-actionbar";
+            return locked ? compass.getCompassLastSeenLockedActionbar()
+                    : compass.getCompassLastSeenActionbar();
         }
         if (teammate) {
-            return locked ? "compass.teammate-locked-actionbar" : "compass.teammate-actionbar";
+            return locked ? compass.getTeammateLockedActionbar() : compass.getTeammateActionbar();
         }
-        return locked ? "compass.compass-locked-actionbar" : "compass.compass-actionbar";
+        return locked ? compass.getCompassLockedActionbar() : compass.getCompassActionbar();
     }
 
     private boolean trackPlayer(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
@@ -515,8 +523,8 @@ public final class CompassManager {
                 sessions.resolutionSpot(holder), truth, pick.id());
         setLodestone(item, drifted.needleSpot());
         holder.getInventory().setItem(slot, item);
-        String key = trackingKey(holder, locked, false);
-        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, target.getName(), pick.id(),
+        String template = trackingTemplate(holder, locked, false);
+        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), template, target.getName(), pick.id(),
                 drifted.feedbackDistance(), Map.of(), drifted);
         return true;
     }
@@ -537,8 +545,8 @@ public final class CompassManager {
         setLodestone(item, drifted.needleSpot());
         holder.getInventory().setItem(slot, item);
         String reason = seen != null ? "Another Dimension" : "Log-Out";
-        String key = trackingKey(holder, locked, true);
-        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), key, pick.name(), pick.id(),
+        String template = trackingTemplate(holder, locked, true);
+        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), template, pick.name(), pick.id(),
                 drifted.feedbackDistance(), Map.of("reason", reason), drifted);
         return true;
     }
@@ -546,7 +554,7 @@ public final class CompassManager {
     private void showNoTarget(Player holder, ItemStack item, int slot, String targetRoleString) {
         spinNeedle(item, holder);
         holder.getInventory().setItem(slot, item);
-        compassActionbars.put(holder.getUniqueId(), component("compass.no-target-actionbar",
+        compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getNoTargetActionbar(),
                 Map.of("role", targetRoleString)));
     }
 
@@ -556,11 +564,11 @@ public final class CompassManager {
         holder.getInventory().setItem(slot, item);
         if (plugin.overrides().getBoolean(lobbyOf(holder),
                 "settings.compass.signal.interference.show-reason-in-actionbar", true)) {
-            compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-reason-actionbar",
+            compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getBadSignalReasonActionbar(),
                     Map.of("reason", reasonText(reason))));
             return;
         }
-        compassActionbars.put(holder.getUniqueId(), component("compass.bad-signal-actionbar"));
+        compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getBadSignalActionbar()));
     }
 
     /**
@@ -568,7 +576,7 @@ public final class CompassManager {
      * message for the option id, prefixed for target-side failures.
      */
     private String reasonText(SignalInterference.Reason reason) {
-        String text = messages.string("compass.signal-reason." + reason.id(), reason.id());
+        String text = compass.getSignalReason().getOrDefault(reason.id(), reason.id());
         return reason.targetSide() ? "target " + text : text;
     }
 
@@ -738,13 +746,5 @@ public final class CompassManager {
 
     private Role role(Player player) {
         return playerStates.role(player);
-    }
-
-    private Component component(String key) {
-        return messages.component(key);
-    }
-
-    private Component component(String key, Map<String, String> values) {
-        return messages.component(key, values);
     }
 }

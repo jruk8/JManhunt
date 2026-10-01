@@ -6,7 +6,9 @@ import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SettingType;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.ListFormatter;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -28,6 +30,8 @@ public final class OverrideCommand {
     private final OverrideService overrides;
     private final ConfigService config;
     private final MessageService messages;
+    private final ManhuntMessages manhunt;
+    private final ModifiersMessages modifiers;
     private final SettingFeedback feedback;
     private final SoundService sounds;
     private final PendingConfirmations confirms = new PendingConfirmations();
@@ -37,10 +41,13 @@ public final class OverrideCommand {
      *        address players
      */
     public OverrideCommand(OverrideService overrides, ConfigService config,
-            MessageService messages, SettingFeedback feedback, SoundService sounds) {
+            MessageService messages, ManhuntMessages manhunt, ModifiersMessages modifiers,
+            SettingFeedback feedback, SoundService sounds) {
         this.overrides = overrides;
         this.config = config;
         this.messages = messages;
+        this.manhunt = manhunt;
+        this.modifiers = modifiers;
         this.feedback = feedback;
         this.sounds = sounds;
     }
@@ -52,7 +59,7 @@ public final class OverrideCommand {
         }
         OptionalInt lobby = OverrideService.parseLobbyId(args[1]);
         if (lobby.isEmpty()) {
-            messages.message(sender, "manhunt.override-invalid-lobby",
+            messages.messageRaw(sender, manhunt.getOverrideInvalidLobby(),
                     Map.of("lobby", args[1]));
             return true;
         }
@@ -253,7 +260,7 @@ public final class OverrideCommand {
                 showModifier(sender, lobby, name);
             }
             if (!config.presetNames().isEmpty()) {
-                messages.message(sender, "modifiers.list-presets-header");
+                messages.messageRaw(sender, modifiers.getListPresetsHeader());
                 for (String id : sortedNames(config.presetNames())) {
                     showPreset(sender, lobby, id);
                 }
@@ -285,7 +292,7 @@ public final class OverrideCommand {
         String id = rest.get(0);
         Boolean value = ModifiersCommand.parseState(rest.get(1));
         if (value == null) {
-            messages.message(sender, "modifiers.invalid-state");
+            messages.messageRaw(sender, modifiers.getInvalidState());
             return true;
         }
         if (config.modifierNames().contains(id)) {
@@ -385,7 +392,7 @@ public final class OverrideCommand {
         if (confirms.confirm(sender.getName() + "|" + key)) {
             return false;
         }
-        messages.message(sender, "manhunt.override-clear-confirm",
+        messages.messageRaw(sender, manhunt.getOverrideClearConfirm(),
                 Map.of("lobby", String.valueOf(lobby), "what", what));
         return true;
     }
@@ -395,7 +402,7 @@ public final class OverrideCommand {
         boolean overridden = isIndexPath(lobby, path)
                 ? overrides.hasListOverride(lobby, path.substring(0, path.lastIndexOf('.')))
                 : overrides.hasSettingOverride(lobby, path);
-        messages.message(sender, "manhunt.override-setting-shown", Map.of("setting", path,
+        messages.messageRaw(sender, manhunt.getOverrideSettingShown(), Map.of("setting", path,
                 "value", ConfigService.displayValue(
                         overrides.effectiveValue(lobby, path)),
                 "source", source(overridden)));
@@ -405,21 +412,21 @@ public final class OverrideCommand {
     private void showList(CommandSender sender, int lobby, String listPath) {
         List<String> entries = overrides.getStringList(lobby, listPath);
         if (entries.isEmpty()) {
-            messages.message(sender, "manhunt.override-setting-shown", Map.of("setting",
+            messages.messageRaw(sender, manhunt.getOverrideSettingShown(), Map.of("setting",
                     listPath, "value", "(empty)", "source", source(false)));
             neutralSound(sender);
             return;
         }
         String mark = source(overrides.hasListOverride(lobby, listPath));
         for (int index = 0; index < entries.size(); index++) {
-            messages.message(sender, "manhunt.override-setting-shown", Map.of("setting",
+            messages.messageRaw(sender, manhunt.getOverrideSettingShown(), Map.of("setting",
                     listPath + "." + index, "value", entries.get(index), "source", mark));
         }
         neutralSound(sender);
     }
 
     private void showModifier(CommandSender sender, int lobby, String name) {
-        messages.message(sender, "manhunt.override-modifier-shown", Map.of("modifier", name,
+        messages.messageRaw(sender, manhunt.getOverrideModifierShown(), Map.of("modifier", name,
                 "state", overrides.modifierEnabled(lobby, name) ? "on" : "off",
                 "source", source(overrides.hasModifierOverride(lobby, name))));
     }
@@ -432,15 +439,15 @@ public final class OverrideCommand {
                 break;
             }
         }
-        messages.message(sender, "manhunt.override-modifier-shown", Map.of("modifier", id,
+        messages.messageRaw(sender, manhunt.getOverrideModifierShown(), Map.of("modifier", id,
                 "state", overrides.presetEnabled(lobby, id) ? "on" : "off",
                 "source", source(anyOverridden)));
     }
 
     private String source(boolean overridden) {
         return overridden
-                ? messages.string("manhunt.override-source-override", "<gray>(override)</gray>")
-                : messages.string("manhunt.override-source-global", "<gray>(global)</gray>");
+                ? manhunt.getOverrideSourceOverride()
+                : manhunt.getOverrideSourceGlobal();
     }
 
     /**
@@ -448,9 +455,8 @@ public final class OverrideCommand {
      * drill so browsing never spams one prefixed line per entry.
      */
     private void listEntries(CommandSender sender, String key, Map<String, String> entries) {
-        String template = messages.string("manhunt.config-entry",
-                "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>");
-        messages.message(sender, "manhunt.config-list",
+        String template = manhunt.getConfigEntry();
+        messages.messageRaw(sender, manhunt.getConfigList(),
                 Map.of("key", key, "entries",
                         ManhuntCommand.renderEntries(entries, template)));
     }
@@ -476,7 +482,7 @@ public final class OverrideCommand {
     }
 
     private boolean unknownModifier(CommandSender sender, String id) {
-        messages.message(sender, "modifiers.unknown-modifier",
+        messages.messageRaw(sender, modifiers.getUnknownModifier(),
                 Map.of("name", id, "valid",
                         ListFormatter.joinOxford(sortedNames(config.modifierNames()))));
         return true;
@@ -510,12 +516,12 @@ public final class OverrideCommand {
     }
 
     private boolean usage(CommandSender sender) {
-        messages.message(sender, "manhunt.override-usage");
+        messages.messageRaw(sender, manhunt.getOverrideUsage());
         return true;
     }
 
     private boolean invalid(CommandSender sender) {
-        messages.message(sender, "manhunt.setting-invalid");
+        messages.messageRaw(sender, manhunt.getSettingInvalid());
         return true;
     }
 }

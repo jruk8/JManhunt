@@ -4,8 +4,10 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.match.ModifierTestService;
+import com.jruk8.jmanhunt.message.CommandMessages;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.function.Function;
 import com.jruk8.jmanhunt.modifiers.ModifierCodec;
@@ -35,6 +37,8 @@ public final class ModifiersCommand {
 
     private final ConfigService config;
     private final MessageService messages;
+    private final ModifiersMessages modifiers;
+    private final CommandMessages command;
     private final GuiService gui;
     private final Function<Player, Menu> mainMenu;
     private final SoundService sounds;
@@ -47,10 +51,13 @@ public final class ModifiersCommand {
      *        path touches it, so tests for other paths may pass null
      */
     public ModifiersCommand(ConfigService config, MessageService messages,
+            ModifiersMessages modifiers, CommandMessages command,
             GuiService gui, Function<Player, Menu> mainMenu, SoundService sounds,
             ModifierTestService testService) {
         this.config = config;
         this.messages = messages;
+        this.modifiers = modifiers;
+        this.command = command;
         this.gui = gui;
         this.mainMenu = mainMenu;
         this.sounds = sounds;
@@ -76,7 +83,7 @@ public final class ModifiersCommand {
             case "create" -> createCommand(sender, args);
             case "test" -> testCommand(sender, args);
             default -> {
-                messages.message(sender, "modifiers.usage");
+                messages.messageRaw(sender, modifiers.getUsage());
                 yield true;
             }
         };
@@ -126,20 +133,20 @@ public final class ModifiersCommand {
     private boolean list(CommandSender sender) {
         Set<String> names = config.modifierNames();
         if (names.isEmpty()) {
-            messages.message(sender, "modifiers.list-empty");
+            messages.messageRaw(sender, modifiers.getListEmpty());
             return true;
         }
-        messages.message(sender, "modifiers.list-header");
+        messages.messageRaw(sender, modifiers.getListHeader());
         for (String name : names) {
-            messages.message(sender, config.modifierEnabled(name)
-                    ? "modifiers.list-entry-on" : "modifiers.list-entry-off", Map.of("name", name));
+            messages.messageRaw(sender, config.modifierEnabled(name)
+                    ? modifiers.getListEntryOn() : modifiers.getListEntryOff(), Map.of("name", name));
         }
         Set<String> presets = config.presetNames();
         if (!presets.isEmpty()) {
-            messages.message(sender, "modifiers.list-presets-header");
+            messages.messageRaw(sender, modifiers.getListPresetsHeader());
             for (String id : presets) {
-                messages.message(sender, config.presetEnabled(id)
-                        ? "modifiers.list-entry-on" : "modifiers.list-entry-off", Map.of("name", id));
+                messages.messageRaw(sender, config.presetEnabled(id)
+                        ? modifiers.getListEntryOn() : modifiers.getListEntryOff(), Map.of("name", id));
             }
         }
         return true;
@@ -147,22 +154,22 @@ public final class ModifiersCommand {
 
     private boolean setModifier(CommandSender sender, String[] args) {
         if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
-            messages.message(sender, "command.no-permission");
+            messages.messageRaw(sender, command.getNoPermission());
             return true;
         }
         if (args.length < 3) {
-            messages.message(sender, "modifiers.setmod-usage");
+            messages.messageRaw(sender, modifiers.getSetmodUsage());
             return true;
         }
         String name = args[1];
         if (!config.hasModifier(name)) {
-            messages.message(sender, "modifiers.unknown-modifier",
+            messages.messageRaw(sender, modifiers.getUnknownModifier(),
                     Map.of("name", name, "valid", ListFormatter.joinOxford(modifierNameOptions())));
             return true;
         }
         Boolean value = parseState(args[2]);
         if (value == null) {
-            messages.message(sender, "modifiers.invalid-state");
+            messages.messageRaw(sender, modifiers.getInvalidState());
             return true;
         }
         applyModifierToggle(sender, name, value, false);
@@ -175,7 +182,7 @@ public final class ModifiersCommand {
      */
     public boolean toggleAllModifiers(CommandSender sender, List<String> ids, boolean value) {
         if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
-            messages.message(sender, "command.no-permission");
+            messages.messageRaw(sender, command.getNoPermission());
             return true;
         }
         int flipped = 0;
@@ -200,32 +207,32 @@ public final class ModifiersCommand {
         if (quiet) {
             return true;
         }
-        messages.message(sender, "modifiers.setmod-success",
+        messages.messageRaw(sender, modifiers.getSetmodSuccess(),
                 Map.of("name", name, "state", value ? "on" : "off"));
         ManhuntCommand.announceSettingChange(messages,
                 config.getBoolean("settings.server.announce-config-changes", false),
-                sender, "modifiers.toggle-announced", "modifier " + name, value ? "on" : "off");
+                sender, modifiers.getToggleAnnounced(), "modifier " + name, value ? "on" : "off");
         return true;
     }
 
     private boolean setPreset(CommandSender sender, String[] args) {
         if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
-            messages.message(sender, "command.no-permission");
+            messages.messageRaw(sender, command.getNoPermission());
             return true;
         }
         if (args.length < 3) {
-            messages.message(sender, "modifiers.setpreset-usage");
+            messages.messageRaw(sender, modifiers.getSetpresetUsage());
             return true;
         }
         String id = args[1];
         if (!config.hasPreset(id)) {
-            messages.message(sender, "modifiers.unknown-preset",
+            messages.messageRaw(sender, modifiers.getUnknownPreset(),
                     Map.of("name", id, "valid", ListFormatter.joinOxford(presetIdOptions())));
             return true;
         }
         Boolean value = parseState(args[2]);
         if (value == null) {
-            messages.message(sender, "modifiers.invalid-state");
+            messages.messageRaw(sender, modifiers.getInvalidState());
             return true;
         }
         applyPresetToggle(sender, id, value, false);
@@ -238,7 +245,7 @@ public final class ModifiersCommand {
      */
     public boolean toggleAllPresets(CommandSender sender, List<String> ids, boolean value) {
         if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
-            messages.message(sender, "command.no-permission");
+            messages.messageRaw(sender, command.getNoPermission());
             return true;
         }
         int flipped = 0;
@@ -263,18 +270,18 @@ public final class ModifiersCommand {
         if (quiet) {
             return true;
         }
-        messages.message(sender, "modifiers.setpreset-success",
+        messages.messageRaw(sender, modifiers.getSetpresetSuccess(),
                 Map.of("name", id, "state", value ? "on" : "off",
                         "count", String.valueOf(config.presetMembers(id).size())));
         ManhuntCommand.announceSettingChange(messages,
                 config.getBoolean("settings.server.announce-config-changes", false),
-                sender, "modifiers.toggle-announced", "preset " + id, value ? "on" : "off");
+                sender, modifiers.getToggleAnnounced(), "preset " + id, value ? "on" : "off");
         return true;
     }
 
     private boolean exportCommand(CommandSender sender, String[] args) {
         if (args.length < 3 || parseEntryType(args[1]) == null) {
-            messages.message(sender, "modifiers.export-usage");
+            messages.messageRaw(sender, modifiers.getExportUsage());
             return true;
         }
         exportEntry(sender, parseEntryType(args[1]), args[2]);
@@ -287,7 +294,7 @@ public final class ModifiersCommand {
      */
     public boolean exportEntry(CommandSender sender, String type, String id) {
         if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
-            messages.message(sender, "command.no-permission");
+            messages.messageRaw(sender, command.getNoPermission());
             return false;
         }
         String payload;
@@ -296,7 +303,7 @@ public final class ModifiersCommand {
             ModifierPreset preset =
                     config.modifiers().presetEntry(id);
             if (preset == null) {
-                messages.message(sender, "modifiers.unknown-preset",
+                messages.messageRaw(sender, modifiers.getUnknownPreset(),
                         Map.of("name", id, "valid", ListFormatter.joinOxford(presetIdOptions())));
                 return false;
             }
@@ -306,14 +313,14 @@ public final class ModifiersCommand {
             ModifierEntry entry =
                     config.modifiers().modifierEntry(id);
             if (entry == null) {
-                messages.message(sender, "modifiers.unknown-modifier",
+                messages.messageRaw(sender, modifiers.getUnknownModifier(),
                         Map.of("name", id, "valid", ListFormatter.joinOxford(modifierNameOptions())));
                 return false;
             }
             payload = ModifierCodec.exportModifier(id, entry);
             name = config.modifiers().metaName(id);
         }
-        sender.sendMessage(messages.component("modifiers.exported",
+        sender.sendMessage(messages.componentRaw(modifiers.getExported(),
                         Map.of("type", type, "name", name))
                 .clickEvent(ClickEvent.copyToClipboard(payload)));
         if (sender instanceof Player player) {
@@ -324,7 +331,7 @@ public final class ModifiersCommand {
 
     private boolean importCommand(CommandSender sender, String[] args) {
         if (args.length < 3 || parseEntryType(args[1]) == null) {
-            messages.message(sender, "modifiers.import-usage");
+            messages.messageRaw(sender, modifiers.getImportUsage());
             return true;
         }
         importEntry(sender, parseEntryType(args[1]), args[2]);
@@ -338,20 +345,20 @@ public final class ModifiersCommand {
      */
     public boolean importEntry(CommandSender sender, String type, String payload) {
         if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
-            messages.message(sender, "command.no-permission");
+            messages.messageRaw(sender, command.getNoPermission());
             return false;
         }
         Optional<ModifierCodec.Imported> decoded =
                 ModifierCodec.decode(payload);
         if (decoded.isEmpty()) {
-            messages.message(sender, "modifiers.import-failed");
+            messages.messageRaw(sender, modifiers.getImportFailed());
             return false;
         }
         ModifierCodec.Imported imported = decoded.get();
         boolean isPreset = imported.kind()
                 == ModifierCodec.Kind.PRESET;
         if (!type.equals(isPreset ? "preset" : "modifier")) {
-            messages.message(sender, "modifiers.import-failed");
+            messages.messageRaw(sender, modifiers.getImportFailed());
             return false;
         }
         String finalId = isPreset
@@ -360,9 +367,9 @@ public final class ModifiersCommand {
         String name = isPreset
                 ? config.modifiers().presetName(finalId)
                 : config.modifiers().metaName(finalId);
-        messages.message(sender, "modifiers.imported", Map.of("name", name));
+        messages.messageRaw(sender, modifiers.getImported(), Map.of("name", name));
         if (!finalId.equals(imported.id())) {
-            messages.message(sender, "modifiers.import-duplicate",
+            messages.messageRaw(sender, modifiers.getImportDuplicate(),
                     Map.of("duplicate", imported.id(), "id", finalId));
         }
         if (sender instanceof Player player) {
@@ -373,13 +380,13 @@ public final class ModifiersCommand {
 
     private boolean createCommand(CommandSender sender, String[] args) {
         if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
-            messages.message(sender, "command.no-permission");
+            messages.messageRaw(sender, command.getNoPermission());
             return true;
         }
         String[] rest = Arrays.copyOfRange(args, 1, args.length);
-        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(rest, config.modifierNames());
+        ModifierCreateArgs.Result result = ModifierCreateArgs.parse(rest, config.modifierNames(), modifiers);
         if (!result.success()) {
-            messages.message(sender, result.messageKey(), result.params());
+            messages.messageRaw(sender, result.messageTemplate(), result.params());
             return true;
         }
         ModifierCreateArgs.Plan plan = result.plan();
@@ -395,10 +402,10 @@ public final class ModifiersCommand {
         String display = plan.preset()
                 ? config.modifiers().presetName(finalId)
                 : config.modifiers().metaName(finalId);
-        messages.message(sender, "modifiers.create-success",
+        messages.messageRaw(sender, modifiers.getCreateSuccess(),
                 Map.of("type", plan.preset() ? "preset" : "modifier", "name", display));
         for (String warning : result.warnings()) {
-            messages.message(sender, "modifiers.create-command-warning", Map.of("warning", warning));
+            messages.messageRaw(sender, modifiers.getCreateCommandWarning(), Map.of("warning", warning));
         }
         if (sender instanceof Player player) {
             sounds.playNeutralSound(player);
@@ -428,7 +435,7 @@ public final class ModifiersCommand {
      */
     public boolean testCommands(Player player, String role, List<String> lines) {
         if (!player.hasPermission(MODIFIERS_PERMISSION)) {
-            messages.message(player, "command.no-permission");
+            messages.messageRaw(player, command.getNoPermission());
             return true;
         }
         testService.report(player, testService.run(player, role, lines));
@@ -445,22 +452,22 @@ public final class ModifiersCommand {
 
     private boolean testCommand(CommandSender sender, String[] args) {
         if (!sender.hasPermission(MODIFIERS_PERMISSION)) {
-            messages.message(sender, "command.no-permission");
+            messages.messageRaw(sender, command.getNoPermission());
             return true;
         }
         if (!(sender instanceof Player player)) {
-            messages.message(sender, "command.player-only");
+            messages.messageRaw(sender, command.getPlayerOnly());
             return true;
         }
         if (args.length < 3 || parseTestRole(args[1]) == null) {
-            messages.message(sender, "modifiers.test-usage");
+            messages.messageRaw(sender, modifiers.getTestUsage());
             return true;
         }
         List<String> lines =
                 ModifierTestService.parseCommandLines(String.join(" ",
                         Arrays.copyOfRange(args, 2, args.length)));
         if (lines.isEmpty()) {
-            messages.message(sender, "modifiers.test-usage");
+            messages.messageRaw(sender, modifiers.getTestUsage());
             return true;
         }
         return testCommands(player, parseTestRole(args[1]), lines);
@@ -473,10 +480,10 @@ public final class ModifiersCommand {
 
     private void announceBulkToggle(CommandSender sender, int count, String kind, boolean value) {
         String state = value ? "on" : "off";
-        messages.message(sender, "modifiers.toggle-all-success",
+        messages.messageRaw(sender, modifiers.getToggleAllSuccess(),
                 Map.of("count", String.valueOf(count), "kind", kind, "state", state));
         ManhuntCommand.announceSettingChange(messages,
                 config.getBoolean("settings.server.announce-config-changes", false),
-                sender, "modifiers.toggle-all-announced", count + " " + kind, state);
+                sender, modifiers.getToggleAllAnnounced(), count + " " + kind, state);
     }
 }

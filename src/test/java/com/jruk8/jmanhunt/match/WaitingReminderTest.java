@@ -49,13 +49,4 @@ class WaitingReminderTest {
         assertEquals(1, WaitingReminder.sliceSeconds(1));
     }
 
-    @Test
-    void forceStartExpiryAnnouncesAutomaticStart() {
-        assertEquals("manhunt.waiting-for-damage-force-started", WaitingReminder.expiryMessageKey(true));
-    }
-
-    @Test
-    void cancelExpiryAnnouncesNoStart() {
-        assertEquals("manhunt.waiting-for-damage-exhausted", WaitingReminder.expiryMessageKey(false));
-    }
 }

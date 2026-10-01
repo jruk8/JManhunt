@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match.lifecycle;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.DurationFormat;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.player.Role;
 
 import org.bukkit.Bukkit;
@@ -31,14 +32,16 @@ public final class TimeLimitService {
     private final WinConditionEngine winConditionEngine;
     private final MatchStore store;
     private final MatchMessaging messaging;
+    private final GameMessages game;
     private final MatchControl control;
 
     public TimeLimitService(JManhuntPlugin plugin, WinConditionEngine winConditionEngine,
-            MatchStore store, MatchMessaging messaging, MatchControl control) {
+            MatchStore store, MatchMessaging messaging, GameMessages game, MatchControl control) {
         this.plugin = plugin;
         this.winConditionEngine = winConditionEngine;
         this.store = store;
         this.messaging = messaging;
+        this.game = game;
         this.control = control;
     }
 
@@ -90,10 +93,10 @@ public final class TimeLimitService {
             for (long mark : dueThresholds(limitSecsWhole, remainingSecs, instance.timeAnnounced())) {
                 instance.timeAnnounced().add(mark);
                 if (limit.cancel()) {
-                    messaging.sendToInstance(instance, "game.cancel-in",
+                    messaging.sendToInstance(instance, game.getCancelIn(),
                             Map.of("time", DurationFormat.format(mark)));
                 } else {
-                    messaging.sendToInstance(instance, "game.time-left",
+                    messaging.sendToInstance(instance, game.getTimeLeft(),
                             Map.of("winner", winnerName, "time", DurationFormat.format(mark)));
                 }
             }

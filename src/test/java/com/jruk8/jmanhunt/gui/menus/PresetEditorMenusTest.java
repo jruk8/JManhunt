@@ -39,6 +39,7 @@ class PresetEditorMenusTest {
     private PresetEditorMenus editor;
     private ModifierStore store;
     private MessageService messages;
+    private MessagesConfig texts;
 
     private static Component plain(String text, TextColor color) {
         return Component.text(text, color).decoration(TextDecoration.ITALIC, false);
@@ -74,9 +75,11 @@ class PresetEditorMenusTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         messages = new MessageService();
-        messages.reload(new MessagesConfig());
+        texts = new MessagesConfig();
+        messages.reload(texts);
         store = new ModifierStore(config, log);
-        editor = new PresetEditorMenus(store, messages, null, null, null, null);
+        editor = new PresetEditorMenus(store, messages, texts.getModifiersGui(),
+                texts.getModifiers(), texts.getCommand(), null, null, null, null);
     }
 
     private static void addModifier(ModifierFiles config, String id, String name) {
@@ -150,7 +153,8 @@ class PresetEditorMenusTest {
         GuiService gui = mock(GuiService.class);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
-        PresetEditorMenus live = new PresetEditorMenus(store, messages, null, gui, null, null);
+        PresetEditorMenus live = new PresetEditorMenus(store, messages, texts.getModifiersGui(),
+                texts.getModifiers(), texts.getCommand(), null, gui, null, null);
 
         live.editor("pair", null).buttonAt(12).action().accept(player);
 

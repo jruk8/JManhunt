@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.command;
 
 import com.jruk8.jmanhunt.match.ModifierTriggers;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierBehavior;
 import com.jruk8.jmanhunt.modifiers.config.ModifierChance;
@@ -153,15 +154,15 @@ public final class ModifierCreateArgs {
         }
     }
 
-    /** Either a plan plus command warnings, or a message key with params. */
-    public record Result(Plan plan, String messageKey, Map<String, String> params,
+    /** Either a plan plus command warnings, or a message template with params. */
+    public record Result(Plan plan, String messageTemplate, Map<String, String> params,
             List<String> warnings) {
         static Result ok(Plan plan, List<String> warnings) {
             return new Result(plan, null, Map.of(), warnings);
         }
 
-        static Result fail(String messageKey, Map<String, String> params) {
-            return new Result(null, messageKey, params, List.of());
+        static Result fail(String messageTemplate, Map<String, String> params) {
+            return new Result(null, messageTemplate, params, List.of());
         }
 
         public boolean success() {
@@ -174,9 +175,9 @@ public final class ModifierCreateArgs {
      * modifier-or-preset type word. Member ids validate against the
      * given known set.
      */
-    public static Result parse(String[] args, Set<String> knownModifierIds) {
+    public static Result parse(String[] args, Set<String> knownModifierIds, ModifiersMessages texts) {
         if (args.length == 0 || ModifiersCommand.parseEntryType(args[0]) == null) {
-            return Result.fail("modifiers.create-usage", Map.of());
+            return Result.fail(texts.getCreateUsage(), Map.of());
         }
         boolean preset = args[0].equalsIgnoreCase("preset");
         Set<String> allowed = preset ? PRESET_FLAGS : MODIFIER_FLAGS;
@@ -184,19 +185,19 @@ public final class ModifierCreateArgs {
         List<String> nameWords = new ArrayList<>();
         while (cursor < args.length && !allowed.contains(args[cursor].toLowerCase(Locale.ROOT))) {
             if (args[cursor].startsWith("--")) {
-                return Result.fail("modifiers.create-unknown-flag", Map.of("flag", args[cursor]));
+                return Result.fail(texts.getCreateUnknownFlag(), Map.of("flag", args[cursor]));
             }
             nameWords.add(args[cursor]);
             cursor++;
         }
         if (nameWords.isEmpty()) {
-            return Result.fail("modifiers.create-usage", Map.of());
+            return Result.fail(texts.getCreateUsage(), Map.of());
         }
-        Builder builder = new Builder(preset, String.join(" ", nameWords));
+        Builder builder = new Builder(preset, String.join(" ", nameWords), texts);
         while (cursor < args.length) {
             String flag = args[cursor].toLowerCase(Locale.ROOT);
             if (!allowed.contains(flag)) {
-                return Result.fail("modifiers.create-unknown-flag", Map.of("flag", args[cursor]));
+                return Result.fail(texts.getCreateUnknownFlag(), Map.of("flag", args[cursor]));
             }
             cursor++;
             List<String> valueWords = new ArrayList<>();
@@ -205,7 +206,7 @@ public final class ModifierCreateArgs {
                 cursor++;
             }
             if (valueWords.isEmpty()) {
-                return Result.fail("modifiers.create-missing-value", Map.of("flag", flag));
+                return Result.fail(texts.getCreateMissingValue(), Map.of("flag", flag));
             }
             Result failure = builder.apply(flag, String.join(" ", valueWords), knownModifierIds);
             if (failure != null) {
@@ -219,6 +220,7 @@ public final class ModifierCreateArgs {
     private static final class Builder {
         private final boolean preset;
         private final String name;
+        private final ModifiersMessages texts;
         private String description;
         private String item;
         private String author;
@@ -237,9 +239,10 @@ public final class ModifierCreateArgs {
         private final List<String> members = new ArrayList<>();
         private final List<String> warnings = new ArrayList<>();
 
-        private Builder(boolean preset, String name) {
+        private Builder(boolean preset, String name, ModifiersMessages texts) {
             this.preset = preset;
             this.name = name;
+            this.texts = texts;
         }
 
         private Result apply(String flag, String value, Set<String> knownModifierIds) {
@@ -256,15 +259,15 @@ public final class ModifierCreateArgs {
                 case "--trigger" -> trigger(value);
                 case "--member" -> member(value, knownModifierIds);
                 case "--on-start" -> {
-                    Result failure = checkEnum(flag, value, ORDERS);
+                    Result failure = checkEnum(flag, value, ORDERS, texts);
                     if (failure == null) {
                         onStartOrder = value.trim().toUpperCase(Locale.ROOT);
                     }
                     yield failure;
                 }
-                case "--interval" -> number(value, checkDouble(flag, value, 0.0, null),
+                case "--interval" -> number(value, checkDouble(flag, value, 0.0, null, texts),
                         parsed -> interval = parsed);
-                case "--deviation" -> number(value, checkDouble(flag, value, 0.0, null),
+                case "--deviation" -> number(value, checkDouble(flag, value, 0.0, null, texts),
                         parsed -> deviation = parsed);
                 default -> applyOptions(flag, value);
             };
@@ -272,25 +275,26 @@ public final class ModifierCreateArgs {
 
         private Result applyOptions(String flag, String value) {
             return switch (flag) {
-                case "--interval-scope" -> scope(value, checkEnum(flag, value, SCOPES),
+                case "--interval-scope" -> scope(value, checkEnum(flag, value, SCOPES, texts),
                         parsed -> intervalBehavior = parsed);
-                case "--chance" -> number(value, checkDouble(flag, value, 0.0, 1.0),
+                case "--chance" -> number(value, checkDouble(flag, value, 0.0, 1.0, texts),
                         parsed -> chance = parsed);
-                case "--chance-scope" -> scope(value, checkEnum(flag, value, SCOPES),
+                case "--chance-scope" -> scope(value, checkEnum(flag, value, SCOPES, texts),
                         parsed -> chanceBehavior = parsed);
-                case "--selection" -> scope(value, checkEnum(flag, value, ORDERS),
+                case "--selection" -> scope(value, checkEnum(flag, value, ORDERS, texts),
                         parsed -> selection = parsed);
                 case "--pick-count" -> {
-                    Result failure = checkLong(flag, value, 1L, (long) Integer.MAX_VALUE);
+                    Result failure = checkLong(flag, value, 1L, (long) Integer.MAX_VALUE,
+                            texts);
                     if (failure == null) {
                         pickCount = Integer.valueOf(value.trim());
                     }
                     yield failure;
                 }
-                case "--pick-scope" -> scope(value, checkEnum(flag, value, SCOPES),
+                case "--pick-scope" -> scope(value, checkEnum(flag, value, SCOPES, texts),
                         parsed -> pickBehavior = parsed);
                 case "--delay" -> {
-                    Result failure = checkLong(flag, value, 0L, null);
+                    Result failure = checkLong(flag, value, 0L, null, texts);
                     if (failure == null) {
                         delay = Long.valueOf(value.trim());
                     }
@@ -319,7 +323,7 @@ public final class ModifierCreateArgs {
         private Result item(String value) {
             Material material = ModifierStore.parseMaterial(value);
             if (material == null || material == Material.AIR) {
-                return Result.fail("modifiers.create-bad-item", Map.of("value", value));
+                return Result.fail(texts.getCreateBadItem(), Map.of("value", value));
             }
             item = material.name();
             return null;
@@ -328,7 +332,7 @@ public final class ModifierCreateArgs {
         private Result trigger(String value) {
             String canonical = value.trim().toUpperCase(Locale.ROOT);
             if (!ModifierTriggers.KNOWN.contains(canonical)) {
-                return Result.fail("modifiers.create-unknown-trigger",
+                return Result.fail(texts.getCreateUnknownTrigger(),
                         Map.of("value", value, "valid", String.join(", ", ModifierTriggers.KNOWN)));
             }
             if (!triggers.contains(canonical)) {
@@ -339,7 +343,7 @@ public final class ModifierCreateArgs {
 
         private Result member(String value, Set<String> knownModifierIds) {
             if (!knownModifierIds.contains(value)) {
-                return Result.fail("modifiers.create-unknown-member", Map.of("value", value));
+                return Result.fail(texts.getCreateUnknownMember(), Map.of("value", value));
             }
             if (!members.contains(value)) {
                 members.add(value);
@@ -351,7 +355,7 @@ public final class ModifierCreateArgs {
             String list = flag.substring("--".length());
             java.util.Optional<String> problem = CommandSyntax.error(value);
             if (problem.isPresent()) {
-                return Result.fail("modifiers.create-bad-command",
+                return Result.fail(texts.getCreateBadCommand(),
                         Map.of("list", list, "error", problem.get()));
             }
             commands.computeIfAbsent(list, ignored -> new ArrayList<>()).add(value);
@@ -360,13 +364,13 @@ public final class ModifierCreateArgs {
 
         private Result build() {
             if (!preset && deviation != null && interval != null && deviation > interval) {
-                return Result.fail("modifiers.create-deviation-range", Map.of("value", String.valueOf(deviation)));
+                return Result.fail(texts.getCreateDeviationRange(), Map.of("value", String.valueOf(deviation)));
             }
             // Deviation without an interval means nothing to the runner;
             // keep the plan clean by refusing rather than writing a
             // dangling value.
             if (!preset && deviation != null && interval == null) {
-                return Result.fail("modifiers.create-deviation-range", Map.of("value", String.valueOf(deviation)));
+                return Result.fail(texts.getCreateDeviationRange(), Map.of("value", String.valueOf(deviation)));
             }
             collectWarnings();
             return Result.ok(new Plan(preset, name, description, item, author,
@@ -397,9 +401,10 @@ public final class ModifierCreateArgs {
             }
         }
 
-        private static Result checkEnum(String flag, String value, Set<String> valid) {
+        private static Result checkEnum(String flag, String value, Set<String> valid,
+                ModifiersMessages texts) {
             if (!valid.contains(value.trim().toUpperCase(Locale.ROOT))) {
-                return Result.fail("modifiers.create-bad-enum",
+                return Result.fail(texts.getCreateBadEnum(),
                         Map.of("flag", flag, "value", value, "valid",
                                 valid.stream().sorted().collect(
                                         java.util.stream.Collectors.joining("/"))));
@@ -407,28 +412,30 @@ public final class ModifierCreateArgs {
             return null;
         }
 
-        private static Result checkDouble(String flag, String value, Double min, Double max) {
+        private static Result checkDouble(String flag, String value, Double min, Double max,
+                ModifiersMessages texts) {
             double parsed;
             try {
                 parsed = Double.parseDouble(value.trim());
             } catch (NumberFormatException unparseable) {
-                return Result.fail("modifiers.create-bad-number", Map.of("flag", flag, "value", value));
+                return Result.fail(texts.getCreateBadNumber(), Map.of("flag", flag, "value", value));
             }
             if (!Double.isFinite(parsed) || (min != null && parsed < min) || (max != null && parsed > max)) {
-                return Result.fail("modifiers.create-bad-number", Map.of("flag", flag, "value", value));
+                return Result.fail(texts.getCreateBadNumber(), Map.of("flag", flag, "value", value));
             }
             return null;
         }
 
-        private static Result checkLong(String flag, String value, Long min, Long max) {
+        private static Result checkLong(String flag, String value, Long min, Long max,
+                ModifiersMessages texts) {
             long parsed;
             try {
                 parsed = Long.parseLong(value.trim());
             } catch (NumberFormatException unparseable) {
-                return Result.fail("modifiers.create-bad-number", Map.of("flag", flag, "value", value));
+                return Result.fail(texts.getCreateBadNumber(), Map.of("flag", flag, "value", value));
             }
             if ((min != null && parsed < min) || (max != null && parsed > max)) {
-                return Result.fail("modifiers.create-bad-number", Map.of("flag", flag, "value", value));
+                return Result.fail(texts.getCreateBadNumber(), Map.of("flag", flag, "value", value));
             }
             return null;
         }

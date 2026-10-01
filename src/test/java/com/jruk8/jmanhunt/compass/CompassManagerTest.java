@@ -1,6 +1,10 @@
 package com.jruk8.jmanhunt.compass;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.message.CompassMessages;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.Role;
+import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.junit.jupiter.api.Test;
@@ -199,12 +203,19 @@ class CompassManagerTest {
     }
 
     @Test
-    void compassKeysFollowRoleWithLegacyFallback() {
-        assertEquals("compass.hunter-name", CompassItemService.compassNameKey(Role.HUNTER));
-        assertEquals("compass.speedrunner-name", CompassItemService.compassNameKey(Role.SPEEDRUNNER));
-        assertEquals("compass.compass-name", CompassItemService.compassNameKey(Role.NONE));
-        assertEquals("compass.hunter-lore", CompassItemService.compassLoreKey(Role.HUNTER));
-        assertEquals("compass.speedrunner-lore", CompassItemService.compassLoreKey(Role.SPEEDRUNNER));
-        assertEquals("compass.compass-lore", CompassItemService.compassLoreKey(Role.SPECTATOR));
+    void compassIdentityFollowsRoleWithLegacyFallback() {
+        MessagesConfig texts = new MessagesConfig();
+        ConfigPathMapper.set(texts, "compass.hunter-name", "H name");
+        ConfigPathMapper.set(texts, "compass.speedrunner-name", "S name");
+        ConfigPathMapper.set(texts, "compass.hunter-lore", List.of("H lore"));
+        ConfigPathMapper.set(texts, "compass.speedrunner-lore", List.of("S lore"));
+        CompassMessages compass = texts.getCompass();
+
+        assertEquals("H name", CompassItemService.compassName(compass, Role.HUNTER));
+        assertEquals("S name", CompassItemService.compassName(compass, Role.SPEEDRUNNER));
+        assertEquals("compass.compass-name", CompassItemService.compassName(compass, Role.NONE));
+        assertEquals(List.of("H lore"), CompassItemService.compassLore(compass, Role.HUNTER));
+        assertEquals(List.of("S lore"), CompassItemService.compassLore(compass, Role.SPEEDRUNNER));
+        assertEquals(List.of(), CompassItemService.compassLore(compass, Role.SPECTATOR));
     }
 }

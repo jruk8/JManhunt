@@ -2,7 +2,6 @@ package com.jruk8.jmanhunt.match;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyMap;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -10,7 +9,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.ArrayList;
@@ -27,13 +29,35 @@ class StatusRosterServiceTest {
             PlayerStateStore players, CommandSender recipient) {
     }
 
+    private static ManhuntMessages texts() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "manhunt.status-limit-speedrunners", "5");
+        ConfigPathMapper.set(config, "manhunt.status-limit-hunters", "10");
+        ConfigPathMapper.set(config, "manhunt.status-limit-afk", "2");
+        ConfigPathMapper.set(config, "manhunt.status-limit-none", "20");
+        ConfigPathMapper.set(config, "manhunt.status-limit-spectators", "5");
+        ConfigPathMapper.set(config, "manhunt.status-limit-dead", "3");
+        ConfigPathMapper.set(config, "manhunt.status-comma", "<gray>,</gray>");
+        ConfigPathMapper.set(config, "manhunt.status-and", "<gray>and</gray>");
+        ConfigPathMapper.set(config, "manhunt.status-more", "more");
+        ConfigPathMapper.set(config, "manhunt.status-dead-word", "dead");
+        ConfigPathMapper.set(config, "manhunt.status-skull", "skull");
+        ConfigPathMapper.set(config, "manhunt.status-player", "player tpl");
+        ConfigPathMapper.set(config, "manhunt.status-dead-line", "dead tpl");
+        ConfigPathMapper.set(config, "manhunt.spectators-line", "spect tpl");
+        return config.getManhunt();
+    }
+
     private static Fixture fixture() {
+        return fixture(texts());
+    }
+
+    private static Fixture fixture(ManhuntMessages texts) {
         MessageService messages = mock(MessageService.class);
-        when(messages.string(anyString(), anyString()))
-                .thenAnswer(invocation -> invocation.getArgument(1));
         PlayerStateStore players = new PlayerStateStore();
         CommandSender recipient = mock(CommandSender.class);
-        return new Fixture(new StatusRosterService(messages, players), messages, players, recipient);
+        return new Fixture(new StatusRosterService(messages, texts, players), messages, players,
+                recipient);
     }
 
     private static Player named(String name, Fixture fixture, Role role) {
@@ -59,14 +83,14 @@ class StatusRosterServiceTest {
                         Role.SPEEDRUNNER));
 
         fixture.roster().sendRoleSection(fixture.recipient(), List.of(bob, amy), Role.HUNTER,
-                "manhunt.hunters-header", dead, id -> false);
+                "header tpl", dead, id -> false);
 
-        verify(fixture.messages()).message(fixture.recipient(), "manhunt.hunters-header", Map.of());
-        verify(fixture.messages()).message(eq(fixture.recipient()), eq("manhunt.status-player"),
+        verify(fixture.messages()).messageRaw(fixture.recipient(), "header tpl", Map.of());
+        verify(fixture.messages()).messageRaw(eq(fixture.recipient()), eq("player tpl"),
                 eq(Map.of("player", "amy <gray>and</gray> bob")));
-        verify(fixture.messages()).message(eq(fixture.recipient()),
-                eq("manhunt.status-dead-line"),
-                eq(Map.of("dead_players", "💀new <gray>and</gray> 💀old")));
+        verify(fixture.messages()).messageRaw(eq(fixture.recipient()),
+                eq("dead tpl"),
+                eq(Map.of("dead_players", "skullnew <gray>and</gray> skullold")));
     }
 
     @Test
@@ -78,9 +102,9 @@ class StatusRosterServiceTest {
         }
 
         fixture.roster().sendRoleSection(fixture.recipient(), hunters, Role.HUNTER,
-                "manhunt.hunters-header", List.of(), id -> false);
+                "header tpl", List.of(), id -> false);
 
-        verify(fixture.messages()).message(eq(fixture.recipient()), eq("manhunt.status-player"),
+        verify(fixture.messages()).messageRaw(eq(fixture.recipient()), eq("player tpl"),
                 eq(Map.of("player", "h0<gray>,</gray> h1<gray>,</gray> h10<gray>,</gray> "
                         + "h11<gray>,</gray> h2<gray>,</gray> h3<gray>,</gray> h4<gray>,</gray> "
                         + "h5<gray>,</gray> h6<gray>,</gray> h7<gray>,</gray> <gray>and</gray> "
@@ -93,28 +117,34 @@ class StatusRosterServiceTest {
         Player amy = named("amy", fixture, Role.SPEEDRUNNER);
 
         fixture.roster().sendRoleSection(fixture.recipient(), List.of(amy), Role.SPEEDRUNNER,
-                "manhunt.speedrunners-header", List.of(), amy.getUniqueId()::equals);
+                "header tpl", List.of(), amy.getUniqueId()::equals);
 
-        verify(fixture.messages()).message(eq(fixture.recipient()), eq("manhunt.status-player"),
-                eq(Map.of("player", "💀amy")));
+        verify(fixture.messages()).messageRaw(eq(fixture.recipient()), eq("player tpl"),
+                eq(Map.of("player", "skullamy")));
     }
 
     @Test
     void deadLimitZeroRendersOverflowWord() {
-        Fixture fixture = fixture();
-        when(fixture.messages().string(eq("manhunt.status-limit-dead"), anyString()))
-                .thenReturn("0");
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "manhunt.status-limit-dead", "0");
+        ConfigPathMapper.set(config, "manhunt.status-dead-line", "dead tpl");
+        ConfigPathMapper.set(config, "manhunt.status-dead-word", "dead");
+        ConfigPathMapper.set(config, "manhunt.status-comma", "<gray>,</gray>");
+        ConfigPathMapper.set(config, "manhunt.status-and", "<gray>and</gray>");
+        ConfigPathMapper.set(config, "manhunt.status-more", "more");
+        ConfigPathMapper.set(config, "manhunt.status-skull", "skull");
+        Fixture fixture = fixture(config.getManhunt());
         List<GameInstance.DeadPlayer> dead = List.of(
                 new GameInstance.DeadPlayer(UUID.randomUUID(), "a", Role.HUNTER),
                 new GameInstance.DeadPlayer(UUID.randomUUID(), "b", Role.HUNTER));
 
         fixture.roster().sendRoleSection(fixture.recipient(), List.of(), Role.HUNTER,
-                "manhunt.hunters-header", dead, id -> false);
+                "header tpl", dead, id -> false);
 
-        verify(fixture.messages()).message(eq(fixture.recipient()),
-                eq("manhunt.status-dead-line"), eq(Map.of("dead_players", "2 dead")));
-        verify(fixture.messages(), never()).message(eq(fixture.recipient()),
-                eq("manhunt.status-player"), anyMap());
+        verify(fixture.messages()).messageRaw(eq(fixture.recipient()),
+                eq("dead tpl"), eq(Map.of("dead_players", "2 dead")));
+        verify(fixture.messages(), never()).messageRaw(eq(fixture.recipient()),
+                eq("player tpl"), anyMap());
     }
 
     @Test
@@ -123,7 +153,7 @@ class StatusRosterServiceTest {
         Player zed = named("zed", fixture, Role.SPEEDRUNNER);
 
         fixture.roster().sendRoleSection(fixture.recipient(), List.of(zed), Role.HUNTER,
-                "manhunt.hunters-header", List.of(), id -> false);
+                "header tpl", List.of(), id -> false);
 
         verifyNoInteractions(fixture.messages());
     }
@@ -138,7 +168,7 @@ class StatusRosterServiceTest {
 
         fixture.roster().sendSpectatorLine(fixture.recipient(), players);
 
-        verify(fixture.messages()).message(eq(fixture.recipient()), eq("manhunt.spectators-line"),
+        verify(fixture.messages()).messageRaw(eq(fixture.recipient()), eq("spect tpl"),
                 eq(Map.of("value", "s0<gray>,</gray> s1<gray>,</gray> s2<gray>,</gray> "
                         + "s3<gray>,</gray> s4<gray>,</gray> <gray>and</gray> 2 more")));
     }

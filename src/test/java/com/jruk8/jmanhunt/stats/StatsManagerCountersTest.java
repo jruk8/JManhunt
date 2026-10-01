@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StatsManagerCountersTest {
 
     private StatsManager manager() {
-        return new StatsManager(null, null, null);
+        return new StatsManager(null, null, null, null);
     }
 
     @Test

@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.command.PlayerSinks;
 import com.jruk8.jmanhunt.command.RosterValues;
 import com.jruk8.jmanhunt.command.TagItems;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
@@ -30,7 +31,7 @@ public final class NamedPlayerSinks {
      * false when offline so the tags warn, true once attempted.
      * Unknown sound ids warn through the given logger and skip.
      */
-    public static PlayerSinks of(MessageService messages, SoundService sounds,
+    public static PlayerSinks of(MessageService messages, ModifiersMessages texts, SoundService sounds,
             Consumer<String> logWarning, String containerId) {
         return new PlayerSinks() {
             @Override
@@ -39,7 +40,7 @@ public final class NamedPlayerSinks {
                 if (target == null) {
                     return false;
                 }
-                messages.sendText(target, formatEngineMessage(messages, text));
+                messages.sendText(target, formatEngineMessage(texts, messages, text));
                 return true;
             }
 
@@ -118,9 +119,9 @@ public final class NamedPlayerSinks {
     }
 
     /** Engine message format shared by modifier and debuff runs. */
-    public static String formatEngineMessage(MessageService messages, String text) {
-        String format = messages.string("modifiers.message-format", "{prefix}{message}");
-        return format.replace("{prefix}", messages.string("prefix", ""))
+    public static String formatEngineMessage(ModifiersMessages texts, MessageService messages,
+            String text) {
+        return texts.getMessageFormat().replace("{prefix}", messages.prefix())
                 .replace("{message}", text);
     }
 

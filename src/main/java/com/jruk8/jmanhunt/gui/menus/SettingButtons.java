@@ -13,6 +13,7 @@ import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ public final class SettingButtons {
     private final OverrideService overrides;
     private final GuiConfig guiData;
     private final MessageService messages;
+    private final ManhuntGuiMessages manhuntGui;
     private final SettingDialog dialogs;
     private final GuiService gui;
     private final SettingFeedback feedback;
@@ -49,12 +51,13 @@ public final class SettingButtons {
      *        tests that never invoke actions
      */
     public SettingButtons(ConfigService config, OverrideService overrides, GuiConfig guiData,
-            MessageService messages, SettingDialog dialogs, GuiService gui,
-            SettingFeedback feedback, SoundService sounds) {
+            MessageService messages, ManhuntGuiMessages manhuntGui, SettingDialog dialogs,
+            GuiService gui, SettingFeedback feedback, SoundService sounds) {
         this.config = config;
         this.overrides = overrides;
         this.guiData = guiData;
         this.messages = messages;
+        this.manhuntGui = manhuntGui;
         this.dialogs = dialogs;
         this.gui = gui;
         this.feedback = feedback;
@@ -146,13 +149,11 @@ public final class SettingButtons {
                 displayDefault(descriptor),
                 hint(descriptor.type()),
                 descriptor.restartRequired());
-        List<String> lines = new ArrayList<>(FieldLore.lines(messages, field));
+        List<String> lines = new ArrayList<>(FieldLore.lines(manhuntGui, field));
         if (lobby != null) {
-            lines.add(template("manhunt-gui.override-shift-clear",
-                    "Shift-left-click to remove the override", null));
+            lines.add(template(manhuntGui.getOverrideShiftClear(), null));
             if (overrides.hasSettingOverride(lobby, descriptor.path())) {
-                lines.add(messages.string("manhunt-gui.override-for-lobby",
-                        "<red>Overrides for Lobby {lobby}")
+                lines.add(manhuntGui.getOverrideForLobby()
                         .replace("{lobby}", String.valueOf(lobby)));
             }
         }
@@ -241,7 +242,7 @@ public final class SettingButtons {
         // Already at default: resetting would be a no-op, so say so in
         // chat instead of opening a confirm panel for nothing.
         if (!modified(descriptor, null)) {
-            messages.message(player, "manhunt-gui.setting-already-default");
+            messages.messageRaw(player, manhuntGui.getSettingAlreadyDefault());
             return;
         }
         String oldValue = MiniMessage.miniMessage()
@@ -250,9 +251,9 @@ public final class SettingButtons {
                 GuiTexts.title(messages, resetTitle(descriptor)),
                 Material.PAPER, null,
                 GuiTexts.lore(messages, List.of(oldValue + " -> " + descriptor.defaultValue())),
-                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                GuiTexts.name(messages, manhuntGui.getCancel(), "Cancel"),
                 back -> gui.navigate(back, caller.get()),
-                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                GuiTexts.name(messages, manhuntGui.getConfirm(), "Confirm"),
                 done -> {
                     ConfigService.SetOutcome outcome =
                             config.setValue(descriptor.path(), descriptor.defaultValue());
@@ -271,18 +272,17 @@ public final class SettingButtons {
         }
     }
 
-    private String template(String key, String fallback, String value) {
-        String line = messages.string(key, fallback);
+    private String template(String line, String value) {
         return value == null ? line : line.replace("{value}", value)
                 .replace("{path}", value).replace("{type}", value).replace("{bounds}", value);
     }
 
     private String hint(SettingType type) {
         return switch (type) {
-            case BOOL -> template("manhunt-gui.setting-hint-toggle", "Click to toggle", null);
-            case OPTION -> template("manhunt-gui.setting-hint-cycle", "Click to cycle", null);
+            case BOOL -> template(manhuntGui.getSettingHintToggle(), null);
+            case OPTION -> template(manhuntGui.getSettingHintCycle(), null);
             case INT, FLOAT, STRING ->
-                    template("manhunt-gui.setting-hint-edit", "Click to edit", null);
+                    template(manhuntGui.getSettingHintEdit(), null);
         };
     }
 
@@ -297,18 +297,16 @@ public final class SettingButtons {
     }
 
     private String dialogTitle(SettingDescriptor descriptor) {
-        return messages.string("manhunt-gui.dialog-title-edit", "Edit {name}")
+        return manhuntGui.getDialogTitleEdit()
                 .replace("{name}", prettify(leaf(descriptor.path())));
     }
 
     private String resetTitle(SettingDescriptor descriptor) {
-        return messages.string("manhunt-gui.setting-reset-title", "Reset {name}?")
+        return manhuntGui.getSettingResetTitle()
                 .replace("{name}", prettify(leaf(descriptor.path())));
     }
 
-    private String text(String key, String fallback) {
-        return messages.string("manhunt-gui." + key, fallback);
-    }
+
 
     private static String leaf(String path) {
         return path.substring(path.lastIndexOf('.') + 1);

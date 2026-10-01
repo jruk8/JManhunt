@@ -13,6 +13,7 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -64,7 +65,7 @@ class PlayerConnectionListenerAbandonTest {
                 mock(MessageService.class), mock(ConfigService.class), lobbies,
                 mock(LobbyTeleporter.class), mock(WorldEngineService.class),
                 mock(SpeedrunnerDisconnectTracker.class), disconnectTasks,
-                mock(CompassManager.class));
+                mock(CompassManager.class), new GameMessages());
         return new Fixture(listener, quitter, other, game, instance, quitterId, otherId);
     }
 

@@ -13,6 +13,7 @@ import com.jruk8.jmanhunt.command.TagItems;
 import com.jruk8.jmanhunt.command.TagLists;
 import com.jruk8.jmanhunt.command.TagMath;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -52,13 +53,15 @@ public final class ModifierTestService {
     private final GameStateCommandManager commands;
     private final PlayerStateStore playerStates;
     private final MessageService messages;
+    private final ModifiersMessages texts;
     private final SoundService sounds;
 
     public ModifierTestService(GameStateCommandManager commands, PlayerStateStore playerStates,
-            MessageService messages, SoundService sounds) {
+            MessageService messages, ModifiersMessages texts, SoundService sounds) {
         this.commands = commands;
         this.playerStates = playerStates;
         this.messages = messages;
+        this.texts = texts;
         this.sounds = sounds;
     }
 
@@ -148,9 +151,9 @@ public final class ModifierTestService {
      */
     public void report(Player sender, TestResult result) {
         if (result.errorLine() != null) {
-            messages.message(sender, "modifiers.test-error-line", Map.of("line",
+            messages.messageRaw(sender, texts.getTestErrorLine(), Map.of("line",
                     String.valueOf(result.errorLine()), "exception", result.errorText()));
-            messages.message(sender, "modifiers.test-error",
+            messages.messageRaw(sender, texts.getTestError(),
                     Map.of("time", String.valueOf(result.elapsedMs())));
             return;
         }
@@ -164,12 +167,12 @@ public final class ModifierTestService {
             }
         }
         if (!result.warnings().isEmpty()) {
-            messages.message(sender, "modifiers.test-failure",
+            messages.messageRaw(sender, texts.getTestFailure(),
                     Map.of("error", EngineEscapes.restore(
                             String.join("; ", result.warnings()))));
             return;
         }
-        messages.message(sender, "modifiers.test-success",
+        messages.messageRaw(sender, texts.getTestSuccess(),
                 Map.of("elapsed", String.valueOf(result.elapsedMs())));
     }
 

@@ -14,6 +14,7 @@ import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.stats.HistoryPlaceholders;
 import com.jruk8.jmanhunt.stats.StatsManager;
@@ -68,8 +69,6 @@ class ManhuntMenusTest {
         when(guiData.categoryItem(anyString())).thenReturn(Material.CLOCK);
         when(guiData.sectionItem(anyString())).thenReturn(Material.CLOCK);
         when(guiData.description(anyString())).thenReturn("");
-        when(messages.string(anyString(), anyString()))
-                .thenAnswer(invocation -> invocation.getArgument(1));
         when(messages.parse(anyString()))
                 .thenAnswer(invocation ->
                         Component.text(invocation.getArgument(0, String.class)));
@@ -88,7 +87,8 @@ class ManhuntMenusTest {
         stats = mock(StatsManager.class);
         modifierDialogs = mock(ModifierDialog.class);
         menus = new ManhuntMenus(config, overrides, guiData, messages,
-                mock(SoundService.class), gui, mock(SettingDialog.class),
+                new MessagesConfig().getManhuntGui(), mock(SoundService.class), gui,
+                mock(SettingDialog.class),
                 mock(SettingFeedback.class), stats,
                 mock(ModifierMenus.class), modifierDialogs);
     }
@@ -301,7 +301,8 @@ class ManhuntMenusTest {
                 "settings.compass.signal.interference.weather.interfere-during",
                 () -> menus.settingsMenu(viewer)), player);
         assertBackResolves(ScrollList.menu(Component.text("Keys"), List::of,
-                () -> menus.settingsMenu(viewer), gui, messages), player);
+                () -> menus.settingsMenu(viewer), gui, messages,
+                new MessagesConfig().getManhuntGui()), player);
     }
 
     private void assertBackResolves(Menu menu, Player player) {

@@ -182,10 +182,11 @@ class CompassAnalysisSessionsTest {
         when(plugin.overrides()).thenReturn(
                 new OverrideService(configService, new LobbyConfig(), () -> { }));
         MessageService messages = new MessageService();
-        messages.reload(new MessagesConfig());
+        MessagesConfig texts = new MessagesConfig();
+        messages.reload(texts);
         SoundService sounds = mock(SoundService.class);
         CompassAnalysisSessions sessions = new CompassAnalysisSessions(plugin, messages,
-                new PlayerStateStore(), mock(CompassTargetService.class),
+                texts.getCompass(), new PlayerStateStore(), mock(CompassTargetService.class),
                 mock(CompassSignalService.class), mock(CompassItemService.class),
                 new HashMap<UUID, Component>(), sounds);
         return new Fixture(root, sessions, UUID.randomUUID(), sounds);

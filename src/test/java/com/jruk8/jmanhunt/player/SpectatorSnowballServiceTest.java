@@ -13,7 +13,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
+import com.jruk8.jmanhunt.message.SpectatorMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.Map;
 import java.util.UUID;
@@ -56,7 +59,7 @@ class SpectatorSnowballServiceTest {
         when(toolbar.layout(player)).thenReturn(SpectatorToolbarService.parseLayout("cp##s###b"));
         when(toolbar.snowballItem(anyInt())).thenReturn(stack);
         SpectatorSnowballService snowballs = new SpectatorSnowballService(
-                mock(Plugin.class), toolbar, messages, sounds);
+                mock(Plugin.class), toolbar, messages, texts(), sounds);
         return new Fixture(snowballs, toolbar, messages, sounds, player, inventory, stack);
     }
 
@@ -64,6 +67,12 @@ class SpectatorSnowballServiceTest {
         Snowball snowball = mock(Snowball.class);
         when(snowball.getShooter()).thenReturn(fixture.player());
         return snowball;
+    }
+
+    private static SpectatorMessages texts() {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "spectator.snowball-cooldown", "cooldown tpl");
+        return config.getSpectator();
     }
 
     @Test
@@ -98,8 +107,8 @@ class SpectatorSnowballServiceTest {
 
             assertTrue(event.isCancelled());
             verify(fixture.player(), never()).setCooldown(any(), any(Integer.class));
-            verify(fixture.messages()).message(eq(fixture.player()),
-                    eq("spectator.snowball-cooldown"), eq(Map.of("seconds", "3")));
+            verify(fixture.messages()).messageRaw(eq(fixture.player()),
+                    eq("cooldown tpl"), eq(Map.of("seconds", "3")));
             verify(fixture.sounds()).playNeutralSound(fixture.player());
             deferred(scheduler).run();
             verify(fixture.inventory()).setItem(4, fixture.stack());

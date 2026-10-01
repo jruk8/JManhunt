@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.match.lifecycle;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.Role;
@@ -17,14 +18,16 @@ import com.jruk8.jmanhunt.match.GameInstance;
 /** Match and lobby message fan-out. */
 public final class MatchMessaging {
     private final MessageService messages;
+    private final ManhuntMessages manhunt;
     private final SoundService sounds;
     private final ConfigService configService;
     private final MatchStore store;
     private final LobbyService lobbies;
 
-    public MatchMessaging(MessageService messages, SoundService sounds, ConfigService configService,
-            MatchStore store, LobbyService lobbies) {
+    public MatchMessaging(MessageService messages, ManhuntMessages manhunt, SoundService sounds,
+            ConfigService configService, MatchStore store, LobbyService lobbies) {
         this.messages = messages;
+        this.manhunt = manhunt;
         this.sounds = sounds;
         this.configService = configService;
         this.store = store;
@@ -32,11 +35,11 @@ public final class MatchMessaging {
     }
 
     /** Sends a message to a match plus the console, never other matches. */
-    public void sendToInstance(GameInstance instance, String key, Map<String, String> values) {
-        if (messages.isDisabled(key)) {
+    public void sendToInstance(GameInstance instance, String template, Map<String, String> values) {
+        if (messages.blank(template)) {
             return;
         }
-        Component rendered = messages.component(key, values);
+        Component rendered = messages.componentRaw(template, values);
         for (Player recipient : store.onlineMatchAudience(instance)) {
             recipient.sendMessage(rendered);
         }
@@ -78,7 +81,7 @@ public final class MatchMessaging {
             return;
         }
         Role active = to.isParticipant() ? to : from;
-        String key = to.isParticipant() ? "manhunt.role-is-now" : "manhunt.role-no-longer";
+        String template = to.isParticipant() ? manhunt.getRoleIsNow() : manhunt.getRoleNoLonger();
         Map<String, String> values = Map.of("player", player.getName(),
                 "active-role", messages.roleName(active));
         Optional<Lobby> lobby = lobbies.lobbyOf(player.getUniqueId());
@@ -92,7 +95,7 @@ public final class MatchMessaging {
             if (store.instanceOf(recipient.getUniqueId()).isPresent()) {
                 continue;
             }
-            messages.message(recipient, key, values);
+            messages.messageRaw(recipient, template, values);
         }
     }
 
@@ -108,11 +111,11 @@ public final class MatchMessaging {
                 .map(player -> (Player) player).toList();
     }
 
-    public void sendToLobby(int lobbyId, String key, Map<String, String> values) {
-        messages.sendTo(lobbyRecipients(lobbyId), key, values);
+    public void sendToLobby(int lobbyId, String template, Map<String, String> values) {
+        messages.sendToRaw(lobbyRecipients(lobbyId), template, values);
         // Console keeps seeing every lobby, as with the old broadcasts.
-        if (!messages.isDisabled(key)) {
-            Bukkit.getConsoleSender().sendMessage(messages.component(key, values));
+        if (!messages.blank(template)) {
+            Bukkit.getConsoleSender().sendMessage(messages.componentRaw(template, values));
         }
     }
 

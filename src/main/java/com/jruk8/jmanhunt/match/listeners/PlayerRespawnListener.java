@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.message.GameMessages;
 
 /** Respawn routing: vanilla respawn hooks and delayed spectator revives. */
 public final class PlayerRespawnListener implements Listener {
@@ -26,14 +27,16 @@ public final class PlayerRespawnListener implements Listener {
     private final PlayerStateStore playerStates;
     private final GameManager game;
     private final CompassManager compass;
+    private final GameMessages gameTexts;
     private final Map<UUID, BukkitTask> respawnTasks = new HashMap<>();
 
     public PlayerRespawnListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
-            CompassManager compass) {
+            CompassManager compass, GameMessages gameTexts) {
         this.plugin = plugin;
         this.playerStates = playerStates;
         this.game = game;
         this.compass = compass;
+        this.gameTexts = gameTexts;
         // Cancel any pending respawn tasks when a match ends so players
         // are not revived during the end sequence or after the match.
         game.addGameEndListener(instance -> cancelAllRespawnTasks());
@@ -79,9 +82,9 @@ public final class PlayerRespawnListener implements Listener {
      * revive. A non-positive delay revives immediately without announcing.
      */
     void scheduleRespawn(Player player, GameInstance instance, boolean quiet,
-            int delaySeconds, String scheduledKey, long matchId) {
+            int delaySeconds, String scheduledTemplate, long matchId) {
         if (!quiet && delaySeconds > 0) {
-            game.sendToInstance(instance, scheduledKey,
+            game.messaging().sendToInstance(instance, scheduledTemplate,
                     Map.of("player", player.getName(), "seconds", Integer.toString(delaySeconds)));
         }
         respawnParticipant(player, delaySeconds, matchId);
@@ -150,9 +153,10 @@ public final class PlayerRespawnListener implements Listener {
             // delay announces the return, for either role.
             if (delayed) {
                 if (playerStates.role(player) == Role.HUNTER) {
-                    game.sendToInstance(instance, "game.hunter-respawn-imminent", Map.of("player", player.getName()));
+                    game.messaging().sendToInstance(instance, gameTexts.getHunterRespawnImminent(),
+                            Map.of("player", player.getName()));
                 } else if (playerStates.role(player) == Role.SPEEDRUNNER) {
-                    game.sendToInstance(instance, "game.speedrunner-respawn-imminent",
+                    game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnerRespawnImminent(),
                             Map.of("player", player.getName()));
                 }
             }

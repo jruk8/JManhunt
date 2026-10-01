@@ -24,9 +24,9 @@ class ModifierToggleAllTest {
         return new ConfigService(null, new ModifierStore(config, log));
     }
 
-    private static MessageService messages() {
+    private static MessageService messages(MessagesConfig texts) {
         MessageService messages = new MessageService();
-        messages.reload(new MessagesConfig());
+        messages.reload(texts);
         return messages;
     }
 
@@ -42,15 +42,17 @@ class ModifierToggleAllTest {
         addModifier(config, "a", false);
         addModifier(config, "b", true);
         ConfigService service = service(config);
-        MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
+        MessagesConfig texts = new MessagesConfig();
+        MessageService messages = messages(texts);
+        ModifiersCommand command = new ModifiersCommand(service, messages,
+                texts.getModifiers(), texts.getCommand(), null, null, null, null);
         FakeSender sender = FakeSender.permitted();
 
         assertTrue(command.toggleAllModifiers(sender, List.of("a", "b"), true));
 
         assertTrue(service.modifierEnabled("a"));
         assertTrue(service.modifierEnabled("b"));
-        Component expected = messages.component("modifiers.toggle-all-success",
+        Component expected = messages.componentRaw(texts.getModifiers().getToggleAllSuccess(),
                 Map.of("count", "2", "kind", "modifiers", "state", "on"));
         assertEquals(List.of(expected), sender.received());
     }
@@ -60,14 +62,16 @@ class ModifierToggleAllTest {
         ModifierFiles config = ModifierFiles.inMemory();
         addModifier(config, "a", false);
         ConfigService service = service(config);
-        MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
+        MessagesConfig texts = new MessagesConfig();
+        MessageService messages = messages(texts);
+        ModifiersCommand command = new ModifiersCommand(service, messages,
+                texts.getModifiers(), texts.getCommand(), null, null, null, null);
         FakeSender sender = FakeSender.permitted();
 
         assertTrue(command.toggleAllModifiers(sender, List.of("a", "nope"), true));
 
         assertTrue(service.modifierEnabled("a"));
-        Component expected = messages.component("modifiers.toggle-all-success",
+        Component expected = messages.componentRaw(texts.getModifiers().getToggleAllSuccess(),
                 Map.of("count", "1", "kind", "modifiers", "state", "on"));
         assertEquals(List.of(expected), sender.received());
     }
@@ -77,14 +81,16 @@ class ModifierToggleAllTest {
         ModifierFiles config = ModifierFiles.inMemory();
         addModifier(config, "a", false);
         ConfigService service = service(config);
-        MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
+        MessagesConfig texts = new MessagesConfig();
+        MessageService messages = messages(texts);
+        ModifiersCommand command = new ModifiersCommand(service, messages,
+                texts.getModifiers(), texts.getCommand(), null, null, null, null);
         FakeSender sender = FakeSender.denied();
 
         assertTrue(command.toggleAllModifiers(sender, List.of("a"), true));
 
         assertFalse(service.modifierEnabled("a"));
-        assertEquals(List.of(messages.component("command.no-permission")), sender.received());
+        assertEquals(List.of(messages.componentRaw(texts.getCommand().getNoPermission(), Map.of())), sender.received());
     }
 
     @Test
@@ -96,15 +102,17 @@ class ModifierToggleAllTest {
         preset.setModifiers(List.of("a", "b"));
         config.getPresets().put("pack", preset);
         ConfigService service = service(config);
-        MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
+        MessagesConfig texts = new MessagesConfig();
+        MessageService messages = messages(texts);
+        ModifiersCommand command = new ModifiersCommand(service, messages,
+                texts.getModifiers(), texts.getCommand(), null, null, null, null);
         FakeSender sender = FakeSender.permitted();
 
         assertTrue(command.toggleAllPresets(sender, List.of("pack", "nope"), true));
 
         assertTrue(service.modifierEnabled("a"));
         assertTrue(service.modifierEnabled("b"));
-        Component expected = messages.component("modifiers.toggle-all-success",
+        Component expected = messages.componentRaw(texts.getModifiers().getToggleAllSuccess(),
                 Map.of("count", "1", "kind", "presets", "state", "on"));
         assertEquals(List.of(expected), sender.received());
     }
@@ -117,13 +125,15 @@ class ModifierToggleAllTest {
         preset.setModifiers(List.of("a"));
         config.getPresets().put("pack", preset);
         ConfigService service = service(config);
-        MessageService messages = messages();
-        ModifiersCommand command = new ModifiersCommand(service, messages, null, null, null, null);
+        MessagesConfig texts = new MessagesConfig();
+        MessageService messages = messages(texts);
+        ModifiersCommand command = new ModifiersCommand(service, messages,
+                texts.getModifiers(), texts.getCommand(), null, null, null, null);
         FakeSender sender = FakeSender.denied();
 
         assertTrue(command.toggleAllPresets(sender, List.of("pack"), true));
 
         assertFalse(service.modifierEnabled("a"));
-        assertEquals(List.of(messages.component("command.no-permission")), sender.received());
+        assertEquals(List.of(messages.componentRaw(texts.getCommand().getNoPermission(), Map.of())), sender.received());
     }
 }

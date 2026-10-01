@@ -64,11 +64,13 @@ class AutostartVersusTest {
 
     @Test
     void versusMessageRendersNamedCountsWithoutColorBleed() {
-        MessageService messages = messagesWith("<red>", "<green>");
+        VersusFixture fixture = messagesWith("<red>", "<green>");
 
         Map<String, String> values = AutostartService.versusValues(30, 5,
-                messages.roleColor(Role.HUNTER), 3, messages.roleColor(Role.SPEEDRUNNER));
-        Component rendered = messages.component("manhunt.autostart-versus-eligible", values);
+                fixture.messages().roleColor(Role.HUNTER), 3,
+                fixture.messages().roleColor(Role.SPEEDRUNNER));
+        Component rendered = fixture.messages().componentRaw(
+                fixture.config().getManhunt().getAutostartVersusEligible(), values);
 
         assertEquals("[T] 3v5 starts in 30s.", plain(rendered));
         String legacy = LegacyComponentSerializer.legacySection().serialize(rendered);
@@ -78,27 +80,33 @@ class AutostartVersusTest {
 
     @Test
     void versusMessageRendersHexCountsWithoutColorBleed() {
-        MessageService messages = new MessageService();
-        messages.reload(new MessagesConfig());
+        VersusFixture fixture = messagesWith("<#de666e>", "<#74de66>");
 
         Map<String, String> values = AutostartService.versusValues(30, 5,
-                messages.roleColor(Role.HUNTER), 3, messages.roleColor(Role.SPEEDRUNNER));
-        Component rendered = messages.component("manhunt.autostart-versus-eligible", values);
+                fixture.messages().roleColor(Role.HUNTER), 3,
+                fixture.messages().roleColor(Role.SPEEDRUNNER));
+        Component rendered = fixture.messages().componentRaw(
+                fixture.config().getManhunt().getAutostartVersusEligible(), values);
 
-        assertEquals("[JManhunt] 3v5 starts in 30s.", plain(rendered));
+        assertEquals("[T] 3v5 starts in 30s.", plain(rendered));
         String legacy = LegacyComponentSerializer.legacySection().serialize(rendered);
         assertTrue(legacy.contains("3§e"), legacy);
         assertTrue(legacy.contains("5§e"), legacy);
     }
 
-    private static MessageService messagesWith(String hunterColor, String runnerColor) {
+    private record VersusFixture(MessageService messages, MessagesConfig config) {
+    }
+
+    private static VersusFixture messagesWith(String hunterColor, String runnerColor) {
         MessagesConfig config = new MessagesConfig();
         ConfigPathMapper.set(config, "prefix", "<gray>[T]</gray> ");
         ConfigPathMapper.set(config, "role-colors.hunter", hunterColor);
         ConfigPathMapper.set(config, "role-colors.speedrunner", runnerColor);
+        ConfigPathMapper.set(config, "manhunt.autostart-versus-eligible",
+                "{prefix}<yellow>{runners}v{hunters} starts in <white>{seconds}</white>s.");
         MessageService messages = new MessageService();
         messages.reload(config);
-        return messages;
+        return new VersusFixture(messages, config);
     }
 
     private static String plain(Component component) {

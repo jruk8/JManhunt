@@ -20,7 +20,7 @@ public final class JManhuntTutorialMessenger implements TutorialMessenger {
 
     @Override
     public void send(Player player, List<String> lines) {
-        String prefix = messages.string("prefix", "");
+        String prefix = messages.prefix();
         String logo = logo(prefix);
         for (String line : lines) {
             String resolved = line.replace("{prefix}", prefix).replace("{logo}", logo);

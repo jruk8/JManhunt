@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.core.DebugLevel;
+import com.jruk8.jmanhunt.message.DebugMessages;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.TagMath;
 import com.jruk8.jmanhunt.config.ConfigService;
@@ -317,7 +318,7 @@ public final class IntervalDispatcher {
                         matchId);
             } else {
                 if (target != null) {
-                    plugin.logger().debug(DebugLevel.INFO, "debug.interval-skip", Map.of("modifier", name,
+                    plugin.logger().debug(DebugLevel.INFO, DebugMessages::getIntervalSkip, Map.of("modifier", name,
                             "player", target.getName(), "why", skip.get()));
                 }
                 chainedPlayers(matchId, name, index).remove(playerId);
@@ -417,7 +418,7 @@ public final class IntervalDispatcher {
             if (skip.isEmpty()) {
                 targets.add(player);
             } else {
-                plugin.logger().debug(DebugLevel.INFO, "debug.interval-skip", Map.of("modifier", name,
+                plugin.logger().debug(DebugLevel.INFO, DebugMessages::getIntervalSkip, Map.of("modifier", name,
                         "player", player.getName(), "why", skip.get()));
             }
         }

@@ -13,7 +13,11 @@ import com.jruk8.jmanhunt.gui.dialog.DialogInputs;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.message.CommandMessages;
+import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.ModifiersGuiMessages;
+import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import java.util.ArrayList;
@@ -41,6 +45,10 @@ public final class ModifierMenus {
 
     private final ModifierStore store;
     private final MessageService messages;
+    private final ModifiersGuiMessages modifiersGui;
+    private final ManhuntGuiMessages manhuntGui;
+    private final ModifiersMessages modifiers;
+    private final CommandMessages command;
     private final SoundService sounds;
     private final GuiService gui;
     private final ModifiersCommand toggles;
@@ -59,20 +67,28 @@ public final class ModifierMenus {
      *        touched inside click actions or override sessions, so
      *        builders tolerate them as null
      */
-    public ModifierMenus(ModifierStore store, MessageService messages, SoundService sounds,
+    public ModifierMenus(ModifierStore store, MessageService messages,
+            ModifiersGuiMessages modifiersGui, ManhuntGuiMessages manhuntGui,
+            ModifiersMessages modifiers, CommandMessages command, SoundService sounds,
             GuiService gui, ModifiersCommand toggles, SettingDialogs dialogs,
             ModifierDialog modifierDialogs, BooleanSupplier commandValidation,
             OverrideService overrides, SettingFeedback feedback, ModifierEditorMemory memory) {
         this.store = store;
         this.messages = messages;
+        this.modifiersGui = modifiersGui;
+        this.manhuntGui = manhuntGui;
+        this.modifiers = modifiers;
+        this.command = command;
         this.sounds = sounds;
         this.gui = gui;
         this.toggles = toggles;
         this.dialogs = dialogs;
         this.modifierDialogs = modifierDialogs;
-        this.modifierEditor = new ModifierEditorMenus(store, messages, sounds, gui, toggles,
-                dialogs, modifierDialogs, commandValidation);
-        this.presetEditor = new PresetEditorMenus(store, messages, sounds, gui, toggles, dialogs);
+        this.modifierEditor = new ModifierEditorMenus(store, messages, modifiersGui, manhuntGui,
+                modifiers, command, sounds, gui, toggles, dialogs, modifierDialogs,
+                commandValidation);
+        this.presetEditor = new PresetEditorMenus(store, messages, modifiersGui, modifiers, command,
+                sounds, gui, toggles, dialogs);
         this.overrides = overrides;
         this.feedback = feedback;
         this.memory = memory;
@@ -97,16 +113,16 @@ public final class ModifierMenus {
      */
     public Menu mainMenu(Player viewer, Supplier<Menu> parent) {
         Integer lobby = lobbyOf(viewer);
-        return TwinPanel.menu(GuiTexts.title(messages, text("title-main", "Modifiers")),
-                linkButton(Material.DIAMOND, "to-modifiers", "to-modifiers-lore",
+        return TwinPanel.menu(GuiTexts.title(messages, modifiersGui.getTitleMain()),
+                linkButton(Material.DIAMOND, modifiersGui.getToModifiers(), modifiersGui.getToModifiersLore(),
                         "Modifiers", enabledModifiers(lobby), store.modifierNames().size(),
                         () -> modifiersMenu(viewer, parent)),
-                linkButton(Material.FILLED_MAP, "to-presets", "to-presets-lore",
+                linkButton(Material.FILLED_MAP, modifiersGui.getToPresets(), modifiersGui.getToPresetsLore(),
                         "Presets", enabledPresets(lobby), store.presetNames().size(),
                         () -> presetsMenu(viewer, parent)),
                 gui,
                 parent == null ? null
-                        : GuiTexts.name(messages, text("back", "Back"), "Back"),
+                        : GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
                 parent);
     }
 
@@ -122,13 +138,13 @@ public final class ModifierMenus {
 
     /** Modifiers scroll list for one viewer, session-aware. */
     public Menu modifiersMenu(Player viewer, Supplier<Menu> parent) {
-        return listMenu("title-modifiers",
+        return listMenu(modifiersGui.getTitleModifiers(),
                 columns -> modifierButtons(columns, viewer, () -> modifiersMenu(viewer, parent)),
                 () -> mainMenu(viewer, parent), self -> toggleAllModifiersButton(viewer, self),
-                self -> importButton(self, "modifier", "import-modifier",
-                        "import-modifier-lore", "import-modifier-title"),
-                createButton(Material.WRITABLE_BOOK, "modifier-editor", "Modifier Editor",
-                        "modifier-editor-lore", "Create a modifier or test commands",
+                self -> importButton(self, "modifier", modifiersGui.getImportModifier(),
+                        modifiersGui.getImportModifierLore(), modifiersGui.getImportModifierTitle()),
+                createButton(Material.WRITABLE_BOOK, modifiersGui.getModifierEditor(), "Modifier Editor",
+                        modifiersGui.getModifierEditorLore(), "Create a modifier or test commands",
                         player -> gui.navigate(player,
                                 editorTwin(player, () -> modifiersMenu(player, parent)))));
     }
@@ -145,13 +161,13 @@ public final class ModifierMenus {
 
     /** Presets scroll list for one viewer, session-aware. */
     public Menu presetsMenu(Player viewer, Supplier<Menu> parent) {
-        return listMenu("title-presets",
+        return listMenu(modifiersGui.getTitlePresets(),
                 columns -> presetButtons(columns, viewer, () -> presetsMenu(viewer, parent)),
                 () -> mainMenu(viewer, parent), self -> toggleAllPresetsButton(viewer, self),
-                self -> importButton(self, "preset", "import-preset",
-                        "import-preset-lore", "import-preset-title"),
-                createButton(Material.WRITABLE_BOOK, "create-preset", "Create Preset",
-                        "create-preset-lore", "Start a new preset",
+                self -> importButton(self, "preset", modifiersGui.getImportPreset(),
+                        modifiersGui.getImportPresetLore(), modifiersGui.getImportPresetTitle()),
+                createButton(Material.WRITABLE_BOOK, modifiersGui.getCreatePreset(), "Create Preset",
+                        modifiersGui.getCreatePresetLore(), "Start a new preset",
                         player -> presetEditor.createPreset(player,
                                 () -> presetsMenu(player, parent))));
     }
@@ -164,38 +180,34 @@ public final class ModifierMenus {
         return gui.overrideLobby(viewer);
     }
 
-    private Menu listMenu(String titleKey, Function<Integer, List<MenuButton>> content,
+    private Menu listMenu(String title, Function<Integer, List<MenuButton>> content,
             Supplier<Menu> parent, Function<Menu[], MenuButton> toggleAll,
             Function<Menu[], MenuButton> importButton, MenuButton create) {
-        return PagedList.menu(GuiTexts.title(messages, text(titleKey, "Modifiers")), content,
+        return PagedList.menu(GuiTexts.title(messages, title), content,
                 parent, gui,
-                GuiTexts.name(messages, text("scroll-up", "Scroll up"), "Scroll up"),
-                GuiTexts.name(messages, text("scroll-down", "Scroll down"), "Scroll down"),
-                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                GuiTexts.name(messages, modifiersGui.getScrollUp(), "Scroll up"),
+                GuiTexts.name(messages, modifiersGui.getScrollDown(), "Scroll down"),
+                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
                 self -> new PagedList.Chrome(create, toggleAll.apply(self), importButton.apply(self)));
     }
 
     /** Bottom-right import loom: prompts for a share string, then refreshes. */
-    private MenuButton importButton(Menu[] self, String type, String nameKey,
-            String loreKey, String titleKey) {
+    private MenuButton importButton(Menu[] self, String type, String name,
+            String lore, String title) {
         return new MenuButton(Material.LOOM,
-                GuiTexts.name(messages,
-                        text(nameKey, type.equals("preset") ? "Import Preset" : "Import Modifier"),
-                        "Import"),
-                GuiTexts.lore(messages, text(loreKey, "Paste an exported string.")),
-                false, false, importAction(self, type, titleKey)).silent();
+                GuiTexts.name(messages, name, "Import"),
+                GuiTexts.lore(messages, lore),
+                false, false, importAction(self, type, title)).silent();
     }
 
-    private Consumer<Player> importAction(Menu[] self, String type, String titleKey) {
+    private Consumer<Player> importAction(Menu[] self, String type, String title) {
         return player -> {
             if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
-                messages.message(player, "command.no-permission");
+                messages.messageRaw(player, command.getNoPermission());
                 return;
             }
-            dialogs.prompt(player,
-                    text(titleKey,
-                            type.equals("preset") ? "Import Preset" : "Import Modifier"),
-                    List.of(text("import-prompt", "Paste an exported string.")),
+            dialogs.prompt(player, title,
+                    List.of(modifiersGui.getImportPrompt()),
                     payload -> {
                         if (!toggles.importEntry(player, type, payload)) {
                             sounds.playAngrySound(player);
@@ -213,19 +225,19 @@ public final class ModifierMenus {
     public Menu editorTwin(Player viewer, Supplier<Menu> parent) {
         final Menu[] self = new Menu[1];
         self[0] = TwinPanel.menu(
-                GuiTexts.title(messages, text("modifier-editor-title", "Modifier Editor")),
+                GuiTexts.title(messages, modifiersGui.getModifierEditorTitle()),
                 new MenuButton(Material.REPEATING_COMMAND_BLOCK,
-                        GuiTexts.name(messages, text("test-command", "Test a Command"),
+                        GuiTexts.name(messages, modifiersGui.getTestCommand(),
                                 "Test a Command"),
-                        GuiTexts.lore(messages, text("test-command-lore",
-                                "Dry-run up to five commands")),
+                        GuiTexts.lore(messages, modifiersGui.getTestCommandLore()),
                         false, false,
                         player -> openTestDialog(player, self[0])).silent(),
-                createButton(Material.WRITABLE_BOOK, "create-modifier", "Create Modifier",
-                        "create-modifier-lore", "Start a new modifier",
+                createButton(Material.WRITABLE_BOOK, modifiersGui.getCreateModifier(),
+                        "Create Modifier", modifiersGui.getCreateModifierLore(),
+                        "Start a new modifier",
                         player -> modifierEditor.createModifier(player, () -> self[0])),
                 gui,
-                GuiTexts.name(messages, text("back", "Back"), "Back"),
+                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
                 parent);
         return self[0];
     }
@@ -233,7 +245,7 @@ public final class ModifierMenus {
     /** Test-a-Command dialog over the remembered initials. */
     private void openTestDialog(Player player, Menu twin) {
         if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
-            messages.message(player, "command.no-permission");
+            messages.messageRaw(player, command.getNoPermission());
             return;
         }
         openTestDialogWith(player, twin, memory.initialFor(player));
@@ -257,7 +269,7 @@ public final class ModifierMenus {
             ModifierDialog.TestSubmission submission) {
         List<String> lines = DialogInputs.collapseTestCommands(submission.commands());
         if (lines.isEmpty()) {
-            messages.message(player, "modifiers.test-commands-empty");
+            messages.messageRaw(player, modifiers.getTestCommandsEmpty());
             sounds.playAngrySound(player);
             return () -> openTestDialogWith(player, twin, submission);
         }
@@ -267,24 +279,24 @@ public final class ModifierMenus {
     }
 
     /** Top-right create button opening the creator flow. */
-    private MenuButton createButton(Material material, String nameKey, String nameFallback,
-            String loreKey, String loreFallback, Consumer<Player> action) {
+    private MenuButton createButton(Material material, String name, String nameFallback,
+            String lore, String loreFallback, Consumer<Player> action) {
         return new MenuButton(material,
-                GuiTexts.name(messages, text(nameKey, nameFallback), nameFallback),
-                GuiTexts.lore(messages, text(loreKey, loreFallback)),
+                GuiTexts.name(messages, name, nameFallback),
+                GuiTexts.lore(messages, lore),
                 false, false, action).silent();
     }
 
     private MenuButton toggleAllModifiersButton(Player viewer, Menu[] self) {
         boolean allOn = allModifiersOn(lobbyOf(viewer));
-        String loreText = text("toggle-all-modifiers-lore", "{total} modifiers")
+        String loreText = modifiersGui.getToggleAllModifiersLore()
                 .replace("{total}", String.valueOf(store.modifierNames().size()));
         return new MenuButton(Material.STRUCTURE_VOID,
-                GuiTexts.name(messages, text("toggle-all", "Toggle all"), "Toggle all"),
+                GuiTexts.name(messages, modifiersGui.getToggleAll(), "Toggle all"),
                 GuiTexts.lore(messages, loreText), allOn, false,
                 player -> {
                     if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
-                        messages.message(player, "command.no-permission");
+                        messages.messageRaw(player, command.getNoPermission());
                         return;
                     }
                     Integer lobby = lobbyOf(player);
@@ -315,14 +327,14 @@ public final class ModifierMenus {
 
     private MenuButton toggleAllPresetsButton(Player viewer, Menu[] self) {
         boolean allOn = allPresetsOn(lobbyOf(viewer));
-        String loreText = text("toggle-all-presets-lore", "{total} presets")
+        String loreText = modifiersGui.getToggleAllPresetsLore()
                 .replace("{total}", String.valueOf(store.presetNames().size()));
         return new MenuButton(Material.STRUCTURE_VOID,
-                GuiTexts.name(messages, text("toggle-all", "Toggle all"), "Toggle all"),
+                GuiTexts.name(messages, modifiersGui.getToggleAll(), "Toggle all"),
                 GuiTexts.lore(messages, loreText), allOn, false,
                 player -> {
                     if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
-                        messages.message(player, "command.no-permission");
+                        messages.messageRaw(player, command.getNoPermission());
                         return;
                     }
                     Integer lobby = lobbyOf(player);
@@ -356,14 +368,14 @@ public final class ModifierMenus {
     /** Confirm panel before bulk-enabling; bulk-disabling applies immediately. */
     private void confirmToggleAll(Player player, Menu[] self, String kind, Runnable apply) {
         Menu confirm = ConfirmMenu.create(
-                GuiTexts.title(messages, text("toggle-all-confirm-title", "Turn all {kind} on?")
+                GuiTexts.title(messages, "Turn all {kind} on?"
                         .replace("{kind}", kind)),
                 Material.STRUCTURE_VOID, null,
-                GuiTexts.lore(messages, text("toggle-all-confirm-lore", "This enables every {kind}.")
+                GuiTexts.lore(messages, "This enables every {kind}."
                         .replace("{kind}", kind)),
-                GuiTexts.name(messages, text("cancel", "Cancel"), "Cancel"),
+                GuiTexts.name(messages, modifiersGui.getCancel(), "Cancel"),
                 back -> gui.navigate(back, self[0]),
-                GuiTexts.name(messages, text("confirm", "Confirm"), "Confirm"),
+                GuiTexts.name(messages, modifiersGui.getConfirm(), "Confirm"),
                 done -> {
                     apply.run();
                     gui.navigate(done, self[0]);
@@ -372,13 +384,13 @@ public final class ModifierMenus {
         gui.navigate(player, confirm);
     }
 
-    private MenuButton linkButton(Material material, String nameKey, String loreKey,
+    private MenuButton linkButton(Material material, String name, String lore,
             String fallback, int enabled, int total, Supplier<Menu> target) {
-        String loreText = text(loreKey, "{enabled}/{total} enabled")
+        String loreText = lore
                 .replace("{enabled}", String.valueOf(enabled))
                 .replace("{total}", String.valueOf(total));
         return new MenuButton(material,
-                GuiTexts.name(messages, text(nameKey, fallback), fallback),
+                GuiTexts.name(messages, name, fallback),
                 GuiTexts.lore(messages, loreText), false, false,
                 player -> gui.navigate(player, target.get()));
     }
@@ -414,7 +426,7 @@ public final class ModifierMenus {
                 false, toggleModifier(id),
                 player -> {
                     if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
-                        messages.message(player, "command.no-permission");
+                        messages.messageRaw(player, command.getNoPermission());
                         return;
                     }
                     gui.navigate(player, modifierEditor.editor(id, listParent));
@@ -435,7 +447,7 @@ public final class ModifierMenus {
         if (overrides.clearModifierOverride(lobby, id)) {
             feedback.overrideModifierCleared(player, lobby, id);
         } else {
-            messages.message(player, "manhunt-gui.override-no-override");
+            messages.messageRaw(player, manhuntGui.getOverrideNoOverride());
         }
     }
 
@@ -444,18 +456,16 @@ public final class ModifierMenus {
         if (!lore.isEmpty()) {
             lore.add(Component.text(" "));
         }
-        lore.addAll(GuiTexts.lore(messages, text(stateKey(enabled), enabled ? "Enabled" : "Disabled")));
+        lore.addAll(GuiTexts.lore(messages, (enabled ? modifiersGui.getStateOn() : modifiersGui.getStateOff())));
         String author = store.metaAuthor(id);
         if (author != null) {
             lore.add(Component.text(" "));
             lore.addAll(GuiTexts.lore(messages, "by " + author));
         }
         lore.add(Component.text(" "));
-        lore.addAll(GuiTexts.lore(messages, text("edit-hint", "Right-click to edit")));
+        lore.addAll(GuiTexts.lore(messages, modifiersGui.getEditHint()));
         if (lobby != null) {
-            lore.addAll(GuiTexts.lore(messages, messages.string(
-                    "manhunt-gui.override-shift-clear",
-                    "Shift-left-click to remove the override")));
+            lore.addAll(GuiTexts.lore(messages, manhuntGui.getOverrideShiftClear()));
             if (overrides.hasModifierOverride(lobby, id)) {
                 lore.addAll(GuiTexts.lore(messages, overridesLine(lobby)));
             }
@@ -494,7 +504,7 @@ public final class ModifierMenus {
                 false, togglePreset(id),
                 player -> {
                     if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
-                        messages.message(player, "command.no-permission");
+                        messages.messageRaw(player, command.getNoPermission());
                         return;
                     }
                     gui.navigate(player, presetEditor.editor(id, listParent));
@@ -519,7 +529,7 @@ public final class ModifierMenus {
             }
         }
         if (removed == 0) {
-            messages.message(player, "manhunt-gui.override-no-override");
+            messages.messageRaw(player, manhuntGui.getOverrideNoOverride());
             return;
         }
         feedback.overrideCleared(player, lobby, "preset." + id, removed);
@@ -547,14 +557,14 @@ public final class ModifierMenus {
                     + (members.size() - shown) + "</gray> more"));
         }
         lore.add(Component.text(" "));
-        lore.addAll(GuiTexts.lore(messages, text(stateKey(allOn), allOn ? "Enabled" : "Disabled")));
+        lore.addAll(GuiTexts.lore(messages, (allOn ? modifiersGui.getStateOn() : modifiersGui.getStateOff())));
         String author = store.presetAuthor(id);
         if (author != null) {
             lore.add(Component.text(" "));
             lore.addAll(GuiTexts.lore(messages, "by " + author));
         }
         lore.add(Component.text(" "));
-        lore.addAll(GuiTexts.lore(messages, text("edit-hint", "Right-click to edit")));
+        lore.addAll(GuiTexts.lore(messages, modifiersGui.getEditHint()));
         if (lobby != null) {
             appendOverrideLore(lore, lobby, id);
         }
@@ -565,11 +575,11 @@ public final class ModifierMenus {
     private List<Component> emptyPresetLore(String id, Integer lobby) {
         List<Component> lore = new ArrayList<>();
         lore.addAll(GuiTexts.lore(messages,
-                text("preset-empty-lore", "<red>No modifiers configured!")));
+                modifiersGui.getPresetEmptyLore()));
         lore.add(Component.text(" "));
-        lore.addAll(GuiTexts.lore(messages, text(stateKey(false), "Disabled")));
+        lore.addAll(GuiTexts.lore(messages, modifiersGui.getStateOff()));
         lore.add(Component.text(" "));
-        lore.addAll(GuiTexts.lore(messages, text("edit-hint", "Right-click to edit")));
+        lore.addAll(GuiTexts.lore(messages, modifiersGui.getEditHint()));
         if (lobby != null) {
             appendOverrideLore(lore, lobby, id);
         }
@@ -577,23 +587,20 @@ public final class ModifierMenus {
     }
 
     private void appendOverrideLore(List<Component> lore, int lobby, String id) {
-        lore.addAll(GuiTexts.lore(messages, messages.string(
-                "manhunt-gui.override-shift-clear",
-                "Shift-left-click to remove the override")));
+        lore.addAll(GuiTexts.lore(messages, manhuntGui.getOverrideShiftClear()));
         if (hasPresetOverride(lobby, id)) {
             lore.addAll(GuiTexts.lore(messages, overridesLine(lobby)));
         }
     }
 
     private String overridesLine(int lobby) {
-        return messages.string("manhunt-gui.override-for-lobby",
-                "<red>Overrides for Lobby {lobby}").replace("{lobby}", String.valueOf(lobby));
+        return manhuntGui.getOverrideForLobby().replace("{lobby}", String.valueOf(lobby));
     }
 
     private Consumer<Player> toggleModifier(String id) {
         return player -> {
             if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
-                messages.message(player, "command.no-permission");
+                messages.messageRaw(player, command.getNoPermission());
                 return;
             }
             Integer lobby = lobbyOf(player);
@@ -612,7 +619,7 @@ public final class ModifierMenus {
     private Consumer<Player> togglePreset(String id) {
         return player -> {
             if (!player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
-                messages.message(player, "command.no-permission");
+                messages.messageRaw(player, command.getNoPermission());
                 return;
             }
             Integer lobby = lobbyOf(player);
@@ -621,7 +628,7 @@ public final class ModifierMenus {
                     ? !store.presetEnabled(id)
                     : !overrides.presetEnabled(lobby, id);
             if (members.isEmpty() && next) {
-                messages.message(player, "modifiers.preset-empty",
+                messages.messageRaw(player, modifiers.getPresetEmpty(),
                         Map.of("name", store.presetName(id)));
                 sounds.playAngrySound(player);
                 return;
@@ -694,11 +701,4 @@ public final class ModifierMenus {
                 && enabledPresets(lobby) == store.presetNames().size();
     }
 
-    private static String stateKey(boolean on) {
-        return on ? "state-on" : "state-off";
-    }
-
-    private String text(String key, String fallback) {
-        return messages.string("modifiers-gui." + key, fallback);
-    }
 }

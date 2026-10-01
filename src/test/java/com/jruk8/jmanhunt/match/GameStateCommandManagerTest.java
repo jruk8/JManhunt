@@ -13,6 +13,7 @@ import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -277,6 +278,7 @@ class GameStateCommandManagerTest {
         when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
         when(game.flagStore()).thenReturn(new FlagStore());
         MessageService messages = mock(MessageService.class);
+        stubEngineTexts(messages);
         GameStateCommandManager manager = new GameStateCommandManager(plugin,
                 new PlayerStateStore(), config, messages,
                 mock(SoundService.class), game);
@@ -308,8 +310,7 @@ class GameStateCommandManagerTest {
         when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
         when(game.flagStore()).thenReturn(new FlagStore());
         MessageService messages = mock(MessageService.class);
-        when(messages.string(anyString(), anyString()))
-                .thenAnswer(invocation -> invocation.getArgument(1));
+        stubEngineTexts(messages);
         GameStateCommandManager manager = new GameStateCommandManager(plugin,
                 new PlayerStateStore(), config, messages,
                 mock(SoundService.class), game);
@@ -322,6 +323,15 @@ class GameStateCommandManagerTest {
         verify(messages).sendText(eq(player), argThat(text -> text != null
                 && text.contains("step limit") && text.contains("administrator")));
         verify(game).cancel(instance);
+    }
+
+    private static void stubEngineTexts(MessageService messages) {
+        MessagesConfig config = new MessagesConfig();
+        ConfigPathMapper.set(config, "modifiers.message-format", "{prefix}{message}");
+        ConfigPathMapper.set(config, "modifiers.loop-limit",
+                "loop step limit exceeded tell administrator");
+        when(messages.modifiers()).thenReturn(config.getModifiers());
+        when(messages.prefix()).thenReturn("");
     }
 
     private static final class RoleTagHarness {
@@ -355,6 +365,7 @@ class GameStateCommandManagerTest {
         when(game.matchStatValues(7L)).thenReturn(StatValues.inert());
         when(game.flagStore()).thenReturn(new FlagStore());
         MessageService messages = mock(MessageService.class);
+        stubEngineTexts(messages);
         SoundService sounds = mock(SoundService.class);
         return new RoleTagHarness(new GameStateCommandManager(plugin, playerStates, config,
                 messages, sounds, game), messages, sounds, logger);
@@ -377,8 +388,6 @@ class GameStateCommandManagerTest {
                 List.of("<rmessage:hunter,go team>",
                         "<rsound:speedrunner,block.note_block.pling,1,1>"),
                 List.of("<rmessage:speedrunner,from console>"));
-        when(harness.messages.string(anyString(), anyString()))
-                .thenAnswer(invocation -> invocation.getArgument(1));
         when(harness.sounds.isValidSound(anyString())).thenReturn(true);
 
         harness.manager.runPlayerCleanup(7L, List.of(hunter));

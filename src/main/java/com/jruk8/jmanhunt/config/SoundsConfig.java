@@ -86,6 +86,17 @@ public class SoundsConfig extends OkaeriConfig {
         this.chat = chat;
     }
 
+    /**
+     * Sound entry for one dotted key (for example
+     * {@code game.speedrunner-death}), or null when the key resolves to
+     * nothing. Sounds stay key addressed: entries are file-only and the
+     * call sites pass dynamic keys.
+     */
+    public SoundEntry entry(String key) {
+        Object node = ConfigPathMapper.get(this, key);
+        return node instanceof SoundEntry entry ? entry : null;
+    }
+
     /** One sound: toggle, namespaced key, pitch, and volume. */
     @Getter
     @SuppressWarnings("FieldMayBeFinal")

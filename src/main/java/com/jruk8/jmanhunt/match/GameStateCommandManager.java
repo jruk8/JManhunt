@@ -59,7 +59,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         this.toggles = new ModifierToggleService(plugin, configService, game, intervals, this);
         this.wipes = new PlayerWipeService(plugin, new PlayerResetService(plugin.overrides()));
         this.defaults = new MatchDefaultsService(plugin, playerStates, wipes);
-        this.sinks = new ModifierTagSinks(plugin, messages, sounds, game, playerStates, configService);
+        this.sinks = new ModifierTagSinks(plugin, messages, messages.modifiers(), sounds, game,
+                playerStates, configService);
     }
 
     public void runStart(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId) {
@@ -316,7 +317,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                 matchId, new TagBackends(game.matchStatValues(matchId), game.flagStore(),
                         new PlaceholderPass(plugin.placeholderValues()),
                         new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId),
-                        NamedPlayerSinks.of(messages, sounds, plugin.logger()::warning, name)),
+                        NamedPlayerSinks.of(messages, messages.modifiers(), sounds, plugin.logger()::warning, name)),
                 eventArgs, detail -> sinks.loopLimitExceeded(detail, matchId),
                 (role, text) -> sinks.sendRoleMessage(name, matchId, scope, role, text),
                 (role, soundId, pitch, volume) -> sinks.playRoleSound(name, matchId, scope, role,

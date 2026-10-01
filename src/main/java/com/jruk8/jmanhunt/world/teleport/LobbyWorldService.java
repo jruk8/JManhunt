@@ -6,6 +6,8 @@ import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorldManager;
+import com.jruk8.jmanhunt.message.DebugMessages;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -22,13 +24,16 @@ import com.jruk8.jmanhunt.world.WorldEngineConfig;
 public final class LobbyWorldService {
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final ManhuntMessages manhunt;
     private final LobbyWorldManager lobbyWorlds;
     /** Last lobby-care sweep, for the configured repeat interval. */
     private long lastCareMillis;
 
-    public LobbyWorldService(JManhuntPlugin plugin, MessageService messages) {
+    public LobbyWorldService(JManhuntPlugin plugin, MessageService messages,
+            ManhuntMessages manhunt) {
         this.plugin = plugin;
         this.messages = messages;
+        this.manhunt = manhunt;
         this.lobbyWorlds = new LobbyWorldManager(plugin);
     }
 
@@ -207,7 +212,7 @@ public final class LobbyWorldService {
         }
         int fallback = tps.keySet().stream().min(Integer::compare).orElseThrow();
         if (logFallback) {
-            plugin.logger().debug(DebugLevel.WARN, "debug.lobby-fallback", Map.of(
+            plugin.logger().debug(DebugLevel.WARN, DebugMessages::getLobbyFallback, Map.of(
                     "lobby", String.valueOf(lobbyId), "fallback", String.valueOf(fallback)));
         }
         return toLobbyLocation(lobbyWorld, tps.get(fallback));
@@ -246,12 +251,13 @@ public final class LobbyWorldService {
         if (lobby != null) {
             return lobby;
         }
-        plugin.logger().debug(DebugLevel.SEVERE, "debug.lobby-missing", Map.of("lobby", String.valueOf(lobbyId)));
+        plugin.logger().debug(DebugLevel.SEVERE, DebugMessages::getLobbyMissing,
+                Map.of("lobby", String.valueOf(lobbyId)));
         if (!announce) {
             return null;
         }
         for (Player target : targets) {
-            messages.message(target, "manhunt.lobby-no-location-anywhere",
+            messages.messageRaw(target, manhunt.getLobbyNoLocationAnywhere(),
                     Map.of("lobby", String.valueOf(lobbyId)));
         }
         return null;

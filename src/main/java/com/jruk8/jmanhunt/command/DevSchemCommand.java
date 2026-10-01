@@ -5,6 +5,8 @@ import com.jruk8.jmanhunt.lobby.bounds.LobbyBounds;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyBundle;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
 import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
+import com.jruk8.jmanhunt.message.CommandMessages;
+import com.jruk8.jmanhunt.message.DevMessages;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import org.bukkit.Bukkit;
@@ -51,21 +53,26 @@ public final class DevSchemCommand {
 
     private final JManhuntPlugin plugin;
     private final MessageService messages;
+    private final DevMessages dev;
+    private final CommandMessages command;
     private final LobbySchematicService schematics;
     private final Map<UUID, Location> pos1 = new HashMap<>();
     private final Map<UUID, Location> pos2 = new HashMap<>();
     private final Map<UUID, PendingLoad> pendingLoads = new HashMap<>();
 
-    public DevSchemCommand(JManhuntPlugin plugin, MessageService messages) {
+    public DevSchemCommand(JManhuntPlugin plugin, MessageService messages, DevMessages dev,
+            CommandMessages command) {
         this.plugin = plugin;
         this.messages = messages;
+        this.dev = dev;
+        this.command = command;
         this.schematics = new LobbySchematicService(plugin);
     }
 
     /** Runs one schem action; args[0] is the action, args[1] the name if any. */
     public boolean execute(CommandSender sender, String[] args) {
         if (args.length == 0) {
-            messages.message(sender, "dev.usage");
+            messages.messageRaw(sender, dev.getUsage());
             return true;
         }
         String action = args[0].toLowerCase(Locale.ROOT);
@@ -77,7 +84,7 @@ public final class DevSchemCommand {
             case "load" -> load(sender, name);
             case "list" -> list(sender);
             default -> {
-                messages.message(sender, "dev.usage");
+                messages.messageRaw(sender, dev.getUsage());
                 yield true;
             }
         };
@@ -90,7 +97,7 @@ public final class DevSchemCommand {
         // Feet block at execution time: Location is already feet-based.
         Location corner = player.getLocation().clone();
         (first ? pos1 : pos2).put(player.getUniqueId(), corner);
-        messages.message(sender, first ? "dev.pos1" : "dev.pos2",
+        messages.messageRaw(sender, first ? dev.getPos1() : dev.getPos2(),
                 Map.of("pos", blockCoords(corner)));
         return true;
     }
@@ -100,7 +107,7 @@ public final class DevSchemCommand {
             return playerOnly(sender);
         }
         if (name == null || !validName(name)) {
-            messages.message(sender, name == null ? "dev.usage" : "dev.invalid-name");
+            messages.messageRaw(sender, name == null ? dev.getUsage() : dev.getInvalidName());
             return true;
         }
         List<Location> selection = selection(sender, player);
@@ -119,7 +126,7 @@ public final class DevSchemCommand {
             nbt = captureNbt(structure);
         } catch (IOException failed) {
             plugin.logger().warning("Dev schem save failed: " + failed.getMessage());
-            messages.message(sender, "dev.save-failed", Map.of("name", name));
+            messages.messageRaw(sender, dev.getSaveFailed(), Map.of("name", name));
             return true;
         }
         JmhLobbyService.SavedCounts counts;
@@ -127,11 +134,11 @@ public final class DevSchemCommand {
             counts = bundleLobby(name, nbt, corners);
         } catch (IOException failed) {
             plugin.logger().warning("Dev schem save failed: " + failed.getMessage());
-            messages.message(sender, "dev.save-failed", Map.of("name", name));
+            messages.messageRaw(sender, dev.getSaveFailed(), Map.of("name", name));
             return true;
         }
         BlockVector size = structure.getSize();
-        messages.message(sender, "dev.saved", Map.of("name", name, "size",
+        messages.messageRaw(sender, dev.getSaved(), Map.of("name", name, "size",
                 size.getBlockX() + "x" + size.getBlockY() + "x" + size.getBlockZ(),
                 "lobbies", lobbySummary(counts)));
         return true;
@@ -142,11 +149,11 @@ public final class DevSchemCommand {
         Location first = pos1.get(player.getUniqueId());
         Location second = pos2.get(player.getUniqueId());
         if (first == null || second == null) {
-            messages.message(sender, "dev.need-selection");
+            messages.messageRaw(sender, dev.getNeedSelection());
             return null;
         }
         if (first.getWorld() == null || !first.getWorld().equals(second.getWorld())) {
-            messages.message(sender, "dev.world-mismatch");
+            messages.messageRaw(sender, dev.getWorldMismatch());
             return null;
         }
         return List.of(first, second);
@@ -160,7 +167,7 @@ public final class DevSchemCommand {
             structure.fill(corners.get(0).toLocation(world), corners.get(1).toLocation(world), true);
         } catch (RuntimeException failed) {
             plugin.logger().warning("Dev schem fill failed: " + failed.getMessage());
-            messages.message(sender, "dev.save-failed", Map.of("name", name));
+            messages.messageRaw(sender, dev.getSaveFailed(), Map.of("name", name));
             return null;
         }
         return structure;
@@ -220,13 +227,13 @@ public final class DevSchemCommand {
             return playerOnly(sender);
         }
         if (name == null) {
-            messages.message(sender, "dev.usage");
+            messages.messageRaw(sender, dev.getUsage());
             return true;
         }
         File bundle = new File(schematics.schematicDir(), name + JmhLobbyService.BUNDLE_SUFFIX);
         File legacy = new File(schematics.schematicDir(), name + ".nbt");
         if (!bundle.isFile() && !legacy.isFile()) {
-            messages.message(sender, "dev.load-missing", Map.of("name", name));
+            messages.messageRaw(sender, dev.getLoadMissing(), Map.of("name", name));
             return true;
         }
         if (bundle.isFile() && confirmRequired(player, name, bundle)) {
@@ -238,9 +245,9 @@ public final class DevSchemCommand {
         File file = bundle.isFile() ? bundle : legacy;
         if (schematics.pasteFile(player.getWorld(), file, player.getLocation())) {
             pendingLoads.remove(player.getUniqueId());
-            messages.message(sender, "dev.pasted", Map.of("name", name));
+            messages.messageRaw(sender, dev.getPasted(), Map.of("name", name));
         } else {
-            messages.message(sender, "dev.load-failed", Map.of("name", name));
+            messages.messageRaw(sender, dev.getLoadFailed(), Map.of("name", name));
         }
         return true;
     }
@@ -276,7 +283,7 @@ public final class DevSchemCommand {
         }
         pendingLoads.put(player.getUniqueId(),
                 new PendingLoad(name, System.currentTimeMillis()));
-        messages.message(player, "dev.load-overwrite-confirm",
+        messages.messageRaw(player, dev.getLoadOverwriteConfirm(),
                 Map.of("name", name, "ids", overwritten.stream().sorted()
                         .map(String::valueOf)
                         .collect(Collectors.joining(", "))));
@@ -286,15 +293,15 @@ public final class DevSchemCommand {
     private boolean list(CommandSender sender) {
         List<String> names = schematicNames();
         if (names.isEmpty()) {
-            messages.message(sender, "dev.list-empty");
+            messages.messageRaw(sender, dev.getListEmpty());
         } else {
-            messages.message(sender, "dev.list", Map.of("value", ListFormatter.joinOxford(names)));
+            messages.messageRaw(sender, dev.getList(), Map.of("value", ListFormatter.joinOxford(names)));
         }
         return true;
     }
 
     private boolean playerOnly(CommandSender sender) {
-        messages.message(sender, "command.player-only");
+        messages.messageRaw(sender, command.getPlayerOnly());
         return true;
     }
 
