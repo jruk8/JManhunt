@@ -50,13 +50,8 @@ public final class NamedPlayerSinks {
                 if (target == null) {
                     return false;
                 }
-                if (!sounds.isValidSound(soundId)) {
-                    logWarning.accept("modifier \"" + containerId
-                            + "\" tried playing invalid sound \"" + soundId + "\"");
-                    return true;
-                }
-                sounds.playCustomSound(target, soundId, pitch, volume);
-                return true;
+                return playSinkSound(target, sounds, logWarning, containerId, soundId, pitch,
+                        volume);
             }
 
             @Override
@@ -66,11 +61,8 @@ public final class NamedPlayerSinks {
                 if (target == null) {
                     return false;
                 }
-                target.showTitle(Title.title(messages.parse(title), messages.parse(subtitle),
-                        Title.Times.times(
-                                ticksToDuration(inSeconds),
-                                ticksToDuration(staySeconds),
-                                ticksToDuration(outSeconds))));
+                showSinkTitle(target, messages, title, subtitle, staySeconds, inSeconds,
+                        outSeconds);
                 return true;
             }
 
@@ -81,36 +73,62 @@ public final class NamedPlayerSinks {
                 if (target == null || target.getInventory() == null) {
                     return false;
                 }
-                Material material =
-                        Material.matchMaterial(TagItems.normalizeMaterialKey(materialKey));
-                if (material == null) {
-                    return false;
-                }
-                int clamped = Math.min(Math.max(qty, 1), material.getMaxStackSize());
-                ItemStack stack = new ItemStack(material, clamped);
-                PlayerInventory inventory = target.getInventory();
-                if (slot instanceof RosterValues.InventorySlot.Named named) {
-                    switch (named.name()) {
-                        case "MAINHAND" -> inventory.setItemInMainHand(stack);
-                        case "OFFHAND" -> inventory.setItemInOffHand(stack);
-                        case "HELMET" -> inventory.setHelmet(stack);
-                        case "CHESTPLATE" -> inventory.setChestplate(stack);
-                        case "LEGGINGS" -> inventory.setLeggings(stack);
-                        default -> inventory.setBoots(stack);
-                    }
-                    return true;
-                }
-                if (slot instanceof RosterValues.InventorySlot.Index indexed) {
-                    int index = indexed.index();
-                    if (index < 0 || index >= inventory.getSize()) {
-                        return false;
-                    }
-                    inventory.setItem(index, stack);
-                    return true;
-                }
-                return false;
+                return setSlotInto(target, slot, materialKey, qty);
             }
         };
+    }
+
+    private static boolean playSinkSound(Player target, SoundService sounds,
+            Consumer<String> logWarning, String containerId, String soundId, float pitch,
+            float volume) {
+        if (!sounds.isValidSound(soundId)) {
+            logWarning.accept("modifier \"" + containerId
+                    + "\" tried playing invalid sound \"" + soundId + "\"");
+            return true;
+        }
+        sounds.playCustomSound(target, soundId, pitch, volume);
+        return true;
+    }
+
+    private static void showSinkTitle(Player target, MessageService messages, String title,
+            String subtitle, double staySeconds, double inSeconds, double outSeconds) {
+        target.showTitle(Title.title(messages.parse(title), messages.parse(subtitle),
+                Title.Times.times(
+                        ticksToDuration(inSeconds),
+                        ticksToDuration(staySeconds),
+                        ticksToDuration(outSeconds))));
+    }
+
+    private static boolean setSlotInto(Player target, RosterValues.InventorySlot slot,
+            String materialKey, int qty) {
+        Material material =
+                Material.matchMaterial(TagItems.normalizeMaterialKey(materialKey));
+        if (material == null) {
+            return false;
+        }
+        int clamped = Math.min(Math.max(qty, 1), material.getMaxStackSize());
+        ItemStack stack = new ItemStack(material, clamped);
+        PlayerInventory inventory = target.getInventory();
+        if (slot instanceof RosterValues.InventorySlot.Named named) {
+            switch (named.name()) {
+                case "MAINHAND" -> inventory.setItemInMainHand(stack);
+                case "OFFHAND" -> inventory.setItemInOffHand(stack);
+                case "HELMET" -> inventory.setHelmet(stack);
+                case "CHESTPLATE" -> inventory.setChestplate(stack);
+                case "LEGGINGS" -> inventory.setLeggings(stack);
+                default -> inventory.setBoots(stack);
+            }
+            return true;
+        }
+        if (slot instanceof RosterValues.InventorySlot.Index indexed) {
+            int index = indexed.index();
+            if (index < 0 || index >= inventory.getSize()) {
+                return false;
+            }
+            inventory.setItem(index, stack);
+            return true;
+        }
+        return false;
     }
 
     /** Seconds through the shared tick converter, as a title duration. */

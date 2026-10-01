@@ -152,7 +152,7 @@ class CommandSyntaxTest {
     }
 
     @Test
-    void extendedTagArityPasses() {
+    void extendedTagArityPassesCore() {
         assertTrue(CommandSyntax.error("say <id>").isEmpty());
         assertTrue(CommandSyntax.error("give <p> apple <min:8,10>").isEmpty());
         assertTrue(CommandSyntax.error("give <p> apple <max:8,10>").isEmpty());
@@ -182,6 +182,10 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <list.get:[a,b],1> done").isEmpty());
         assertTrue(CommandSyntax.error("say <list.set:<gflag:l>,0,x> done").isEmpty());
         assertTrue(CommandSyntax.error("say <list.remove:<gflag:l>,x> done").isEmpty());
+    }
+
+    @Test
+    void extendedTagArityPassesCollections() {
         assertTrue(CommandSyntax.error("say <list.contains:[a],x> done").isEmpty());
         assertTrue(CommandSyntax.error("say <list.clear:<gflag:l>> done").isEmpty());
         assertTrue(CommandSyntax.error("say <list.pop:<gflag:l>> done").isEmpty());
@@ -211,6 +215,10 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <str.contains:ab,b> x").isEmpty());
         assertTrue(CommandSyntax.error("say <pcooldown:Steve,dash,5> x").isEmpty());
         assertTrue(CommandSyntax.error("say <pcooldown.get:Steve,dash,5> x").isEmpty());
+    }
+
+    @Test
+    void extendedTagArityPassesWorldMath() {
         assertTrue(CommandSyntax.error("say <pcooldown.reset:Steve,dash> x").isEmpty());
         assertTrue(CommandSyntax.error("say <gcooldown:dash,5> x").isEmpty());
         assertTrue(CommandSyntax.error("say <gcooldown.get:dash,5> x").isEmpty());
@@ -240,6 +248,7 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <range:5> <range:1,5> <range:5,0,-1> x").isEmpty());
         assertTrue(CommandSyntax.error("say <while:true,x> <for:[a,b],x> <i> x").isEmpty());
     }
+
 
     @Test
     void functionAndRootTagArityPasses() {
@@ -285,7 +294,7 @@ class CommandSyntaxTest {
     }
 
     @Test
-    void extendedTagArityFails() {
+    void extendedTagArityFailsCore() {
         assertTrue(CommandSyntax.error("say <id:x>").isPresent());
         assertTrue(CommandSyntax.error("say <loseplayer> done").isPresent());
         assertTrue(CommandSyntax.error("say <loseplayer:> done").isPresent());
@@ -322,6 +331,10 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <default:7> x").isPresent());
         assertTrue(CommandSyntax.error("say <default:7,0,1> x").isPresent());
         assertTrue(CommandSyntax.error("say <pheld> x").isPresent());
+    }
+
+    @Test
+    void extendedTagArityFailsWorldMath() {
         assertTrue(CommandSyntax.error("say <vec.add:[1,2,3]> x").isPresent());
         assertTrue(CommandSyntax.error("say <vec.mult:[0,1,0]> x").isPresent());
         assertTrue(CommandSyntax.error("say <vec.normalize:[1,2,3],[4,5,6]> x").isPresent());
@@ -359,6 +372,7 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <if:\"<papi:x==y>\",\"y\"> done").isPresent());
         assertTrue(CommandSyntax.error("say <if:\"7 <= 5\" done").isPresent());
     }
+
 
     @Test
     void roleTagShapeFails() {

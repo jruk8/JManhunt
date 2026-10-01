@@ -138,29 +138,12 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.lobbyTeleporter = lobbyTeleporter; this.debugService = debugService;
         this.lobbies = lobbyService;
         this.roster = new StatusRosterService(messages, messages.manhunt(), playerStates);
-        this.devSchem = new DevSchemCommand(
-                new LobbySchematicService(new JmhLobbyService(plugin.logger(), plugin.lobbyConfig(),
-                        plugin.configRoot().getWorldEngine(),
-                        plugin.configRoot().getAdvanced().getLobbies()),
-                        plugin.devConfig(), plugin.getDataFolder().toPath(), plugin.logger(),
-                        plugin::getResource),
-                plugin.lobbyConfig(), plugin.configRoot().getWorldEngine(), plugin.logger(),
-                new DevSchemCommand.Texts(messages, messages.dev(), messages.command()));
+        this.devSchem = newDevSchem(plugin, messages);
         this.feedback = new SettingFeedback(messages, messages.manhunt(), config, sounds);
-        this.modifiersCmd = new ModifiersCommand(config,
-                new ModifiersCommand.ModifiersDeps(plugin.guiService(),
-                        viewer -> modifierMenus.mainMenu(viewer, null),
-                        new ModifierTestService(game.stateCommands(), playerStates,
-                                messages, messages.modifiers(), sounds)),
-                new ModifiersCommand.ModifiersTexts(messages, messages.modifiers(),
-                        messages.command(), sounds));
-        this.overrideCmd = new OverrideCommand(plugin.overrides(), config,
-                new OverrideCommand.OverrideTexts(messages, messages.manhunt(),
-                        messages.modifiers(), sounds),
-                feedback);
-        this.setupService = new SetupService(game,
-                new SetupService.Announcer(messages, messages.manhunt(), sounds), feedback,
-                plugin::observeWorldEngine, plugin::markSetupDone);
+        this.modifiersCmd = newModifiersCmd(plugin, config, messages, sounds, playerStates,
+                game);
+        this.overrideCmd = newOverrideCmd(plugin, config, messages, sounds, feedback);
+        this.setupService = newSetupService(plugin, game, messages, sounds, feedback);
         SettingDialogs dialogs = new SettingDialogs(
                 new SettingDialogs.SettingStores(config, plugin.overrides()),
                 new SettingDialogs.SettingTexts(messages, messages.manhuntGui(), sounds),
@@ -187,6 +170,44 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                         plugin.guiConfig()),
                 new ManhuntMenus.ManhuntDeps(dialogs, plugin.stats(), modifierMenus,
                         modifierDialogs));
+    }
+
+    private DevSchemCommand newDevSchem(JManhuntPlugin plugin, MessageService messages) {
+        return new DevSchemCommand(
+                new LobbySchematicService(new JmhLobbyService(plugin.logger(), plugin.lobbyConfig(),
+                        plugin.configRoot().getWorldEngine(),
+                        plugin.configRoot().getAdvanced().getLobbies()),
+                        plugin.devConfig(), plugin.getDataFolder().toPath(), plugin.logger(),
+                        plugin::getResource),
+                plugin.lobbyConfig(), plugin.configRoot().getWorldEngine(), plugin.logger(),
+                new DevSchemCommand.Texts(messages, messages.dev(), messages.command()));
+    }
+
+    private ModifiersCommand newModifiersCmd(JManhuntPlugin plugin, ConfigService config,
+            MessageService messages, SoundService sounds, PlayerStateStore playerStates,
+            GameManager game) {
+        return new ModifiersCommand(config,
+                new ModifiersCommand.ModifiersDeps(plugin.guiService(),
+                        viewer -> modifierMenus.mainMenu(viewer, null),
+                        new ModifierTestService(game.stateCommands(), playerStates,
+                                messages, messages.modifiers(), sounds)),
+                new ModifiersCommand.ModifiersTexts(messages, messages.modifiers(),
+                        messages.command(), sounds));
+    }
+
+    private OverrideCommand newOverrideCmd(JManhuntPlugin plugin, ConfigService config,
+            MessageService messages, SoundService sounds, SettingFeedback feedback) {
+        return new OverrideCommand(plugin.overrides(), config,
+                new OverrideCommand.OverrideTexts(messages, messages.manhunt(),
+                        messages.modifiers(), sounds),
+                feedback);
+    }
+
+    private SetupService newSetupService(JManhuntPlugin plugin, GameManager game,
+            MessageService messages, SoundService sounds, SettingFeedback feedback) {
+        return new SetupService(game,
+                new SetupService.Announcer(messages, messages.manhunt(), sounds), feedback,
+                plugin::observeWorldEngine, plugin::markSetupDone);
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {

@@ -589,19 +589,13 @@ class SignalInterferenceTest {
     }
 
     @Test
-    void targetCheckOnSkipsHolderSideForEveryOption() {
+    void targetCheckOnSkipsHolderSideLightGroundWater() {
         Snapshot dark = spot(0, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains");
         Snapshot buried =
                 spot(15, 15, true, 10, 0, 64, Weather.CLEAR, "minecraft:plains");
         Snapshot soaked = spot(15, 15, true, 0, 3, 64, Weather.CLEAR, "minecraft:plains",
                 0.0, true);
-        Snapshot high = spot(15, 15, true, 0, 0, 121, Weather.CLEAR, "minecraft:plains");
-        Snapshot desert =
-                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:desert");
-        Snapshot moved = spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
-                5.0, false);
-        Snapshot weak = spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
-                0.0, false, false, 7.0, 9, 4);
+
         Config light = configFull(true, false, false, false, false, false,
                 false, false, CheckOn.TARGET, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
                 CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
@@ -614,6 +608,20 @@ class SignalInterferenceTest {
                 false, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.TARGET, CheckOn.BOTH,
                 CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
                 InterfereWhenVisible.VISIBLE);
+        assertTargetOnly(light, dark);
+        assertTargetOnly(underground, buried);
+        assertTargetOnly(underwater, soaked);
+    }
+
+    @Test
+    void targetCheckOnSkipsHolderSideAltitudeBiomeRest() {
+        Snapshot weak = spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
+                0.0, false, false, 7.0, 9, 4);
+        Snapshot high = spot(15, 15, true, 0, 0, 121, Weather.CLEAR, "minecraft:plains");
+        Snapshot desert =
+                spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:desert");
+        Snapshot moved = spot(15, 15, true, 0, 0, 64, Weather.CLEAR, "minecraft:plains",
+                5.0, false);
         Config altitude = configFull(false, false, false, true, false, false,
                 false, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.TARGET,
                 CheckOn.BOTH, CheckOn.SELF, 1, 0.0, InterfereWhen.ONE_UNMET,
@@ -626,10 +634,6 @@ class SignalInterferenceTest {
                 true, false, CheckOn.SELF, CheckOn.BOTH, CheckOn.BOTH, CheckOn.BOTH,
                 CheckOn.BOTH, CheckOn.TARGET, 1, 0.0, InterfereWhen.ONE_UNMET,
                 InterfereWhenVisible.VISIBLE);
-
-        assertTargetOnly(light, dark);
-        assertTargetOnly(underground, buried);
-        assertTargetOnly(underwater, soaked);
         assertTargetOnly(altitude, high);
         assertTargetOnly(biome, desert);
         assertTargetOnly(movement, moved);
@@ -641,6 +645,8 @@ class SignalInterferenceTest {
         assertTargetOnly(statsConfig(false, false, true,
                 CheckOn.SELF, CheckOn.SELF, CheckOn.TARGET), weak);
     }
+
+
 
     private static void assertTargetOnly(Config config, Snapshot failing) {
         assertFalse(SignalInterference.badSignal(failing, clearSpot(), config, 0.0));

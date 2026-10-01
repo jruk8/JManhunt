@@ -5,7 +5,6 @@ import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SignalInterferenceSettings;
 import com.jruk8.jmanhunt.gui.ConfirmMenu;
-import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;

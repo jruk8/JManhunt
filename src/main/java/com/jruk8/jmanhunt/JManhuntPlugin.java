@@ -17,6 +17,7 @@ import com.jruk8.jmanhunt.config.DevConfigRegistrar;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.lobby.bounds.LobbyBoundsService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfigRegistrar;
@@ -90,6 +91,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
@@ -207,8 +209,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         fakeSpectators = new FakeSpectatorService(this, playerStates);
         lobbyService = new LobbyService(new LobbyService.LobbyPlayers(this::game, fakeSpectators),
                 new LobbyService.LobbyTexts(messages, messages.manhunt()),
-                configRegistrar.getRoot().getAdvanced().getLobbies(),
-                configRegistrar.getRoot().getWorldEngine());
+                configRegistrar.getRoot().getAdvanced().getLobbies(), configRegistrar.getRoot().getWorldEngine());
         setupStatistics();
         setupEngineState();
         stats = new StatsManager(new StatsManager.StatsLogs(logger, getLogger(), this), this::game, overrideService,
@@ -306,8 +307,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
             statistics = StatisticsRepository.open(getDataFolder().toPath(), statisticsConfig);
             logger().info("Career statistics database initialized.");
         } catch (Exception exception) {
-            logger().severe(
-                    "Career statistics are disabled because the database could not be initialized: "
+            logger().severe( "Career statistics are disabled because the database could not be initialized: "
                             + exception.getMessage());
         }
     }
@@ -317,8 +317,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
             engineState = EngineStateRepository.open(getDataFolder());
             logger().info("Engine state database initialized.");
         } catch (Exception exception) {
-            logger().severe(
-                    "World-engine cell allocation will fall back to memory because "
+            logger().severe( "World-engine cell allocation will fall back to memory because "
                             + "the engine database could not be initialized: "
                             + exception.getMessage());
         }
@@ -333,8 +332,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
             expansion.register();
             logger().info("Hooked into PlaceholderAPI as the %jmanhunt_<placeholder>% expansion.");
         } else {
-            logger().warning(
-                    "PlaceholderAPI is not installed; JManhunt placeholders will not be hooked into.");
+            logger().warning( "PlaceholderAPI is not installed; JManhunt placeholders will not be hooked into.");
         }
     }
 
@@ -359,8 +357,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         var players = root.getSettings().getPlayers();
         var match = root.getSettings().getMatch();
         var advanced = root.getAdvanced();
-        var piglinBarter = new PiglinBarterListener(getDataFolder().toPath(), logger, game,
-                match.getGameBoosts());
+        var piglinBarter = new PiglinBarterListener(getDataFolder().toPath(), logger, game, match.getGameBoosts());
         settings.add(worldEngine);
         settings.add(piglinBarter);
         ManhuntCommand command = new ManhuntCommand(
@@ -389,16 +386,21 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         manager.registerEvents(respawn, this);
         manager.registerEvents(piglinBarter, this);
         manager.registerEvents(new BruteSpawnListener(match.getGameBoosts()), this);
-        var lobbies = advanced.getLobbies();
+        registerLobbyListeners(manager, advanced.getLobbies(), command);
+        manager.registerEvents(new GuiListener(guiService), this);
+        manager.registerEvents(new UpdateCheckJoinListener(updateChecks, updateCheckNotifier), this);
+    }
+
+    private void registerLobbyListeners(PluginManager manager, LobbiesConfig lobbies,
+            ManhuntCommand command) {
         var pads = new RolePadService(
-                new RolePadService.RolePadLobby(lobbyService, lobbies,
-                        worldEngine::lobbyWorldName),
+                new RolePadService.RolePadLobby(lobbyService, lobbies, worldEngine::lobbyWorldName),
                 new RolePadService.RolePadTexts(messages, messages.manhunt(), sounds),
                 new RolePadService.RolePadPlayers(playerStates, fakeSpectators), game,
                 new RolePadService.RolePadEdge(logger, roleTeams));
         manager.registerEvents(pads, this);
-        manager.registerEvents(new LobbyProtectionService(lobbyConfig(), worldEngine::lobbyWorldName),
-                this);
+        manager.registerEvents(
+                new LobbyProtectionService(lobbyConfig(), worldEngine::lobbyWorldName), this);
         manager.registerEvents(new LobbyBoundsService(
                 new LobbyBoundsService.BoundsSuppliers(worldEngine::lobbyWorldName,
                         command::boundPos1View, command::boundPos2View, command::devPos1View,
@@ -406,8 +408,6 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
                 new LobbyBoundsService.BoundsContext(lobbyService, lobbies.getBounds(),
                         playerStates, game, debugService),
                 new LobbyBoundsService.BoundsEdge(this, roleTeams, lobbyConfig())), this);
-        manager.registerEvents(new GuiListener(guiService), this);
-        manager.registerEvents(new UpdateCheckJoinListener(updateChecks, updateCheckNotifier), this);
     }
 
     /** Creates the respawn router and keeps it for roster skull lookups. */

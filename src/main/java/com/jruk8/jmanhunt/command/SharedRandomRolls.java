@@ -3,7 +3,6 @@ package com.jruk8.jmanhunt.command;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.concurrent.ThreadLocalRandom;
 import org.bukkit.Material;
 import org.bukkit.entity.EntityType;

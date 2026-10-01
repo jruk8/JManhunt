@@ -209,121 +209,123 @@ public final class ModifierTestService {
      * locations and item counts read live from the sender.
      */
     private static RosterValues testRoster(Player sender, String role) {
-        String name = sender.getName();
-        return new RosterValues() {
-            @Override
-            public Optional<String> roleOf(String playerName) {
-                return playerName.equalsIgnoreCase(name) ? Optional.of(role) : Optional.empty();
-            }
+        return new TestRoster(sender, sender.getName(), role);
+    }
 
-            @Override
-            public List<String> activePlayers(String roleName) {
-                return roleName.equalsIgnoreCase(role) ? List.of(name) : List.of();
-            }
+    /** Single-sender roster behind dry runs. */
+    private record TestRoster(Player sender, String name, String role) implements RosterValues {
+        @Override
+        public Optional<String> roleOf(String playerName) {
+            return playerName.equalsIgnoreCase(name) ? Optional.of(role) : Optional.empty();
+        }
 
-            @Override
-            public Optional<Location> locationOf(String playerName) {
-                return playerName.equalsIgnoreCase(name)
-                        ? Optional.ofNullable(sender.getLocation()) : Optional.empty();
-            }
+        @Override
+        public List<String> activePlayers(String roleName) {
+            return roleName.equalsIgnoreCase(role) ? List.of(name) : List.of();
+        }
 
-            @Override
-            public List<RosterValues.NearbyParticipant> nearbyParticipants() {
-                Location spot = sender.getLocation();
-                if (spot == null || spot.getWorld() == null) {
-                    return List.of();
-                }
-                return List.of(new RosterValues.NearbyParticipant(name, role,
-                        spot.getX(), spot.getY(), spot.getZ(),
-                        spot.getWorld().getEnvironment().name(), spot.getWorld().getName()));
-            }
+        @Override
+        public Optional<Location> locationOf(String playerName) {
+            return playerName.equalsIgnoreCase(name)
+                    ? Optional.ofNullable(sender.getLocation()) : Optional.empty();
+        }
 
-            @Override
-            public Optional<Integer> countItem(String playerName, String materialKey) {
-                if (!playerName.equalsIgnoreCase(name) || sender.getInventory() == null) {
-                    return Optional.empty();
-                }
-                Material material =
-                        Material.matchMaterial(TagItems.normalizeMaterialKey(materialKey));
-                if (material == null) {
-                    return Optional.empty();
-                }
-                ItemStack[] contents = sender.getInventory().getStorageContents();
-                if (contents == null) {
-                    return Optional.of(0);
-                }
-                int count = 0;
-                for (ItemStack stack : contents) {
-                    if (stack != null && stack.getType() == material) {
-                        count += stack.getAmount();
-                    }
-                }
-                return Optional.of(count);
+        @Override
+        public List<RosterValues.NearbyParticipant> nearbyParticipants() {
+            Location spot = sender.getLocation();
+            if (spot == null || spot.getWorld() == null) {
+                return List.of();
             }
+            return List.of(new RosterValues.NearbyParticipant(name, role,
+                    spot.getX(), spot.getY(), spot.getZ(),
+                    spot.getWorld().getEnvironment().name(), spot.getWorld().getName()));
+        }
 
-            @Override
-            public Optional<String> heldItem(String playerName) {
-                if (!playerName.equalsIgnoreCase(name) || sender.getInventory() == null) {
-                    return Optional.empty();
-                }
-                ItemStack held = sender.getInventory().getItemInMainHand();
-                if (held == null || held.getType() == Material.AIR) {
-                    return Optional.empty();
-                }
-                return Optional.of(held.getType().name());
+        @Override
+        public Optional<Integer> countItem(String playerName, String materialKey) {
+            if (!playerName.equalsIgnoreCase(name) || sender.getInventory() == null) {
+                return Optional.empty();
             }
+            Material material =
+                    Material.matchMaterial(TagItems.normalizeMaterialKey(materialKey));
+            if (material == null) {
+                return Optional.empty();
+            }
+            ItemStack[] contents = sender.getInventory().getStorageContents();
+            if (contents == null) {
+                return Optional.of(0);
+            }
+            int count = 0;
+            for (ItemStack stack : contents) {
+                if (stack != null && stack.getType() == material) {
+                    count += stack.getAmount();
+                }
+            }
+            return Optional.of(count);
+        }
 
-            @Override
-            public Optional<Vector> lookDirection(String playerName) {
-                if (!playerName.equalsIgnoreCase(name)) {
-                    return Optional.empty();
-                }
-                Location eye = sender.getEyeLocation();
-                if (eye == null) {
-                    return Optional.empty();
-                }
-                return Optional.of(eye.getDirection());
+        @Override
+        public Optional<String> heldItem(String playerName) {
+            if (!playerName.equalsIgnoreCase(name) || sender.getInventory() == null) {
+                return Optional.empty();
             }
+            ItemStack held = sender.getInventory().getItemInMainHand();
+            if (held == null || held.getType() == Material.AIR) {
+                return Optional.empty();
+            }
+            return Optional.of(held.getType().name());
+        }
 
-            @Override
-            public Optional<Boolean> playerState(String playerName, String state) {
-                if (!playerName.equalsIgnoreCase(name)) {
-                    return Optional.empty();
-                }
-                return Optional.of(switch (state) {
-                    case "SNEAK" -> sender.isSneaking();
-                    case "SPRINT" -> sender.isSprinting();
-                    case "GLIDE" -> sender.isGliding();
-                    case "SWIM" -> sender.isSwimming();
-                    default -> sender.isOnGround();
-                });
+        @Override
+        public Optional<Vector> lookDirection(String playerName) {
+            if (!playerName.equalsIgnoreCase(name)) {
+                return Optional.empty();
             }
+            Location eye = sender.getEyeLocation();
+            if (eye == null) {
+                return Optional.empty();
+            }
+            return Optional.of(eye.getDirection());
+        }
 
-            @Override
-            public Optional<String> standingOn(String playerName) {
-                if (!playerName.equalsIgnoreCase(name)) {
-                    return Optional.empty();
-                }
-                Location feet = sender.getLocation();
-                if (feet == null) {
-                    return Optional.empty();
-                }
-                return Optional.of(feet.getBlock().getRelative(BlockFace.DOWN).getType().name());
+        @Override
+        public Optional<Boolean> playerState(String playerName, String state) {
+            if (!playerName.equalsIgnoreCase(name)) {
+                return Optional.empty();
             }
+            return Optional.of(switch (state) {
+                case "SNEAK" -> sender.isSneaking();
+                case "SPRINT" -> sender.isSprinting();
+                case "GLIDE" -> sender.isGliding();
+                case "SWIM" -> sender.isSwimming();
+                default -> sender.isOnGround();
+            });
+        }
 
-            @Override
-            public Optional<RosterValues.SlotContent> slotItem(String playerName,
-                    RosterValues.InventorySlot slot) {
-                if (!playerName.equalsIgnoreCase(name) || sender.getInventory() == null) {
-                    return Optional.empty();
-                }
-                ItemStack stack = NamedPlayerSinks.slotStack(sender.getInventory(), slot);
-                if (stack == null || stack.getType() == Material.AIR || stack.getAmount() <= 0) {
-                    return Optional.empty();
-                }
-                return Optional.of(new RosterValues.SlotContent(stack.getType().name(),
-                        stack.getAmount()));
+        @Override
+        public Optional<String> standingOn(String playerName) {
+            if (!playerName.equalsIgnoreCase(name)) {
+                return Optional.empty();
             }
-        };
+            Location feet = sender.getLocation();
+            if (feet == null) {
+                return Optional.empty();
+            }
+            return Optional.of(feet.getBlock().getRelative(BlockFace.DOWN).getType().name());
+        }
+
+        @Override
+        public Optional<RosterValues.SlotContent> slotItem(String playerName,
+                RosterValues.InventorySlot slot) {
+            if (!playerName.equalsIgnoreCase(name) || sender.getInventory() == null) {
+                return Optional.empty();
+            }
+            ItemStack stack = NamedPlayerSinks.slotStack(sender.getInventory(), slot);
+            if (stack == null || stack.getType() == Material.AIR || stack.getAmount() <= 0) {
+                return Optional.empty();
+            }
+            return Optional.of(new RosterValues.SlotContent(stack.getType().name(),
+                    stack.getAmount()));
+        }
     }
 }

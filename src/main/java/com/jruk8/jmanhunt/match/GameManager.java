@@ -117,8 +117,7 @@ public final class GameManager implements MatchControl {
         var engine = root.getWorldEngine();
         this.matchSettings = new MatchSettingsFacade(edge.overrides(), match);
         this.playersSettings = new PlayersSettingsFacade(edge.overrides(), players);
-        this.winConditionsSettings =
-                new WinConditionsSettingsFacade(edge.overrides(), match.getWinConditions());
+        this.winConditionsSettings = new WinConditionsSettingsFacade(edge.overrides(), match.getWinConditions());
         var interop = root.getAdvanced().getMisc().getInterop();
         this.stateCommands = new GameStateCommandManager(
                 new GameStateCommandManager.CommandReads(services.playerStates(), reads.configService(), interop,
@@ -137,40 +136,61 @@ public final class GameManager implements MatchControl {
         this.timeLimits = new TimeLimitService(
                 new TimeLimitService.TimeEdge(edge.log(), edge.tasks()), reads.winConditionEngine(),
                 store, new TimeLimitService.TimeTexts(messaging, texts.gameTexts()), this);
-        this.prestart = new PrestartService(
-                new PrestartService.PrestartConfig(match.getHeadstarts(), matchSettings,
-                        playersSettings, edge.overrides()),
-                new PrestartService.PrestartServices(services.playerStates(), services.stats(), stateCommands,
-                        store, this, edge.fakes(), edge.tasks()),
-                texts.messages(), messaging, texts.manhunt());
-        this.autostart = new AutostartService(
-                new AutostartService.AutoConfig(matchSettings, edge.tasks()),
-                new AutostartService.AutoMatch(services.playerStates(), reads.lobbies(), reads.worldEngine(), store,
-                        this),
-                texts.messages(), messaging, texts.manhunt());
-        this.matchFinish = new MatchFinishService(
-                new MatchFinishService.FinishReads(playersSettings, matchSettings, engine,
-                        edge.overrides(), edge.log()),
-                new MatchFinishService.FinishMatch(services.playerStates(), services.compass(), services.stats(),
-                        stateCommands, reads.worldEngine(), store, timeLimits, prestart, autostart,
-                        flagStore, cooldownStore),
-                new MatchFinishService.FinishEdge(edge.fakes(), edge.roleTeams(),
-                        edge.spawnCamp(), edge.tasks(), edge.configRoot()),
-                new MatchFinishService.FinishTexts(texts.messages(), texts.gameTexts(), messaging));
-        this.matchStart = new MatchStartService(
-                new MatchStartService.StartReads(matchSettings, playersSettings, engine,
-                        edge.log()),
-                new MatchStartService.StartMatch(services.playerStates(), services.compass(), services.stats(),
-                        stateCommands, reads.worldEngine(), reads.lobbies(), store, timeLimits, prestart,
-                        autostart),
-                new MatchStartService.StartEdge(edge.fakes(), edge.roleTeams(),
-                        edge.respawn(), texts.sounds()),
-                new MatchStartService.StartTexts(texts.messages(), texts.gameTexts(), texts.manhunt(), messaging));
+        this.prestart = newPrestartService(match.getHeadstarts());
+        this.autostart = newAutostartService();
+        this.matchFinish = newMatchFinish(engine);
+        this.matchStart = newMatchStart(engine);
         this.pseudoborderParticles = new PseudoborderParticleService(edge.tasks(),
                 edge.fakes(), engine, store, reads.worldEngine());
         this.winConditions = new WinConditionTextService(texts.messages(), texts.wincon(),
                 players.getRespawn(), reads.winConditionEngine());
         subscribeSettingChanges();
+    }
+
+    private PrestartService newPrestartService(
+            com.jruk8.jmanhunt.config.MatchSettings.Headstarts headstarts) {
+        return new PrestartService(
+                new PrestartService.PrestartConfig(headstarts, matchSettings,
+                        playersSettings, edge.overrides()),
+                new PrestartService.PrestartServices(services.playerStates(), services.stats(),
+                        stateCommands, store, this, edge.fakes(), edge.tasks()),
+                texts.messages(), messaging, texts.manhunt());
+    }
+
+    private AutostartService newAutostartService() {
+        return new AutostartService(
+                new AutostartService.AutoConfig(matchSettings, edge.tasks()),
+                new AutostartService.AutoMatch(services.playerStates(), reads.lobbies(),
+                        reads.worldEngine(), store, this),
+                texts.messages(), messaging, texts.manhunt());
+    }
+
+    private MatchFinishService newMatchFinish(
+            com.jruk8.jmanhunt.config.WorldEngineConfig engine) {
+        return new MatchFinishService(
+                new MatchFinishService.FinishReads(playersSettings, matchSettings, engine,
+                        edge.overrides(), edge.log()),
+                new MatchFinishService.FinishMatch(services.playerStates(), services.compass(),
+                        services.stats(), stateCommands, reads.worldEngine(), store, timeLimits,
+                        prestart, autostart, flagStore, cooldownStore),
+                new MatchFinishService.FinishEdge(edge.fakes(), edge.roleTeams(),
+                        edge.spawnCamp(), edge.tasks(), edge.configRoot()),
+                new MatchFinishService.FinishTexts(texts.messages(), texts.gameTexts(),
+                        messaging));
+    }
+
+    private MatchStartService newMatchStart(
+            com.jruk8.jmanhunt.config.WorldEngineConfig engine) {
+        return new MatchStartService(
+                new MatchStartService.StartReads(matchSettings, playersSettings, engine,
+                        edge.log()),
+                new MatchStartService.StartMatch(services.playerStates(), services.compass(),
+                        services.stats(), stateCommands, reads.worldEngine(), reads.lobbies(),
+                        store, timeLimits, prestart, autostart),
+                new MatchStartService.StartEdge(edge.fakes(), edge.roleTeams(),
+                        edge.respawn(), texts.sounds()),
+                new MatchStartService.StartTexts(texts.messages(), texts.gameTexts(),
+                        texts.manhunt(), messaging));
     }
 
     /** True while any match runs, including end-delay phases. */

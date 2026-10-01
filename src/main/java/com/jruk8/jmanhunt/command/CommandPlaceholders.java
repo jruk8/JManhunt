@@ -436,6 +436,15 @@ public final class CommandPlaceholders {
             case "loseplayer" -> TagExpressions.loseplayer(tag, args, context);
             case "win" -> TagExpressions.win(tag, args, context);
             case "args" -> TagArgs.resolve(tag, args, context);
+            case "run" -> TagRun.run(tag, args, context); case "format" -> TagFormat.format(tag, args, context);
+            default -> resolveDataTag(tag, name, args, playerName, context, eval);
+        };
+    }
+
+    /** Collection, location, vector, and math tags behind {@link #resolveTag}. */
+    private static String resolveDataTag(String tag, String name, String args, String playerName,
+            TagContext context, TagLoops.Evaluator eval) {
+        return switch (name) {
             case "list.append", "list.get", "list.set", "list.remove", "list.contains", "list.clear",
                     "list.pop", "len", "list.shuffle", "list.filter", "list.reverse", "list.join",
                     "list.slice", "list.first", "list.last" ->
@@ -463,7 +472,6 @@ public final class CommandPlaceholders {
             case "distance" -> TagLocations.distance(tag, args, context);
             case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" ->
                     TagExpressions.mathUnary(tag, name, args, context);
-            case "run" -> TagRun.run(tag, args, context); case "format" -> TagFormat.format(tag, args, context);
             default -> TagFunctions.call(tag, name, args, context, eval);
         };
     }

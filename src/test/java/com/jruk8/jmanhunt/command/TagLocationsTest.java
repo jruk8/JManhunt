@@ -303,18 +303,13 @@ class TagLocationsTest {
                 @Override
                 public List<RosterValues.NearbyParticipant> nearbyParticipants() {
                     return List.of(
-                            new RosterValues.NearbyParticipant(
-                                    "Steve", "HUNTER", 0, 64, 0, "NORMAL", "world"),
-                            new RosterValues.NearbyParticipant(
-                                    "Amy", "SPEEDRUNNER", 3, 64, 4, "NORMAL", "world"),
-                            new RosterValues.NearbyParticipant(
-                                    "Zoe", "SPEEDRUNNER", -3, 64, -4, "NORMAL", "world"),
+                            new RosterValues.NearbyParticipant("Steve", "HUNTER", 0, 64, 0, "NORMAL", "world"),
+                            new RosterValues.NearbyParticipant("Amy", "SPEEDRUNNER", 3, 64, 4, "NORMAL", "world"),
+                            new RosterValues.NearbyParticipant("Zoe", "SPEEDRUNNER", -3, 64, -4, "NORMAL", "world"),
                             new RosterValues.NearbyParticipant(
                                     "Ned", "SPEEDRUNNER", 1, 64, 1, "NETHER", "world_nether"),
-                            new RosterValues.NearbyParticipant(
-                                    "Far", "HUNTER", 100, 64, 0, "NORMAL", "world"),
-                            new RosterValues.NearbyParticipant(
-                                    "Endy", "HUNTER", 2, 64, 0, "THE_END", "jmh_end_3"));
+                            new RosterValues.NearbyParticipant("Far", "HUNTER", 100, 64, 0, "NORMAL", "world"),
+                            new RosterValues.NearbyParticipant("Endy", "HUNTER", 2, 64, 0, "THE_END", "jmh_end_3"));
                 }
             };
         }

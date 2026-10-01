@@ -160,10 +160,14 @@ private static void addSignalInterferenceEntries(List<SettingDescriptor> entries
             "VISIBLE", "NOT_VISIBLE"));
     entries.add(intVal("settings.compass.signal.interference.line-of-sight.max-ray-distance",
             300, 1, 1000));
+    addInvisibleEntries(entries);
+    addPlayerStatsEntries(entries);
+}
+
+private static void addInvisibleEntries(List<SettingDescriptor> entries) {
     entries.add(bool("settings.compass.signal.interference.invisible.enabled", true));
     entries.add(option("settings.compass.signal.interference.invisible.check-on", "BOTH",
             "SELF", "TARGET", "BOTH"));
-    addPlayerStatsEntries(entries);
 }
 
 private static void addPlayerStatsEntries(List<SettingDescriptor> entries) {

@@ -57,6 +57,13 @@ final class TagSyntaxErrors {
             case "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
                     "vec.dot", "vec.cross", "loc.shift", "pdir" ->
                     TagVectors.opError(name, args);
+            default -> tailError(name, args);
+        };
+    }
+
+    /** Trailing tag names behind {@link #tagError}: proximity, math, loops, defs. */
+    static Optional<String> tailError(String name, String args) {
+        return switch (name) {
             case "pstate", "pstandingon", "ptitle", "pslot" -> TagPlayers.opError(name, args);
             case "overlap-players", "nearby-players" -> proximityError(name, args);
             case "distance" -> topLevelArityError(name, args, 2, "<distance:loc1,loc2>");

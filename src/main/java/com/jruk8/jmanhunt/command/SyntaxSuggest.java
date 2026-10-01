@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.command;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;

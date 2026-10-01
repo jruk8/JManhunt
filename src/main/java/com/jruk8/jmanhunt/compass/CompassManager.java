@@ -84,22 +84,15 @@ public final class CompassManager {
                 new CompassAnalysisSessions.SessionServices(targets, signal, items),
                 new CompassAnalysisSessions.SessionPlayers(playerStates, fakes),
                 compassActionbars);
-        CompassAnalysisRunner runner = new CompassAnalysisRunner(settings,
-                new CompassAnalysisRunner.RunnerFeedback(messages, compass, modifiers, sounds,
-                        edge.log()),
-                new CompassAnalysisRunner.RunnerCallbacks(this::resolveClickRefresh,
-                        this::refreshCompass, sessions::beginAnalysisSpot, sessions,
-                        edge.tasks()),
-                new CompassAnalysisRunner.RunnerShared(compassActionbars, lastClick),
-                new CompassAnalysisRunner.RunnerData(playerStates, fakes,
-                        edge.placeholders()));
+        CompassAnalysisRunner runner = newRunner(settings, texts, players, edge, sessions);
         this.locks = new CompassLockService(settings,
                 new CompassLockService.LockCycle(targets, cache, this::renderFromCache,
                         this::refreshCompass),
                 runner, new CompassLockService.LockTexts(messages, compass, sounds),
                 new CompassLockService.LockPlayers(playerStates, fakes));
         sessions.setLockService(locks);
-        this.deltas = new CompassDeltaRenderer(edge.tasks(), settings, messages, compassActionbars);
+        this.deltas = new CompassDeltaRenderer(edge.tasks(), settings, messages,
+                compassActionbars);
         this.refresh = new CompassRefreshService(settings,
                 new CompassRefreshService.RefreshInputs(targets, signal, items, inaccuracy,
                         deltas),
@@ -107,6 +100,20 @@ public final class CompassManager {
                         compassActionbars),
                 new CompassRefreshService.RefreshTexts(messages, compass, sounds),
                 new CompassRefreshService.RefreshPlayers(playerStates, fakes));
+    }
+
+    /** Builds the analysis runner behind compass clicks and debuffs. */
+    private CompassAnalysisRunner newRunner(CompassSettingsFacade settings, ManagerTexts texts,
+            ManagerPlayers players, ManagerEdge edge, CompassAnalysisSessions sessions) {
+        return new CompassAnalysisRunner(settings,
+                new CompassAnalysisRunner.RunnerFeedback(texts.messages(), texts.compass(),
+                        texts.modifiers(), texts.sounds(), edge.log()),
+                new CompassAnalysisRunner.RunnerCallbacks(this::resolveClickRefresh,
+                        this::refreshCompass, sessions::beginAnalysisSpot, sessions,
+                        edge.tasks()),
+                new CompassAnalysisRunner.RunnerShared(compassActionbars, lastClick),
+                new CompassAnalysisRunner.RunnerData(players.playerStates(), players.fakes(),
+                        edge.placeholders()));
     }
 
     /** Wires the game after construction so targets resolve within one match. */

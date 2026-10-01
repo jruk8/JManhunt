@@ -60,6 +60,13 @@ class ModifierEditorMenusTest {
         return PlainTextComponentSerializer.plainText().serialize(component);
     }
 
+    private static void attachCommands(ModifierEntry entry, ModifierBehavior behavior) {
+        ModifierCommands commands = new ModifierCommands();
+        commands.getLists().put("player", new ArrayList<>(List.of("give <p> apple")));
+        behavior.setCommands(commands);
+        entry.setBehavior(new java.util.HashMap<>(java.util.Map.of("0", behavior)));
+    }
+
     @BeforeEach
     void setup() throws Exception {
         ModifierFiles config = ModifierFiles.inMemory();
@@ -87,10 +94,7 @@ class ModifierEditorMenusTest {
         options.setExecution(execution);
         options.setDelay(100L);
         behavior.setOptions(options);
-        ModifierCommands commands = new ModifierCommands();
-        commands.getLists().put("player", new ArrayList<>(List.of("give <p> apple")));
-        behavior.setCommands(commands);
-        entry.setBehavior(new java.util.HashMap<>(java.util.Map.of("0", behavior)));
+        attachCommands(entry, behavior);
         config.getModifiers().put("zebra", entry);
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);

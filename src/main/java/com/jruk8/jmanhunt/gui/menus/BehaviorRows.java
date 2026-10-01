@@ -5,7 +5,6 @@ import com.jruk8.jmanhunt.gui.ConfirmMenu;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
-import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.modifiers.ModifierOptionDescriptors;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierBehavior;
@@ -93,7 +92,8 @@ final class BehaviorRows {
         ModifierOptionDescriptors.Descriptor descriptor =
                 ModifierOptionDescriptors.byKey(optionKey);
         Menu confirm = ConfirmMenu.create(
-                GuiTexts.title(texts.messages(), texts.modifiersGui().getEditorResetTitle().replace("{name}", descriptor.label())),
+                GuiTexts.title(texts.messages(), texts.modifiersGui().getEditorResetTitle()
+                        .replace("{name}", descriptor.label())),
                 Material.PAPER, null,
                 GuiTexts.lore(texts.messages(), List.of(value + " -> " + descriptor.defaultText())),
                 GuiTexts.name(texts.messages(), texts.modifiersGui().getCancel(), "Cancel"),
@@ -150,7 +150,8 @@ final class BehaviorRows {
 
     void fieldPrompt(Player player, Supplier<Menu> reopen, String label, String current,
             boolean clearable, FieldPrompts.Submit submit) {
-        FieldPrompts.prompt(deps.dialogs(), deps.gui(), texts.messages(), texts.modifiersGui(), texts.modifiers(), texts.sounds(), player, reopen,
+        FieldPrompts.prompt(deps.dialogs(), deps.gui(), texts.messages(), texts.modifiersGui(), texts.modifiers(),
+                texts.sounds(), player, reopen,
                 texts.modifiersGui().getEditorPromptTitle().replace("{label}", label),
                 current, clearable, submit);
     }

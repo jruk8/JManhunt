@@ -55,6 +55,15 @@ class PlayerCombatListenerDeathTest {
             FakeSpectatorService fakes, PlayerRespawnListener respawn) {
     }
 
+    private static TaskScheduler immediateTasks() {
+        TaskScheduler tasks = mock(TaskScheduler.class);
+        doAnswer(invocation -> {
+            invocation.getArgument(0, Runnable.class).run();
+            return null;
+        }).when(tasks).run(any(Runnable.class));
+        return tasks;
+    }
+
     private static Fixture fixture(Role role, int lives, boolean begun) {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.spawnCamp()).thenReturn(mock(SpawnCampService.class));
@@ -86,11 +95,7 @@ class PlayerCombatListenerDeathTest {
         when(game.instanceOf(victimId)).thenReturn(Optional.of(instance));
         PlayerSettings settings = new PlayerSettings();
         settings.getRespawn().getHunter().setEnabled(false);
-        TaskScheduler tasks = mock(TaskScheduler.class);
-        doAnswer(invocation -> {
-            invocation.getArgument(0, Runnable.class).run();
-            return null;
-        }).when(tasks).run(any(Runnable.class));
+        TaskScheduler tasks = immediateTasks();
         PlayerCombatListener listener = new PlayerCombatListener(
                 new PlayerCombatListener.CombatReads(players, fakes, settings, texts()),
                 new PlayerCombatListener.CombatMatch(game, stats,
