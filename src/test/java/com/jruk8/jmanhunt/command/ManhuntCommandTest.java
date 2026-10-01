@@ -1,9 +1,15 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.command.CommandSupport;
+import com.jruk8.jmanhunt.command.PendingConfirmations;
+import com.jruk8.jmanhunt.command.units.EndUnit;
+import com.jruk8.jmanhunt.command.units.HelpUnit;
+import com.jruk8.jmanhunt.command.units.QuickStartUnit;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
+import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -17,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /** Unit-testable ManhuntCommand argument helpers. */
 class ManhuntCommandTest {
@@ -39,17 +46,17 @@ class ManhuntCommandTest {
 
     @Test
     void immediateFlagAcceptsShortAndLongForms() {
-        assertTrue(ManhuntCommand.isImmediateFlag("-i"));
-        assertTrue(ManhuntCommand.isImmediateFlag("-immediate"));
-        assertTrue(ManhuntCommand.isImmediateFlag("-I"));
-        assertTrue(ManhuntCommand.isImmediateFlag("-IMMEDIATE"));
+        assertTrue(EndUnit.isImmediateFlag("-i"));
+        assertTrue(EndUnit.isImmediateFlag("-immediate"));
+        assertTrue(EndUnit.isImmediateFlag("-I"));
+        assertTrue(EndUnit.isImmediateFlag("-IMMEDIATE"));
     }
 
     @Test
     void immediateFlagRejectsAnythingElse() {
-        assertFalse(ManhuntCommand.isImmediateFlag("-f"));
-        assertFalse(ManhuntCommand.isImmediateFlag("3"));
-        assertFalse(ManhuntCommand.isImmediateFlag(""));
+        assertFalse(EndUnit.isImmediateFlag("-f"));
+        assertFalse(EndUnit.isImmediateFlag("3"));
+        assertFalse(EndUnit.isImmediateFlag(""));
     }
 
     @Test
@@ -128,18 +135,18 @@ class ManhuntCommandTest {
     @Test
     void parseQuickStartArgsAcceptsForms() {
         assertEquals(new QuickStartArgs(null, true),
-                ManhuntCommand.parseQuickStartArgs(new String[]{"qs"}));
+                QuickStartUnit.parseQuickStartArgs(new String[]{"qs"}));
         assertEquals(new QuickStartArgs(50, true),
-                ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "50"}));
+                QuickStartUnit.parseQuickStartArgs(new String[]{"qs", "50"}));
     }
 
     @Test
     void parseQuickStartArgsRejectsJunk() {
-        assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "soon"}).valid());
-        assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "50", "60"}).valid());
-        assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "-f"}).valid());
-        assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "50", "-force"}).valid());
-        assertFalse(ManhuntCommand.parseQuickStartArgs(new String[]{"qs", "50", "-f", "x"}).valid());
+        assertFalse(QuickStartUnit.parseQuickStartArgs(new String[]{"qs", "soon"}).valid());
+        assertFalse(QuickStartUnit.parseQuickStartArgs(new String[]{"qs", "50", "60"}).valid());
+        assertFalse(QuickStartUnit.parseQuickStartArgs(new String[]{"qs", "-f"}).valid());
+        assertFalse(QuickStartUnit.parseQuickStartArgs(new String[]{"qs", "50", "-force"}).valid());
+        assertFalse(QuickStartUnit.parseQuickStartArgs(new String[]{"qs", "50", "-f", "x"}).valid());
     }
 
     @Test
@@ -154,7 +161,7 @@ class ManhuntCommandTest {
 
     @Test
     void parseEndArgsAcceptsBareEnd() {
-        EndArgs parsed = ManhuntCommand.parseEndArgs(new String[]{"end"});
+        EndArgs parsed = EndUnit.parseEndArgs(new String[]{"end"});
 
         assertTrue(parsed.valid());
         assertEquals(Optional.empty(), parsed.instanceId());
@@ -163,8 +170,8 @@ class ManhuntCommandTest {
 
     @Test
     void parseEndArgsAcceptsIdAndFlagInEitherOrder() {
-        EndArgs idFirst = ManhuntCommand.parseEndArgs(new String[]{"end", "3", "-i"});
-        EndArgs flagFirst = ManhuntCommand.parseEndArgs(new String[]{"end", "-immediate", "3"});
+        EndArgs idFirst = EndUnit.parseEndArgs(new String[]{"end", "3", "-i"});
+        EndArgs flagFirst = EndUnit.parseEndArgs(new String[]{"end", "-immediate", "3"});
 
         for (EndArgs parsed : new EndArgs[]{idFirst, flagFirst}) {
             assertTrue(parsed.valid());
@@ -175,16 +182,16 @@ class ManhuntCommandTest {
 
     @Test
     void parseEndArgsRejectsTwoIds() {
-        EndArgs parsed = ManhuntCommand.parseEndArgs(new String[]{"end", "3", "4"});
+        EndArgs parsed = EndUnit.parseEndArgs(new String[]{"end", "3", "4"});
 
         assertFalse(parsed.valid());
     }
 
     @Test
     void parseEndArgsAcceptsAllAloneAndWithFlagInEitherOrder() {
-        EndArgs bare = ManhuntCommand.parseEndArgs(new String[]{"end", "all"});
-        EndArgs allFirst = ManhuntCommand.parseEndArgs(new String[]{"end", "ALL", "-i"});
-        EndArgs flagFirst = ManhuntCommand.parseEndArgs(new String[]{"end", "-immediate", "All"});
+        EndArgs bare = EndUnit.parseEndArgs(new String[]{"end", "all"});
+        EndArgs allFirst = EndUnit.parseEndArgs(new String[]{"end", "ALL", "-i"});
+        EndArgs flagFirst = EndUnit.parseEndArgs(new String[]{"end", "-immediate", "All"});
 
         assertTrue(bare.valid());
         assertTrue(bare.all());
@@ -200,9 +207,9 @@ class ManhuntCommandTest {
 
     @Test
     void parseEndArgsRejectsAllWithIdOrTwice() {
-        assertFalse(ManhuntCommand.parseEndArgs(new String[]{"end", "3", "all"}).valid());
-        assertFalse(ManhuntCommand.parseEndArgs(new String[]{"end", "all", "3"}).valid());
-        assertFalse(ManhuntCommand.parseEndArgs(new String[]{"end", "all", "all"}).valid());
+        assertFalse(EndUnit.parseEndArgs(new String[]{"end", "3", "all"}).valid());
+        assertFalse(EndUnit.parseEndArgs(new String[]{"end", "all", "3"}).valid());
+        assertFalse(EndUnit.parseEndArgs(new String[]{"end", "all", "all"}).valid());
     }
 
     @Test
@@ -228,7 +235,9 @@ class ManhuntCommandTest {
         MessageService messages = new MessageService();
         messages.reload(config);
 
-        List<Component> lines = ManhuntCommand.supportMessages(messages);
+        CommandSupport support = new CommandSupport(messages, mock(SoundService.class),
+                new PendingConfirmations());
+        List<Component> lines = HelpUnit.supportMessages(support);
 
         assertEquals(5, lines.size());
         assertEquals(Component.empty(), lines.get(0));

@@ -1,6 +1,9 @@
 package com.jruk8.jmanhunt.message;
 
-import com.jruk8.jmanhunt.command.ManhuntCommand;
+import com.jruk8.jmanhunt.command.CommandSupport;
+import com.jruk8.jmanhunt.command.PendingConfirmations;
+import com.jruk8.jmanhunt.command.units.HelpUnit;
+import com.jruk8.jmanhunt.message.SoundService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
@@ -10,6 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for the code-configurable Challenges announcement printed by
@@ -28,8 +32,8 @@ class ChallengesMessageTest {
 
     @Test
     void hereWordOpensTheBuiltByBitResource() {
-        ClickEvent expected = ClickEvent.openUrl(ManhuntCommand.CHALLENGES_URL);
-        List<Component> children = ManhuntCommand.challengesComponents(messages(), true).stream()
+        ClickEvent expected = ClickEvent.openUrl(HelpUnit.CHALLENGES_URL);
+        List<Component> children = HelpUnit.challengesComponents(support(), true).stream()
                 .flatMap(line -> line.children().stream()).toList();
         assertTrue(children.stream().anyMatch(child -> isHereLink(child, expected)));
     }
@@ -46,11 +50,11 @@ class ChallengesMessageTest {
 
     @Test
     void statusValueIsColoredGreenOrRed() {
-        List<Component> active = ManhuntCommand.challengesComponents(messages(), true).stream()
+        List<Component> active = HelpUnit.challengesComponents(support(), true).stream()
                 .flatMap(line -> line.children().stream()).toList();
         assertTrue(active.stream().anyMatch(child ->
                 "ACTIVE".equals(plain(child)) && NamedTextColor.GREEN == child.color()));
-        List<Component> inactive = ManhuntCommand.challengesComponents(messages(), false).stream()
+        List<Component> inactive = HelpUnit.challengesComponents(support(), false).stream()
                 .flatMap(line -> line.children().stream()).toList();
         assertTrue(inactive.stream().anyMatch(child ->
                 "INACTIVE".equals(plain(child)) && NamedTextColor.RED == child.color()));
@@ -59,7 +63,7 @@ class ChallengesMessageTest {
     @Test
     void urlPointsAtTheBuiltByBitResource() {
         assertEquals("https://builtbybit.com/resources/jmanhunt-challenges.121574/",
-                ManhuntCommand.CHALLENGES_URL);
+                HelpUnit.CHALLENGES_URL);
     }
 
     private MessageService messages() {
@@ -68,8 +72,13 @@ class ChallengesMessageTest {
         return messages;
     }
 
+    private CommandSupport support() {
+        return new CommandSupport(messages(), mock(SoundService.class),
+                new PendingConfirmations());
+    }
+
     private String joined(boolean companionEnabled) {
-        return ManhuntCommand.challengesComponents(messages(), companionEnabled).stream()
+        return HelpUnit.challengesComponents(support(), companionEnabled).stream()
                 .map(this::plain)
                 .collect(Collectors.joining(" "));
     }

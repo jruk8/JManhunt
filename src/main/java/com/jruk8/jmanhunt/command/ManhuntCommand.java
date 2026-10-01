@@ -1,11 +1,16 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.command.units.DebugUnit;
+import com.jruk8.jmanhunt.command.units.EndUnit;
+import com.jruk8.jmanhunt.command.units.HelpUnit;
+import com.jruk8.jmanhunt.command.units.QuickStartUnit;
+import com.jruk8.jmanhunt.command.units.ReloadUnit;
+import com.jruk8.jmanhunt.command.units.StartUnit;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SettingType;
 import com.jruk8.jmanhunt.config.DurationFormat;
-import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialogs;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
@@ -28,23 +33,13 @@ import com.jruk8.jmanhunt.match.ModifierTestService;
 import com.jruk8.jmanhunt.match.ModifierTriggers;
 import com.jruk8.jmanhunt.match.StatusRosterService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
-import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
-import com.jruk8.jmanhunt.modifiers.files.ModLoadResult;
-import com.jruk8.jmanhunt.modifiers.files.ReloadDiff;
-import com.jruk8.jmanhunt.modifiers.files.ReloadReportComposer;
-import com.jruk8.jmanhunt.modifiers.files.ReloadWords;
 import com.jruk8.jmanhunt.player.CapLimits;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.event.HoverEvent;
-import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -75,34 +70,6 @@ import java.util.UUID;
 
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     /**
-     * Readonly announcement printed by the challenges subcommand. This text is
-     * intentionally not loaded from messages.yml so it cannot be edited or
-     * removed by server owners; change it here instead. It is always parsed as
-     * MiniMessage; the {link} token becomes a clickable link to
-     * {@link #CHALLENGES_URL} and {status} becomes the companion plugin status.
-     */
-    static final String CHALLENGES_MESSAGE = """
-            
-            <gray>[<gradient:#5e42f4:#b742f4>JMHChallenges</gradient>]</gray>
-            <#de7766>JManhunt</#de7766> is a free plugin for configurable manhunts. \
-            For lucky blocks and other fun challenges, you can find the optional addon {link}.
-            
-            <gray> » Challenges status: [{status}<gray>]</gray>
-            
-            <gray>Looking for modifiers instead? Try \
-            <white>/mh modifiers</white>.</gray>
-            """;
-    public static final String CHALLENGES_URL = "https://builtbybit.com/resources/jmanhunt-challenges.121574/";
-    private static final String CHALLENGES_LINK_TOKEN = "{link}";
-    private static final String CHALLENGES_LINK_TEXT = "here";
-    private static final String CHALLENGES_STATUS_TOKEN = "{status}";
-    private static final String CHALLENGES_STATUS_ACTIVE = "ACTIVE";
-    private static final String CHALLENGES_STATUS_INACTIVE = "INACTIVE";
-    // Candidate plugin.yml names of the JManhunt-Challenges companion plugin;
-    // the status line shows ACTIVE when any of these is loaded and enabled.
-    private static final Set<String> CHALLENGES_PLUGIN_NAMES =
-            Set.of("JManhunt-Challenges", "JManhuntChallenges", "JMHChallenges");
-    /**
      * Extra node for the optional status arguments: bare status needs
      * only the base node, while an instance id or all needs this too.
      */
@@ -128,6 +95,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     /** Lobby-bounds corners per player, separate from the dev schem selection. */
     private final Map<UUID, Location> boundPos1 = new HashMap<>();
     private final Map<UUID, Location> boundPos2 = new HashMap<>();
+    private final Map<String, SubcommandUnit> units = new HashMap<>();
+    // Init-once in initUnits (blank finals cannot assign from a helper).
+    private HelpUnit helpUnit;
+    private StartUnit startUnit;
+    private EndUnit endUnit;
+    private QuickStartUnit quickStartUnit;
+    private ReloadUnit reloadUnit;
+    private DebugUnit debugUnit;
 
     public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, ConfigService config,
                           SoundService sounds, PlayerStateStore playerStates, GameManager game,
@@ -170,6 +145,31 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                         plugin.guiConfig()),
                 new ManhuntMenus.ManhuntDeps(dialogs, plugin.stats(), modifierMenus,
                         modifierDialogs));
+        initUnits();
+    }
+
+    /** Builds the extracted Phase 1 units and routes verbs to them. */
+    private void initUnits() {
+        CommandSupport support = new CommandSupport(messages, sounds, confirms);
+        helpUnit = new HelpUnit(messages.manhunt(), support);
+        startUnit = new StartUnit(game, lobbies, messages.manhunt(), support);
+        endUnit = new EndUnit(game, messages.manhunt(), support);
+        quickStartUnit = new QuickStartUnit(game, lobbies, messages.manhunt(), support);
+        reloadUnit = new ReloadUnit(plugin, game, messages.manhunt(), support);
+        debugUnit = new DebugUnit(debugService, messages.manhunt(), support);
+        registerUnit(helpUnit);
+        registerUnit(startUnit);
+        registerUnit(endUnit);
+        registerUnit(quickStartUnit);
+        registerUnit(reloadUnit);
+        registerUnit(debugUnit);
+    }
+
+    private void registerUnit(SubcommandUnit unit) {
+        units.put(unit.primaryName(), unit);
+        for (String alias : unit.aliases()) {
+            units.put(alias, unit);
+        }
     }
 
     private DevSchemCommand newDevSchem(JManhuntPlugin plugin, MessageService messages) {
@@ -219,97 +219,26 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             return message(sender, messages.command().getNoPermission());
         }
         return switch (sub) {
-            case "help" -> help(sender);
+            case "help" -> helpUnit.execute(sender, args);
             case "status" -> status(sender, args);
-            case "challenges" -> challenges(sender);
+            case "challenges" -> helpUnit.execute(sender, args);
             case "setplayer" -> setPlayer(sender, args);
-            case "start" -> start(sender, args);
-            case "end" -> end(sender, args);
+            case "start" -> startUnit.execute(sender, args);
+            case "end" -> endUnit.execute(sender, args);
             case "game" -> game(sender, args);
             case "config" -> configCommand(sender, args);
             case "modifiers" -> modifiers(sender, args);
             case "override" -> overrideCmd.execute(sender, args);
             case "worldengine" -> worldEngine(sender, args);
-            case "quickstart", "qs" -> quickStart(sender, args);
-            case "reload" -> reload(sender);
-            case "debug" -> debug(sender, args);
+            case "quickstart", "qs" -> quickStartUnit.execute(sender, args);
+            case "reload" -> reloadUnit.execute(sender, args);
+            case "debug" -> debugUnit.execute(sender, args);
             case "lobby" -> lobby(sender, args);
             case "setup" -> setup(sender);
-            case "support" -> support(sender);
+            case "support" -> helpUnit.execute(sender, args);
             case "dev" -> dev(sender, args);
             default -> message(sender, messages.command().getInvalid());
         };
-    }
-
-    /** Community links shared by the help suffix and /mh support. */
-    private static final String DOCS_URL = "https://jruk8.github.io/JManhunt/";
-    private static final String DISCORD_URL = "https://discord.gg/hkWmCVmWDC";
-    private static final String GITHUB_URL = "https://github.com/jruk8/JManhunt";
-    private static final String KOFI_URL = "https://ko-fi.com/jruk";
-
-    private boolean help(CommandSender sender) {
-        message(sender, messages.manhunt().getHelpHeader());
-        String[][] lines = {{"/manhunt help", "show commands"}, {"/manhunt setup", "interactive setup guide"},
-                {"/manhunt", "open the GUI or show match status"},
-                {"/manhunt setplayer <selector> <hunter|speedrunner|spectator|afk|none>", "assign roles"},
-                {"/manhunt lobby join <selector> <lobby-id> [role] [-notp]", "move players to a lobby"},
-                {"/manhunt lobby leave [selector]", "remove players from their lobby"},
-                {"/manhunt start [lobby-id]", "start a match"}, {"/manhunt end [id] [-i|-immediate]", "cancel a match"},
-                {"/manhunt game join <id> [role] [selector]", "add players to a running match"},
-                {"/manhunt game leave [id] [selector]", "remove players from a running match"},
-                {"/manhunt status [id|all]", "show match status"},
-                {"/manhunt quickstart [percentage]", "assign teams and start immediately"},
-                {"/manhunt config <category> <key...> <value>", "view or change a setting"},
-                {"/manhunt modifiers [setmod|setpreset]", "browse or toggle gameplay modifiers"},
-                {"/manhunt override <lobby> <settings|modifiers|clear> ...", "view or change per-lobby overrides"},
-                {"/manhunt worldengine", "manage lobbies or teleport players"},
-                {"/manhunt debug [INFO|WARN|SEVERE]", "toggle or set debug level"},
-                {"/manhunt challenges", "show Challenges addon info"},
-                {"/manhunt dev schem <pos1|pos2|save|load|list>", "dev schematic tools"},
-                {"/manhunt reload", "reload files"}};
-        for (String[] line : lines) {
-            message(sender, messages.manhunt().getHelpLine(), Map.of("command", line[0], "description", line[1]));
-        }
-        // Clickable links use hardcoded MiniMessage instead of living in
-        // messages.yml.
-        sender.sendMessage(messages.miniMessage(
-                "\n<green>Still need help? Check <#de7766><click:open_url:'" + DOCS_URL + "'>"
-                        + "<underlined>Docs</underlined></click></#de7766> or join our "
-                        + "<#de7766><click:open_url:'" + DISCORD_URL + "'>"
-                        + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
-        sender.sendMessage(messages.miniMessage(
-                "<green>Support our development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
-                        + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
-        neutralSound(sender);
-        return true;
-    }
-
-    /** Support links: Discord invite, GitHub, Ko-fi. Players and console alike. */
-    private boolean support(CommandSender sender) {
-        for (Component line : supportMessages(messages)) {
-            sender.sendMessage(line);
-        }
-        neutralSound(sender);
-        return true;
-    }
-
-    /**
-     * Support output lines: blank, parsed prefix, then the Discord,
-     * GitHub, and Ko-fi lines. Static for tests.
-     */
-    static List<Component> supportMessages(MessageService messages) {
-        return List.of(
-                Component.empty(),
-                messages.componentRaw(messages.prefix(), Map.of()),
-                messages.miniMessage(
-                        "<green>Need help? Join our <#de7766><click:open_url:'" + DISCORD_URL + "'>"
-                                + "<underlined>Discord server</underlined></click></#de7766>!</green>"),
-                messages.miniMessage(
-                        "<green>Star us on <#de7766><click:open_url:'" + GITHUB_URL + "'>"
-                                + "<underlined>GitHub</underlined></click></#de7766>.</green>"),
-                messages.miniMessage(
-                        "<green>Support our development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
-                                + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
     }
 
     /** Starts the interactive setup tutorial. Players only: it runs over chat. */
@@ -546,80 +475,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                     "lobby", String.valueOf(lobby.id()),
                     "detail", StatusRosterService.lobbyDetail(inLobby, inMatch.size())));
         }
-    }
-
-    private boolean challenges(CommandSender sender) {
-        for (Component line : challengesComponents(messages, isCompanionEnabled())) {
-            sender.sendMessage(line);
-        }
-        neutralSound(sender);
-        return true;
-    }
-
-    /**
-     * The announcement lines from {@link #CHALLENGES_MESSAGE}, with the {link}
-     * token turned into a clickable link and the {status} token turned into the
-     * companion plugin status.
-     */
-    public static List<Component> challengesComponents(MessageService messages, boolean companionEnabled) {
-        List<Component> lines = new ArrayList<>();
-        for (String line : CHALLENGES_MESSAGE.split("\n")) {
-            lines.add(renderChallengesLine(messages, line, companionEnabled));
-        }
-        return lines;
-    }
-
-    /**
-     * Renders one line of {@link #CHALLENGES_MESSAGE}, replacing every
-     * braced {token} with its dynamic component and parsing the rest of the
-     * text as MiniMessage.
-     */
-    private static Component renderChallengesLine(MessageService messages, String line, boolean companionEnabled) {
-        Component rendered = Component.empty();
-        int cursor = 0;
-        while (cursor < line.length()) {
-            int open = line.indexOf('{', cursor);
-            int close = open < 0 ? -1 : line.indexOf('}', open);
-            if (open < 0 || close < 0) {
-                rendered = rendered.append(messages.miniMessage(line.substring(cursor)));
-                break;
-            }
-            if (open > cursor) {
-                rendered = rendered.append(messages.miniMessage(line.substring(cursor, open)));
-            }
-            rendered = rendered.append(tokenComponent(messages, line.substring(open, close + 1), companionEnabled));
-            cursor = close + 1;
-        }
-        return rendered;
-    }
-
-    private static Component tokenComponent(MessageService messages, String token, boolean companionEnabled) {
-        return switch (token) {
-            case CHALLENGES_LINK_TOKEN -> challengesLink();
-            case CHALLENGES_STATUS_TOKEN -> challengesStatus(companionEnabled);
-            default -> messages.miniMessage(token);
-        };
-    }
-
-    private static Component challengesLink() {
-        return Component.text(CHALLENGES_LINK_TEXT, NamedTextColor.GOLD, TextDecoration.UNDERLINED)
-                .clickEvent(ClickEvent.openUrl(CHALLENGES_URL))
-                .hoverEvent(HoverEvent.showText(Component.text(CHALLENGES_URL, NamedTextColor.GRAY)));
-    }
-
-    private static Component challengesStatus(boolean companionEnabled) {
-        String status = companionEnabled ? CHALLENGES_STATUS_ACTIVE : CHALLENGES_STATUS_INACTIVE;
-        NamedTextColor color = companionEnabled ? NamedTextColor.GREEN : NamedTextColor.RED;
-        return Component.text(status, color);
-    }
-
-    private boolean isCompanionEnabled() {
-        for (String name : CHALLENGES_PLUGIN_NAMES) {
-            if (Bukkit.getPluginManager().isPluginEnabled(name)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -1217,118 +1072,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private int capFor(Role role) {
         return config.getInt(
                 "advanced.lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1);
-    }
-
-    private boolean start(CommandSender sender, String[] args) {
-        int lobbyId;
-        if (args.length == 1) {
-            lobbyId = startLobbyFor(sender);
-        } else if (args.length == 2) {
-            OptionalInt parsed = LobbyService.parseId(args[1]);
-            if (parsed.isEmpty()) {
-                return message(sender, messages.manhunt().getLobbyInvalidId());
-            }
-            lobbyId = parsed.getAsInt();
-        } else {
-            return message(sender, messages.manhunt().getStartUsage());
-        }
-        if (lobbyId < 0) {
-            return message(sender, messages.manhunt().getStartInvalid());
-        }
-        if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
-            return message(sender, messages.manhunt().getLobbyWorldengineRequired());
-        }
-        if (liveMatchBlocks(lobbyId)) {
-            return message(sender, messages.manhunt().getAlreadyActive());
-        }
-        Location surroundOrigin = sender instanceof Player executor ? executor.getLocation() : null;
-        if (!game.start(lobbyId, surroundOrigin)) {
-            return message(sender, messages.manhunt().getStartInvalid());
-        }
-        return true;
-    }
-
-    /**
-     * True when a live lobby match blocks a new start: any live match
-     * except under sublobby policies with the world engine on, where the
-     * new match becomes the next child sublobby.
-     */
-    private boolean liveMatchBlocks(int lobbyId) {
-        return game.instanceForLobby(lobbyId).isPresent()
-                && !lobbies.midMatchPolicy().allowsConcurrentStart(lobbies.multiLobbyAllowed());
-    }
-
-    /** Lobby a bare start targets: the sender's lobby, else the default. */
-    private int startLobbyFor(CommandSender sender) {
-        if (sender instanceof Player player) {
-            return lobbies.lobbyOf(player.getUniqueId()).map(Lobby::id)
-                    .orElseGet(() -> lobbies.multiLobbyAllowed() ? lobbies.defaultLobbyId() : 0);
-        }
-        return lobbies.multiLobbyAllowed() ? lobbies.defaultLobbyId() : 0;
-    }
-
-    private boolean end(CommandSender sender, String[] args) {
-        EndArgs parsed = parseEndArgs(args);
-        if (!parsed.valid()) {
-            return message(sender, messages.manhunt().getEndUsage());
-        }
-        if (parsed.all()) {
-            List<GameInstance> live = game.liveInstances();
-            if (live.isEmpty()) {
-                return message(sender, messages.manhunt().getNotActive());
-            }
-            for (GameInstance each : live) {
-                game.cancel(each, parsed.immediate());
-            }
-            message(sender, messages.manhunt().getEndAllSuccess(),
-                    Map.of("count", String.valueOf(live.size())));
-            return true;
-        }
-        GameInstance instance;
-        if (parsed.instanceId().isPresent()) {
-            Optional<GameInstance> resolved = game.resolveInstance(parsed.instanceId().get());
-            if (resolved.isEmpty()) {
-                return message(sender, messages.manhunt().getInvalidInstanceId());
-            }
-            instance = resolved.get();
-        } else if (sender instanceof Player player) {
-            Optional<GameInstance> own = game.instanceOf(player.getUniqueId());
-            if (own.isEmpty()) {
-                if (!game.isActive()) {
-                    return message(sender, messages.manhunt().getNotActive());
-                }
-                return message(sender, messages.manhunt().getNotInMatch());
-            }
-            instance = own.get();
-        } else {
-            return message(sender, messages.manhunt().getConsoleRequiresId());
-        }
-        game.cancel(instance, parsed.immediate());
-        return true;
-    }
-
-
-    static EndArgs parseEndArgs(String[] args) {
-        Optional<String> instanceId = Optional.empty();
-        boolean immediate = false;
-        boolean all = false;
-        for (int i = 1; i < args.length; i++) {
-            if (isImmediateFlag(args[i])) {
-                immediate = true;
-            } else if (args[i].equalsIgnoreCase("all") && instanceId.isEmpty() && !all) {
-                all = true;
-            } else if (instanceId.isEmpty() && !all) {
-                instanceId = Optional.of(args[i]);
-            } else {
-                return new EndArgs(Optional.empty(), false, false, false);
-            }
-        }
-        return new EndArgs(instanceId, immediate, all, true);
-    }
-
-    /** True for the -i and -immediate flags accepted by end. */
-    static boolean isImmediateFlag(String arg) {
-        return arg.equalsIgnoreCase("-i") || arg.equalsIgnoreCase("-immediate");
     }
 
     /** Joins players to or removes them from a running match. */
@@ -2183,79 +1926,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return corner.getBlockX() + ", " + corner.getBlockY() + ", " + corner.getBlockZ();
     }
 
-    private boolean reload(CommandSender sender) {
-        long started = System.nanoTime();
-        plugin.reloadExceptModifiers();
-        game.validateLobbyWorldName();
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            ModLoadResult fresh = plugin.loadModsSnapshot();
-            Bukkit.getScheduler().runTask(plugin, () -> applyReload(sender, fresh, started));
-        });
-        return true;
-    }
-
-    /** Applies a background mods load on the main thread, then reports it. */
-    private void applyReload(CommandSender sender, ModLoadResult fresh, long started) {
-        if (!plugin.isEnabled()) {
-            plugin.logger().info("Skipping mods reload: JManhunt is disabled.");
-            return;
-        }
-        ReloadDiff diff = plugin.applyModifierReload(fresh);
-        long elapsed = (System.nanoTime() - started) / 1_000_000L;
-        message(sender, messages.manhunt().getReloadSuccess(), Map.of("elapsed", String.valueOf(elapsed)));
-        String bullet = messages.manhunt().getReloadBullet();
-        for (String line : ReloadReportComposer.compose(diff, fresh, reloadWords())) {
-            sender.sendMessage(messages.renderLiteral(bullet + line, Map.of()));
-        }
-        plugin.logger().info("JManhunt has been reloaded.");
-        neutralSound(sender);
-    }
-
-    /** Resolves every reload report template with its schema default behind it. */
-    private ReloadWords reloadWords() {
-        return new ReloadWords(
-                messages.manhunt().getReloadChangesNew(),
-                messages.manhunt().getReloadChangesRemoved(),
-                messages.manhunt().getReloadChangesJoin(),
-                messages.manhunt().getReloadUnknown(),
-                messages.manhunt().getReloadFailed(),
-                messages.manhunt().getReloadDuplicate(),
-                messages.manhunt().getReloadItemModifier(),
-                messages.manhunt().getReloadItemModifiers(),
-                messages.manhunt().getReloadItemPreset(),
-                messages.manhunt().getReloadItemPresets(),
-                messages.manhunt().getReloadItemBoth(),
-                messages.manhunt().getReloadLabelUnknownFile(),
-                messages.manhunt().getReloadLabelUnknownFiles(),
-                messages.manhunt().getReloadLabelDuplicateId(),
-                messages.manhunt().getReloadLabelDuplicateIds(),
-                messages.manhunt().getReloadExtra());
-    }
-
-    private boolean debug(CommandSender sender, String[] args) {
-        if (args.length == 1) {
-            Optional<DebugLevel> now = toggleDebug(sender);
-            if (now.isEmpty()) {
-                message(sender, messages.manhunt().getDebugDisabled());
-            } else {
-                message(sender, messages.manhunt().getDebugEnabled(), Map.of("level", now.get().name()));
-            }
-            neutralSound(sender);
-            return true;
-        }
-        if (args.length == 2) {
-            DebugLevel level = DebugLevel.parse(args[1]);
-            if (level == null) {
-                return message(sender, messages.manhunt().getDebugUsage());
-            }
-            setDebug(sender, level);
-            message(sender, messages.manhunt().getDebugEnabled(), Map.of("level", level.name()));
-            neutralSound(sender);
-            return true;
-        }
-        return message(sender, messages.manhunt().getDebugUsage());
-    }
-
     /** Developer tools. Only schem exists for now; usage covers the rest. */
     private boolean dev(CommandSender sender, String[] args) {
         if (args.length < 2 || !args[1].equalsIgnoreCase("schem")) {
@@ -2268,20 +1938,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return modifiersCmd.execute(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
     }
 
-    private Optional<DebugLevel> toggleDebug(CommandSender sender) {
-        if (sender instanceof Player player) {
-            return debugService.togglePlayer(player.getUniqueId());
-        }
-        return debugService.toggleConsole();
-    }
-
-    private DebugLevel setDebug(CommandSender sender, DebugLevel level) {
-        if (sender instanceof Player player) {
-            return debugService.setPlayerLevel(player.getUniqueId(), level);
-        }
-        return debugService.setConsoleLevel(level);
-    }
-
     @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             // Only suggest subcommands the sender may actually run.
@@ -2289,12 +1945,19 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             options.removeIf(option -> !canUseSubcommand(sender, option));
             return partial(args[0], options);
         }
-        List<String> completion = completeStatusStartEndTab(sender, args);
+        SubcommandUnit unit = units.get(args[0].toLowerCase(Locale.ROOT));
+        if (unit != null) {
+            List<String> unitCompletion = unit.complete(sender, args);
+            if (unitCompletion != null) {
+                return unitCompletion;
+            }
+        }
+        List<String> completion = completeStatusTab(sender, args);
         if (completion == null) {
             completion = completeGameTab(args);
         }
         if (completion == null) {
-            completion = completeDevDebugTab(args);
+            completion = completeDevTab(args);
         }
         if (args.length >= 2
                 && args[0].equalsIgnoreCase("config")) {
@@ -2305,9 +1968,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         }
         if (completion == null) {
             completion = completeSetPlayerTab(args);
-        }
-        if (args.length == 2 && (args[0].equalsIgnoreCase("quickstart") || args[0].equalsIgnoreCase("qs"))) {
-            return partial(args[1], List.of("50"));
         }
         if (completion == null) {
             completion = completeLobbyTab(args);
@@ -2479,7 +2139,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /** Tab completion for status, start, and end. Null when inapplicable. */
-    private List<String> completeStatusStartEndTab(CommandSender sender, String[] args) {
+    private List<String> completeStatusTab(CommandSender sender, String[] args) {
         if (args.length == 2 && args[0].equalsIgnoreCase("status")) {
             if (!canUseStatusArgs(sender)) {
                 return List.of();
@@ -2487,22 +2147,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             List<String> options = new ArrayList<>(List.of("all"));
             options.addAll(instanceIdOptions());
             return partial(args[1], options);
-        }
-        if (args.length == 2 && args[0].equalsIgnoreCase("start")) {
-            return partial(args[1], lobbyIdOptions());
-        }
-        if (args.length == 2 && args[0].equalsIgnoreCase("end")) {
-            List<String> options = new ArrayList<>(List.of("all", "-i", "-immediate"));
-            options.addAll(instanceIdOptions());
-            return partial(args[1], options);
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("end")) {
-            if (isImmediateFlag(args[1])) {
-                List<String> options = new ArrayList<>(List.of("all"));
-                options.addAll(instanceIdOptions());
-                return partial(args[2], options);
-            }
-            return partial(args[2], List.of("-i", "-immediate"));
         }
         return null;
     }
@@ -2529,7 +2173,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     /** Tab completion for dev and debug. Null when inapplicable. */
-    private List<String> completeDevDebugTab(String[] args) {
+    private List<String> completeDevTab(String[] args) {
         if (args.length == 2 && args[0].equalsIgnoreCase("dev")) {
             return partial(args[1], List.of("schem"));
         }
@@ -2539,9 +2183,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         if (args.length == 4 && args[0].equalsIgnoreCase("dev") && args[1].equalsIgnoreCase("schem")
                 && args[2].equalsIgnoreCase("load")) {
             return partial(args[3], devSchem.schematicNames());
-        }
-        if (args.length == 2 && args[0].equalsIgnoreCase("debug")) {
-            return partial(args[1], List.of("INFO", "WARN", "SEVERE"));
         }
         return null;
     }
@@ -2703,11 +2344,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Lobby id completion: live lobby ids, falling back to 0 when none exist. */
     private List<String> lobbyIdOptions() {
-        List<String> ids = new ArrayList<>(lobbies.lobbyIds().stream().sorted().map(String::valueOf).toList());
-        if (ids.isEmpty()) {
-            ids.add("0");
-        }
-        return ids;
+        return CommandSupport.lobbyIdOptions(lobbies);
     }
 
     /**
@@ -2782,7 +2419,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
 
     /** Instance id completion: live match ids, oldest first. */
     private List<String> instanceIdOptions() {
-        return game.liveInstances().stream().map(instance -> String.valueOf(instance.matchId())).toList();
+        return CommandSupport.instanceIdOptions(game);
     }
 
     /** Selector completion: vanilla selectors plus online player names. */
@@ -2982,50 +2619,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * config.yml so that tab completion can suggest the default entry.
      */
 
-    private boolean quickStart(CommandSender sender, String[] args) {
-        QuickStartArgs parsed = parseQuickStartArgs(args);
-        if (!parsed.valid()) {
-            return message(sender, messages.manhunt().getQuickstartUsage());
-        }
-        int percent = parsed.percent() == null ? -1 : parsed.percent();
-        if (parsed.percent() != null && (percent < 0 || percent > 100)) {
-            return message(sender, messages.manhunt().getQuickstartInvalidPercent());
-        }
-        int lobbyId;
-        if (sender instanceof Player player) {
-            lobbyId = lobbies.lobbyOf(player.getUniqueId()).map(Lobby::id)
-                    .orElseGet(() -> lobbies.multiLobbyAllowed() ? lobbies.defaultLobbyId() : 0);
-        } else {
-            lobbyId = lobbies.multiLobbyAllowed() ? lobbies.defaultLobbyId() : 0;
-        }
-        if (lobbyId < 0) {
-            return message(sender, messages.manhunt().getQuickstartFailed());
-        }
-        if (liveMatchBlocks(lobbyId)) {
-            return message(sender, messages.manhunt().getAlreadyActive());
-        }
-        Location surroundOrigin = sender instanceof Player executor ? executor.getLocation() : null;
-        QuickStartOutcome outcome = game.quickStart(percent, lobbyId, surroundOrigin);
-        if (!outcome.started()) {
-            return message(sender, messages.manhunt().getQuickstartFailed());
-        }
-        return true;
-    }
-
-
-    static QuickStartArgs parseQuickStartArgs(String[] args) {
-        if (args.length > 2) {
-            return new QuickStartArgs(null, false);
-        }
-        if (args.length == 1) {
-            return new QuickStartArgs(null, true);
-        }
-        try {
-            return new QuickStartArgs(Integer.parseInt(args[1]), true);
-        } catch (NumberFormatException exception) {
-            return new QuickStartArgs(null, false);
-        }
-    }
 
     private boolean message(CommandSender sender, String raw) {
         messages.messageRaw(sender, raw, Map.of());
