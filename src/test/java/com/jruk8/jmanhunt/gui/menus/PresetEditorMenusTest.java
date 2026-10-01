@@ -78,8 +78,10 @@ class PresetEditorMenusTest {
         texts = new MessagesConfig();
         messages.reload(texts);
         store = new ModifierStore(config, log);
-        editor = new PresetEditorMenus(store, messages, texts.getModifiersGui(),
-                texts.getModifiers(), texts.getCommand(), null, null, null, null);
+        editor = new PresetEditorMenus(store,
+                new PresetEditorMenus.PresetTexts(messages, texts.getModifiersGui(),
+                        texts.getModifiers(), texts.getCommand(), null),
+                new PresetEditorMenus.PresetDeps(null, null, null));
     }
 
     private static void addModifier(ModifierFiles config, String id, String name) {
@@ -153,8 +155,10 @@ class PresetEditorMenusTest {
         GuiService gui = mock(GuiService.class);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
-        PresetEditorMenus live = new PresetEditorMenus(store, messages, texts.getModifiersGui(),
-                texts.getModifiers(), texts.getCommand(), null, gui, null, null);
+        PresetEditorMenus live = new PresetEditorMenus(store,
+                new PresetEditorMenus.PresetTexts(messages, texts.getModifiersGui(),
+                        texts.getModifiers(), texts.getCommand(), null),
+                new PresetEditorMenus.PresetDeps(gui, null, null));
 
         live.editor("pair", null).buttonAt(12).action().accept(player);
 

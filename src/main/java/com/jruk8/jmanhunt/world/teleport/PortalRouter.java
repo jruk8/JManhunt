@@ -1,10 +1,10 @@
 package com.jruk8.jmanhunt.world.teleport;
 
 import com.jruk8.jmanhunt.core.DebugLevel;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.message.DebugMessages;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -25,14 +25,14 @@ import com.jruk8.jmanhunt.world.cell.CellBounds;
  * and leaving the end returns to the match cell.
  */
 public final class PortalRouter implements Listener {
-    private final JManhuntPlugin plugin;
+    private final JManhuntLogger log;
     private final GameManager game;
     private final WorldEngineService worldEngine;
     private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
 
-    public PortalRouter(JManhuntPlugin plugin, GameManager game, WorldEngineService worldEngine,
+    public PortalRouter(JManhuntLogger log, GameManager game, WorldEngineService worldEngine,
             com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings) {
-        this.plugin = plugin;
+        this.log = log;
         this.game = game;
         this.worldEngine = worldEngine;
         this.engineSettings = engineSettings;
@@ -82,7 +82,7 @@ public final class PortalRouter implements Listener {
             return;
         }
         event.setTo(new Location(to.getWorld(), inside[0], to.getY(), inside[1], to.getYaw(), to.getPitch()));
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getPortalReroute,
+        log.debug(DebugLevel.INFO, DebugMessages::getPortalReroute,
                 Map.of("player", player.getName(), "cell", String.valueOf(cell)));
     }
 
@@ -98,7 +98,7 @@ public final class PortalRouter implements Listener {
                 return;
             }
             event.setTo(root.get());
-            plugin.logger().debug(DebugLevel.INFO, DebugMessages::getPortalReroute,
+            log.debug(DebugLevel.INFO, DebugMessages::getPortalReroute,
                     Map.of("player", player.getName(), "cell", String.valueOf(cell)));
         } else if (fromWorld.getEnvironment() == World.Environment.NORMAL) {
             Optional<World> end = worldEngine.assignMatchEndWorld(instance.matchId());
@@ -112,7 +112,7 @@ public final class PortalRouter implements Listener {
                 to.setWorld(end.get());
             }
             event.setTo(to);
-            plugin.logger().debug(DebugLevel.INFO, DebugMessages::getPortalReroute,
+            log.debug(DebugLevel.INFO, DebugMessages::getPortalReroute,
                     Map.of("player", player.getName(), "cell", end.get().getName()));
         }
     }

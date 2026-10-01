@@ -36,16 +36,17 @@ class TagExpressionsTest {
                 return true;
             }
         };
-        final TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
-                "beef",
-                globalMessages::add,
-                playerMessages::add,
-                (id, pitch, volume) -> globalSounds.add(id + ":" + pitch + ":" + volume),
-                (id, pitch, volume) -> playerSounds.add(id + ":" + pitch + ":" + volume),
-                (player, reason) -> { }, (role, reason) -> { },
-                TagContext.NO_MATCH, new TagBackends(StatValues.inert(), new FlagStore(),
-                        (text, name) -> text, RosterValues.inert(), players));
+        final TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                List.of(), new Random(7), warnings::add), "beef"),
+                TagContext.TagSinks.simple(globalMessages::add, playerMessages::add,
+                        (id, pitch, volume) -> globalSounds.add(id + ":" + pitch + ":" + volume),
+                        (id, pitch, volume) -> playerSounds.add(id + ":" + pitch + ":" + volume),
+                        ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(TagContext.NO_MATCH, new TagBackends(StatValues.inert(),
+                        new FlagStore(),
+                                (text, name) -> text, RosterValues.inert(), players)
+                                , (player, reason) -> { }, (role, reason) -> { }));
     }
 
     private static String replace(Fixture fixture, String command) {
@@ -345,15 +346,15 @@ class TagExpressionsTest {
         List<String> warnings = new ArrayList<>();
         List<String> roleMessages = new ArrayList<>();
         List<String> roleSounds = new ArrayList<>();
-        TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
-                "beef", warnings::add, warnings::add,
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, TagBackends.inert(), List.of(), detail -> { },
-                (role, text) -> roleMessages.add(role + ":" + text),
-                (role, id, pitch, volume) ->
-                        roleSounds.add(role + ":" + id + ":" + pitch + ":" + volume));
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                List.of(), new Random(7), warnings::add), "beef"),
+                TagContext.TagSinks.simple(warnings::add, warnings::add, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { },
+                                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add)),
+                new TagContext.TagRole((role, text) -> roleMessages.add(role + ":" + text),
+                        (role, id, pitch, volume) -> roleSounds.add(role + ":" + id + ":" + pitch + ":" + volume)),
+                new TagContext.TagMatch(7L, TagBackends.inert(), List.of(), detail -> { },
+                        (player, reason) -> { }, (role, reason) -> { }));
 
         assertEquals("", CommandPlaceholders.replace("<rmessage:hunter,hi>", "Steve", 0, 0, 0, context));
         assertEquals("", CommandPlaceholders.replace(
@@ -405,14 +406,15 @@ class TagExpressionsTest {
     void roleMessageAliasMatchesCanonical() {
         List<String> warnings = new ArrayList<>();
         List<String> roleMessages = new ArrayList<>();
-        TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
-                "beef", warnings::add, warnings::add,
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, TagBackends.inert(), List.of(), detail -> { },
-                (role, text) -> roleMessages.add(role + ":" + text),
-                (role, id, pitch, volume) -> { });
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                List.of(), new Random(7), warnings::add), "beef"),
+                TagContext.TagSinks.simple(warnings::add, warnings::add, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { },
+                                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add)),
+                new TagContext.TagRole((role, text) -> roleMessages.add(role + ":" + text),
+                        (role, id, pitch, volume) -> { }),
+                new TagContext.TagMatch(7L, TagBackends.inert(), List.of(), detail -> { },
+                        (player, reason) -> { }, (role, reason) -> { }));
         assertEquals("", CommandPlaceholders.replace("<rmsg:hunter,hi>", "Steve", 0, 0, 0, context));
         assertEquals("", CommandPlaceholders.replace("<rmsg:hi>", "Steve", 0, 0, 0, context));
         assertEquals(List.of("HUNTER:hi"), roleMessages);
@@ -423,9 +425,9 @@ class TagExpressionsTest {
     @Test
     void playerMessageAliasWarnsWhenOffline() {
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.of(
-                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
-                "beef", warnings::add, warnings::add,
+        TagContext context = TagContext.of(new TagContext.TagIdentity(ModifierTagScope.match("Steve", List.of(),
+                new Random(7), warnings::add), "beef"),
+                warnings::add, warnings::add,
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { });
         assertEquals("", CommandPlaceholders.replace("<pmsg:Alex,yo>", "Steve", 0, 0, 0,
                 context));
@@ -488,9 +490,9 @@ class TagExpressionsTest {
     @Test
     void namedSinksWarnWhenOffline() {
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.of(
-                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
-                "beef", warnings::add, warnings::add,
+        TagContext context = TagContext.of(new TagContext.TagIdentity(ModifierTagScope.match("Steve", List.of(),
+                new Random(7), warnings::add), "beef"),
+                warnings::add, warnings::add,
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { });
         assertEquals("", CommandPlaceholders.replace("<pmessage:Alex,yo>", "Steve", 0, 0, 0,
                 context));
@@ -511,22 +513,22 @@ class TagExpressionsTest {
 
     @Test
     void exitDetection() {
-        assertTrue(TagExpressions.isExit("exit"));
-        assertTrue(TagExpressions.isExit(" exit "));
-        assertTrue(TagExpressions.isExit("/exit"));
-        assertFalse(TagExpressions.isExit("exit give Steve apple"));
-        assertFalse(TagExpressions.isExit("exiting"));
-        assertFalse(TagExpressions.isExit("say exit"));
-        assertTrue(TagExpressions.isExitMisuse("exit give Steve apple"));
-        assertTrue(TagExpressions.isExitMisuse("/exit now"));
-        assertFalse(TagExpressions.isExitMisuse("exit"));
-        assertFalse(TagExpressions.isExitMisuse("exiting"));
-        assertFalse(TagExpressions.isExitMisuse("say exit now"));
+        assertTrue(TagControlFlow.isExit("exit"));
+        assertTrue(TagControlFlow.isExit(" exit "));
+        assertTrue(TagControlFlow.isExit("/exit"));
+        assertFalse(TagControlFlow.isExit("exit give Steve apple"));
+        assertFalse(TagControlFlow.isExit("exiting"));
+        assertFalse(TagControlFlow.isExit("say exit"));
+        assertTrue(TagControlFlow.isExitMisuse("exit give Steve apple"));
+        assertTrue(TagControlFlow.isExitMisuse("/exit now"));
+        assertFalse(TagControlFlow.isExitMisuse("exit"));
+        assertFalse(TagControlFlow.isExitMisuse("exiting"));
+        assertFalse(TagControlFlow.isExitMisuse("say exit now"));
     }
 
     @Test
     void findIfSpansSeesQuotedComparisons() {
-        List<TagExpressions.IfSpan> spans = TagExpressions.findIfSpans(
+        List<TagControlFlow.IfSpan> spans = TagControlFlow.findIfSpans(
                 "say <if:\"7 <= 5\",\"y\",\"n\"> done");
         assertEquals(1, spans.size());
         assertEquals("\"7 <= 5\",\"y\",\"n\"", spans.get(0).args());
@@ -537,18 +539,18 @@ class TagExpressionsTest {
 
     @Test
     void findIfSpansSkipsNonIfAndUnbalanced() {
-        assertTrue(TagExpressions.findIfSpans("say <iffy> hi").isEmpty());
-        assertTrue(TagExpressions.findIfSpans("say <if:\"7 < 5,hi").isEmpty());
-        assertTrue(TagExpressions.findIfSpans("say <p> hi").isEmpty());
+        assertTrue(TagControlFlow.findIfSpans("say <iffy> hi").isEmpty());
+        assertTrue(TagControlFlow.findIfSpans("say <if:\"7 < 5,hi").isEmpty());
+        assertTrue(TagControlFlow.findIfSpans("say <p> hi").isEmpty());
     }
 
     @Test
     void hasNestedIfDetectsNestedTags() {
-        assertTrue(TagExpressions.hasNestedIf("\"<if:\"1==1\",\"a\">\" == \"a\",\"y\""));
-        assertTrue(TagExpressions.hasNestedIf("<IF:\"1==1\",\"a\">,\"y\""));
-        assertFalse(TagExpressions.hasNestedIf("\"7 <= 5\",\"y\",\"n\""));
-        assertFalse(TagExpressions.hasNestedIf("\"<p> == Steve\",\"y\""));
-        assertFalse(TagExpressions.hasNestedIf("\"<iffy>\""));
+        assertTrue(TagControlFlow.hasNestedIf("\"<if:\"1==1\",\"a\">\" == \"a\",\"y\""));
+        assertTrue(TagControlFlow.hasNestedIf("<IF:\"1==1\",\"a\">,\"y\""));
+        assertFalse(TagControlFlow.hasNestedIf("\"7 <= 5\",\"y\",\"n\""));
+        assertFalse(TagControlFlow.hasNestedIf("\"<p> == Steve\",\"y\""));
+        assertFalse(TagControlFlow.hasNestedIf("\"<iffy>\""));
     }
 
     @Test
@@ -592,24 +594,24 @@ class TagExpressionsTest {
 
     @Test
     void dispatchableLineSkipsBlankAndStripsSlash() {
-        assertTrue(TagExpressions.dispatchableLine("").isEmpty());
-        assertTrue(TagExpressions.dispatchableLine("   ").isEmpty());
-        assertTrue(TagExpressions.dispatchableLine("/").isEmpty());
-        assertTrue(TagExpressions.dispatchableLine(" / ").isEmpty());
-        assertEquals("say hi", TagExpressions.dispatchableLine("say hi").orElseThrow());
-        assertEquals("say hi", TagExpressions.dispatchableLine("/say hi").orElseThrow());
-        assertEquals("say hi", TagExpressions.dispatchableLine("  say hi  ").orElseThrow());
+        assertTrue(TagControlFlow.dispatchableLine("").isEmpty());
+        assertTrue(TagControlFlow.dispatchableLine("   ").isEmpty());
+        assertTrue(TagControlFlow.dispatchableLine("/").isEmpty());
+        assertTrue(TagControlFlow.dispatchableLine(" / ").isEmpty());
+        assertEquals("say hi", TagControlFlow.dispatchableLine("say hi").orElseThrow());
+        assertEquals("say hi", TagControlFlow.dispatchableLine("/say hi").orElseThrow());
+        assertEquals("say hi", TagControlFlow.dispatchableLine("  say hi  ").orElseThrow());
     }
 
     @Test
     void isPureNullMatchesExactLowercaseNull() {
-        assertTrue(TagExpressions.isPureNull("null"));
-        assertTrue(TagExpressions.isPureNull("  null  "));
-        assertFalse(TagExpressions.isPureNull("NULL"));
-        assertFalse(TagExpressions.isPureNull("Null"));
-        assertFalse(TagExpressions.isPureNull("null x"));
-        assertFalse(TagExpressions.isPureNull(""));
-        assertFalse(TagExpressions.isPureNull("say null"));
+        assertTrue(TagControlFlow.isPureNull("null"));
+        assertTrue(TagControlFlow.isPureNull("  null  "));
+        assertFalse(TagControlFlow.isPureNull("NULL"));
+        assertFalse(TagControlFlow.isPureNull("Null"));
+        assertFalse(TagControlFlow.isPureNull("null x"));
+        assertFalse(TagControlFlow.isPureNull(""));
+        assertFalse(TagControlFlow.isPureNull("say null"));
     }
 
     @Test
@@ -646,12 +648,14 @@ class TagExpressionsTest {
         final List<String> warnings = new ArrayList<>();
         final List<String> wins = new ArrayList<>();
         final List<String> lost = new ArrayList<>();
-        final TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
-                "beef", warnings::add, warnings::add,
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> lost.add(player + "|" + reason),
-                (role, reason) -> wins.add(role + "|" + reason),
-                TagContext.NO_MATCH, TagBackends.inert());
+        final TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                List.of(), new Random(7), warnings::add), "beef"),
+                TagContext.TagSinks.simple(warnings::add, warnings::add, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { },
+                                ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(TagContext.NO_MATCH, TagBackends.inert(),
+                        (player, reason) -> lost.add(player + "|" + reason),
+                                (role, reason) -> wins.add(role + "|" + reason)));
     }
 }

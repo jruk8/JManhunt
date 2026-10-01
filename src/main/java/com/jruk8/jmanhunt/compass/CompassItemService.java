@@ -1,10 +1,11 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.GameMode;
@@ -24,22 +25,27 @@ import java.util.Set;
 
 /** Compass items: giving, finding, identifying, and restamping. */
 final class CompassItemService {
-    private final JManhuntPlugin plugin;
+    /** Role plus fake-spectator reads for holding rules. */
+    record ItemPlayers(PlayerStateStore states, FakeSpectatorService fakes) {
+    }
+
+    /** Item name and lore rendering. */
+    record ItemTexts(MessageService messages, CompassMessages compass) {
+    }
+
     private final CompassSettingsFacade settings;
-    private final MessageService messages;
-    private final CompassMessages compass;
-    private final PlayerStateStore playerStates;
+    private final ItemPlayers players;
+    private final ItemTexts texts;
+    private final JManhuntLogger log;
     private final NamespacedKey compassKey;
     private GameManager game;
 
-    CompassItemService(JManhuntPlugin plugin, CompassSettingsFacade settings,
-            MessageService messages, CompassMessages compass,
-            PlayerStateStore playerStates, NamespacedKey compassKey) {
-        this.plugin = plugin;
+    CompassItemService(CompassSettingsFacade settings, ItemPlayers players, ItemTexts texts,
+            JManhuntLogger log, NamespacedKey compassKey) {
         this.settings = settings;
-        this.messages = messages;
-        this.compass = compass;
-        this.playerStates = playerStates;
+        this.players = players;
+        this.texts = texts;
+        this.log = log;
         this.compassKey = compassKey;
     }
 
@@ -125,23 +131,23 @@ final class CompassItemService {
         // death screen, never in (fake) spectator mode. Revives re-give
         // after leaving spectator mode instead.
         if (player.isDead() || player.getGameMode() == GameMode.SPECTATOR
-                || plugin.fakeSpectators().isFakeSpectator(player)) {
+                || players.fakes().isFakeSpectator(player)) {
             return;
         }
         Integer lobby = lobbyOf(player);
-        if (!shouldReceiveCompass(lobby, playerStates.role(player)) || !mayHoldCompass(player)) {
+        if (!shouldReceiveCompass(lobby, players.states().role(player)) || !mayHoldCompass(player)) {
             return;
         }
         removeCompasses(player);
         String configured = settings.obtainingItem(lobby);
         Material material = resolveCompassMaterial(configured);
         if (material == null) {
-            plugin.logger().warning("Unknown or placeable settings.compass.obtaining.item '"
+            log.warning("Unknown or placeable settings.compass.obtaining.item '"
                     + configured + "'. Using minecraft:compass.");
             material = Material.COMPASS;
         }
         ItemStack item = new ItemStack(material);
-        applyCompassIdentity(item, playerStates.role(player));
+        applyCompassIdentity(item, players.states().role(player));
         ItemMeta meta = item.getItemMeta();
         if (settings.dropOnDeathEnabled(lobby)) {
             meta.addEnchant(Enchantment.UNBREAKING, 1, true);
@@ -247,7 +253,7 @@ final class CompassItemService {
      * everyone else lose picked-up compasses and receive none.
      */
     boolean mayHoldCompass(Player player) {
-        Role holderRole = playerStates.role(player);
+        Role holderRole = players.states().role(player);
         if (holderRole != Role.HUNTER && holderRole != Role.SPEEDRUNNER) {
             return false;
         }
@@ -265,7 +271,7 @@ final class CompassItemService {
         if (!isCompass(item)) {
             return;
         }
-        applyCompassIdentity(item, playerStates.role(player));
+        applyCompassIdentity(item, players.states().role(player));
         player.getInventory().setItem(slot, item);
     }
 
@@ -275,9 +281,10 @@ final class CompassItemService {
      */
     private void applyCompassIdentity(ItemStack item, Role holderRole) {
         ItemMeta meta = item.getItemMeta();
+        MessageService messages = texts.messages();
         meta.displayName(messages.nonItalic(
-                messages.componentRaw(compassName(compass, holderRole), Map.of())));
-        List<String> lore = compassLore(compass, holderRole);
+                messages.componentRaw(compassName(texts.compass(), holderRole), Map.of())));
+        List<String> lore = compassLore(texts.compass(), holderRole);
         meta.lore(lore.stream().map(messages::parse).map(messages::nonItalic).toList());
         item.setItemMeta(meta);
     }

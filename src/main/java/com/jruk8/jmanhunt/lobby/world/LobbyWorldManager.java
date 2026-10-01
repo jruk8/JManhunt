@@ -1,13 +1,14 @@
 package com.jruk8.jmanhunt.lobby.world;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.config.WorldEngineConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.world.DimensionWorlds;
 import org.bukkit.Bukkit;
 import org.bukkit.Difficulty;
 import org.bukkit.GameRules;
 import org.bukkit.Location;
+import org.bukkit.Server;
 import org.bukkit.World;
 import java.io.File;
 import java.util.HashMap;
@@ -30,9 +31,17 @@ public final class LobbyWorldManager {
     /** Window in which a second tpto run confirms generation. */
     public static final long CONFIRM_TIMEOUT_MILLIS = 10_000L;
 
-    private final JManhuntPlugin plugin;
-    private final LobbiesConfig lobbySettings;
-    private final WorldEngineConfig engineSettings;
+    /** Server, logger, and lobby store edge. */
+    public record ManagerEdge(Server server, JManhuntLogger log, LobbyConfig lobbyConfig) {
+    }
+
+    /** Lobby name plus engine world config. */
+    public record ManagerConfig(LobbiesConfig lobbySettings, WorldEngineConfig engineSettings) {
+    }
+
+    private final ManagerEdge edge;
+    private final ManagerConfig config;
+    private final LobbySchematicService schematics;
     private final LongSupplier clock;
     /** Sender keys with an armed generation confirmation. */
     private final Map<String, Pending> pending = new HashMap<>();
@@ -41,29 +50,29 @@ public final class LobbyWorldManager {
     private record Pending(String worldName, long expiresAt) {
     }
 
-    public LobbyWorldManager(JManhuntPlugin plugin, LobbiesConfig lobbySettings,
-            WorldEngineConfig engineSettings) {
-        this(plugin, lobbySettings, engineSettings, System::currentTimeMillis);
+    public LobbyWorldManager(ManagerEdge edge, ManagerConfig config,
+            LobbySchematicService schematics) {
+        this(edge, config, schematics, System::currentTimeMillis);
     }
 
-    public LobbyWorldManager(JManhuntPlugin plugin, LobbiesConfig lobbySettings,
-            WorldEngineConfig engineSettings, LongSupplier clock) {
-        this.plugin = plugin;
-        this.lobbySettings = lobbySettings;
-        this.engineSettings = engineSettings;
+    public LobbyWorldManager(ManagerEdge edge, ManagerConfig config,
+            LobbySchematicService schematics, LongSupplier clock) {
+        this.edge = edge;
+        this.config = config;
+        this.schematics = schematics;
         this.clock = clock;
     }
 
     public LobbyWorldManager(LongSupplier clock) {
-        this.plugin = null;
-        this.lobbySettings = null;
-        this.engineSettings = null;
+        this.edge = null;
+        this.config = null;
+        this.schematics = null;
         this.clock = clock;
     }
 
     /** Configured lobby world name, live-read so renames apply on reload. */
     public String lobbyWorldName() {
-        return lobbySettings.getLobbyWorldName();
+        return config.lobbySettings().getLobbyWorldName();
     }
 
     /** True when the lobby world name collides with the game world name. Pure for tests. */
@@ -74,8 +83,8 @@ public final class LobbyWorldManager {
 
     /** True when a world with the lobby name is loaded or has a folder waiting. */
     public boolean lobbyWorldExists() {
-        return DimensionWorlds.exists(plugin.getServer().getWorldContainer(),
-                engineSettings.getWorldName(),
+        return DimensionWorlds.exists(edge.server().getWorldContainer(),
+                config.engineSettings().getWorldName(),
                 lobbyWorldName());
     }
 
@@ -113,8 +122,8 @@ public final class LobbyWorldManager {
      */
     public Optional<LobbyWorld> ensureLobbyWorld(Optional<LobbyPreset> presetOverride) {
         String name = lobbyWorldName();
-        if (namesClash(name, engineSettings.getWorldName())) {
-            plugin.logger().warning("Refusing to load lobby world '" + name
+        if (namesClash(name, config.engineSettings().getWorldName())) {
+            edge.log().warning("Refusing to load lobby world '" + name
                     + "': it matches the game world. Rename advanced.lobbies.lobby-world-name.");
             return Optional.empty();
         }
@@ -122,8 +131,8 @@ public final class LobbyWorldManager {
         if (loaded != null) {
             return Optional.of(new LobbyWorld(loaded, false, false));
         }
-        File container = plugin.getServer().getWorldContainer();
-        String gameWorld = engineSettings.getWorldName();
+        File container = edge.server().getWorldContainer();
+        String gameWorld = config.engineSettings().getWorldName();
         boolean fresh = !DimensionWorlds.folderExists(container, gameWorld, name);
         World world;
         try {
@@ -132,7 +141,7 @@ public final class LobbyWorldManager {
                 creator.generateStructures(false);
             });
         } catch (Exception exception) {
-            plugin.logger().warning("Could not create lobby world " + name + ": " + exception.getMessage());
+            edge.log().warning("Could not create lobby world " + name + ": " + exception.getMessage());
             return Optional.empty();
         }
         if (world == null) {
@@ -143,12 +152,12 @@ public final class LobbyWorldManager {
             return Optional.of(new LobbyWorld(world, false, false));
         }
         LobbyPreset preset = presetOverride.orElse(LobbyPreset.DEFAULT);
-        new LobbySchematicService(plugin).applyPreset(world, preset);
+        schematics.applyPreset(world, preset);
         applyLobbyDefaults(world);
         Location spawn = safeSpawn(world);
         world.setSpawnLocation(spawn);
         boolean lobbyZeroSet = ensureLobbyZero(spawn);
-        lowestLobbyTp(plugin.lobbyConfig().getLobbies()).ifPresent(lowest ->
+        lowestLobbyTp(edge.lobbyConfig().getLobbies()).ifPresent(lowest ->
                 world.setSpawnLocation(toSpawn(world, lowest.getValue())));
         return Optional.of(new LobbyWorld(world, true, lobbyZeroSet));
     }
@@ -161,9 +170,9 @@ public final class LobbyWorldManager {
      * misconfiguration can never freeze time and weather where matches run.
      */
     private void applyLobbyDefaults(World world) {
-        String gameWorldName = engineSettings.getWorldName();
+        String gameWorldName = config.engineSettings().getWorldName();
         if (namesClash(world.getName(), gameWorldName)) {
-            plugin.logger().warning("Refusing to apply lobby defaults to '" + world.getName()
+            edge.log().warning("Refusing to apply lobby defaults to '" + world.getName()
                     + "': it matches the game world. Rename advanced.lobbies.lobby-world-name.");
             return;
         }
@@ -231,7 +240,7 @@ public final class LobbyWorldManager {
      * written.
      */
     public boolean ensureLobbyZero(Location spawn) {
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
+        LobbyConfig lobbyConfig = edge.lobbyConfig();
         if (!missingLobbyZero(lobbyConfig)) {
             return false;
         }

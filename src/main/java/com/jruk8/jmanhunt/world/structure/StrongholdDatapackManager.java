@@ -1,11 +1,15 @@
 package com.jruk8.jmanhunt.world.structure;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import org.bukkit.Server;
+import java.nio.file.Path;
+import java.util.function.Consumer;
 
 /** Applies the world-engine stronghold placement datapack. */
 public final class StrongholdDatapackManager extends DatapackManager {
-    public StrongholdDatapackManager(JManhuntPlugin plugin) {
-        super(plugin);
+    public StrongholdDatapackManager(Server server, Path dataFolder, JManhuntLogger log,
+            Consumer<String> saveResource) {
+        super(server, dataFolder, log, saveResource);
     }
 
     @Override

@@ -10,6 +10,7 @@ import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.MiscConfig;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
@@ -17,6 +18,7 @@ import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Location;
@@ -186,17 +188,22 @@ class GameStateCommandManagerTest {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         JManhuntLogger logger = mock(JManhuntLogger.class);
         when(plugin.logger()).thenReturn(logger);
-        GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), mock(ConfigService.class), new MiscConfig.Interop(),
-                mock(PlayersSettingsFacade.class), mock(MessageService.class),
-                mock(SoundService.class), mock(GameManager.class));
+        GameStateCommandManager manager = new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(new PlayerStateStore(),
+                        mock(ConfigService.class), new MiscConfig.Interop(),
+                        mock(PlayersSettingsFacade.class)),
+                new GameStateCommandManager.CommandEdge(
+                        plugin.engineStates(), plugin.fakeSpectators(),
+                        plugin.logger(), plugin.overrides(),
+                        plugin.placeholderValues(), plugin),
+                mock(MessageService.class), mock(SoundService.class), mock(GameManager.class));
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.run(
-                ModifierTagScope.executor("Steve", warnings::add), "gapple-on-low-hp",
-                text -> { }, text -> { },
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, TagBackends.inert());
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.executor("Steve",
+                warnings::add), "gapple-on-low-hp"),
+                TagContext.TagSinks.simple(text -> { }, text -> { }, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { }, ModifierTagScope.executor("Steve", warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(7L, TagBackends.inert(), (player, reason) -> { }, (role, reason) -> { }));
 
         // A bare set evaluates to blank text; dispatching it crashes the
         // server dispatcher, so the line must be skipped with no error.
@@ -212,17 +219,22 @@ class GameStateCommandManagerTest {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         JManhuntLogger logger = mock(JManhuntLogger.class);
         when(plugin.logger()).thenReturn(logger);
-        GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), mock(ConfigService.class), new MiscConfig.Interop(),
-                mock(PlayersSettingsFacade.class), mock(MessageService.class),
-                mock(SoundService.class), mock(GameManager.class));
+        GameStateCommandManager manager = new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(new PlayerStateStore(),
+                        mock(ConfigService.class), new MiscConfig.Interop(),
+                        mock(PlayersSettingsFacade.class)),
+                new GameStateCommandManager.CommandEdge(
+                        plugin.engineStates(), plugin.fakeSpectators(),
+                        plugin.logger(), plugin.overrides(),
+                        plugin.placeholderValues(), plugin),
+                mock(MessageService.class), mock(SoundService.class), mock(GameManager.class));
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.run(
-                ModifierTagScope.executor("Steve", warnings::add), "null-probe",
-                text -> { }, text -> { },
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, TagBackends.inert());
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.executor("Steve",
+                warnings::add), "null-probe"),
+                TagContext.TagSinks.simple(text -> { }, text -> { }, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { }, ModifierTagScope.executor("Steve", warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(7L, TagBackends.inert(), (player, reason) -> { }, (role, reason) -> { }));
 
         // <i> outside any loop is a silent null, so the line resolves to
         // pure "null": warn with the source line and skip the dispatcher
@@ -244,17 +256,22 @@ class GameStateCommandManagerTest {
         ConfigService config = mock(ConfigService.class);
         when(config.getStringList(anyString())).thenReturn(List.of("stop"));
         MessageService messages = mock(MessageService.class);
-        GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), config, new MiscConfig.Interop(),
-                mock(PlayersSettingsFacade.class), messages,
-                mock(SoundService.class), mock(GameManager.class));
+        GameStateCommandManager manager = new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(new PlayerStateStore(), config, new MiscConfig.Interop(),
+                        mock(PlayersSettingsFacade.class)),
+                new GameStateCommandManager.CommandEdge(
+                        plugin.engineStates(), plugin.fakeSpectators(),
+                        plugin.logger(), plugin.overrides(),
+                        plugin.placeholderValues(), plugin),
+                messages, mock(SoundService.class), mock(GameManager.class));
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.run(
-                ModifierTagScope.executor("Steve", warnings::add), "halt",
-                text -> messages.broadcastText(text), text -> { },
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, TagBackends.inert());
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.executor("Steve",
+                warnings::add), "halt"),
+                TagContext.TagSinks.simple(text -> messages.broadcastText(text), text -> { },
+                        (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                                ModifierTagScope.executor("Steve", warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(7L, TagBackends.inert(), (player, reason) -> { }, (role, reason) -> { }));
 
         manager.runCommandList(List.of("stop", "<gmessage:after>"), null, context,
                 TagContext.Provenance.of("halt", 0, "console"));
@@ -284,10 +301,14 @@ class GameStateCommandManagerTest {
         when(game.flagStore()).thenReturn(new FlagStore());
         MessageService messages = mock(MessageService.class);
         stubEngineTexts(messages);
-        GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), config, new MiscConfig.Interop(),
-                mock(PlayersSettingsFacade.class), messages,
-                mock(SoundService.class), game);
+        GameStateCommandManager manager = new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(new PlayerStateStore(), config, new MiscConfig.Interop(),
+                        mock(PlayersSettingsFacade.class)),
+                new GameStateCommandManager.CommandEdge(
+                        plugin.engineStates(), plugin.fakeSpectators(),
+                        plugin.logger(), plugin.overrides(),
+                        plugin.placeholderValues(), plugin),
+                messages, mock(SoundService.class), game);
 
         manager.runConsoleCleanup(7L);
 
@@ -317,10 +338,14 @@ class GameStateCommandManagerTest {
         when(game.flagStore()).thenReturn(new FlagStore());
         MessageService messages = mock(MessageService.class);
         stubEngineTexts(messages);
-        GameStateCommandManager manager = new GameStateCommandManager(plugin,
-                new PlayerStateStore(), config, new MiscConfig.Interop(),
-                mock(PlayersSettingsFacade.class), messages,
-                mock(SoundService.class), game);
+        GameStateCommandManager manager = new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(new PlayerStateStore(), config, new MiscConfig.Interop(),
+                        mock(PlayersSettingsFacade.class)),
+                new GameStateCommandManager.CommandEdge(
+                        plugin.engineStates(), plugin.fakeSpectators(),
+                        plugin.logger(), plugin.overrides(),
+                        plugin.placeholderValues(), plugin),
+                messages, mock(SoundService.class), game);
 
         manager.runConsoleCleanup(7L);
 
@@ -374,8 +399,13 @@ class GameStateCommandManagerTest {
         MessageService messages = mock(MessageService.class);
         stubEngineTexts(messages);
         SoundService sounds = mock(SoundService.class);
-        return new RoleTagHarness(new GameStateCommandManager(plugin, playerStates, config,
-                new MiscConfig.Interop(), mock(PlayersSettingsFacade.class),
+        return new RoleTagHarness(new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(playerStates, config,
+                        new MiscConfig.Interop(), mock(PlayersSettingsFacade.class)),
+                new GameStateCommandManager.CommandEdge(
+                        plugin.engineStates(), plugin.fakeSpectators(),
+                        logger, plugin.overrides(),
+                        plugin.placeholderValues(), plugin),
                 messages, sounds, game), messages, sounds, logger);
     }
 
@@ -476,10 +506,15 @@ class GameStateCommandManagerTest {
     }
 
     private static GameStateCommandManager wipeManager(JManhuntPlugin plugin) {
-        return new GameStateCommandManager(plugin,
-                new PlayerStateStore(), mock(ConfigService.class), new MiscConfig.Interop(),
-                mock(PlayersSettingsFacade.class), mock(MessageService.class),
-                mock(SoundService.class), mock(GameManager.class));
+        return new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(new PlayerStateStore(),
+                        mock(ConfigService.class), new MiscConfig.Interop(),
+                        mock(PlayersSettingsFacade.class)),
+                new GameStateCommandManager.CommandEdge(
+                        plugin.engineStates(), plugin.fakeSpectators(),
+                        plugin.logger(), plugin.overrides(),
+                        plugin.placeholderValues(), plugin),
+                mock(MessageService.class), mock(SoundService.class), mock(GameManager.class));
     }
 
     @Test

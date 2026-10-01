@@ -2,22 +2,23 @@ package com.jruk8.jmanhunt.loot;
 
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.config.SettingsListener;
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import org.bukkit.event.Event;
 import org.bukkit.event.Listener;
 import java.io.File;
+import java.nio.file.Path;
 
 public abstract class LootTableListener<T extends Event> implements Listener, SettingsListener {
-    protected final JManhuntPlugin plugin;
+    protected final JManhuntLogger log;
     protected final LootTableEngine engine;
     private final GameManager game;
     private final File customFile;
 
-    public LootTableListener(JManhuntPlugin plugin, GameManager game) {
-        this.plugin = plugin;
+    public LootTableListener(Path dataFolder, JManhuntLogger log, GameManager game) {
+        this.log = log;
         this.game = game;
         this.engine = new LootTableEngine();
-        this.customFile = new File(plugin.getDataFolder(), "settings/loot-tables/" + getLootTableName() + ".json");
+        this.customFile = dataFolder.resolve("settings/loot-tables/" + getLootTableName() + ".json").toFile();
     }
 
     protected boolean validateEvent(T event) {
@@ -38,17 +39,17 @@ public abstract class LootTableListener<T extends Event> implements Listener, Se
     private void reloadTable() {
         String name = getLootTableName();
         if (!customFile.exists()) {
-            plugin.logger().warning("Custom loot table '%s.json' does not exist.".formatted(name));
+            log.warning("Custom loot table '%s.json' does not exist.".formatted(name));
             return;
         }
 
-        boolean success = engine.loadFromFile(customFile, plugin.logger());
+        boolean success = engine.loadFromFile(customFile, log);
 
         if (!success) {
-            plugin.logger().severe("Found loot table '%s.json' but failed to parse it!".formatted(name));
+            log.severe("Found loot table '%s.json' but failed to parse it!".formatted(name));
             return;
         }
-        plugin.logger().info("Successfully loaded custom loot table '%s.json'!".formatted(name));
+        log.info("Successfully loaded custom loot table '%s.json'!".formatted(name));
     }
 
     public void onStart() {

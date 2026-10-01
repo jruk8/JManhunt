@@ -48,11 +48,14 @@ public final class ConfirmMenu {
             Component confirmLabel, Consumer<Player> onConfirm, Supplier<Menu> parent) {
         MenuLayout layout = MenuLayout.parse("#########");
         Map<Integer, MenuButton> fixed = Map.of(
-                CANCEL_SLOT, new MenuButton(Material.RED_STAINED_GLASS_PANE,
-                        cancelLabel, null, false, false, onCancel),
-                ICON_SLOT, new MenuButton(icon, iconName, description, false, false, null),
-                CONFIRM_SLOT, new MenuButton(Material.LIME_STAINED_GLASS_PANE,
-                        confirmLabel, null, false, false, onConfirm).silent());
+                CANCEL_SLOT, new MenuButton(new MenuButton.Spec(Material.RED_STAINED_GLASS_PANE,
+                        cancelLabel, null, false, false, onCancel, null, null, MenuButton.SoundPolicy.CLICK, null)),
+                ICON_SLOT,
+                        new MenuButton(new MenuButton.Spec(icon, iconName, description, false, false, null, null, null,
+                        MenuButton.SoundPolicy.CLICK, null)),
+                CONFIRM_SLOT, new MenuButton(new MenuButton.Spec(Material.LIME_STAINED_GLASS_PANE,
+                        confirmLabel, null, false, false, onConfirm, null, null,
+                                MenuButton.SoundPolicy.CLICK, null)).silent());
         return new Menu(title, layout, () -> fixed, List::of, parent);
     }
 }

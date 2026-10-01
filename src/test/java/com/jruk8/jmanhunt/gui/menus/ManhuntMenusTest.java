@@ -12,6 +12,7 @@ import com.jruk8.jmanhunt.gui.ScalingLayout;
 import com.jruk8.jmanhunt.gui.ScrollList;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
+import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
@@ -86,11 +87,13 @@ class ManhuntMenusTest {
                 .thenAnswer(invocation -> config.getValue(invocation.getArgument(1)));
         stats = mock(StatsManager.class);
         modifierDialogs = mock(ModifierDialog.class);
-        menus = new ManhuntMenus(config, overrides, guiData, messages,
-                new MessagesConfig().getManhuntGui(), mock(SoundService.class), gui,
-                mock(SettingDialog.class),
-                mock(SettingFeedback.class), stats,
-                mock(ModifierMenus.class), modifierDialogs);
+        menus = new ManhuntMenus(
+                new SettingDialogs.SettingStores(config, overrides),
+                new SettingDialogs.SettingTexts(messages,
+                        new MessagesConfig().getManhuntGui(), mock(SoundService.class)),
+                new SettingDialogs.SettingUi(gui, mock(SettingFeedback.class), guiData),
+                new ManhuntMenus.ManhuntDeps(mock(SettingDialog.class), stats,
+                        mock(ModifierMenus.class), modifierDialogs));
     }
 
     @Test

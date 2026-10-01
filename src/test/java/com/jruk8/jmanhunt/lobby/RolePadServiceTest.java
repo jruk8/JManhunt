@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.lobby;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.LobbiesConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -9,6 +9,7 @@ import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.RoleTeamService;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
@@ -44,10 +45,8 @@ class RolePadServiceTest {
 
     @Test
     void fakeSpectatorNeverTriggersPads() {
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         LobbiesConfig lobbySettings = new LobbiesConfig();
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
-        when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore playerStates = mock(PlayerStateStore.class);
         World world = mock(World.class);
         when(world.getName()).thenReturn("jmh-lobby");
@@ -57,9 +56,15 @@ class RolePadServiceTest {
         when(playerStates.role(player)).thenReturn(Role.HUNTER);
         PlayerMoveEvent event = mock(PlayerMoveEvent.class);
         when(event.getPlayer()).thenReturn(player);
-        RolePadService pads = new RolePadService(plugin, lobbySettings, mock(LobbyService.class),
-                playerStates, mock(GameManager.class), mock(MessageService.class),
-                new ManhuntMessages(), mock(SoundService.class), () -> "jmh-lobby");
+        RolePadService pads = new RolePadService(
+                new RolePadService.RolePadLobby(mock(LobbyService.class), lobbySettings,
+                        () -> "jmh-lobby"),
+                new RolePadService.RolePadTexts(mock(MessageService.class), new ManhuntMessages(),
+                        mock(SoundService.class)),
+                new RolePadService.RolePadPlayers(playerStates, fakes),
+                mock(GameManager.class),
+                new RolePadService.RolePadEdge(mock(JManhuntLogger.class),
+                        mock(RoleTeamService.class)));
 
         pads.onMove(event);
 
@@ -69,7 +74,6 @@ class RolePadServiceTest {
 
     @Test
     void spectatorRoleWithoutFakeModePassesThePadGate() {
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         LobbiesConfig lobbySettings = new LobbiesConfig();
         var blocks = lobbySettings.getRolePads().getBlocks();
         blocks.setSpeedrunner("");
@@ -78,7 +82,6 @@ class RolePadServiceTest {
         blocks.setSpectator("");
         blocks.setNone("");
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
-        when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore playerStates = mock(PlayerStateStore.class);
         World world = mock(World.class);
         when(world.getName()).thenReturn("jmh-lobby");
@@ -89,9 +92,15 @@ class RolePadServiceTest {
         when(playerStates.role(player)).thenReturn(Role.SPECTATOR);
         PlayerMoveEvent event = mock(PlayerMoveEvent.class);
         when(event.getPlayer()).thenReturn(player);
-        RolePadService pads = new RolePadService(plugin, lobbySettings, mock(LobbyService.class),
-                playerStates, mock(GameManager.class), mock(MessageService.class),
-                new ManhuntMessages(), mock(SoundService.class), () -> "jmh-lobby");
+        RolePadService pads = new RolePadService(
+                new RolePadService.RolePadLobby(mock(LobbyService.class), lobbySettings,
+                        () -> "jmh-lobby"),
+                new RolePadService.RolePadTexts(mock(MessageService.class), new ManhuntMessages(),
+                        mock(SoundService.class)),
+                new RolePadService.RolePadPlayers(playerStates, fakes),
+                mock(GameManager.class),
+                new RolePadService.RolePadEdge(mock(JManhuntLogger.class),
+                        mock(RoleTeamService.class)));
 
         pads.onMove(event);
 

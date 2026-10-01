@@ -1,6 +1,8 @@
 package com.jruk8.jmanhunt.stats;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -16,11 +18,22 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.Set;
+import java.util.function.Supplier;
+import java.util.logging.Logger;
 
 public final class StatsManager {
-    private final JManhuntPlugin plugin;
-    private final MessageService messages;
-    private final GameMessages gameTexts;
+    /** Loggers plus async saves. */
+    public record StatsLogs(JManhuntLogger log, Logger jul, TaskScheduler tasks) {
+    }
+
+    /** End-screen chat halves. */
+    public record StatsTexts(MessageService messages, GameMessages gameTexts) {
+    }
+
+    private final StatsLogs logs;
+    private final Supplier<GameManager> games;
+    private final OverrideService overrides;
+    private final StatsTexts texts;
     private final StatisticsRepository repository;
     private final Map<Long, Map<UUID, Stats>> matchStats = new HashMap<>();
     private final Map<UUID, CareerStats> career = new ConcurrentHashMap<>();
@@ -29,11 +42,12 @@ public final class StatsManager {
     private final Set<UUID> careerLoaded = ConcurrentHashMap.newKeySet();
     private final Set<CompletableFuture<Void>> pendingSaves = ConcurrentHashMap.newKeySet();
 
-    public StatsManager(JManhuntPlugin plugin, MessageService messages, GameMessages gameTexts,
-            StatisticsRepository repository) {
-        this.plugin = plugin;
-        this.messages = messages;
-        this.gameTexts = gameTexts;
+    public StatsManager(StatsLogs logs, Supplier<GameManager> games, OverrideService overrides,
+            StatsTexts texts, StatisticsRepository repository) {
+        this.logs = logs;
+        this.games = games;
+        this.overrides = overrides;
+        this.texts = texts;
         this.repository = repository;
     }
 
@@ -63,7 +77,7 @@ public final class StatsManager {
             return;
         }
         career.computeIfAbsent(id, ignored -> new CareerStats());
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        logs.tasks().runAsync(() -> {
             try {
                 CareerStats loaded = repository.load(id);
                 repository.loadStreaks(id, loaded);
@@ -78,7 +92,7 @@ public final class StatsManager {
                 }
                 careerLoaded.add(id);
             } catch (Exception exception) {
-                plugin.logger().warning("Could not load career statistics for " + id + ": " + exception.getMessage());
+                logs.log().warning("Could not load career statistics for " + id + ": " + exception.getMessage());
             } finally {
                 careerLoading.remove(id);
             }
@@ -98,7 +112,7 @@ public final class StatsManager {
         try {
             return repository.lifetime();
         } catch (java.sql.SQLException exception) {
-            plugin.getLogger().warning(
+            logs.jul().warning(
                     "Could not load lifetime stats: " + exception.getMessage());
             return HistoryPlaceholders.Totals.empty();
         }
@@ -228,7 +242,7 @@ public final class StatsManager {
             try {
                 repository.updateStreaks(id, current, best);
             } catch (Exception exception) {
-                plugin.logger().warning("Could not save win streaks for " + id + ": " + exception.getMessage());
+                logs.log().warning("Could not save win streaks for " + id + ": " + exception.getMessage());
             }
         });
         pendingSaves.add(save);
@@ -283,7 +297,7 @@ public final class StatsManager {
             try {
                 repository.increment(id, snapshot);
             } catch (Exception exception) {
-                plugin.logger().warning("Could not save career statistics for " + id + ": " + exception.getMessage());
+                logs.log().warning("Could not save career statistics for " + id + ": " + exception.getMessage());
             }
         });
         pendingSaves.add(save);
@@ -305,7 +319,7 @@ public final class StatsManager {
                     lobbySessions.merge(entry.getKey(), entry.getValue(), Integer::sum);
                 }
             } catch (Exception exception) {
-                plugin.logger().warning("Could not load lobby sessions: " + exception.getMessage());
+                logs.log().warning("Could not load lobby sessions: " + exception.getMessage());
             }
         });
         pendingSaves.add(load);
@@ -322,7 +336,7 @@ public final class StatsManager {
             try {
                 repository.incrementLobbySessions(lobbyId);
             } catch (Exception exception) {
-                plugin.logger().warning("Could not save lobby sessions for lobby " + lobbyId
+                logs.log().warning("Could not save lobby sessions for lobby " + lobbyId
                         + ": " + exception.getMessage());
             }
         });
@@ -338,9 +352,9 @@ public final class StatsManager {
     /** End-screen lines go to the match plus the console, never other matches. */
     public void showStats(long matchId, Collection<? extends Player> recipients) {
         Map<UUID, Stats> slice = matchStats.getOrDefault(matchId, Map.of());
-        GameManager game = plugin.game();
+        GameManager game = games.get();
         Integer lobby = game == null ? null : game.lobbyOf(matchId);
-        for (String statistic : plugin.overrides().getStringList(lobby,
+        for (String statistic : overrides.getStringList(lobby,
                 "advanced.advanced-match-controls.end-statistics")) {
             if (statistic.equalsIgnoreCase("PROGRESSION")) {
                 updateProgression(matchId);
@@ -353,16 +367,17 @@ public final class StatsManager {
             if (ranked.isEmpty()) {
                 continue;
             }
-            String displayName = gameTexts.getStatNames().getOrDefault(statistic, statistic);
-            String prefix = gameTexts.getStatHeaderPrefix();
-            sendStat(recipients, gameTexts.getStatHeader(), Map.of("stat-prefix", prefix, "stat", displayName));
+            String displayName = texts.gameTexts().getStatNames().getOrDefault(statistic, statistic);
+            String prefix = texts.gameTexts().getStatHeaderPrefix();
+            sendStat(recipients, texts.gameTexts().getStatHeader(), Map.of("stat-prefix", prefix, "stat", displayName));
             for (int i = 0; i < ranked.size(); i++) {
                 Stats stat = ranked.get(i);
                 String placement = getPlacementName(i);
-                var rankColor = gameTexts.getRankColors().getOrDefault(placement, "&f");
-                sendStat(recipients, gameTexts.getStatEntry(),
+                var rankColor = texts.gameTexts().getRankColors().getOrDefault(placement, "&f");
+                sendStat(recipients, texts.gameTexts().getStatEntry(),
                         Map.of("rank-color", rankColor, "rank", String.valueOf(i + 1),
-                        "player", stat.player, "value", stat.displayValue(statistic, gameTexts)));
+                        "player", stat.player, "value",
+                        stat.displayValue(statistic, texts.gameTexts())));
             }
         }
     }
@@ -373,7 +388,7 @@ public final class StatsManager {
 
     private void sendStat(Collection<? extends Player> recipients, String template,
             Map<String, String> values) {
-        Component rendered = messages.componentRaw(template, values);
+        Component rendered = texts.messages().componentRaw(template, values);
         for (Player recipient : recipients) {
             recipient.sendMessage(rendered);
         }

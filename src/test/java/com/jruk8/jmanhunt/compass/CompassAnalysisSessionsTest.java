@@ -8,9 +8,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.CompassAnalysisSettings;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
@@ -179,20 +179,21 @@ class CompassAnalysisSessionsTest {
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         OverrideService overrides =
                 new OverrideService(configService, new LobbyConfig(), () -> { });
-        when(plugin.overrides()).thenReturn(overrides);
         CompassSettingsFacade settings =
                 new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         MessageService messages = new MessageService();
         MessagesConfig texts = new MessagesConfig();
         messages.reload(texts);
         SoundService sounds = mock(SoundService.class);
-        CompassAnalysisSessions sessions = new CompassAnalysisSessions(plugin, settings, messages,
-                texts.getCompass(), new PlayerStateStore(), mock(CompassTargetService.class),
-                mock(CompassSignalService.class), mock(CompassItemService.class),
-                new HashMap<UUID, Component>(), sounds);
+        CompassAnalysisSessions sessions = new CompassAnalysisSessions(settings,
+                new CompassAnalysisSessions.SessionTexts(messages, texts.getCompass(), sounds),
+                new CompassAnalysisSessions.SessionServices(mock(CompassTargetService.class),
+                        mock(CompassSignalService.class), mock(CompassItemService.class)),
+                new CompassAnalysisSessions.SessionPlayers(new PlayerStateStore(),
+                        mock(FakeSpectatorService.class)),
+                new HashMap<UUID, Component>());
         return new Fixture(root, sessions, UUID.randomUUID(), sounds);
     }
 }

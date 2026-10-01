@@ -1,12 +1,10 @@
 package com.jruk8.jmanhunt.gui.menus;
 
-import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SignalInterferenceSettings;
 import com.jruk8.jmanhunt.gui.ConfirmMenu;
-import com.jruk8.jmanhunt.gui.GuiConfig;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
@@ -18,10 +16,8 @@ import com.jruk8.jmanhunt.gui.ScrollList;
 import com.jruk8.jmanhunt.gui.TwinPanel;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialog;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
+import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
-import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
-import com.jruk8.jmanhunt.message.MessageService;
-import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.stats.HistoryPlaceholders;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import java.util.ArrayList;
@@ -43,44 +39,29 @@ import org.bukkit.entity.Player;
  * scaling menu up to 48 entries and a scroll list beyond that.
  */
 public final class ManhuntMenus {
+    /** Dialogs, stats, modifier menus, and modifier dialogs. */
+    public record ManhuntDeps(SettingDialog dialogs, StatsManager stats,
+            ModifierMenus modifiers, ModifierDialog modifierDialogs) {
+    }
 
-    private final ConfigService config;
-    private final OverrideService overrides;
-    private final GuiConfig guiData;
-    private final MessageService messages;
-    private final ManhuntGuiMessages manhuntGui;
-    private final SoundService sounds;
-    private final GuiService gui;
-    private final SettingDialog dialogs;
-    private final SettingFeedback feedback;
-    private final StatsManager stats;
-    private final ModifierMenus modifiers;
-    private final ModifierDialog modifierDialogs;
+    private final SettingDialogs.SettingStores stores;
+    private final SettingDialogs.SettingTexts texts;
+    private final SettingDialogs.SettingUi ui;
+    private final ManhuntDeps deps;
     private final SettingButtons buttons;
 
-    public ManhuntMenus(ConfigService config, OverrideService overrides, GuiConfig guiData,
-            MessageService messages, ManhuntGuiMessages manhuntGui, SoundService sounds,
-            GuiService gui, SettingDialog dialogs, SettingFeedback feedback, StatsManager stats,
-            ModifierMenus modifiers, ModifierDialog modifierDialogs) {
-        this.config = config;
-        this.overrides = overrides;
-        this.guiData = guiData;
-        this.messages = messages;
-        this.manhuntGui = manhuntGui;
-        this.sounds = sounds;
-        this.gui = gui;
-        this.dialogs = dialogs;
-        this.feedback = feedback;
-        this.stats = stats;
-        this.modifiers = modifiers;
-        this.modifierDialogs = modifierDialogs;
-        this.buttons = new SettingButtons(config, overrides, guiData, messages, manhuntGui,
-                dialogs, gui, feedback, sounds);
+    public ManhuntMenus(SettingDialogs.SettingStores stores, SettingDialogs.SettingTexts texts,
+            SettingDialogs.SettingUi ui, ManhuntDeps deps) {
+        this.stores = stores;
+        this.texts = texts;
+        this.ui = ui;
+        this.deps = deps;
+        this.buttons = new SettingButtons(stores, texts, ui, deps.dialogs());
     }
 
     /** 27-slot root with support, settings, history, modifiers, and override links. */
     public Menu rootMenu(Player viewer) {
-        return new Menu(title(manhuntGui.getTitleRoot()),
+        return new Menu(title(texts.guiTexts().getTitleRoot()),
                 MenuLayout.parse("#########", "##s#h#m##", "#########"),
                 () -> rootStatic(viewer), List::of, null);
     }
@@ -92,54 +73,56 @@ public final class ManhuntMenus {
 
     /** Settings root with an explicit parent. */
     private Menu settingsMenu(Player viewer, Supplier<Menu> parent) {
-        return TwinPanel.menu(title(manhuntGui.getTitleSettings()),
-                generalButton(viewer), advancedButton(viewer), gui,
-                GuiTexts.name(messages, manhuntGui.getBack(), "Back"), parent);
+        return TwinPanel.menu(title(texts.guiTexts().getTitleSettings()),
+                generalButton(viewer), advancedButton(viewer), ui.gui(),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getBack(), "Back"), parent);
     }
 
     /** General quad: the four everyday setting categories. */
     private Menu generalMenu(Player viewer, Supplier<Menu> parent) {
-        return QuadPanel.menu(title(manhuntGui.getTitleSettingsGeneral()),
-                categorySpecs(viewer, parent), gui,
-                GuiTexts.name(messages, manhuntGui.getBack(), "Back"), parent);
+        return QuadPanel.menu(title(texts.guiTexts().getTitleSettingsGeneral()),
+                categorySpecs(viewer, parent), ui.gui(),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getBack(), "Back"), parent);
     }
 
     /** Advanced quad: match controls, world engine, lobbies, misc. */
     private Menu advancedMenu(Player viewer, Supplier<Menu> parent) {
-        return QuadPanel.menu(title(manhuntGui.getTitleSettingsAdvanced()),
-                advancedSpecs(viewer, parent), gui,
-                GuiTexts.name(messages, manhuntGui.getBack(), "Back"), parent);
+        return QuadPanel.menu(title(texts.guiTexts().getTitleSettingsAdvanced()),
+                advancedSpecs(viewer, parent), ui.gui(),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getBack(), "Back"), parent);
     }
 
     /** TwinPanel left: General opens the everyday quad. */
     private MenuButton generalButton(Player viewer) {
-        Integer lobby = gui.overrideLobby(viewer);
-        return new MenuButton(Material.CHEST,
-                GuiTexts.name(messages, manhuntGui.getToGeneral(),
+        Integer lobby = ui.gui().overrideLobby(viewer);
+        return new MenuButton(new MenuButton.Spec(Material.CHEST,
+                GuiTexts.name(texts.messages(), texts.guiTexts().getToGeneral(),
                         "General Settings"),
-                GuiTexts.lore(messages, List.of(
-                        manhuntGui.getToGeneralLore())),
-                lobby == null ? ModifiedGlow.section(config, "settings")
-                        : overrides.hasOverridesBeneath(lobby, "settings"),
+                GuiTexts.lore(texts.messages(), List.of(
+                        texts.guiTexts().getToGeneralLore())),
+                lobby == null ? ModifiedGlow.section(stores.config(), "settings")
+                        : stores.overrides().hasOverridesBeneath(lobby, "settings"),
                 false,
-                open(openViewer -> generalMenu(openViewer, () -> settingsMenu(openViewer))));
+                open(openViewer -> generalMenu(openViewer, () -> settingsMenu(openViewer))), null, null,
+                        MenuButton.SoundPolicy.CLICK, null));
     }
 
     /** TwinPanel right: Advanced opens the power-user quad. */
     private MenuButton advancedButton(Player viewer) {
-        Integer lobby = gui.overrideLobby(viewer);
+        Integer lobby = ui.gui().overrideLobby(viewer);
         boolean changed = lobby == null
-                ? ModifiedGlow.section(config, "advanced")
-                        || ModifiedGlow.section(config, "world-engine")
-                : overrides.hasOverridesBeneath(lobby, "advanced")
-                        || overrides.hasOverridesBeneath(lobby, "world-engine");
-        return new MenuButton(Material.ANVIL,
-                GuiTexts.name(messages, manhuntGui.getToAdvanced(),
+                ? ModifiedGlow.section(stores.config(), "advanced")
+                        || ModifiedGlow.section(stores.config(), "world-engine")
+                : stores.overrides().hasOverridesBeneath(lobby, "advanced")
+                        || stores.overrides().hasOverridesBeneath(lobby, "world-engine");
+        return new MenuButton(new MenuButton.Spec(Material.ANVIL,
+                GuiTexts.name(texts.messages(), texts.guiTexts().getToAdvanced(),
                         "Advanced Settings"),
-                GuiTexts.lore(messages, List.of(
-                        manhuntGui.getToAdvancedLore())),
+                GuiTexts.lore(texts.messages(), List.of(
+                        texts.guiTexts().getToAdvancedLore())),
                 changed, false,
-                open(openViewer -> advancedMenu(openViewer, () -> settingsMenu(openViewer))));
+                open(openViewer -> advancedMenu(openViewer, () -> settingsMenu(openViewer))), null,
+                        null, MenuButton.SoundPolicy.CLICK, null));
     }
 
     /** Advanced quad specs: one drill button per advanced section. */
@@ -164,7 +147,7 @@ public final class ManhuntMenus {
         Supplier<List<MenuButton>> content = () -> listButtons(viewer, listPath, () -> self[0]);
         MenuLayout layout = ScalingLayout.layout(ScalingLayout.rowsFor(content.get().size()));
         self[0] = new Menu(
-                GuiTexts.title(messages, manhuntGui.getDialogTitleEdit()
+                GuiTexts.title(texts.messages(), texts.guiTexts().getDialogTitleEdit()
                         .replace("{name}", SettingButtons.prettify(leaf(listPath)))),
                 layout, () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
                         backButton(self)),
@@ -174,7 +157,7 @@ public final class ManhuntMenus {
 
     /** Lifetime stat lines for the root history book. Null-safe for tests. */
     private List<String> historyLines() {
-        HistoryPlaceholders.Totals totals = stats.lifetime();
+        HistoryPlaceholders.Totals totals = deps.stats().lifetime();
         if (totals == null) {
             totals = new HistoryPlaceholders.Totals(0, 0, 0, 0, 0, 0, 0.0, 0L);
         }
@@ -197,17 +180,17 @@ public final class ManhuntMenus {
      */
     public Menu setupFirstMenu(Consumer<Player> onConfirm, Consumer<Player> onCancel) {
         return ConfirmMenu.create(
-                title(manhuntGui.getSetupFirstTitle()),
+                title(texts.guiTexts().getSetupFirstTitle()),
                 Material.WRITABLE_BOOK, null,
-                GuiTexts.lore(messages, List.of(
-                        manhuntGui.getSetupFirstLine1(),
-                        manhuntGui.getSetupFirstLine2())),
-                GuiTexts.name(messages,
-                        manhuntGui.getSetupFirstCancel(),
+                GuiTexts.lore(texts.messages(), List.of(
+                        texts.guiTexts().getSetupFirstLine1(),
+                        texts.guiTexts().getSetupFirstLine2())),
+                GuiTexts.name(texts.messages(),
+                        texts.guiTexts().getSetupFirstCancel(),
                         "Skip forever"),
                 onCancel,
-                GuiTexts.name(messages,
-                        manhuntGui.getSetupFirstConfirm(), "Start setup"),
+                GuiTexts.name(texts.messages(),
+                        texts.guiTexts().getSetupFirstConfirm(), "Start setup"),
                 onConfirm,
                 null);
     }
@@ -221,7 +204,7 @@ public final class ManhuntMenus {
         final Menu[] self = new Menu[1];
         Supplier<List<MenuButton>> content = () -> drillButtons(viewer, effective, () -> self[0]);
         if (drillSize(effective) > ScalingLayout.capacity(ScalingLayout.MAX_ROWS)) {
-            return ScrollList.menu(effectiveTitle, content, parent, gui, messages, manhuntGui);
+            return ScrollList.menu(effectiveTitle, content, parent, ui.gui(), texts.messages(), texts.guiTexts());
         }
         self[0] = scalingMenu(effectiveTitle, content, parent);
         return self[0];
@@ -274,14 +257,15 @@ public final class ManhuntMenus {
         if (SettingRegistry.isListPath(path)) {
             return listButton(viewer, path, caller);
         }
-        Integer lobby = gui.overrideLobby(viewer);
-        MenuButton button = new MenuButton(guiData.sectionItem(path),
-                GuiTexts.name(messages, SettingButtons.prettify(leaf(path)),
+        Integer lobby = ui.gui().overrideLobby(viewer);
+        MenuButton button = new MenuButton(new MenuButton.Spec(ui.guiData().sectionItem(path),
+                GuiTexts.name(texts.messages(), SettingButtons.prettify(leaf(path)),
                         SettingButtons.prettify(leaf(path))),
-                GuiTexts.lore(messages, sectionLines(path, lobby)),
-                lobby == null ? ModifiedGlow.section(config, path)
-                        : overrides.hasOverridesBeneath(lobby, path),
-                false, open(openViewer -> sectionMenu(openViewer, path, caller)));
+                GuiTexts.lore(texts.messages(), sectionLines(path, lobby)),
+                lobby == null ? ModifiedGlow.section(stores.config(), path)
+                        : stores.overrides().hasOverridesBeneath(lobby, path),
+                false, open(openViewer -> sectionMenu(openViewer, path, caller)), null, null,
+                        MenuButton.SoundPolicy.CLICK, null));
         if (lobby == null) {
             return button;
         }
@@ -291,14 +275,14 @@ public final class ManhuntMenus {
     /** Section button lore: description when present, then the entry count. */
     private List<String> sectionLines(String path, Integer lobby) {
         List<String> lines = new ArrayList<>();
-        String description = guiData.description(path);
+        String description = ui.guiData().description(path);
         if (description != null && !description.isBlank()) {
             lines.add(description);
         }
         lines.add(countLine(drillSize(path)));
         if (lobby != null) {
-            lines.add(manhuntGui.getOverrideShiftClearCategory());
-            if (overrides.hasOverridesBeneath(lobby, path)) {
+            lines.add(texts.guiTexts().getOverrideShiftClearCategory());
+            if (stores.overrides().hasOverridesBeneath(lobby, path)) {
                 lines.add(overridesLine(lobby));
             }
         }
@@ -307,52 +291,52 @@ public final class ManhuntMenus {
 
     /** Shift-left on a category: confirm, then clear every override beneath. */
     private void clearCategoryConfirm(Player player, String path, Supplier<Menu> caller) {
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         if (lobby == null) {
             return;
         }
-        int count = overrides.countOverrides(lobby, path);
+        int count = stores.overrides().countOverrides(lobby, path);
         if (count == 0) {
-            messages.messageRaw(player, manhuntGui.getOverrideNoOverride());
+            texts.messages().messageRaw(player, texts.guiTexts().getOverrideNoOverride());
             return;
         }
         Menu confirm = ConfirmMenu.create(
-                GuiTexts.title(messages, manhuntGui.getOverrideClearTitle()
+                GuiTexts.title(texts.messages(), texts.guiTexts().getOverrideClearTitle()
                         .replace("{count}", String.valueOf(count))),
                 Material.PAPER, null,
-                GuiTexts.lore(messages, List.of(path)),
-                GuiTexts.name(messages, manhuntGui.getCancel(), "Cancel"),
-                back -> gui.navigate(back, caller.get()),
-                GuiTexts.name(messages, manhuntGui.getConfirm(), "Confirm"),
+                GuiTexts.lore(texts.messages(), List.of(path)),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getCancel(), "Cancel"),
+                back -> ui.gui().navigate(back, caller.get()),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getConfirm(), "Confirm"),
                 done -> {
-                    int removed = overrides.clearOverrides(lobby, path);
-                    feedback.overrideCleared(done, lobby, path, removed);
-                    gui.navigate(done, caller.get());
+                    int removed = stores.overrides().clearOverrides(lobby, path);
+                    ui.feedback().overrideCleared(done, lobby, path, removed);
+                    ui.gui().navigate(done, caller.get());
                 },
                 caller);
-        gui.navigate(player, confirm);
+        ui.gui().navigate(player, confirm);
     }
 
     private MenuButton listButton(Player viewer, String path, Supplier<Menu> caller) {
-        Integer lobby = gui.overrideLobby(viewer);
-        int count = overrides.getStringList(lobby, path).size();
+        Integer lobby = ui.gui().overrideLobby(viewer);
+        int count = stores.overrides().getStringList(lobby, path).size();
         List<String> lines = new ArrayList<>(List.of(countLine(count),
-                manhuntGui.getListHintOpen(),
-                manhuntGui.getSettingHintReset()));
+                texts.guiTexts().getListHintOpen(),
+                texts.guiTexts().getSettingHintReset()));
         if (lobby != null) {
-            lines.add(manhuntGui.getOverrideShiftClear());
-            if (overrides.hasListOverride(lobby, path)) {
+            lines.add(texts.guiTexts().getOverrideShiftClear());
+            if (stores.overrides().hasListOverride(lobby, path)) {
                 lines.add(overridesLine(lobby));
             }
         }
-        MenuButton button = new MenuButton(Material.PAPER,
-                GuiTexts.name(messages, SettingButtons.prettify(leaf(path)),
+        MenuButton button = new MenuButton(new MenuButton.Spec(Material.PAPER,
+                GuiTexts.name(texts.messages(), SettingButtons.prettify(leaf(path)),
                         SettingButtons.prettify(leaf(path))),
-                GuiTexts.lore(messages, lines),
-                lobby == null ? config.isListModified(path)
-                        : overrides.hasListOverride(lobby, path),
+                GuiTexts.lore(texts.messages(), lines),
+                lobby == null ? stores.config().isListModified(path)
+                        : stores.overrides().hasListOverride(lobby, path),
                 false, openList(player -> listMenu(player, path, caller), path, caller),
-                player -> listResetConfirm(player, path, caller));
+                player -> listResetConfirm(player, path, caller), null, MenuButton.SoundPolicy.CLICK, null));
         if (lobby == null) {
             return button;
         }
@@ -361,212 +345,215 @@ public final class ManhuntMenus {
 
     /** Shift-left (and right-click) on a list: drop the list override. */
     private void clearListOverride(Player player, String path) {
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         if (lobby == null) {
             return;
         }
-        int removed = overrides.clearOverrides(lobby, path);
-        feedback.overrideCleared(player, lobby, path, removed);
+        int removed = stores.overrides().clearOverrides(lobby, path);
+        ui.feedback().overrideCleared(player, lobby, path, removed);
     }
 
     private String overridesLine(int lobby) {
-        return manhuntGui.getOverrideForLobby().replace("{lobby}", String.valueOf(lobby));
+        return texts.guiTexts().getOverrideForLobby().replace("{lobby}", String.valueOf(lobby));
     }
 
     private void listResetConfirm(Player player, String listPath, Supplier<Menu> caller) {
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         if (lobby != null) {
             clearListOverride(player, listPath);
             return;
         }
         // Already at default: resetting would be a no-op, so say so in
         // chat instead of opening a confirm panel for nothing.
-        if (!config.isListModified(listPath)) {
-            messages.messageRaw(player, manhuntGui.getSettingAlreadyDefault());
+        if (!stores.config().isListModified(listPath)) {
+            texts.messages().messageRaw(player, texts.guiTexts().getSettingAlreadyDefault());
             return;
         }
         Menu confirm = ConfirmMenu.create(
-                GuiTexts.title(messages, manhuntGui.getSettingResetTitle()
+                GuiTexts.title(texts.messages(), texts.guiTexts().getSettingResetTitle()
                         .replace("{name}", SettingButtons.prettify(leaf(listPath)))),
                 Material.PAPER, null,
-                GuiTexts.lore(messages, List.of(countLine(config.getStringList(listPath).size()))),
-                GuiTexts.name(messages, manhuntGui.getCancel(), "Cancel"),
-                back -> gui.navigate(back, caller.get()),
-                GuiTexts.name(messages, manhuntGui.getConfirm(), "Confirm"),
+                GuiTexts.lore(texts.messages(), List.of(countLine(stores.config().getStringList(listPath).size()))),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getCancel(), "Cancel"),
+                back -> ui.gui().navigate(back, caller.get()),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getConfirm(), "Confirm"),
                 done -> {
-                    ConfigService.SetOutcome outcome = config.listReset(listPath);
+                    ConfigService.SetOutcome outcome = stores.config().listReset(listPath);
                     if (!outcome.ok()) {
-                        feedback.failed(done, outcome);
-                        sounds.playAngrySound(done);
+                        ui.feedback().failed(done, outcome);
+                        texts.sounds().playAngrySound(done);
                     } else {
-                        feedback.listReset(done, listPath, outcome);
+                        ui.feedback().listReset(done, listPath, outcome);
                     }
-                    gui.navigate(done, caller.get());
+                    ui.gui().navigate(done, caller.get());
                 },
                 caller);
-        gui.navigate(player, confirm);
+        ui.gui().navigate(player, confirm);
     }
 
     private List<MenuButton> listButtons(Player viewer, String listPath, Supplier<Menu> caller) {
-        List<String> entries = overrides.getStringList(gui.overrideLobby(viewer), listPath);
+        List<String> entries = stores.overrides().getStringList(ui.gui().overrideLobby(viewer), listPath);
         int room = ScalingLayout.capacity(ScalingLayout.rowsFor(entries.size() + 1)) - 1;
         List<MenuButton> buttons = new ArrayList<>();
         for (int index = 0; index < entries.size() && index < room; index++) {
             buttons.add(indexButton(listPath, index, entries.get(index), caller));
         }
-        buttons.add(AddStick.button(messages,
-                manhuntGui.getListAddName(),
-                List.of(manhuntGui.getListAddLore()),
-                player -> dialogs.openListAppend(player, listPath,
-                        GuiTexts.title(messages, addTitle()), caller)));
+        buttons.add(AddStick.button(texts.messages(),
+                texts.guiTexts().getListAddName(),
+                List.of(texts.guiTexts().getListAddLore()),
+                player -> deps.dialogs().openListAppend(player, listPath,
+                        GuiTexts.title(texts.messages(), addTitle()), caller)));
         return buttons;
     }
 
     private MenuButton indexButton(String listPath, int index, String value, Supplier<Menu> caller) {
-        String name = manhuntGui.getListEntryName().replace("{index}",
+        String name = texts.guiTexts().getListEntryName().replace("{index}",
                 String.valueOf(index));
         List<String> lore = List.of(
                 MiniMessage.miniMessage().escapeTags(GuiTexts.truncate(value, 60)),
-                manhuntGui.getListHintEdit(),
-                manhuntGui.getListHintDelete());
-        return new MenuButton(Material.PAPER, GuiTexts.name(messages, name, name),
-                GuiTexts.lore(messages, lore), false, false,
-                player -> dialogs.openListEntry(player, listPath, index,
-                        GuiTexts.title(messages, editTitle(index)), caller),
-                player -> deleteConfirm(player, listPath, index, value, caller)).silent();
+                texts.guiTexts().getListHintEdit(),
+                texts.guiTexts().getListHintDelete());
+        return new MenuButton(new MenuButton.Spec(Material.PAPER, GuiTexts.name(texts.messages(), name, name),
+                GuiTexts.lore(texts.messages(), lore), false, false,
+                player -> deps.dialogs().openListEntry(player, listPath, index,
+                        GuiTexts.title(texts.messages(), editTitle(index)), caller),
+                player -> deleteConfirm(player, listPath, index, value, caller), null,
+                        MenuButton.SoundPolicy.CLICK, null)).silent();
     }
 
     private void deleteConfirm(Player player, String listPath, int index,
             String value, Supplier<Menu> caller) {
         Menu confirm = ConfirmMenu.create(
-                GuiTexts.title(messages, deleteTitle(index)),
+                GuiTexts.title(texts.messages(), deleteTitle(index)),
                 Material.PAPER, null,
-                GuiTexts.lore(messages, List.of(MiniMessage.miniMessage()
+                GuiTexts.lore(texts.messages(), List.of(MiniMessage.miniMessage()
                         .escapeTags(GuiTexts.truncate(value, 60)))),
-                GuiTexts.name(messages, manhuntGui.getCancel(), "Cancel"),
-                back -> gui.navigate(back, caller.get()),
-                GuiTexts.name(messages, manhuntGui.getConfirm(), "Confirm"),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getCancel(), "Cancel"),
+                back -> ui.gui().navigate(back, caller.get()),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getConfirm(), "Confirm"),
                 done -> {
-                    Integer lobby = gui.overrideLobby(done);
+                    Integer lobby = ui.gui().overrideLobby(done);
                     ConfigService.SetOutcome outcome = lobby == null
-                            ? config.listRemove(listPath, index)
-                            : overrides.listRemoveOverride(lobby, listPath, index);
+                            ? stores.config().listRemove(listPath, index)
+                            : stores.overrides().listRemoveOverride(lobby, listPath, index);
                     if (!outcome.ok()) {
-                        feedback.failed(done, outcome);
-                        sounds.playAngrySound(done);
+                        ui.feedback().failed(done, outcome);
+                        texts.sounds().playAngrySound(done);
                     } else if (lobby == null) {
-                        feedback.listRemoved(done, listPath, outcome);
+                        ui.feedback().listRemoved(done, listPath, outcome);
                     } else {
-                        feedback.overrideListRemoved(done, lobby, listPath, outcome);
+                        ui.feedback().overrideListRemoved(done, lobby, listPath, outcome);
                     }
-                    gui.navigate(done, caller.get());
+                    ui.gui().navigate(done, caller.get());
                 },
                 caller);
-        gui.navigate(player, confirm);
-        sounds.playSound(player, "compass.left-click");
+        ui.gui().navigate(player, confirm);
+        texts.sounds().playSound(player, "compass.left-click");
     }
 
     private Map<Integer, MenuButton> rootStatic(Player viewer) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
-        fixed.put(0, new MenuButton(Material.RECOVERY_COMPASS,
-                GuiTexts.name(messages, manhuntGui.getToSupport(), "Need Help?"),
-                GuiTexts.lore(messages, List.of(
-                        manhuntGui.getToSupportLore())),
+        fixed.put(0, new MenuButton(new MenuButton.Spec(Material.RECOVERY_COMPASS,
+                GuiTexts.name(texts.messages(), texts.guiTexts().getToSupport(), "Need Help?"),
+                GuiTexts.lore(texts.messages(), List.of(
+                        texts.guiTexts().getToSupportLore())),
                 true, false,
                 player -> {
                     player.performCommand("mh support");
                     player.closeInventory();
-                }).silent());
+                }, null, null, MenuButton.SoundPolicy.CLICK, null)).silent());
         fixed.put(8, overrideButton(viewer));
-        fixed.put(11, new MenuButton(Material.CHEST,
-                GuiTexts.name(messages, manhuntGui.getToSettings(), "Settings"),
-                GuiTexts.lore(messages, List.of(
-                        manhuntGui.getToSettingsLore())),
-                false, false, open(openViewer -> settingsMenu(openViewer))));
+        fixed.put(11, new MenuButton(new MenuButton.Spec(Material.CHEST,
+                GuiTexts.name(texts.messages(), texts.guiTexts().getToSettings(), "Settings"),
+                GuiTexts.lore(texts.messages(), List.of(
+                        texts.guiTexts().getToSettingsLore())),
+                false, false, open(openViewer -> settingsMenu(openViewer)), null, null,
+                        MenuButton.SoundPolicy.CLICK, null)));
         // Lifetime stats live on the book itself: hover to read, no
         // separate menu. The action stays null so clicks pass through
         // silently like any other display line.
-        fixed.put(13, new MenuButton(Material.WRITTEN_BOOK,
-                GuiTexts.name(messages, manhuntGui.getToHistory(), "History"),
-                GuiTexts.lore(messages, historyLines()),
-                false, false, null));
-        fixed.put(15, new MenuButton(Material.BOOK,
-                GuiTexts.name(messages, manhuntGui.getToModifiers(), "Modifiers"),
-                GuiTexts.lore(messages, List.of(
-                        manhuntGui.getToModifiersLore())),
+        fixed.put(13, new MenuButton(new MenuButton.Spec(Material.WRITTEN_BOOK,
+                GuiTexts.name(texts.messages(), texts.guiTexts().getToHistory(), "History"),
+                GuiTexts.lore(texts.messages(), historyLines()),
+                false, false, null, null, null, MenuButton.SoundPolicy.CLICK, null)));
+        fixed.put(15, new MenuButton(new MenuButton.Spec(Material.BOOK,
+                GuiTexts.name(texts.messages(), texts.guiTexts().getToModifiers(), "Modifiers"),
+                GuiTexts.lore(texts.messages(), List.of(
+                        texts.guiTexts().getToModifiersLore())),
                 false, false,
-                open(openViewer -> modifiers.mainMenu(openViewer, () -> rootMenu(openViewer)))));
+                open(openViewer -> deps.modifiers().mainMenu(openViewer, () -> rootMenu(openViewer))),
+                        null, null, MenuButton.SoundPolicy.CLICK, null)));
         return fixed;
     }
 
     /** Session indicator: glass globally, yellow once a lobby is set. */
     private MenuButton overrideButton(Player viewer) {
-        Integer lobby = gui.overrideLobby(viewer);
+        Integer lobby = ui.gui().overrideLobby(viewer);
         String mode = lobby == null ? "GLOBAL" : "Lobby " + lobby;
         List<String> lore = new ArrayList<>(List.of(
-                manhuntGui.getOverrideHintSet(),
-                manhuntGui.getOverrideHintGlobal(),
+                texts.guiTexts().getOverrideHintSet(),
+                texts.guiTexts().getOverrideHintGlobal(),
                 "",
-                manhuntGui.getOverrideCurrent()
+                texts.guiTexts().getOverrideCurrent()
                         .replace("{mode}", mode)));
-        return new MenuButton(lobby == null ? Material.GLASS : Material.YELLOW_STAINED_GLASS,
-                GuiTexts.name(messages, manhuntGui.getOverrideName(),
+        return new MenuButton(new MenuButton.Spec(lobby == null ? Material.GLASS : Material.YELLOW_STAINED_GLASS,
+                GuiTexts.name(texts.messages(), texts.guiTexts().getOverrideName(),
                         "Lobby Overrides"),
-                GuiTexts.lore(messages, lore), false, false,
+                GuiTexts.lore(texts.messages(), lore), false, false,
                 player -> openLobbySetter(player),
                 player -> {
-                    gui.clearOverrideLobby(player);
-                    sounds.playNeutralSound(player);
-                    gui.navigate(player, rootMenu(player));
-                }).silent();
+                    ui.gui().clearOverrideLobby(player);
+                    texts.sounds().playNeutralSound(player);
+                    ui.gui().navigate(player, rootMenu(player));
+                }, null, MenuButton.SoundPolicy.CLICK, null)).silent();
     }
 
     /** Lobby setter dialog: a lobby id, or GLOBAL to leave the session. */
     private void openLobbySetter(Player player) {
-        Integer lobby = gui.overrideLobby(player);
-        dialogs.prompt(player,
-                manhuntGui.getOverrideSetTitle(),
+        Integer lobby = ui.gui().overrideLobby(player);
+        deps.dialogs().prompt(player,
+                texts.guiTexts().getOverrideSetTitle(),
                 lobby == null ? "GLOBAL" : String.valueOf(lobby),
-                List.of(manhuntGui.getOverrideSetPrompt()),
+                List.of(texts.guiTexts().getOverrideSetPrompt()),
                 raw -> submitLobby(player, raw == null ? "" : raw.trim()),
-                () -> gui.navigate(player, rootMenu(player)));
+                () -> ui.gui().navigate(player, rootMenu(player)));
     }
 
     /** Commits the setter: GLOBAL clears, an id points, junk errors. */
     private void submitLobby(Player player, String raw) {
         if (raw.equalsIgnoreCase("global")) {
-            gui.clearOverrideLobby(player);
-            sounds.playNeutralSound(player);
-            gui.navigate(player, rootMenu(player));
+            ui.gui().clearOverrideLobby(player);
+            texts.sounds().playNeutralSound(player);
+            ui.gui().navigate(player, rootMenu(player));
             return;
         }
         OptionalInt lobby = OverrideService.parseLobbyId(raw);
         if (lobby.isEmpty()) {
-            messages.messageRaw(player, manhuntGui.getOverrideSetInvalid(),
+            texts.messages().messageRaw(player, texts.guiTexts().getOverrideSetInvalid(),
                     Map.of("input", raw.isEmpty() ? " " : raw));
-            sounds.playAngrySound(player);
-            gui.navigate(player, rootMenu(player));
+            texts.sounds().playAngrySound(player);
+            ui.gui().navigate(player, rootMenu(player));
             return;
         }
-        gui.setOverrideLobby(player, lobby.getAsInt());
-        sounds.playNeutralSound(player);
-        gui.navigate(player, rootMenu(player));
+        ui.gui().setOverrideLobby(player, lobby.getAsInt());
+        texts.sounds().playNeutralSound(player);
+        ui.gui().navigate(player, rootMenu(player));
     }
 
     private List<MenuButton> categorySpecs(Player viewer, Supplier<Menu> parent) {
         List<MenuButton> specs = new ArrayList<>();
-        Integer lobby = gui.overrideLobby(viewer);
+        Integer lobby = ui.gui().overrideLobby(viewer);
         for (String category : new String[]{"match", "compass", "players", "server"}) {
             String path = "settings." + category;
-            MenuButton button = new MenuButton(guiData.categoryItem(category),
-                    GuiTexts.name(messages, SettingButtons.prettify(category),
+            MenuButton button = new MenuButton(new MenuButton.Spec(ui.guiData().categoryItem(category),
+                    GuiTexts.name(texts.messages(), SettingButtons.prettify(category),
                             SettingButtons.prettify(category)),
-                    GuiTexts.lore(messages, sectionLines(path, lobby)),
-                    lobby == null ? ModifiedGlow.section(config, path)
-                            : overrides.hasOverridesBeneath(lobby, path),
+                    GuiTexts.lore(texts.messages(), sectionLines(path, lobby)),
+                    lobby == null ? ModifiedGlow.section(stores.config(), path)
+                            : stores.overrides().hasOverridesBeneath(lobby, path),
                     false,
                     open(openViewer -> sectionMenu(openViewer, path,
-                            () -> generalMenu(openViewer, parent))));
+                            () -> generalMenu(openViewer, parent))), null, null, MenuButton.SoundPolicy.CLICK, null));
             if (lobby == null) {
                 specs.add(button);
             } else {
@@ -584,14 +571,14 @@ public final class ManhuntMenus {
      * the cell at click time always sees the finished menu.
      */
     private MenuButton backButton(Menu[] self) {
-        return new MenuButton(Material.PAPER,
-                GuiTexts.name(messages, manhuntGui.getBack(), "Back"),
+        return new MenuButton(new MenuButton.Spec(Material.PAPER,
+                GuiTexts.name(texts.messages(), texts.guiTexts().getBack(), "Back"),
                 null, false, false,
-                player -> gui.back(player, self[0]));
+                player -> ui.gui().back(player, self[0]), null, null, MenuButton.SoundPolicy.CLICK, null));
     }
 
     private Consumer<Player> open(Function<Player, Menu> menu) {
-        return player -> gui.navigate(player, menu.apply(player));
+        return player -> ui.gui().navigate(player, menu.apply(player));
     }
 
     /**
@@ -603,22 +590,22 @@ public final class ManhuntMenus {
             Supplier<Menu> caller) {
         if (MatchConfig.GameRules.RULES_PATH.equals(path)) {
             return player -> {
-                Integer lobby = gui.overrideLobby(player);
-                List<String> current = overrides.getStringList(lobby, path);
-                modifierDialogs.openGameRules(player, current,
+                Integer lobby = ui.gui().overrideLobby(player);
+                List<String> current = stores.overrides().getStringList(lobby, path);
+                deps.modifierDialogs().openGameRules(player, current,
                         checked -> applyChecklist(player, lobby, path,
                                 new ArrayList<>(checked), caller),
-                        () -> gui.navigate(player, caller.get()));
+                        () -> ui.gui().navigate(player, caller.get()));
             };
         }
         if (SignalInterferenceSettings.Weather.INTERFERE_DURING_PATH.equals(path)) {
             return player -> {
-                Integer lobby = gui.overrideLobby(player);
-                List<String> current = overrides.getStringList(lobby, path);
-                modifierDialogs.openInterfereDuring(player, current,
+                Integer lobby = ui.gui().overrideLobby(player);
+                List<String> current = stores.overrides().getStringList(lobby, path);
+                deps.modifierDialogs().openInterfereDuring(player, current,
                         checked -> applyChecklist(player, lobby, path,
                                 new ArrayList<>(checked), caller),
-                        () -> gui.navigate(player, caller.get()));
+                        () -> ui.gui().navigate(player, caller.get()));
             };
         }
         return open(menu);
@@ -628,60 +615,60 @@ public final class ManhuntMenus {
     private void applyChecklist(Player player, Integer lobby, String path,
             List<String> checked, Supplier<Menu> caller) {
         ConfigService.SetOutcome outcome = lobby == null
-                ? config.setList(path, checked)
-                : overrides.setListOverride(lobby, path, checked);
+                ? stores.config().setList(path, checked)
+                : stores.overrides().setListOverride(lobby, path, checked);
         if (!outcome.ok()) {
-            feedback.failed(player, outcome);
-            sounds.playAngrySound(player);
+            ui.feedback().failed(player, outcome);
+            texts.sounds().playAngrySound(player);
         }
-        gui.navigate(player, caller.get());
+        ui.gui().navigate(player, caller.get());
     }
 
     private String historyLine(String key, String value) {
         String line = switch (key) {
-            case "matches" -> manhuntGui.getHistoryLineMatches();
-            case "kills" -> manhuntGui.getHistoryLineKills();
-            case "hunter-kills" -> manhuntGui.getHistoryLineHunterKills();
-            case "speedrunner-kills" -> manhuntGui.getHistoryLineSpeedrunnerKills();
-            case "hunter-wins" -> manhuntGui.getHistoryLineHunterWins();
-            case "speedrunner-wins" -> manhuntGui.getHistoryLineSpeedrunnerWins();
-            case "damage" -> manhuntGui.getHistoryLineDamage();
-            case "playtime" -> manhuntGui.getHistoryLinePlaytime();
+            case "matches" -> texts.guiTexts().getHistoryLineMatches();
+            case "kills" -> texts.guiTexts().getHistoryLineKills();
+            case "hunter-kills" -> texts.guiTexts().getHistoryLineHunterKills();
+            case "speedrunner-kills" -> texts.guiTexts().getHistoryLineSpeedrunnerKills();
+            case "hunter-wins" -> texts.guiTexts().getHistoryLineHunterWins();
+            case "speedrunner-wins" -> texts.guiTexts().getHistoryLineSpeedrunnerWins();
+            case "damage" -> texts.guiTexts().getHistoryLineDamage();
+            case "playtime" -> texts.guiTexts().getHistoryLinePlaytime();
             default -> key + ": {value}";
         };
         return line.replace("{value}", value);
     }
 
     private String countLine(int count) {
-        return manhuntGui.getCategoryLore()
+        return texts.guiTexts().getCategoryLore()
                 .replace("{count}", String.valueOf(count));
     }
 
     private String editTitle(int index) {
-        return manhuntGui.getDialogTitleEditEntry()
+        return texts.guiTexts().getDialogTitleEditEntry()
                 .replace("{index}", String.valueOf(index));
     }
 
     private String addTitle() {
-        return manhuntGui.getDialogTitleAddEntry();
+        return texts.guiTexts().getDialogTitleAddEntry();
     }
 
     private String deleteTitle(int index) {
-        return manhuntGui.getDialogTitleDeleteEntry()
+        return texts.guiTexts().getDialogTitleDeleteEntry()
                 .replace("{index}", String.valueOf(index));
     }
 
     private Component title(String line) {
-        return GuiTexts.title(messages, line);
+        return GuiTexts.title(texts.messages(), line);
     }
 
     private Component sectionTitle(String path) {
         String[] parts = path.split("\\.");
         if (parts.length == 2 && !parts[0].equals("advanced")) {
-            return GuiTexts.title(messages, manhuntGui.getTitleCategory()
+            return GuiTexts.title(texts.messages(), texts.guiTexts().getTitleCategory()
                     .replace("{name}", SettingButtons.prettify(parts[1])));
         }
-        return GuiTexts.title(messages, SettingButtons.prettify(parts[parts.length - 1]));
+        return GuiTexts.title(texts.messages(), SettingButtons.prettify(parts[parts.length - 1]));
     }
 
     private static String leaf(String path) {

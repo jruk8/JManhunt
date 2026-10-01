@@ -54,9 +54,10 @@ class OverrideCommandTest {
         messages = new MessageService();
         texts = new MessagesConfig();
         messages.reload(texts);
-        command = new OverrideCommand(overrides, config, messages,
-                texts.getManhunt(), texts.getModifiers(),
-                new SettingFeedback(messages, texts.getManhunt(), config, null), null);
+        command = new OverrideCommand(overrides, config,
+                new OverrideCommand.OverrideTexts(messages, texts.getManhunt(),
+                        texts.getModifiers(), null),
+                new SettingFeedback(messages, texts.getManhunt(), config, null));
     }
 
     @Test

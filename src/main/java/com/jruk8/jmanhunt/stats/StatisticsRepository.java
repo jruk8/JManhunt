@@ -1,10 +1,10 @@
 package com.jruk8.jmanhunt.stats;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.StatisticsConfig;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.File;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,26 +14,24 @@ import java.util.UUID;
 
 /** Persistent career-statistics storage for local and shared deployments. */
 public final class StatisticsRepository implements AutoCloseable {
-    private final JManhuntPlugin plugin;
     private final boolean postgres;
     private final HikariDataSource dataSource;
 
-    private StatisticsRepository(JManhuntPlugin plugin, boolean postgres, HikariDataSource dataSource) {
-        this.plugin = plugin;
+    private StatisticsRepository(boolean postgres, HikariDataSource dataSource) {
         this.postgres = postgres;
         this.dataSource = dataSource;
     }
 
-    public static StatisticsRepository open(JManhuntPlugin plugin, StatisticsConfig statistics)
+    public static StatisticsRepository open(Path dataFolder, StatisticsConfig statistics)
             throws SQLException {
         String type = statistics.getType().toLowerCase();
         if (type.equals("sqlite")) {
             String file = statistics.getSqlite().getFile();
-            File database = new File(plugin.getDataFolder(), file);
+            File database = dataFolder.resolve(file).toFile();
             if (database.getParentFile() != null) {
                 database.getParentFile().mkdirs();
             }
-            StatisticsRepository repository = new StatisticsRepository(plugin, false,
+            StatisticsRepository repository = new StatisticsRepository(false,
                     dataSource("jdbc:sqlite:" + database, "", "",
                             statistics.getPoolSize()));
             repository.initialize();
@@ -49,7 +47,7 @@ public final class StatisticsRepository implements AutoCloseable {
             boolean ssl = postgres.isSsl();
             String jdbc = "jdbc:postgresql://" + host + ":" + port + "/" + database + "?sslmode="
                     + (ssl ? "require" : "disable");
-            StatisticsRepository repository = new StatisticsRepository(plugin, true,
+            StatisticsRepository repository = new StatisticsRepository(true,
                     dataSource(jdbc, user, pass, statistics.getPoolSize()));
             repository.initialize();
             return repository;

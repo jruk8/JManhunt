@@ -1,9 +1,8 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.MiscConfig;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.match.GameManager;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
@@ -22,14 +21,14 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 public final class CompassProtectionListener implements Listener {
-    private final JManhuntPlugin plugin;
+    private final TaskScheduler tasks;
     private final MiscConfig.Interop interop;
     private final CompassManager compass;
     private final GameManager game;
 
-    public CompassProtectionListener(JManhuntPlugin plugin, MiscConfig.Interop interop,
+    public CompassProtectionListener(TaskScheduler tasks, MiscConfig.Interop interop,
             CompassManager compass, GameManager game) {
-        this.plugin = plugin;
+        this.tasks = tasks;
         this.interop = interop;
         this.compass = compass;
         this.game = game;
@@ -123,7 +122,7 @@ public final class CompassProtectionListener implements Listener {
         }
         // Schedule next tick to handle multiple compasses picked up in
         // the same tick; the kept compass takes the picker's role text.
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        tasks.run(() -> {
             compass.deduplicateCompasses(player);
             compass.refreshCompassIdentity(player);
         });

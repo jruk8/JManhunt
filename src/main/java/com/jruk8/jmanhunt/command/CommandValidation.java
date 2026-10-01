@@ -34,11 +34,11 @@ public final class CommandValidation {
             return problem;
         }
         String substituted = EngineEscapes.substitute(raw);
-        Optional<String> root = CommandSyntax.unknownRoot(substituted, knownRoots);
+        Optional<String> root = SyntaxSuggest.unknownRoot(substituted, knownRoots);
         if (root.isPresent()) {
             return root.map(EngineEscapes::restore);
         }
-        return CommandSyntax.giveItemCheck(substituted, knownMaterial, materialNames)
+        return SyntaxSuggest.giveItemCheck(substituted, knownMaterial, materialNames)
                 .map(EngineEscapes::restore);
     }
 

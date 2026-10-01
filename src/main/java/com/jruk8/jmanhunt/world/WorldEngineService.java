@@ -1,9 +1,16 @@
 package com.jruk8.jmanhunt.world;
 
+import com.jruk8.jmanhunt.config.DevConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
+import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
+import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
+import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
+import com.jruk8.jmanhunt.lobby.world.LobbyWorldManager;
 import com.jruk8.jmanhunt.match.GameInstance;
-import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.world.end.EndCellManager;
 import com.jruk8.jmanhunt.world.end.EndResetManager;
 import com.jruk8.jmanhunt.world.structure.NetherStructuresDatapackManager;
@@ -13,24 +20,48 @@ import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.config.MatchSettings;
 import com.jruk8.jmanhunt.config.SettingsListener;
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import com.jruk8.jmanhunt.world.cell.WorldCellService;
 import com.jruk8.jmanhunt.world.teleport.LobbyWorldService;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 
 public final class WorldEngineService implements SettingsListener {
-    private final JManhuntPlugin plugin;
+    /** Server, files, logger, scheduler, and resource edges. */
+    public record EngineEdge(Server server, Path dataFolder, JManhuntLogger log,
+            TaskScheduler tasks, Consumer<String> saveResource,
+            Function<String, InputStream> resources) {
+    }
+
+    /** Lobby store, service, and dev config. */
+    public record EngineLobby(LobbyConfig lobbyConfig, LobbyService lobbyService,
+            DevConfig devConfig) {
+    }
+
+    /** Engine config, boosts, lobbies, store, and player reads. */
+    public record EngineState(com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            MatchSettings.GameBoosts boosts, LobbiesConfig lobbySettings,
+            EngineStateRepository engineState, PlayerStateStore playerStates,
+            FakeSpectatorService fakes) {
+    }
+
+    private final JManhuntLogger log;
+    private final TaskScheduler tasks;
     private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
     private final MatchSettings.GameBoosts boosts;
     private final StrongholdDatapackManager strongholdDatapackManager;
@@ -42,23 +73,38 @@ public final class WorldEngineService implements SettingsListener {
     private final MatchTeleportService teleport;
     private final LobbyWorldService lobbyWorlds;
 
-    public WorldEngineService(JManhuntPlugin plugin, MessageService messages,
-            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
-            MatchSettings.GameBoosts boosts, LobbiesConfig lobbySettings,
-            EngineStateRepository engineState, PlayerStateStore playerStates) {
-        this.plugin = plugin;
-        this.engineSettings = engineSettings;
-        this.boosts = boosts;
-        this.strongholdDatapackManager = new StrongholdDatapackManager(plugin);
-        this.netherStructuresDatapackManager = new NetherStructuresDatapackManager(plugin);
-        this.overworldStructuresDatapackManager = new OverworldStructuresDatapackManager(plugin);
-        this.endResetManager = new EndResetManager(plugin);
-        this.endCells = new EndCellManager(plugin, engineState);
-        this.cells = new WorldCellService(plugin, engineSettings, engineState, endCells,
-                playerStates);
-        this.lobbyWorlds = new LobbyWorldService(plugin, messages, messages.manhunt(),
-                engineSettings, lobbySettings);
-        this.teleport = new MatchTeleportService(plugin, engineSettings, lobbyWorlds);
+    public WorldEngineService(EngineEdge edge, EngineLobby lobby,
+            LobbyWorldService.LobbyWorldTexts texts, EngineState state) {
+        this.log = edge.log();
+        this.tasks = edge.tasks();
+        this.engineSettings = state.engineSettings();
+        this.boosts = state.boosts();
+        this.strongholdDatapackManager = new StrongholdDatapackManager(edge.server(),
+                edge.dataFolder(), edge.log(), edge.saveResource());
+        this.netherStructuresDatapackManager = new NetherStructuresDatapackManager(edge.server(),
+                edge.dataFolder(), edge.log(), edge.saveResource());
+        this.overworldStructuresDatapackManager = new OverworldStructuresDatapackManager(
+                edge.server(), edge.dataFolder(), edge.log(), edge.saveResource());
+        this.endResetManager = new EndResetManager(edge.server(), edge.log());
+        this.endCells = new EndCellManager(edge.server(), edge.log(), state.engineState());
+        this.cells = new WorldCellService(
+                new WorldCellService.WorldCellEdge(edge.log(), edge.tasks()),
+                state.engineSettings(), state.engineState(), endCells,
+                new WorldCellService.WorldCellPlayers(state.playerStates(), state.fakes()));
+        JmhLobbyService bundles = new JmhLobbyService(edge.log(), lobby.lobbyConfig(),
+                state.engineSettings(), state.lobbySettings());
+        LobbySchematicService schematics = new LobbySchematicService(bundles, lobby.devConfig(),
+                edge.dataFolder(), edge.log(), edge.resources());
+        LobbyWorldManager lobbyManager = new LobbyWorldManager(
+                new LobbyWorldManager.ManagerEdge(edge.server(), edge.log(),
+                        lobby.lobbyConfig()),
+                new LobbyWorldManager.ManagerConfig(state.lobbySettings(),
+                        state.engineSettings()),
+                schematics);
+        this.lobbyWorlds = new LobbyWorldService(lobbyManager, lobby.lobbyConfig(), edge.log(),
+                texts, state.engineSettings());
+        this.teleport =
+                new MatchTeleportService(lobby.lobbyService(), state.engineSettings(), lobbyWorlds);
     }
 
     /** Wires the match-running check behind the NO_MATCH_RUNNING refill policy. */
@@ -184,7 +230,7 @@ public final class WorldEngineService implements SettingsListener {
         cells.refillBuffer();
         // Periodic top-up for matches consumed while others run. Plugin
         // tasks are cancelled automatically on disable.
-        Bukkit.getScheduler().runTaskTimer(plugin, cells::refillBuffer, 1200L, 1200L);
+        tasks.runTimer(cells::refillBuffer, 1200L, 1200L);
     }
 
     /** Dedicated end world of a live match, if it has one. */
@@ -304,7 +350,7 @@ public final class WorldEngineService implements SettingsListener {
         WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
         int deleted = endCells.deleteOrphans(config);
         if (deleted > 0) {
-            plugin.logger().info("Deleted " + deleted + " orphaned end dimension(s).");
+            log.info("Deleted " + deleted + " orphaned end dimension(s).");
         }
     }
 

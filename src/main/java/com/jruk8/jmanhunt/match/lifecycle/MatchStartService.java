@@ -1,7 +1,9 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
 import com.jruk8.jmanhunt.core.DebugLevel;
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
 import com.jruk8.jmanhunt.api.events.JMatchStartEvent;
 import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
@@ -42,6 +44,7 @@ import java.util.function.Consumer;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
+import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
 import com.jruk8.jmanhunt.match.StatusRosterService;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.match.prestart.HeadstartState;
@@ -58,62 +61,56 @@ public final class MatchStartService {
     /** Fallback origin spread: random point within this of 0,0. */
     static final int SURROUND_FALLBACK_RADIUS = 5000;
 
-    private final JManhuntPlugin plugin;
-    private final MessageService messages;
-    private final GameMessages game;
-    private final ManhuntMessages manhunt;
-    private final PlayerStateStore playerStates;
-    private final CompassManager compass;
-    private final StatsManager stats;
-    private final GameStateCommandManager stateCommands;
-    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
-    private final MatchSettingsFacade match;
-    private final PlayersSettingsFacade players;
-    private final WorldEngineService worldEngine;
-    private final LobbyService lobbies;
-    private final MatchStore store;
-    private final MatchMessaging messaging;
-    private final TimeLimitService timeLimits;
-    private final PrestartService prestart;
-    private final AutostartService autostart;
+    /** Match/player settings, engine settings, and logger. */
+    public record StartReads(MatchSettingsFacade match, PlayersSettingsFacade players,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings, JManhuntLogger log) {
+    }
+
+    /** States, compass, stats, commands, engine, lobbies, store, and phases. */
+    public record StartMatch(PlayerStateStore playerStates, CompassManager compass,
+            StatsManager stats, GameStateCommandManager stateCommands,
+            WorldEngineService worldEngine, LobbyService lobbies, MatchStore store,
+            TimeLimitService timeLimits, PrestartService prestart,
+            AutostartService autostart) {
+    }
+
+    /** Fakes, role teams, respawn listener, and sounds. */
+    public record StartEdge(FakeSpectatorService fakes, RoleTeamService roleTeams,
+            PlayerRespawnListener respawn, SoundService sounds) {
+    }
+
+    /** Message bus, game/manhunt texts, and match messaging. */
+    public record StartTexts(MessageService messages, GameMessages game,
+            ManhuntMessages manhunt, MatchMessaging messaging) {
+    }
+
+    private final StartReads reads;
+    private final StartMatch services;
+    private final StartEdge edge;
+    private final StartTexts texts;
     private final MatchAnnounceService announce;
     private final QuickStartService quickStart;
     private final List<Consumer<GameInstance>> gameStartListeners = new ArrayList<>();
     private final List<Consumer<GameInstance>> beginGameListeners = new ArrayList<>();
 
-    public MatchStartService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
-            ManhuntMessages manhunt, SoundService sounds,
-            PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
-            GameStateCommandManager stateCommands,
-            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
-            MatchSettingsFacade match, PlayersSettingsFacade players,
-            WorldEngineService worldEngine, LobbyService lobbies, MatchStore store,
-            MatchMessaging messaging, TimeLimitService timeLimits, PrestartService prestart,
-            AutostartService autostart) {
-        this.plugin = plugin;
-        this.messages = messages;
-        this.game = game;
-        this.manhunt = manhunt;
-        this.playerStates = playerStates;
-        this.compass = compass;
-        this.stats = stats;
-        this.stateCommands = stateCommands;
-        this.engineSettings = engineSettings;
-        this.match = match;
-        this.players = players;
-        this.worldEngine = worldEngine;
-        this.lobbies = lobbies;
-        this.store = store;
-        this.messaging = messaging;
-        this.timeLimits = timeLimits;
-        this.prestart = prestart;
-        this.autostart = autostart;
-        this.announce = new MatchAnnounceService(plugin, players,
-                messages, sounds,
-                playerStates, store, new StatusRosterService(messages, manhunt, playerStates),
-                manhunt);
-        this.quickStart = new QuickStartService(plugin, lobbies, playerStates, store, autostart,
-                this::start);
+    public MatchStartService(StartReads reads, StartMatch services, StartEdge edge,
+            StartTexts texts) {
+        this.reads = reads;
+        this.services = services;
+        this.edge = edge;
+        this.texts = texts;
+        this.announce = new MatchAnnounceService(reads.players(),
+                new MatchAnnounceService.AnnounceTexts(texts.messages(), edge.sounds(),
+                        texts.manhunt()),
+                new MatchAnnounceService.AnnounceState(services.playerStates(),
+                        services.store(),
+                        new StatusRosterService(texts.messages(), texts.manhunt(),
+                                services.playerStates()),
+                        edge.respawn()));
+        this.quickStart = new QuickStartService(
+                new QuickStartService.QuickRoster(services.lobbies(),
+                        services.playerStates(), edge.roleTeams()),
+                services.store(), services.autostart(), this::start);
     }
 
     public void addGameStartListener(Consumer<GameInstance> listener) {
@@ -160,7 +157,7 @@ public final class MatchStartService {
         if (quickStart.blocksStart(lobbyId)) {
             return false;
         }
-        Optional<Lobby> lobby = lobbies.get(lobbyId);
+        Optional<Lobby> lobby = services.lobbies().get(lobbyId);
         if (lobby.isEmpty()) {
             return false;
         }
@@ -169,26 +166,26 @@ public final class MatchStartService {
             return false;
         }
         List<Player> participants = players.get();
-        autostart.cancelAutostartCountdown(lobbyId, false);
+        services.autostart().cancelAutostartCountdown(lobbyId, false);
         // Remove any lingering invulnerability from a previous game end. Only
         // this match's players are touched so a concurrent match sitting in
         // its end delay keeps its protection.
         participants.forEach(p -> p.setInvulnerable(false));
-        long currentMatchId = store.nextMatchId();
+        long currentMatchId = services.store().nextMatchId();
         List<UUID> assignees = prepareMatchPlayers(participants, currentMatchId);
         List<Player> spectators = lobbyNonePlayers(lobby.get());
-        participants.forEach(lobbies::restoreCollisions); // match wins; fakes re-disable below
-        spectators.forEach(lobbies::applyLobbyCollisions); // stayers keep lobby rules
-        OptionalLong matchCell = worldEngine.onMatchStart(participants, lobbyId);
+        participants.forEach(services.lobbies()::restoreCollisions); // match wins; fakes re-disable below
+        spectators.forEach(services.lobbies()::applyLobbyCollisions); // stayers keep lobby rules
+        OptionalLong matchCell = services.worldEngine().onMatchStart(participants, lobbyId);
         GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell, assignees);
         instance.setStartCenter(engineOffStartCenter(participants, surroundOrigin, matchCell));
-        store.registerInstance(instance);
+        services.store().registerInstance(instance);
         promoteQueuedSpectators(instance, lobby.get());
-        stats.recordLobbySession(lobbyId);
+        services.stats().recordLobbySession(lobbyId);
         applyStartState(instance, participants, spectators, lobbyId);
         publishMatchStart(instance, participants, spectators, lobbyId, matchCell);
         beginMatchPlay(instance);
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getMatchStart,
+        reads.log().debug(DebugLevel.INFO, DebugMessages::getMatchStart,
                 Map.of("lobby", String.valueOf(lobbyId), "index", GameManager.cellString(instance)));
         return true;
     }
@@ -199,7 +196,7 @@ public final class MatchStartService {
      */
     private Location engineOffStartCenter(List<Player> participants, Location surroundOrigin,
             OptionalLong matchCell) {
-        if (matchCell.isPresent() || engineSettings.isEnabled()) {
+        if (matchCell.isPresent() || reads.engineSettings().isEnabled()) {
             return null;
         }
         return surroundParticipants(participants, surroundOrigin);
@@ -207,15 +204,15 @@ public final class MatchStartService {
 
     /** Lobby id used when a start has no other context; negative disables it. */
     public int defaultStartLobbyId() {
-        return lobbies.multiLobbyAllowed() ? lobbies.defaultLobbyId() : 0;
+        return services.lobbies().multiLobbyAllowed() ? services.lobbies().defaultLobbyId() : 0;
     }
 
     /** Attaches queued spectators of a starting lobby to the new match, all policies. */
     private void promoteQueuedSpectators(GameInstance instance, Lobby lobby) {
         List<Player> queued = Bukkit.getOnlinePlayers().stream()
                 .filter(p -> lobby.contains(p.getUniqueId())
-                        && isQueuedSpectator(playerStates.role(p),
-                                store.isInLiveInstance(p.getUniqueId())))
+                        && isQueuedSpectator(services.playerStates().role(p),
+                                services.store().isInLiveInstance(p.getUniqueId())))
                 .map(p -> (Player) p).toList();
         joinPlayers(instance, queued, Role.SPECTATOR);
     }
@@ -233,26 +230,27 @@ public final class MatchStartService {
     private Optional<List<Player>> matchPlayers(Lobby resolved) {
         List<Player> players = Bukkit.getOnlinePlayers().stream()
                 .filter(p -> resolved.contains(p.getUniqueId())
-                        && playerStates.role(p).isParticipant()
-                        && !store.isInLiveInstance(p.getUniqueId()))
+                        && services.playerStates().role(p).isParticipant()
+                        && !services.store().isInLiveInstance(p.getUniqueId()))
                 .map(p -> (Player) p).toList();
-        boolean ready = players.stream().anyMatch(p -> playerStates.role(p) == Role.HUNTER)
-                && players.stream().anyMatch(p -> playerStates.role(p) == Role.SPEEDRUNNER);
+        boolean ready = players.stream().anyMatch(p -> services.playerStates().role(p) == Role.HUNTER)
+                && players.stream().anyMatch(p -> services.playerStates().role(p) == Role.SPEEDRUNNER);
         return ready ? Optional.of(players) : Optional.empty();
     }
 
     /** Clears stale match state and seeds per-player stats. Returns the assignee ids. */
     private List<UUID> prepareMatchPlayers(List<Player> players, long currentMatchId) {
         List<UUID> assignees = players.stream().map(Player::getUniqueId).toList();
-        playerStates.clearMatchFor(assignees);
-        Integer lobby = store.lobbyOf(currentMatchId);
+        services.playerStates().clearMatchFor(assignees);
+        Integer lobby = services.store().lobbyOf(currentMatchId);
         for (Player player : players) {
             initMatchStats(currentMatchId, player);
-            if (playerStates.role(player) == Role.SPEEDRUNNER) {
-                playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
+            if (services.playerStates().role(player) == Role.SPEEDRUNNER) {
+                services.playerStates().setSpeedrunnerAlive(player.getUniqueId(), true);
             }
-            playerStates.recordLastSeen(player, player.getLocation());
-            playerStates.setLives(player.getUniqueId(), livesFor(lobby, playerStates.role(player)));
+            services.playerStates().recordLastSeen(player, player.getLocation());
+            services.playerStates().setLives(player.getUniqueId(),
+                    livesFor(lobby, services.playerStates().role(player)));
         }
         return assignees;
     }
@@ -266,13 +264,13 @@ public final class MatchStartService {
             List<UUID> assignees) {
         GameInstance instance = new GameInstance(currentMatchId, lobbyId, matchCell,
                 System.currentTimeMillis());
-        if (lobbies.multiLobbyAllowed() && lobbies.midMatchPolicy().usesSubLobbies()) {
-            instance.setSubLobby(new SubLobby(lobbyId, lobbies.nextSubId(lobbyId)));
+        if (services.lobbies().multiLobbyAllowed() && services.lobbies().midMatchPolicy().usesSubLobbies()) {
+            instance.setSubLobby(new SubLobby(lobbyId, services.lobbies().nextSubId(lobbyId)));
         }
         for (UUID playerId : assignees) {
             instance.activate(playerId);
         }
-        stateCommands.trackMatchEntry(assignees);
+        services.stateCommands().trackMatchEntry(assignees);
         return instance;
     }
 
@@ -281,20 +279,20 @@ public final class MatchStartService {
             List<Player> spectators, int lobbyId) {
         // Apply the configured default state and custom start commands before
         // giving role equipment. In particular, default clear-inventory must
-        // not remove the hunter compass. Runs after the teleport so ON_START
+        // not remove the hunter services.compass(). Runs after the teleport so ON_START
         // modifiers resolve participants from the registered instance.
-        stateCommands.runStart(instance.matchId(), players, spectators, lobbyId);
+        services.stateCommands().runStart(instance.matchId(), players, spectators, lobbyId);
         for (Player player : players) {
-            if (playerStates.role(player).isParticipant()) {
-                compass.giveCompass(player);
-                compass.refreshCompass(player);
+            if (services.playerStates().role(player).isParticipant()) {
+                services.compass().giveCompass(player);
+                services.compass().refreshCompass(player);
             }
         }
         // Set participants to adventure mode during the pre-start window if
         // configured, preventing block breaking while waiting for the first
         // speedrunner hit.
-        if (match.startOnDamageEnabled(lobbyId)
-                && match.startInAdventureMode(lobbyId)) {
+        if (reads.match().startOnDamageEnabled(lobbyId)
+                && reads.match().startInAdventureMode(lobbyId)) {
             for (Player player : players) {
                 player.setGameMode(GameMode.ADVENTURE);
             }
@@ -304,10 +302,10 @@ public final class MatchStartService {
     /** Broadcasts the match start to players, listeners, and the API event. */
     private void publishMatchStart(GameInstance instance, List<Player> players,
             List<Player> spectators, int lobbyId, OptionalLong matchCell) {
-        messaging.sendToInstance(instance, manhunt.getStartSuccess(), Map.of());
+        texts.messaging().sendToInstance(instance, texts.manhunt().getStartSuccess(), Map.of());
         gameStartListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchStartEvent(instance.matchId(), lobbyId, matchCell));
-        messaging.playInstanceNeutral(instance);
+        texts.messaging().playInstanceNeutral(instance);
         announce.showStatusToInstance(instance, players);
         announce.announceRoles(lobbyId, players, spectators);
     }
@@ -320,17 +318,17 @@ public final class MatchStartService {
         // spectator when the opposite countdown actually begins; when
         // start-on-speedrunner-damage is enabled, that happens only after
         // the speedrunner first damages a hunter.
-        prestart.armHeadstarts(instance);
-        boolean gated = match.startOnDamageEnabled(lobby);
+        services.prestart().armHeadstarts(instance);
+        boolean gated = reads.match().startOnDamageEnabled(lobby);
         if (!gated) {
-            prestart.beginHeadstarts(instance);
+            services.prestart().beginHeadstarts(instance);
         }
         // load waiting delay configuration (enforces a 5 second minimum;
         // -1 waits indefinitely)
         instance.setWaitingDelayConfigured(WaitingReminder.clampDelay(
-                match.startOnDamageDelaySeconds(lobby)));
+                reads.match().startOnDamageDelaySeconds(lobby)));
         if (gated) {
-            prestart.scheduleWaitingReminder(instance);
+            services.prestart().scheduleWaitingReminder(instance);
         } else {
             beginGame(instance);
         }
@@ -354,7 +352,7 @@ public final class MatchStartService {
         World world = center.getWorld();
         int centerX = center.getBlockX();
         int centerZ = center.getBlockZ();
-        WorldEngineConfig spawnConfig = WorldEngineConfig.fromSettings(engineSettings);
+        WorldEngineConfig spawnConfig = WorldEngineConfig.fromSettings(reads.engineSettings());
         List<Location> spawns = MatchTeleportService.spreadSpawnsForConfig(world, centerX, centerZ,
                 SURROUND_RADIUS, participants, spawnConfig);
         for (int index = 0; index < participants.size(); index++) {
@@ -365,7 +363,7 @@ public final class MatchStartService {
 
     /** Random origin in the game world for executor-less starts. */
     private Location fallbackOrigin() {
-        World world = Bukkit.getWorld(engineSettings.getWorldName());
+        World world = Bukkit.getWorld(reads.engineSettings().getWorldName());
         if (world == null) {
             return null;
         }
@@ -389,33 +387,33 @@ public final class MatchStartService {
     /** Joins one player to the instance. Returns false when already assigned. */
     private boolean joinPlayer(GameInstance instance, Player player, Role role) {
         UUID playerId = player.getUniqueId();
-        if (instance.isActive(playerId) || store.isInLiveInstance(playerId)) {
+        if (instance.isActive(playerId) || services.store().isInLiveInstance(playerId)) {
             return false;
         }
-        lobbies.setLobby(playerId, instance.originLobbyId());
-        playerStates.setRole(player, role);
-        plugin.roleTeams().sync(player);
+        services.lobbies().setLobby(playerId, instance.originLobbyId());
+        services.playerStates().setRole(player, role);
+        edge.roleTeams().sync(player);
         instance.activate(playerId);
         initMatchStats(instance.matchId(), player);
         if (role == Role.SPEEDRUNNER) {
-            playerStates.setSpeedrunnerAlive(playerId, true);
+            services.playerStates().setSpeedrunnerAlive(playerId, true);
         }
-        playerStates.setLives(playerId, livesFor(instance.originLobbyId(), role));
+        services.playerStates().setLives(playerId, livesFor(instance.originLobbyId(), role));
         if (instance.cellIndex().isPresent()) {
-            worldEngine.teleportJoinersToCell(instance, List.of(player), instance.cellIndex().getAsLong());
+            services.worldEngine().teleportJoinersToCell(instance, List.of(player), instance.cellIndex().getAsLong());
         }
-        playerStates.recordLastSeen(player, player.getLocation());
+        services.playerStates().recordLastSeen(player, player.getLocation());
         if (role.isParticipant()) {
-            compass.giveCompass(player);
-            compass.refreshCompass(player);
+            services.compass().giveCompass(player);
+            services.compass().refreshCompass(player);
         }
-        lobbies.restoreCollisions(player); // match wins; fake enable below re-disables
+        services.lobbies().restoreCollisions(player); // match wins; fake enable below re-disables
         applyJoinGameMode(instance, player, role);
         Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(
                 instance.matchId(), playerId, GameManager.roleToPlayerRole(role)));
-        messaging.sendToInstance(instance, game.getJoinAnnounce(),
-                Map.of("player", player.getName(), "role", messages.roleName(role)));
-        stateCommands.trackMatchEntry(List.of(playerId));
+        texts.messaging().sendToInstance(instance, texts.game().getJoinAnnounce(),
+                Map.of("player", player.getName(), "role", texts.messages().roleName(role)));
+        services.stateCommands().trackMatchEntry(List.of(playerId));
         return true;
     }
 
@@ -425,11 +423,11 @@ public final class MatchStartService {
         if (role == Role.SPECTATOR
                 // NONE joiners take fake spectator mode only with the toggle;
                 // AFK cannot join at all (rejected in gameJoin).
-                || (!role.isParticipant() && players.turnNonesSpectator(lobby))) {
-            plugin.fakeSpectators().enable(player);
+                || (!role.isParticipant() && reads.players().turnNonesSpectator(lobby))) {
+            edge.fakes().enable(player);
         }
         if (!instance.begun()
-                && match.startInAdventureMode(lobby)
+                && reads.match().startInAdventureMode(lobby)
                 && role.isParticipant()
                 && !instance.headstart(role.opposite()).armed()) {
             player.setGameMode(GameMode.ADVENTURE);
@@ -439,13 +437,13 @@ public final class MatchStartService {
         HeadstartState headstart = instance.headstart(role.opposite());
         if (role.isParticipant() && headstart.task() != null) {
             headstart.returnPoints().put(player.getUniqueId(), player.getLocation());
-            plugin.fakeSpectators().enable(player);
+            edge.fakes().enable(player);
         }
     }
 
     /** Begins the match when exactly one is live; a no-op otherwise. */
     public void beginGame() {
-        store.singleLiveInstance().ifPresent(this::beginGame);
+        services.store().singleLiveInstance().ifPresent(this::beginGame);
     }
 
     /** Begins one match: real gameplay starts for its participants. */
@@ -457,49 +455,49 @@ public final class MatchStartService {
         // The match clock (elapsed status, time-limit countdown) ignores
         // the pre-start wait: it anchors here, when play actually starts.
         instance.setStartedAtMillis(System.currentTimeMillis());
-        timeLimits.scheduleTimeLimit(instance, instance.matchId());
-        prestart.cancelWaitingTasks(instance);
+        services.timeLimits().scheduleTimeLimit(instance, instance.matchId());
+        services.prestart().cancelWaitingTasks(instance);
         // Restore participants to survival when the game begins if they were
         // set to adventure mode during the pre-start window. Held headstart
         // sides stay out: their countdown moves them to fake spectator below.
-        if (match.startInAdventureMode(instance.originLobbyId())) {
-            for (Player player : store.onlineActivePlayers(instance)) {
-                Role playerRole = playerStates.role(player);
+        if (reads.match().startInAdventureMode(instance.originLobbyId())) {
+            for (Player player : services.store().onlineActivePlayers(instance)) {
+                Role playerRole = services.playerStates().role(player);
                 if (playerRole.isParticipant() && !instance.headstart(playerRole.opposite()).armed()) {
-                    plugin.fakeSpectators().disable(player);
+                    edge.fakes().disable(player);
                 }
             }
         }
-        messaging.sendToInstance(instance, manhunt.getStartedByDamage(), Map.of());
-        messaging.playInstanceNeutral(instance);
+        texts.messaging().sendToInstance(instance, texts.manhunt().getStartedByDamage(), Map.of());
+        texts.messaging().playInstanceNeutral(instance);
         // Dedicated begin cue, after any prestart window: begin runs once
         // per match (the begun guard above), so this plays exactly once.
-        messaging.playInstanceSound(instance, "game.match-started");
+        texts.messaging().playInstanceSound(instance, "game.match-started");
         beginGameListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JGameBeginEvent(instance.matchId()));
         // AFTER pre-start-order modifiers waited out the pre-start window;
         // their ON_START sequence runs now instead of at match start.
-        stateCommands.runPostStartModifiers(instance.matchId());
-        stateCommands.startIntervalModifiers(instance.matchId());
+        services.stateCommands().runPostStartModifiers(instance.matchId());
+        services.stateCommands().startIntervalModifiers(instance.matchId());
         // Armed headstarts begin counting now (the countdown only starts once
         // the speedrunner first damages a hunter).
-        prestart.beginHeadstarts(instance);
+        services.prestart().beginHeadstarts(instance);
     }
 
     /** Fresh per-match stat row for one participant; spectators never get one. */
     private void initMatchStats(long matchId, Player player) {
-        if (!playerStates.role(player).isParticipant()) { return; }
-        Stats playerStats = stats.getOrCreate(matchId, player.getUniqueId());
+        if (!services.playerStates().role(player).isParticipant()) { return; }
+        Stats playerStats = services.stats().getOrCreate(matchId, player.getUniqueId());
         playerStats.player = player.getName();
         playerStats.uuid = player.getUniqueId();
-        playerStats.role = playerStates.role(player);
+        playerStats.role = services.playerStates().role(player);
         playerStats.matchStartedAt = System.currentTimeMillis();
     }
     /** Configured starting lives for a role. -1 means unlimited. */
     private int livesFor(Integer lobby, Role role) {
         return switch (role) {
-            case HUNTER -> players.hunterLives(lobby);
-            case SPEEDRUNNER -> players.speedrunnerLives(lobby);
+            case HUNTER -> reads.players().hunterLives(lobby);
+            case SPEEDRUNNER -> reads.players().speedrunnerLives(lobby);
             default -> -1;
         };
     }
@@ -507,12 +505,12 @@ public final class MatchStartService {
     /** Online lobby members watching without playing: NONE and SPECTATOR, never AFK. */
     private List<Player> lobbyNonePlayers(Lobby lobby) {
         return Bukkit.getOnlinePlayers().stream()
-                .filter(p -> playerStates.role(p).isWatching() && lobby.contains(p.getUniqueId()))
+                .filter(p -> services.playerStates().role(p).isWatching() && lobby.contains(p.getUniqueId()))
                 .map(p -> (Player) p).toList();
     }
 
     public boolean joinLeastTimeMatch(Player player) {
-        Optional<GameInstance> target = leastTimeMatch(store.liveInstances());
+        Optional<GameInstance> target = leastTimeMatch(services.store().liveInstances());
         if (target.isEmpty()) {
             return false;
         }
@@ -532,7 +530,7 @@ public final class MatchStartService {
     }
 
     private void teleportToGameWorldSpawn(Player player) {
-        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(reads.engineSettings());
         World world = Bukkit.getWorld(config.worldName());
         Location spawn = world != null ? world.getSpawnLocation() : player.getWorld().getSpawnLocation();
         player.teleport(spawn);

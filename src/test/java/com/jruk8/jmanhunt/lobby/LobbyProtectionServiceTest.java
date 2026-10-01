@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.lobby;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -17,9 +16,7 @@ import static org.mockito.Mockito.when;
 class LobbyProtectionServiceTest {
 
     private LobbyProtectionService service(LobbyConfig config) {
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.lobbyConfig()).thenReturn(config);
-        return new LobbyProtectionService(plugin, () -> "jmh-lobby");
+        return new LobbyProtectionService(config, () -> "jmh-lobby");
     }
 
     private World world(String name) {

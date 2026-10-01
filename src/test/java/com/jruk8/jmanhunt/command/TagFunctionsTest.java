@@ -21,14 +21,15 @@ class TagFunctionsTest {
         final FlagStore flags = new FlagStore();
 
         TagContext context() {
-            return TagContext.run(
-                    ModifierTagScope.match("Steve", List.of(), new Random(11), warnings::add),
-                    "funcs", messages::add, messages::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), flags,
-                            (text, name) -> text, RosterValues.inert(), PlayerSinks.inert()),
-                    List.of(), loopLimits::add);
+            return TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve", List.of(),
+                    new Random(11), warnings::add), "funcs"),
+                    TagContext.TagSinks.simple(messages::add, messages::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                            ModifierTagScope.match("Steve", List.of(), new Random(11), warnings::add)),
+                    TagContext.TagRole.silent(),
+                    new TagContext.TagMatch(7L, new TagBackends(StatValues.inert(), flags, (text,
+                            name) -> text, RosterValues.inert(), PlayerSinks.inert()), List.of(), loopLimits::add,
+                            (player, reason) -> { }, (role, reason) -> { }));
         }
 
         String replace(String command, TagContext context) {

@@ -1,12 +1,12 @@
 package com.jruk8.jmanhunt.world.border;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import com.jruk8.jmanhunt.world.cell.CellBounds;
-import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -27,21 +27,21 @@ public final class PseudoborderParticleService {
     private static final float PARTICLE_SIZE = 1.0f;
     private static final double NETHER_SCALE = 8.0;
 
-    private final JManhuntPlugin plugin;
+    private final FakeSpectatorService fakeSpectators;
     private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
     private final MatchStore store;
     private final WorldEngineService worldEngine;
     /** Shared clock: ticks since enable, driving both pulse modes. */
     private long tick;
 
-    public PseudoborderParticleService(JManhuntPlugin plugin,
+    public PseudoborderParticleService(TaskScheduler tasks, FakeSpectatorService fakeSpectators,
             com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings, MatchStore store,
             WorldEngineService worldEngine) {
-        this.plugin = plugin;
+        this.fakeSpectators = fakeSpectators;
         this.engineSettings = engineSettings;
         this.store = store;
         this.worldEngine = worldEngine;
-        Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
+        tasks.runTimer(this::tick, 1L, 1L);
     }
 
     private void tick() {
@@ -67,7 +67,7 @@ public final class PseudoborderParticleService {
                     engine.cellSize(), engine.startBorderDiameter(),
                     engine.useStartBorder(instance.begun()));
             for (Player player : store.onlineActivePlayers(instance)) {
-                if (plugin.fakeSpectators().isFakeSpectator(player)) {
+                if (fakeSpectators.isFakeSpectator(player)) {
                     continue;
                 }
                 renderForPlayer(player, bounds, particles, dust, color);

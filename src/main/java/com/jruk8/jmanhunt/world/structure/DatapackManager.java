@@ -1,26 +1,36 @@
 package com.jruk8.jmanhunt.world.structure;
 
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.world.FileUtils;
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import org.bukkit.Server;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /** Base class for datapacks that override vanilla structure sets. */
 public abstract class DatapackManager {
-    protected final JManhuntPlugin plugin;
+    protected final Server server;
+    protected final Path dataFolder;
+    protected final JManhuntLogger log;
+    protected final Consumer<String> saveResource;
 
-    protected DatapackManager(JManhuntPlugin plugin) {
-        this.plugin = plugin;
+    protected DatapackManager(Server server, Path dataFolder, JManhuntLogger log,
+            Consumer<String> saveResource) {
+        this.server = server;
+        this.dataFolder = dataFolder;
+        this.log = log;
+        this.saveResource = saveResource;
     }
 
     public void apply(String worldName, boolean enabled) {
         if (!enabled) {
             return;
         }
-        File worldFolder = new File(plugin.getServer().getWorldContainer(), worldName);
+        File worldFolder = new File(server.getWorldContainer(), worldName);
         File datapackRoot = new File(worldFolder, "datapacks/" + datapackFolderName());
         File mcMeta = new File(datapackRoot, "pack.mcmeta");
         try {
@@ -33,9 +43,9 @@ public abstract class DatapackManager {
                 if (structureSet.getParentFile() != null) {
                     structureSet.getParentFile().mkdirs();
                 }
-                File source = new File(plugin.getDataFolder(), resource);
+                File source = dataFolder.resolve(resource).toFile();
                 if (!source.exists()) {
-                    plugin.saveResource(resource, false);
+                    saveResource.accept(resource);
                 }
                 String content = Files.readString(source.toPath(), StandardCharsets.UTF_8);
                 changed |= writeIfChanged(structureSet, content);
@@ -44,25 +54,25 @@ public abstract class DatapackManager {
                 reloadDataPacks();
             }
         } catch (IOException exception) {
-            plugin.logger().warning(
+            log.warning(
                     "Failed to apply " + datapackFolderName() + " datapack: " + exception.getMessage());
         }
     }
 
     public void remove(String worldName, boolean enabled) {
         if (enabled) {
-            plugin.logger().warning("Attempted remove datapack with feature enabled. " +
+            log.warning("Attempted remove datapack with feature enabled. " +
                     "This message should not happen. Contact an admin.");
             return;
         }
-        File worldFolder = new File(plugin.getServer().getWorldContainer(), worldName);
+        File worldFolder = new File(server.getWorldContainer(), worldName);
         File datapackRoot = new File(worldFolder, "datapacks/" + datapackFolderName());
         if (datapackRoot.exists()) {
             try {
                 FileUtils.deleteRecursively(datapackRoot);
                 reloadDataPacks();
             } catch (IOException e) {
-                plugin.logger().warning("Failed to delete datapack folder: " + e.getMessage());
+                log.warning("Failed to delete datapack folder: " + e.getMessage());
             }
         }
     }
@@ -97,7 +107,7 @@ public abstract class DatapackManager {
     }
 
     private void reloadDataPacks() {
-        plugin.getServer().reloadData();
+        server.reloadData();
     }
 
     private String packMeta() {

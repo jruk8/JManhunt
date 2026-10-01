@@ -47,19 +47,19 @@ public final class ScrollList {
             MessageService messages, GuiService gui, ManhuntGuiMessages guiTexts) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
         fixed.put(8, scrollButton(messages, self, guiTexts.getScrollUp(), "Scroll up", -1));
-        fixed.put(26, new MenuButton(Material.PAPER,
+        fixed.put(26, new MenuButton(new MenuButton.Spec(Material.PAPER,
                 GuiTexts.name(messages, guiTexts.getBack(), "Back"),
                 null, false, false,
-                player -> gui.back(player, self[0])));
+                player -> gui.back(player, self[0]), null, null, MenuButton.SoundPolicy.CLICK, null)));
         fixed.put(53, scrollButton(messages, self, guiTexts.getScrollDown(), "Scroll down", 1));
         return fixed;
     }
 
     private static MenuButton scrollButton(MessageService messages,
             Menu[] self, String label, String fallback, int delta) {
-        return new MenuButton(Material.ARROW,
+        return new MenuButton(new MenuButton.Spec(Material.ARROW,
                 GuiTexts.name(messages, label, fallback),
                 null, false, false,
-                player -> self[0].window().scrollLine(delta));
+                player -> self[0].window().scrollLine(delta), null, null, MenuButton.SoundPolicy.CLICK, null));
     }
 }

@@ -37,11 +37,13 @@ class TagStatsFlagsTest {
         TagContext context(String executor, long matchId) {
             ModifierTagScope scope = ModifierTagScope.match(executor, List.of(), new Random(3),
                     warnings::add);
-            return TagContext.run(scope, "gear-dice", warnings::add, warnings::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    matchId, new TagBackends(backend, flags, (text, name) -> text,
-                            RosterValues.inert(), PlayerSinks.inert()));
+            return TagContext.run(new TagContext.TagIdentity(scope, "gear-dice"),
+                    TagContext.TagSinks.simple(warnings::add, warnings::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { }, scope),
+                    TagContext.TagRole.silent(),
+                    TagContext.TagMatch.simple(matchId, new TagBackends(backend, flags, (text,
+                            name) -> text, RosterValues.inert(), PlayerSinks.inert()),
+                                    (player, reason) -> { }, (role, reason) -> { }));
         }
 
         String replace(String command, String executor, long matchId) {

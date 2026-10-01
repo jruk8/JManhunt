@@ -17,12 +17,14 @@ class TagArgsTest {
         final List<String> warnings = new ArrayList<>();
 
         TagContext context(List<String> eventArgs) {
-            return TagContext.run(
-                    ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add),
-                    "beef", warnings::add, warnings::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    TagContext.NO_MATCH, TagBackends.inert(), eventArgs);
+            return TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve", List.of(),
+                    new Random(7), warnings::add), "beef"),
+                    TagContext.TagSinks.simple(warnings::add, warnings::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                            ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add)),
+                    TagContext.TagRole.silent(),
+                    new TagContext.TagMatch(TagContext.NO_MATCH, TagBackends.inert(), eventArgs,
+                            detail -> { }, (player, reason) -> { }, (role, reason) -> { }));
         }
 
         String replace(String command, List<String> eventArgs) {

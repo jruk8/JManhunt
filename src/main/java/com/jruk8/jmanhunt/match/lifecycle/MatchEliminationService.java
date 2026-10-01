@@ -1,11 +1,14 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.RoleTeamService;
+import com.jruk8.jmanhunt.player.SpawnCampService;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import java.util.Map;
@@ -20,24 +23,33 @@ import java.util.function.Consumer;
  * check through the finish hook.
  */
 public final class MatchEliminationService {
-    private final JManhuntPlugin plugin;
-    private final PlayerStateStore playerStates;
-    private final CompassManager compass;
-    private final MatchStore store;
-    private final MatchMessaging messaging;
-    private final FlagStore flagStore;
-    private final Consumer<GameInstance> onEliminated;
+    /** Role plus fake-spectator state. */
+    public record ElimPlayers(PlayerStateStore states, FakeSpectatorService fakes) {
+    }
 
-    public MatchEliminationService(JManhuntPlugin plugin, PlayerStateStore playerStates,
-            CompassManager compass, MatchStore store, MatchMessaging messaging,
-            FlagStore flagStore, Consumer<GameInstance> onEliminated) {
-        this.plugin = plugin;
-        this.playerStates = playerStates;
+    /** Scheduler, spawn camp, and role teams edge. */
+    public record ElimEdge(TaskScheduler tasks, SpawnCampService spawnCamp,
+            RoleTeamService roleTeams) {
+    }
+
+    /** Match store, flags, and elimination hook. */
+    public record ElimMatch(MatchStore store, FlagStore flagStore,
+            Consumer<GameInstance> onEliminated) {
+    }
+
+    private final ElimPlayers players;
+    private final ElimEdge edge;
+    private final CompassManager compass;
+    private final MatchMessaging messaging;
+    private final ElimMatch match;
+
+    public MatchEliminationService(ElimPlayers players, ElimEdge edge, CompassManager compass,
+            MatchMessaging messaging, ElimMatch match) {
+        this.players = players;
+        this.edge = edge;
         this.compass = compass;
-        this.store = store;
         this.messaging = messaging;
-        this.flagStore = flagStore;
-        this.onEliminated = onEliminated;
+        this.match = match;
     }
 
     /**
@@ -50,7 +62,7 @@ public final class MatchEliminationService {
      * or not a runner/hunter.
      */
     public boolean losePlayer(long matchId, String playerName, String reason) {
-        Optional<GameInstance> match = store.instance(matchId);
+        Optional<GameInstance> match = this.match.store().instance(matchId);
         if (match.isEmpty() || !match.get().begun() || match.get().ending()) {
             return false;
         }
@@ -59,26 +71,26 @@ public final class MatchEliminationService {
         if (player == null) {
             return false;
         }
-        Role role = playerStates.role(player);
+        Role role = players.states().role(player);
         if (role != Role.HUNTER && role != Role.SPEEDRUNNER) {
             return false;
         }
-        plugin.spawnCamp().quietKill(player);
+        edge.spawnCamp().quietKill(player);
         instance.recordDeath(player.getUniqueId(), player.getName(), role);
-        playerStates.setRole(player.getUniqueId(), Role.SPECTATOR);
-        plugin.roleTeams().sync(player);
+        players.states().setRole(player.getUniqueId(), Role.SPECTATOR);
+        edge.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());
         compass.reconcileTeammateModes(instance);
-        flagStore.removePlayer(matchId, player.getName());
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            plugin.fakeSpectators().enable(player);
+        this.match.flagStore().removePlayer(matchId, player.getName());
+        edge.tasks().run(() -> {
+            players.fakes().enable(player);
             compass.removeCompasses(player);
         });
         messaging.sendToInstance(instance, "game.loseplayer",
                 Map.of("player", player.getName(), "reason", reason));
         messaging.playInstanceSound(instance,
                 role == Role.HUNTER ? "game.hunter-death" : "game.speedrunner-death");
-        onEliminated.accept(instance);
+        this.match.onEliminated().accept(instance);
         return true;
     }
 

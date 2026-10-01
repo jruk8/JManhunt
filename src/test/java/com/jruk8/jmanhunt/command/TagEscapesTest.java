@@ -29,14 +29,15 @@ class TagEscapesTest {
         final FlagStore flags = new FlagStore();
 
         TagContext context() {
-            return TagContext.run(
-                    ModifierTagScope.match("Steve", List.of(), new Random(9), warnings::add),
-                    "escapes", globalMessages::add, globalMessages::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), flags,
-                            (text, name) -> text, RosterValues.inert(), players),
-                    List.of(), detail -> { });
+            return TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve", List.of(),
+                    new Random(9), warnings::add), "escapes"),
+                    TagContext.TagSinks.simple(globalMessages::add, globalMessages::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                            ModifierTagScope.match("Steve", List.of(), new Random(9), warnings::add)),
+                    TagContext.TagRole.silent(),
+                    new TagContext.TagMatch(7L, new TagBackends(StatValues.inert(), flags, (text,
+                            name) -> text, RosterValues.inert(), players), List.of(), detail -> { }, (player,
+                            reason) -> { }, (role, reason) -> { }));
         }
 
         String replace(String command, TagContext context) {

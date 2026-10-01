@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
@@ -9,9 +8,11 @@ import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Material;
@@ -134,10 +135,11 @@ class CompassItemTest {
 
     @Test
     void deduplicateCollapsesStackedCompassAndClearsExtraSlots() {
-        CompassItemService items = new CompassItemService(mock(JManhuntPlugin.class),
-                mock(CompassSettingsFacade.class),
-                mock(MessageService.class), null, mock(PlayerStateStore.class),
-                new NamespacedKey("jmanhunt", "hunters_compass"));
+        CompassItemService items = new CompassItemService(mock(CompassSettingsFacade.class),
+                new CompassItemService.ItemPlayers(mock(PlayerStateStore.class),
+                        mock(FakeSpectatorService.class)),
+                new CompassItemService.ItemTexts(mock(MessageService.class), null),
+                mock(JManhuntLogger.class), new NamespacedKey("jmanhunt", "hunters_compass"));
         Player player = mock(Player.class);
         PlayerInventory inventory = mock(PlayerInventory.class);
         when(player.getInventory()).thenReturn(inventory);
@@ -191,15 +193,15 @@ class CompassItemTest {
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         OverrideService overrides =
                 new OverrideService(configService, new LobbyConfig(), () -> { });
-        when(plugin.overrides()).thenReturn(overrides);
         CompassSettingsFacade settings =
                 new CompassSettingsFacade(overrides, root.getSettings().getCompass());
-        CompassItemService items = new CompassItemService(plugin, settings,
-                mock(MessageService.class), null,
-                mock(PlayerStateStore.class), new NamespacedKey("jmanhunt", "hunters_compass"));
+        CompassItemService items = new CompassItemService(settings,
+                new CompassItemService.ItemPlayers(mock(PlayerStateStore.class),
+                        mock(FakeSpectatorService.class)),
+                new CompassItemService.ItemTexts(mock(MessageService.class), null),
+                mock(JManhuntLogger.class), new NamespacedKey("jmanhunt", "hunters_compass"));
 
         assertTrue(items.shouldReceiveCompass(null, Role.HUNTER));
         assertFalse(items.shouldReceiveCompass(null, Role.SPEEDRUNNER));
@@ -220,10 +222,11 @@ class CompassItemTest {
         });
         GameManager game = mock(GameManager.class);
         when(game.instanceOf(uuid)).thenReturn(match);
-        CompassItemService items = new CompassItemService(mock(JManhuntPlugin.class),
-                mock(CompassSettingsFacade.class),
-                mock(MessageService.class), null, playerStates,
-                new NamespacedKey("jmanhunt", "hunters_compass"));
+        CompassItemService items = new CompassItemService(mock(CompassSettingsFacade.class),
+                new CompassItemService.ItemPlayers(playerStates,
+                        mock(FakeSpectatorService.class)),
+                new CompassItemService.ItemTexts(mock(MessageService.class), null),
+                mock(JManhuntLogger.class), new NamespacedKey("jmanhunt", "hunters_compass"));
         items.setGameManager(game);
         return items;
     }

@@ -1,37 +1,20 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.command.CommandPlaceholders;
-import com.jruk8.jmanhunt.command.EngineEscapes;
-import com.jruk8.jmanhunt.command.FlagStore;
-import com.jruk8.jmanhunt.command.ModifierTagScope;
-import com.jruk8.jmanhunt.command.PlaceholderResolver;
-import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
-import com.jruk8.jmanhunt.command.RosterValues;
-import com.jruk8.jmanhunt.command.StatValues;
-import com.jruk8.jmanhunt.command.TagBackends;
-import com.jruk8.jmanhunt.core.PlaceholderPass;
-import com.jruk8.jmanhunt.command.TagContext;
-import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.config.SettingRegistry;
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
-import com.jruk8.jmanhunt.match.MatchRosterValues;
-import com.jruk8.jmanhunt.match.NamedPlayerSinks;
 import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
-import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,35 +24,33 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * Manual target locks, left-click scroll cycling, and the analysis lag
- * before a refresh resolves.
+ * Manual target locks, left-click scroll cycling, and teammate
+ * tracking. Analysis runs live in the runner; this keeps the lock,
+ * scroll, and cycle logic plus analysis delegates.
  */
 final class CompassLockService {
-    private final JManhuntPlugin plugin;
+    /** Cycle inputs, renders, and the reconcile refresh. */
+    record LockCycle(CompassTargetService targets, CompassCache cache,
+            Consumer<Player> cacheRenderer, Consumer<Player> refresher) {
+    }
+
+    /** Lock chat plus click sounds. */
+    record LockTexts(MessageService messages, CompassMessages compass, SoundService sounds) {
+    }
+
+    /** Role plus fake-spectator reads. */
+    record LockPlayers(PlayerStateStore states, FakeSpectatorService fakes) {
+    }
+
     private final CompassSettingsFacade settings;
-    private final PlayerStateStore playerStates;
-    private final SoundService sounds;
-    private final MessageService messages;
-    private final CompassMessages compass;
-    private final ModifiersMessages modifiers;
-    private final CompassTargetService targets;
-    private final Map<UUID, Component> actionbars;
-    private final Consumer<Player> refresher;
-    /** Click-initiated refresh: refreshes plus the outcome click sound. */
-    private final Consumer<Player> clickResolver;
-    /** Cache-only render for accepted clicks; never fetches or refreshes. */
-    private final Consumer<Player> cacheRenderer;
-    /** Press-time snapshot hook, run once when an analysis starts. */
-    private final Consumer<Player> analysisStarter;
-    /** Sampling hooks hosted by the facade: movement, doom, costs. */
-    private final AnalysisHost analysisHost;
-    /** Location snapshots written by refresh events, read by clicks. */
-    private final CompassCache cache;
+    private final LockCycle cycle;
+    private final CompassAnalysisRunner runner;
+    private final LockTexts texts;
+    private final LockPlayers players;
     /** Manual left-click target locks: holder id -> locked target id. */
     private final Map<UUID, UUID> locks = new HashMap<>();
     /** Holders tracking teammates instead of enemies, toggled by shift-left. */
@@ -78,42 +59,21 @@ final class CompassLockService {
     private final Map<UUID, Long> lastScroll = new HashMap<>();
     /** Last accepted shift-left switch per holder; a pure feel throttle. */
     private final Map<UUID, Long> lastSwitch = new HashMap<>();
-    private final Set<UUID> analyzing = new HashSet<>();
-    /** Analysis generation per holder; stale tick tasks cancel themselves. */
-    private final Map<UUID, Long> generations = new HashMap<>();
-    /** Click cooldown stamps shared with right-clicks, owned by the facade. */
-    private final Map<UUID, Long> sharedClicks;
     private GameManager game;
 
-    CompassLockService(JManhuntPlugin plugin, CompassSettingsFacade settings,
-            PlayerStateStore playerStates, SoundService sounds,
-            MessageService messages, CompassMessages compass, ModifiersMessages modifiers,
-            CompassTargetService targets,
-            Map<UUID, Component> actionbars, Consumer<Player> refresher,
-            Consumer<Player> clickResolver, Consumer<Player> cacheRenderer,
-            Consumer<Player> analysisStarter, CompassCache cache,
-            Map<UUID, Long> sharedClicks, AnalysisHost analysisHost) {
-        this.plugin = plugin;
+    CompassLockService(CompassSettingsFacade settings, LockCycle cycle,
+            CompassAnalysisRunner runner, LockTexts texts, LockPlayers players) {
         this.settings = settings;
-        this.playerStates = playerStates;
-        this.sounds = sounds;
-        this.messages = messages;
-        this.compass = compass;
-        this.modifiers = modifiers;
-        this.targets = targets;
-        this.actionbars = actionbars;
-        this.refresher = refresher;
-        this.clickResolver = clickResolver;
-        this.cacheRenderer = cacheRenderer;
-        this.analysisStarter = analysisStarter;
-        this.cache = cache;
-        this.sharedClicks = sharedClicks;
-        this.analysisHost = analysisHost;
+        this.cycle = cycle;
+        this.runner = runner;
+        this.texts = texts;
+        this.players = players;
     }
 
     /** Wires the game after construction; scroll and analysis need matches. */
     void setGameManager(GameManager game) {
         this.game = game;
+        runner.setGameManager(game);
     }
 
     /** Origin lobby of the holder's match, or null outside matches. */
@@ -184,15 +144,15 @@ final class CompassLockService {
      */
     CachedCycle buildCycle(Player holder, GameInstance instance, Role targetRole, int maxTargets) {
         List<CompassIdentity> identities =
-                targets.collectIdentities(holder, targetRole, instance);
+                cycle.targets().collectIdentities(holder, targetRole, instance);
         Map<UUID, String> names = new HashMap<>();
         for (CompassIdentity identity : identities) {
             names.put(identity.id(), identity.name());
         }
         List<CompassCandidate> cached = new ArrayList<>();
-        Map<UUID, Location> spots = cache.spotsFor(holder.getUniqueId());
+        Map<UUID, Location> spots = cycle.cache().spotsFor(holder.getUniqueId());
         Location origin = CompassManager.effectiveSpot(
-                cache.holderSpotFor(holder.getUniqueId()), holder.getLocation());
+                cycle.cache().holderSpotFor(holder.getUniqueId()), holder.getLocation());
         if (!spots.isEmpty()) {
             UUID worldId = holder.getWorld().getUID();
             for (Map.Entry<UUID, Location> entry : spots.entrySet()) {
@@ -208,7 +168,7 @@ final class CompassLockService {
             }
         }
         List<CompassSighting> sightings =
-                targets.collectSightings(holder, targetRole, instance, origin);
+                cycle.targets().collectSightings(holder, targetRole, instance, origin);
         List<UUID> ordered =
                 CompassPick.orderedCachedCandidates(cached, sightings, identities, maxTargets);
         return new CachedCycle(cached, sightings, names.keySet(), ordered, names);
@@ -233,7 +193,7 @@ final class CompassLockService {
     void clearMatchState(UUID holderId) {
         locks.remove(holderId);
         teammates.remove(holderId);
-        cache.clear(holderId);
+        cycle.cache().clear(holderId);
     }
 
     /**
@@ -254,13 +214,13 @@ final class CompassLockService {
             if (match.isEmpty() || match.get().matchId() != matchId) {
                 continue;
             }
-            Role holderRole = playerStates.role(holder);
+            Role holderRole = players.states().role(holder);
             if (!holderRole.isParticipant()) {
                 continue;
             }
-            if (targets.collectOpponents(holder, holderRole, match.get()).isEmpty()) {
+            if (cycle.targets().collectOpponents(holder, holderRole, match.get()).isEmpty()) {
                 clearTeammateMode(holder.getUniqueId());
-                refresher.accept(holder);
+                cycle.refresher().accept(holder);
             }
         }
     }
@@ -270,13 +230,18 @@ final class CompassLockService {
      * else the enemy role.
      */
     Role targetRole(Player holder) {
-        Role holderRole = playerStates.role(holder);
+        Role holderRole = players.states().role(holder);
         return teammateMode(holder.getUniqueId()) ? holderRole : holderRole.opposite();
     }
 
     /** True while the holder's analysis runs. */
     boolean isAnalyzing(UUID holderId) {
-        return analyzing.contains(holderId);
+        return runner.isAnalyzing(holderId);
+    }
+
+    /** Starts one holder's analysis run. */
+    void startAnalysis(Player holder) {
+        runner.startAnalysis(holder);
     }
 
     /** Cycles the holder's manual target lock one step; see the facade docs. */
@@ -299,7 +264,7 @@ final class CompassLockService {
             return;
         }
         applyCachedCycle(player, cycle);
-        cacheRenderer.accept(player);
+        this.cycle.cacheRenderer().accept(player);
     }
 
     /** Resolves the scroll match, applying the enabled, throttle, and membership gates. */
@@ -308,10 +273,10 @@ final class CompassLockService {
         if (!settings.targetCyclingEnabled(lobby)) {
             return Optional.empty();
         }
-        if (plugin.fakeSpectators().isFakeSpectator(player)) {
+        if (players.fakes().isFakeSpectator(player)) {
             return Optional.empty();
         }
-        if (analyzing.contains(player.getUniqueId())) {
+        if (runner.isAnalyzing(player.getUniqueId())) {
             return Optional.empty();
         }
         long cooldownMs = (long) (Math.max(0.0,
@@ -321,7 +286,7 @@ final class CompassLockService {
                 cooldownMs)) {
             return Optional.empty();
         }
-        if (game == null || !playerStates.role(player).isParticipant()) {
+        if (game == null || !players.states().role(player).isParticipant()) {
             return Optional.empty();
         }
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
@@ -349,8 +314,8 @@ final class CompassLockService {
             handleLeftClick(player);
             return;
         }
-        if (plugin.fakeSpectators().isFakeSpectator(player)
-                || analyzing.contains(player.getUniqueId())) {
+        if (players.fakes().isFakeSpectator(player)
+                || runner.isAnalyzing(player.getUniqueId())) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -361,7 +326,7 @@ final class CompassLockService {
                 lastSwitch.getOrDefault(player.getUniqueId(), 0L), switchMs)) {
             return;
         }
-        if (game == null || !playerStates.role(player).isParticipant()) {
+        if (game == null || !players.states().role(player).isParticipant()) {
             return;
         }
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
@@ -376,8 +341,8 @@ final class CompassLockService {
             return;
         }
         locks.remove(holderId);
-        sounds.playSound(player, "compass.left-click");
-        cacheRenderer.accept(player);
+        texts.sounds().playSound(player, "compass.left-click");
+        cycle.cacheRenderer().accept(player);
     }
 
     /**
@@ -390,18 +355,19 @@ final class CompassLockService {
             teammates.remove(holderId);
             entering = false;
         } else {
-            Role holderRole = playerStates.role(player);
-            if (targets.collectIdentities(player, holderRole, match).isEmpty()) {
-                messages.messageRaw(player, compass.getNoTeammates());
-                sounds.playAngrySound(player);
+            Role holderRole = players.states().role(player);
+            if (cycle.targets().collectIdentities(player, holderRole, match).isEmpty()) {
+                texts.messages().messageRaw(player, texts.compass().getNoTeammates());
+                texts.sounds().playAngrySound(player);
                 return false;
             }
             teammates.add(holderId);
             entering = true;
         }
         if (chatMessagesEnabled(lobbyOf(player))) {
-            messages.messageRaw(player,
-                    entering ? compass.getTeammateOnChat() : compass.getTeammateOffChat());
+            texts.messages().messageRaw(player,
+                    entering ? texts.compass().getTeammateOnChat()
+                            : texts.compass().getTeammateOffChat());
         }
         return true;
     }
@@ -426,7 +392,7 @@ final class CompassLockService {
             if (holder == null || !chatMessagesEnabled(lobbyOf(holder))) {
                 continue;
             }
-            messages.messageRaw(holder, compass.getLockedTargetDiedChat());
+            texts.messages().messageRaw(holder, texts.compass().getLockedTargetDiedChat());
         }
     }
 
@@ -435,7 +401,7 @@ final class CompassLockService {
         UUID current = locks.get(player.getUniqueId());
         UUID next = CompassPick.cycleOrdered(cycle.ordered(), current);
         if (!Objects.equals(next, current)) {
-            sounds.playSound(player, "compass.left-click");
+            texts.sounds().playSound(player, "compass.left-click");
         }
         if (next == null) {
             locks.remove(player.getUniqueId());
@@ -443,128 +409,11 @@ final class CompassLockService {
         }
         locks.put(player.getUniqueId(), next);
         if (chatMessagesEnabled(lobbyOf(player))) {
-            String name = cycle.names().getOrDefault(next, playerStates.playerName(next));
-            messages.messageRaw(player, compass.getLockedChat(), Map.of("player", name));
+            String name = cycle.names().getOrDefault(next, players.states().playerName(next));
+            texts.messages().messageRaw(player, texts.compass().getLockedChat(),
+                    Map.of("player", name));
         }
     }
-
-    /**
-     * Purposeful analysis lag before a right-click refresh resolves:
-     * shows "Analyzing...", ticks the analysis sound on the configured
-     * interval, counts one repeating timer down, then refreshes. Each
-     * tick samples movement and requires the compass in the main hand;
-     * every tenth tick re-checks doom. No second analysis starts while
-     * one runs. Runs stamp the shared click cooldown at resolution, so
-     * the full cooldown runs after the refresh, and close with the
-     * outcome click sound.
-     */
-    void startAnalysis(Player holder) {
-        UUID id = holder.getUniqueId();
-        if (!analyzing.add(id)) {
-            return;
-        }
-        analysisStarter.accept(holder);
-        long generation = generations.merge(id, 1L, Long::sum);
-        Integer lobby = lobbyOf(holder);
-        double effectiveDelay = AnalysisTiming.jitteredDelay(
-                settings.analysisDelaySeconds(lobby),
-                settings.analysisDelayDeviationSeconds(lobby),
-                ThreadLocalRandom.current().nextDouble());
-        double multiplier = cancelEarlyMultiplier(lobby);
-        if (analysisHost.analysisDoomed(holder)) {
-            effectiveDelay = effectiveDelay * multiplier;
-        }
-        runAnalysisDebuffs(holder, effectiveDelay);
-        actionbars.put(id, messages.componentRaw(compass.getAnalyzingActionbar()));
-        sounds.playSound(holder, "compass.analysis");
-        long intervalTicks = AnalysisTiming.analysisTickInterval(
-                clampedSoundInterval(settings.analysisSoundIntervalSeconds(lobby)));
-        long[] remaining = {AnalysisTiming.analyzeDelayTicks(effectiveDelay)};
-        long[] elapsed = {0L};
-        boolean[] doomed = {false};
-        Bukkit.getScheduler().runTaskTimer(plugin, task -> {
-            if (!analyzing.contains(id) || generations.getOrDefault(id, 0L) != generation) {
-                task.cancel();
-                return;
-            }
-            if (tickAnalysisOnline(task, id, holder, remaining, elapsed, doomed, multiplier,
-                    intervalTicks)) {
-                return;
-            }
-            remaining[0]--;
-            if (remaining[0] <= 0L) {
-                task.cancel();
-                resolveAnalysis(holder, id);
-            }
-        }, 1L, 1L);
-    }
-
-    /** One online analysis tick; true when the run ended inside it. */
-    private boolean tickAnalysisOnline(BukkitTask task, UUID id, Player holder, long[] remaining,
-            long[] elapsed, boolean[] doomed, double multiplier, long intervalTicks) {
-        if (!holder.isOnline()) {
-            return false;
-        }
-        analysisHost.sampleAnalysisMovement(holder);
-        if (!analysisHost.isMainhandCompass(holder)) {
-            cancelAnalysis(task, id, holder);
-            return true;
-        }
-        elapsed[0]++;
-        if (elapsed[0] % 10L == 0L) {
-            boolean nowDoomed = analysisHost.analysisDoomed(holder);
-            if (nowDoomed && !doomed[0]) {
-                remaining[0] = AnalysisTiming.shortenedTicks(remaining[0], multiplier);
-            }
-            doomed[0] = nowDoomed;
-        }
-        if (elapsed[0] % intervalTicks == 0L) {
-            sounds.playSound(holder, "compass.analysis");
-        }
-        return false;
-    }
-
-    /** Cancels an analysis, pushing the bar at once for compassless holders. Always on. */
-    private void cancelAnalysis(BukkitTask task, UUID id, Player holder) {
-        task.cancel();
-        analyzing.remove(id);
-        generations.merge(id, 1L, Long::sum);
-        sharedClicks.put(id, System.currentTimeMillis());
-        analysisHost.cancelAnalysisSnapshots(id);
-        actionbars.put(id, messages.componentRaw(compass.getBadSignalReasonActionbar(), Map.of(
-                "reason", compass.getSignalReason().getOrDefault("cancelled", "cancelled"))));
-        if (holder.isOnline()) {
-            holder.sendActionBar(actionbars.get(id));
-            sounds.playSound(holder, "compass.failure");
-        }
-    }
-
-    /** Completes an in-flight analysis, charging SUCCESS costs first. */
-    private void resolveAnalysis(Player holder, UUID id) {
-        analyzing.remove(id);
-        if (!AnalysisResolution.stampClickOnSuccessfulCost(analysisHost, sharedClicks, holder, id)) {
-            return;
-        }
-        if (holder.isOnline()) {
-            clickResolver.accept(holder);
-        } else {
-            refresher.accept(holder);
-        }
-        boolean live = game != null && game.instanceOf(holder.getUniqueId()).isPresent();
-        if (!live || !playerStates.role(holder).isParticipant()) {
-            actionbars.remove(id);
-        }
-    }
-
-    /** Cancel-early multiplier: 1.0 when the option is disabled. */
-    private double cancelEarlyMultiplier(Integer lobby) {
-        if (!settings.cancelEarlyEnabled(lobby)) {
-            return 1.0;
-        }
-        double multiplier = settings.cancelEarlyTimeMultiplier(lobby);
-        return Math.min(1.0, Math.max(0.0, multiplier));
-    }
-
 
     /** Sound interval clamped to its registry bounds, for stale files. */
     static double clampedSoundInterval(double value) {
@@ -580,161 +429,6 @@ final class CompassLockService {
             value = Math.min(descriptor.max(), value);
         }
         return value;
-    }
-
-
-
-    /**
-     * Runs the configured analysis debuff commands for a participant
-     * holder: the shared player list plus their own role list, resolved
-     * modifier-style and dispatched as console.
-     */
-    private void runAnalysisDebuffs(Player holder, double effectiveDelaySeconds) {
-        Integer lobby = lobbyOf(holder);
-        if (!settings.analysisDebuffsEnabled(lobby)) {
-            return;
-        }
-        Role holderRole = playerStates.role(holder);
-        if (!holderRole.isParticipant()) {
-            return;
-        }
-        double delaySeconds = effectiveDelaySeconds;
-        List<String> commands = debuffCommands(lobby, holderRole);
-        Location location = holder.getLocation();
-        TagContext context = debuffContext(holder);
-        for (int lineIndex = 0; lineIndex < commands.size(); lineIndex++) {
-            String command = commands.get(lineIndex);
-            stampProvenance(context, lineIndex);
-            if (command.isBlank()) {
-                continue;
-            }
-            if (TagExpressions.isExitMisuse(command)) {
-                context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
-                continue;
-            }
-            try {
-                String parsed = CommandPlaceholders.replace(
-                        CommandPlaceholders.withDuration(command, delaySeconds),
-                        holder.getName(), location.getX(), location.getY(), location.getZ(), context);
-                parsed = context.placeholders().resolve(parsed, holder.getName());
-                if (TagExpressions.isExit(parsed)) {
-                    return;
-                }
-                if (TagExpressions.isExitMisuse(parsed)) {
-                    context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
-                    continue;
-                }
-                dispatchDebuffLine(parsed, context);
-            } catch (Exception exception) {
-                plugin.logger().severe(
-                        "Failed to run analysis debuff command '" + command + "'. Skipping..",
-                        exception);
-            }
-        }
-    }
-
-    /** Stamps the debuff line provenance for loop-limit diagnostics. */
-    private static void stampProvenance(TagContext context, int lineIndex) {
-        context.setProvenance(TagContext.Provenance.of("debuffs", -1, "debuffs").withLine(lineIndex));
-    }
-
-    /**
-     * Dispatches one parsed debuff line as console. A line that
-     * resolved to pure {@code "null"} warns with the source line and
-     * never dispatches.
-     */
-    private void dispatchDebuffLine(String parsed, TagContext context) {
-        Optional<String> dispatchable = TagExpressions.dispatchableLine(parsed);
-        if (dispatchable.isPresent() && TagExpressions.isPureNull(dispatchable.get())) {
-            plugin.logger().warning("Skipping command that resolved to pure \"null\" at "
-                    + context.provenance().describe() + ".");
-            return;
-        }
-        dispatchable.ifPresent(QuietConsoleDispatch::dispatch);
-    }
-
-    /** Shared player debuffs plus the holder's own role list. */
-    private List<String> debuffCommands(Integer lobby, Role holderRole) {
-        List<String> commands = new ArrayList<>(
-                settings.debuffCommandsPlayer(lobby));
-        commands.addAll(holderRole == Role.HUNTER
-                ? settings.debuffCommandsHunter(lobby)
-                : settings.debuffCommandsSpeedrunner(lobby));
-        return commands;
-    }
-
-    /** Tag context for one debuff run: {@code <id>} is {@code debuffs}. */
-    private TagContext debuffContext(Player holder) {
-        ModifierTagScope scope = ModifierTagScope.executor(holder.getName(),
-                EngineEscapes.restoring(plugin.logger()::warning));
-        long matchId = game == null ? TagContext.NO_MATCH
-                : game.instanceOf(holder.getUniqueId()).map(GameInstance::matchId)
-                        .orElse(TagContext.NO_MATCH);
-        StatValues stats = game == null ? StatValues.inert() : game.matchStatValues(matchId);
-        FlagStore flags = game == null ? new FlagStore() : game.flagStore();
-        PlaceholderResolver placeholderPass = plugin.placeholderValues() == null
-                ? PlaceholderResolver.inert()
-                : new PlaceholderPass(plugin.placeholderValues());
-        RosterValues roster = game == null ? RosterValues.inert()
-                : new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId);
-        TagBackends backends = new TagBackends(stats, flags, placeholderPass, roster,
-                NamedPlayerSinks.of(messages, modifiers, sounds, plugin.logger()::warning, "debuffs"));
-        return TagContext.run(scope, "debuffs",
-                text -> messages.broadcastText(formatEngineMessage(text)),
-                text -> messages.sendText(holder, formatEngineMessage(text)),
-                (soundId, pitch, volume) -> playGlobalSound(soundId, pitch, volume),
-                (soundId, pitch, volume) -> {
-                    if (!sounds.isValidSound(soundId)) {
-                        warnInvalidSound(soundId);
-                        return;
-                    }
-                    sounds.playCustomSound(holder, soundId, pitch, volume);
-                },
-                (target, reason) -> scope.warn("Tag <loseplayer> only works in modifiers: skipped."),
-                (role, reason) -> scope.warn("Tag <win> only works in modifiers: skipped."),
-                matchId, backends, List.of(), detail -> loopLimitExceeded(detail, matchId),
-                (role, text) -> scope.warn("Tag <rmessage> only works in modifiers: skipped."),
-                (role, soundId, pitch, volume) ->
-                        scope.warn("Tag <rsound> only works in modifiers: skipped."));
-    }
-
-    /**
-     * Loop-limit sink for debuff lines: without a live match there is
-     * nothing to cancel, so the source line is only logged.
-     */
-    private void loopLimitExceeded(String detail, long matchId) {
-        plugin.logger().severe("JMHScript loop exceeded 1000 steps at " + detail);
-        if (game == null || matchId == TagContext.NO_MATCH) {
-            return;
-        }
-        Optional<GameInstance> instance = game.instance(matchId);
-        if (instance.isEmpty()) {
-            return;
-        }
-        String text = modifiers.getLoopLimit();
-        for (Player player : game.onlineParticipants(matchId)) {
-            messages.sendText(player, text);
-        }
-        game.cancel(instance.get());
-    }
-
-    private String formatEngineMessage(String text) {
-        return NamedPlayerSinks.formatEngineMessage(modifiers, messages, text);
-    }
-
-    private void playGlobalSound(String soundId, float pitch, float volume) {
-        if (!sounds.isValidSound(soundId)) {
-            warnInvalidSound(soundId);
-            return;
-        }
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            sounds.playCustomSound(online, soundId, pitch, volume);
-        }
-    }
-
-    private void warnInvalidSound(String soundId) {
-        plugin.logger().warning("modifier \"debuffs\" tried playing invalid sound \""
-                + soundId + "\"");
     }
 
     boolean analyzeEnabled(Integer lobby) {

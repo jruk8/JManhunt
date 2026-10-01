@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.match;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.player.PlayerResetService;
 import org.bukkit.entity.Player;
 import java.sql.SQLException;
@@ -17,14 +17,17 @@ import java.util.function.Consumer;
  * continue; gameplay never blocks on persistence.
  */
 public final class PlayerWipeService {
-    private final JManhuntPlugin plugin;
+    private final EngineStateRepository engineStates;
+    private final JManhuntLogger log;
     private final PlayerResetService resets;
     private final Set<UUID> pendingEndWipes = new HashSet<>();
     /** In-match UUIDs still owed a post-crash wipe; mirrored in crash_cleanup. */
     private final Set<UUID> pendingCrashWipes = new HashSet<>();
 
-    public PlayerWipeService(JManhuntPlugin plugin, PlayerResetService resets) {
-        this.plugin = plugin;
+    public PlayerWipeService(EngineStateRepository engineStates, JManhuntLogger log,
+            PlayerResetService resets) {
+        this.engineStates = engineStates;
+        this.log = log;
         this.resets = resets;
     }
 
@@ -71,7 +74,7 @@ public final class PlayerWipeService {
      */
     public void trackMatchEntry(Collection<UUID> playerIds) {
         pendingCrashWipes.addAll(playerIds);
-        EngineStateRepository repository = plugin.engineStates();
+        EngineStateRepository repository = engineStates;
         if (repository == null) {
             return;
         }
@@ -79,7 +82,7 @@ public final class PlayerWipeService {
             try {
                 repository.markCrashCleanup(playerId);
             } catch (SQLException failed) {
-                plugin.logger().warning("Could not track crash cleanup for " + playerId + ": "
+                log.warning("Could not track crash cleanup for " + playerId + ": "
                         + failed.getMessage());
             }
         }
@@ -92,7 +95,7 @@ public final class PlayerWipeService {
      */
     public void untrackMatchExit(Collection<UUID> playerIds) {
         pendingCrashWipes.removeAll(playerIds);
-        EngineStateRepository repository = plugin.engineStates();
+        EngineStateRepository repository = engineStates;
         if (repository == null) {
             return;
         }
@@ -100,7 +103,7 @@ public final class PlayerWipeService {
             try {
                 repository.clearCrashCleanup(playerId);
             } catch (SQLException failed) {
-                plugin.logger().warning("Could not clear crash cleanup for " + playerId + ": "
+                log.warning("Could not clear crash cleanup for " + playerId + ": "
                         + failed.getMessage());
             }
         }
@@ -113,14 +116,14 @@ public final class PlayerWipeService {
      * deletes only when its player is actually wiped.
      */
     public void loadCrashCleanup() {
-        EngineStateRepository repository = plugin.engineStates();
+        EngineStateRepository repository = engineStates;
         if (repository == null) {
             return;
         }
         try {
             pendingCrashWipes.addAll(repository.crashCleanupIds());
         } catch (SQLException failed) {
-            plugin.logger().warning("Could not load crash cleanup rows: " + failed.getMessage());
+            log.warning("Could not load crash cleanup rows: " + failed.getMessage());
         }
     }
 
@@ -137,14 +140,14 @@ public final class PlayerWipeService {
             return false;
         }
         wipe.accept(player);
-        EngineStateRepository repository = plugin.engineStates();
+        EngineStateRepository repository = engineStates;
         if (repository == null) {
             return true;
         }
         try {
             repository.clearCrashCleanup(playerId);
         } catch (SQLException failed) {
-            plugin.logger().warning("Could not clear crash cleanup for " + playerId + ": "
+            log.warning("Could not clear crash cleanup for " + playerId + ": "
                     + failed.getMessage());
         }
         return true;

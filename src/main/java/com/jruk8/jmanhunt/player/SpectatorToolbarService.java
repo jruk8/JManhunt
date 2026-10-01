@@ -82,36 +82,32 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     public record PlayerEntry(UUID id, String name, Role role, boolean locked) {
     }
 
+    /** Message bus, spectator/command texts, and sounds. */
+    public record ToolbarTexts(MessageService messages, SpectatorMessages spectator,
+            CommandMessages command, SoundService sounds) {
+    }
+
+    /** States, fakes, game, and lobbies. */
+    public record ToolbarMatch(PlayerStateStore playerStates, FakeSpectatorService fakes,
+            GameManager game, LobbyService lobbies) {
+    }
+
     private final PlayersSettingsFacade settings;
-    private final MessageService messages;
-    private final SpectatorMessages spectator;
-    private final CommandMessages command;
-    private final SoundService sounds;
-    private final PlayerStateStore playerStates;
-    private final FakeSpectatorService fakes;
-    private final GameManager game;
-    private final LobbyService lobbies;
+    private final ToolbarTexts texts;
+    private final ToolbarMatch match;
     private final NamespacedKey toolbarKey;
     private final Map<UUID, InventorySnapshot> snapshots = new HashMap<>();
     private final Map<UUID, UUID> locks = new HashMap<>();
     private final Map<UUID, Long> lastSneaks = new HashMap<>();
     private final Map<UUID, ItemStack> previousHelmets = new HashMap<>();
 
-    public SpectatorToolbarService(PlayersSettingsFacade settings, MessageService messages,
-            SpectatorMessages spectator, CommandMessages command,
-            SoundService sounds, PlayerStateStore playerStates, FakeSpectatorService fakes,
-            GameManager game, LobbyService lobbies, NamespacedKey toolbarKey) {
+    public SpectatorToolbarService(PlayersSettingsFacade settings, ToolbarTexts texts,
+            ToolbarMatch match, NamespacedKey toolbarKey) {
         this.settings = settings;
-        this.messages = messages;
-        this.spectator = spectator;
-        this.command = command;
-        this.sounds = sounds;
-        this.playerStates = playerStates;
-        this.fakes = fakes;
-        this.game = game;
-        this.lobbies = lobbies;
+        this.texts = texts;
+        this.match = match;
         this.toolbarKey = toolbarKey;
-        fakes.addModeListener(this);
+        match.fakes().addModeListener(this);
     }
 
     /**
@@ -153,7 +149,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     @Override
     public void onModeChange(Player player, boolean enabled) {
         if (enabled) {
-            if (playerStates.role(player) == Role.SPECTATOR) {
+            if (match.playerStates().role(player) == Role.SPECTATOR) {
                 deploy(player);
             }
             placeHead(player);
@@ -291,9 +287,9 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             return false;
         }
         Player target = Bukkit.getPlayer(targetId);
-        String name = target != null ? target.getName() : playerStates.playerName(targetId);
-        messages.messageRaw(spectator, this.spectator.getFollowExited(), Map.of("player", name));
-        sounds.playNeutralSound(spectator);
+        String name = target != null ? target.getName() : match.playerStates().playerName(targetId);
+        texts.messages().messageRaw(spectator, this.texts.spectator().getFollowExited(), Map.of("player", name));
+        texts.sounds().playNeutralSound(spectator);
         spectator.sendActionBar(Component.empty());
         return true;
     }
@@ -305,7 +301,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
 
     /** Origin lobby of the spectator's match, or null outside matches. */
     Integer lobbyOf(Player spectator) {
-        return game.lobbyOfPlayer(spectator.getUniqueId());
+        return match.game().lobbyOfPlayer(spectator.getUniqueId());
     }
 
     /** Effective hotbar layout for the spectator. */
@@ -348,8 +344,8 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             if (!from.getWorld().equals(to.getWorld()) || from.distance(to) > tpDistance(spectator)) {
                 spectator.teleport(to);
             }
-            spectator.sendActionBar(messages.componentRaw(this.spectator.getFollowingActionbar(),
-                    Map.of("role", messages.roleName(playerStates.role(target)),
+            spectator.sendActionBar(texts.messages().componentRaw(this.texts.spectator().getFollowingActionbar(),
+                    Map.of("role", texts.messages().roleName(match.playerStates().role(target)),
                             "player", target.getName())));
         }
     }
@@ -359,12 +355,12 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
      * first, then by match id.
      */
     public List<MatchEntry> matchEntries(Player spectator) {
-        long currentId = game.instanceOf(spectator.getUniqueId())
+        long currentId = match.game().instanceOf(spectator.getUniqueId())
                 .map(GameInstance::matchId).orElse(-1L);
-        return game.liveInstances().stream()
+        return match.game().liveInstances().stream()
                 .filter(instance -> instance.active() && !instance.ending())
                 .map(instance -> new MatchEntry(instance.matchId(), instance.lobbyTag(),
-                        game.activeRunnerCount(instance), game.activeHunterCount(instance),
+                        match.game().activeRunnerCount(instance), match.game().activeHunterCount(instance),
                         instance.subLobby() != null, instance.matchId() == currentId))
                 .sorted(Comparator.comparing(MatchEntry::subLobby).reversed()
                         .thenComparingLong(MatchEntry::matchId))
@@ -378,51 +374,51 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
      * with feedback when the move is refused.
      */
     public boolean swapSpectator(Player spectator, long matchId) {
-        Optional<GameInstance> target = game.instance(matchId)
+        Optional<GameInstance> target = match.game().instance(matchId)
                 .filter(instance -> instance.active() && !instance.ending());
         if (target.isEmpty()) {
-            messages.messageRaw(spectator, this.spectator.getMatchGone());
-            sounds.playAngrySound(spectator);
+            texts.messages().messageRaw(spectator, this.texts.spectator().getMatchGone());
+            texts.sounds().playAngrySound(spectator);
             spectator.closeInventory();
             return false;
         }
-        Optional<GameInstance> current = game.instanceOf(spectator.getUniqueId());
+        Optional<GameInstance> current = match.game().instanceOf(spectator.getUniqueId());
         if (current.isPresent() && current.get().matchId() == matchId) {
-            messages.messageRaw(spectator, this.spectator.getAlreadyInMatch());
-            sounds.playNeutralSound(spectator);
+            texts.messages().messageRaw(spectator, this.texts.spectator().getAlreadyInMatch());
+            texts.sounds().playNeutralSound(spectator);
             spectator.closeInventory();
             return true;
         }
         Integer fromLobby = current.map(GameInstance::originLobbyId)
-                .or(() -> lobbies.lobbyOf(spectator.getUniqueId())
+                .or(() -> match.lobbies().lobbyOf(spectator.getUniqueId())
                         .map(lobby -> lobby.id()))
                 .orElse(null);
         if (fromLobby != null && fromLobby != target.get().originLobbyId()
                 && !spectator.hasPermission(SWAP_LOBBY_PERMISSION)) {
-            messages.messageRaw(spectator, command.getNoPermission());
-            sounds.playAngrySound(spectator);
+            texts.messages().messageRaw(spectator, texts.command().getNoPermission());
+            texts.sounds().playAngrySound(spectator);
             return false;
         }
-        current.ifPresent(old -> game.leaveMatch(old, List.of(spectator), false));
-        if (game.joinPlayers(target.get(), List.of(spectator), Role.SPECTATOR) == 0) {
-            messages.messageRaw(spectator, this.spectator.getMatchGone());
-            sounds.playAngrySound(spectator);
+        current.ifPresent(old -> match.game().leaveMatch(old, List.of(spectator), false));
+        if (match.game().joinPlayers(target.get(), List.of(spectator), Role.SPECTATOR) == 0) {
+            texts.messages().messageRaw(spectator, this.texts.spectator().getMatchGone());
+            texts.sounds().playAngrySound(spectator);
             spectator.closeInventory();
             return false;
         }
         teleportToPriority(spectator, target.get());
         clearLock(spectator.getUniqueId());
-        sounds.playNeutralSound(spectator);
+        texts.sounds().playNeutralSound(spectator);
         spectator.closeInventory();
         return true;
     }
 
     /** Teleports to the shared spectator spawn pick of a match. */
     void teleportToPriority(Player spectator, GameInstance target) {
-        SpectatorSpawnResolver resolver = new SpectatorSpawnResolver(playerStates, fakes);
+        SpectatorSpawnResolver resolver = new SpectatorSpawnResolver(match.playerStates(), match.fakes());
         Location center = null;
         if (target.cellIndex().isPresent()) {
-            center = game.cellCenter(target.cellIndex().getAsLong()).orElse(null);
+            center = match.game().cellCenter(target.cellIndex().getAsLong()).orElse(null);
         }
         SpectatorSpawnResolver.resolve(resolver.candidatesOf(target), center)
                 .ifPresent(spectator::teleport);
@@ -434,14 +430,14 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
      * Runners sort before hunters, then by name.
      */
     public List<PlayerEntry> playerEntries(Player spectator) {
-        List<Player> pool = game.instanceOf(spectator.getUniqueId())
-                .map(game::onlineActivePlayers)
+        List<Player> pool = match.game().instanceOf(spectator.getUniqueId())
+                .map(match.game()::onlineActivePlayers)
                 .orElseGet(() -> lobbyPool(spectator));
         UUID locked = lockedTarget(spectator.getUniqueId());
         return pool.stream()
-                .filter(player -> playerStates.role(player).isParticipant())
+                .filter(player -> match.playerStates().role(player).isParticipant())
                 .map(player -> new PlayerEntry(player.getUniqueId(), player.getName(),
-                        playerStates.role(player),
+                        match.playerStates().role(player),
                         player.getUniqueId().equals(locked)))
                 .sorted(Comparator.comparing((PlayerEntry entry) -> entry.role()
                         != Role.SPEEDRUNNER).thenComparing(entry -> entry.name()
@@ -458,14 +454,14 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     public boolean teleportAndLock(Player spectator, UUID targetId) {
         Player target = Bukkit.getPlayer(targetId);
         if (target == null) {
-            sounds.playAngrySound(spectator);
+            texts.sounds().playAngrySound(spectator);
             spectator.closeInventory();
             return false;
         }
         if (lockOn(spectator) && targetId.equals(lockedTarget(spectator.getUniqueId()))) {
-            messages.messageRaw(spectator, this.spectator.getAlreadySpectating(),
+            texts.messages().messageRaw(spectator, this.texts.spectator().getAlreadySpectating(),
                     Map.of("player", target.getName()));
-            sounds.playNeutralSound(spectator);
+            texts.sounds().playNeutralSound(spectator);
             spectator.closeInventory();
             return true;
         }
@@ -475,10 +471,10 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         } else {
             locks.remove(spectator.getUniqueId());
         }
-        messages.messageRaw(spectator, this.spectator.getNowSpectating(),
-                Map.of("role", messages.roleName(playerStates.role(target)),
+        texts.messages().messageRaw(spectator, this.texts.spectator().getNowSpectating(),
+                Map.of("role", texts.messages().roleName(match.playerStates().role(target)),
                         "player", target.getName()));
-        sounds.playNeutralSound(spectator);
+        texts.sounds().playNeutralSound(spectator);
         spectator.closeInventory();
         return true;
     }
@@ -489,43 +485,43 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
      * toolbar through the mode listener.
      */
     public void returnToLobby(Player spectator) {
-        Optional<GameInstance> current = game.instanceOf(spectator.getUniqueId());
+        Optional<GameInstance> current = match.game().instanceOf(spectator.getUniqueId());
         if (current.isPresent()) {
-            game.leaveMatchToLobby(current.get(), spectator, Role.NONE);
+            match.game().leaveMatchToLobby(current.get(), spectator, Role.NONE);
             return;
         }
-        lobbies.lobbyOf(spectator.getUniqueId()).ifPresent(lobby -> {
-            game.teleportToLobby(List.of(spectator), lobby.id());
-            game.setSpawnToLobbyQuiet(List.of(spectator), lobby.id());
+        match.lobbies().lobbyOf(spectator.getUniqueId()).ifPresent(lobby -> {
+            match.game().teleportToLobby(List.of(spectator), lobby.id());
+            match.game().setSpawnToLobbyQuiet(List.of(spectator), lobby.id());
         });
-        playerStates.setRole(spectator, Role.NONE);
+        match.playerStates().setRole(spectator, Role.NONE);
     }
 
     private List<Player> lobbyPool(Player spectator) {
-        Optional<Integer> lobbyId = lobbies.lobbyOf(spectator.getUniqueId()).map(lobby ->
+        Optional<Integer> lobbyId = match.lobbies().lobbyOf(spectator.getUniqueId()).map(lobby ->
                 lobby.id());
         if (lobbyId.isEmpty()) {
             return List.of();
         }
         return Bukkit.getOnlinePlayers().stream()
-                .filter(player -> lobbies.lobbyOf(player.getUniqueId())
+                .filter(player -> match.lobbies().lobbyOf(player.getUniqueId())
                         .map(lobby -> lobby.id() == lobbyId.get()).orElse(false))
                 .map(player -> (Player) player)
                 .toList();
     }
 
     private SpectateCandidate candidateOf(Player player) {
-        return candidateOf(player, game.instanceOf(player.getUniqueId()).orElse(null));
+        return candidateOf(player, match.game().instanceOf(player.getUniqueId()).orElse(null));
     }
 
     private SpectateCandidate candidateOf(Player player, GameInstance instance) {
         UUID id = player.getUniqueId();
-        Role role = playerStates.role(player);
+        Role role = match.playerStates().role(player);
         boolean active = instance == null || instance.isActive(id);
         boolean runnerAlive = role != Role.SPEEDRUNNER
-                || instance == null || playerStates.isActiveSpeedrunner(id);
+                || instance == null || match.playerStates().isActiveSpeedrunner(id);
         return new SpectateCandidate(id, role, active, runnerAlive,
-                fakes.isFakeSpectator(player), player.isOnline());
+                match.fakes().isFakeSpectator(player), player.isOnline());
     }
 
     private void deploy(Player player) {
@@ -589,13 +585,13 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
 
     private ItemStack buttonItem(Player player, ToolbarButton button) {
         return switch (button) {
-            case LOBBIES -> toolbarItem(Material.COMPASS, 'c', spectator.getToolbarLobbiesName(),
-                    spectator.getToolbarLobbiesLore());
-            case PLAYERS -> toolbarItem(Material.BLAZE_ROD, 'p', spectator.getToolbarPlayersName(),
-                    spectator.getToolbarPlayersLore());
+            case LOBBIES -> toolbarItem(Material.COMPASS, 'c', texts.spectator().getToolbarLobbiesName(),
+                    texts.spectator().getToolbarLobbiesLore());
+            case PLAYERS -> toolbarItem(Material.BLAZE_ROD, 'p', texts.spectator().getToolbarPlayersName(),
+                    texts.spectator().getToolbarPlayersLore());
             case SNOWBALL -> snowballItem(snowballCooldownSeconds(player));
-            case BACK -> toolbarItem(Material.PAPER, 'b', spectator.getToolbarBackName(),
-                    spectator.getToolbarBackLore());
+            case BACK -> toolbarItem(Material.PAPER, 'b', texts.spectator().getToolbarBackName(),
+                    texts.spectator().getToolbarBackLore());
             case EMPTY -> null;
         };
     }
@@ -626,8 +622,8 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
      * cooldown state is needed for honest clients.
      */
     public ItemStack snowballItem(int cooldownSeconds) {
-        ItemStack item = toolbarItem(Material.SNOWBALL, 's', spectator.getToolbarSnowballName(),
-                spectator.getToolbarSnowballLore());
+        ItemStack item = toolbarItem(Material.SNOWBALL, 's', texts.spectator().getToolbarSnowballName(),
+                texts.spectator().getToolbarSnowballLore());
         if (cooldownSeconds > 0) {
             item.setData(DataComponentTypes.USE_COOLDOWN,
                     UseCooldown.useCooldown((float) cooldownSeconds).build());
@@ -638,11 +634,11 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     private ItemStack toolbarItem(Material material, char button, String name, String loreText) {
         ItemStack item = new ItemStack(material, 1);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(messages.nonItalic(messages.parse("<white>" + name)));
+        meta.displayName(texts.messages().nonItalic(texts.messages().parse("<white>" + name)));
         List<String> lines = new ArrayList<>(List.of(loreText.split("\\\\n|\n", -1)));
         List<Component> lore = new ArrayList<>();
         for (String line : lines) {
-            lore.add(messages.nonItalic(messages.parse("<gray>" + line)));
+            lore.add(texts.messages().nonItalic(texts.messages().parse("<gray>" + line)));
         }
         meta.lore(lore);
         meta.getPersistentDataContainer().set(toolbarKey,

@@ -59,10 +59,12 @@ class SpectatorToolbarServiceTest {
 
     private SpectatorToolbarService toolbar(NamespacedKey key) {
         return new SpectatorToolbarService(mock(PlayersSettingsFacade.class),
-                mock(MessageService.class), new SpectatorMessages(), new CommandMessages(),
-                mock(SoundService.class), new PlayerStateStore(),
-                mock(FakeSpectatorService.class), mock(GameManager.class),
-                mock(LobbyService.class), key);
+                new SpectatorToolbarService.ToolbarTexts(mock(MessageService.class), new SpectatorMessages(),
+                        new CommandMessages(), mock(SoundService.class)),
+                new SpectatorToolbarService.ToolbarMatch(new PlayerStateStore(),
+                        mock(FakeSpectatorService.class), mock(GameManager.class),
+                        mock(LobbyService.class)),
+                key);
     }
 
     @Test
@@ -157,10 +159,10 @@ class SpectatorToolbarServiceTest {
             when(settings.snowballCooldownSeconds(lobby)).thenReturn(seconds);
         }
         SpectatorToolbarService toolbar = new SpectatorToolbarService(settings,
-                mock(MessageService.class), new SpectatorMessages(), new CommandMessages(),
-                mock(SoundService.class), new PlayerStateStore(),
-                mock(FakeSpectatorService.class), game,
-                mock(LobbyService.class),
+                new SpectatorToolbarService.ToolbarTexts(mock(MessageService.class), new SpectatorMessages(),
+                        new CommandMessages(), mock(SoundService.class)),
+                new SpectatorToolbarService.ToolbarMatch(new PlayerStateStore(), mock(FakeSpectatorService.class), game,
+                        mock(LobbyService.class)),
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
         return new SnowballFixture(toolbar, player);
     }
@@ -319,10 +321,12 @@ class SpectatorToolbarServiceTest {
     @Test
     void modeChangeSkipsDeployForParticipants() {
         PlayerStateStore players = new PlayerStateStore();
-        SpectatorToolbarService toolbar = spy(new SpectatorToolbarService(
-                mock(PlayersSettingsFacade.class), mock(MessageService.class), new SpectatorMessages(),
-                new CommandMessages(), mock(SoundService.class), players, mock(FakeSpectatorService.class),
-                mock(GameManager.class), mock(LobbyService.class),
+        SpectatorToolbarService toolbar = spy(new SpectatorToolbarService(mock(PlayersSettingsFacade.class),
+                new SpectatorToolbarService.ToolbarTexts(mock(MessageService.class), new SpectatorMessages(),
+                        new CommandMessages(), mock(SoundService.class)),
+                new SpectatorToolbarService.ToolbarMatch(players, mock(FakeSpectatorService.class),
+                        mock(GameManager.class),
+                        mock(LobbyService.class)),
                 new NamespacedKey("jmanhunt", "spectator_toolbar")));
         ItemStack head = mock(ItemStack.class);
         doReturn(head).when(toolbar).buildSpectatorHead(any());
@@ -341,10 +345,12 @@ class SpectatorToolbarServiceTest {
     @Test
     void modeDisableWithoutDeployIsNoop() {
         PlayerStateStore players = new PlayerStateStore();
-        SpectatorToolbarService toolbar = new SpectatorToolbarService(
-                mock(PlayersSettingsFacade.class), mock(MessageService.class), new SpectatorMessages(),
-                new CommandMessages(), mock(SoundService.class), players, mock(FakeSpectatorService.class),
-                mock(GameManager.class), mock(LobbyService.class),
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(mock(PlayersSettingsFacade.class),
+                new SpectatorToolbarService.ToolbarTexts(mock(MessageService.class), new SpectatorMessages(),
+                        new CommandMessages(), mock(SoundService.class)),
+                new SpectatorToolbarService.ToolbarMatch(players, mock(FakeSpectatorService.class),
+                        mock(GameManager.class),
+                        mock(LobbyService.class)),
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
         Player hunter = mock(Player.class);
         PlayerInventory inventory = mock(PlayerInventory.class);
@@ -367,10 +373,11 @@ class SpectatorToolbarServiceTest {
         LobbyService lobbies = mock(LobbyService.class);
         MessageService messages = mock(MessageService.class);
         SoundService sounds = mock(SoundService.class);
-        SpectatorToolbarService toolbar = new SpectatorToolbarService(
-                mock(PlayersSettingsFacade.class), messages, texts(), new CommandMessages(), sounds,
-                new PlayerStateStore(),
-                mock(FakeSpectatorService.class), game, lobbies,
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(mock(PlayersSettingsFacade.class),
+                new SpectatorToolbarService.ToolbarTexts(messages, texts(),
+                        new CommandMessages(), sounds),
+                new SpectatorToolbarService.ToolbarMatch(new PlayerStateStore(), mock(FakeSpectatorService.class), game,
+                        lobbies),
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
         Player spectator = mock(Player.class);
         when(spectator.getUniqueId()).thenReturn(UUID.randomUUID());
@@ -445,9 +452,11 @@ class SpectatorToolbarServiceTest {
         PlayerStateStore players = new PlayerStateStore();
         GameManager game = mock(GameManager.class);
         when(game.instanceOf(any())).thenReturn(Optional.empty());
-        SpectatorToolbarService toolbar = new SpectatorToolbarService(overrides, messages, texts(),
-                new CommandMessages(), sounds, players, mock(FakeSpectatorService.class), game,
-                mock(LobbyService.class),
+        SpectatorToolbarService toolbar = new SpectatorToolbarService(overrides,
+                new SpectatorToolbarService.ToolbarTexts(messages, texts(),
+                        new CommandMessages(), sounds),
+                new SpectatorToolbarService.ToolbarMatch(players, mock(FakeSpectatorService.class), game,
+                        mock(LobbyService.class)),
                 new NamespacedKey("jmanhunt", "spectator_toolbar"));
         Player spectator = mock(Player.class);
         when(spectator.getUniqueId()).thenReturn(UUID.randomUUID());

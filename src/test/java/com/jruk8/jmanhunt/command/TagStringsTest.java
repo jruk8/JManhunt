@@ -14,14 +14,15 @@ class TagStringsTest {
         final List<String> warnings = new ArrayList<>();
 
         TagContext context() {
-            return TagContext.run(
-                    ModifierTagScope.match("Steve", List.of(), new Random(21), warnings::add),
-                    "strings", warnings::add, warnings::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), new FlagStore(),
-                            (text, name) -> text, RosterValues.inert(),
-                            PlayerSinks.inert()));
+            return TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve", List.of(),
+                    new Random(21), warnings::add), "strings"),
+                    TagContext.TagSinks.simple(warnings::add, warnings::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                            ModifierTagScope.match("Steve", List.of(), new Random(21), warnings::add)),
+                    TagContext.TagRole.silent(),
+                    TagContext.TagMatch.simple(7L, new TagBackends(StatValues.inert(),
+                            new FlagStore(), (text, name) -> text, RosterValues.inert(), PlayerSinks.inert()), (player,
+                            reason) -> { }, (role, reason) -> { }));
         }
 
         String replace(String command, TagContext context) {

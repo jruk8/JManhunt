@@ -40,6 +40,16 @@ public final class ModLoadResult {
     public record UnknownMember(String presetId, String memberId) {
     }
 
+    /** Loaded entries by id, in load order. */
+    public record Loaded(Map<String, LoadedModifier> modifiers,
+            Map<String, LoadedPreset> presets) {
+    }
+
+    /** File problems in load (or walk encounter) order. */
+    public record Problems(List<UnknownFile> unknownFiles, List<FailedFile> failedFiles,
+            List<DuplicateId> duplicates, List<UnknownMember> unknownMembers) {
+    }
+
     private final Map<String, LoadedModifier> modifiers;
     private final Map<String, LoadedPreset> presets;
     private final List<UnknownFile> unknownFiles;
@@ -47,20 +57,19 @@ public final class ModLoadResult {
     private final List<DuplicateId> duplicates;
     private final List<UnknownMember> unknownMembers;
 
-    public ModLoadResult(Map<String, LoadedModifier> modifiers, Map<String, LoadedPreset> presets,
-            List<UnknownFile> unknownFiles, List<FailedFile> failedFiles,
-            List<DuplicateId> duplicates, List<UnknownMember> unknownMembers) {
-        this.modifiers = new LinkedHashMap<>(modifiers);
-        this.presets = new LinkedHashMap<>(presets);
-        this.unknownFiles = new ArrayList<>(unknownFiles);
-        this.failedFiles = new ArrayList<>(failedFiles);
-        this.duplicates = new ArrayList<>(duplicates);
-        this.unknownMembers = new ArrayList<>(unknownMembers);
+    public ModLoadResult(Loaded loaded, Problems problems) {
+        this.modifiers = new LinkedHashMap<>(loaded.modifiers());
+        this.presets = new LinkedHashMap<>(loaded.presets());
+        this.unknownFiles = new ArrayList<>(problems.unknownFiles());
+        this.failedFiles = new ArrayList<>(problems.failedFiles());
+        this.duplicates = new ArrayList<>(problems.duplicates());
+        this.unknownMembers = new ArrayList<>(problems.unknownMembers());
     }
 
     /** Empty result: no entries, no problems. */
     public static ModLoadResult empty() {
-        return new ModLoadResult(Map.of(), Map.of(), List.of(), List.of(), List.of(), List.of());
+        return new ModLoadResult(new Loaded(Map.of(), Map.of()),
+                new Problems(List.of(), List.of(), List.of(), List.of()));
     }
 
     /** Loaded modifiers by id, in load order. */

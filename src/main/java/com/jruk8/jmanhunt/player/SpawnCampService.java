@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.player;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.ServerSettings;
 import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -16,6 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.LongSupplier;
+import java.util.logging.Logger;
 
 /**
  * Rolling anti-spawn-camp guard: too many kills by one attacker on the
@@ -45,7 +45,7 @@ public final class SpawnCampService {
     private record OffenseKey(long matchId, UUID attacker) {
     }
 
-    private final JManhuntPlugin plugin;
+    private final Logger log;
     private final ServerSettings.AntiSpawnCamp antiSpawnCamp;
     private final MessageService messages;
     private final GameMessages game;
@@ -55,14 +55,14 @@ public final class SpawnCampService {
     private final Set<String> warnedRoles = new HashSet<>();
     private final LongSupplier clock;
 
-    public SpawnCampService(JManhuntPlugin plugin, ServerSettings.AntiSpawnCamp antiSpawnCamp,
+    public SpawnCampService(Logger log, ServerSettings.AntiSpawnCamp antiSpawnCamp,
             MessageService messages, GameMessages game) {
-        this(plugin, antiSpawnCamp, messages, game, System::currentTimeMillis);
+        this(log, antiSpawnCamp, messages, game, System::currentTimeMillis);
     }
 
-    SpawnCampService(JManhuntPlugin plugin, ServerSettings.AntiSpawnCamp antiSpawnCamp,
+    SpawnCampService(Logger log, ServerSettings.AntiSpawnCamp antiSpawnCamp,
             MessageService messages, GameMessages game, LongSupplier clock) {
-        this.plugin = plugin;
+        this.log = log;
         this.antiSpawnCamp = antiSpawnCamp;
         this.messages = messages;
         this.game = game;
@@ -173,7 +173,7 @@ public final class SpawnCampService {
                     || normalized.isEmpty() || !warnedRoles.add(normalized)) {
                 continue;
             }
-            plugin.getLogger().warning(
+            log.warning(
                     "Unknown settings.server.anti-spawn-camp.monitored-roles value '"
                             + raw + "': expected SPEEDRUNNER or HUNTER.");
         }

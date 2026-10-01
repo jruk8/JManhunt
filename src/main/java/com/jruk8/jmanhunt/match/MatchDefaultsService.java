@@ -1,8 +1,10 @@
 package com.jruk8.jmanhunt.match;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.MatchConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
@@ -17,25 +19,31 @@ import java.util.List;
  * gamerules, and daytime, ahead of custom start commands and equipment.
  */
 public final class MatchDefaultsService {
-    private final JManhuntPlugin plugin;
-    private final PlayersSettingsFacade players;
-    private final PlayerStateStore playerStates;
-    private final PlayerWipeService wipes;
+    /** Role plus fake-spectator state. */
+    public record DefaultsStates(PlayerStateStore states, FakeSpectatorService fakes) {
+    }
 
-    public MatchDefaultsService(JManhuntPlugin plugin, PlayersSettingsFacade players,
-            PlayerStateStore playerStates, PlayerWipeService wipes) {
-        this.plugin = plugin;
+    private final OverrideService overrides;
+    private final JManhuntLogger log;
+    private final PlayersSettingsFacade players;
+    private final PlayerWipeService wipes;
+    private final DefaultsStates states;
+
+    public MatchDefaultsService(OverrideService overrides, JManhuntLogger log,
+            PlayersSettingsFacade players, PlayerWipeService wipes, DefaultsStates states) {
+        this.overrides = overrides;
+        this.log = log;
         this.players = players;
-        this.playerStates = playerStates;
         this.wipes = wipes;
+        this.states = states;
     }
 
     public void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators,
             int lobbyId, boolean lastMatch) {
-        if (!plugin.overrides().getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
+        if (!overrides.getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
             return;
         }
-        List<String> rules = plugin.overrides().getStringList(lobbyId,
+        List<String> rules = overrides.getStringList(lobbyId,
                 MatchConfig.GameRules.RULES_PATH);
         if (wipes.endWipeEnabled(lobbyId)) {
             participants.forEach(wipes::resetPlayer);
@@ -86,18 +94,18 @@ public final class MatchDefaultsService {
         // the toggle, keeping their mode like AFK when it is off.
         boolean setNoneSpectator = players.turnNonesSpectator(lobbyId);
         for (Player player : participants) {
-            plugin.fakeSpectators().disable(player);
+            states.fakes().disable(player);
         }
         for (Player player : lobbySpectators) {
-            if (playerStates.role(player) == Role.AFK) {
+            if (states.states().role(player) == Role.AFK) {
                 continue; // AFK players are left alone
             }
             if (phase.equals("start")) {
                 if (setNoneSpectator) {
-                    plugin.fakeSpectators().enable(player);
+                    states.fakes().enable(player);
                 }
             } else {
-                plugin.fakeSpectators().disable(player);
+                states.fakes().disable(player);
             }
         }
     }
@@ -110,7 +118,7 @@ public final class MatchDefaultsService {
             world.setStorm(false);
             world.setWeatherDuration(0);
         } catch (IllegalArgumentException exception) {
-            plugin.logger().fine("Skipping daytime reset in world without a world clock: " + world.getName());
+            log.fine("Skipping daytime reset in world without a world clock: " + world.getName());
         }
     }
 

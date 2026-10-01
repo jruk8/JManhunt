@@ -18,11 +18,11 @@ public final class TagRun {
         if (line.isEmpty()) {
             return "";
         }
-        Optional<String> dispatchable = TagExpressions.dispatchableLine(line);
+        Optional<String> dispatchable = TagControlFlow.dispatchableLine(line);
         if (dispatchable.isEmpty()) {
             return "";
         }
-        if (TagExpressions.isPureNull(dispatchable.get())) {
+        if (TagControlFlow.isPureNull(dispatchable.get())) {
             context.scope().warn("Skipping command that resolved to pure \"null\" at "
                     + context.provenance().describe() + ".");
             return "";

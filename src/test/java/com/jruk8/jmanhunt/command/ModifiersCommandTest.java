@@ -68,9 +68,9 @@ class ModifiersCommandTest {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);
         // Nulls are never touched: options read the store, messages unused.
-        ModifiersCommand command = new ModifiersCommand(
-                new ConfigService(null, new ModifierStore(config, log)), null, null, null, null,
-                null, null, null);
+        ModifiersCommand command = new ModifiersCommand(new ConfigService(null, new ModifierStore(config, log)),
+                new ModifiersCommand.ModifiersDeps(null, null, null),
+                new ModifiersCommand.ModifiersTexts(null, null, null, null));
 
         assertEquals(List.of("Alpha", "mike", "zeta"), command.modifierNameOptions());
         assertEquals(List.of("apple", "zulu"), command.presetIdOptions());
@@ -94,8 +94,9 @@ class ModifiersCommandTest {
         MessageService messages = new MessageService();
         MessagesConfig texts = new MessagesConfig();
         messages.reload(texts);
-        ModifiersCommand command = new ModifiersCommand(service, messages,
-                texts.getModifiers(), texts.getCommand(), null, null, null, null);
+        ModifiersCommand command = new ModifiersCommand(service, new ModifiersCommand.ModifiersDeps(null, null, null),
+                new ModifiersCommand.ModifiersTexts(messages, texts.getModifiers(),
+                        texts.getCommand(), null));
         FakeSender sender = FakeSender.permitted();
         byte[] nestedBefore = Files.readAllBytes(nested);
 
@@ -125,17 +126,19 @@ class ModifiersCommandTest {
         log.setUseParentHandlers(false);
         ModifierStore store = new ModifierStore(config, log);
         // Nulls are never touched: options read the store, messages unused.
-        ModifiersCommand command = new ModifiersCommand(
-                new ConfigService(null, store), null, null, null, null, null, null, null);
+        ModifiersCommand command = new ModifiersCommand(new ConfigService(null, store),
+                new ModifiersCommand.ModifiersDeps(null, null, null),
+                new ModifiersCommand.ModifiersTexts(null, null, null, null));
         assertEquals(List.of("alpha"), command.modifierNameOptions());
         assertEquals(List.of("zed"), command.presetIdOptions());
 
         ModLoadResult fresh = new ModLoadResult(
-                Map.of("beta", new ModLoadResult.LoadedModifier(
-                        new ModifierEntry(), Path.of("beta"), "fp")),
-                Map.of("ay", new ModLoadResult.LoadedPreset(
-                        new ModifierPreset(), Path.of("ay"), "fp")),
-                List.of(), List.of(), List.of(), List.of());
+                new ModLoadResult.Loaded(
+                        Map.of("beta", new ModLoadResult.LoadedModifier(
+                                new ModifierEntry(), Path.of("beta"), "fp")),
+                        Map.of("ay", new ModLoadResult.LoadedPreset(
+                                new ModifierPreset(), Path.of("ay"), "fp"))),
+                new ModLoadResult.Problems(List.of(), List.of(), List.of(), List.of()));
         store.replaceAll(fresh);
 
         assertEquals(List.of("beta"), command.modifierNameOptions());
@@ -220,8 +223,9 @@ class ModifiersCommandTest {
         MessageService messages = new MessageService();
         MessagesConfig texts = new MessagesConfig();
         messages.reload(texts);
-        ModifiersCommand command = new ModifiersCommand(service, messages,
-                texts.getModifiers(), texts.getCommand(), null, null, null, null);
+        ModifiersCommand command = new ModifiersCommand(service, new ModifiersCommand.ModifiersDeps(null, null, null),
+                new ModifiersCommand.ModifiersTexts(messages, texts.getModifiers(),
+                        texts.getCommand(), null));
         FakeSender sender = FakeSender.denied();
         boolean before = service.modifierEnabled("beef");
 
@@ -252,8 +256,9 @@ class ModifiersCommandTest {
         MessageService messages = new MessageService();
         MessagesConfig texts = new MessagesConfig();
         messages.reload(texts);
-        return new Fixture(new ModifiersCommand(service, messages,
-                texts.getModifiers(), texts.getCommand(), null, null, null, null),
+        return new Fixture(new ModifiersCommand(service, new ModifiersCommand.ModifiersDeps(null, null, null),
+                new ModifiersCommand.ModifiersTexts(messages, texts.getModifiers(),
+                        texts.getCommand(), null)),
                 service, messages, texts);
     }
 
@@ -311,9 +316,11 @@ class ModifiersCommandTest {
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(12L, List.of(),
                 List.of(), List.of(), null, null);
         when(service.run(any(), eq("HUNTER"), eq(List.of("say hi")))).thenReturn(result);
-        ModifiersCommand command = new ModifiersCommand(fixture.service(), fixture.messages(),
-                fixture.texts().getModifiers(), fixture.texts().getCommand(),
-                null, null, null, service);
+        ModifiersCommand command = new ModifiersCommand(fixture.service(),
+                new ModifiersCommand.ModifiersDeps(null, null, service),
+                new ModifiersCommand.ModifiersTexts(fixture.messages(),
+                        fixture.texts().getModifiers(), fixture.texts().getCommand(),
+                        null));
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
         when(player.getName()).thenReturn("Steve");

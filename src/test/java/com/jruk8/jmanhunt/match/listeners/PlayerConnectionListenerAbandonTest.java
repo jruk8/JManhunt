@@ -11,11 +11,13 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.config.PlayerSettings;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -64,12 +66,19 @@ class PlayerConnectionListenerAbandonTest {
         Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
         PlayerSettings settings = new PlayerSettings();
         settings.getRoles().getResetOnLeave().setEnabled(false);
-        PlayerConnectionListener listener = new PlayerConnectionListener(plugin, players, game,
-                mock(MessageService.class), settings, new MatchConfig.DisconnectHandling(),
-                lobbies,
-                mock(LobbyTeleporter.class), mock(WorldEngineService.class),
-                mock(SpeedrunnerDisconnectTracker.class), disconnectTasks,
-                mock(CompassManager.class), new GameMessages());
+        PlayerConnectionListener listener = new PlayerConnectionListener(
+                new PlayerConnectionListener.ConnectReads(players,
+                        mock(FakeSpectatorService.class), mock(MessageService.class),
+                        new GameMessages()),
+                new PlayerConnectionListener.ConnectMatch(game, lobbies,
+                        mock(CompassManager.class),
+                        mock(SpeedrunnerDisconnectTracker.class), disconnectTasks),
+                new PlayerConnectionListener.ConnectWorld(mock(LobbyTeleporter.class),
+                        mock(WorldEngineService.class)),
+                new PlayerConnectionListener.ConnectConfig(settings,
+                        new MatchConfig.DisconnectHandling()),
+                new PlayerConnectionListener.ConnectEdge(plugin.roleTeams(),
+                        mock(TaskScheduler.class)));
         return new Fixture(listener, quitter, other, game, instance, quitterId, otherId);
     }
 

@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.world.end;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import org.bukkit.World;
 
 /** Shared end-dimension helpers for the legacy reset and end cells. */
@@ -13,7 +13,7 @@ public final class EndWorlds {
      * per player and is not always cleared when its world is unloaded, so
      * without this a stale bar stays on screen for anyone inside.
      */
-    public static void clearDragonBar(JManhuntPlugin plugin, World endWorld) {
+    public static void clearDragonBar(JManhuntLogger log, World endWorld) {
         try {
             var battle = endWorld.getEnderDragonBattle();
             if (battle == null) {
@@ -25,7 +25,7 @@ public final class EndWorlds {
             }
             bar.removeAll();
         } catch (UnsupportedOperationException exception) {
-            plugin.logger().fine("Could not clear dragon bar in " + endWorld.getName() + ": " + exception.getMessage());
+            log.fine("Could not clear dragon bar in " + endWorld.getName() + ": " + exception.getMessage());
         }
     }
 }

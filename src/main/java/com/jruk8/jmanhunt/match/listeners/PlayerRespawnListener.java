@@ -2,10 +2,10 @@ package com.jruk8.jmanhunt.match.listeners;
 
 import com.jruk8.jmanhunt.command.TagLocations;
 import com.jruk8.jmanhunt.compass.CompassManager;
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.TaskScheduler;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -23,17 +23,21 @@ import com.jruk8.jmanhunt.message.GameMessages;
 
 /** Respawn routing: vanilla respawn hooks and delayed spectator revives. */
 public final class PlayerRespawnListener implements Listener {
-    private final JManhuntPlugin plugin;
-    private final PlayerStateStore playerStates;
+    /** Role plus fake-spectator state. */
+    public record RespawnPlayers(PlayerStateStore states, FakeSpectatorService fakes) {
+    }
+
+    private final TaskScheduler tasks;
+    private final RespawnPlayers players;
     private final GameManager game;
     private final CompassManager compass;
     private final GameMessages gameTexts;
     private final Map<UUID, BukkitTask> respawnTasks = new HashMap<>();
 
-    public PlayerRespawnListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
+    public PlayerRespawnListener(TaskScheduler tasks, RespawnPlayers players, GameManager game,
             CompassManager compass, GameMessages gameTexts) {
-        this.plugin = plugin;
-        this.playerStates = playerStates;
+        this.tasks = tasks;
+        this.players = players;
         this.game = game;
         this.compass = compass;
         this.gameTexts = gameTexts;
@@ -52,12 +56,12 @@ public final class PlayerRespawnListener implements Listener {
         Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
         // Delayed revives re-give after leaving spectator mode; handing one
         // here would land it in the spectator inventory.
-        if (match.isPresent() && playerStates.role(player).isParticipant()
+        if (match.isPresent() && players.states().role(player).isParticipant()
                 && !hasPendingRespawn(player.getUniqueId())
-                && !plugin.fakeSpectators().isFakeSpectator(player)) {
-            Bukkit.getScheduler().runTask(plugin, () -> compass.giveCompass(player));
+                && !players.fakes().isFakeSpectator(player)) {
+            tasks.run(() -> compass.giveCompass(player));
         }
-        if (match.isEmpty() || !match.get().begun() || !playerStates.role(player).isParticipant()) {
+        if (match.isEmpty() || !match.get().begun() || !players.states().role(player).isParticipant()) {
             return;
         }
         long matchId = match.get().matchId();
@@ -109,12 +113,12 @@ public final class PlayerRespawnListener implements Listener {
         if (existing != null) {
             existing.cancel();
         }
-        Bukkit.getScheduler().runTask(plugin, () -> plugin.fakeSpectators().enable(player));
+        tasks.run(() -> players.fakes().enable(player));
         if (delaySeconds <= 0) {
-            Bukkit.getScheduler().runTask(plugin, () -> revivePlayer(player, matchId, false));
+            tasks.run(() -> revivePlayer(player, matchId, false));
             return;
         }
-        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        BukkitTask task = tasks.runLater(() -> {
             respawnTasks.remove(playerId);
             if (!game.isActiveInInstance(matchId, playerId)) {
                 return;
@@ -130,10 +134,10 @@ public final class PlayerRespawnListener implements Listener {
             return;
         }
         GameInstance instance = match.get();
-        if (playerStates.role(player) == Role.SPEEDRUNNER) {
-            playerStates.setSpeedrunnerAlive(player.getUniqueId(), true);
+        if (players.states().role(player) == Role.SPEEDRUNNER) {
+            players.states().setSpeedrunnerAlive(player.getUniqueId(), true);
         }
-        plugin.fakeSpectators().disable(player);
+        players.fakes().disable(player);
         player.setHealth(player.getMaxHealth());
         player.setFoodLevel(20);
         Location respawn = player.getBedSpawnLocation();
@@ -146,22 +150,22 @@ public final class PlayerRespawnListener implements Listener {
         // The fake-spectator fall before the revive must not convert
         // into damage on arrival.
         player.setFallDistance(0F);
-        if (playerStates.role(player).isParticipant()) {
+        if (players.states().role(player).isParticipant()) {
             compass.giveCompass(player);
             compass.refreshCompass(player);
             // Immediate revives stay silent, as before; only a waited-out
             // delay announces the return, for either role.
             if (delayed) {
-                if (playerStates.role(player) == Role.HUNTER) {
+                if (players.states().role(player) == Role.HUNTER) {
                     game.messaging().sendToInstance(instance, gameTexts.getHunterRespawnImminent(),
                             Map.of("player", player.getName()));
-                } else if (playerStates.role(player) == Role.SPEEDRUNNER) {
+                } else if (players.states().role(player) == Role.SPEEDRUNNER) {
                     game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnerRespawnImminent(),
                             Map.of("player", player.getName()));
                 }
             }
         }
-        if (!instance.begun() || !playerStates.role(player).isParticipant()) {
+        if (!instance.begun() || !players.states().role(player).isParticipant()) {
             return;
         }
         fireRespawnTriggers(player, matchId);
@@ -171,7 +175,7 @@ public final class PlayerRespawnListener implements Listener {
     private void fireRespawnTriggers(Player player, long matchId) {
         List<String> eventArgs = deathArgs(player);
         game.stateCommands().runEventModifiers("ON_RESPAWN", player, matchId, eventArgs);
-        Role role = playerStates.role(player);
+        Role role = players.states().role(player);
         if (role == Role.HUNTER) {
             game.stateCommands().runEventModifiers("ON_HUNTER_RESPAWN", player, matchId, eventArgs);
         } else if (role == Role.SPEEDRUNNER) {

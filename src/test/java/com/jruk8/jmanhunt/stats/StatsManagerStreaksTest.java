@@ -15,7 +15,7 @@ class StatsManagerStreaksTest {
 
     @Test
     void winIncrementsStreakAndBest() {
-        StatsManager manager = new StatsManager(null, null, null, null);
+        StatsManager manager = new StatsManager(null, null, null, null, null);
         UUID winner = join(manager, 1L, Role.HUNTER);
 
         manager.completeMatch(1L, Role.HUNTER);
@@ -26,7 +26,7 @@ class StatsManagerStreaksTest {
 
     @Test
     void lossResetsCurrentButKeepsBest() {
-        StatsManager manager = new StatsManager(null, null, null, null);
+        StatsManager manager = new StatsManager(null, null, null, null, null);
         UUID player = join(manager, 1L, Role.HUNTER);
         manager.completeMatch(1L, Role.HUNTER);
         join(manager, 2L, Role.HUNTER);
@@ -40,7 +40,7 @@ class StatsManagerStreaksTest {
 
     @Test
     void streaksSpanMatches() {
-        StatsManager manager = new StatsManager(null, null, null, null);
+        StatsManager manager = new StatsManager(null, null, null, null, null);
         UUID player = join(manager, 1L, Role.SPEEDRUNNER);
         manager.completeMatch(1L, Role.SPEEDRUNNER);
         manager.getOrCreate(2L, player).role = Role.SPEEDRUNNER;
@@ -53,7 +53,7 @@ class StatsManagerStreaksTest {
 
     @Test
     void nonParticipantsKeepStreaks() {
-        StatsManager manager = new StatsManager(null, null, null, null);
+        StatsManager manager = new StatsManager(null, null, null, null, null);
         UUID watcher = join(manager, 1L, Role.NONE);
 
         manager.completeMatch(1L, Role.HUNTER);
@@ -64,7 +64,7 @@ class StatsManagerStreaksTest {
 
     @Test
     void lobbySessionsRecordAndCount() {
-        StatsManager manager = new StatsManager(null, null, null, null);
+        StatsManager manager = new StatsManager(null, null, null, null, null);
 
         assertEquals(0, manager.lifetimeSessions(0));
         manager.recordLobbySession(0);

@@ -1,21 +1,15 @@
 package com.jruk8.jmanhunt.gui.menus;
 
-import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SettingType;
 import com.jruk8.jmanhunt.gui.ConfirmMenu;
-import com.jruk8.jmanhunt.gui.GuiConfig;
-import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialog;
-import com.jruk8.jmanhunt.lobby.config.OverrideService;
-import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
-import com.jruk8.jmanhunt.message.MessageService;
-import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -35,33 +29,18 @@ import org.bukkit.entity.Player;
  */
 public final class SettingButtons {
 
-    private final ConfigService config;
-    private final OverrideService overrides;
-    private final GuiConfig guiData;
-    private final MessageService messages;
-    private final ManhuntGuiMessages manhuntGui;
+    private final SettingDialogs.SettingStores stores;
+    private final SettingDialogs.SettingTexts texts;
+    private final SettingDialogs.SettingUi ui;
     private final SettingDialog dialogs;
-    private final GuiService gui;
-    private final SettingFeedback feedback;
-    private final SoundService sounds;
 
-    /**
-     * @param sounds failure blips for toggle and cycle writes; success
-     *        sounds come from the shared feedback, null only in unit
-     *        tests that never invoke actions
-     */
-    public SettingButtons(ConfigService config, OverrideService overrides, GuiConfig guiData,
-            MessageService messages, ManhuntGuiMessages manhuntGui, SettingDialog dialogs,
-            GuiService gui, SettingFeedback feedback, SoundService sounds) {
-        this.config = config;
-        this.overrides = overrides;
-        this.guiData = guiData;
-        this.messages = messages;
-        this.manhuntGui = manhuntGui;
+    public SettingButtons(SettingDialogs.SettingStores stores,
+            SettingDialogs.SettingTexts texts, SettingDialogs.SettingUi ui,
+            SettingDialog dialogs) {
+        this.stores = stores;
+        this.texts = texts;
+        this.ui = ui;
         this.dialogs = dialogs;
-        this.gui = gui;
-        this.feedback = feedback;
-        this.sounds = sounds;
     }
 
     /** Leaf segment to title words: countdown-seconds becomes Countdown Seconds. */
@@ -108,13 +87,13 @@ public final class SettingButtons {
      */
     public MenuButton settingButton(Player viewer, String path, Supplier<Menu> caller) {
         SettingDescriptor descriptor = SettingRegistry.byPath(path);
-        Material icon = guiData.sectionItem(path);
-        Component name = GuiTexts.name(messages, prettify(leaf(path)), prettify(leaf(path)));
-        Integer lobby = gui.overrideLobby(viewer);
-        MenuButton button = new MenuButton(icon, name, lore(descriptor, lobby),
+        Material icon = ui.guiData().sectionItem(path);
+        Component name = GuiTexts.name(texts.messages(), prettify(leaf(path)), prettify(leaf(path)));
+        Integer lobby = ui.gui().overrideLobby(viewer);
+        MenuButton button = new MenuButton(new MenuButton.Spec(icon, name, lore(descriptor, lobby),
                 modified(descriptor, lobby),
                 false, clickAction(descriptor, caller),
-                player -> resetConfirm(player, descriptor, caller)).silent();
+                player -> resetConfirm(player, descriptor, caller), null, MenuButton.SoundPolicy.CLICK, null)).silent();
         if (lobby == null) {
             return button;
         }
@@ -126,7 +105,7 @@ public final class SettingButtons {
             case BOOL -> player -> toggle(player, descriptor);
             case OPTION -> player -> cycle(player, descriptor);
             case INT, FLOAT, STRING -> player -> dialogs.openSetting(player, descriptor,
-                    GuiTexts.title(messages, dialogTitle(descriptor)), caller);
+                    GuiTexts.title(texts.messages(), dialogTitle(descriptor)), caller);
         };
     }
 
@@ -134,14 +113,14 @@ public final class SettingButtons {
         String allowed = null;
         if (SettingRegistry.hasBounds(descriptor)) {
             allowed = SettingRegistry.boundsText(descriptor,
-                    path -> overrides.effectiveRaw(lobby, path));
+                    path -> stores.overrides().effectiveRaw(lobby, path));
         }
         List<String> options = null;
         if (descriptor.type() == SettingType.OPTION) {
             options = descriptor.options();
         }
         FieldLore.Field field = new FieldLore.Field(
-                guiData.description(descriptor.path()),
+                ui.guiData().description(descriptor.path()),
                 displayCurrent(descriptor, lobby),
                 descriptor.path().replaceFirst("^settings\\.", ""),
                 typeName(descriptor.type()),
@@ -149,19 +128,19 @@ public final class SettingButtons {
                 displayDefault(descriptor),
                 hint(descriptor.type()),
                 descriptor.restartRequired());
-        List<String> lines = new ArrayList<>(FieldLore.lines(manhuntGui, field));
+        List<String> lines = new ArrayList<>(FieldLore.lines(texts.guiTexts(), field));
         if (lobby != null) {
-            lines.add(template(manhuntGui.getOverrideShiftClear(), null));
-            if (overrides.hasSettingOverride(lobby, descriptor.path())) {
-                lines.add(manhuntGui.getOverrideForLobby()
+            lines.add(template(texts.guiTexts().getOverrideShiftClear(), null));
+            if (stores.overrides().hasSettingOverride(lobby, descriptor.path())) {
+                lines.add(texts.guiTexts().getOverrideForLobby()
                         .replace("{lobby}", String.valueOf(lobby)));
             }
         }
-        return GuiTexts.lore(messages, lines);
+        return GuiTexts.lore(texts.messages(), lines);
     }
 
     private String displayCurrent(SettingDescriptor descriptor, Integer lobby) {
-        Object value = overrides.effectiveValue(lobby, descriptor.path());
+        Object value = stores.overrides().effectiveValue(lobby, descriptor.path());
         if (descriptor.type() == SettingType.BOOL && value instanceof Boolean bool) {
             return bool ? "<green>Enabled</green>" : "<red>Disabled</red>";
         }
@@ -178,63 +157,63 @@ public final class SettingButtons {
 
     private boolean modified(SettingDescriptor descriptor, Integer lobby) {
         if (lobby != null) {
-            return overrides.hasSettingOverride(lobby, descriptor.path());
+            return stores.overrides().hasSettingOverride(lobby, descriptor.path());
         }
-        return ModifiedGlow.leafSetting(config, descriptor.path());
+        return ModifiedGlow.leafSetting(stores.config(), descriptor.path());
     }
 
     private void toggle(Player player, SettingDescriptor descriptor) {
-        Integer lobby = gui.overrideLobby(player);
-        String raw = toggledValue(overrides.effectiveValue(lobby, descriptor.path()));
+        Integer lobby = ui.gui().overrideLobby(player);
+        String raw = toggledValue(stores.overrides().effectiveValue(lobby, descriptor.path()));
         ConfigService.SetOutcome outcome = lobby == null
-                ? config.setValue(descriptor.path(), raw)
-                : overrides.setSettingOverride(lobby, descriptor.path(), raw);
+                ? stores.config().setValue(descriptor.path(), raw)
+                : stores.overrides().setSettingOverride(lobby, descriptor.path(), raw);
         if (!outcome.ok()) {
-            feedback.failed(player, outcome);
+            ui.feedback().failed(player, outcome);
             angry(player);
         } else if (lobby == null) {
-            feedback.scalarUpdated(player, descriptor.path(), outcome);
+            ui.feedback().scalarUpdated(player, descriptor.path(), outcome);
         } else {
-            feedback.overrideScalarUpdated(player, lobby, descriptor.path(), outcome);
+            ui.feedback().overrideScalarUpdated(player, lobby, descriptor.path(), outcome);
         }
     }
 
     private void cycle(Player player, SettingDescriptor descriptor) {
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         String current =
-                ConfigService.displayValue(overrides.effectiveValue(lobby, descriptor.path()));
+                ConfigService.displayValue(stores.overrides().effectiveValue(lobby, descriptor.path()));
         ConfigService.SetOutcome outcome = lobby == null
-                ? config.setValue(descriptor.path(), nextOption(descriptor, current))
-                : overrides.setSettingOverride(lobby, descriptor.path(),
+                ? stores.config().setValue(descriptor.path(), nextOption(descriptor, current))
+                : stores.overrides().setSettingOverride(lobby, descriptor.path(),
                         nextOption(descriptor, current));
         if (!outcome.ok()) {
-            feedback.failed(player, outcome);
+            ui.feedback().failed(player, outcome);
             angry(player);
         } else if (lobby == null) {
-            feedback.scalarUpdated(player, descriptor.path(), outcome);
+            ui.feedback().scalarUpdated(player, descriptor.path(), outcome);
         } else {
-            feedback.overrideScalarUpdated(player, lobby, descriptor.path(), outcome);
+            ui.feedback().overrideScalarUpdated(player, lobby, descriptor.path(), outcome);
         }
     }
 
     /** Shift-left (and right-click) in an override session: drop the override. */
     private void clearOverride(Player player, SettingDescriptor descriptor) {
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         if (lobby == null) {
             return;
         }
-        int removed = overrides.clearOverrides(lobby, descriptor.path());
-        feedback.overrideCleared(player, lobby, descriptor.path(), removed);
+        int removed = stores.overrides().clearOverrides(lobby, descriptor.path());
+        ui.feedback().overrideCleared(player, lobby, descriptor.path(), removed);
     }
 
     private void angry(Player player) {
-        if (sounds != null) {
-            sounds.playAngrySound(player);
+        if (texts.sounds() != null) {
+            texts.sounds().playAngrySound(player);
         }
     }
 
     private void resetConfirm(Player player, SettingDescriptor descriptor, Supplier<Menu> caller) {
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         if (lobby != null) {
             clearOverride(player, descriptor);
             return;
@@ -242,33 +221,33 @@ public final class SettingButtons {
         // Already at default: resetting would be a no-op, so say so in
         // chat instead of opening a confirm panel for nothing.
         if (!modified(descriptor, null)) {
-            messages.messageRaw(player, manhuntGui.getSettingAlreadyDefault());
+            texts.messages().messageRaw(player, texts.guiTexts().getSettingAlreadyDefault());
             return;
         }
         String oldValue = MiniMessage.miniMessage()
-                .escapeTags(ConfigService.displayValue(config.getValue(descriptor.path())));
+                .escapeTags(ConfigService.displayValue(stores.config().getValue(descriptor.path())));
         Menu confirm = ConfirmMenu.create(
-                GuiTexts.title(messages, resetTitle(descriptor)),
+                GuiTexts.title(texts.messages(), resetTitle(descriptor)),
                 Material.PAPER, null,
-                GuiTexts.lore(messages, List.of(oldValue + " -> " + descriptor.defaultValue())),
-                GuiTexts.name(messages, manhuntGui.getCancel(), "Cancel"),
-                back -> gui.navigate(back, caller.get()),
-                GuiTexts.name(messages, manhuntGui.getConfirm(), "Confirm"),
+                GuiTexts.lore(texts.messages(), List.of(oldValue + " -> " + descriptor.defaultValue())),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getCancel(), "Cancel"),
+                back -> ui.gui().navigate(back, caller.get()),
+                GuiTexts.name(texts.messages(), texts.guiTexts().getConfirm(), "Confirm"),
                 done -> {
                     ConfigService.SetOutcome outcome =
-                            config.setValue(descriptor.path(), descriptor.defaultValue());
+                            stores.config().setValue(descriptor.path(), descriptor.defaultValue());
                     if (!outcome.ok()) {
-                        feedback.failed(done, outcome);
+                        ui.feedback().failed(done, outcome);
                         angry(done);
                     } else {
-                        feedback.scalarUpdated(done, descriptor.path(), outcome);
+                        ui.feedback().scalarUpdated(done, descriptor.path(), outcome);
                     }
-                    gui.navigate(done, caller.get());
+                    ui.gui().navigate(done, caller.get());
                 },
                 caller);
-        gui.navigate(player, confirm);
-        if (sounds != null) {
-            sounds.playSound(player, "compass.left-click");
+        ui.gui().navigate(player, confirm);
+        if (texts.sounds() != null) {
+            texts.sounds().playSound(player, "compass.left-click");
         }
     }
 
@@ -279,10 +258,10 @@ public final class SettingButtons {
 
     private String hint(SettingType type) {
         return switch (type) {
-            case BOOL -> template(manhuntGui.getSettingHintToggle(), null);
-            case OPTION -> template(manhuntGui.getSettingHintCycle(), null);
+            case BOOL -> template(texts.guiTexts().getSettingHintToggle(), null);
+            case OPTION -> template(texts.guiTexts().getSettingHintCycle(), null);
             case INT, FLOAT, STRING ->
-                    template(manhuntGui.getSettingHintEdit(), null);
+                    template(texts.guiTexts().getSettingHintEdit(), null);
         };
     }
 
@@ -297,12 +276,12 @@ public final class SettingButtons {
     }
 
     private String dialogTitle(SettingDescriptor descriptor) {
-        return manhuntGui.getDialogTitleEdit()
+        return texts.guiTexts().getDialogTitleEdit()
                 .replace("{name}", prettify(leaf(descriptor.path())));
     }
 
     private String resetTitle(SettingDescriptor descriptor) {
-        return manhuntGui.getSettingResetTitle()
+        return texts.guiTexts().getSettingResetTitle()
                 .replace("{name}", prettify(leaf(descriptor.path())));
     }
 

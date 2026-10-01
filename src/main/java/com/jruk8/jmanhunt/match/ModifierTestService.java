@@ -113,19 +113,24 @@ public final class ModifierTestService {
         ModifierTagScope scope = ModifierTagScope.executor(sender.getName(), warnings::add);
         TagBackends backends = new TagBackends(testStats(), new FlagStore(),
                 PlaceholderResolver.inert(), testRoster(sender, role), PlayerSinks.inert());
-        TagContext context = TagContext.run(scope, "modifiers-test",
-                capturedMessages::add, capturedMessages::add,
-                (id, pitch, volume) -> capturedSounds.add(new CapturedSound(id, pitch, volume)),
-                (id, pitch, volume) -> capturedSounds.add(new CapturedSound(id, pitch, volume)),
-                (target, reason) -> capturedMessages.add("Would eliminate " + target + ": "
-                        + reason),
-                (wonRole, reason) -> capturedMessages.add("Would end the match for " + wonRole
-                        + ": " + reason),
-                TagContext.NO_MATCH, backends, List.of(), warnings::add,
-                (wonRole, text) -> capturedMessages.add("[" + wonRole + "] " + text),
-                (wonRole, id, pitch, volume) -> capturedSounds.add(
-                        new CapturedSound(id, pitch, volume)),
-                (line, provenance) -> commands.runTagCommand(line, provenance));
+        TagContext context = TagContext.run(new TagContext.TagIdentity(scope, "modifiers-test"),
+                new TagContext.TagSinks(capturedMessages::add, capturedMessages::add,
+                        (id, pitch, volume) -> capturedSounds.add(
+                                new CapturedSound(id, pitch, volume)),
+                        (id, pitch, volume) -> capturedSounds.add(
+                                new CapturedSound(id, pitch, volume)),
+                        (line, provenance) -> commands.runTagCommand(line, provenance)),
+                new TagContext.TagRole(
+                        (wonRole, text) -> capturedMessages.add(
+                                "[" + wonRole + "] " + text),
+                        (wonRole, id, pitch, volume) -> capturedSounds.add(
+                                new CapturedSound(id, pitch, volume))),
+                new TagContext.TagMatch(TagContext.NO_MATCH, backends, List.of(),
+                        warnings::add,
+                        (target, reason) -> capturedMessages.add(
+                                "Would eliminate " + target + ": " + reason),
+                        (wonRole, reason) -> capturedMessages.add(
+                                "Would end the match for " + wonRole + ": " + reason)));
         long start = System.nanoTime();
         try {
             commands.runCommandList(lines, sender, context,

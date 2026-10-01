@@ -1,10 +1,11 @@
 package com.jruk8.jmanhunt.world.end;
 
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.world.FileUtils;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
@@ -12,10 +13,12 @@ import java.io.File;
 import java.io.IOException;
 
 public final class EndResetManager {
-    private final JManhuntPlugin plugin;
+    private final Server server;
+    private final JManhuntLogger log;
 
-    public EndResetManager(JManhuntPlugin plugin) {
-        this.plugin = plugin;
+    public EndResetManager(Server server, JManhuntLogger log) {
+        this.server = server;
+        this.log = log;
     }
 
     /**
@@ -37,13 +40,13 @@ public final class EndResetManager {
                 }
             }
         }
-        EndWorlds.clearDragonBar(plugin, endWorld);
+        EndWorlds.clearDragonBar(log, endWorld);
         for (org.bukkit.Chunk chunk : endWorld.getLoadedChunks()) {
             chunk.unload();
         }
 
         if (!Bukkit.unloadWorld(endWorld, true)) {
-            plugin.logger().warning("Could not unload end world " + endWorldName + " for reset.");
+            log.warning("Could not unload end world " + endWorldName + " for reset.");
             return;
         }
 
@@ -54,12 +57,12 @@ public final class EndResetManager {
     }
 
     private void deleteEndData(String baseWorldName) {
-        File container = plugin.getServer().getWorldContainer();
+        File container = server.getWorldContainer();
         for (String relative : new String[]{baseWorldName + "/DIM1", baseWorldName + "/dimensions/minecraft/the_end"}) {
             try {
                 FileUtils.deleteRecursively(new File(container, relative));
             } catch (IOException exception) {
-                plugin.logger().warning("Failed to clean end data at " + relative + ": " + exception.getMessage());
+                log.warning("Failed to clean end data at " + relative + ": " + exception.getMessage());
             }
         }
     }

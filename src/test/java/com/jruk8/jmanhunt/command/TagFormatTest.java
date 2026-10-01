@@ -15,15 +15,15 @@ class TagFormatTest {
         final FlagStore flags = new FlagStore();
 
         TagContext context() {
-            return TagContext.run(
-                    ModifierTagScope.match("Steve", List.of(), new Random(3), warnings::add),
-                    "format", warnings::add, warnings::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), flags,
-                            (text, name) -> text, RosterValues.inert(),
-                            PlayerSinks.inert()),
-                    List.of(), detail -> { });
+            return TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve", List.of(),
+                    new Random(3), warnings::add), "format"),
+                    TagContext.TagSinks.simple(warnings::add, warnings::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                            ModifierTagScope.match("Steve", List.of(), new Random(3), warnings::add)),
+                    TagContext.TagRole.silent(),
+                    new TagContext.TagMatch(7L, new TagBackends(StatValues.inert(), flags, (text,
+                            name) -> text, RosterValues.inert(), PlayerSinks.inert()), List.of(), detail -> { },
+                            (player, reason) -> { }, (role, reason) -> { }));
         }
 
         String replace(String command, TagContext context) {

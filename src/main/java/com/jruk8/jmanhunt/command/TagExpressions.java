@@ -65,34 +65,6 @@ public final class TagExpressions {
     }
 
     /**
-     * Real nth root of value, or empty when none exists: a zero
-     * index, or a negative value under a non-odd-integer index.
-     * Indexes 2 and 3 use sqrt/cbrt directly for exact results.
-     */
-    private static Optional<Double> rootOf(double value, double index) {
-        if (index == 0.0 || Double.isNaN(index) || Double.isInfinite(index)) {
-            return Optional.empty();
-        }
-        if (index == 2.0) {
-            return value < 0 ? Optional.empty() : Optional.of(Math.sqrt(value));
-        }
-        if (index == 3.0) {
-            return Optional.of(Math.cbrt(value));
-        }
-        if (value < 0) {
-            if (index != Math.floor(index) || Math.abs(index) > 1e15) {
-                return Optional.empty();
-            }
-            long whole = (long) index;
-            if (whole % 2 == 0) {
-                return Optional.empty();
-            }
-            return Optional.of(-Math.pow(-value, 1.0 / index));
-        }
-        return Optional.of(Math.pow(value, 1.0 / index));
-    }
-
-    /**
      * Evaluates a condition: {@code or} splits first, then {@code and},
      * then leading {@code not} words, then one comparison per part.
      * The words match case-blindly; {@code and} and {@code or} need
@@ -144,15 +116,15 @@ public final class TagExpressions {
     private static boolean evalComparison(String part, Consumer<String> warn, String where)
             throws ExprException {
         validateConditionBrackets(part);
-        Comparison comparison = findComparison(part);
+        TagComparison.Comparison comparison = TagComparison.findComparison(part);
         if (comparison == null) {
             throw new ExprException("condition needs a comparison (==, !=, lt, le, gt, ge)");
         }
         TagMath.Value left = TagMath.evalValue(comparison.left(), warn, where);
         TagMath.Value right = TagMath.evalValue(comparison.right(), warn, where);
         return switch (comparison.operator()) {
-            case "==" -> equalsValue(left, right);
-            case "!=" -> !equalsValue(left, right);
+            case "==" -> TagComparison.equalsValue(left, right);
+            case "!=" -> !TagComparison.equalsValue(left, right);
             default -> orderValue(left, right, normalizeOperator(comparison.operator()));
         };
     }
@@ -168,85 +140,13 @@ public final class TagExpressions {
         };
     }
 
-    private record Comparison(String operator, String left, String right) {
-    }
-
-    private static Comparison findComparison(String part) throws ExprException {
-        int depth = 0;
-        char quote = 0;
-        for (int index = 0; index < part.length(); index++) {
-            char letter = part.charAt(index);
-            if (quote != 0) {
-                if (letter == quote) {
-                    quote = 0;
-                }
-                continue;
-            }
-            if (letter == '"' || letter == '\'') {
-                quote = letter;
-            } else if (letter == '(') {
-                depth++;
-            } else if (letter == ')') {
-                depth = Math.max(0, depth - 1);
-            } else if (depth == 0) {
-                Integer tagClose = nestedTagClose(part, index);
-                if (tagClose != null) {
-                    index = tagClose;
-                    continue;
-                }
-                String operator = matchOperator(part, index);
-                if (operator != null) {
-                    String left = part.substring(0, index);
-                    String right = part.substring(index + operator.length());
-                    if (findOperator(left) >= 0 || findOperator(right) >= 0) {
-                        throw new ExprException("only one comparison per 'and' part");
-                    }
-                    return new Comparison(operator, left, right);
-                }
-            }
-        }
-        return null;
-    }
-
-    private static String matchOperator(String part, int index) {
-        for (String operator : List.of("==", "!=")) {
-            if (part.startsWith(operator, index)) {
-                return operator;
-            }
-        }
-        return matchWordOperator(part, index);
-    }
-
-    /**
-     * Word comparison operator at {@code index} (case-blind), or null
-     * when absent. Both sides need a non-letter-or-digit boundary so
-     * words like {@code alt} or {@code glee} never split. Angle
-     * brackets are deliberately not operators: they would be
-     * ambiguous with tag brackets.
-     */
-    private static String matchWordOperator(String part, int index) {
-        for (String word : List.of("lt", "le", "gt", "ge")) {
-            int end = index + word.length();
-            if (end > part.length()
-                    || !part.regionMatches(true, index, word, 0, word.length())) {
-                continue;
-            }
-            char before = index > 0 ? part.charAt(index - 1) : ' ';
-            char after = end < part.length() ? part.charAt(end) : ' ';
-            if (!Character.isLetterOrDigit(before) && !Character.isLetterOrDigit(after)) {
-                return word;
-            }
-        }
-        return null;
-    }
-
     /**
      * Closing {@code >} of the nested tag opening at {@code index},
      * or null when the bracket opens no tag. Only a tag-name letter
      * after {@code <} qualifies for the skip; anything else is a
      * stray bracket that validation reports.
      */
-    private static Integer nestedTagClose(String part, int index) {
+    static Integer nestedTagClose(String part, int index) {
         if (part.charAt(index) != '<' || index + 1 >= part.length()
                 || Character.isWhitespace(part.charAt(index + 1))) {
             return null;
@@ -263,36 +163,7 @@ public final class TagExpressions {
      * validation.
      */
     static boolean hasComparison(String part) {
-        return findOperator(part) >= 0;
-    }
-
-    private static int findOperator(String part) {
-        int depth = 0;
-        char quote = 0;
-        for (int index = 0; index < part.length(); index++) {
-            char letter = part.charAt(index);
-            if (quote != 0) {
-                if (letter == quote) {
-                    quote = 0;
-                }
-            } else if (letter == '"' || letter == '\'') {
-                quote = letter;
-            } else if (letter == '(') {
-                depth++;
-            } else if (letter == ')') {
-                depth = Math.max(0, depth - 1);
-            } else if (depth == 0) {
-                Integer tagClose = nestedTagClose(part, index);
-                if (tagClose != null) {
-                    index = tagClose;
-                    continue;
-                }
-                if (matchOperator(part, index) != null) {
-                    return index;
-                }
-            }
-        }
-        return -1;
+        return TagComparison.findOperator(part) >= 0;
     }
 
     /**
@@ -331,19 +202,6 @@ public final class TagExpressions {
         }
     }
 
-    private static boolean equalsValue(TagMath.Value left, TagMath.Value right) {
-        if (left instanceof TagMath.Value.Null && right instanceof TagMath.Value.Null) {
-            return true;
-        }
-        if (left instanceof TagMath.Value.Null || right instanceof TagMath.Value.Null) {
-            return false;
-        }
-        if (left instanceof TagMath.Value.Num leftNumber && right instanceof TagMath.Value.Num rightNumber) {
-            return leftNumber.number() == rightNumber.number();
-        }
-        return displayValue(left).equals(displayValue(right));
-    }
-
     private static boolean orderValue(TagMath.Value left, TagMath.Value right, String operator)
             throws ExprException {
         double leftNumber = orderNumber(left);
@@ -366,16 +224,6 @@ public final class TagExpressions {
             return number.number();
         }
         throw new ExprException("ordering comparisons need numbers");
-    }
-
-    private static String displayValue(TagMath.Value value) {
-        if (value instanceof TagMath.Value.Num number) {
-            return TagMath.formatNumber(number.number());
-        }
-        if (value instanceof TagMath.Value.Text text) {
-            return text.text();
-        }
-        return "null";
     }
 
     private static List<String> splitWords(String text, String word) {
@@ -486,7 +334,7 @@ public final class TagExpressions {
         } else if (name.equals("clamp")) {
             result = Math.min(Math.max(numbers.get(0), numbers.get(1)), numbers.get(2));
         } else if (name.equals("root")) {
-            Optional<Double> root = rootOf(numbers.get(0), numbers.get(1));
+            Optional<Double> root = TagComparison.rootOf(numbers.get(0), numbers.get(1));
             if (root.isEmpty() || !Double.isFinite(root.get())) {
                 context.scope().warn("Tag <root> needs a real result: no zero index, "
                         + "no even root of a negative: " + tag);
@@ -595,64 +443,6 @@ public final class TagExpressions {
         return reason.isBlank() ? "unknown reason" : reason;
     }
 
-    /**
-     * One {@code <if>} span: offsets plus the raw args between the
-     * root colon and the balancing {@code >}. End is exclusive.
-     */
-    public record IfSpan(int start, int end, String args) {
-    }
-
-    /**
-     * Finds {@code <if>} spans, whose conditions may hold nested tags
-     * that the plain innermost-tag scan cannot see. Quotes nest by
-     * alternation and only unquoted brackets count toward depth.
-     * Spans that never balance are skipped.
-     */
-    public static List<IfSpan> findIfSpans(String line) {
-        List<IfSpan> spans = new ArrayList<>();
-        int index = 0;
-        while (index < line.length()) {
-            int open = line.indexOf('<', index);
-            if (open < 0) {
-                return spans;
-            }
-            IfSpan span = ifSpanAt(line, open);
-            if (span != null) {
-                spans.add(span);
-            }
-            index = open + 1;
-        }
-        return spans;
-    }
-
-    private static IfSpan ifSpanAt(String line, int open) {
-        int cursor = open + 1;
-        while (cursor < line.length() && Character.isWhitespace(line.charAt(cursor))) {
-            cursor++;
-        }
-        int rootEnd = cursor;
-        while (rootEnd < line.length() && isRootChar(line.charAt(rootEnd))) {
-            rootEnd++;
-        }
-        if (!line.substring(cursor, rootEnd).equalsIgnoreCase("if")) {
-            return null;
-        }
-        cursor = rootEnd;
-        while (cursor < line.length() && Character.isWhitespace(line.charAt(cursor))) {
-            cursor++;
-        }
-        if (cursor >= line.length() || (line.charAt(cursor) != ':'
-                && line.charAt(cursor) != '>')) {
-            return null;
-        }
-        int argsStart = cursor + 1;
-        Integer end = spanEnd(line, open);
-        if (end == null) {
-            return null;
-        }
-        return new IfSpan(open, end + 1, line.substring(argsStart, end));
-    }
-
     static boolean isRootChar(char letter) {
         return letter == '_' || letter == '-' || letter == '.'
                 || Character.isLetterOrDigit(letter);
@@ -687,70 +477,6 @@ public final class TagExpressions {
     }
 
     /** True when the args hold another {@code <if} tag. */
-    public static boolean hasNestedIf(String args) {
-        String lower = args.toLowerCase(Locale.ROOT);
-        int from = 0;
-        while (true) {
-            int at = lower.indexOf("<if", from);
-            if (at < 0) {
-                return false;
-            }
-            int after = at + 3;
-            if (after >= lower.length()) {
-                return true;
-            }
-            char next = lower.charAt(after);
-            if (next == ':' || next == '>' || Character.isWhitespace(next)) {
-                return true;
-            }
-            from = after;
-        }
-    }
-
     /** True when the line is just {@code exit}, ignoring one leading slash. */
-    public static boolean isExit(String line) {
-        return stripSlash(line).strip().equals("exit");
-    }
-
     /** True when {@code exit} leads the line but is not alone. */
-    public static boolean isExitMisuse(String line) {
-        String stripped = stripSlash(line).strip();
-        if (stripped.equals("exit")) {
-            return false;
-        }
-        int end = stripped.indexOf(' ');
-        int tab = stripped.indexOf('\t');
-        if (tab >= 0 && (end < 0 || tab < end)) {
-            end = tab;
-        }
-        String first = end < 0 ? stripped : stripped.substring(0, end);
-        return first.equals("exit");
-    }
-
-    private static String stripSlash(String line) {
-        String stripped = line.strip();
-        return stripped.startsWith("/") ? stripped.substring(1) : stripped;
-    }
-
-    /**
-     * Dispatch text for a parsed command line. Tag-only lines evaluate
-     * to nothing (a bare {@code <pflag:...>} set, {@code <gmessage:...>},
-     * ...), and dispatching blank text crashes the server dispatcher,
-     * so blank lines resolve empty and the caller skips them quietly.
-     * One leading slash is dropped; surrounding whitespace is trimmed.
-     */
-    public static Optional<String> dispatchableLine(String parsed) {
-        String line = stripSlash(parsed);
-        return line.isEmpty() ? Optional.empty() : Optional.of(line);
-    }
-
-    /**
-     * True when a dispatchable line is exactly the engine null
-     * literal: trimmed, case-sensitive lowercase. Callers warn and
-     * skip dispatch instead of sending {@code null} to the console
-     * dispatcher, which would only raise unknown-command noise.
-     */
-    public static boolean isPureNull(String line) {
-        return line.strip().equals("null");
-    }
 }

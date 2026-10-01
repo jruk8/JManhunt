@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.gui.dialog;
 import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.gui.GuiConfig;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
@@ -31,10 +32,8 @@ import java.util.function.Supplier;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.event.ClickCallback;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 
 /**
  * Native client dialogs for INT, FLOAT, and STRING settings.
@@ -54,28 +53,30 @@ public final class SettingDialogs implements SettingDialog {
     /** Text input ceiling, shared with the headless input helpers. */
     static final int TEXT_MAX_LENGTH = DialogInputs.TEXT_MAX_LENGTH;
 
-    private final ConfigService config;
-    private final OverrideService overrides;
-    private final MessageService messages;
-    private final ManhuntGuiMessages guiTexts;
-    private final SoundService sounds;
-    private final GuiService gui;
-    private final SettingFeedback feedback;
-    private final GuiConfig guiData;
-    private final Plugin plugin;
+    /** Global plus override setting backends. */
+    public record SettingStores(ConfigService config, OverrideService overrides) {
+    }
 
-    public SettingDialogs(ConfigService config, OverrideService overrides, MessageService messages,
-            ManhuntGuiMessages guiTexts, SoundService sounds, GuiService gui, SettingFeedback feedback,
-            GuiConfig guiData, Plugin plugin) {
-        this.config = config;
-        this.overrides = overrides;
-        this.messages = messages;
-        this.guiTexts = guiTexts;
-        this.sounds = sounds;
-        this.gui = gui;
-        this.feedback = feedback;
-        this.guiData = guiData;
-        this.plugin = plugin;
+    /** Dialog chat, text, and texts.sounds(). */
+    public record SettingTexts(MessageService messages, ManhuntGuiMessages guiTexts,
+            SoundService sounds) {
+    }
+
+    /** Navigation, feedback, and descriptions. */
+    public record SettingUi(GuiService gui, SettingFeedback feedback, GuiConfig guiData) {
+    }
+
+    private final SettingStores stores;
+    private final SettingTexts texts;
+    private final SettingUi ui;
+    private final TaskScheduler tasks;
+
+    public SettingDialogs(SettingStores stores, SettingTexts texts, SettingUi ui,
+            TaskScheduler tasks) {
+        this.stores = stores;
+        this.texts = texts;
+        this.ui = ui;
+        this.tasks = tasks;
     }
 
     @Override
@@ -88,7 +89,7 @@ public final class SettingDialogs implements SettingDialog {
                     "Dialogs edit INT, FLOAT, and STRING only: " + descriptor.path());
         }
         boolean ranged = DialogInputs.useNumberRange(descriptor);
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         String current = currentText(lobby, descriptor);
         if (!ranged && tooLong(player, current, () -> reopenLater(player, reopen))) {
             return;
@@ -111,14 +112,14 @@ public final class SettingDialogs implements SettingDialog {
                         confirmButton(submitAction(player, descriptor, reopen, ranged), true),
                         confirmButton(clickAction((response, audience) ->
                                 reopenLater(player, reopen)), false))));
-        sounds.playNeutralSound(player);
+        texts.sounds().playNeutralSound(player);
         player.showDialog(dialog);
     }
 
     @Override
     public void openListEntry(Player player, String listPath, int index,
             Component title, Supplier<Menu> reopen) {
-        List<String> entries = overrides.getStringList(gui.overrideLobby(player), listPath);
+        List<String> entries = stores.overrides().getStringList(ui.gui().overrideLobby(player), listPath);
         if (index < 0 || index >= entries.size()) {
             reopenLater(player, reopen);
             return;
@@ -170,9 +171,9 @@ public final class SettingDialogs implements SettingDialog {
             lines.addAll(iconBody(initial));
         }
         for (String line : body) {
-            lines.add(DialogBody.plainMessage(messages.parse(line)));
+            lines.add(DialogBody.plainMessage(texts.messages().parse(line)));
         }
-        openText(player, GuiTexts.title(messages, titleText), initial,
+        openText(player, GuiTexts.title(texts.messages(), titleText), initial,
                 lines,
                 value -> runLater(player, () -> onSubmit.accept(value)),
                 () -> runLater(player, onCancel));
@@ -212,40 +213,40 @@ public final class SettingDialogs implements SettingDialog {
                                 onSubmit.accept(response.getText(VALUE_KEY))), true),
                         confirmButton(clickAction((response, audience) ->
                                 onCancel.run()), false))));
-        sounds.playNeutralSound(player);
+        texts.sounds().playNeutralSound(player);
         player.showDialog(dialog);
     }
 
     private void submitListSet(Player player, String listPath, int index,
             Supplier<Menu> reopen, String raw) {
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         ConfigService.SetOutcome outcome = lobby == null
-                ? config.listSet(listPath, index, raw)
-                : overrides.listSetOverride(lobby, listPath, index, raw);
+                ? stores.config().listSet(listPath, index, raw)
+                : stores.overrides().listSetOverride(lobby, listPath, index, raw);
         if (!outcome.ok()) {
-            feedback.failed(player, outcome);
-            sounds.playAngrySound(player);
+            ui.feedback().failed(player, outcome);
+            texts.sounds().playAngrySound(player);
         } else if (lobby == null) {
-            feedback.scalarUpdated(player, listPath + "." + index, outcome);
+            ui.feedback().scalarUpdated(player, listPath + "." + index, outcome);
         } else {
-            feedback.overrideScalarUpdated(player, lobby, listPath + "." + index, outcome);
+            ui.feedback().overrideScalarUpdated(player, lobby, listPath + "." + index, outcome);
         }
         reopenLater(player, reopen);
     }
 
     private void submitListAdd(Player player, String listPath,
             Supplier<Menu> reopen, String raw) {
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         ConfigService.SetOutcome outcome = lobby == null
-                ? config.listAdd(listPath, raw)
-                : overrides.listAddOverride(lobby, listPath, raw);
+                ? stores.config().listAdd(listPath, raw)
+                : stores.overrides().listAddOverride(lobby, listPath, raw);
         if (!outcome.ok()) {
-            feedback.failed(player, outcome);
-            sounds.playAngrySound(player);
+            ui.feedback().failed(player, outcome);
+            texts.sounds().playAngrySound(player);
         } else if (lobby == null) {
-            feedback.listAdded(player, listPath, outcome);
+            ui.feedback().listAdded(player, listPath, outcome);
         } else {
-            feedback.overrideListAdded(player, lobby, listPath, outcome);
+            ui.feedback().overrideListAdded(player, lobby, listPath, outcome);
         }
         reopenLater(player, reopen);
     }
@@ -268,13 +269,13 @@ public final class SettingDialogs implements SettingDialog {
     }
 
     private String currentText(Integer lobby, SettingDescriptor descriptor) {
-        return ConfigService.displayValue(overrides.effectiveValue(lobby, descriptor.path()));
+        return ConfigService.displayValue(stores.overrides().effectiveValue(lobby, descriptor.path()));
     }
 
     /** Current value, with floats rendered to three decimals. */
     private String displayCurrent(Integer lobby, SettingDescriptor descriptor) {
         if (descriptor.type() == SettingType.FLOAT) {
-            Object value = overrides.effectiveValue(lobby, descriptor.path());
+            Object value = stores.overrides().effectiveValue(lobby, descriptor.path());
             if (value instanceof Number number) {
                 return DialogInputs.formatFloat(number.floatValue());
             }
@@ -292,7 +293,7 @@ public final class SettingDialogs implements SettingDialog {
     }
 
     private float currentNumber(Integer lobby, SettingDescriptor descriptor, float fallback) {
-        Object value = overrides.effectiveValue(lobby, descriptor.path());
+        Object value = stores.overrides().effectiveValue(lobby, descriptor.path());
         if (value instanceof Number number) {
             return number.floatValue();
         }
@@ -304,17 +305,17 @@ public final class SettingDialogs implements SettingDialog {
         if (descriptor.type() == SettingType.STRING) {
             lines.addAll(iconBody(currentText(lobby, descriptor)));
         }
-        String current = guiTexts.getDialogCurrent()
+        String current = texts.guiTexts().getDialogCurrent()
                 .replace("{value}", escape(displayCurrent(lobby, descriptor)));
         String bounds = null;
         if (SettingRegistry.hasBounds(descriptor)) {
-            bounds = guiTexts.getDialogBounds()
+            bounds = texts.guiTexts().getDialogBounds()
                     .replace("{bounds}", escape(SettingRegistry.boundsText(
-                            descriptor, path -> overrides.effectiveRaw(lobby, path))));
+                            descriptor, path -> stores.overrides().effectiveRaw(lobby, path))));
         }
         for (String line : DialogInputs.orderedBody(
-                guiData.description(descriptor.path()), current, bounds)) {
-            lines.add(DialogBody.plainMessage(messages.parse(line)));
+                ui.guiData().description(descriptor.path()), current, bounds)) {
+            lines.add(DialogBody.plainMessage(texts.messages().parse(line)));
         }
         return lines;
     }
@@ -327,10 +328,10 @@ public final class SettingDialogs implements SettingDialog {
         if (initial != null && initial.length() <= TEXT_MAX_LENGTH) {
             return false;
         }
-        messages.messageRaw(player, guiTexts.getDialogTooLong(), Map.of(
+        texts.messages().messageRaw(player, texts.guiTexts().getDialogTooLong(), Map.of(
                 "length", String.valueOf(initial == null ? 0 : initial.length()),
                 "max", String.valueOf(TEXT_MAX_LENGTH)));
-        sounds.playAngrySound(player);
+        texts.sounds().playAngrySound(player);
         onCancel.run();
         return true;
     }
@@ -360,41 +361,41 @@ public final class SettingDialogs implements SettingDialog {
 
     private ActionButton confirmButton(DialogAction action, boolean submit) {
         String text = submit
-                ? guiTexts.getDialogSubmit()
-                : guiTexts.getDialogCancel();
-        return ActionButton.builder(GuiTexts.name(messages, text, text))
+                ? texts.guiTexts().getDialogSubmit()
+                : texts.guiTexts().getDialogCancel();
+        return ActionButton.builder(GuiTexts.name(texts.messages(), text, text))
                 .action(action)
                 .build();
     }
 
     private void submit(Player player, SettingDescriptor descriptor,
             Supplier<Menu> reopen, String raw) {
-        Integer lobby = gui.overrideLobby(player);
+        Integer lobby = ui.gui().overrideLobby(player);
         ConfigService.SetOutcome outcome = lobby == null
-                ? config.setValue(descriptor.path(), raw)
-                : overrides.setSettingOverride(lobby, descriptor.path(), raw);
+                ? stores.config().setValue(descriptor.path(), raw)
+                : stores.overrides().setSettingOverride(lobby, descriptor.path(), raw);
         if (!outcome.ok()) {
-            feedback.failed(player, outcome);
-            sounds.playAngrySound(player);
+            ui.feedback().failed(player, outcome);
+            texts.sounds().playAngrySound(player);
         } else if (lobby == null) {
-            feedback.scalarUpdated(player, descriptor.path(), outcome);
+            ui.feedback().scalarUpdated(player, descriptor.path(), outcome);
         } else {
-            feedback.overrideScalarUpdated(player, lobby, descriptor.path(), outcome);
+            ui.feedback().overrideScalarUpdated(player, lobby, descriptor.path(), outcome);
         }
         reopenLater(player, reopen);
     }
 
     private void reopenLater(Player player, Supplier<Menu> reopen) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        tasks.run(() -> {
             if (player.isOnline()) {
-                gui.navigate(player, reopen.get());
+                ui.gui().navigate(player, reopen.get());
             }
         });
     }
 
     /** Runs a dialog callback next tick, skipping offline players. */
     private void runLater(Player player, Runnable callback) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        tasks.run(() -> {
             if (player.isOnline()) {
                 callback.run();
             }

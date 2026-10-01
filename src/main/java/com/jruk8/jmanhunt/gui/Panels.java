@@ -23,7 +23,7 @@ public final class Panels {
      * @return the stock back button
      */
     public static MenuButton backButton(GuiService gui, Component backName, Menu[] self) {
-        return new MenuButton(Material.PAPER, backName, null, false, false,
-                (Player player) -> gui.back(player, self[0]));
+        return new MenuButton(new MenuButton.Spec(Material.PAPER, backName, null, false, false,
+                (Player player) -> gui.back(player, self[0]), null, null, MenuButton.SoundPolicy.CLICK, null));
     }
 }

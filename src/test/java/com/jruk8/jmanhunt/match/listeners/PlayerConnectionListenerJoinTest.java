@@ -12,6 +12,7 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.config.PlayerSettings;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
@@ -50,12 +51,19 @@ class PlayerConnectionListenerJoinTest {
         when(player.getUniqueId()).thenReturn(playerId);
         when(game.instanceOf(playerId)).thenReturn(Optional.empty());
         Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
-        PlayerConnectionListener listener = new PlayerConnectionListener(plugin,
-                new PlayerStateStore(), game, mock(MessageService.class),
-                new PlayerSettings(), new MatchConfig.DisconnectHandling(), lobbies,
-                mock(LobbyTeleporter.class),
-                mock(WorldEngineService.class), mock(SpeedrunnerDisconnectTracker.class),
-                disconnectTasks, mock(CompassManager.class), new GameMessages());
+        PlayerConnectionListener listener = new PlayerConnectionListener(
+                new PlayerConnectionListener.ConnectReads(new PlayerStateStore(),
+                        mock(FakeSpectatorService.class), mock(MessageService.class),
+                        new GameMessages()),
+                new PlayerConnectionListener.ConnectMatch(game, lobbies,
+                        mock(CompassManager.class),
+                        mock(SpeedrunnerDisconnectTracker.class), disconnectTasks),
+                new PlayerConnectionListener.ConnectWorld(mock(LobbyTeleporter.class),
+                        mock(WorldEngineService.class)),
+                new PlayerConnectionListener.ConnectConfig(new PlayerSettings(),
+                        new MatchConfig.DisconnectHandling()),
+                new PlayerConnectionListener.ConnectEdge(plugin.roleTeams(),
+                        mock(TaskScheduler.class)));
 
         listener.onJoin(new PlayerJoinEvent(player, "join"));
 
@@ -88,11 +96,18 @@ class PlayerConnectionListenerJoinTest {
         when(game.instanceForLobby(anyInt())).thenReturn(Optional.of(mock(GameInstance.class)));
         when(game.hasLobbyLocation(anyInt())).thenReturn(true);
         PlayerSettings config = new PlayerSettings();
-        PlayerConnectionListener listener = new PlayerConnectionListener(plugin, players, game,
-                mock(MessageService.class), config, new MatchConfig.DisconnectHandling(), lobbies,
-                mock(LobbyTeleporter.class),
-                mock(WorldEngineService.class), mock(SpeedrunnerDisconnectTracker.class),
-                new HashMap<>(), mock(CompassManager.class), new GameMessages());
+        PlayerConnectionListener listener = new PlayerConnectionListener(
+                new PlayerConnectionListener.ConnectReads(players, fakes,
+                        mock(MessageService.class), new GameMessages()),
+                new PlayerConnectionListener.ConnectMatch(game, lobbies,
+                        mock(CompassManager.class),
+                        mock(SpeedrunnerDisconnectTracker.class), new HashMap<>()),
+                new PlayerConnectionListener.ConnectWorld(mock(LobbyTeleporter.class),
+                        mock(WorldEngineService.class)),
+                new PlayerConnectionListener.ConnectConfig(config,
+                        new MatchConfig.DisconnectHandling()),
+                new PlayerConnectionListener.ConnectEdge(plugin.roleTeams(),
+                        mock(TaskScheduler.class)));
         return new JoinFixture(listener, player, playerId, players, game, config, fakes);
     }
 

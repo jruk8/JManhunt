@@ -28,9 +28,9 @@ public final class FieldButtons {
     public static MenuButton field(MessageService messages, Material material,
             String label, List<String> loreLines, boolean glow,
             Consumer<Player> click, Consumer<Player> rightClick) {
-        return new MenuButton(material,
+        return new MenuButton(new MenuButton.Spec(material,
                 GuiTexts.name(messages, label, label),
                 GuiTexts.lore(messages, loreLines),
-                glow, false, click, rightClick).silent();
+                glow, false, click, rightClick, null, MenuButton.SoundPolicy.CLICK, null)).silent();
     }
 }

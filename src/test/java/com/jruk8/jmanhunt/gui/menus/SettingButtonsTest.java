@@ -12,6 +12,7 @@ import com.jruk8.jmanhunt.gui.GuiConfig;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.gui.MenuButton;
+import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -74,8 +75,9 @@ class SettingButtonsTest {
         when(gui.overrideLobby(any())).thenReturn(null);
         overrides = new OverrideService(config, new LobbyConfig(), () -> {});
         viewer = mock(Player.class);
-        buttons = new SettingButtons(config, overrides, guiData, messages,
-                texts.getManhuntGui(), null, gui, null, null);
+        buttons = new SettingButtons(new SettingDialogs.SettingStores(config, overrides),
+                new SettingDialogs.SettingTexts(messages, texts.getManhuntGui(), null),
+                new SettingDialogs.SettingUi(gui, null, guiData), null);
     }
 
     @Test
@@ -167,8 +169,10 @@ class SettingButtonsTest {
     void resetOnModifiedSettingOpensConfirm() {
         assertTrue(ConfigPathMapper.set(root,
                 "settings.match.autostart.enabled", false));
-        SettingButtons withGui = new SettingButtons(config, overrides, guiData,
-                messages, texts.getManhuntGui(), null, gui, null, null);
+        SettingButtons withGui = new SettingButtons(
+                new SettingDialogs.SettingStores(config, overrides),
+                new SettingDialogs.SettingTexts(messages, texts.getManhuntGui(), null),
+                new SettingDialogs.SettingUi(gui, null, guiData), null);
         MenuButton button = withGui.settingButton(viewer,
                 "settings.match.autostart.enabled", () -> null);
         Player player = mock(Player.class);

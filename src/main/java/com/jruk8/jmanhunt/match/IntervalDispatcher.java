@@ -1,10 +1,13 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.core.DebugLevel;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.message.DebugMessages;
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.TagMath;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.Bukkit;
@@ -28,10 +31,22 @@ import java.util.concurrent.atomic.AtomicReference;
  * (watchers, the dead, and fake spectators skipped).
  */
 public final class IntervalDispatcher {
-    private final JManhuntPlugin plugin;
-    private final ConfigService configService;
-    private final GameManager game;
-    private final PlayerStateStore playerStates;
+    /** Modifier config plus enablement reads. */
+    public record IntervalReads(ConfigService configService, OverrideService overrides) {
+    }
+
+    /** Match, role, and visibility runtime. */
+    public record IntervalRuntime(GameManager game, PlayerStateStore playerStates,
+            FakeSpectatorService fakes) {
+    }
+
+    /** Logger plus scheduler. */
+    public record IntervalEdge(JManhuntLogger log, TaskScheduler tasks) {
+    }
+
+    private final IntervalReads reads;
+    private final IntervalRuntime runtime;
+    private final IntervalEdge edge;
     private final DispatchHook dispatch;
     /** One interval engine per live match, keyed by match id. */
     private final Map<Long, IntervalEngine> intervalEngines = new HashMap<>();
@@ -42,12 +57,11 @@ public final class IntervalDispatcher {
                 List<String> eventArgs);
     }
 
-    public IntervalDispatcher(JManhuntPlugin plugin, ConfigService configService,
-            GameManager game, PlayerStateStore playerStates, DispatchHook dispatch) {
-        this.plugin = plugin;
-        this.configService = configService;
-        this.game = game;
-        this.playerStates = playerStates;
+    public IntervalDispatcher(IntervalReads reads, IntervalRuntime runtime, IntervalEdge edge,
+            DispatchHook dispatch) {
+        this.reads = reads;
+        this.runtime = runtime;
+        this.edge = edge;
         this.dispatch = dispatch;
     }
 
@@ -59,8 +73,8 @@ public final class IntervalDispatcher {
     List<String> enabledModifiers(long matchId) {
         Integer lobby = lobbyOf(matchId);
         List<String> enabled = new ArrayList<>();
-        for (String name : configService.modifierNames()) {
-            if (plugin.overrides().modifierEnabled(lobby, name)) {
+        for (String name : reads.configService().modifierNames()) {
+            if (reads.overrides().modifierEnabled(lobby, name)) {
                 enabled.add(name);
             }
         }
@@ -69,7 +83,7 @@ public final class IntervalDispatcher {
 
     /** Origin lobby of a match for override resolution, or null when gone. */
     private Integer lobbyOf(long matchId) {
-        return game.lobbyOf(matchId);
+        return runtime.game().lobbyOf(matchId);
     }
 
     /**
@@ -111,25 +125,25 @@ public final class IntervalDispatcher {
         cancelChainsFor(matchId, names);
         Integer lobby = lobbyOf(matchId);
         for (String name : names) {
-            if (plugin.overrides().modifierEnabled(lobby, name)) {
+            if (reads.overrides().modifierEnabled(lobby, name)) {
                 scheduleBehaviors(name, matchId);
             }
         }
     }
 
     private void scheduleBehaviors(String name, long matchId) {
-        for (int index : configService.behaviorIndexes(name)) {
-            if (!ModifierTriggers.runsOn(configService.runsOn(name, index), "INTERVAL")) {
+        for (int index : reads.configService().behaviorIndexes(name)) {
+            if (!ModifierTriggers.runsOn(reads.configService().runsOn(name, index), "INTERVAL")) {
                 continue;
             }
-            double intervalSeconds = configService.intervalSeconds(name, index);
+            double intervalSeconds = reads.configService().intervalSeconds(name, index);
             if (intervalSeconds < 0) {
                 continue;
             }
             double deviation = ModifierTriggers.clampDeviation(
-                    configService.intervalDeviation(name, index), intervalSeconds);
+                    reads.configService().intervalDeviation(name, index), intervalSeconds);
             ModifierTriggers.TriggerScope scope = ModifierTriggers.parseScope(
-                    configService.intervalBehavior(name, index));
+                    reads.configService().intervalBehavior(name, index));
             if (deviation > 0.0 && scope == ModifierTriggers.TriggerScope.PER_EXECUTOR) {
                 startPerExecutorInterval(name, index, matchId);
             } else {
@@ -214,18 +228,18 @@ public final class IntervalDispatcher {
     private void scheduleSharedFiring(String name, int index, long matchId) {
         IntervalEngine engine = engine(matchId);
         long generation = engine.generation;
-        double intervalSeconds = configService.intervalSeconds(name, index);
+        double intervalSeconds = reads.configService().intervalSeconds(name, index);
         if (intervalSeconds < 0) {
             return;
         }
         double deviation = ModifierTriggers.clampDeviation(
-                configService.intervalDeviation(name, index), intervalSeconds);
+                reads.configService().intervalDeviation(name, index), intervalSeconds);
         if (deviation <= 0.0) {
             long intervalTicks = ModifierTriggers.secondsToTicks(intervalSeconds);
             AtomicReference<BukkitTask> ref = new AtomicReference<>();
-            ref.set(Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            ref.set(edge.tasks().runTimer(() -> {
                 if (generation != engine.generation
-                        || !plugin.overrides().modifierEnabled(lobbyOf(matchId), name)) {
+                        || !reads.overrides().modifierEnabled(lobbyOf(matchId), name)) {
                     BukkitTask task = ref.get();
                     if (task != null) {
                         task.cancel();
@@ -241,10 +255,10 @@ public final class IntervalDispatcher {
         long delayTicks = ModifierTriggers.jitteredIntervalTicks(intervalSeconds, deviation,
                 ThreadLocalRandom.current().nextDouble());
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
-        ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        ref.set(edge.tasks().runLater(() -> {
             engine.tasks.remove(ref.get());
             if (generation != engine.generation
-                    || !plugin.overrides().modifierEnabled(lobbyOf(matchId), name)) {
+                    || !reads.overrides().modifierEnabled(lobbyOf(matchId), name)) {
                 return;
             }
             runIntervalCommands(name, index, matchId, intervalArg(delayTicks));
@@ -257,7 +271,7 @@ public final class IntervalDispatcher {
     private void startPerExecutorInterval(String name, int index, long matchId) {
         engine(matchId).consoleChained.add(new IntervalEngine.BehaviorChain(name, index));
         scheduleConsoleFiring(name, index, matchId);
-        for (Player player : game.onlineParticipants(matchId)) {
+        for (Player player : runtime.game().onlineParticipants(matchId)) {
             if (chainedPlayers(matchId, name, index).add(player.getUniqueId())) {
                 schedulePlayerFiring(name, index, player.getUniqueId(), matchId);
             }
@@ -275,10 +289,10 @@ public final class IntervalDispatcher {
             return;
         }
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
-        ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        ref.set(edge.tasks().runLater(() -> {
             engine.tasks.remove(ref.get());
             if (generation != engine.generation || !engine.consoleChained.contains(chain)
-                    || !plugin.overrides().modifierEnabled(lobbyOf(matchId), name)) {
+                    || !reads.overrides().modifierEnabled(lobbyOf(matchId), name)) {
                 engine.consoleChained.remove(chain);
                 return;
             }
@@ -301,10 +315,10 @@ public final class IntervalDispatcher {
             return;
         }
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
-        ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        ref.set(edge.tasks().runLater(() -> {
             engine.tasks.remove(ref.get());
             if (generation != engine.generation
-                    || !plugin.overrides().modifierEnabled(lobbyOf(matchId), name)) {
+                    || !reads.overrides().modifierEnabled(lobbyOf(matchId), name)) {
                 chainedPlayers(matchId, name, index).remove(playerId);
                 return;
             }
@@ -318,7 +332,7 @@ public final class IntervalDispatcher {
                         matchId);
             } else {
                 if (target != null) {
-                    plugin.logger().debug(DebugLevel.INFO, DebugMessages::getIntervalSkip, Map.of("modifier", name,
+                    edge.log().debug(DebugLevel.INFO, DebugMessages::getIntervalSkip, Map.of("modifier", name,
                             "player", target.getName(), "why", skip.get()));
                 }
                 chainedPlayers(matchId, name, index).remove(playerId);
@@ -342,12 +356,12 @@ public final class IntervalDispatcher {
 
     /** Reads the live interval config and rolls the next delay, or -1 when disabled. */
     private long currentJitteredDelay(String name, int index) {
-        double intervalSeconds = configService.intervalSeconds(name, index);
+        double intervalSeconds = reads.configService().intervalSeconds(name, index);
         if (intervalSeconds < 0) {
             return -1;
         }
         double deviation = ModifierTriggers.clampDeviation(
-                configService.intervalDeviation(name, index), intervalSeconds);
+                reads.configService().intervalDeviation(name, index), intervalSeconds);
         return ModifierTriggers.jitteredIntervalTicks(intervalSeconds, deviation,
                 ThreadLocalRandom.current().nextDouble());
     }
@@ -360,7 +374,7 @@ public final class IntervalDispatcher {
     /** Starts chains for participants that joined after the modifier began. */
     private void reconcilePlayerChains(String name, int index, long matchId) {
         Set<UUID> active = chainedPlayers(matchId, name, index);
-        for (Player player : game.onlineParticipants(matchId)) {
+        for (Player player : runtime.game().onlineParticipants(matchId)) {
             if (active.add(player.getUniqueId())) {
                 schedulePlayerFiring(name, index, player.getUniqueId(), matchId);
             }
@@ -373,7 +387,7 @@ public final class IntervalDispatcher {
      * when they trigger. Cleanup commands never go through here.
      */
     public void runDelayed(String name, int index, Runnable dispatch, long matchId) {
-        long delay = Math.max(0L, configService.delayTicks(name, index));
+        long delay = Math.max(0L, reads.configService().delayTicks(name, index));
         if (delay <= 0L) {
             dispatch.run();
             return;
@@ -381,7 +395,7 @@ public final class IntervalDispatcher {
         IntervalEngine engine = engine(matchId);
         long generation = engine.generation;
         AtomicReference<BukkitTask> ref = new AtomicReference<>();
-        ref.set(Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        ref.set(edge.tasks().runLater(() -> {
             try {
                 // A restart or teardown between scheduling and firing voids
                 // the dispatch: stale interval output never leaks into a
@@ -413,12 +427,12 @@ public final class IntervalDispatcher {
     /** INTERVAL execution roster: eligible players only, skips logged. */
     private List<Player> intervalTargets(String name, long matchId) {
         List<Player> targets = new ArrayList<>();
-        for (Player player : game.onlineParticipants(matchId)) {
+        for (Player player : runtime.game().onlineParticipants(matchId)) {
             Optional<String> skip = intervalSkip(player, matchId);
             if (skip.isEmpty()) {
                 targets.add(player);
             } else {
-                plugin.logger().debug(DebugLevel.INFO, DebugMessages::getIntervalSkip, Map.of("modifier", name,
+                edge.log().debug(DebugLevel.INFO, DebugMessages::getIntervalSkip, Map.of("modifier", name,
                         "player", player.getName(), "why", skip.get()));
             }
         }
@@ -427,9 +441,9 @@ public final class IntervalDispatcher {
 
     /** Live-state INTERVAL gate for one player; empty when eligible. */
     private Optional<String> intervalSkip(Player player, long matchId) {
-        return intervalSkipWhy(playerStates.role(player),
-                game.isActiveInInstance(matchId, player.getUniqueId()),
-                player.isDead(), plugin.fakeSpectators().isFakeSpectator(player));
+        return intervalSkipWhy(runtime.playerStates().role(player),
+                runtime.game().isActiveInInstance(matchId, player.getUniqueId()),
+                player.isDead(), runtime.fakes().isFakeSpectator(player));
     }
 
     /**

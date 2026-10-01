@@ -7,11 +7,12 @@ import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
 import lombok.Getter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Logger;
 
 /**
  * Creates and reloads the Okaeri root and sounds stores. Both files
@@ -24,36 +25,38 @@ public final class ConfigRegistrar {
     private static final Set<String> CURRENT_CATEGORIES =
             Set.of("match", "compass", "players", "server");
 
-    private final JavaPlugin plugin;
+    private final Path dataFolder;
+    private final Logger log;
     private final SectionPinner sections = new SectionPinner();
     @Getter
     private JManhuntConfig root;
     @Getter
     private SoundsConfig sounds;
 
-    public ConfigRegistrar(JavaPlugin plugin) {
-        this.plugin = plugin;
+    public ConfigRegistrar(Path dataFolder, Logger log) {
+        this.dataFolder = dataFolder;
+        this.log = log;
     }
 
     public void register() {
-        List<String> stale = staleBlocks(new File(plugin.getDataFolder(), "config.yml"));
+        List<String> stale = staleBlocks(dataFolder.resolve("config.yml").toFile());
         if (!stale.isEmpty()) {
-            plugin.getLogger().warning("config.yml still has retired blocks ("
+            log.warning("config.yml still has retired blocks ("
                     + String.join(", ", stale) + "); settings regrouped under match, compass, "
                     + "players, and server and sounds moved to sounds.yml, so re-apply any "
                     + "tweaks there. The stale blocks will be removed.");
         }
         this.root = ConfigManager.create(JManhuntConfig.class, it -> {
             it.withConfigurer(new YamlBukkitConfigurer(), new SerdesBukkit());
-            it.withBindFile(new File(plugin.getDataFolder(), "config.yml"));
+            it.withBindFile(dataFolder.resolve("config.yml").toFile());
             it.withRemoveOrphans(true);
-            it.withLogger(plugin.getLogger());
+            it.withLogger(log);
         });
         this.sounds = ConfigManager.create(SoundsConfig.class, it -> {
             it.withConfigurer(new YamlBukkitConfigurer(), new SerdesBukkit());
-            it.withBindFile(new File(plugin.getDataFolder(), "sounds.yml"));
+            it.withBindFile(dataFolder.resolve("sounds.yml").toFile());
             it.withRemoveOrphans(true);
-            it.withLogger(plugin.getLogger());
+            it.withLogger(log);
         });
         reload();
     }
@@ -104,7 +107,7 @@ public final class ConfigRegistrar {
             config.saveDefaults();
             config.load(true);
         } catch (RuntimeException exception) {
-            plugin.getLogger().warning("Could not load " + name + " (" + exception.getMessage()
+            log.warning("Could not load " + name + " (" + exception.getMessage()
                     + "); check the file, then run /mh reload.");
         }
     }

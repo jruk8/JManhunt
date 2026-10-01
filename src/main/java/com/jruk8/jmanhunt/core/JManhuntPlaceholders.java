@@ -28,22 +28,20 @@ import org.bukkit.OfflinePlayer;
  * implementation backs both paths.
  */
 public final class JManhuntPlaceholders {
-    private final StatsManager stats;
+    /** Stats, game, states, and win checks. */
+    public record PlaceholderReads(StatsManager stats, GameManager game,
+            PlayerStateStore playerStates, WinConditionEngine winConditions) {
+    }
+
+    private final PlaceholderReads reads;
     private final MessageService messages;
-    private final GameManager game;
-    private final PlayerStateStore playerStates;
-    private final WinConditionEngine winConditions;
     private final PlaceholderConfig placeholders;
     private final MatchSettingsFacade match;
 
-    public JManhuntPlaceholders(StatsManager stats, MessageService messages, GameManager game,
-            PlayerStateStore playerStates, WinConditionEngine winConditions,
+    public JManhuntPlaceholders(PlaceholderReads reads, MessageService messages,
             PlaceholderConfig placeholders, MatchSettingsFacade match) {
-        this.stats = stats;
+        this.reads = reads;
         this.messages = messages;
-        this.game = game;
-        this.playerStates = playerStates;
-        this.winConditions = winConditions;
         this.placeholders = placeholders;
         this.match = match;
     }
@@ -79,7 +77,7 @@ public final class JManhuntPlaceholders {
 
     /** Player-scoped values: career totals plus live session numbers. Null when unknown. */
     private String playerValue(OfflinePlayer player, String key) {
-        CareerStats value = stats.career(player.getUniqueId());
+        CareerStats value = reads.stats().career(player.getUniqueId());
         return switch (key) {
             case "time_as_speedrunner" -> String.valueOf(value.timeSpeedrunner);
             case "time_as_hunter" -> String.valueOf(value.timeHunter);
@@ -117,15 +115,16 @@ public final class JManhuntPlaceholders {
                             instance.elapsedMillis(System.currentTimeMillis())))
                     .orElse("-1");
             case "game_speedrunners_remaining" -> String.valueOf(
-                    match.map(game::activeRunnerCount).orElse(0));
+                    match.map(reads.game()::activeRunnerCount).orElse(0));
             case "game_hunters_remaining" -> String.valueOf(
-                    match.map(game::activeHunterCount).orElse(0));
+                    match.map(reads.game()::activeHunterCount).orElse(0));
             case "game_players_remaining" -> String.valueOf(match
-                    .map(instance -> game.activeRunnerCount(instance) + game.activeHunterCount(instance))
+                    .map(instance -> reads.game().activeRunnerCount(instance)
+                            + reads.game().activeHunterCount(instance))
                     .orElse(0));
             case "game_spectators" -> String.valueOf(match.map(this::spectatorCount).orElse(0));
-            case "lobby_lifetime_sessions" -> String.valueOf(stats.lifetimeSessions(lobbyKey.lobbyId()));
-            case "lobby_current_sessions" -> String.valueOf(game.instancesForLobby(lobbyKey.lobbyId()).size());
+            case "lobby_lifetime_sessions" -> String.valueOf(reads.stats().lifetimeSessions(lobbyKey.lobbyId()));
+            case "lobby_current_sessions" -> String.valueOf(reads.game().instancesForLobby(lobbyKey.lobbyId()).size());
             case "game_phase" -> LobbyPlaceholders.phaseFor(match.orElse(null), prestartEnabled(),
                     placeholders.getPhases());
             case "game_time_remaining" -> String.valueOf(match
@@ -141,7 +140,7 @@ public final class JManhuntPlaceholders {
      * game wins, otherwise the lobby's own match.
      */
     private Optional<GameInstance> resolveLobbyInstance(int lobbyId) {
-        List<GameInstance> matches = game.instancesForLobby(lobbyId);
+        List<GameInstance> matches = reads.game().instancesForLobby(lobbyId);
         return matches.stream()
                 .sorted(Comparator.comparing((GameInstance instance) -> instance.subLobby() == null)
                         .thenComparing(instance -> instance.subLobby() == null
@@ -151,8 +150,8 @@ public final class JManhuntPlaceholders {
 
     private int spectatorCount(GameInstance instance) {
         int count = 0;
-        for (var player : game.onlineAssignedPlayers(instance)) {
-            if (playerStates.role(player).isWatching()) {
+        for (var player : reads.game().onlineAssignedPlayers(instance)) {
+            if (reads.playerStates().role(player).isWatching()) {
                 count++;
             }
         }
@@ -165,12 +164,12 @@ public final class JManhuntPlaceholders {
 
     /** Survive clock left in milliseconds, or -1 when none runs. */
     private long timeRemainingMillis(GameInstance instance) {
-        Double runnerSecs = winConditions.enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME)
-                ? winConditions.time(Role.SPEEDRUNNER) : null;
-        Double hunterSecs = winConditions.enabled(Role.HUNTER, WinCondition.TIME_LIMIT)
-                ? winConditions.time(Role.HUNTER) : null;
-        Double cancelSecs = winConditions.cancelSurviveEnabled()
-                ? winConditions.cancelSurviveTime() : null;
+        Double runnerSecs = reads.winConditions().enabled(Role.SPEEDRUNNER, WinCondition.SURVIVE_TIME)
+                ? reads.winConditions().time(Role.SPEEDRUNNER) : null;
+        Double hunterSecs = reads.winConditions().enabled(Role.HUNTER, WinCondition.TIME_LIMIT)
+                ? reads.winConditions().time(Role.HUNTER) : null;
+        Double cancelSecs = reads.winConditions().cancelSurviveEnabled()
+                ? reads.winConditions().cancelSurviveTime() : null;
         TimeLimitService.SurviveOutcome limit = TimeLimitService.resolveSurvive(
                 runnerSecs, hunterSecs, cancelSecs);
         if (limit == null) {
@@ -188,16 +187,16 @@ public final class JManhuntPlaceholders {
     }
 
     private Role roleOf(OfflinePlayer player) {
-        return playerStates.role(player.getUniqueId());
+        return reads.playerStates().role(player.getUniqueId());
     }
 
     /** Session kills or deaths: -1 outside a match, 0 with no score yet. */
     private int sessionStat(OfflinePlayer player, boolean kills) {
-        Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
+        Optional<GameInstance> match = reads.game().instanceOf(player.getUniqueId());
         if (match.isEmpty()) {
             return -1;
         }
-        return stats.matchStats(match.get().matchId(), player.getUniqueId())
+        return reads.stats().matchStats(match.get().matchId(), player.getUniqueId())
                 .map(slice -> kills ? slice.kills : slice.deaths)
                 .orElse(0);
     }

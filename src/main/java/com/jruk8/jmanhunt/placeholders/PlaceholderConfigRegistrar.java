@@ -6,8 +6,8 @@ import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
 import lombok.Getter;
-import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
+import java.nio.file.Path;
 
 /**
  * Creates and reloads the Okaeri placeholders store. Defaults generate
@@ -16,17 +16,17 @@ import java.io.File;
  */
 public final class PlaceholderConfigRegistrar {
 
-    private final JavaPlugin plugin;
+    private final Path dataFolder;
     private final SectionPinner sections = new SectionPinner();
     @Getter
     private PlaceholderConfig placeholderConfig;
 
-    public PlaceholderConfigRegistrar(JavaPlugin plugin) {
-        this.plugin = plugin;
+    public PlaceholderConfigRegistrar(Path dataFolder) {
+        this.dataFolder = dataFolder;
     }
 
     public void register() {
-        File file = new File(plugin.getDataFolder(), "placeholders.yml");
+        File file = dataFolder.resolve("placeholders.yml").toFile();
         this.placeholderConfig = ConfigManager.create(PlaceholderConfig.class, it -> {
             it.withConfigurer(new YamlBukkitConfigurer(), new SerdesBukkit());
             it.withBindFile(file);

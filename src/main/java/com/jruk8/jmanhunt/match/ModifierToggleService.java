@@ -1,7 +1,8 @@
 package com.jruk8.jmanhunt.match;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,16 +24,19 @@ public final class ModifierToggleService {
         boolean afterPrestart(String name, int index);
     }
 
-    private final JManhuntPlugin plugin;
-    private final ConfigService configService;
+    /** Overrides, logger, and modifier reads. */
+    public record ToggleReads(OverrideService overrides, JManhuntLogger log,
+            ConfigService configService) {
+    }
+
+    private final ToggleReads reads;
     private final GameManager game;
     private final IntervalDispatcher intervals;
     private final Commands commands;
 
-    public ModifierToggleService(JManhuntPlugin plugin, ConfigService configService,
-            GameManager game, IntervalDispatcher intervals, Commands commands) {
-        this.plugin = plugin;
-        this.configService = configService;
+    public ModifierToggleService(ToggleReads reads, GameManager game,
+            IntervalDispatcher intervals, Commands commands) {
+        this.reads = reads;
         this.game = game;
         this.intervals = intervals;
         this.commands = commands;
@@ -55,11 +59,11 @@ public final class ModifierToggleService {
             }
             long matchId = instance.matchId();
             Integer lobby = game.lobbyOf(matchId);
-            boolean dedup = plugin.overrides().getBoolean(lobby,
+            boolean dedup = reads.overrides().getBoolean(lobby,
                     "advanced.misc.modifier-editor.prevent-duplicate-toggle", true);
             List<String> activating = new ArrayList<>();
             for (String name : names) {
-                if (plugin.overrides().modifierEnabled(lobby, name)) {
+                if (reads.overrides().modifierEnabled(lobby, name)) {
                     activating.add(name);
                 } else if (!dedup || instance.markModifierCleaned(name)) {
                     runModifierCleanup(name, matchId);
@@ -93,7 +97,7 @@ public final class ModifierToggleService {
 
     /** Warns that a repeat mid-match toggle was skipped by the once-only guard. */
     private void warnToggleRepeat(String name, String action) {
-        plugin.logger().warning("Modifier '" + name + "' already " + action
+        reads.log().warning("Modifier '" + name + "' already " + action
                 + " this match; ignoring repeat toggle.");
     }
 
@@ -104,8 +108,8 @@ public final class ModifierToggleService {
 
     /** All ON_START behaviors of one modifier; the prestart already passed. */
     private void fireModifierStart(String name, long matchId) {
-        for (int index : configService.behaviorIndexes(name)) {
-            if (ModifierTriggers.runsOn(configService.runsOn(name, index), "ON_START")) {
+        for (int index : reads.configService().behaviorIndexes(name)) {
+            if (ModifierTriggers.runsOn(reads.configService().runsOn(name, index), "ON_START")) {
                 commands.fireBehavior(name, index, matchId);
             }
         }
@@ -113,8 +117,8 @@ public final class ModifierToggleService {
 
     /** Non-deferred ON_START behaviors, mirroring match-start dispatch. */
     private void firePreStartModifier(String name, long matchId) {
-        for (int index : configService.behaviorIndexes(name)) {
-            if (ModifierTriggers.runsOn(configService.runsOn(name, index), "ON_START")
+        for (int index : reads.configService().behaviorIndexes(name)) {
+            if (ModifierTriggers.runsOn(reads.configService().runsOn(name, index), "ON_START")
                     && !commands.afterPrestart(name, index)) {
                 commands.fireBehavior(name, index, matchId);
             }
@@ -123,9 +127,9 @@ public final class ModifierToggleService {
 
     /** True when any behavior of the modifier runs on a live INTERVAL. */
     private boolean hasIntervalBehavior(String name) {
-        for (int index : configService.behaviorIndexes(name)) {
-            if (ModifierTriggers.runsOn(configService.runsOn(name, index), "INTERVAL")
-                    && configService.intervalSeconds(name, index) >= 0) {
+        for (int index : reads.configService().behaviorIndexes(name)) {
+            if (ModifierTriggers.runsOn(reads.configService().runsOn(name, index), "INTERVAL")
+                    && reads.configService().intervalSeconds(name, index) >= 0) {
                 return true;
             }
         }

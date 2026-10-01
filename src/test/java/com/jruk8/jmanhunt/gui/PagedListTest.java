@@ -14,7 +14,8 @@ import org.junit.jupiter.api.Test;
 class PagedListTest {
 
     private static MenuButton button(Material material) {
-        return new MenuButton(material, Component.text("x"), null, false, false, null);
+        return new MenuButton(new MenuButton.Spec(material, Component.text("x"), null, false, false, null, null,
+                null, MenuButton.SoundPolicy.CLICK, null));
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
@@ -31,45 +32,36 @@ import java.util.function.Consumer;
  * through the after-leave callback.
  */
 public final class MatchLeaveService {
-    private final JManhuntPlugin plugin;
+    /** Match settings, engine settings, fakes, and role teams. */
+    public record LeaveReads(MatchSettingsFacade match,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            FakeSpectatorService fakes, RoleTeamService roleTeams) {
+    }
+
+    /** States, compass, commands, engine, store, flags, and callback. */
+    public record LeaveMatch(PlayerStateStore playerStates, CompassManager compass,
+            GameStateCommandManager stateCommands, WorldEngineService worldEngine,
+            MatchStore store, FlagStore flagStore, Consumer<GameInstance> afterLeave) {
+    }
+
+    private final LeaveReads reads;
+    private final LeaveMatch services;
     private final MessageService messages;
     private final GameMessages game;
-    private final PlayerStateStore playerStates;
-    private final CompassManager compass;
-    private final GameStateCommandManager stateCommands;
-    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
-    private final MatchSettingsFacade match;
-    private final WorldEngineService worldEngine;
-    private final MatchStore store;
     private final MatchMessaging messaging;
-    private final FlagStore flagStore;
-    private final Consumer<GameInstance> afterLeave;
 
-    public MatchLeaveService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
-            PlayerStateStore playerStates, CompassManager compass,
-            GameStateCommandManager stateCommands,
-            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
-            MatchSettingsFacade match,
-            WorldEngineService worldEngine, MatchStore store, MatchMessaging messaging,
-            FlagStore flagStore, Consumer<GameInstance> afterLeave) {
-        this.plugin = plugin;
+    public MatchLeaveService(LeaveReads reads, LeaveMatch services, MessageService messages,
+            GameMessages game, MatchMessaging messaging) {
+        this.reads = reads;
+        this.services = services;
         this.messages = messages;
         this.game = game;
-        this.playerStates = playerStates;
-        this.compass = compass;
-        this.stateCommands = stateCommands;
-        this.engineSettings = engineSettings;
-        this.match = match;
-        this.worldEngine = worldEngine;
-        this.store = store;
         this.messaging = messaging;
-        this.flagStore = flagStore;
-        this.afterLeave = afterLeave;
     }
 
     /** Configured leave destination, SPECTATOR by default. */
     public LeaveDestination leaveDestination(Integer lobby) {
-        return LeaveDestination.parse(match.gameLeaveDestination(lobby));
+        return LeaveDestination.parse(reads.match().gameLeaveDestination(lobby));
     }
 
     /**
@@ -100,7 +92,7 @@ public final class MatchLeaveService {
         }
         announceLeaves(instance, leftRoles, leftNames);
         if (removed > 0) {
-            afterLeave.accept(instance);
+            services.afterLeave().accept(instance);
         }
         return removed;
     }
@@ -112,23 +104,23 @@ public final class MatchLeaveService {
         if (!instance.isActive(playerId)) {
             return null;
         }
-        Role before = playerStates.role(player);
+        Role before = services.playerStates().role(player);
         if (instance.begun() && before.isParticipant()) {
             if (dropGear) {
                 PlayerResetService.dropAllGear(player);
-                stateCommands.resetVitals(player);
+                services.stateCommands().resetVitals(player);
             } else {
-                stateCommands.resetPlayer(player);
+                services.stateCommands().resetPlayer(player);
             }
         }
-        playerStates.setSpeedrunnerAlive(playerId, false);
+        services.playerStates().setSpeedrunnerAlive(playerId, false);
         instance.deactivate(playerId);
-        stateCommands.untrackMatchExit(List.of(playerId));
-        playerStates.clearMatchFor(List.of(playerId));
-        flagStore.removePlayer(instance.matchId(), player.getName());
-        compass.removeCompasses(player);
+        services.stateCommands().untrackMatchExit(List.of(playerId));
+        services.playerStates().clearMatchFor(List.of(playerId));
+        services.flagStore().removePlayer(instance.matchId(), player.getName());
+        services.compass().removeCompasses(player);
         applyLeaveDestination(instance, player, dropGear, destination);
-        plugin.roleTeams().sync(player);
+        reads.roleTeams().sync(player);
         messages.messageRaw(player, game.getLeaveSuccess(), Map.of());
         return before;
     }
@@ -143,11 +135,11 @@ public final class MatchLeaveService {
         if (removed == 0) {
             return 0;
         }
-        playerStates.setRole(player, role);
-        worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
-        worldEngine.setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
-        plugin.fakeSpectators().disable(player);
-        plugin.roleTeams().sync(player);
+        services.playerStates().setRole(player, role);
+        services.worldEngine().teleportToLobby(List.of(player), instance.originLobbyId());
+        services.worldEngine().setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
+        reads.fakes().disable(player);
+        reads.roleTeams().sync(player);
         return removed;
     }
 
@@ -155,19 +147,19 @@ public final class MatchLeaveService {
     private void applyLeaveDestination(GameInstance instance, Player player, boolean dropGear,
             LeaveDestination destination) {
         if (destination == LeaveDestination.LOBBY) {
-            playerStates.setRole(player, Role.NONE);
-            worldEngine.teleportToLobby(List.of(player), instance.originLobbyId());
-            worldEngine.setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
-            if (plugin.fakeSpectators().isFakeSpectator(player)) {
-                plugin.fakeSpectators().disable(player);
+            services.playerStates().setRole(player, Role.NONE);
+            services.worldEngine().teleportToLobby(List.of(player), instance.originLobbyId());
+            services.worldEngine().setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
+            if (reads.fakes().isFakeSpectator(player)) {
+                reads.fakes().disable(player);
             }
         } else {
-            playerStates.setRole(player, Role.SPECTATOR);
-            plugin.fakeSpectators().enable(player);
+            services.playerStates().setRole(player, Role.SPECTATOR);
+            reads.fakes().enable(player);
             if (!dropGear && instance.cellIndex().isPresent()) {
                 // Auto-leave pulled them out of bounds: put the watcher
                 // back in the cell instead of stranding them outside it.
-                worldEngine.teleportJoinersToCell(instance, List.of(player),
+                services.worldEngine().teleportJoinersToCell(instance, List.of(player),
                         instance.cellIndex().getAsLong());
             }
         }
@@ -180,11 +172,11 @@ public final class MatchLeaveService {
             if (before == Role.HUNTER) {
                 messaging.sendToInstance(instance, game.getHunterLeft(),
                         Map.of("player", leftNames.get(index),
-                                "remaining", String.valueOf(store.activeHunterCount(instance))));
+                                "remaining", String.valueOf(services.store().activeHunterCount(instance))));
             } else if (before == Role.SPEEDRUNNER) {
                 messaging.sendToInstance(instance, game.getSpeedrunnerLeft(),
                         Map.of("player", leftNames.get(index),
-                                "remaining", String.valueOf(store.activeRunnerCount(instance))));
+                                "remaining", String.valueOf(services.store().activeRunnerCount(instance))));
             }
         }
     }
@@ -197,15 +189,15 @@ public final class MatchLeaveService {
      * Returns true when the player was removed.
      */
     public boolean autoLeaveIfOutside(Player player, Location at) {
-        Optional<GameInstance> match = store.instanceOf(player.getUniqueId());
+        Optional<GameInstance> match = services.store().instanceOf(player.getUniqueId());
         if (match.isEmpty() || !match.get().begun() || match.get().ending()) {
             return false;
         }
-        if (!playerStates.role(player).isParticipant()) {
+        if (!services.playerStates().role(player).isParticipant()) {
             return false;
         }
         GameInstance instance = match.get();
-        if (at.getWorld() != null && at.getWorld().getName().equals(worldEngine.lobbyWorldName())) {
+        if (at.getWorld() != null && at.getWorld().getName().equals(services.worldEngine().lobbyWorldName())) {
             messages.messageRaw(player, game.getAutoLeftLobbyWorld(), Map.of());
             leaveMatch(instance, List.of(player), false);
             return true;
@@ -217,7 +209,7 @@ public final class MatchLeaveService {
         if (environment != World.Environment.NORMAL && environment != World.Environment.NETHER) {
             return false;
         }
-        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(reads.engineSettings());
         if (!config.enabled() || instance.cellIndex().isEmpty()) {
             return false;
         }

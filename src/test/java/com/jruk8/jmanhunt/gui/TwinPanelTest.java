@@ -18,8 +18,8 @@ import static org.mockito.Mockito.verify;
 class TwinPanelTest {
 
     private static MenuButton spec(String name) {
-        return new MenuButton(Material.STONE, Component.text(name), null,
-                false, false, player -> {});
+        return new MenuButton(new MenuButton.Spec(Material.STONE, Component.text(name), null,
+                false, false, player -> {}, null, null, MenuButton.SoundPolicy.CLICK, null));
     }
 
     @Test

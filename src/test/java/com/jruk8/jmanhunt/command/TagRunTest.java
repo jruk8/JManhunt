@@ -17,22 +17,21 @@ class TagRunTest {
         final List<String> warnings = new ArrayList<>();
         final List<String> commands = new ArrayList<>();
         final TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(11), warnings::add),
-                "funcs",
-                text -> { },
-                text -> { },
-                (id, pitch, volume) -> { },
-                (id, pitch, volume) -> { },
-                (player, reason) -> { },
-                (role, reason) -> { },
-                7L,
-                new TagBackends(StatValues.inert(), new FlagStore(),
-                        (text, name) -> text, RosterValues.inert(), PlayerSinks.inert()),
-                List.of(),
-                detail -> { },
-                (role, text) -> { },
-                (role, id, pitch, volume) -> { },
-                (line, provenance) -> commands.add(line));
+                new TagContext.TagIdentity(
+                        ModifierTagScope.match("Steve", List.of(), new Random(11),
+                                warnings::add),
+                        "funcs"),
+                new TagContext.TagSinks(text -> { }, text -> { },
+                        (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                        (line, provenance) -> commands.add(line)),
+                new TagContext.TagRole((role, text) -> { },
+                        (role, id, pitch, volume) -> { }),
+                new TagContext.TagMatch(7L,
+                        new TagBackends(StatValues.inert(), new FlagStore(),
+                                (text, name) -> text, RosterValues.inert(),
+                                PlayerSinks.inert()),
+                        List.of(), detail -> { }, (player, reason) -> { },
+                        (role, reason) -> { }));
 
         String replace(String command) {
             return CommandPlaceholders.replace(command, "Steve", 0, 0, 0, context);
@@ -108,13 +107,10 @@ class TagRunTest {
     @Test
     void runWithoutSinkWarnsAndSkips() {
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.of(
-                ModifierTagScope.match("Steve", List.of(), new Random(11), warnings::add),
-                "plain",
-                text -> { },
-                text -> { },
-                (id, pitch, volume) -> { },
-                (id, pitch, volume) -> { });
+        TagContext context = TagContext.of(new TagContext.TagIdentity(ModifierTagScope.match("Steve", List.of(),
+                new Random(11), warnings::add), "plain"),
+                text -> { }, text -> { },
+                (id, pitch, volume) -> { }, (id, pitch, volume) -> { });
 
         assertEquals("", CommandPlaceholders.replace("<run:say hi>", "Steve", 0, 0, 0, context));
         assertEquals(1, warnings.size());

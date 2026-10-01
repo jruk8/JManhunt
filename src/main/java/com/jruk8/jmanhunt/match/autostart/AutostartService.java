@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.match.autostart;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.lobby.LobbyService;
@@ -34,16 +34,20 @@ import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
  * queued players which roles are still missing.
  */
 public final class AutostartService {
-    private final JManhuntPlugin plugin;
-    private final MatchSettingsFacade settings;
+    /** Match settings plus the scheduler. */
+    public record AutoConfig(MatchSettingsFacade settings, TaskScheduler tasks) {
+    }
+
+    /** States, lobbies, engine, store, and control. */
+    public record AutoMatch(PlayerStateStore playerStates, LobbyService lobbies,
+            WorldEngineService worldEngine, MatchStore store, MatchControl control) {
+    }
+
+    private final AutoConfig config;
+    private final AutoMatch match;
     private final MessageService messages;
-    private final PlayerStateStore playerStates;
-    private final LobbyService lobbies;
-    private final WorldEngineService worldEngine;
-    private final MatchStore store;
     private final MatchMessaging messaging;
     private final ManhuntMessages manhunt;
-    private final MatchControl control;
     /** Per-lobby autostart countdowns, keyed by lobby id. */
     private final Map<Integer, AutostartCountdown> autostartCountdowns = new HashMap<>();
     /** Last shortfall broadcast per lobby, for the needs-more interval. */
@@ -58,30 +62,23 @@ public final class AutostartService {
         int configured;
     }
 
-    public AutostartService(JManhuntPlugin plugin, MatchSettingsFacade settings,
-            MessageService messages, PlayerStateStore playerStates,
-            LobbyService lobbies, WorldEngineService worldEngine, MatchStore store,
-            MatchMessaging messaging, ManhuntMessages manhunt, MatchControl control) {
-        this.plugin = plugin;
-        this.settings = settings;
+    public AutostartService(AutoConfig config, AutoMatch match, MessageService messages,
+            MatchMessaging messaging, ManhuntMessages manhunt) {
+        this.config = config;
+        this.match = match;
         this.messages = messages;
-        this.playerStates = playerStates;
-        this.lobbies = lobbies;
-        this.worldEngine = worldEngine;
-        this.store = store;
         this.messaging = messaging;
         this.manhunt = manhunt;
-        this.control = control;
     }
 
     public void updateAutostartState() {
         if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(plugin, () -> updateAutostartState());
+            config.tasks().run(() -> updateAutostartState());
             return;
         }
         pruneAutostartCountdowns();
-        for (int lobbyId : lobbies.lobbyIds()) {
-            if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
+        for (int lobbyId : match.lobbies().lobbyIds()) {
+            if (!match.lobbies().multiLobbyAllowed() && lobbyId != 0) {
                 continue;
             }
             updateAutostartState(lobbyId);
@@ -91,32 +88,32 @@ public final class AutostartService {
     /** Drops countdowns for deleted lobbies (and non-zero lobbies with the engine off). */
     private void pruneAutostartCountdowns() {
         for (int lobbyId : List.copyOf(autostartCountdowns.keySet())) {
-            if (lobbies.get(lobbyId).isEmpty() || (!lobbies.multiLobbyAllowed() && lobbyId != 0)) {
+            if (match.lobbies().get(lobbyId).isEmpty() || (!match.lobbies().multiLobbyAllowed() && lobbyId != 0)) {
                 cancelAutostartCountdown(lobbyId, false);
             }
         }
     }
 
     private void updateAutostartState(int lobbyId) {
-        Optional<Lobby> lobby = lobbies.get(lobbyId);
+        Optional<Lobby> lobby = match.lobbies().get(lobbyId);
         if (lobby.isEmpty() || liveMatchBlocks(lobbyId)
                 || !isEligibleToStart(lobby.get())) {
             cancelAutostartCountdown(lobbyId, true);
             return;
         }
-        if (!settings.autostartEnabled(lobbyId)) {
+        if (!config.settings().autostartEnabled(lobbyId)) {
             cancelAutostartCountdown(lobbyId, true);
             return;
         }
         if (autostartCountdowns.containsKey(lobbyId)) {
             return;
         }
-        int configured = Math.max(0, settings.autostartCountdownSeconds(lobbyId));
+        int configured = Math.max(0, config.settings().autostartCountdownSeconds(lobbyId));
         if (configured == 0) {
-            control.start(lobbyId);
+            match.control().start(lobbyId);
             return;
         }
-        worldEngine.prepareNextCell();
+        match.worldEngine().prepareNextCell();
         AutostartCountdown countdown = new AutostartCountdown();
         countdown.configured = configured;
         countdown.remaining = configured;
@@ -124,8 +121,8 @@ public final class AutostartService {
         sendAutostartEligible(lobby.get(), configured);
         messaging.playLobbySound(lobbyId, "game.autostart-countdown");
         // Eligible covered these seconds already; ticks announce the rest.
-        countdown.task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            Optional<Lobby> tickLobby = lobbies.get(lobbyId);
+        countdown.task = config.tasks().runTimer(() -> {
+            Optional<Lobby> tickLobby = match.lobbies().get(lobbyId);
             if (liveMatchBlocks(lobbyId) || tickLobby.isEmpty()
                     || !isEligibleToStart(tickLobby.get())) {
                 cancelAutostartCountdown(lobbyId, true);
@@ -134,7 +131,7 @@ public final class AutostartService {
             countdown.remaining--;
             if (countdown.remaining <= 0) {
                 cancelAutostartCountdown(lobbyId, false);
-                control.start(lobbyId);
+                match.control().start(lobbyId);
                 return;
             }
             announceAutostartCheckpoint(lobbyId, tickLobby.get(), countdown, countdown.remaining);
@@ -172,7 +169,7 @@ public final class AutostartService {
     }
 
     private String countdownStyle(int lobbyId) {
-        return settings.autostartCountdownStyle(lobbyId);
+        return config.settings().autostartCountdownStyle(lobbyId);
     }
 
     private String hunterColor() {
@@ -249,8 +246,8 @@ public final class AutostartService {
      * fresh queue may start the next child sublobby.
      */
     private boolean liveMatchBlocks(int lobbyId) {
-        return store.instanceForLobby(lobbyId).isPresent()
-                && !lobbies.midMatchPolicy().allowsConcurrentStart(lobbies.multiLobbyAllowed());
+        return match.store().instanceForLobby(lobbyId).isPresent()
+                && !match.lobbies().midMatchPolicy().allowsConcurrentStart(match.lobbies().multiLobbyAllowed());
     }
 
     public void cancelAutostartCountdown(int lobbyId, boolean announce) {
@@ -292,12 +289,12 @@ public final class AutostartService {
             if (!lobby.contains(player.getUniqueId())) {
                 continue;
             }
-            if (store.isInLiveInstance(player.getUniqueId())) {
+            if (match.store().isInLiveInstance(player.getUniqueId())) {
                 continue;
             }
-            if (playerStates.role(player) == Role.HUNTER) {
+            if (match.playerStates().role(player) == Role.HUNTER) {
                 hunters++;
-            } else if (playerStates.role(player) == Role.SPEEDRUNNER) {
+            } else if (match.playerStates().role(player) == Role.SPEEDRUNNER) {
                 speedrunners++;
             }
         }
@@ -308,16 +305,16 @@ public final class AutostartService {
     private Map<Role, Integer> shortfallFor(Lobby lobby) {
         int[] counts = countQueuedRoles(lobby);
         return autostartShortfall(counts[0], counts[1],
-                settings.autostartMinimumHunters(lobby.id()),
-                settings.autostartMinimumSpeedrunners(lobby.id()));
+                config.settings().autostartMinimumHunters(lobby.id()),
+                config.settings().autostartMinimumSpeedrunners(lobby.id()));
     }
 
     /** Per-role overfill of a lobby's online members against the autostart maximums. */
     private Map<Role, Integer> overfillFor(Lobby lobby) {
         int[] counts = countQueuedRoles(lobby);
         return autostartOverfill(counts[0], counts[1],
-                settings.autostartMaximumHunters(lobby.id()),
-                settings.autostartMaximumSpeedrunners(lobby.id()));
+                config.settings().autostartMaximumHunters(lobby.id()),
+                config.settings().autostartMaximumSpeedrunners(lobby.id()));
     }
 
     /**
@@ -367,27 +364,27 @@ public final class AutostartService {
      */
     public void broadcastAutostartShortfalls() {
         long now = System.currentTimeMillis();
-        for (int lobbyId : lobbies.lobbyIds()) {
+        for (int lobbyId : match.lobbies().lobbyIds()) {
             broadcastLobbyShortfall(lobbyId, now);
         }
-        lastShortfallBroadcast.keySet().removeIf(id -> lobbies.get(id).isEmpty());
-        lastNagTeams.keySet().removeIf(id -> lobbies.get(id).isEmpty());
+        lastShortfallBroadcast.keySet().removeIf(id -> match.lobbies().get(id).isEmpty());
+        lastNagTeams.keySet().removeIf(id -> match.lobbies().get(id).isEmpty());
     }
 
     /** Nags one lobby about unmet autostart requirements when the interval is due. */
     private void broadcastLobbyShortfall(int lobbyId, long now) {
-        if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
+        if (!match.lobbies().multiLobbyAllowed() && lobbyId != 0) {
             return;
         }
-        if (!settings.autostartEnabled(lobbyId)) {
+        if (!config.settings().autostartEnabled(lobbyId)) {
             return;
         }
-        if (!settings.autostartBroadcastEnabled(lobbyId)) {
+        if (!config.settings().autostartBroadcastEnabled(lobbyId)) {
             return;
         }
         int intervalSeconds =
-                Math.max(1, settings.autostartBroadcastIntervalSeconds(lobbyId));
-        Optional<Lobby> lobby = lobbies.get(lobbyId);
+                Math.max(1, config.settings().autostartBroadcastIntervalSeconds(lobbyId));
+        Optional<Lobby> lobby = match.lobbies().get(lobbyId);
         if (lobby.isEmpty() || liveMatchBlocks(lobbyId)
                 || autostartCountdowns.containsKey(lobbyId)) {
             lastShortfallBroadcast.remove(lobbyId);
@@ -404,7 +401,7 @@ public final class AutostartService {
         Map<Role, Integer> missing = shortfallFor(lobby.get());
         Map<Role, Integer> excess = overfillFor(lobby.get());
         List<Player> recipients = messaging.lobbyRecipients(lobbyId).stream()
-                .filter(player -> receivesShortfall(playerStates.role(player)))
+                .filter(player -> receivesShortfall(match.playerStates().role(player)))
                 .toList();
         if ((missing.isEmpty() && excess.isEmpty()) || recipients.isEmpty()) {
             lastShortfallBroadcast.remove(lobbyId);
@@ -437,7 +434,7 @@ public final class AutostartService {
             if (!lobby.contains(player.getUniqueId())) {
                 continue;
             }
-            if (receivesShortfall(playerStates.role(player))) {
+            if (receivesShortfall(match.playerStates().role(player))) {
                 teams.add(player.getUniqueId());
             }
         }

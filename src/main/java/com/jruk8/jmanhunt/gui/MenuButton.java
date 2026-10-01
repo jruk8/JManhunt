@@ -44,51 +44,9 @@ public final class MenuButton {
     private final Consumer<ItemMeta> metaTweak;
 
     /**
-     * @param material icon material, never air
-     * @param name display name, may be null for no custom name
-     * @param lore lore lines, null means none
-     * @param glow true to force the enchantment glint
-     * @param hideTooltip true to hide the hover tooltip
-     * @param action click action, null for display-only buttons
-     */
-    public MenuButton(Material material, Component name, List<Component> lore,
-            boolean glow, boolean hideTooltip, Consumer<Player> action) {
-        this(material, name, lore, glow, hideTooltip, action, null);
-    }
-
-    /**
-     * @param material icon material, never air
-     * @param name display name, may be null for no custom name
-     * @param lore lore lines, null means none
-     * @param glow true to force the enchantment glint
-     * @param hideTooltip true to hide the hover tooltip
-     * @param action click action, null for display-only buttons
-     * @param rightAction right-click action, null to reuse the main action
-     */
-    public MenuButton(Material material, Component name, List<Component> lore,
-            boolean glow, boolean hideTooltip, Consumer<Player> action,
-            Consumer<Player> rightAction) {
-        this(material, name, lore, glow, hideTooltip, action, rightAction,
-                SoundPolicy.CLICK);
-    }
-
-    /**
-     * @param material icon material, never air
-     * @param name display name, may be null for no custom name
-     * @param lore lore lines, null means none
-     * @param glow true to force the enchantment glint
-     * @param hideTooltip true to hide the hover tooltip
-     * @param action click action, null for display-only buttons
-     * @param rightAction right-click action, null to reuse the main action
-     * @param soundPolicy central click sound policy, never null
-     */
-    public MenuButton(Material material, Component name, List<Component> lore,
-            boolean glow, boolean hideTooltip, Consumer<Player> action,
-            Consumer<Player> rightAction, SoundPolicy soundPolicy) {
-        this(material, name, lore, glow, hideTooltip, action, rightAction, null, soundPolicy);
-    }
-
-    /**
+     * Full button spec: icon, text, glint, tooltip, click actions,
+     * central sound policy, and an optional item-meta tweak.
+     *
      * @param material icon material, never air
      * @param name display name, may be null for no custom name
      * @param lore lore lines, null means none
@@ -98,35 +56,31 @@ public final class MenuButton {
      * @param rightAction right-click action, null to reuse the main action
      * @param shiftAction shift-left-click action, null to reuse the main action
      * @param soundPolicy central click sound policy, never null
+     * @param metaTweak item-meta tweak, null for none
      */
-    public MenuButton(Material material, Component name, List<Component> lore,
-            boolean glow, boolean hideTooltip, Consumer<Player> action,
-            Consumer<Player> rightAction, Consumer<Player> shiftAction,
-            SoundPolicy soundPolicy) {
-        this(material, name, lore, glow, hideTooltip, action, rightAction, shiftAction,
-                soundPolicy, null);
+    public record Spec(Material material, Component name, List<Component> lore, boolean glow,
+            boolean hideTooltip, Consumer<Player> action, Consumer<Player> rightAction,
+            Consumer<Player> shiftAction, SoundPolicy soundPolicy,
+            Consumer<ItemMeta> metaTweak) {
     }
 
-    private MenuButton(Material material, Component name, List<Component> lore,
-            boolean glow, boolean hideTooltip, Consumer<Player> action,
-            Consumer<Player> rightAction, Consumer<Player> shiftAction,
-            SoundPolicy soundPolicy, Consumer<ItemMeta> metaTweak) {
-        this.material = material;
-        this.name = name;
-        this.lore = lore == null ? List.of() : List.copyOf(lore);
-        this.glow = glow;
-        this.hideTooltip = hideTooltip;
-        this.action = action;
-        this.rightAction = rightAction;
-        this.shiftAction = shiftAction;
-        this.soundPolicy = soundPolicy;
-        this.metaTweak = metaTweak;
+    public MenuButton(Spec spec) {
+        this.material = spec.material();
+        this.name = spec.name();
+        this.lore = spec.lore() == null ? List.of() : List.copyOf(spec.lore());
+        this.glow = spec.glow();
+        this.hideTooltip = spec.hideTooltip();
+        this.action = spec.action();
+        this.rightAction = spec.rightAction();
+        this.shiftAction = spec.shiftAction();
+        this.soundPolicy = spec.soundPolicy();
+        this.metaTweak = spec.metaTweak();
     }
 
     /** Blank, tooltip-less filler pane with no action. */
     public static MenuButton filler() {
-        return new MenuButton(Material.GRAY_STAINED_GLASS_PANE,
-                Component.text(" "), null, false, true, null);
+        return new MenuButton(new Spec(Material.GRAY_STAINED_GLASS_PANE, Component.text(" "),
+                null, false, true, null, null, null, SoundPolicy.CLICK, null));
     }
 
     /** Copy of this button with the central click suppressed. */
@@ -134,14 +88,14 @@ public final class MenuButton {
         if (soundPolicy == SoundPolicy.SILENT) {
             return this;
         }
-        return new MenuButton(material, name, lore, glow, hideTooltip,
-                action, rightAction, shiftAction, SoundPolicy.SILENT, metaTweak);
+        return new MenuButton(new Spec(material, name, lore, glow, hideTooltip, action,
+                rightAction, shiftAction, SoundPolicy.SILENT, metaTweak));
     }
 
     /** Copy of this button running the shift action on shift-left-click. */
     public MenuButton shiftAction(Consumer<Player> shiftAction) {
-        return new MenuButton(material, name, lore, glow, hideTooltip,
-                action, rightAction, shiftAction, soundPolicy, metaTweak);
+        return new MenuButton(new Spec(material, name, lore, glow, hideTooltip, action,
+                rightAction, shiftAction, soundPolicy, metaTweak));
     }
 
     /**
@@ -149,8 +103,8 @@ public final class MenuButton {
      * for per-button meta such as skull profiles. Null clears the tweak.
      */
     public MenuButton withMeta(Consumer<ItemMeta> metaTweak) {
-        return new MenuButton(material, name, lore, glow, hideTooltip,
-                action, rightAction, shiftAction, soundPolicy, metaTweak);
+        return new MenuButton(new Spec(material, name, lore, glow, hideTooltip, action,
+                rightAction, shiftAction, soundPolicy, metaTweak));
     }
 
     /** Builds the displayed item. */

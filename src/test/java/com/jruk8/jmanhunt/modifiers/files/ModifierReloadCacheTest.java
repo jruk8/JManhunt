@@ -110,16 +110,15 @@ class ModifierReloadCacheTest {
         Map<String, LoadedPreset> loadedPresets = new LinkedHashMap<>();
         presets.forEach((id, print) -> loadedPresets.put(id,
                 new LoadedPreset(new ModifierPreset(), Path.of(id), print)));
-        return new ModLoadResult(loadedModifiers, loadedPresets,
-                List.of(), failed, List.of(), List.of());
+        return new ModLoadResult(new ModLoadResult.Loaded(loadedModifiers, loadedPresets),
+                new ModLoadResult.Problems(List.of(), failed, List.of(), List.of()));
     }
 
     private static ModLoadResult withDuplicates(ModLoadResult base) {
-        return new ModLoadResult(base.modifiers(), base.presets(), base.unknownFiles(),
-                base.failedFiles(),
-                List.of(new ModLoadResult.DuplicateId("x", ModFileKind.MODIFIER,
-                        Path.of("winner"), List.of(Path.of("skipped")))),
-                base.unknownMembers());
+        return new ModLoadResult(new ModLoadResult.Loaded(base.modifiers(), base.presets()),
+                new ModLoadResult.Problems(base.unknownFiles(), base.failedFiles(),
+                        List.of(new ModLoadResult.DuplicateId("x", ModFileKind.MODIFIER, Path.of("winner"),
+                        List.of(Path.of("skipped")))), base.unknownMembers()));
     }
 
     private static FailedFile failed(String filename, ModFileKind kind) {

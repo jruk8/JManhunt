@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.world.cell;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,12 +27,12 @@ final class CloseToStructureFetch {
     }
 
     /** Arms the fetch from config, warning once about unknown words. */
-    static CloseToStructureFetch armed(WorldEngineConfig config, JManhuntPlugin plugin) {
+    static CloseToStructureFetch armed(WorldEngineConfig config, JManhuntLogger log) {
         Set<String> unknown = new LinkedHashSet<>();
         List<String> keys =
                 StructurePreference.keysFor(config.spawnCloseToStructureWords(), unknown::add);
         if (!unknown.isEmpty()) {
-            plugin.logger().warning("Unknown spawn-close-to-structure entries skipped: "
+            log.warning("Unknown spawn-close-to-structure entries skipped: "
                     + String.join(", ", unknown));
         }
         if (keys.isEmpty()) {

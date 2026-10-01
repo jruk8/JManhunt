@@ -98,11 +98,15 @@ class ModifierEditorMenusTest {
         texts = new MessagesConfig();
         messages.reload(texts);
         store = new ModifierStore(config, log);
-        editor = new ModifierEditorMenus(store, messages, texts.getModifiersGui(),
-                texts.getManhuntGui(), texts.getModifiers(), texts.getCommand(), null, null,
-                null, null, null, null);
-        detail = new ModifierDetailMenus(store, messages, texts.getModifiersGui(),
-                texts.getModifiers(), texts.getCommand(), null, null, null, null, null);
+        editor = new ModifierEditorMenus(store,
+                new ModifierEditorMenus.EditorTexts(messages, texts.getModifiersGui(),
+                        texts.getManhuntGui(), texts.getModifiers(), texts.getCommand(),
+                        null),
+                new ModifierEditorMenus.EditorDeps(null, null, null, null, null));
+        detail = new ModifierDetailMenus(store,
+                new ModifierDetailMenus.DetailTexts(messages, texts.getModifiersGui(),
+                        texts.getModifiers(), texts.getCommand(), null),
+                new ModifierDetailMenus.DetailDeps(null, null, null, null));
     }
 
     @Test
@@ -269,12 +273,13 @@ class ModifierEditorMenusTest {
         ModifierTestService.TestResult result = new ModifierTestService.TestResult(12L, List.of(),
                 List.of(), List.of(), null, null);
         when(service.run(any(), eq("HUNTER"), eq(List.of("give <p> apple")))).thenReturn(result);
-        ModifiersCommand toggles = new ModifiersCommand(null, messages,
-                texts.getModifiers(), texts.getCommand(), null, null, null,
-                service);
-        ModifierDetailMenus wired = new ModifierDetailMenus(store, messages,
-                texts.getModifiersGui(), texts.getModifiers(), texts.getCommand(), null, null,
-                null, null, toggles);
+        ModifiersCommand toggles = new ModifiersCommand(null, new ModifiersCommand.ModifiersDeps(null, null, service),
+                new ModifiersCommand.ModifiersTexts(messages, texts.getModifiers(),
+                        texts.getCommand(), null));
+        ModifierDetailMenus wired = new ModifierDetailMenus(store,
+                new ModifierDetailMenus.DetailTexts(messages, texts.getModifiersGui(),
+                        texts.getModifiers(), texts.getCommand(), null),
+                new ModifierDetailMenus.DetailDeps(null, null, null, toggles));
         Player viewer = mock(Player.class);
         when(viewer.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
         when(viewer.getName()).thenReturn("Steve");

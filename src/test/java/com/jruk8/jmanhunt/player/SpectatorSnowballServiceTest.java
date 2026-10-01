@@ -7,20 +7,19 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.message.SpectatorMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.Map;
 import java.util.UUID;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Player;
@@ -30,16 +29,14 @@ import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitScheduler;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockedStatic;
 
 /** Spectator snowball throw gating, restore, and zero-damage rule. */
 class SpectatorSnowballServiceTest {
 
     private record Fixture(SpectatorSnowballService snowballs, SpectatorToolbarService toolbar,
-            MessageService messages, SoundService sounds, Player player,
+            TaskScheduler tasks, MessageService messages, SoundService sounds, Player player,
             PlayerInventory inventory, ItemStack stack) {
     }
 
@@ -58,9 +55,11 @@ class SpectatorSnowballServiceTest {
         when(toolbar.snowballCooldownSeconds(player)).thenReturn(8);
         when(toolbar.layout(player)).thenReturn(SpectatorToolbarService.parseLayout("cp##s###b"));
         when(toolbar.snowballItem(anyInt())).thenReturn(stack);
+        TaskScheduler tasks = mock(TaskScheduler.class);
+        when(tasks.plugin()).thenReturn(mock(Plugin.class));
         SpectatorSnowballService snowballs = new SpectatorSnowballService(
-                mock(Plugin.class), toolbar, messages, texts(), sounds);
-        return new Fixture(snowballs, toolbar, messages, sounds, player, inventory, stack);
+                tasks, toolbar, messages, texts(), sounds);
+        return new Fixture(snowballs, toolbar, tasks, messages, sounds, player, inventory, stack);
     }
 
     private Snowball thrownBy(Fixture fixture) {
@@ -78,19 +77,14 @@ class SpectatorSnowballServiceTest {
     @Test
     void spectatorThrowRestoresTagsAndCoolsDown() {
         Fixture fixture = fixture();
-        BukkitScheduler scheduler = mock(BukkitScheduler.class);
         ProjectileLaunchEvent event = new ProjectileLaunchEvent(thrownBy(fixture));
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+        fixture.snowballs().onLaunch(event);
 
-            fixture.snowballs().onLaunch(event);
-
-            assertFalse(event.isCancelled());
-            verify(fixture.player()).setCooldown(Material.SNOWBALL, 160);
-            verify(fixture.inventory(), never()).setItem(anyInt(), any());
-            deferred(scheduler).run();
-            verify(fixture.inventory()).setItem(4, fixture.stack());
-        }
+        assertFalse(event.isCancelled());
+        verify(fixture.player()).setCooldown(Material.SNOWBALL, 160);
+        verify(fixture.inventory(), never()).setItem(anyInt(), any());
+        deferred(fixture.tasks()).run();
+        verify(fixture.inventory()).setItem(4, fixture.stack());
     }
 
     @Test
@@ -98,77 +92,57 @@ class SpectatorSnowballServiceTest {
         Fixture fixture = fixture();
         when(fixture.player().hasCooldown(Material.SNOWBALL)).thenReturn(true);
         when(fixture.player().getCooldown(Material.SNOWBALL)).thenReturn(45);
-        BukkitScheduler scheduler = mock(BukkitScheduler.class);
         ProjectileLaunchEvent event = new ProjectileLaunchEvent(thrownBy(fixture));
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+        fixture.snowballs().onLaunch(event);
 
-            fixture.snowballs().onLaunch(event);
-
-            assertTrue(event.isCancelled());
-            verify(fixture.player(), never()).setCooldown(any(), any(Integer.class));
-            verify(fixture.messages()).messageRaw(eq(fixture.player()),
-                    eq("cooldown tpl"), eq(Map.of("seconds", "3")));
-            verify(fixture.sounds()).playNeutralSound(fixture.player());
-            deferred(scheduler).run();
-            verify(fixture.inventory()).setItem(4, fixture.stack());
-        }
+        assertTrue(event.isCancelled());
+        verify(fixture.player(), never()).setCooldown(any(), any(Integer.class));
+        verify(fixture.messages()).messageRaw(eq(fixture.player()),
+                eq("cooldown tpl"), eq(Map.of("seconds", "3")));
+        verify(fixture.sounds()).playNeutralSound(fixture.player());
+        deferred(fixture.tasks()).run();
+        verify(fixture.inventory()).setItem(4, fixture.stack());
     }
 
     @Test
     void zeroCooldownThrowsFreely() {
         Fixture fixture = fixture();
         when(fixture.toolbar().snowballCooldownSeconds(fixture.player())).thenReturn(0);
-        BukkitScheduler scheduler = mock(BukkitScheduler.class);
         ProjectileLaunchEvent event = new ProjectileLaunchEvent(thrownBy(fixture));
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+        fixture.snowballs().onLaunch(event);
 
-            fixture.snowballs().onLaunch(event);
-
-            assertFalse(event.isCancelled());
-            verify(fixture.player(), never()).setCooldown(any(), any(Integer.class));
-            deferred(scheduler).run();
-            verify(fixture.inventory()).setItem(4, fixture.stack());
-        }
+        assertFalse(event.isCancelled());
+        verify(fixture.player(), never()).setCooldown(any(), any(Integer.class));
+        deferred(fixture.tasks()).run();
+        verify(fixture.inventory()).setItem(4, fixture.stack());
     }
 
     @Test
     void offlineShooterSkipsRestore() {
         Fixture fixture = fixture();
         when(fixture.player().isOnline()).thenReturn(false);
-        BukkitScheduler scheduler = mock(BukkitScheduler.class);
         ProjectileLaunchEvent event = new ProjectileLaunchEvent(thrownBy(fixture));
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+        fixture.snowballs().onLaunch(event);
+        deferred(fixture.tasks()).run();
 
-            fixture.snowballs().onLaunch(event);
-            deferred(scheduler).run();
-
-            verify(fixture.inventory(), never()).setItem(anyInt(), any());
-        }
+        verify(fixture.inventory(), never()).setItem(anyInt(), any());
     }
 
     @Test
     void undeployedBeforeTickSkipsRestore() {
         Fixture fixture = fixture();
         when(fixture.toolbar().isDeployed(fixture.player())).thenReturn(true, false);
-        BukkitScheduler scheduler = mock(BukkitScheduler.class);
         ProjectileLaunchEvent event = new ProjectileLaunchEvent(thrownBy(fixture));
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            bukkit.when(Bukkit::getScheduler).thenReturn(scheduler);
+        fixture.snowballs().onLaunch(event);
+        deferred(fixture.tasks()).run();
 
-            fixture.snowballs().onLaunch(event);
-            deferred(scheduler).run();
-
-            verify(fixture.inventory(), never()).setItem(anyInt(), any());
-        }
+        verify(fixture.inventory(), never()).setItem(anyInt(), any());
     }
 
-    private static Runnable deferred(BukkitScheduler scheduler) {
-        ArgumentCaptor<Runnable> tasks = ArgumentCaptor.forClass(Runnable.class);
-        verify(scheduler).runTask(any(Plugin.class), tasks.capture());
-        return tasks.getValue();
+    private static Runnable deferred(TaskScheduler tasks) {
+        ArgumentCaptor<Runnable> pending = ArgumentCaptor.forClass(Runnable.class);
+        verify(tasks).run(pending.capture());
+        return pending.getValue();
     }
 
     @Test

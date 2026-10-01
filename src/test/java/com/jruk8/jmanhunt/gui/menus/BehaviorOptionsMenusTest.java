@@ -73,9 +73,10 @@ class BehaviorOptionsMenusTest {
         texts = new MessagesConfig();
         messages.reload(texts);
         store = new ModifierStore(config, log);
-        options = new BehaviorOptionsMenus(store, messages, texts.getModifiersGui(),
-                texts.getManhuntGui(), texts.getModifiers(), texts.getCommand(), null, null,
-                null, null);
+        options = new BehaviorOptionsMenus(store,
+                new BehaviorOptionsMenus.BehaviorTexts(messages, texts.getModifiersGui(),
+                        texts.getManhuntGui(), texts.getModifiers(), texts.getCommand(), null),
+                new BehaviorOptionsMenus.BehaviorDeps(null, null, null));
     }
 
     private static List<String> loreLines(MenuButton button) {
@@ -214,9 +215,10 @@ class BehaviorOptionsMenusTest {
         when(messages.nonItalic(any(Component.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         MessagesConfig fresh = new MessagesConfig();
-        BehaviorOptionsMenus gated = new BehaviorOptionsMenus(store, messages,
-                fresh.getModifiersGui(), fresh.getManhuntGui(), fresh.getModifiers(),
-                fresh.getCommand(), sounds, gui, null, null);
+        BehaviorOptionsMenus gated = new BehaviorOptionsMenus(store,
+                new BehaviorOptionsMenus.BehaviorTexts(messages, fresh.getModifiersGui(),
+                        fresh.getManhuntGui(), fresh.getModifiers(), fresh.getCommand(), sounds),
+                new BehaviorOptionsMenus.BehaviorDeps(gui, null, null));
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
@@ -238,9 +240,10 @@ class BehaviorOptionsMenusTest {
         when(messages.nonItalic(any(Component.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         MessagesConfig fresh = new MessagesConfig();
-        BehaviorOptionsMenus gated = new BehaviorOptionsMenus(store, messages,
-                fresh.getModifiersGui(), fresh.getManhuntGui(), fresh.getModifiers(),
-                fresh.getCommand(), sounds, gui, null, null);
+        BehaviorOptionsMenus gated = new BehaviorOptionsMenus(store,
+                new BehaviorOptionsMenus.BehaviorTexts(messages, fresh.getModifiersGui(),
+                        fresh.getManhuntGui(), fresh.getModifiers(), fresh.getCommand(), sounds),
+                new BehaviorOptionsMenus.BehaviorDeps(gui, null, null));
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
@@ -260,10 +263,10 @@ class BehaviorOptionsMenusTest {
         when(messages.nonItalic(any(Component.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         MessagesConfig fresh = new MessagesConfig();
-        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store, messages,
-                fresh.getModifiersGui(), fresh.getManhuntGui(), fresh.getModifiers(),
-                fresh.getCommand(), mock(SoundService.class), mock(GuiService.class),
-                null, dialogs);
+        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store,
+                new BehaviorOptionsMenus.BehaviorTexts(messages, fresh.getModifiersGui(),
+                        fresh.getManhuntGui(), fresh.getModifiers(), fresh.getCommand(), mock(SoundService.class)),
+                new BehaviorOptionsMenus.BehaviorDeps(mock(GuiService.class), null, dialogs));
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
@@ -387,9 +390,10 @@ class BehaviorOptionsMenusTest {
         MessageService messages = new MessageService();
         MessagesConfig local = new MessagesConfig();
         messages.reload(local);
-        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store, messages,
-                local.getModifiersGui(), local.getManhuntGui(), local.getModifiers(),
-                local.getCommand(), sounds, mock(GuiService.class), null, null);
+        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store,
+                new BehaviorOptionsMenus.BehaviorTexts(messages, local.getModifiersGui(),
+                        local.getManhuntGui(), local.getModifiers(), local.getCommand(), sounds),
+                new BehaviorOptionsMenus.BehaviorDeps(mock(GuiService.class), null, null));
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 
@@ -405,9 +409,10 @@ class BehaviorOptionsMenusTest {
     void rightClickResetClearsThroughConfirm() {
         SoundService sounds = mock(SoundService.class);
         GuiService gui = mock(GuiService.class);
-        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store, messages,
-                texts.getModifiersGui(), texts.getManhuntGui(), texts.getModifiers(),
-                texts.getCommand(), sounds, gui, null, null);
+        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store,
+                new BehaviorOptionsMenus.BehaviorTexts(messages, texts.getModifiersGui(),
+                        texts.getManhuntGui(), texts.getModifiers(), texts.getCommand(), sounds),
+                new BehaviorOptionsMenus.BehaviorDeps(gui, null, null));
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
         AtomicReference<Menu> shown = new AtomicReference<>();
@@ -428,9 +433,10 @@ class BehaviorOptionsMenusTest {
     @Test
     void rightClickResetRefusesWhenAlreadyDefault() {
         GuiService gui = mock(GuiService.class);
-        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store, messages,
-                texts.getModifiersGui(), texts.getManhuntGui(), texts.getModifiers(),
-                texts.getCommand(), mock(SoundService.class), gui, null, null);
+        BehaviorOptionsMenus menus = new BehaviorOptionsMenus(store,
+                new BehaviorOptionsMenus.BehaviorTexts(messages, texts.getModifiersGui(),
+                        texts.getManhuntGui(), texts.getModifiers(), texts.getCommand(), mock(SoundService.class)),
+                new BehaviorOptionsMenus.BehaviorDeps(gui, null, null));
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
 

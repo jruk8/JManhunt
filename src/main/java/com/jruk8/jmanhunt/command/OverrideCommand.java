@@ -27,29 +27,23 @@ import org.bukkit.entity.Player;
  */
 public final class OverrideCommand {
 
+    /** Message bus, manhunt/modifier texts, and sounds. */
+    public record OverrideTexts(MessageService messages, ManhuntMessages manhunt,
+            ModifiersMessages modifiers, SoundService sounds) {
+    }
+
     private final OverrideService overrides;
     private final ConfigService config;
-    private final MessageService messages;
-    private final ManhuntMessages manhunt;
-    private final ModifiersMessages modifiers;
+    private final OverrideTexts texts;
     private final SettingFeedback feedback;
-    private final SoundService sounds;
     private final PendingConfirmations confirms = new PendingConfirmations();
 
-    /**
-     * @param sounds get-path blips, null only in unit tests that never
-     *        address players
-     */
     public OverrideCommand(OverrideService overrides, ConfigService config,
-            MessageService messages, ManhuntMessages manhunt, ModifiersMessages modifiers,
-            SettingFeedback feedback, SoundService sounds) {
+            OverrideTexts texts, SettingFeedback feedback) {
         this.overrides = overrides;
         this.config = config;
-        this.messages = messages;
-        this.manhunt = manhunt;
-        this.modifiers = modifiers;
+        this.texts = texts;
         this.feedback = feedback;
-        this.sounds = sounds;
     }
 
     /** Runs one override action; args[0] is "override". */
@@ -59,7 +53,7 @@ public final class OverrideCommand {
         }
         OptionalInt lobby = OverrideService.parseLobbyId(args[1]);
         if (lobby.isEmpty()) {
-            messages.messageRaw(sender, manhunt.getOverrideInvalidLobby(),
+            texts.messages().messageRaw(sender, texts.manhunt().getOverrideInvalidLobby(),
                     Map.of("lobby", args[1]));
             return true;
         }
@@ -260,7 +254,7 @@ public final class OverrideCommand {
                 showModifier(sender, lobby, name);
             }
             if (!config.presetNames().isEmpty()) {
-                messages.messageRaw(sender, modifiers.getListPresetsHeader());
+                texts.messages().messageRaw(sender, texts.modifiers().getListPresetsHeader());
                 for (String id : sortedNames(config.presetNames())) {
                     showPreset(sender, lobby, id);
                 }
@@ -292,7 +286,7 @@ public final class OverrideCommand {
         String id = rest.get(0);
         Boolean value = ModifiersCommand.parseState(rest.get(1));
         if (value == null) {
-            messages.messageRaw(sender, modifiers.getInvalidState());
+            texts.messages().messageRaw(sender, texts.modifiers().getInvalidState());
             return true;
         }
         if (config.modifierNames().contains(id)) {
@@ -392,7 +386,7 @@ public final class OverrideCommand {
         if (confirms.confirm(sender.getName() + "|" + key)) {
             return false;
         }
-        messages.messageRaw(sender, manhunt.getOverrideClearConfirm(),
+        texts.messages().messageRaw(sender, texts.manhunt().getOverrideClearConfirm(),
                 Map.of("lobby", String.valueOf(lobby), "what", what));
         return true;
     }
@@ -402,7 +396,7 @@ public final class OverrideCommand {
         boolean overridden = isIndexPath(lobby, path)
                 ? overrides.hasListOverride(lobby, path.substring(0, path.lastIndexOf('.')))
                 : overrides.hasSettingOverride(lobby, path);
-        messages.messageRaw(sender, manhunt.getOverrideSettingShown(), Map.of("setting", path,
+        texts.messages().messageRaw(sender, texts.manhunt().getOverrideSettingShown(), Map.of("setting", path,
                 "value", ConfigService.displayValue(
                         overrides.effectiveValue(lobby, path)),
                 "source", source(overridden)));
@@ -412,21 +406,21 @@ public final class OverrideCommand {
     private void showList(CommandSender sender, int lobby, String listPath) {
         List<String> entries = overrides.getStringList(lobby, listPath);
         if (entries.isEmpty()) {
-            messages.messageRaw(sender, manhunt.getOverrideSettingShown(), Map.of("setting",
+            texts.messages().messageRaw(sender, texts.manhunt().getOverrideSettingShown(), Map.of("setting",
                     listPath, "value", "(empty)", "source", source(false)));
             neutralSound(sender);
             return;
         }
         String mark = source(overrides.hasListOverride(lobby, listPath));
         for (int index = 0; index < entries.size(); index++) {
-            messages.messageRaw(sender, manhunt.getOverrideSettingShown(), Map.of("setting",
+            texts.messages().messageRaw(sender, texts.manhunt().getOverrideSettingShown(), Map.of("setting",
                     listPath + "." + index, "value", entries.get(index), "source", mark));
         }
         neutralSound(sender);
     }
 
     private void showModifier(CommandSender sender, int lobby, String name) {
-        messages.messageRaw(sender, manhunt.getOverrideModifierShown(), Map.of("modifier", name,
+        texts.messages().messageRaw(sender, texts.manhunt().getOverrideModifierShown(), Map.of("modifier", name,
                 "state", overrides.modifierEnabled(lobby, name) ? "on" : "off",
                 "source", source(overrides.hasModifierOverride(lobby, name))));
     }
@@ -439,15 +433,15 @@ public final class OverrideCommand {
                 break;
             }
         }
-        messages.messageRaw(sender, manhunt.getOverrideModifierShown(), Map.of("modifier", id,
+        texts.messages().messageRaw(sender, texts.manhunt().getOverrideModifierShown(), Map.of("modifier", id,
                 "state", overrides.presetEnabled(lobby, id) ? "on" : "off",
                 "source", source(anyOverridden)));
     }
 
     private String source(boolean overridden) {
         return overridden
-                ? manhunt.getOverrideSourceOverride()
-                : manhunt.getOverrideSourceGlobal();
+                ? texts.manhunt().getOverrideSourceOverride()
+                : texts.manhunt().getOverrideSourceGlobal();
     }
 
     /**
@@ -455,8 +449,8 @@ public final class OverrideCommand {
      * drill so browsing never spams one prefixed line per entry.
      */
     private void listEntries(CommandSender sender, String key, Map<String, String> entries) {
-        String template = manhunt.getConfigEntry();
-        messages.messageRaw(sender, manhunt.getConfigList(),
+        String template = texts.manhunt().getConfigEntry();
+        texts.messages().messageRaw(sender, texts.manhunt().getConfigList(),
                 Map.of("key", key, "entries",
                         ManhuntCommand.renderEntries(entries, template)));
     }
@@ -482,7 +476,7 @@ public final class OverrideCommand {
     }
 
     private boolean unknownModifier(CommandSender sender, String id) {
-        messages.messageRaw(sender, modifiers.getUnknownModifier(),
+        texts.messages().messageRaw(sender, texts.modifiers().getUnknownModifier(),
                 Map.of("name", id, "valid",
                         ListFormatter.joinOxford(sortedNames(config.modifierNames()))));
         return true;
@@ -510,18 +504,18 @@ public final class OverrideCommand {
     }
 
     private void neutralSound(CommandSender sender) {
-        if (sounds != null && sender instanceof Player player) {
-            sounds.playNeutralSound(player);
+        if (texts.sounds() != null && sender instanceof Player player) {
+            texts.sounds().playNeutralSound(player);
         }
     }
 
     private boolean usage(CommandSender sender) {
-        messages.messageRaw(sender, manhunt.getOverrideUsage());
+        texts.messages().messageRaw(sender, texts.manhunt().getOverrideUsage());
         return true;
     }
 
     private boolean invalid(CommandSender sender) {
-        messages.messageRaw(sender, manhunt.getSettingInvalid());
+        texts.messages().messageRaw(sender, texts.manhunt().getSettingInvalid());
         return true;
     }
 }

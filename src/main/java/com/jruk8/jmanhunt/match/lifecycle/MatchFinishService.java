@@ -1,7 +1,13 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
 import com.jruk8.jmanhunt.core.DebugLevel;
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import com.jruk8.jmanhunt.player.RoleTeamService;
+import com.jruk8.jmanhunt.player.SpawnCampService;
 import com.jruk8.jmanhunt.api.events.JMatchCancelEvent;
 import com.jruk8.jmanhunt.api.events.JMatchEndEvent;
 import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
@@ -39,6 +45,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
@@ -51,64 +58,69 @@ import com.jruk8.jmanhunt.match.prestart.PrestartService;
  * delegates.
  */
 public final class MatchFinishService {
-    private final JManhuntPlugin plugin;
-    private final MessageService messages;
-    private final GameMessages game;
-    private final PlayerStateStore playerStates;
-    private final StatsManager stats;
-    private final GameStateCommandManager stateCommands;
-    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
-    private final PlayersSettingsFacade players;
-    private final MatchSettingsFacade match;
-    private final WorldEngineService worldEngine;
-    private final MatchStore store;
-    private final MatchMessaging messaging;
-    private final TimeLimitService timeLimits;
-    private final PrestartService prestart;
-    private final AutostartService autostart;
-    private final FlagStore flagStore;
-    private final TagCooldownStore cooldowns;
+    /** Player/match settings, engine settings, overrides, and logger. */
+    public record FinishReads(PlayersSettingsFacade players, MatchSettingsFacade match,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            OverrideService overrides, JManhuntLogger log) {
+    }
+
+    /** States, compass, stats, commands, engine, store, and phases. */
+    public record FinishMatch(PlayerStateStore playerStates, CompassManager compass,
+            StatsManager stats, GameStateCommandManager stateCommands,
+            WorldEngineService worldEngine, MatchStore store, TimeLimitService timeLimits,
+            PrestartService prestart, AutostartService autostart, FlagStore flagStore,
+            TagCooldownStore cooldowns) {
+    }
+
+    /** Fakes, role teams, spawn camp, scheduler, and live config root. */
+    public record FinishEdge(FakeSpectatorService fakes, RoleTeamService roleTeams,
+            SpawnCampService spawnCamp, TaskScheduler tasks,
+            Supplier<JManhuntConfig> configRoot) {
+    }
+
+    /** Message bus, game texts, and match messaging. */
+    public record FinishTexts(MessageService messages, GameMessages game,
+            MatchMessaging messaging) {
+    }
+
+    private final FinishReads reads;
+    private final FinishMatch services;
+    private final FinishEdge edge;
+    private final FinishTexts texts;
     private final MatchEliminationService elimination;
     private final MatchLeaveService leave;
     private final List<Consumer<GameInstance>> gameEndListeners = new ArrayList<>();
 
-    public MatchFinishService(JManhuntPlugin plugin, MessageService messages, GameMessages game,
-            PlayerStateStore playerStates,
-            CompassManager compass, StatsManager stats, GameStateCommandManager stateCommands,
-            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
-            PlayersSettingsFacade players, MatchSettingsFacade match,
-            WorldEngineService worldEngine, MatchStore store,
-            MatchMessaging messaging, TimeLimitService timeLimits, PrestartService prestart,
-            AutostartService autostart, FlagStore flagStore, TagCooldownStore cooldowns) {
-        this.plugin = plugin;
-        this.messages = messages;
-        this.game = game;
-        this.playerStates = playerStates;
-        this.stats = stats;
-        this.stateCommands = stateCommands;
-        this.engineSettings = engineSettings;
-        this.players = players;
-        this.match = match;
-        this.worldEngine = worldEngine;
-        this.store = store;
-        this.messaging = messaging;
-        this.timeLimits = timeLimits;
-        this.prestart = prestart;
-        this.autostart = autostart;
-        this.flagStore = flagStore;
-        this.cooldowns = cooldowns;
-        this.elimination = new MatchEliminationService(plugin, playerStates, compass, store,
-                messaging, flagStore, this::finishIfBucketEmpty);
-        this.leave = new MatchLeaveService(plugin, messages, game, playerStates, compass, stateCommands,
-                engineSettings, match,
-                worldEngine, store, messaging, flagStore, instance -> {
-                    compass.reconcileTeammateModes(instance);
-                    finishIfBucketEmpty(instance);
-                    cancelIfPreStartUnviable(instance);
-                });
-        new MatchBorderEnforcer(plugin, plugin.configRoot().getWorldEngine(),
-                plugin.configRoot().getSettings().getPlayers().getSpectator().getTravel(),
-                store, worldEngine, playerStates);
+    public MatchFinishService(FinishReads reads, FinishMatch services, FinishEdge edge,
+            FinishTexts texts) {
+        this.reads = reads;
+        this.services = services;
+        this.edge = edge;
+        this.texts = texts;
+        this.elimination = new MatchEliminationService(
+                new MatchEliminationService.ElimPlayers(services.playerStates(), edge.fakes()),
+                new MatchEliminationService.ElimEdge(edge.tasks(), edge.spawnCamp(),
+                        edge.roleTeams()),
+                services.compass(), texts.messaging(),
+                new MatchEliminationService.ElimMatch(services.store(), services.flagStore(),
+                        this::finishIfBucketEmpty));
+        this.leave = new MatchLeaveService(
+                new MatchLeaveService.LeaveReads(reads.match(), reads.engineSettings(),
+                        edge.fakes(), edge.roleTeams()),
+                new MatchLeaveService.LeaveMatch(services.playerStates(), services.compass(),
+                        services.stateCommands(), services.worldEngine(),
+                        services.store(), services.flagStore(), instance -> {
+                            services.compass().reconcileTeammateModes(instance);
+                            finishIfBucketEmpty(instance);
+                            cancelIfPreStartUnviable(instance);
+                        }),
+                texts.messages(), texts.game(), texts.messaging());
+        new MatchBorderEnforcer(edge.tasks(),
+                new MatchBorderEnforcer.BorderEngine(
+                        edge.configRoot().get().getWorldEngine(), services.worldEngine()),
+                edge.configRoot().get().getSettings().getPlayers().getSpectator().getTravel(),
+                services.store(), new MatchBorderEnforcer.BorderPlayers(
+                        services.playerStates(), edge.fakes()));
     }
 
     public void addGameEndListener(Consumer<GameInstance> listener) {
@@ -124,7 +136,7 @@ public final class MatchFinishService {
         if (!instance.begun() || instance.ending()) {
             return;
         }
-        bucketWinner(store.activeHunterCount(instance), store.activeRunnerCount(instance))
+        bucketWinner(services.store().activeHunterCount(instance), services.store().activeRunnerCount(instance))
                 .ifPresent(winner -> finishLater(instance, winner, winner == Role.HUNTER
                         ? "All speedrunners removed"
                         : "All hunters removed"));
@@ -144,7 +156,7 @@ public final class MatchFinishService {
         if (instance.begun() || instance.ending()) {
             return;
         }
-        if (!canProgress(store.activeHunterCount(instance), store.activeRunnerCount(instance))) {
+        if (!canProgress(services.store().activeHunterCount(instance), services.store().activeRunnerCount(instance))) {
             cancel(instance);
         }
     }
@@ -217,7 +229,7 @@ public final class MatchFinishService {
 
     /** Ends the match when exactly one is live; a no-op otherwise. */
     public void finish(Role winner, String reason) {
-        store.singleLiveInstance().ifPresent(instance -> finish(instance, winner, reason));
+        services.store().singleLiveInstance().ifPresent(instance -> finish(instance, winner, reason));
     }
 
     /** Ends one match. */
@@ -245,36 +257,36 @@ public final class MatchFinishService {
         gameEndListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(
                 new JMatchEndEvent(instance.matchId(), GameManager.roleToPlayerRole(winner)));
-        prestart.cancelWaitingTasks(instance);
-        prestart.cancelHeadstarts(instance);
-        timeLimits.cancelTimeLimit(instance);
+        services.prestart().cancelWaitingTasks(instance);
+        services.prestart().cancelHeadstarts(instance);
+        services.timeLimits().cancelTimeLimit(instance);
 
-        messaging.sendToInstanceComponent(instance, messages.renderLiteral(
-                messages.winAnnouncement(winner),
-                Map.of("wincon", reason, "rolecolor", messages.roleColor(winner))));
-        Component titleComponent = messages.winTitle(winner);
-        for (Player player : store.onlineAssignedPlayers(instance)) {
+        texts.messaging().sendToInstanceComponent(instance, texts.messages().renderLiteral(
+                texts.messages().winAnnouncement(winner),
+                Map.of("wincon", reason, "rolecolor", texts.messages().roleColor(winner))));
+        Component titleComponent = texts.messages().winTitle(winner);
+        for (Player player : services.store().onlineAssignedPlayers(instance)) {
             player.showTitle(Title.title(titleComponent, Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
-        playerStates.resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
-        messaging.playInstanceSound(instance, winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
-        stats.completeMatch(instance.matchId(), winner);
+        services.playerStates().resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
+        texts.messaging().playInstanceSound(instance, winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
+        services.stats().completeMatch(instance.matchId(), winner);
 
         // Make all players invulnerable on game end if configured
-        if (players.invulnerabilityOnGameEnd(instance.originLobbyId())) {
-            store.onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
+        if (reads.players().invulnerabilityOnGameEnd(instance.originLobbyId())) {
+            services.store().onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 
         // cancel interval modifiers early so they don't fire during the end delay
-        stateCommands.cancelIntervalModifiers(instance.matchId());
+        services.stateCommands().cancelIntervalModifiers(instance.matchId());
         // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
-        stateCommands.runConsoleCleanup(instance.matchId());
-        stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
+        services.stateCommands().runConsoleCleanup(instance.matchId());
+        services.stateCommands().runPlayerCleanup(instance.matchId(), services.store().onlineActivePlayers(instance));
 
         long delay = endDelayTicks(instance, immediate);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
+        edge.tasks().runLater(() -> showEndStatsOnce(instance), delay / 2);
+        edge.tasks().runLater(() -> finishEndPhase(instance), delay);
     }
 
     /** Sends end-of-match statistics, exactly once per match. */
@@ -283,7 +295,7 @@ public final class MatchFinishService {
         if (immediate) {
             return 0L;
         }
-        return Math.max(0L, Math.round(plugin.overrides().getDouble(
+        return Math.max(0L, Math.round(reads.overrides().getDouble(
                 instance.originLobbyId(),
                 "advanced.advanced-match-controls.end-delay", 10.0) * 20.0));
     }
@@ -293,7 +305,7 @@ public final class MatchFinishService {
             return;
         }
         instance.setEndStatsShown(true);
-        stats.showStats(instance.matchId(), store.onlineAssignedPlayers(instance));
+        services.stats().showStats(instance.matchId(), services.store().onlineAssignedPlayers(instance));
     }
 
     /** Runs end commands and deactivates the match, exactly once per match. */
@@ -312,39 +324,39 @@ public final class MatchFinishService {
      */
     public void teardownNow(GameInstance instance) {
         long teardownId = instance.matchId();
-        List<Player> participants = store.onlineAssignedPlayers(instance).stream()
-                .filter(p -> playerStates.role(p).isParticipant()).toList();
+        List<Player> participants = services.store().onlineAssignedPlayers(instance).stream()
+                .filter(p -> services.playerStates().role(p).isParticipant()).toList();
         List<Player> spectators = instanceNonePlayers(instance);
         Set<UUID> transferred = transferSpectators(instance, spectators);
         List<Player> returning = spectators.stream()
                 .filter(spectator -> !transferred.contains(spectator.getUniqueId())).toList();
-        boolean lastMatch = store.instances().size() <= 1;
-        stateCommands.runEnd(teardownId, participants, returning, instance.originLobbyId(), lastMatch);
+        boolean lastMatch = services.store().instances().size() <= 1;
+        services.stateCommands().runEnd(teardownId, participants, returning, instance.originLobbyId(), lastMatch);
         scatterEngineOffEnd(instance, participants);
-        worldEngine.onMatchEnd(participants, returning, instance.originLobbyId(), teardownId);
+        services.worldEngine().onMatchEnd(participants, returning, instance.originLobbyId(), teardownId);
         markOfflineEndWipes(instance);
-        if (players.rolesResetOnGameEnd(instance.originLobbyId())) {
+        if (reads.players().rolesResetOnGameEnd(instance.originLobbyId())) {
             Set<UUID> resetIds = new HashSet<>(instance.assignedPlayerIds());
             resetIds.removeAll(transferred);
-            playerStates.resetRoles(resetIds);
+            services.playerStates().resetRoles(resetIds);
         }
         // A finished match fields no sides, even when roles are kept.
-        plugin.roleTeams().removeAll(store.onlineAssignedPlayers(instance).stream()
+        edge.roleTeams().removeAll(services.store().onlineAssignedPlayers(instance).stream()
                 .filter(player -> !transferred.contains(player.getUniqueId())).toList());
-        plugin.spawnCamp().clearMatch(teardownId);
+        edge.spawnCamp().clearMatch(teardownId);
         instance.setActive(false);
         Set<UUID> clearIds = new HashSet<>(instance.assignedPlayerIds());
         clearIds.removeAll(transferred);
-        stateCommands.untrackMatchExit(clearIds);
-        playerStates.clearMatchFor(clearIds);
-        stats.clearMatch(teardownId);
-        flagStore.clearMatch(teardownId);
-        cooldowns.clearMatch(teardownId);
-        store.removeInstance(teardownId);
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getMatchEnd,
+        services.stateCommands().untrackMatchExit(clearIds);
+        services.playerStates().clearMatchFor(clearIds);
+        services.stats().clearMatch(teardownId);
+        services.flagStore().clearMatch(teardownId);
+        services.cooldowns().clearMatch(teardownId);
+        services.store().removeInstance(teardownId);
+        reads.log().debug(DebugLevel.INFO, DebugMessages::getMatchEnd,
                 Map.of("index", GameManager.cellString(instance)));
-        worldEngine.prepareNextCell();
-        autostart.updateAutostartState();
+        services.worldEngine().prepareNextCell();
+        services.autostart().updateAutostartState();
     }
 
     /**
@@ -357,35 +369,35 @@ public final class MatchFinishService {
      */
     private Set<UUID> transferSpectators(GameInstance instance, List<Player> spectators) {
         Optional<GameInstance> target = transferTarget(
-                store.instancesForLobby(instance.originLobbyId()), instance.matchId());
+                services.store().instancesForLobby(instance.originLobbyId()), instance.matchId());
         if (target.isEmpty()) {
             return Set.of();
         }
         GameInstance destination = target.get();
         Set<UUID> moved = new HashSet<>();
         for (Player spectator : spectators) {
-            if (playerStates.role(spectator) != Role.SPECTATOR) {
+            if (services.playerStates().role(spectator) != Role.SPECTATOR) {
                 continue;
             }
             UUID playerId = spectator.getUniqueId();
             instance.deactivate(playerId);
             destination.activate(playerId);
             if (destination.cellIndex().isPresent()) {
-                worldEngine.teleportJoinersToCell(destination, List.of(spectator),
+                services.worldEngine().teleportJoinersToCell(destination, List.of(spectator),
                         destination.cellIndex().getAsLong());
             }
-            playerStates.recordLastSeen(spectator, spectator.getLocation());
-            if (!plugin.fakeSpectators().isFakeSpectator(spectator)) {
-                plugin.fakeSpectators().enable(spectator);
+            services.playerStates().recordLastSeen(spectator, spectator.getLocation());
+            if (!edge.fakes().isFakeSpectator(spectator)) {
+                edge.fakes().enable(spectator);
             }
-            plugin.roleTeams().sync(spectator);
+            edge.roleTeams().sync(spectator);
             Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(destination.matchId(),
                     playerId, GameManager.roleToPlayerRole(Role.SPECTATOR)));
-            messaging.sendToInstance(destination, game.getJoinAnnounce(),
-                    Map.of("player", spectator.getName(), "role", messages.roleName(Role.SPECTATOR)));
+            texts.messaging().sendToInstance(destination, texts.game().getJoinAnnounce(),
+                    Map.of("player", spectator.getName(), "role", texts.messages().roleName(Role.SPECTATOR)));
             moved.add(playerId);
         }
-        stateCommands.trackMatchEntry(moved);
+        services.stateCommands().trackMatchEntry(moved);
         return moved;
     }
 
@@ -405,20 +417,20 @@ public final class MatchFinishService {
      * before roles reset, while roles still identify participants.
      */
     private void markOfflineEndWipes(GameInstance instance) {
-        if (!stateCommands.endWipeEnabled(instance.originLobbyId())) {
+        if (!services.stateCommands().endWipeEnabled(instance.originLobbyId())) {
             return;
         }
         Set<UUID> online = new HashSet<>();
-        for (Player onlinePlayer : store.onlineAssignedPlayers(instance)) {
+        for (Player onlinePlayer : services.store().onlineAssignedPlayers(instance)) {
             online.add(onlinePlayer.getUniqueId());
         }
         List<UUID> offline = new ArrayList<>();
         for (UUID assigned : instance.assignedPlayerIds()) {
-            if (!online.contains(assigned) && playerStates.role(assigned).isParticipant()) {
+            if (!online.contains(assigned) && services.playerStates().role(assigned).isParticipant()) {
                 offline.add(assigned);
             }
         }
-        stateCommands.markPendingEndWipe(offline);
+        services.stateCommands().markPendingEndWipe(offline);
     }
 
     /**
@@ -429,13 +441,13 @@ public final class MatchFinishService {
     private void scatterEngineOffEnd(GameInstance instance, List<Player> participants) {
         Location center = instance.startCenter();
         if (participants.isEmpty() || center == null || center.getWorld() == null
-                || engineSettings.isEnabled()) {
+                || reads.engineSettings().isEnabled()) {
             return;
         }
         World world = center.getWorld();
         int centerX = center.getBlockX();
         int centerZ = center.getBlockZ();
-        WorldEngineConfig spawnConfig = WorldEngineConfig.fromSettings(engineSettings);
+        WorldEngineConfig spawnConfig = WorldEngineConfig.fromSettings(reads.engineSettings());
         List<Location> spawns = MatchTeleportService.spreadSpawnsForConfig(world, centerX, centerZ,
                 MatchStartService.SURROUND_RADIUS, participants, spawnConfig);
         for (int index = 0; index < participants.size(); index++) {
@@ -449,7 +461,7 @@ public final class MatchFinishService {
      * scheduler use, and no career statistics are recorded.
      */
     public void shutdownAll() {
-        for (GameInstance instance : List.copyOf(store.liveInstances())) {
+        for (GameInstance instance : List.copyOf(services.store().liveInstances())) {
             shutdown(instance);
         }
     }
@@ -463,18 +475,18 @@ public final class MatchFinishService {
         instance.setEnding(true);
         gameEndListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchCancelEvent(instance.matchId()));
-        prestart.cancelWaitingTasks(instance);
-        prestart.cancelHeadstarts(instance);
-        timeLimits.cancelTimeLimit(instance);
-        stateCommands.cancelIntervalModifiers(instance.matchId());
-        stateCommands.runConsoleCleanup(instance.matchId());
-        stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
+        services.prestart().cancelWaitingTasks(instance);
+        services.prestart().cancelHeadstarts(instance);
+        services.timeLimits().cancelTimeLimit(instance);
+        services.stateCommands().cancelIntervalModifiers(instance.matchId());
+        services.stateCommands().runConsoleCleanup(instance.matchId());
+        services.stateCommands().runPlayerCleanup(instance.matchId(), services.store().onlineActivePlayers(instance));
         teardownNow(instance);
     }
 
     /** Cancels the match when exactly one is live; a no-op otherwise. */
     public void cancel() {
-        store.singleLiveInstance().ifPresent(this::cancel);
+        services.store().singleLiveInstance().ifPresent(this::cancel);
     }
 
     /** Cancels one match with no winner. */
@@ -504,49 +516,50 @@ public final class MatchFinishService {
         instance.setEnding(true);
         gameEndListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchCancelEvent(instance.matchId()));
-        prestart.cancelWaitingTasks(instance);
-        prestart.cancelHeadstarts(instance);
-        timeLimits.cancelTimeLimit(instance);
+        services.prestart().cancelWaitingTasks(instance);
+        services.prestart().cancelHeadstarts(instance);
+        services.timeLimits().cancelTimeLimit(instance);
 
-        messaging.sendToInstance(instance, game.getCancelled(), Map.of());
-        for (Player player : store.onlineAssignedPlayers(instance)) {
-            player.showTitle(Title.title(messages.componentRaw(game.getCancelledTitle()), Component.empty(),
+        texts.messaging().sendToInstance(instance, texts.game().getCancelled(), Map.of());
+        for (Player player : services.store().onlineAssignedPlayers(instance)) {
+            player.showTitle(Title.title(texts.messages().componentRaw(texts.game().getCancelledTitle()),
+                    Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
-        playerStates.resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
-        messaging.playInstanceSound(instance, "game.cancelled-sound");
+        services.playerStates().resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
+        texts.messaging().playInstanceSound(instance, "game.cancelled-sound");
 
         // Make all players invulnerable on cancel if configured
-        if (players.invulnerabilityOnGameEnd(instance.originLobbyId())) {
-            store.onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
+        if (reads.players().invulnerabilityOnGameEnd(instance.originLobbyId())) {
+            services.store().onlineAssignedPlayers(instance).forEach(p -> p.setInvulnerable(true));
         }
 
         // cancel interval modifiers early so they don't fire during the end delay
-        stateCommands.cancelIntervalModifiers(instance.matchId());
+        services.stateCommands().cancelIntervalModifiers(instance.matchId());
         // ran before the delay to ensure that any commands that depend on the match being completed can run immediately
-        stateCommands.runConsoleCleanup(instance.matchId());
-        stateCommands.runPlayerCleanup(instance.matchId(), store.onlineActivePlayers(instance));
+        services.stateCommands().runConsoleCleanup(instance.matchId());
+        services.stateCommands().runPlayerCleanup(instance.matchId(), services.store().onlineActivePlayers(instance));
 
         long delay = endDelayTicks(instance, immediate);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> showEndStatsOnce(instance), delay / 2);
-        Bukkit.getScheduler().runTaskLater(plugin, () -> finishEndPhase(instance), delay);
+        edge.tasks().runLater(() -> showEndStatsOnce(instance), delay / 2);
+        edge.tasks().runLater(() -> finishEndPhase(instance), delay);
     }
 
     /** Ends the match next tick when exactly one is live; a no-op otherwise. */
     public void finishLater(Role winner, String reason) {
-        store.singleLiveInstance().ifPresent(instance -> finishLater(instance, winner, reason));
+        services.store().singleLiveInstance().ifPresent(instance -> finishLater(instance, winner, reason));
     }
 
     /** Ends one match on the next tick. */
     public void finishLater(GameInstance instance, Role winner, String reason) {
-        Bukkit.getScheduler().runTask(plugin, () -> finish(instance, winner, reason));
+        edge.tasks().run(() -> finish(instance, winner, reason));
     }
 
     /** Online match assignees watching without playing, including eliminated hunters. */
     private List<Player> instanceNonePlayers(GameInstance instance) {
         Set<UUID> assigned = instance.assignedPlayerIds();
         return Bukkit.getOnlinePlayers().stream()
-                .filter(p -> playerStates.role(p).isWatching() && assigned.contains(p.getUniqueId()))
+                .filter(p -> services.playerStates().role(p).isWatching() && assigned.contains(p.getUniqueId()))
                 .map(p -> (Player) p).toList();
     }
 

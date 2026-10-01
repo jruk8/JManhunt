@@ -48,8 +48,8 @@ final class TagPrePass {
         for (TagLoops.LoopSpan span : TagLists.findFilterSpans(command)) {
             spans.add(new int[] {span.start(), span.end()});
         }
-        for (TagExpressions.IfSpan span : TagExpressions.findIfSpans(command)) {
-            if (!TagExpressions.hasNestedIf(span.args())) {
+        for (TagControlFlow.IfSpan span : TagControlFlow.findIfSpans(command)) {
+            if (!TagControlFlow.hasNestedIf(span.args())) {
                 spans.add(new int[] {span.start(), span.end()});
             }
         }
@@ -138,16 +138,16 @@ final class TagPrePass {
      */
     static String resolveIfSpans(String command, TagContext context, TagLoops.Evaluator eval,
             BiFunction<String, Integer, String> gap) {
-        List<TagExpressions.IfSpan> ready = new ArrayList<>();
-        for (TagExpressions.IfSpan span : TagExpressions.findIfSpans(command)) {
-            if (!TagExpressions.hasNestedIf(span.args())) {
+        List<TagControlFlow.IfSpan> ready = new ArrayList<>();
+        for (TagControlFlow.IfSpan span : TagControlFlow.findIfSpans(command)) {
+            if (!TagControlFlow.hasNestedIf(span.args())) {
                 ready.add(span);
             }
         }
         if (ready.isEmpty()) {
             return command;
         }
-        return stitch(command, ready, TagExpressions.IfSpan::start, TagExpressions.IfSpan::end,
+        return stitch(command, ready, TagControlFlow.IfSpan::start, TagControlFlow.IfSpan::end,
                 span -> ifLazy(command.substring(span.start(), span.end()), span.args(),
                         context, eval),
                 gap);

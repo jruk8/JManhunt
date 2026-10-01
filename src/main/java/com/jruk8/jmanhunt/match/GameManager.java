@@ -4,7 +4,16 @@ import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.config.PlayerSettings;
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.EngineStateRepository;
+import com.jruk8.jmanhunt.config.JManhuntConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.JManhuntPlaceholders;
+import com.jruk8.jmanhunt.core.TaskScheduler;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import com.jruk8.jmanhunt.player.RoleTeamService;
+import com.jruk8.jmanhunt.player.SpawnCampService;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
@@ -31,6 +40,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchControl;
 import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
@@ -52,14 +62,34 @@ import com.jruk8.jmanhunt.world.border.PseudoborderParticleService;
 import org.bukkit.scheduler.BukkitTask;
 
 public final class GameManager implements MatchControl {
-    private final JManhuntPlugin plugin;
-    private final MessageService messages;
-    private final PlayerStateStore playerStates;
+    /** States, compass, and stats. */
+    public record GameServices(PlayerStateStore playerStates, CompassManager compass,
+            StatsManager stats) {
+    }
+
+    /** Modifier reads, engine, win engine, and lobbies. */
+    public record GameReads(ConfigService configService, WorldEngineService worldEngine,
+            WinConditionEngine winConditionEngine, LobbyService lobbies) {
+    }
+
+    /** Message bus, texts, and sounds. */
+    public record GameTexts(MessageService messages, ManhuntMessages manhunt,
+            GameMessages gameTexts, WinconMessages wincon, SoundService sounds) {
+    }
+
+    /** Plugin-owned edges, narrowed. */
+    public record GameEdge(EngineStateRepository engineStates, FakeSpectatorService fakes,
+            JManhuntLogger log, OverrideService overrides, JManhuntPlaceholders placeholders,
+            PlayerRespawnListener respawn, RoleTeamService roleTeams,
+            SpawnCampService spawnCamp, LobbyConfig lobbyConfig, TaskScheduler tasks,
+            Supplier<JManhuntConfig> configRoot) {
+    }
+
+    private final GameServices services;
+    private final GameReads reads;
+    private final GameTexts texts;
+    private final GameEdge edge;
     private final GameStateCommandManager stateCommands;
-    private final ConfigService configService;
-    private final WorldEngineService worldEngine;
-    private final WinConditionEngine winConditionEngine;
-    private final LobbyService lobbies;
     private final MatchStore store;
     private final MatchMessaging messaging;
     private final TimeLimitService timeLimits;
@@ -70,59 +100,76 @@ public final class GameManager implements MatchControl {
     private final PseudoborderParticleService pseudoborderParticles;
     private final FlagStore flagStore;
     private final TagCooldownStore cooldownStore;
-    private final StatsManager stats;
     private final WinConditionTextService winConditions;
     private final MatchSettingsFacade matchSettings;
     private final PlayersSettingsFacade playersSettings;
     private final WinConditionsSettingsFacade winConditionsSettings;
 
-    public GameManager(JManhuntPlugin plugin, MessageService messages, ManhuntMessages manhunt,
-                       GameMessages gameTexts, WinconMessages wincon, SoundService sounds,
-                       PlayerStateStore playerStates, CompassManager compass, StatsManager stats,
-                       ConfigService configService, WorldEngineService worldEngine,
-                       WinConditionEngine winConditionEngine, LobbyService lobbyService) {
-        this.plugin = plugin;
-        this.messages = messages;
-        this.playerStates = playerStates;
-        this.configService = configService;
-        this.worldEngine = worldEngine;
-        var root = plugin.configRoot();
+    public GameManager(GameServices services, GameReads reads, GameTexts texts,
+            GameEdge edge) {
+        this.services = services;
+        this.reads = reads;
+        this.texts = texts;
+        this.edge = edge;
+        var root = edge.configRoot().get();
         var match = root.getSettings().getMatch();
         var players = root.getSettings().getPlayers();
         var engine = root.getWorldEngine();
-        this.matchSettings = new MatchSettingsFacade(plugin.overrides(), match);
-        this.playersSettings = new PlayersSettingsFacade(plugin.overrides(), players);
+        this.matchSettings = new MatchSettingsFacade(edge.overrides(), match);
+        this.playersSettings = new PlayersSettingsFacade(edge.overrides(), players);
         this.winConditionsSettings =
-                new WinConditionsSettingsFacade(plugin.overrides(), match.getWinConditions());
-        this.winConditionEngine = winConditionEngine;
-        this.lobbies = lobbyService;
+                new WinConditionsSettingsFacade(edge.overrides(), match.getWinConditions());
         var interop = root.getAdvanced().getMisc().getInterop();
-        this.stateCommands = new GameStateCommandManager(plugin, playerStates, configService,
-                interop, playersSettings, messages, sounds, this);
-        this.store = new MatchStore(playerStates);
+        this.stateCommands = new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(services.playerStates(), reads.configService(), interop,
+                        playersSettings),
+                new GameStateCommandManager.CommandEdge(edge.engineStates(),
+                        edge.fakes(), edge.log(), edge.overrides(),
+                        edge.placeholders(), edge.tasks()),
+                texts.messages(), texts.sounds(), this);
+        this.store = new MatchStore(services.playerStates());
         this.flagStore = new FlagStore();
         this.cooldownStore = new TagCooldownStore();
-        this.stats = stats;
-        this.messaging = new MatchMessaging(messages, manhunt, sounds,
-                root.getSettings().getServer(), store, lobbies);
-        this.timeLimits = new TimeLimitService(plugin, winConditionEngine, store, messaging, gameTexts, this);
-        this.prestart = new PrestartService(plugin, match.getHeadstarts(),
-                matchSettings, playersSettings, messages, playerStates,
-                stats, stateCommands, store, messaging, manhunt, this);
-        this.autostart = new AutostartService(plugin, matchSettings, messages,
-                playerStates, lobbies, worldEngine, store, messaging, manhunt, this);
-        this.matchFinish = new MatchFinishService(plugin, messages, gameTexts, playerStates,
-                compass, stats, stateCommands, engine, playersSettings, matchSettings,
-                worldEngine, store, messaging, timeLimits, prestart, autostart, flagStore,
-                cooldownStore);
-        this.matchStart = new MatchStartService(plugin, messages, gameTexts, manhunt, sounds,
-                playerStates, compass, stats, stateCommands, engine,
-                matchSettings, playersSettings, worldEngine, lobbies,
-                store, messaging, timeLimits, prestart, autostart);
-        this.pseudoborderParticles =
-                new PseudoborderParticleService(plugin, engine, store, worldEngine);
-        this.winConditions = new WinConditionTextService(messages, wincon,
-                players.getRespawn(), winConditionEngine);
+        this.messaging = new MatchMessaging(
+                new MatchMessaging.MessagingTexts(texts.messages(), texts.manhunt(),
+                        texts.sounds()),
+                root.getSettings().getServer(), store, reads.lobbies());
+        this.timeLimits = new TimeLimitService(
+                new TimeLimitService.TimeEdge(edge.log(), edge.tasks()), reads.winConditionEngine(),
+                store, new TimeLimitService.TimeTexts(messaging, texts.gameTexts()), this);
+        this.prestart = new PrestartService(
+                new PrestartService.PrestartConfig(match.getHeadstarts(), matchSettings,
+                        playersSettings, edge.overrides()),
+                new PrestartService.PrestartServices(services.playerStates(), services.stats(), stateCommands,
+                        store, this, edge.fakes(), edge.tasks()),
+                texts.messages(), messaging, texts.manhunt());
+        this.autostart = new AutostartService(
+                new AutostartService.AutoConfig(matchSettings, edge.tasks()),
+                new AutostartService.AutoMatch(services.playerStates(), reads.lobbies(), reads.worldEngine(), store,
+                        this),
+                texts.messages(), messaging, texts.manhunt());
+        this.matchFinish = new MatchFinishService(
+                new MatchFinishService.FinishReads(playersSettings, matchSettings, engine,
+                        edge.overrides(), edge.log()),
+                new MatchFinishService.FinishMatch(services.playerStates(), services.compass(), services.stats(),
+                        stateCommands, reads.worldEngine(), store, timeLimits, prestart, autostart,
+                        flagStore, cooldownStore),
+                new MatchFinishService.FinishEdge(edge.fakes(), edge.roleTeams(),
+                        edge.spawnCamp(), edge.tasks(), edge.configRoot()),
+                new MatchFinishService.FinishTexts(texts.messages(), texts.gameTexts(), messaging));
+        this.matchStart = new MatchStartService(
+                new MatchStartService.StartReads(matchSettings, playersSettings, engine,
+                        edge.log()),
+                new MatchStartService.StartMatch(services.playerStates(), services.compass(), services.stats(),
+                        stateCommands, reads.worldEngine(), reads.lobbies(), store, timeLimits, prestart,
+                        autostart),
+                new MatchStartService.StartEdge(edge.fakes(), edge.roleTeams(),
+                        edge.respawn(), texts.sounds()),
+                new MatchStartService.StartTexts(texts.messages(), texts.gameTexts(), texts.manhunt(), messaging));
+        this.pseudoborderParticles = new PseudoborderParticleService(edge.tasks(),
+                edge.fakes(), engine, store, reads.worldEngine());
+        this.winConditions = new WinConditionTextService(texts.messages(), texts.wincon(),
+                players.getRespawn(), reads.winConditionEngine());
         subscribeSettingChanges();
     }
 
@@ -147,7 +194,7 @@ public final class GameManager implements MatchControl {
     public TagCooldownStore cooldownStore() { return cooldownStore; }
     /** Stat values bound to one match for one tag run. */
     public StatValues matchStatValues(long matchId) {
-        return new MatchStatValues(stats, store, matchId);
+        return new MatchStatValues(services.stats(), store, matchId);
     }
 
     /** Live instances oldest first. */
@@ -200,17 +247,18 @@ public final class GameManager implements MatchControl {
     /** Live-reacts to the toggles this manager owns. */
     private void subscribeSettingChanges() {
         // assign events
-        configService.onChange("settings.match.autostart.enabled", (oldValue, newValue) -> updateAutostartState());
-        configService.onChange("world-engine.enabled", (oldValue, newValue) -> worldEngine.onReload());
+        reads.configService().onChange("settings.match.autostart.enabled",
+                (oldValue, newValue) -> updateAutostartState());
+        reads.configService().onChange("world-engine.enabled", (oldValue, newValue) -> reads.worldEngine().onReload());
         // Structure datapacks refresh exactly like the world-engine datapack:
         // toggling in-game applies or removes the files immediately instead of
         // waiting for a restart.
-        configService.onChange("settings.match.game-boosts.nether-structures.enabled",
-                (oldValue, newValue) -> worldEngine.onReload());
-        configService.onChange("settings.match.game-boosts.overworld-structures.enabled",
-                (oldValue, newValue) -> worldEngine.onReload());
-        configService.onChange(LobbyService.COLLISIONS_PATH,
-                (oldValue, newValue) -> lobbies.reapplyCollisions());
+        reads.configService().onChange("settings.match.game-boosts.nether-structures.enabled",
+                (oldValue, newValue) -> reads.worldEngine().onReload());
+        reads.configService().onChange("settings.match.game-boosts.overworld-structures.enabled",
+                (oldValue, newValue) -> reads.worldEngine().onReload());
+        reads.configService().onChange(LobbyService.COLLISIONS_PATH,
+                (oldValue, newValue) -> reads.lobbies().reapplyCollisions());
     }
 
     /** Connection listener with typed player and disconnect sections. */
@@ -219,9 +267,15 @@ public final class GameManager implements MatchControl {
             SpeedrunnerDisconnectTracker disconnects,
             Map<UUID, BukkitTask> disconnectTasks, CompassManager compass,
             GameMessages gameTexts) {
-        return new PlayerConnectionListener(plugin, playerStates, this, messages, players,
-                handling, lobbies, worldEngine.teleportService(), worldEngine,
-                disconnects, disconnectTasks, compass, gameTexts);
+        return new PlayerConnectionListener(
+                new PlayerConnectionListener.ConnectReads(services.playerStates(), edge.fakes(),
+                        texts.messages(), gameTexts),
+                new PlayerConnectionListener.ConnectMatch(this, reads.lobbies(), compass, disconnects,
+                        disconnectTasks),
+                new PlayerConnectionListener.ConnectWorld(reads.worldEngine().teleportService(),
+                        reads.worldEngine()),
+                new PlayerConnectionListener.ConnectConfig(players, handling),
+                new PlayerConnectionListener.ConnectEdge(edge.roleTeams(), edge.tasks()));
     }
 
     /** Combat listener with the typed player section. */
@@ -229,9 +283,15 @@ public final class GameManager implements MatchControl {
             PlayerRespawnListener respawn, SpeedrunnerDisconnectTracker disconnects,
             Map<UUID, BukkitTask> disconnectTasks, CompassManager compass,
             GameMessages gameTexts) {
-        return new PlayerCombatListener(plugin, playerStates, this, players, compass, stats,
-                lobbies, worldEngine, winConditionEngine, respawn, disconnects,
-                disconnectTasks, gameTexts);
+        return new PlayerCombatListener(
+                new PlayerCombatListener.CombatReads(services.playerStates(), edge.fakes(),
+                        players, gameTexts),
+                new PlayerCombatListener.CombatMatch(this, services.stats(), reads.winConditionEngine(),
+                        disconnects, disconnectTasks),
+                new PlayerCombatListener.CombatWorld(compass, reads.lobbies(), reads.worldEngine(), respawn),
+                new PlayerCombatListener.CombatEdge(edge.spawnCamp(), edge.roleTeams(),
+                        edge.log(), edge.lobbyConfig()),
+                edge.tasks());
     }
 
     public void updateAutostartState() { autostart.updateAutostartState(); }
@@ -239,7 +299,7 @@ public final class GameManager implements MatchControl {
     /**
      * Tells queued hunters and speedrunners of ineligible lobbies how
      * many more of each role autostart needs, at most once per
-     * configured interval. Runs every second from the plugin scheduler.
+     * configured interval. Runs every second from the tasks scheduler.
      */
     public void broadcastAutostartShortfalls() { autostart.broadcastAutostartShortfalls(); }
 
@@ -514,12 +574,12 @@ public final class GameManager implements MatchControl {
     public void syncModifierToggles(Collection<String> names) {
         stateCommands.syncModifierToggles(names);
     }
-    public Set<String> settingNames() { return configService.settingNames(); }
-    public boolean getSetting(String setting) { return configService.getBoolean(setting, false); }
-    public Object getSettingValue(String setting) { return configService.getValue(setting); }
+    public Set<String> settingNames() { return reads.configService().settingNames(); }
+    public boolean getSetting(String setting) { return reads.configService().getBoolean(setting, false); }
+    public Object getSettingValue(String setting) { return reads.configService().getValue(setting); }
     /** Sets a scalar setting parsed from a raw string, with typed validation. */
     public ConfigService.SetOutcome setSetting(String setting, String rawValue) {
-        return configService.setValue(setting, rawValue);
+        return reads.configService().setValue(setting, rawValue);
     }
 
 
@@ -555,52 +615,54 @@ public final class GameManager implements MatchControl {
 
 
     /** Current world-engine cell index, or empty when the store is unavailable. */
-    public OptionalLong cellIndex() { return worldEngine.cellIndex(); }
+    public OptionalLong cellIndex() { return reads.worldEngine().cellIndex(); }
 
     /** Current world-engine cell index cap for the live cell size. */
-    public long cellIndexCap() { return worldEngine.cellIndexCap(); }
+    public long cellIndexCap() { return reads.worldEngine().cellIndexCap(); }
 
     /** Buffered ready-cell indexes, oldest first. */
-    public List<Long> bufferedCellIndexes() { return worldEngine.bufferedCellIndexes(); }
+    public List<Long> bufferedCellIndexes() { return reads.worldEngine().bufferedCellIndexes(); }
 
     /** Configured lobby world name. */
-    public String lobbyWorldName() { return worldEngine.lobbyWorldName(); }
+    public String lobbyWorldName() { return reads.worldEngine().lobbyWorldName(); }
 
     /** True when newcomers have a lobby to wait in. */
-    public boolean hasLobbyLocation(int lobbyId) { return worldEngine.hasLobbyLocation(lobbyId); }
+    public boolean hasLobbyLocation(int lobbyId) { return reads.worldEngine().hasLobbyLocation(lobbyId); }
 
     /** Teleports players to a lobby spawn, announcing the travel. */
     public boolean teleportToLobby(List<Player> targets, int lobbyId) {
-        return worldEngine.teleportToLobby(targets, lobbyId);
+        return reads.worldEngine().teleportToLobby(targets, lobbyId);
     }
 
     public Optional<Location> lowestLobbyTeleport() {
-        return worldEngine.lowestLobbyTeleport();
+        return reads.worldEngine().lowestLobbyTeleport();
     }
 
     /** Pins respawn locations to a lobby spawn without announcing. */
     public boolean setSpawnToLobbyQuiet(List<Player> targets, int lobbyId) {
-        return worldEngine.setSpawnToLobbyQuiet(targets, lobbyId);
+        return reads.worldEngine().setSpawnToLobbyQuiet(targets, lobbyId);
     }
 
     /** Center surface point of a match cell, or empty without the engine. */
-    public Optional<Location> cellCenter(long cellIndex) { return worldEngine.cellCenter(cellIndex); }
+    public Optional<Location> cellCenter(long cellIndex) { return reads.worldEngine().cellCenter(cellIndex); }
 
 
     /** True when the lobby world is loaded or has a folder waiting. */
-    public boolean lobbyWorldExists() { return worldEngine.lobbyWorldExists(); }
+    public boolean lobbyWorldExists() { return reads.worldEngine().lobbyWorldExists(); }
 
     /** True when lobby-world-name collides with the game world name. */
-    public boolean lobbyWorldNameClashes() { return worldEngine.lobbyWorldNameClashes(); }
+    public boolean lobbyWorldNameClashes() { return reads.worldEngine().lobbyWorldNameClashes(); }
 
     /** Warns on a lobby/game world name clash. True when clean. */
-    public boolean validateLobbyWorldName() { return worldEngine.validateLobbyWorldName(); }
+    public boolean validateLobbyWorldName() { return reads.worldEngine().validateLobbyWorldName(); }
 
     /**
      * Arms or confirms lobby-world generation for one sender key. True only
      * on a matching second call within the timeout.
      */
-    public boolean confirmLobbyGeneration(String senderKey) { return worldEngine.confirmLobbyGeneration(senderKey); }
+    public boolean confirmLobbyGeneration(String senderKey) {
+        return reads.worldEngine().confirmLobbyGeneration(senderKey);
+    }
 
     /** Loads or generates the lobby world. Empty when creation fails. */
     public Optional<LobbyWorld> ensureLobbyWorld() {
@@ -609,16 +671,16 @@ public final class GameManager implements MatchControl {
 
     /** Same, with a one-shot preset override for fresh generation. */
     public Optional<LobbyWorld> ensureLobbyWorld(Optional<LobbyPreset> presetOverride) {
-        return worldEngine.ensureLobbyWorld(presetOverride);
+        return reads.worldEngine().ensureLobbyWorld(presetOverride);
     }
 
     /** Points lobby 0 at the spawn when none is configured. True when written. */
     public boolean ensureLobbyZero(Location spawn) {
-        return worldEngine.ensureLobbyZero(spawn);
+        return reads.worldEngine().ensureLobbyZero(spawn);
     }
 
     /** Overwrites the world-engine cell index. Returns false when unavailable. */
-    public boolean cellIndex(long value) { return worldEngine.cellIndex(value); }
+    public boolean cellIndex(long value) { return reads.worldEngine().cellIndex(value); }
 
     /** Maps an internal role to the API player role, defaulting to the winner role of NONE. */
     public static com.jruk8.jmanhunt.api.PlayerRole roleToPlayerRole(Role role) {

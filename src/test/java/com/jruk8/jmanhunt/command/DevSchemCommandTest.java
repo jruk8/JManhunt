@@ -4,10 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.DevConfig;
+import com.jruk8.jmanhunt.config.WorldEngineConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
+import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
 import com.jruk8.jmanhunt.message.MessageService;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -52,11 +55,12 @@ class DevSchemCommandTest {
         Files.write(schematics.resolve("both.jmhlobby"), new byte[]{1});
         Files.write(schematics.resolve("both.nbt"), new byte[]{1});
         Files.write(schematics.resolve("notes.txt"), new byte[]{1});
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.getDataFolder()).thenReturn(dir.toFile());
+        LobbySchematicService service = new LobbySchematicService(mock(JmhLobbyService.class),
+                mock(DevConfig.class), dir, mock(JManhuntLogger.class), name -> null);
 
-        List<String> names =
-                new DevSchemCommand(plugin, mock(MessageService.class), null, null).schematicNames();
+        List<String> names = new DevSchemCommand(service, mock(LobbyConfig.class),
+                mock(WorldEngineConfig.class), mock(JManhuntLogger.class),
+                new DevSchemCommand.Texts(mock(MessageService.class), null, null)).schematicNames();
 
         assertEquals(List.of("arena", "both", "old"), names);
     }

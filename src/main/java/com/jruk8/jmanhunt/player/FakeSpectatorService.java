@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.player;
 
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -10,7 +11,6 @@ import java.util.function.Supplier;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -34,18 +34,18 @@ public final class FakeSpectatorService {
         void onModeChange(Player player, boolean enabled);
     }
 
-    private final Plugin plugin;
+    private final TaskScheduler tasks;
     private final Supplier<Collection<? extends Player>> onlinePlayers;
     private final Set<UUID> actives = new HashSet<>();
     private final List<ModeListener> modeListeners = new ArrayList<>();
 
-    public FakeSpectatorService(Plugin plugin, PlayerStateStore playerStates) {
-        this(plugin, playerStates, Bukkit::getOnlinePlayers);
+    public FakeSpectatorService(TaskScheduler tasks, PlayerStateStore playerStates) {
+        this(tasks, playerStates, Bukkit::getOnlinePlayers);
     }
 
-    FakeSpectatorService(Plugin plugin, PlayerStateStore playerStates,
+    FakeSpectatorService(TaskScheduler tasks, PlayerStateStore playerStates,
             Supplier<Collection<? extends Player>> onlinePlayers) {
-        this.plugin = plugin;
+        this.tasks = tasks;
         this.onlinePlayers = onlinePlayers;
         playerStates.addRoleListener(this::onRoleChange);
     }
@@ -70,11 +70,11 @@ public final class FakeSpectatorService {
                 continue;
             }
             // The new fake sees everyone; only fakes see them back.
-            player.showPlayer(plugin, viewer);
+            player.showPlayer(tasks.plugin(), viewer);
             if (seesPlayer(isFakeSpectator(viewer), true)) {
-                viewer.showPlayer(plugin, player);
+                viewer.showPlayer(tasks.plugin(), player);
             } else {
-                viewer.hidePlayer(plugin, player);
+                viewer.hidePlayer(tasks.plugin(), player);
             }
         }
         notifyMode(player, true);
@@ -100,11 +100,11 @@ public final class FakeSpectatorService {
             if (viewer.getUniqueId().equals(id)) {
                 continue;
             }
-            viewer.showPlayer(plugin, player);
+            viewer.showPlayer(tasks.plugin(), player);
             if (seesPlayer(false, isFakeSpectator(viewer))) {
-                player.showPlayer(plugin, viewer);
+                player.showPlayer(tasks.plugin(), viewer);
             } else {
-                player.hidePlayer(plugin, viewer);
+                player.hidePlayer(tasks.plugin(), viewer);
             }
         }
         notifyMode(player, false);
@@ -140,7 +140,7 @@ public final class FakeSpectatorService {
         for (Player online : onlinePlayers.get()) {
             if (actives.contains(online.getUniqueId())
                     && !online.getUniqueId().equals(joinerId)) {
-                joiner.hidePlayer(plugin, online);
+                joiner.hidePlayer(tasks.plugin(), online);
             }
         }
     }
@@ -154,7 +154,7 @@ public final class FakeSpectatorService {
         stopFlightUnlessCreative(joiner);
         for (Player viewer : onlinePlayers.get()) {
             if (!viewer.getUniqueId().equals(joiner.getUniqueId())) {
-                viewer.showPlayer(plugin, joiner);
+                viewer.showPlayer(tasks.plugin(), joiner);
             }
         }
     }

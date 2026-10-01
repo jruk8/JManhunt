@@ -1,15 +1,16 @@
 package com.jruk8.jmanhunt.world.end;
 
 import com.jruk8.jmanhunt.core.DebugLevel;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.message.DebugMessages;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.world.DimensionWorlds;
 import com.jruk8.jmanhunt.world.FileUtils;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import java.io.File;
@@ -46,13 +47,15 @@ public final class EndCellManager {
      */
     static final int OVERFLOW_MULTIPLIER = 5;
 
-    private final JManhuntPlugin plugin;
+    private final Server server;
+    private final JManhuntLogger log;
     private final EngineStateRepository engineState;
     /** Live assignments, match id to pool world name. */
     private final Map<Long, String> reservations = new HashMap<>();
 
-    public EndCellManager(JManhuntPlugin plugin, EngineStateRepository engineState) {
-        this.plugin = plugin;
+    public EndCellManager(Server server, JManhuntLogger log, EngineStateRepository engineState) {
+        this.server = server;
+        this.log = log;
         this.engineState = engineState;
     }
 
@@ -167,7 +170,7 @@ public final class EndCellManager {
         String name = pool.get(chosen);
         reservations.put(matchId, name);
         persistReservation(matchId, name);
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getEndCellReserved,
+        log.debug(DebugLevel.INFO, DebugMessages::getEndCellReserved,
                 Map.of("cell", name, "id", String.valueOf(matchId)));
         World world = loadDimension(name);
         if (world == null) {
@@ -205,7 +208,7 @@ public final class EndCellManager {
         }
         reservations.remove(matchId);
         dropReservation(matchId);
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getEndCellReset, Map.of("cell", name));
+        log.debug(DebugLevel.INFO, DebugMessages::getEndCellReset, Map.of("cell", name));
         return true;
     }
 
@@ -223,7 +226,7 @@ public final class EndCellManager {
         Set<Long> assigned = assignedNumbers(config.endBaseName());
         Set<Long> free = new TreeSet<>(pool.keySet());
         free.removeAll(assigned);
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getEndPoolScan, Map.of(
+        log.debug(DebugLevel.INFO, DebugMessages::getEndPoolScan, Map.of(
                 "container", container.getAbsolutePath(),
                 "entries", String.valueOf(entries.size()),
                 "pool", describe(pool.keySet()),
@@ -276,7 +279,7 @@ public final class EndCellManager {
             return OptionalLong.empty();
         }
         long n = nextN(pool.keySet());
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getEndCellTopup, Map.of(
+        log.debug(DebugLevel.INFO, DebugMessages::getEndCellTopup, Map.of(
                 "cell", poolName(config.endBaseName(), n),
                 "pool", describe(pool.keySet())));
         if (generateDimension(config, n, seed.getAsLong()) == null) {
@@ -329,7 +332,7 @@ public final class EndCellManager {
     }
 
     private File worldContainer() {
-        return plugin.getServer().getWorldContainer();
+        return server.getWorldContainer();
     }
 
     private List<String> containerDirs() {
@@ -379,7 +382,7 @@ public final class EndCellManager {
         boolean loaded = Bukkit.getWorld(name) != null;
         boolean folder = loaded
                 || DimensionWorlds.unloadedFolder(worldContainer(), config.worldName(), name).isDirectory();
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getEndCellCreateAttempt, Map.of(
+        log.debug(DebugLevel.INFO, DebugMessages::getEndCellCreateAttempt, Map.of(
                 "cell", name,
                 "loaded", String.valueOf(loaded),
                 "folder", String.valueOf(folder)));
@@ -388,10 +391,10 @@ public final class EndCellManager {
             creator.seed(EndSeedHasher.initialSeed(seed, n));
         });
         if (created == null) {
-            plugin.logger().warning("Could not generate end dimension " + name + ".");
+            log.warning("Could not generate end dimension " + name + ".");
             return null;
         }
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getEndCellCreated, Map.of("cell", name));
+        log.debug(DebugLevel.INFO, DebugMessages::getEndCellCreated, Map.of("cell", name));
         return created;
     }
 
@@ -413,7 +416,7 @@ public final class EndCellManager {
                     player.teleport(fallback);
                 }
             }
-            EndWorlds.clearDragonBar(plugin, loaded);
+            EndWorlds.clearDragonBar(log, loaded);
             for (Chunk chunk : loaded.getLoadedChunks()) {
                 chunk.unload();
             }
@@ -424,10 +427,10 @@ public final class EndCellManager {
         try {
             FileUtils.deleteRecursively(target);
         } catch (IOException exception) {
-            plugin.logger().warning("Failed to delete end dimension " + name + ": " + exception.getMessage());
+            log.warning("Failed to delete end dimension " + name + ": " + exception.getMessage());
             return false;
         }
-        plugin.logger().debug(DebugLevel.INFO, DebugMessages::getEndCellPruned, Map.of("cell", name));
+        log.debug(DebugLevel.INFO, DebugMessages::getEndCellPruned, Map.of("cell", name));
         return true;
     }
 
@@ -438,7 +441,7 @@ public final class EndCellManager {
         try {
             engineState.putEndReservation(matchId, name);
         } catch (SQLException exception) {
-            plugin.logger().warning("Could not persist end reservation for match " + matchId
+            log.warning("Could not persist end reservation for match " + matchId
                     + ": " + exception.getMessage());
         }
     }
@@ -450,7 +453,7 @@ public final class EndCellManager {
         try {
             engineState.removeEndReservation(matchId);
         } catch (SQLException exception) {
-            plugin.logger().warning("Could not drop end reservation for match " + matchId
+            log.warning("Could not drop end reservation for match " + matchId
                     + ": " + exception.getMessage());
         }
     }
@@ -462,7 +465,7 @@ public final class EndCellManager {
         try {
             return engineState.endReservations();
         } catch (SQLException exception) {
-            plugin.logger().warning("Could not load end reservations; sweeping stray folders only: "
+            log.warning("Could not load end reservations; sweeping stray folders only: "
                     + exception.getMessage());
             return Map.of();
         }
@@ -478,20 +481,20 @@ public final class EndCellManager {
                 player.teleport(evacuateTo);
             }
         }
-        EndWorlds.clearDragonBar(plugin, world);
+        EndWorlds.clearDragonBar(log, world);
         for (Chunk chunk : world.getLoadedChunks()) {
             chunk.unload();
         }
         String name = world.getName();
         File folder = world.getWorldFolder();
         if (!Bukkit.unloadWorld(world, true)) {
-            plugin.logger().warning("Could not unload end world " + name + " for reset.");
+            log.warning("Could not unload end world " + name + " for reset.");
             return false;
         }
         try {
             FileUtils.deleteRecursively(folder);
         } catch (IOException exception) {
-            plugin.logger().warning("Failed to clean end data at " + name + ": " + exception.getMessage());
+            log.warning("Failed to clean end data at " + name + ": " + exception.getMessage());
             return false;
         }
         World recreated = DimensionWorlds.loadOrCreate(name, creator -> {
@@ -499,7 +502,7 @@ public final class EndCellManager {
             creator.seed(newSeed);
         });
         if (recreated == null) {
-            plugin.logger().warning("Could not recreate end world " + name + " after reset.");
+            log.warning("Could not recreate end world " + name + " after reset.");
             return false;
         }
         return true;

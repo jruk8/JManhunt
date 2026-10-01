@@ -186,8 +186,9 @@ public final class ModsLoader {
         private final List<UnknownMember> unknownMembers = new ArrayList<>();
 
         private ModLoadResult result() {
-            return new ModLoadResult(modifiers, presets, unknownFiles, failedFiles,
-                    duplicates(), unknownMembers);
+            return new ModLoadResult(new ModLoadResult.Loaded(modifiers, presets),
+                    new ModLoadResult.Problems(unknownFiles, failedFiles, duplicates(),
+                            unknownMembers));
         }
 
         private List<DuplicateId> duplicates() {

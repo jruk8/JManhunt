@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.lobby;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import java.util.function.Supplier;
 import org.bukkit.World;
@@ -28,11 +27,11 @@ public final class LobbyProtectionService implements Listener {
 
     public static final String EDIT_PERMISSION = "jmanhunt.editlobby";
 
-    private final JManhuntPlugin plugin;
+    private final LobbyConfig lobbyConfig;
     private final Supplier<String> lobbyWorldName;
 
-    public LobbyProtectionService(JManhuntPlugin plugin, Supplier<String> lobbyWorldName) {
-        this.plugin = plugin;
+    public LobbyProtectionService(LobbyConfig lobbyConfig, Supplier<String> lobbyWorldName) {
+        this.lobbyConfig = lobbyConfig;
         this.lobbyWorldName = lobbyWorldName;
     }
 
@@ -103,8 +102,7 @@ public final class LobbyProtectionService implements Listener {
         if (world == null || !world.getName().equals(lobbyWorldName.get())) {
             return false;
         }
-        LobbyConfig config = plugin.lobbyConfig();
-        return config != null && config.isProtectedWorld();
+        return lobbyConfig != null && lobbyConfig.isProtectedWorld();
     }
 
     private static Player attacker(Entity damager) {

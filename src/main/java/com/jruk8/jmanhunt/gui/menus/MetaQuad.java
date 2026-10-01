@@ -28,23 +28,17 @@ import org.bukkit.entity.Player;
  * name while right-clicking it renames the id.
  */
 public final class MetaQuad {
+    /** Message bus, gui/modifier/command texts, and sounds. */
+    public record MetaTexts(MessageService messages, ModifiersGuiMessages modifiersGui,
+            ModifiersMessages modifiers, CommandMessages command, SoundService sounds) {
+    }
 
-    private final MessageService messages;
-    private final ModifiersGuiMessages modifiersGui;
-    private final ModifiersMessages modifiers;
-    private final CommandMessages command;
-    private final SoundService sounds;
+    private final MetaTexts texts;
     private final GuiService gui;
     private final SettingDialog dialogs;
 
-    public MetaQuad(MessageService messages, ModifiersGuiMessages modifiersGui,
-            ModifiersMessages modifiers, CommandMessages command, SoundService sounds,
-            GuiService gui, SettingDialog dialogs) {
-        this.messages = messages;
-        this.modifiersGui = modifiersGui;
-        this.modifiers = modifiers;
-        this.command = command;
-        this.sounds = sounds;
+    public MetaQuad(MetaTexts texts, GuiService gui, SettingDialog dialogs) {
+        this.texts = texts;
         this.gui = gui;
         this.dialogs = dialogs;
     }
@@ -60,20 +54,20 @@ public final class MetaQuad {
             Function<String, Menu> reopenMeta) {
         final Menu[] self = new Menu[1];
         self[0] = QuadPanel.menu(
-                GuiTexts.title(messages, modifiersGui.getMetaTitle()),
+                GuiTexts.title(texts.messages(), texts.modifiersGui().getMetaTitle()),
                 List.of(
                         nameButton(target, parent, reopenMeta),
-                        EditorButtons.valueButton(messages, modifiersGui, Material.BOOK,
+                        EditorButtons.valueButton(texts.messages(), texts.modifiersGui(), Material.BOOK,
                                 "Description", orUnset(target.description()),
-                                modifiersGui.getEditorClickEdit(),
+                                texts.modifiersGui().getEditorClickEdit(),
                                 player -> fieldPrompt(player, reopen(target, parent, reopenMeta), "Description",
                                         target.description(), true, false, raw -> {
                                             target.patchDescription(raw);
                                             return null;
                                         })),
-                        EditorButtons.valueButton(messages, modifiersGui, target.item(),
+                        EditorButtons.valueButton(texts.messages(), texts.modifiersGui(), target.item(),
                                 "Icon", target.item().name(),
-                                modifiersGui.getEditorClickEdit(),
+                                texts.modifiersGui().getEditorClickEdit(),
                                 player -> fieldPrompt(player, reopen(target, parent, reopenMeta), "Icon",
                                         target.item().name(), false, true, raw -> {
                                             ModifierFieldEdits.Parsed<Material> item =
@@ -82,13 +76,13 @@ public final class MetaQuad {
                                                 return item.error();
                                             }
                                             target.patchItem(item.value());
-                                            messages.messageRaw(player, modifiers.getEditIconSet(),
+                                            texts.messages().messageRaw(player, texts.modifiers().getEditIconSet(),
                                                     Map.of("material", item.value().name()));
                                             return null;
                                         })),
-                        EditorButtons.valueButton(messages, modifiersGui, Material.PLAYER_HEAD,
+                        EditorButtons.valueButton(texts.messages(), texts.modifiersGui(), Material.PLAYER_HEAD,
                                 "Author", orUnset(target.author()),
-                                modifiersGui.getEditorClickEdit(),
+                                texts.modifiersGui().getEditorClickEdit(),
                                 player -> fieldPrompt(player, reopen(target, parent, reopenMeta), "Author",
                                         target.author() == null ? "" : target.author(),
                                         true, false, raw -> {
@@ -97,20 +91,20 @@ public final class MetaQuad {
                                         })).withMeta(meta ->
                                                 AuthorHeads.applyTo(meta, target.author()))),
                 gui,
-                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
+                GuiTexts.name(texts.messages(), texts.modifiersGui().getBack(), "Back"),
                 parent);
         return self[0];
     }
 
     private MenuButton nameButton(MetaTarget target, Supplier<Menu> parent,
             Function<String, Menu> reopenMeta) {
-        return new MenuButton(Material.NAME_TAG,
-                GuiTexts.name(messages, "Name", "Name"),
-                GuiTexts.lore(messages, List.of(
-                        EditorButtons.currentLine(modifiersGui, target.name()),
+        return new MenuButton(new MenuButton.Spec(Material.NAME_TAG,
+                GuiTexts.name(texts.messages(), "Name", "Name"),
+                GuiTexts.lore(texts.messages(), List.of(
+                        EditorButtons.currentLine(texts.modifiersGui(), target.name()),
                         "Id: <white>{id}".replace("{id}", target.id()),
-                        modifiersGui.getEditorClickEdit(),
-                        modifiersGui.getEditorRenameHint())),
+                        texts.modifiersGui().getEditorClickEdit(),
+                        texts.modifiersGui().getEditorRenameHint())),
                 false, false,
                 player -> fieldPrompt(player, reopen(target, parent, reopenMeta),
                         "Name", target.name(), false, false,
@@ -121,13 +115,13 @@ public final class MetaQuad {
                                 return name.error();
                             }
                             target.patchName(name.value());
-                            messages.messageRaw(player, modifiers.getEditRenamed(),
+                            texts.messages().messageRaw(player, texts.modifiers().getEditRenamed(),
                                     Map.of("name", target.displayName(target.id())));
-                            sounds.playNeutralSound(player);
+                            texts.sounds().playNeutralSound(player);
                             return null;
                         }),
                 player -> renamePrompt(player, reopen(target, parent, reopenMeta),
-                        target, reopenMeta)).silent();
+                        target, reopenMeta), null, MenuButton.SoundPolicy.CLICK, null)).silent();
     }
 
     /** Rebuild supplier so prompt callbacks reopen a fresh quad. */
@@ -138,12 +132,14 @@ public final class MetaQuad {
 
     private void fieldPrompt(Player player, Supplier<Menu> reopen, String label, String current,
             boolean clearable, boolean withIcon, FieldPrompts.Submit submit) {
-        String title = modifiersGui.getEditorPromptTitle().replace("{label}", label);
+        String title = texts.modifiersGui().getEditorPromptTitle().replace("{label}", label);
         if (withIcon) {
-            FieldPrompts.promptWithIcon(dialogs, gui, messages, modifiersGui, modifiers, sounds, player, reopen,
+            FieldPrompts.promptWithIcon(dialogs, gui, texts.messages(), texts.modifiersGui(),
+                    texts.modifiers(), texts.sounds(), player, reopen,
                     title, current, clearable, submit);
         } else {
-            FieldPrompts.prompt(dialogs, gui, messages, modifiersGui, modifiers, sounds, player, reopen,
+            FieldPrompts.prompt(dialogs, gui, texts.messages(), texts.modifiersGui(), texts.modifiers(),
+                    texts.sounds(), player, reopen,
                     title, current, clearable, submit);
         }
     }
@@ -153,8 +149,8 @@ public final class MetaQuad {
         if (denied(player)) {
             return;
         }
-        dialogs.prompt(player, modifiersGui.getEditorRenameTitle(), target.id(),
-                List.of(modifiersGui.getEditorRenamePrompt()),
+        dialogs.prompt(player, texts.modifiersGui().getEditorRenameTitle(), target.id(),
+                List.of(texts.modifiersGui().getEditorRenamePrompt()),
                 raw -> {
                     ModifierFieldEdits.Parsed<String> parsed =
                             ModifierFieldEdits.id(raw, target.takenIds());
@@ -164,9 +160,9 @@ public final class MetaQuad {
                         return;
                     }
                     target.rename(parsed.value());
-                    messages.messageRaw(player, modifiers.getEditIdChanged(),
+                    texts.messages().messageRaw(player, texts.modifiers().getEditIdChanged(),
                             Map.of("name", parsed.value()));
-                    sounds.playNeutralSound(player);
+                    texts.sounds().playNeutralSound(player);
                     gui.navigate(player, reopenMeta.apply(parsed.value()));
                 },
                 () -> gui.navigate(player, reopen.get()));
@@ -174,20 +170,20 @@ public final class MetaQuad {
 
     private String orUnset(String value) {
         return value == null || value.isBlank()
-                ? modifiersGui.getEditorUnset() : value;
+                ? texts.modifiersGui().getEditorUnset() : value;
     }
 
     private boolean denied(Player player) {
         if (player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
             return false;
         }
-        messages.messageRaw(player, command.getNoPermission());
+        texts.messages().messageRaw(player, texts.command().getNoPermission());
         return true;
     }
 
     private void invalid(Player player, String error) {
-        messages.messageRaw(player, modifiers.getEditInvalid(), Map.of("error", error));
-        sounds.playAngrySound(player);
+        texts.messages().messageRaw(player, texts.modifiers().getEditInvalid(), Map.of("error", error));
+        texts.sounds().playAngrySound(player);
     }
 
 }

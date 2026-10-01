@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.lobby;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.DevConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -12,8 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
 import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
+import java.nio.file.Path;
 
 class LobbySchematicServiceTest {
 
@@ -63,10 +64,8 @@ class LobbySchematicServiceTest {
 
     @Test
     void missingBundledSchematicWarnsAndFails() {
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
-
-        assertFalse(new LobbySchematicService(plugin)
+        assertFalse(new LobbySchematicService(mock(JmhLobbyService.class), mock(DevConfig.class),
+                Path.of("missing"), mock(JManhuntLogger.class), name -> null)
                 .pasteNbt(mock(World.class), "no-such-lobby"));
     }
 }

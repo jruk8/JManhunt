@@ -1,11 +1,11 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.RoleTeamService;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -21,18 +21,19 @@ import java.util.function.BiFunction;
  * normal start flow through the starter callback.
  */
 public final class QuickStartService {
-    private final JManhuntPlugin plugin;
-    private final LobbyService lobbies;
-    private final PlayerStateStore playerStates;
+    /** Lobby, roles, and team sync. */
+    public record QuickRoster(LobbyService lobbies, PlayerStateStore playerStates,
+            RoleTeamService roleTeams) {
+    }
+
+    private final QuickRoster roster;
     private final MatchStore store;
     private final AutostartService autostart;
     private final BiFunction<Integer, Location, Boolean> starter;
 
-    public QuickStartService(JManhuntPlugin plugin, LobbyService lobbies, PlayerStateStore playerStates,
-            MatchStore store, AutostartService autostart, BiFunction<Integer, Location, Boolean> starter) {
-        this.plugin = plugin;
-        this.lobbies = lobbies;
-        this.playerStates = playerStates;
+    public QuickStartService(QuickRoster roster, MatchStore store, AutostartService autostart,
+            BiFunction<Integer, Location, Boolean> starter) {
+        this.roster = roster;
         this.store = store;
         this.autostart = autostart;
         this.starter = starter;
@@ -45,7 +46,7 @@ public final class QuickStartService {
      */
     public boolean blocksStart(int lobbyId) {
         return store.instanceForLobby(lobbyId).isPresent()
-                && !lobbies.midMatchPolicy().allowsConcurrentStart(lobbies.multiLobbyAllowed());
+                && !roster.lobbies().midMatchPolicy().allowsConcurrentStart(roster.lobbies().multiLobbyAllowed());
     }
 
     /**
@@ -74,7 +75,7 @@ public final class QuickStartService {
         if (blocksStart(lobbyId)) {
             return new QuickStartOutcome(false);
         }
-        Optional<Lobby> lobby = lobbies.get(lobbyId);
+        Optional<Lobby> lobby = roster.lobbies().get(lobbyId);
         if (lobby.isEmpty()) {
             return new QuickStartOutcome(false);
         }
@@ -84,7 +85,7 @@ public final class QuickStartService {
         // conversion is needed, and NONEs always join the pool.
         List<Player> pool = Bukkit.getOnlinePlayers().stream()
                 .filter(p -> resolved.contains(p.getUniqueId())
-                        && playerStates.role(p) != Role.AFK && playerStates.role(p) != Role.SPECTATOR
+                        && roster.playerStates().role(p) != Role.AFK && roster.playerStates().role(p) != Role.SPECTATOR
                         && !store.isInLiveInstance(p.getUniqueId()))
                 .map(p -> (Player) p)
                 .toList();
@@ -115,8 +116,8 @@ public final class QuickStartService {
         Collections.shuffle(shuffled);
         for (int index = 0; index < shuffled.size(); index++) {
             Role want = index < speedrunnerCount ? Role.SPEEDRUNNER : Role.HUNTER;
-            playerStates.setRole(shuffled.get(index), want);
-            plugin.roleTeams().sync(shuffled.get(index));
+            roster.playerStates().setRole(shuffled.get(index), want);
+            roster.roleTeams().sync(shuffled.get(index));
         }
     }
 
@@ -140,29 +141,29 @@ public final class QuickStartService {
      * everyone else keeps their current role.
      */
     private void ensureMinimumTeams(List<Player> pool) {
-        boolean hasHunter = pool.stream().anyMatch(p -> playerStates.role(p) == Role.HUNTER);
-        boolean hasSpeedrunner = pool.stream().anyMatch(p -> playerStates.role(p) == Role.SPEEDRUNNER);
+        boolean hasHunter = pool.stream().anyMatch(p -> roster.playerStates().role(p) == Role.HUNTER);
+        boolean hasSpeedrunner = pool.stream().anyMatch(p -> roster.playerStates().role(p) == Role.SPEEDRUNNER);
         Player converted = null;
         if (!hasSpeedrunner) {
             converted = pickConvertible(pool, null);
             if (converted != null) {
-                playerStates.setRole(converted, Role.SPEEDRUNNER);
-                plugin.roleTeams().sync(converted);
+                roster.playerStates().setRole(converted, Role.SPEEDRUNNER);
+                roster.roleTeams().sync(converted);
             }
         }
         if (!hasHunter) {
             Player hunter = pickConvertible(pool, converted);
             if (hunter != null) {
-                playerStates.setRole(hunter, Role.HUNTER);
-                plugin.roleTeams().sync(hunter);
+                roster.playerStates().setRole(hunter, Role.HUNTER);
+                roster.roleTeams().sync(hunter);
             }
         }
         for (Player player : pool) {
-            if (playerStates.role(player) != Role.NONE) {
+            if (roster.playerStates().role(player) != Role.NONE) {
                 continue;
             }
-            playerStates.setRole(player, Role.HUNTER);
-            plugin.roleTeams().sync(player);
+            roster.playerStates().setRole(player, Role.HUNTER);
+            roster.roleTeams().sync(player);
         }
     }
 
@@ -175,7 +176,7 @@ public final class QuickStartService {
     private Player pickConvertible(List<Player> pool, Player exclude) {
         List<Player> candidates = pool.stream().filter(p -> !p.equals(exclude)).toList();
         List<Player> unassigned = candidates.stream()
-                .filter(p -> playerStates.role(p) == Role.NONE).toList();
+                .filter(p -> roster.playerStates().role(p) == Role.NONE).toList();
         List<Player> preferred = unassigned.isEmpty() ? candidates : unassigned;
         return preferred.isEmpty()
                 ? null : preferred.get(ThreadLocalRandom.current().nextInt(preferred.size()));

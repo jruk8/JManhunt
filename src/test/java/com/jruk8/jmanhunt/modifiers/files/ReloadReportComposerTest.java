@@ -116,12 +116,11 @@ class ReloadReportComposerTest {
     @Test
     void fullStackKeepsFixedOrder() {
         ReloadDiff diff = new ReloadDiff(List.of("a"), List.of(), List.of(), List.of());
-        ModLoadResult result = new ModLoadResult(Map.of(), Map.of(),
-                List.of(new UnknownFile("stray.txt", Path.of("stray"))),
-                List.of(new FailedFile("bad.yml", ModFileKind.MODIFIER, "boom", Path.of("bad"))),
-                List.of(new DuplicateId("x", ModFileKind.MODIFIER, Path.of("w"),
-                        List.of(Path.of("s")))),
-                List.of());
+        ModLoadResult result = new ModLoadResult(new ModLoadResult.Loaded(Map.of(), Map.of()),
+                new ModLoadResult.Problems(List.of(new UnknownFile("stray.txt", Path.of("stray"))),
+                        List.of(new FailedFile("bad.yml", ModFileKind.MODIFIER, "boom", Path.of("bad"))),
+                        List.of(new DuplicateId("x", ModFileKind.MODIFIER, Path.of("w"),
+                                List.of(Path.of("s")))), List.of()));
 
         List<String> lines = ReloadReportComposer.compose(diff, result, WORDS);
 
@@ -140,14 +139,17 @@ class ReloadReportComposerTest {
         List<UnknownFile> unknowns = filenames.stream()
                 .map(name -> new UnknownFile(name, Path.of(name)))
                 .toList();
-        return new ModLoadResult(Map.of(), Map.of(), unknowns, List.of(), List.of(), List.of());
+        return new ModLoadResult(new ModLoadResult.Loaded(Map.of(), Map.of()),
+                new ModLoadResult.Problems(unknowns, List.of(), List.of(), List.of()));
     }
 
     private static ModLoadResult withFailed(List<FailedFile> failed) {
-        return new ModLoadResult(Map.of(), Map.of(), List.of(), failed, List.of(), List.of());
+        return new ModLoadResult(new ModLoadResult.Loaded(Map.of(), Map.of()),
+                new ModLoadResult.Problems(List.of(), failed, List.of(), List.of()));
     }
 
     private static ModLoadResult withDuplicates(List<DuplicateId> duplicates) {
-        return new ModLoadResult(Map.of(), Map.of(), List.of(), List.of(), duplicates, List.of());
+        return new ModLoadResult(new ModLoadResult.Loaded(Map.of(), Map.of()),
+                new ModLoadResult.Problems(List.of(), List.of(), duplicates, List.of()));
     }
 }

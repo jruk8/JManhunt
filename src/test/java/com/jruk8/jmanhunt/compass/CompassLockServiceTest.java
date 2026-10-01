@@ -9,7 +9,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -461,13 +460,14 @@ class CompassLockServiceTest {
                 .thenReturn(List.of(new CompassIdentity(targetId, "victim")));
         when(targets.collectSightings(any(), any(), any(), any())).thenReturn(List.of());
         MessagesConfig texts = new MessagesConfig();
-        CompassLockService locks = new CompassLockService(mock(JManhuntPlugin.class),
-                mock(CompassSettingsFacade.class),
-                new PlayerStateStore(), mock(SoundService.class), mock(MessageService.class),
-                texts.getCompass(), texts.getModifiers(),
-                targets, new HashMap<>(), mock(Consumer.class), mock(Consumer.class),
-                mock(Consumer.class), ignored -> { }, cache, new HashMap<>(),
-                mock(AnalysisHost.class));
+        CompassLockService locks = new CompassLockService(mock(CompassSettingsFacade.class),
+                new CompassLockService.LockCycle(targets, cache, mock(Consumer.class),
+                        mock(Consumer.class)),
+                mock(CompassAnalysisRunner.class),
+                new CompassLockService.LockTexts(mock(MessageService.class), texts.getCompass(),
+                        mock(SoundService.class)),
+                new CompassLockService.LockPlayers(new PlayerStateStore(),
+                        mock(FakeSpectatorService.class)));
 
         CompassLockService.CachedCycle cycle = locks.buildCycle(player, mock(GameInstance.class),
                 Role.SPEEDRUNNER, 5);
@@ -494,15 +494,11 @@ class CompassLockServiceTest {
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.configService()).thenReturn(configService);
         OverrideService overrides =
                 new OverrideService(configService, new LobbyConfig(), () -> { });
-        when(plugin.overrides()).thenReturn(overrides);
         CompassSettingsFacade settings =
                 new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
-        when(plugin.fakeSpectators()).thenReturn(fakes);
         UUID holderId = UUID.randomUUID();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(holderId);
@@ -523,10 +519,12 @@ class CompassLockServiceTest {
         MessageService messages = mock(MessageService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         MessagesConfig texts = new MessagesConfig();
-        CompassLockService locks = new CompassLockService(plugin, settings, playerStates,
-                sounds, messages, texts.getCompass(), texts.getModifiers(), targets,
-                new HashMap<>(), refresher, mock(Consumer.class), renderer,
-                ignored -> { }, new CompassCache(), sharedClicks, mock(AnalysisHost.class));
+        CompassLockService locks = new CompassLockService(settings,
+                new CompassLockService.LockCycle(targets, new CompassCache(), renderer,
+                        refresher),
+                mock(CompassAnalysisRunner.class),
+                new CompassLockService.LockTexts(messages, texts.getCompass(), sounds),
+                new CompassLockService.LockPlayers(playerStates, fakes));
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
                 messages, targets, sharedClicks, playerStates, texts);
@@ -557,12 +555,9 @@ class CompassLockServiceTest {
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.configService()).thenReturn(configService);
         var overrides = new OverrideService(configService, new LobbyConfig(), () -> { });
         var settings = new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
-        when(plugin.fakeSpectators()).thenReturn(fakes);
         UUID holderId = UUID.randomUUID();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(holderId);
@@ -583,10 +578,12 @@ class CompassLockServiceTest {
         MessageService messages = mock(MessageService.class);
         Map<UUID, Long> sharedClicks = new HashMap<>();
         MessagesConfig texts = new MessagesConfig();
-        CompassLockService locks = new CompassLockService(plugin, settings, playerStates,
-                sounds, messages, texts.getCompass(), texts.getModifiers(), targets,
-                new HashMap<>(), refresher, mock(Consumer.class), renderer,
-                ignored -> { }, new CompassCache(), sharedClicks, mock(AnalysisHost.class));
+        CompassLockService locks = new CompassLockService(settings,
+                new CompassLockService.LockCycle(targets, new CompassCache(), renderer,
+                        refresher),
+                mock(CompassAnalysisRunner.class),
+                new CompassLockService.LockTexts(messages, texts.getCompass(), sounds),
+                new CompassLockService.LockPlayers(playerStates, fakes));
         locks.setGameManager(game);
         return new Fixture(locks, player, refresher, renderer, game, sounds, fakes,
                 messages, targets, sharedClicks, playerStates, texts);

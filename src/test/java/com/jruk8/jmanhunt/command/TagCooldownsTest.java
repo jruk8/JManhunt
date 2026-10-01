@@ -39,13 +39,16 @@ class TagCooldownsTest {
 
         TagContext context() {
             LongSupplier clock = () -> now;
-            TagContext context = TagContext.run(
-                    ModifierTagScope.match("Steve", List.of(), new Random(23), warnings::add),
-                    "cooldowns", warnings::add, warnings::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), new FlagStore(),
-                            (text, name) -> text, roster, PlayerSinks.inert()));
+            TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                    List.of(), new Random(23), warnings::add), "cooldowns"),
+                    TagContext.TagSinks.simple(warnings::add, warnings::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                            ModifierTagScope.match("Steve", List.of(), new Random(23), warnings::add)),
+                    TagContext.TagRole.silent(),
+                    TagContext.TagMatch.simple(7L, new TagBackends(StatValues.inert(),
+                            new FlagStore(),
+                                    (text, name) -> text, roster, PlayerSinks.inert())
+                                    , (player, reason) -> { }, (role, reason) -> { }));
             context.setCooldowns(new TagCooldownStore(clock));
             return context;
         }

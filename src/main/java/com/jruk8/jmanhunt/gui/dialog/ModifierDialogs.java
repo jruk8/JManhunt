@@ -3,7 +3,7 @@ package com.jruk8.jmanhunt.gui.dialog;
 import com.jruk8.jmanhunt.command.PlaceholderCheatsheet;
 import com.jruk8.jmanhunt.compass.SignalInterference;
 import com.jruk8.jmanhunt.config.MatchConfig;
-import com.jruk8.jmanhunt.gui.GuiService;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.gui.GuiTexts;
 import com.jruk8.jmanhunt.match.ModifierTriggers;
 import com.jruk8.jmanhunt.message.ManhuntGuiMessages;
@@ -28,9 +28,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 /**
  * Native client dialogs for modifier editing.
@@ -49,17 +47,15 @@ public final class ModifierDialogs implements ModifierDialog {
     private final ModifiersGuiMessages modifiersGui;
     private final ManhuntGuiMessages manhuntGui;
     private final SoundService sounds;
-    private final GuiService gui;
-    private final Plugin plugin;
+    private final TaskScheduler tasks;
 
     public ModifierDialogs(MessageService messages, ModifiersGuiMessages modifiersGui,
-            ManhuntGuiMessages manhuntGui, SoundService sounds, GuiService gui, Plugin plugin) {
+            ManhuntGuiMessages manhuntGui, SoundService sounds, TaskScheduler tasks) {
         this.messages = messages;
         this.modifiersGui = modifiersGui;
         this.manhuntGui = manhuntGui;
         this.sounds = sounds;
-        this.gui = gui;
-        this.plugin = plugin;
+        this.tasks = tasks;
     }
 
     @Override
@@ -209,7 +205,7 @@ public final class ModifierDialogs implements ModifierDialog {
     }
 
     private void runLater(Player player, Runnable callback) {
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        tasks.run(() -> {
             if (player.isOnline()) {
                 callback.run();
             }

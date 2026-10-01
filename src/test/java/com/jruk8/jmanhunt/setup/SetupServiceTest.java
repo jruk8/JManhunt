@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.setup;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
@@ -31,16 +30,18 @@ import static org.mockito.Mockito.when;
 class SetupServiceTest {
 
     private GameManager game;
-    private JManhuntPlugin plugin;
     private MessageService messages;
     private SetupService setup;
     private Player clicker;
+    private Runnable observeWorldEngine;
+    private Runnable markSetupDone;
 
     @BeforeEach
     void setUp() throws Exception {
         game = mock(GameManager.class);
-        plugin = mock(JManhuntPlugin.class);
         messages = mock(MessageService.class);
+        observeWorldEngine = mock(Runnable.class);
+        markSetupDone = mock(Runnable.class);
         clicker = mock(Player.class);
         ConfigService config = mock(ConfigService.class);
         MessagesConfig texts = new MessagesConfig();
@@ -48,8 +49,10 @@ class SetupServiceTest {
         ConfigPathMapper.set(texts, "manhunt.worldengine-tpto-lobby-world-clash", "clash tpl");
         ConfigPathMapper.set(texts, "manhunt.worldengine-tpto-failed", "failed tpl");
         ManhuntMessages manhunt = texts.getManhunt();
-        setup = new SetupService(plugin, game, messages, manhunt, mock(SoundService.class),
-                new SettingFeedback(messages, manhunt, config, null));
+        setup = new SetupService(game,
+                new SetupService.Announcer(messages, manhunt, mock(SoundService.class)),
+                new SettingFeedback(messages, manhunt, config, null), observeWorldEngine,
+                markSetupDone);
     }
 
     @Test
@@ -60,9 +63,9 @@ class SetupServiceTest {
         setup.recommendedSetup(clicker);
 
         verify(messages).messageRaw(clicker, "invalid tpl", Map.of());
-        verify(plugin, never()).observeWorldEngine();
+        verify(observeWorldEngine, never()).run();
         verify(game, never()).ensureLobbyWorld();
-        verify(plugin, never()).markSetupDone();
+        verify(markSetupDone, never()).run();
     }
 
     @Test
@@ -75,7 +78,7 @@ class SetupServiceTest {
 
         verify(messages).messageRaw(clicker, "clash tpl");
         verify(game, never()).ensureLobbyWorld();
-        verify(plugin, never()).markSetupDone();
+        verify(markSetupDone, never()).run();
     }
 
     @Test
@@ -90,6 +93,6 @@ class SetupServiceTest {
         setup.recommendedSetup(clicker);
 
         verify(messages).messageRaw(eq(clicker), eq("failed tpl"), any());
-        verify(plugin, never()).markSetupDone();
+        verify(markSetupDone, never()).run();
     }
 }

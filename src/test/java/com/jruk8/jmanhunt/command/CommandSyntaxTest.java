@@ -100,25 +100,25 @@ class CommandSyntaxTest {
     @Test
     void unknownRootAcceptsKnownSlashAliasAndNamespace() {
         Set<String> roots = Set.of("give", "effect", "mhelp");
-        assertTrue(CommandSyntax.unknownRoot("give <p> apple", roots).isEmpty());
-        assertTrue(CommandSyntax.unknownRoot("/give <p> apple", roots).isEmpty());
-        assertTrue(CommandSyntax.unknownRoot("//give <p> apple", roots).isEmpty());
-        assertTrue(CommandSyntax.unknownRoot("mhelp", roots).isEmpty());
-        assertTrue(CommandSyntax.unknownRoot("minecraft:give <p> apple", roots).isEmpty());
-        assertTrue(CommandSyntax.unknownRoot("Give <p> apple", roots).isEmpty());
+        assertTrue(SyntaxSuggest.unknownRoot("give <p> apple", roots).isEmpty());
+        assertTrue(SyntaxSuggest.unknownRoot("/give <p> apple", roots).isEmpty());
+        assertTrue(SyntaxSuggest.unknownRoot("//give <p> apple", roots).isEmpty());
+        assertTrue(SyntaxSuggest.unknownRoot("mhelp", roots).isEmpty());
+        assertTrue(SyntaxSuggest.unknownRoot("minecraft:give <p> apple", roots).isEmpty());
+        assertTrue(SyntaxSuggest.unknownRoot("Give <p> apple", roots).isEmpty());
     }
 
     @Test
     void unknownRootRejectsUnknownNamingToken() {
         assertEquals(Optional.of("Unknown command 'asd'."),
-                CommandSyntax.unknownRoot("asd asd asd asd", Set.of("give")));
+                SyntaxSuggest.unknownRoot("asd asd asd asd", Set.of("give")));
         assertEquals(Optional.of("Unknown command 'asd'."),
-                CommandSyntax.unknownRoot("/asd", Set.of("give")));
+                SyntaxSuggest.unknownRoot("/asd", Set.of("give")));
     }
 
     @Test
     void unknownRootSkipsPlaceholderBuiltRoots() {
-        assertTrue(CommandSyntax
+        assertTrue(SyntaxSuggest
                 .unknownRoot("<random-pick:give,effect> <p> apple", Set.of("give")).isEmpty());
     }
 
@@ -127,12 +127,12 @@ class CommandSyntaxTest {
         Predicate<String> known = token -> token.equalsIgnoreCase("golden_apple")
                 || token.equalsIgnoreCase("minecraft:golden_apple");
         Set<String> names = Set.of("golden_apple", "diamond_sword");
-        assertTrue(CommandSyntax.giveItemCheck("give <p> golden_apple", known, names).isEmpty());
-        assertTrue(CommandSyntax
+        assertTrue(SyntaxSuggest.giveItemCheck("give <p> golden_apple", known, names).isEmpty());
+        assertTrue(SyntaxSuggest
                 .giveItemCheck("minecraft:give <p> golden_apple", known, names).isEmpty());
-        assertTrue(CommandSyntax.giveItemCheck("/give <p> golden_apple", known, names).isEmpty());
-        assertTrue(CommandSyntax.giveItemCheck("give <p> <random-item>", known, names).isEmpty());
-        assertTrue(CommandSyntax.giveItemCheck("effect give <p> slowness", known, names).isEmpty());
+        assertTrue(SyntaxSuggest.giveItemCheck("/give <p> golden_apple", known, names).isEmpty());
+        assertTrue(SyntaxSuggest.giveItemCheck("give <p> <random-item>", known, names).isEmpty());
+        assertTrue(SyntaxSuggest.giveItemCheck("effect give <p> slowness", known, names).isEmpty());
     }
 
     @Test
@@ -140,7 +140,7 @@ class CommandSyntaxTest {
         Predicate<String> known = token -> token.equalsIgnoreCase("golden_apple");
         Set<String> names = Set.of("golden_apple", "diamond_sword");
         assertEquals(Optional.of("Unknown item 'gulden_apple'. Did you mean 'golden_apple'?"),
-                CommandSyntax.giveItemCheck("give <p> gulden_apple", known, names));
+                SyntaxSuggest.giveItemCheck("give <p> gulden_apple", known, names));
     }
 
     @Test
@@ -148,7 +148,7 @@ class CommandSyntaxTest {
         Predicate<String> known = token -> false;
         Set<String> names = Set.of("golden_apple", "diamond_sword");
         assertEquals(Optional.of("Unknown item 'zzzqqq'."),
-                CommandSyntax.giveItemCheck("give <p> zzzqqq", known, names));
+                SyntaxSuggest.giveItemCheck("give <p> zzzqqq", known, names));
     }
 
     @Test
@@ -375,7 +375,7 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("exit").isEmpty());
         assertTrue(CommandSyntax.error("  exit  ").isEmpty());
         assertTrue(CommandSyntax.error("exit give <p> apple").isPresent());
-        assertTrue(CommandSyntax.unknownRoot("exit", Set.of("give")).isEmpty());
+        assertTrue(SyntaxSuggest.unknownRoot("exit", Set.of("give")).isEmpty());
     }
 
     @Test

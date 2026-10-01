@@ -8,7 +8,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.bounds.LobbyBounds;
@@ -92,20 +91,18 @@ class JmhLobbyServiceTest {
 
     @Test
     void saveBundleWritesReadableZipAndWarnsOrphans(@TempDir Path dir) throws Exception {
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         JManhuntLogger logger = mock(JManhuntLogger.class);
-        when(plugin.logger()).thenReturn(logger);
         Map<String, LobbyConfig.LobbyEntry> lobbies = new LinkedHashMap<>();
         lobbies.put("0", entry(100, 64, 100, 109, 73, 109, 105.5, 65.0, 105.5));
         lobbies.put("1", entry(null, null, null, null, null, null, 106.5, 65.0, 106.5));
         File target = dir.resolve("arena.jmhlobby").toFile();
 
-        JmhLobbyService.SavedCounts counts = new JmhLobbyService(plugin)
+        JmhLobbyService.SavedCounts counts = new JmhLobbyService(logger, null, null, null)
                 .saveBundle(target, new byte[]{7, 8}, lobbies, REGION, ORIGIN);
 
         assertEquals(new JmhLobbyService.SavedCounts(1, 1), counts);
         assertTrue(target.isFile());
-        JmhLobbyBundle reread = new JmhLobbyService(plugin).readBundle(target);
+        JmhLobbyBundle reread = new JmhLobbyService(logger, null, null, null).readBundle(target);
         assertEquals(1, reread.bounds().size());
         assertEquals(1, reread.teleports().size());
         verify(logger).warning(anyString());
@@ -117,19 +114,17 @@ class JmhLobbyServiceTest {
         LobbyConfig.LobbyEntry existing = new LobbyConfig.LobbyEntry();
         existing.getOverrides().getSettings().put("settings.match.autostart.enabled", false);
         stored.put("0", existing);
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         LobbyConfig lobbyConfig = mock(LobbyConfig.class);
         when(lobbyConfig.getLobbies()).thenReturn(stored);
-        when(plugin.lobbyConfig()).thenReturn(lobbyConfig);
         JManhuntConfig root = new JManhuntConfig();
         root.getWorldEngine().setEnabled(true);
-        when(plugin.configRoot()).thenReturn(root);
-        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        JManhuntLogger logger = mock(JManhuntLogger.class);
         JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),
                 List.of(new BoundEntry(0, new Offset(0, 0, 0), new Offset(9, 9, 9))),
                 List.of(new TeleportEntry(1, 5.5, 1.0, 5.5, 45.0f, 10.0f)));
 
-        JmhLobbyService.BuiltCounts built = new JmhLobbyService(plugin)
+        JmhLobbyService.BuiltCounts built = new JmhLobbyService(logger, lobbyConfig, root.getWorldEngine(),
+                root.getAdvanced().getLobbies())
                 .buildIntoLobbyConfig(bundle, 200, 64, 300);
 
         assertEquals(new JmhLobbyService.BuiltCounts(1, 1), built);
@@ -186,20 +181,17 @@ class JmhLobbyServiceTest {
     void buildWarnsOverwrittenIds() {
         Map<String, LobbyConfig.LobbyEntry> stored = new LinkedHashMap<>();
         stored.put("0", entry(0, 64, 0, 9, 73, 9, 5.5, 65.0, 5.5));
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         LobbyConfig lobbyConfig = mock(LobbyConfig.class);
         when(lobbyConfig.getLobbies()).thenReturn(stored);
-        when(plugin.lobbyConfig()).thenReturn(lobbyConfig);
         JManhuntConfig root = new JManhuntConfig();
         root.getWorldEngine().setEnabled(true);
-        when(plugin.configRoot()).thenReturn(root);
         JManhuntLogger logger = mock(JManhuntLogger.class);
-        when(plugin.logger()).thenReturn(logger);
         JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),
                 List.of(new BoundEntry(0, new Offset(0, 0, 0), new Offset(9, 9, 9))),
                 List.of());
 
-        new JmhLobbyService(plugin).buildIntoLobbyConfig(bundle, 0, 64, 0);
+        new JmhLobbyService(logger, lobbyConfig, root.getWorldEngine(),
+                root.getAdvanced().getLobbies()).buildIntoLobbyConfig(bundle, 0, 64, 0);
 
         var captor = ArgumentCaptor.forClass(String.class);
         verify(logger).warning(captor.capture());
@@ -209,21 +201,18 @@ class JmhLobbyServiceTest {
     @Test
     void buildSkipsNonzeroLobbiesWithEngineOff() {
         Map<String, LobbyConfig.LobbyEntry> stored = new LinkedHashMap<>();
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         LobbyConfig lobbyConfig = mock(LobbyConfig.class);
         when(lobbyConfig.getLobbies()).thenReturn(stored);
-        when(plugin.lobbyConfig()).thenReturn(lobbyConfig);
         JManhuntConfig root = new JManhuntConfig();
         root.getWorldEngine().setEnabled(false);
-        when(plugin.configRoot()).thenReturn(root);
         JManhuntLogger logger = mock(JManhuntLogger.class);
-        when(plugin.logger()).thenReturn(logger);
         JmhLobbyBundle bundle = new JmhLobbyBundle(new byte[]{1}, new Offset(0, 0, 0),
                 List.of(new BoundEntry(0, new Offset(0, 0, 0), new Offset(9, 9, 9)),
                         new BoundEntry(2, new Offset(0, 0, 0), new Offset(9, 9, 9))),
                 List.of(new TeleportEntry(2, 5, 1, 5, 0.0f, 0.0f)));
 
-        JmhLobbyService.BuiltCounts built = new JmhLobbyService(plugin)
+        JmhLobbyService.BuiltCounts built = new JmhLobbyService(logger, lobbyConfig, root.getWorldEngine(),
+                root.getAdvanced().getLobbies())
                 .buildIntoLobbyConfig(bundle, 0, 64, 0);
 
         assertEquals(new JmhLobbyService.BuiltCounts(1, 0), built);

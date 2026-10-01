@@ -17,18 +17,19 @@ import com.jruk8.jmanhunt.match.GameInstance;
 
 /** Match and lobby message fan-out. */
 public final class MatchMessaging {
-    private final MessageService messages;
-    private final ManhuntMessages manhunt;
-    private final SoundService sounds;
+    /** Message bus, manhunt texts, and sounds. */
+    public record MessagingTexts(MessageService messages, ManhuntMessages manhunt,
+            SoundService sounds) {
+    }
+
+    private final MessagingTexts texts;
     private final ServerSettings server;
     private final MatchStore store;
     private final LobbyService lobbies;
 
-    public MatchMessaging(MessageService messages, ManhuntMessages manhunt, SoundService sounds,
-            ServerSettings server, MatchStore store, LobbyService lobbies) {
-        this.messages = messages;
-        this.manhunt = manhunt;
-        this.sounds = sounds;
+    public MatchMessaging(MessagingTexts texts, ServerSettings server, MatchStore store,
+            LobbyService lobbies) {
+        this.texts = texts;
         this.server = server;
         this.store = store;
         this.lobbies = lobbies;
@@ -36,10 +37,10 @@ public final class MatchMessaging {
 
     /** Sends a message to a match plus the console, never other matches. */
     public void sendToInstance(GameInstance instance, String template, Map<String, String> values) {
-        if (messages.blank(template)) {
+        if (texts.messages().blank(template)) {
             return;
         }
-        Component rendered = messages.componentRaw(template, values);
+        Component rendered = texts.messages().componentRaw(template, values);
         for (Player recipient : store.onlineMatchAudience(instance)) {
             recipient.sendMessage(rendered);
         }
@@ -49,14 +50,14 @@ public final class MatchMessaging {
     /** Plays a match sound for a match's online players. */
     public void playInstanceSound(GameInstance instance, String key) {
         for (Player recipient : store.onlineMatchAudience(instance)) {
-            sounds.playSound(recipient, key);
+            texts.sounds().playSound(recipient, key);
         }
     }
 
     /** Plays the neutral click for a match's online players. */
     public void playInstanceNeutral(GameInstance instance) {
         for (Player recipient : store.onlineMatchAudience(instance)) {
-            sounds.playNeutralSound(recipient);
+            texts.sounds().playNeutralSound(recipient);
         }
     }
 
@@ -81,9 +82,9 @@ public final class MatchMessaging {
             return;
         }
         Role active = to.isParticipant() ? to : from;
-        String template = to.isParticipant() ? manhunt.getRoleIsNow() : manhunt.getRoleNoLonger();
+        String template = to.isParticipant() ? texts.manhunt().getRoleIsNow() : texts.manhunt().getRoleNoLonger();
         Map<String, String> values = Map.of("player", player.getName(),
-                "active-role", messages.roleName(active));
+                "active-role", texts.messages().roleName(active));
         Optional<Lobby> lobby = lobbies.lobbyOf(player.getUniqueId());
         if (lobby.isEmpty()) {
             return;
@@ -95,11 +96,11 @@ public final class MatchMessaging {
             if (store.instanceOf(recipient.getUniqueId()).isPresent()) {
                 continue;
             }
-            messages.messageRaw(recipient, template, values);
+            texts.messages().messageRaw(recipient, template, values);
         }
     }
 
-    /** Online lobby members for scoped autostart messages and sounds. */
+    /** Online lobby members for scoped autostart messages and texts.sounds(). */
     public List<Player> lobbyRecipients(int lobbyId) {
         Optional<Lobby> lobby = lobbies.get(lobbyId);
         if (lobby.isEmpty()) {
@@ -112,16 +113,16 @@ public final class MatchMessaging {
     }
 
     public void sendToLobby(int lobbyId, String template, Map<String, String> values) {
-        messages.sendToRaw(lobbyRecipients(lobbyId), template, values);
+        texts.messages().sendToRaw(lobbyRecipients(lobbyId), template, values);
         // Console keeps seeing every lobby, as with the old broadcasts.
-        if (!messages.blank(template)) {
-            Bukkit.getConsoleSender().sendMessage(messages.componentRaw(template, values));
+        if (!texts.messages().blank(template)) {
+            Bukkit.getConsoleSender().sendMessage(texts.messages().componentRaw(template, values));
         }
     }
 
     public void playLobbySound(int lobbyId, String key) {
         for (Player recipient : lobbyRecipients(lobbyId)) {
-            sounds.playSound(recipient, key);
+            texts.sounds().playSound(recipient, key);
         }
     }
 }

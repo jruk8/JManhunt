@@ -2,16 +2,19 @@ package com.jruk8.jmanhunt.match.listeners;
 
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.PlayerSettings;
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.RoleTeamService;
+import com.jruk8.jmanhunt.player.SpawnCampService;
 import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
 import com.jruk8.jmanhunt.stats.Stats;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.WorldEngineService;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -40,46 +43,48 @@ public final class PlayerCombatListener implements Listener {
     /** Mocking friendly fire lines the broadcast picks between. */
     static final int FRIENDLY_FIRE_LINES = 3;
 
-    private final JManhuntPlugin plugin;
-    private final PlayerStateStore playerStates;
-    private final GameManager game;
-    private final PlayerSettings players;
-    private final CompassManager compass;
-    private final StatsManager stats;
-    private final LobbyService lobbies;
-    private final WorldEngineService worldEngine;
-    private final WinConditionEngine winConditionEngine;
-    private final PlayerRespawnListener respawn;
-    private final SpeedrunnerDisconnectTracker disconnects;
-    private final Map<UUID, BukkitTask> disconnectTasks;
-    private final GameMessages gameTexts;
+    /** Role, visibility, player settings, and death text. */
+    public record CombatReads(PlayerStateStore states, FakeSpectatorService fakes,
+            PlayerSettings players, GameMessages gameTexts) {
+    }
+
+    /** Match, stats, win checks, and disconnect tracking. */
+    public record CombatMatch(GameManager game, StatsManager stats,
+            WinConditionEngine winConditionEngine, SpeedrunnerDisconnectTracker disconnects,
+            Map<UUID, BukkitTask> disconnectTasks) {
+    }
+
+    /** Compass, lobbies, engine, and respawn services. */
+    public record CombatWorld(CompassManager compass, LobbyService lobbies,
+            WorldEngineService worldEngine, PlayerRespawnListener respawn) {
+    }
+
+    /** Spawn camp, role teams, logger, and lobby store. */
+    public record CombatEdge(SpawnCampService spawnCamp, RoleTeamService roleTeams,
+            JManhuntLogger log, LobbyConfig lobbyConfig) {
+    }
+
+    private final CombatReads reads;
+    private final CombatMatch match;
+    private final CombatWorld world;
+    private final CombatEdge edge;
+    private final TaskScheduler tasks;
     private long lastVoidRescueWarning;
 
-    public PlayerCombatListener(JManhuntPlugin plugin, PlayerStateStore playerStates, GameManager game,
-            PlayerSettings players, CompassManager compass, StatsManager stats, LobbyService lobbies,
-            WorldEngineService worldEngine, WinConditionEngine winConditionEngine,
-            PlayerRespawnListener respawn, SpeedrunnerDisconnectTracker disconnects,
-            Map<UUID, BukkitTask> disconnectTasks, GameMessages gameTexts) {
-        this.plugin = plugin;
-        this.playerStates = playerStates;
-        this.game = game;
-        this.players = players;
-        this.compass = compass;
-        this.stats = stats;
-        this.lobbies = lobbies;
-        this.worldEngine = worldEngine;
-        this.winConditionEngine = winConditionEngine;
-        this.respawn = respawn;
-        this.disconnects = disconnects;
-        this.disconnectTasks = disconnectTasks;
-        this.gameTexts = gameTexts;
+    public PlayerCombatListener(CombatReads reads, CombatMatch match, CombatWorld world,
+            CombatEdge edge, TaskScheduler tasks) {
+        this.reads = reads;
+        this.match = match;
+        this.world = world;
+        this.edge = edge;
+        this.tasks = tasks;
     }
 
     @EventHandler public void onDeath(PlayerDeathEvent event) {
         Player player = event.getEntity();
-        playerStates.recordLastSeen(player, player.getLocation());
+        reads.states().recordLastSeen(player, player.getLocation());
 
-        Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
+        Optional<GameInstance> match = this.match.game().instanceOf(player.getUniqueId());
         if (match.isEmpty() || !match.get().begun()) {
             return;
         }
@@ -87,10 +92,10 @@ public final class PlayerCombatListener implements Listener {
         // messages would double every announcement.
         event.setDeathMessage(null);
         GameInstance instance = match.get();
-        Role role = playerStates.role(player);
+        Role role = reads.states().role(player);
         if (role.isParticipant()) {
-            stats.recordDeath(player.getUniqueId());
-            Stats deathSlice = stats.getOrCreate(instance.matchId(), player.getUniqueId());
+            this.match.stats().recordDeath(player.getUniqueId());
+            Stats deathSlice = this.match.stats().getOrCreate(instance.matchId(), player.getUniqueId());
             deathSlice.deaths++;
             if (deathSlice.role == Role.NONE) {
                 deathSlice.role = role;
@@ -98,19 +103,19 @@ public final class PlayerCombatListener implements Listener {
         }
         // Spawncamp punishment kills re-enter here synchronously: their state
         // changes run intact, but the punishment broadcast already said it.
-        boolean quiet = plugin.spawnCamp().isQuietPunishment(player.getUniqueId());
+        boolean quiet = edge.spawnCamp().isQuietPunishment(player.getUniqueId());
         if (role == Role.SPEEDRUNNER) {
             handleSpeedrunnerDeath(player, instance, quiet);
         } else if (role == Role.HUNTER) {
             handleHunterDeath(player, instance, quiet);
         }
-        compass.clearLocksOnTargetDeath(player.getUniqueId());
+        world.compass().clearLocksOnTargetDeath(player.getUniqueId());
         if (!quiet) {
             broadcastFriendlyFireKill(instance, player);
         }
         // Next tick: state is final, and compass items are safe to touch
         // outside the death event. Unlocked picks re-resolve at once.
-        Bukkit.getScheduler().runTask(plugin, () -> compass.refreshInstance(instance));
+        tasks.run(() -> world.compass().refreshInstance(instance));
     }
 
     /** Mocking lobby broadcast for same-team kills, when enabled. */
@@ -118,15 +123,16 @@ public final class PlayerCombatListener implements Listener {
         if (!(victim.getKiller() instanceof Player killer)) {
             return;
         }
-        if (!isFriendlyFireKill(playerStates.role(killer), playerStates.role(victim),
+        if (!isFriendlyFireKill(reads.states().role(killer), reads.states().role(victim),
                 killer.getUniqueId().equals(victim.getUniqueId()))) {
             return;
         }
-        if (!players.getFriendlyFire().isBroadcastKills()) {
+        if (!reads.players().getFriendlyFire().isBroadcastKills()) {
             return;
         }
         int roll = ThreadLocalRandom.current().nextInt(FRIENDLY_FIRE_LINES);
-        game.messaging().sendToInstance(instance, friendlyFireTemplate(gameTexts, roll),
+        this.match.game().messaging().sendToInstance(instance,
+                friendlyFireTemplate(reads.gameTexts(), roll),
                 Map.of("dead", victim.getName(), "killer", killer.getName()));
     }
 
@@ -145,17 +151,17 @@ public final class PlayerCombatListener implements Listener {
     }
 
     private void handleSpeedrunnerDeath(Player player, GameInstance instance, boolean quiet) {
-        PlayerConnectionListener.cancelDisconnectTask(disconnectTasks, player.getUniqueId());
-        disconnects.clear(player.getUniqueId());
-        playerStates.setSpeedrunnerAlive(player.getUniqueId(), false);
+        PlayerConnectionListener.cancelDisconnectTask(this.match.disconnectTasks(), player.getUniqueId());
+        this.match.disconnects().clear(player.getUniqueId());
+        reads.states().setSpeedrunnerAlive(player.getUniqueId(), false);
         long matchId = instance.matchId();
-        int lives = playerStates.getLives(player.getUniqueId());
-        var speedrunnerRespawn = players.getRespawn().getSpeedrunner();
+        int lives = reads.states().getLives(player.getUniqueId());
+        var speedrunnerRespawn = reads.players().getRespawn().getSpeedrunner();
         int delaySeconds = PlayerRespawnListener.effectiveRespawnDelay(
                 speedrunnerRespawn.isEnabled(), speedrunnerRespawn.getDelaySeconds());
         if (lives != -1) {
-            playerStates.decrementLives(player.getUniqueId());
-            if (playerStates.getLives(player.getUniqueId()) <= 0) {
+            reads.states().decrementLives(player.getUniqueId());
+            if (reads.states().getLives(player.getUniqueId()) <= 0) {
                 eliminateSpeedrunner(player, instance, quiet, matchId);
                 return;
             }
@@ -173,20 +179,20 @@ public final class PlayerCombatListener implements Listener {
         // mirroring the speedrunner elimination.
         creditHunterFinalKill(matchId, player);
         if (!quiet) {
-            game.messaging().sendToInstance(instance, gameTexts.getHunterOutOfLives(), Map.of());
+            this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getHunterOutOfLives(), Map.of());
         }
         instance.recordDeath(player.getUniqueId(), player.getName(), Role.HUNTER);
-        playerStates.setRole(player.getUniqueId(), Role.SPECTATOR);
-        plugin.roleTeams().sync(player);
+        reads.states().setRole(player.getUniqueId(), Role.SPECTATOR);
+        edge.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());
-        compass.reconcileTeammateModes(instance);
-        game.flagStore().removePlayer(matchId, player.getName());
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            plugin.fakeSpectators().enable(player);
-            compass.removeCompasses(player);
+        world.compass().reconcileTeammateModes(instance);
+        this.match.game().flagStore().removePlayer(matchId, player.getName());
+        tasks.run(() -> {
+            reads.fakes().enable(player);
+            world.compass().removeCompasses(player);
         });
         checkHuntersRemaining(instance);
-        game.messaging().playInstanceSound(instance, "game.hunter-death");
+        this.match.game().messaging().playInstanceSound(instance, "game.hunter-death");
     }
 
     /** Eliminates a speedrunner out of lives and finishes when none remain. */
@@ -194,52 +200,53 @@ public final class PlayerCombatListener implements Listener {
         // Out of lives: eliminate permanently. Only an opposite-role
         // killer earns the final kill: same-role finishes never count.
         instance.recordDeath(player.getUniqueId(), player.getName(), Role.SPEEDRUNNER);
-        playerStates.setRole(player.getUniqueId(), Role.SPECTATOR);
-        plugin.roleTeams().sync(player);
+        reads.states().setRole(player.getUniqueId(), Role.SPECTATOR);
+        edge.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());
-        compass.reconcileTeammateModes(instance);
-        game.flagStore().removePlayer(matchId, player.getName());
+        world.compass().reconcileTeammateModes(instance);
+        this.match.game().flagStore().removePlayer(matchId, player.getName());
         Player finalKiller = player.getKiller();
-        if (finalKiller != null && playerStates.role(finalKiller.getUniqueId()) == Role.HUNTER) {
-            Stats finalSlice = stats.getOrCreate(matchId, finalKiller.getUniqueId());
+        if (finalKiller != null && reads.states().role(finalKiller.getUniqueId()) == Role.HUNTER) {
+            Stats finalSlice = this.match.stats().getOrCreate(matchId, finalKiller.getUniqueId());
             finalSlice.finalKills++;
             if (finalSlice.role == Role.NONE) {
                 finalSlice.role = Role.HUNTER;
             }
         }
-        Bukkit.getScheduler().runTask(plugin, () -> {
-            plugin.fakeSpectators().enable(player);
-            compass.removeCompasses(player);
+        tasks.run(() -> {
+            reads.fakes().enable(player);
+            world.compass().removeCompasses(player);
         });
         if (!quiet) {
-            game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnerOutOfLives(), Map.of());
+            this.match.game().messaging().sendToInstance(instance,
+                    reads.gameTexts().getSpeedrunnerOutOfLives(), Map.of());
         }
         // When nobody remains the win line follows, so no last-died
         // line is sent: the win is the announcement.
-        int playerCount = game.activeRunnerCount(instance);
+        int playerCount = this.match.game().activeRunnerCount(instance);
         if (playerCount > 0) {
             if (!quiet) {
-                game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnerDeath(),
+                this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getSpeedrunnerDeath(),
                         Map.of("value", Integer.toString(playerCount)));
             }
         } else {
-            game.finishLater(instance, Role.HUNTER, "All speedrunners eliminated");
+            this.match.game().finishLater(instance, Role.HUNTER, "All speedrunners eliminated");
         }
-        game.messaging().playInstanceSound(instance, "game.speedrunner-death");
+        this.match.game().messaging().playInstanceSound(instance, "game.speedrunner-death");
     }
 
-    /** Announces a survived speedrunner death and schedules the respawn. */
+    /** Announces a survived speedrunner death and schedules the world.respawn(). */
     private void surviveRunnerDeath(Player player, GameInstance instance, boolean quiet,
             long matchId, int delaySeconds) {
         if (!quiet) {
             // The dying runner is already flagged not-alive but will respawn, so count them.
-            int remaining = game.activeRunnerCount(instance) + 1;
-            game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnerDeath(),
+            int remaining = this.match.game().activeRunnerCount(instance) + 1;
+            this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getSpeedrunnerDeath(),
                     Map.of("value", Integer.toString(remaining)));
         }
-        game.messaging().playInstanceSound(instance, "game.speedrunner-death");
-        respawn.scheduleRespawn(player, instance, quiet, delaySeconds,
-                gameTexts.getSpeedrunnerRespawnScheduled(), matchId);
+        this.match.game().messaging().playInstanceSound(instance, "game.speedrunner-death");
+        world.respawn().scheduleRespawn(player, instance, quiet, delaySeconds,
+                reads.gameTexts().getSpeedrunnerRespawnScheduled(), matchId);
     }
 
     /** Handles a speedrunner death with unlimited lives. */
@@ -250,46 +257,48 @@ public final class PlayerCombatListener implements Listener {
         // send nor consume it.
         if (!quiet && !instance.runnerUnlimitedAnnounced()) {
             instance.setRunnerUnlimitedAnnounced(true);
-            game.messaging().sendToInstance(instance, gameTexts.getSpeedrunnersUnlimitedLives(), Map.of());
+            this.match.game().messaging().sendToInstance(instance,
+                    reads.gameTexts().getSpeedrunnersUnlimitedLives(), Map.of());
         }
         surviveRunnerDeath(player, instance, quiet, matchId, delaySeconds);
     }
 
     private void handleHunterDeath(Player player, GameInstance instance, boolean quiet) {
-        PlayerConnectionListener.cancelDisconnectTask(disconnectTasks, player.getUniqueId());
-        disconnects.clear(player.getUniqueId());
+        PlayerConnectionListener.cancelDisconnectTask(this.match.disconnectTasks(), player.getUniqueId());
+        this.match.disconnects().clear(player.getUniqueId());
         long matchId = instance.matchId();
-        int lives = playerStates.getLives(player.getUniqueId());
-        var hunterRespawn = players.getRespawn().getHunter();
+        int lives = reads.states().getLives(player.getUniqueId());
+        var hunterRespawn = reads.players().getRespawn().getHunter();
         int delaySeconds = PlayerRespawnListener.effectiveRespawnDelay(
                 hunterRespawn.isEnabled(), hunterRespawn.getDelaySeconds());
         if (lives != -1) {
-            playerStates.decrementLives(player.getUniqueId());
-            if (playerStates.getLives(player.getUniqueId()) <= 0) {
+            reads.states().decrementLives(player.getUniqueId());
+            if (reads.states().getLives(player.getUniqueId()) <= 0) {
                 eliminateHunterOutOfLives(player, instance, quiet, matchId);
                 return;
             }
         }
         if (!quiet) {
-            game.messaging().sendToInstance(instance, gameTexts.getHunterDeath(), Map.of());
+            this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getHunterDeath(), Map.of());
         }
-        game.messaging().playInstanceSound(instance, "game.hunter-death");
+        this.match.game().messaging().playInstanceSound(instance, "game.hunter-death");
         if (lives == -1 && !quiet && !instance.hunterUnlimitedAnnounced()) {
             instance.setHunterUnlimitedAnnounced(true);
-            game.messaging().sendToInstance(instance, gameTexts.getHuntersUnlimitedLives(), Map.of());
+            this.match.game().messaging().sendToInstance(instance,
+                    reads.gameTexts().getHuntersUnlimitedLives(), Map.of());
         }
         // Undelayed hunters respawn through vanilla mechanics; only a
         // positive delay routes them through the spectator revive.
         if (delaySeconds > 0) {
-            respawn.scheduleRespawn(player, instance, quiet, delaySeconds,
-                    gameTexts.getHunterRespawnScheduled(), matchId);
+            world.respawn().scheduleRespawn(player, instance, quiet, delaySeconds,
+                    reads.gameTexts().getHunterRespawnScheduled(), matchId);
         }
     }
 
     private void checkHuntersRemaining(GameInstance instance) {
         // No last-removed line: the win that follows is the announcement.
-        if (game.activeHunterCount(instance) == 0) {
-            game.finishLater(instance, Role.SPEEDRUNNER, "All hunters eliminated");
+        if (this.match.game().activeHunterCount(instance) == 0) {
+            this.match.game().finishLater(instance, Role.SPEEDRUNNER, "All hunters eliminated");
         }
     }
 
@@ -304,9 +313,9 @@ public final class PlayerCombatListener implements Listener {
         // NONE, AFK, and spectator players are always invulnerable if
         // configured. Command kills (/kill) still go through: only the
         // pre-start window below blocks those, to avoid glitches.
-        if (!playerStates.role(victim).isParticipant()
+        if (!reads.states().role(victim).isParticipant()
                 && event.getCause() != EntityDamageEvent.DamageCause.SUICIDE
-                && players.getInvulnerability().getNonePlayers().isEnabled()) {
+                && reads.players().getInvulnerability().getNonePlayers().isEnabled()) {
             event.setCancelled(true);
             return;
         }
@@ -314,7 +323,7 @@ public final class PlayerCombatListener implements Listener {
         if (event.getFinalDamage() <= 0) {
             return;
         }
-        Optional<GameInstance> victimMatch = game.instanceOf(victim.getUniqueId());
+        Optional<GameInstance> victimMatch = this.match.game().instanceOf(victim.getUniqueId());
         if (victimMatch.isPresent() && !victimMatch.get().begun()) {
             handlePreStartDamage(event, victim, victimMatch.get());
             return;
@@ -336,20 +345,20 @@ public final class PlayerCombatListener implements Listener {
         }
         boolean playerInvolved = attacker != null && victimMatch.isPresent()
                 && victimMatch.get().begun() && sameMatch(victimMatch.get(), attacker)
-                && playerStates.role(attacker).isParticipant()
-                && playerStates.role(victim).isParticipant();
+                && reads.states().role(attacker).isParticipant()
+                && reads.states().role(victim).isParticipant();
         if (playerInvolved && blockFriendlyFire(event, attacker, victim)) {
             return;
         }
         if (victimMatch.isPresent() && victimMatch.get().begun()
-                && playerStates.role(victim).isParticipant()) {
+                && reads.states().role(victim).isParticipant()) {
             fireDamageTaken(event, victim, victimMatch.get(), attacker);
         }
         if (!playerInvolved) {
             return;
         }
-        Role attackerRole = playerStates.role(attacker);
-        Stats damageSlice = stats.getOrCreate(victimMatch.get().matchId(), attacker.getUniqueId());
+        Role attackerRole = reads.states().role(attacker);
+        Stats damageSlice = this.match.stats().getOrCreate(victimMatch.get().matchId(), attacker.getUniqueId());
         damageSlice.damage += event.getFinalDamage();
         if (damageSlice.role == Role.NONE) {
             damageSlice.role = attackerRole;
@@ -363,7 +372,7 @@ public final class PlayerCombatListener implements Listener {
      */
     private void fireDamageTaken(EntityDamageEvent event, Player victim, GameInstance match,
             Player attacker) {
-        game.stateCommands().runEventModifiers("ON_DAMAGE_TAKEN", victim, match.matchId(),
+        this.match.game().stateCommands().runEventModifiers("ON_DAMAGE_TAKEN", victim, match.matchId(),
                 List.of(victim.getName(), String.valueOf(event.getFinalDamage()),
                         attacker == null ? "null" : attacker.getName()));
     }
@@ -372,8 +381,8 @@ public final class PlayerCombatListener implements Listener {
     private void creditHunterFinalKill(long matchId, Player victim) {
         Player hunterKiller = victim.getKiller();
         if (hunterKiller != null
-                && playerStates.role(hunterKiller.getUniqueId()) == Role.SPEEDRUNNER) {
-            Stats finalSlice = stats.getOrCreate(matchId, hunterKiller.getUniqueId());
+                && reads.states().role(hunterKiller.getUniqueId()) == Role.SPEEDRUNNER) {
+            Stats finalSlice = this.match.stats().getOrCreate(matchId, hunterKiller.getUniqueId());
             finalSlice.finalKills++;
             if (finalSlice.role == Role.NONE) {
                 finalSlice.role = Role.SPEEDRUNNER;
@@ -386,7 +395,7 @@ public final class PlayerCombatListener implements Listener {
      * enabled when the store is unavailable, matching the old default.
      */
     private boolean voidRescueEnabled() {
-        LobbyConfig lobby = plugin.lobbyConfig();
+        LobbyConfig lobby = edge.lobbyConfig();
         return lobby == null || lobby.isVoidRescue();
     }
 
@@ -397,12 +406,12 @@ public final class PlayerCombatListener implements Listener {
         // in the game world.
         if (event.getCause() != EntityDamageEvent.DamageCause.VOID
                 || !voidRescueEnabled()
-                || !worldEngine.rescuesVoidIn(victim.getWorld())) {
+                || !world.worldEngine().rescuesVoidIn(victim.getWorld())) {
             return false;
         }
-        OptionalInt memberLobby = lobbies.lobbyOf(victim.getUniqueId())
+        OptionalInt memberLobby = world.lobbies().lobbyOf(victim.getUniqueId())
                 .map(lobby -> OptionalInt.of(lobby.id())).orElseGet(OptionalInt::empty);
-        Optional<Location> rescue = worldEngine.lobbyRescueLocation(memberLobby);
+        Optional<Location> rescue = world.worldEngine().lobbyRescueLocation(memberLobby);
         if (rescue.isPresent()) {
             event.setCancelled(true);
             victim.teleport(rescue.get());
@@ -420,8 +429,8 @@ public final class PlayerCombatListener implements Listener {
         boolean startsGame = event instanceof EntityDamageByEntityEvent byEntity
                 && byEntity.getDamager() instanceof Player attacker
                 && sameMatch(match, attacker)
-                && playerStates.role(attacker) == Role.SPEEDRUNNER
-                && playerStates.role(victim) == Role.HUNTER;
+                && reads.states().role(attacker) == Role.SPEEDRUNNER
+                && reads.states().role(victim) == Role.HUNTER;
         // Hunter hits on speedrunners never land before the game
         // begins, while speedrunner hits on hunters still start it.
         if (event instanceof EntityDamageByEntityEvent byEntity
@@ -431,7 +440,7 @@ public final class PlayerCombatListener implements Listener {
         }
         absorbPreStartHit(event, victim);
         if (startsGame) {
-            game.beginGame(match);
+            this.match.game().beginGame(match);
         }
     }
 
@@ -442,12 +451,12 @@ public final class PlayerCombatListener implements Listener {
         // Survivable hits still land so knockback registers, then heal
         // back one tick later; lethal hits cancel to prevent pre-start
         // deaths.
-        if (!playerStates.role(victim).isParticipant()) {
+        if (!reads.states().role(victim).isParticipant()) {
             return;
         }
         double finalDamage = event.getFinalDamage();
         if (finalDamage < victim.getHealth()) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            tasks.runLater(() -> {
                 if (victim.isOnline() && victim.getHealth() > 0) {
                     victim.setHealth(Math.min(victim.getMaxHealth(),
                             victim.getHealth() + finalDamage));
@@ -463,11 +472,11 @@ public final class PlayerCombatListener implements Listener {
         // Friendly fire: participants cannot damage their own team unless
         // enabled for their role. This only applies once the game has begun,
         // so it is never active during the pre-start window.
-        if (playerStates.role(attacker) != playerStates.role(victim)) {
+        if (reads.states().role(attacker) != reads.states().role(victim)) {
             return false;
         }
-        var fire = players.getFriendlyFire();
-        boolean friendlyFire = playerStates.role(attacker) == Role.HUNTER
+        var fire = reads.players().getFriendlyFire();
+        boolean friendlyFire = reads.states().role(attacker) == Role.HUNTER
                 ? fire.isHunter()
                 : fire.isSpeedrunner();
         if (!friendlyFire) {
@@ -479,10 +488,10 @@ public final class PlayerCombatListener implements Listener {
 
     @EventHandler public void onEntityDeath(EntityDeathEvent event) {
         if (!(event.getEntity().getKiller() instanceof Player killer)
-                || !playerStates.role(killer).isParticipant()) {
+                || !reads.states().role(killer).isParticipant()) {
             return;
         }
-        Optional<GameInstance> match = game.instanceOf(killer.getUniqueId());
+        Optional<GameInstance> match = this.match.game().instanceOf(killer.getUniqueId());
         if (match.isEmpty() || !match.get().begun()) {
             return;
         }
@@ -491,72 +500,72 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         boolean victimIsPlayer = event.getEntity() instanceof Player;
-        if (!victimIsPlayer || !playerStates.role(event.getEntity().getUniqueId()).isParticipant()) {
+        if (!victimIsPlayer || !reads.states().role(event.getEntity().getUniqueId()).isParticipant()) {
             return;
         }
         if (!sameMatch(match.get(), event.getEntity().getUniqueId())) {
             return;
         }
         long matchId = match.get().matchId();
-        stats.recordPlayerKill(matchId, killer.getUniqueId(),
-                playerStates.role(killer.getUniqueId()),
-                playerStates.role(event.getEntity().getUniqueId()));
-        plugin.spawnCamp().handleKill(matchId, killer, (Player) event.getEntity(),
-                playerStates.role(killer.getUniqueId()));
+        this.match.stats().recordPlayerKill(matchId, killer.getUniqueId(),
+                reads.states().role(killer.getUniqueId()),
+                reads.states().role(event.getEntity().getUniqueId()));
+        edge.spawnCamp().handleKill(matchId, killer, (Player) event.getEntity(),
+                reads.states().role(killer.getUniqueId()));
         if (victimIsPlayer) {
             List<String> eventArgs = List.of(killer.getName(), event.getEntity().getName());
-            game.stateCommands().runEventModifiers("ON_PLAYER_KILLS", killer, matchId, eventArgs);
-            Role killerRole = playerStates.role(killer.getUniqueId());
+            this.match.game().stateCommands().runEventModifiers("ON_PLAYER_KILLS", killer, matchId, eventArgs);
+            Role killerRole = reads.states().role(killer.getUniqueId());
             if (killerRole == Role.HUNTER) {
-                game.stateCommands().runEventModifiers("ON_HUNTER_KILLS", killer, matchId, eventArgs);
+                this.match.game().stateCommands().runEventModifiers("ON_HUNTER_KILLS", killer, matchId, eventArgs);
             } else if (killerRole == Role.SPEEDRUNNER) {
-                game.stateCommands().runEventModifiers("ON_SPEEDRUNNER_KILLS", killer, matchId,
+                this.match.game().stateCommands().runEventModifiers("ON_SPEEDRUNNER_KILLS", killer, matchId,
                         eventArgs);
             }
         }
     }
 
     private void handleMobKill(GameInstance match, Player killer, Entity victim) {
-        Role killerRole = playerStates.role(killer);
-        stats.recordMobKill(match.matchId(), killer.getUniqueId(), killerRole);
-        game.stateCommands().runEventModifiers("ON_MOB_KILLED", killer, match.matchId(),
+        Role killerRole = reads.states().role(killer);
+        this.match.stats().recordMobKill(match.matchId(), killer.getUniqueId(), killerRole);
+        this.match.game().stateCommands().runEventModifiers("ON_MOB_KILLED", killer, match.matchId(),
                 List.of(victim.getType().name()));
         // Mob kills only matter for the kill-mob win conditions.
         Integer lobby = match.originLobbyId();
         if (killerRole == Role.SPEEDRUNNER
-                && winConditionEngine.mobMatches(lobby, victim.getType(), Role.SPEEDRUNNER)) {
-            game.finishLater(match, Role.SPEEDRUNNER,
+                && this.match.winConditionEngine().mobMatches(lobby, victim.getType(), Role.SPEEDRUNNER)) {
+            this.match.game().finishLater(match, Role.SPEEDRUNNER,
                     "Slew " + WinConditionEngine.prettyKey(victim.getType().getKey().toString()));
         } else if (killerRole == Role.HUNTER
-                && winConditionEngine.mobMatches(lobby, victim.getType(), Role.HUNTER)) {
-            game.finishLater(match, Role.HUNTER,
+                && this.match.winConditionEngine().mobMatches(lobby, victim.getType(), Role.HUNTER)) {
+            this.match.game().finishLater(match, Role.HUNTER,
                     "Slew " + WinConditionEngine.prettyKey(victim.getType().getKey().toString()));
         }
     }
 
     @EventHandler public void onPickupItem(PlayerPickupItemEvent event) {
         Player player = event.getPlayer();
-        Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
-        if (match.isEmpty() || !match.get().begun() || !playerStates.role(player).isParticipant()) {
+        Optional<GameInstance> match = this.match.game().instanceOf(player.getUniqueId());
+        if (match.isEmpty() || !match.get().begun() || !reads.states().role(player).isParticipant()) {
             return;
         }
-        Role role = playerStates.role(player);
+        Role role = reads.states().role(player);
         // This deprecated event fires before the stack lands in the
         // inventory, so check the picked stack itself for an instant win
         // and keep the inventory scan as a fallback for stacks already
         // held or picked up by other means.
         Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
-        if (winConditionEngine.materialWins(lobby, event.getItem().getItemStack().getType(), role)
-                || winConditionEngine.hasItem(lobby, player, role)) {
-            game.finishLater(match.get(), role,
-                    "Acquired " + WinConditionEngine.prettyKey(winConditionEngine.item(lobby, role)));
+        if (this.match.winConditionEngine().materialWins(lobby, event.getItem().getItemStack().getType(), role)
+                || this.match.winConditionEngine().hasItem(lobby, player, role)) {
+            this.match.game().finishLater(match.get(), role,
+                    "Acquired " + WinConditionEngine.prettyKey(this.match.winConditionEngine().item(lobby, role)));
         }
     }
 
     @EventHandler public void onAdvancement(org.bukkit.event.player.PlayerAdvancementDoneEvent event) {
         Player player = event.getPlayer();
-        Optional<GameInstance> match = game.instanceOf(player.getUniqueId());
-        if (match.isEmpty() || !match.get().begun() || !playerStates.role(player).isParticipant()) {
+        Optional<GameInstance> match = this.match.game().instanceOf(player.getUniqueId());
+        if (match.isEmpty() || !match.get().begun() || !reads.states().role(player).isParticipant()) {
             return;
         }
         // Recipe book unlocks are advancement events too, but they are not
@@ -566,18 +575,19 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         long matchId = match.get().matchId();
-        stats.recordAdvancement(matchId, player.getUniqueId(), playerStates.role(player));
-        game.stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId,
+        this.match.stats().recordAdvancement(matchId, player.getUniqueId(), reads.states().role(player));
+        this.match.game().stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId,
                 List.of(event.getAdvancement().getKey().toString()));
         Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
-        if (playerStates.role(player) == Role.SPEEDRUNNER
-                && winConditionEngine.hasReachAdvancement(lobby, player, Role.SPEEDRUNNER)) {
-            game.finishLater(match.get(), Role.SPEEDRUNNER, "Reached "
-                    + WinConditionEngine.prettyKey(winConditionEngine.advancement(lobby, Role.SPEEDRUNNER)));
-        } else if (playerStates.role(player) == Role.HUNTER
-                && winConditionEngine.hasReachAdvancement(lobby, player, Role.HUNTER)) {
-            game.finishLater(match.get(), Role.HUNTER, "Reached "
-                    + WinConditionEngine.prettyKey(winConditionEngine.advancement(lobby, Role.HUNTER)));
+        if (reads.states().role(player) == Role.SPEEDRUNNER
+                && this.match.winConditionEngine().hasReachAdvancement(lobby, player, Role.SPEEDRUNNER)) {
+            this.match.game().finishLater(match.get(), Role.SPEEDRUNNER, "Reached "
+                    + WinConditionEngine.prettyKey(this.match.winConditionEngine()
+                            .advancement(lobby, Role.SPEEDRUNNER)));
+        } else if (reads.states().role(player) == Role.HUNTER
+                && this.match.winConditionEngine().hasReachAdvancement(lobby, player, Role.HUNTER)) {
+            this.match.game().finishLater(match.get(), Role.HUNTER, "Reached "
+                    + WinConditionEngine.prettyKey(this.match.winConditionEngine().advancement(lobby, Role.HUNTER)));
         }
     }
 
@@ -593,7 +603,7 @@ public final class PlayerCombatListener implements Listener {
     private boolean hunterHitsRunner(GameInstance instance, Entity damager, Player victim) {
         Player attacker = resolveAttacker(damager);
         return attacker != null && blockPreStartHit(sameMatch(instance, attacker),
-                playerStates.role(attacker), playerStates.role(victim));
+                reads.states().role(attacker), reads.states().role(victim));
     }
 
     /** Attacking player behind a damager: direct hits and shooters. */
@@ -618,7 +628,7 @@ public final class PlayerCombatListener implements Listener {
 
     /** True when the player id actively participates in the given match. */
     private boolean sameMatch(GameInstance instance, UUID playerId) {
-        return game.instanceOf(playerId).map(match -> match.matchId() == instance.matchId()).orElse(false);
+        return this.match.game().instanceOf(playerId).map(match -> match.matchId() == instance.matchId()).orElse(false);
     }
 
     /** Warns about a missing rescue destination, at most once every 30 seconds. */
@@ -628,7 +638,7 @@ public final class PlayerCombatListener implements Listener {
             return;
         }
         lastVoidRescueWarning = now;
-        plugin.logger().warning(playerName + " fell into the void in the lobby world, but no lobby location "
+        edge.log().warning(playerName + " fell into the void in the lobby world, but no lobby location "
                 + "is set to rescue them to. Set one with /manhunt worldengine lobbyconfig setlobbytp 0.");
     }
 }

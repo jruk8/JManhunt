@@ -1,15 +1,17 @@
 package com.jruk8.jmanhunt.lobby;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.LobbiesConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.CapLimits;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.RoleTeamService;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -42,33 +44,41 @@ public final class RolePadService implements Listener {
     /** How far above a pad block a player may stand and still trigger it. */
     static final int PAD_REACH = 4;
 
-    private final JManhuntPlugin plugin;
-    private final LobbiesConfig lobbySettings;
-    private final LobbyService lobbies;
-    private final PlayerStateStore playerStates;
+    /** Lobby service, settings, and world name. */
+    public record RolePadLobby(LobbyService lobbies, LobbiesConfig lobbySettings,
+            Supplier<String> lobbyWorldName) {
+    }
+
+    /** Assignment chat plus texts.sounds(). */
+    public record RolePadTexts(MessageService messages, ManhuntMessages manhunt,
+            SoundService sounds) {
+    }
+
+    /** Role plus fake-spectator reads. */
+    public record RolePadPlayers(PlayerStateStore states, FakeSpectatorService fakes) {
+    }
+
+    /** Logger plus role teams. */
+    public record RolePadEdge(JManhuntLogger log, RoleTeamService roleTeams) {
+    }
+
+    private final RolePadLobby lobby;
+    private final RolePadTexts texts;
+    private final RolePadPlayers players;
     private final GameManager game;
-    private final MessageService messages;
-    private final ManhuntMessages manhunt;
-    private final SoundService sounds;
-    private final Supplier<String> lobbyWorldName;
+    private final RolePadEdge edge;
     /** Last checked block position per player, packed for one-lookup exits. */
     private final Map<UUID, Long> lastChecked = new HashMap<>();
     /** Pad keys already warned about, so bad materials warn once per run. */
     private final Set<String> warnedMaterials = new HashSet<>();
 
-    public RolePadService(JManhuntPlugin plugin, LobbiesConfig lobbySettings,
-            LobbyService lobbies, PlayerStateStore playerStates,
-            GameManager game, MessageService messages, ManhuntMessages manhunt, SoundService sounds,
-            Supplier<String> lobbyWorldName) {
-        this.plugin = plugin;
-        this.lobbySettings = lobbySettings;
-        this.lobbies = lobbies;
-        this.playerStates = playerStates;
+    public RolePadService(RolePadLobby lobby, RolePadTexts texts, RolePadPlayers players,
+            GameManager game, RolePadEdge edge) {
+        this.lobby = lobby;
+        this.texts = texts;
+        this.players = players;
         this.game = game;
-        this.messages = messages;
-        this.manhunt = manhunt;
-        this.sounds = sounds;
-        this.lobbyWorldName = lobbyWorldName;
+        this.edge = edge;
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -87,16 +97,16 @@ public final class RolePadService implements Listener {
     }
 
     private void check(Player player) {
-        if (!lobbySettings.getRolePads().isEnabled()) {
+        if (!lobby.lobbySettings().getRolePads().isEnabled()) {
             return;
         }
-        if (!player.getWorld().getName().equals(lobbyWorldName.get())) {
+        if (!player.getWorld().getName().equals(lobby.lobbyWorldName().get())) {
             return;
         }
         // Fake spectators are watching: standing on a pad must never
         // pull them back into a playing role. The JManhunt role is
         // irrelevant here; only fake spectator mode gates pads.
-        if (plugin.fakeSpectators().isFakeSpectator(player)) {
+        if (players.fakes().isFakeSpectator(player)) {
             return;
         }
         Location location = player.getLocation();
@@ -107,7 +117,7 @@ public final class RolePadService implements Listener {
         }
         Role role = padRoleAt(player.getWorld(), location.getBlockX(),
                 location.getBlockY(), location.getBlockZ());
-        if (role == null || playerStates.role(player) == role) {
+        if (role == null || players.states().role(player) == role) {
             return;
         }
         assignPadRole(player, role);
@@ -143,7 +153,7 @@ public final class RolePadService implements Listener {
     }
 
     private void matchPad(Map<Material, Role> pads, String key, Role role) {
-        var blocks = lobbySettings.getRolePads().getBlocks();
+        var blocks = lobby.lobbySettings().getRolePads().getBlocks();
         String raw = switch (role) {
             case SPEEDRUNNER -> blocks.getSpeedrunner();
             case HUNTER -> blocks.getHunter();
@@ -154,7 +164,7 @@ public final class RolePadService implements Listener {
         Material material = parsePadMaterial(raw);
         if (material == null) {
             if (raw != null && !raw.isBlank() && warnedMaterials.add(key)) {
-                plugin.logger().warning("Unknown role-pad material '" + raw + "' for '" + key
+                edge.log().warning("Unknown role-pad material '" + raw + "' for '" + key
                         + "'; that pad stays inactive until fixed.");
             }
             return;
@@ -189,13 +199,13 @@ public final class RolePadService implements Listener {
      * Silent on caps and blocks so moving players never get spammed.
      */
     private void assignPadRole(Player player, Role role) {
-        Optional<Lobby> targetLobby = lobbies.lobbyOf(player.getUniqueId());
+        Optional<Lobby> targetLobby = lobby.lobbies().lobbyOf(player.getUniqueId());
         Optional<GameInstance> live = targetLobby.flatMap(lobby -> game.instanceForLobby(lobby.id()));
         if (live.isPresent()) {
-            if (!lobbies.multiLobbyAllowed()) {
+            if (!lobby.lobbies().multiLobbyAllowed()) {
                 return;
             }
-            MidMatchPolicy policy = lobbies.midMatchPolicy();
+            MidMatchPolicy policy = lobby.lobbies().midMatchPolicy();
             GameInstance target = targetLobby.map(lobby ->
                     game.midMatchJoinTarget(policy, lobby.id(), live.get(), role)).orElse(live.get());
             if (policy.joinsMidMatch(role)
@@ -208,8 +218,8 @@ public final class RolePadService implements Listener {
             }
             setPadRole(player, role);
             if (!member && !padSilent()) {
-                messages.messageRaw(player, policy.queueMessageTemplate(manhunt),
-                        Map.of("role", messages.roleName(role)));
+                texts.messages().messageRaw(player, policy.queueMessageTemplate(texts.manhunt()),
+                        Map.of("role", texts.messages().roleName(role)));
             }
             return;
         }
@@ -220,13 +230,13 @@ public final class RolePadService implements Listener {
     }
 
     private void setPadRole(Player player, Role role) {
-        Role from = playerStates.role(player);
-        playerStates.setRole(player, role);
-        plugin.roleTeams().sync(player);
+        Role from = players.states().role(player);
+        players.states().setRole(player, role);
+        edge.roleTeams().sync(player);
         if (!padSilent()) {
-            messages.messageRaw(player, manhunt.getRoleAssigned(),
-                    Map.of("role", messages.roleName(role)));
-            sounds.playNeutralSound(player);
+            texts.messages().messageRaw(player, texts.manhunt().getRoleAssigned(),
+                    Map.of("role", texts.messages().roleName(role)));
+            texts.sounds().playNeutralSound(player);
         }
         if (from != role) {
             game.updateAutostartState();
@@ -238,7 +248,7 @@ public final class RolePadService implements Listener {
 
     /** True when pads assign roles quietly. */
     private boolean padSilent() {
-        return lobbySettings.getRolePads().isSilentRoleAssignment();
+        return lobby.lobbySettings().getRolePads().isSilentRoleAssignment();
     }
 
     private boolean capAllows(Optional<Lobby> lobby, Role role) {
@@ -247,12 +257,12 @@ public final class RolePadService implements Listener {
         }
         int count = 0;
         for (Player online : Bukkit.getOnlinePlayers()) {
-            if (playerStates.role(online) == role && lobby.get().contains(online.getUniqueId())
+            if (players.states().role(online) == role && lobby.get().contains(online.getUniqueId())
                     && game.instanceOf(online.getUniqueId()).isEmpty()) {
                 count++;
             }
         }
-        var caps = lobbySettings.getQueueCaps();
+        var caps = this.lobby.lobbySettings().getQueueCaps();
         int cap = role == Role.HUNTER ? caps.getHunter() : caps.getSpeedrunner();
         return CapLimits.allows(count, cap);
     }

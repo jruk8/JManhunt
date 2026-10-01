@@ -22,24 +22,23 @@ import org.bukkit.entity.Player;
  * pure so they stay unit testable; delivery runs on the main thread.
  */
 public final class TeamChatService {
-    private final GameManager game;
-    private final PlayerStateStore playerStates;
-    private final FakeSpectatorService fakes;
-    private final ServerSettings.TeamChat teamChat;
-    private final MessageService messages;
-    private final ChatMessages chat;
-    private final SoundService sounds;
+    /** States, fakes, and team chat settings. */
+    public record TeamReads(PlayerStateStore playerStates, FakeSpectatorService fakes,
+            ServerSettings.TeamChat teamChat) {
+    }
 
-    public TeamChatService(GameManager game, PlayerStateStore playerStates,
-            FakeSpectatorService fakes, ServerSettings.TeamChat teamChat,
-            MessageService messages, ChatMessages chat, SoundService sounds) {
+    /** Message bus, chat texts, and sounds. */
+    public record TeamTexts(MessageService messages, ChatMessages chat, SoundService sounds) {
+    }
+
+    private final GameManager game;
+    private final TeamReads reads;
+    private final TeamTexts texts;
+
+    public TeamChatService(GameManager game, TeamReads reads, TeamTexts texts) {
         this.game = game;
-        this.playerStates = playerStates;
-        this.fakes = fakes;
-        this.teamChat = teamChat;
-        this.messages = messages;
-        this.chat = chat;
-        this.sounds = sounds;
+        this.reads = reads;
+        this.texts = texts;
     }
 
     /** Membership row for the pure recipient filter. */
@@ -99,21 +98,21 @@ public final class TeamChatService {
     }
 
     public boolean enabled() {
-        return teamChat.isEnabled();
+        return reads.teamChat().isEnabled();
     }
 
     public List<String> prefixes() {
-        List<String> prefixes = teamChat.getPrefixes();
+        List<String> prefixes = reads.teamChat().getPrefixes();
         return prefixes.isEmpty() ? List.of("@team", "@t") : prefixes;
     }
 
     public boolean spectatorsSee() {
-        return teamChat.isSpectatorsSee();
+        return reads.teamChat().isSpectatorsSee();
     }
 
     /** Eligible senders: participants inside a match. Nobody else. */
     public boolean isEligible(Player sender) {
-        return playerStates.role(sender).isParticipant()
+        return reads.playerStates().role(sender).isParticipant()
                 && game.instanceOf(sender.getUniqueId()).isPresent();
     }
 
@@ -124,7 +123,7 @@ public final class TeamChatService {
             return List.of();
         }
         long matchId = match.get().matchId();
-        Role senderRole = playerStates.role(sender);
+        Role senderRole = reads.playerStates().role(sender);
         boolean spectatorsSee = spectatorsSee();
         List<Player> recipients = new ArrayList<>();
         for (Player candidate : Bukkit.getOnlinePlayers()) {
@@ -132,7 +131,7 @@ public final class TeamChatService {
             if (other.isEmpty() || other.get().matchId() != matchId) {
                 continue;
             }
-            if (isRecipient(playerStates.role(candidate), fakes.isFakeSpectator(candidate),
+            if (isRecipient(reads.playerStates().role(candidate), reads.fakes().isFakeSpectator(candidate),
                     senderRole, spectatorsSee)) {
                 recipients.add(candidate);
             }
@@ -142,22 +141,22 @@ public final class TeamChatService {
 
     /** Renders once, then sends to recipients plus the console with a bump sound. */
     public void deliver(Player sender, String body) {
-        Role role = playerStates.role(sender);
-        Component rendered = messages.componentRaw(chat.getTeamChatFormat(), Map.of(
-                "role", messages.roleName(role),
-                "rolecolor", messages.roleColor(role),
+        Role role = reads.playerStates().role(sender);
+        Component rendered = texts.messages().componentRaw(texts.chat().getTeamChatFormat(), Map.of(
+                "role", texts.messages().roleName(role),
+                "rolecolor", texts.messages().roleColor(role),
                 "player", sender.getName(),
                 "message", MiniMessage.miniMessage().escapeTags(body)));
         for (Player recipient : recipients(sender)) {
             recipient.sendMessage(rendered);
-            sounds.playSound(recipient, "chat.team-chat");
+            texts.sounds().playSound(recipient, "chat.team-chat");
         }
         Bukkit.getConsoleSender().sendMessage(rendered);
     }
 
     /** Usage hint for a bare prefix. The raw line stays cancelled. */
     public void usage(Player sender) {
-        messages.messageRaw(sender, chat.getTeamChatUsage());
-        sounds.playAngrySound(sender);
+        texts.messages().messageRaw(sender, texts.chat().getTeamChatUsage());
+        texts.sounds().playAngrySound(sender);
     }
 }

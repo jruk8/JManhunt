@@ -1,11 +1,10 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.DurationFormat;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.player.Role;
-
-import org.bukkit.Bukkit;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,20 +27,26 @@ public final class TimeLimitService {
             28_800L, 21_600L, 14_400L, 7_200L, 3_600L, 1_800L, 900L, 600L,
             300L, 120L, 60L, 30L, 15L, 10L, 5L, 4L, 3L, 2L, 1L);
 
-    private final JManhuntPlugin plugin;
+    /** Logger plus countdown scheduler. */
+    public record TimeEdge(JManhuntLogger log, TaskScheduler tasks) {
+    }
+
+    /** Countdown chat halves. */
+    public record TimeTexts(MatchMessaging messaging, GameMessages game) {
+    }
+
+    private final TimeEdge edge;
     private final WinConditionEngine winConditionEngine;
     private final MatchStore store;
-    private final MatchMessaging messaging;
-    private final GameMessages game;
+    private final TimeTexts texts;
     private final MatchControl control;
 
-    public TimeLimitService(JManhuntPlugin plugin, WinConditionEngine winConditionEngine,
-            MatchStore store, MatchMessaging messaging, GameMessages game, MatchControl control) {
-        this.plugin = plugin;
+    public TimeLimitService(TimeEdge edge, WinConditionEngine winConditionEngine,
+            MatchStore store, TimeTexts texts, MatchControl control) {
+        this.edge = edge;
         this.winConditionEngine = winConditionEngine;
         this.store = store;
-        this.messaging = messaging;
-        this.game = game;
+        this.texts = texts;
         this.control = control;
     }
 
@@ -65,7 +70,7 @@ public final class TimeLimitService {
             return;
         }
         if (clocksSet(runnerSecs, hunterSecs, cancelSecs) > 1) {
-            plugin.logger().warning("Several survive clocks are set (speedrunners "
+            edge.log().warning("Several survive clocks are set (speedrunners "
                     + describeClock(runnerSecs) + ", hunters " + describeClock(hunterSecs)
                     + ", cancel " + describeClock(cancelSecs) + "); the earliest expiry wins: "
                     + describeOutcome(limit) + ".");
@@ -74,7 +79,7 @@ public final class TimeLimitService {
         long limitSecsWhole = Math.round(limitSecs);
         long limitMillis = Math.round(limitSecs * 1000.0);
         String winnerName = limit.winner() == null ? null : limit.winner().displayName() + "s";
-        instance.setTimeLimitTask(Bukkit.getScheduler().runTaskTimer(plugin,
+        instance.setTimeLimitTask(edge.tasks().runTimer(
                 () -> tickCountdown(instance, currentMatchId, limit, winnerName, limitSecsWhole, limitMillis),
                 20L, 20L));
     }
@@ -93,10 +98,10 @@ public final class TimeLimitService {
             for (long mark : dueThresholds(limitSecsWhole, remainingSecs, instance.timeAnnounced())) {
                 instance.timeAnnounced().add(mark);
                 if (limit.cancel()) {
-                    messaging.sendToInstance(instance, game.getCancelIn(),
+                    texts.messaging().sendToInstance(instance, texts.game().getCancelIn(),
                             Map.of("time", DurationFormat.format(mark)));
                 } else {
-                    messaging.sendToInstance(instance, game.getTimeLeft(),
+                    texts.messaging().sendToInstance(instance, texts.game().getTimeLeft(),
                             Map.of("winner", winnerName, "time", DurationFormat.format(mark)));
                 }
             }

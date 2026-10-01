@@ -53,44 +53,31 @@ public final class ModifierDetailMenus {
             Material.LIME_CONCRETE, Material.RED_CONCRETE, Material.BLACK_CONCRETE,
             Material.LIGHT_GRAY_SHULKER_BOX, Material.BLACK_SHULKER_BOX};
 
-    private final ModifierStore store;
-    private final MessageService messages;
-    private final ModifiersGuiMessages modifiersGui;
-    private final ModifiersMessages modifiers;
-    private final CommandMessages command;
-    private final SoundService sounds;
-    private final GuiService gui;
-    private final SettingDialogs dialogs;
-    private final BooleanSupplier commandValidation;
-    private final ModifiersCommand commands;
+    /** Message bus, gui/modifier/command texts, and sounds. */
+    public record DetailTexts(MessageService messages, ModifiersGuiMessages modifiersGui,
+            ModifiersMessages modifiers, CommandMessages command, SoundService sounds) {
+    }
 
-    /**
-     * @param store modifier reads and patches; sounds, gui, dialogs,
-     *        commandValidation, and commands are only touched inside click
-     *        actions, so builders tolerate them as null (null validation
-     *        means on)
-     */
-    public ModifierDetailMenus(ModifierStore store, MessageService messages,
-            ModifiersGuiMessages modifiersGui, ModifiersMessages modifiers, CommandMessages command,
-            SoundService sounds, GuiService gui, SettingDialogs dialogs,
+    /** Gui, dialogs, validation, and commands; nulls tolerated per action. */
+    public record DetailDeps(GuiService gui, SettingDialogs dialogs,
             BooleanSupplier commandValidation, ModifiersCommand commands) {
+    }
+
+    private final ModifierStore store;
+    private final DetailTexts texts;
+    private final DetailDeps deps;
+
+    public ModifierDetailMenus(ModifierStore store, DetailTexts texts, DetailDeps deps) {
         this.store = store;
-        this.messages = messages;
-        this.modifiersGui = modifiersGui;
-        this.modifiers = modifiers;
-        this.command = command;
-        this.sounds = sounds;
-        this.gui = gui;
-        this.dialogs = dialogs;
-        this.commandValidation = commandValidation;
-        this.commands = commands;
+        this.texts = texts;
+        this.deps = deps;
     }
 
     /** Command list picker with live line counts. */
     public Menu commandsMenu(String id, int behavior, Supplier<Menu> parent) {
         MenuLayout layout = MenuLayout.parse("#########", "#########", "#########");
         final Menu[] self = new Menu[1];
-        self[0] = new Menu(GuiTexts.title(messages, modifiersGui.getCommandsTitle()),
+        self[0] = new Menu(GuiTexts.title(texts.messages(), texts.modifiersGui().getCommandsTitle()),
                 layout, () -> commandsStatic(id, behavior, self[0]), List::of, parent);
         return self[0];
     }
@@ -104,17 +91,17 @@ public final class ModifierDetailMenus {
             if (count > 0) {
                 lore.add("Lines: <white>" + count);
             }
-            lore.add(modifiersGui.getEditorClickOpen());
+            lore.add(texts.modifiersGui().getEditorClickOpen());
             if (count > 0) {
-                lore.add(modifiersGui.getCommandsTestHint());
+                lore.add(texts.modifiersGui().getCommandsTestHint());
             }
-            MenuButton button = EditorButtons.actionButton(messages,
+            MenuButton button = EditorButtons.actionButton(texts.messages(),
                     DISPLAY_MATERIALS[index], list, lore, count > 0,
                     player -> {
                         if (denied(player)) {
                             return;
                         }
-                        gui.navigate(player, linesMenu(id, behavior, list,
+                        deps.gui().navigate(player, linesMenu(id, behavior, list,
                                 () -> commandsMenu(id, behavior, self.parent())));
                     });
             if (count > 0) {
@@ -124,16 +111,16 @@ public final class ModifierDetailMenus {
                     }
                     List<String> live = store.commandList(id, behavior, list);
                     if (!live.isEmpty()) {
-                        commands.testList(player, list, live);
+                        deps.commands().testList(player, list, live);
                     }
                 });
             }
             fixed.put(DISPLAY_SLOTS[index], button);
         }
-        fixed.put(22, new MenuButton(Material.PAPER,
-                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
+        fixed.put(22, new MenuButton(new MenuButton.Spec(Material.PAPER,
+                GuiTexts.name(texts.messages(), texts.modifiersGui().getBack(), "Back"),
                 null, false, false,
-                player -> gui.back(player, self)));
+                player -> deps.gui().back(player, self), null, null, MenuButton.SoundPolicy.CLICK, null)));
         return fixed;
     }
 
@@ -142,8 +129,8 @@ public final class ModifierDetailMenus {
         MenuLayout layout = MenuLayout.parse(
                 "##xxxxxx#", "u#xxxxxx#", "b#xxxxxxt", "d#xxxxxx#", "##xxxxxx#");
         final Menu[] self = new Menu[1];
-        self[0] = new Menu(GuiTexts.title(messages,
-                modifiersGui.getLinesTitle().replace("{list}", list)),
+        self[0] = new Menu(GuiTexts.title(texts.messages(),
+                texts.modifiersGui().getLinesTitle().replace("{list}", list)),
                 layout, () -> linesStatic(id, list, self),
                 () -> lineButtons(id, behavior, list, self[0]), parent);
         return self[0];
@@ -151,12 +138,12 @@ public final class ModifierDetailMenus {
 
     private Map<Integer, MenuButton> linesStatic(String id, String list, Menu[] self) {
         Map<Integer, MenuButton> fixed = new HashMap<>();
-        fixed.put(9, scrollButton(modifiersGui.getScrollUp(), "Scroll up", self, -1));
-        fixed.put(18, new MenuButton(Material.PAPER,
-                GuiTexts.name(messages, modifiersGui.getBack(), "Back"),
+        fixed.put(9, scrollButton(texts.modifiersGui().getScrollUp(), "Scroll up", self, -1));
+        fixed.put(18, new MenuButton(new MenuButton.Spec(Material.PAPER,
+                GuiTexts.name(texts.messages(), texts.modifiersGui().getBack(), "Back"),
                 null, false, false,
-                player -> gui.back(player, self[0])));
-        fixed.put(27, scrollButton(modifiersGui.getScrollDown(), "Scroll down", self, 1));
+                player -> deps.gui().back(player, self[0]), null, null, MenuButton.SoundPolicy.CLICK, null)));
+        fixed.put(27, scrollButton(texts.modifiersGui().getScrollDown(), "Scroll down", self, 1));
         return fixed;
     }
 
@@ -165,18 +152,18 @@ public final class ModifierDetailMenus {
         List<MenuButton> buttons = new ArrayList<>();
         for (int index = 0; index < lines.size(); index++) {
             int lineIndex = index;
-            buttons.add(new MenuButton(Material.PAPER,
-                    GuiTexts.name(messages, GuiTexts.truncate(lines.get(index), 32), "(blank)"),
-                    GuiTexts.lore(messages, List.of(
-                            modifiersGui.getEditorClickEdit(),
-                            modifiersGui.getLinesDeleteHint(),
-                            modifiersGui.getLinesTestHint())),
+            buttons.add(new MenuButton(new MenuButton.Spec(Material.PAPER,
+                    GuiTexts.name(texts.messages(), GuiTexts.truncate(lines.get(index), 32), "(blank)"),
+                    GuiTexts.lore(texts.messages(), List.of(
+                            texts.modifiersGui().getEditorClickEdit(),
+                            texts.modifiersGui().getLinesDeleteHint(),
+                            texts.modifiersGui().getLinesTestHint())),
                     false, false,
                     player -> {
                         if (denied(player)) {
                             return;
                         }
-                        linePrompt(player, self, modifiersGui.getLinesEditTitle(),
+                        linePrompt(player, self, texts.modifiersGui().getLinesEditTitle(),
                                 store.commandList(id, behavior, list).get(lineIndex), id, behavior,
                                 list, lineIndex);
                     },
@@ -185,22 +172,22 @@ public final class ModifierDetailMenus {
                             return;
                         }
                         deleteLineConfirm(player, self, id, behavior, list, lineIndex);
-                    }).shiftAction(player -> {
+                    }, null, MenuButton.SoundPolicy.CLICK, null)).shiftAction(player -> {
                         if (denied(player)) {
                             return;
                         }
-                        commands.testList(player, list,
+                        deps.commands().testList(player, list,
                                 List.of(store.commandList(id, behavior, list).get(lineIndex)));
                     }).silent());
         }
-        buttons.add(AddStick.button(messages,
-                modifiersGui.getLinesAdd(),
-                List.of(modifiersGui.getEditorClickEdit()),
+        buttons.add(AddStick.button(texts.messages(),
+                texts.modifiersGui().getLinesAdd(),
+                List.of(texts.modifiersGui().getEditorClickEdit()),
                 player -> {
                     if (denied(player)) {
                         return;
                     }
-                    linePrompt(player, self, modifiersGui.getLinesAddTitle(), "",
+                    linePrompt(player, self, texts.modifiersGui().getLinesAddTitle(), "",
                             id, behavior, list, -1);
                 }));
         return buttons;
@@ -213,23 +200,23 @@ public final class ModifierDetailMenus {
      */
     private void linePrompt(Player player, Menu self, String title, String initial,
             String id, int behavior, String list, int index) {
-        dialogs.prompt(player, title, initial, PlaceholderCheatsheet.commandDialogLines(),
+        deps.dialogs().prompt(player, title, initial, PlaceholderCheatsheet.commandDialogLines(),
                 raw -> {
                     Optional<String> problem = CommandValidation.validateLine(raw,
                             validateCommands(), CommandValidation.knownRoots(),
                             CommandValidation::isKnownMaterial,
                             CommandValidation.materialNames());
                     if (problem.isPresent()) {
-                        messages.messageRaw(player, modifiers.getCreateBadCommand(),
+                        texts.messages().messageRaw(player, texts.modifiers().getCreateBadCommand(),
                                 Map.of("list", list, "error", problem.get()));
-                        sounds.playAngrySound(player);
-                        gui.navigate(player, self);
+                        texts.sounds().playAngrySound(player);
+                        deps.gui().navigate(player, self);
                         return;
                     }
                     if (index >= 0 && unchanged(id, behavior, list, index, raw)) {
-                        messages.messageRaw(player, modifiers.getEditCommandUnchanged());
-                        sounds.playNeutralSound(player);
-                        gui.navigate(player, self);
+                        texts.messages().messageRaw(player, texts.modifiers().getEditCommandUnchanged());
+                        texts.sounds().playNeutralSound(player);
+                        deps.gui().navigate(player, self);
                         return;
                     }
                     patch(id, entry -> {
@@ -246,12 +233,12 @@ public final class ModifierDetailMenus {
                     List<String> fresh = store.commandList(id, behavior, list);
                     int position = index < 0
                             ? fresh.size() : Math.min(index + 1, Math.max(fresh.size(), 1));
-                    messages.messageRaw(player, modifiers.getEditCommandSet(),
+                    texts.messages().messageRaw(player, texts.modifiers().getEditCommandSet(),
                             commandSetValues(list, position, raw));
-                    sounds.playNeutralSound(player);
-                    gui.navigate(player, self);
+                    texts.sounds().playNeutralSound(player);
+                    deps.gui().navigate(player, self);
                 },
-                () -> gui.navigate(player, self));
+                () -> deps.gui().navigate(player, self));
     }
 
     /** Warns for one saved line with its function scope's defs in view. */
@@ -262,13 +249,13 @@ public final class ModifierDetailMenus {
         }
         Set<String> functions = TagFunctionScope.definedFunctions(scopeLines);
         for (String warning : CommandSyntax.warnings(raw, functions)) {
-            messages.messageRaw(player, modifiers.getCreateCommandWarning(),
+            texts.messages().messageRaw(player, texts.modifiers().getCreateCommandWarning(),
                     Map.of("warning", warning));
         }
     }
 
     private boolean validateCommands() {
-        return commandValidation == null || commandValidation.getAsBoolean();
+        return deps.commandValidation() == null || deps.commandValidation().getAsBoolean();
     }
 
     /** True when the edit resubmits the live line unchanged. */
@@ -289,12 +276,12 @@ public final class ModifierDetailMenus {
         List<String> lines = store.commandList(id, behavior, list);
         String line = index < lines.size() ? lines.get(index) : "";
         Menu confirm = ConfirmMenu.create(
-                GuiTexts.title(messages, modifiersGui.getLinesDeleteTitle()),
+                GuiTexts.title(texts.messages(), texts.modifiersGui().getLinesDeleteTitle()),
                 Material.PAPER, null,
-                GuiTexts.lore(messages, List.of(line)),
-                GuiTexts.name(messages, modifiersGui.getCancel(), "Cancel"),
-                back -> gui.navigate(back, self),
-                GuiTexts.name(messages, modifiersGui.getConfirm(), "Confirm"),
+                GuiTexts.lore(texts.messages(), List.of(line)),
+                GuiTexts.name(texts.messages(), texts.modifiersGui().getCancel(), "Cancel"),
+                back -> deps.gui().navigate(back, self),
+                GuiTexts.name(texts.messages(), texts.modifiersGui().getConfirm(), "Confirm"),
                 done -> {
                     patch(id, entry -> {
                         if (entry.getBehavior() == null) {
@@ -310,19 +297,19 @@ public final class ModifierDetailMenus {
                             kept.remove(index);
                         }
                     });
-                    sounds.playNeutralSound(done);
-                    gui.navigate(done, self);
+                    texts.sounds().playNeutralSound(done);
+                    deps.gui().navigate(done, self);
                 },
                 () -> self);
-        gui.navigate(player, confirm);
-        sounds.playSound(player, "compass.left-click");
+        deps.gui().navigate(player, confirm);
+        texts.sounds().playSound(player, "compass.left-click");
     }
 
     private MenuButton scrollButton(String name, String fallback, Menu[] self, int delta) {
-        return new MenuButton(Material.ARROW,
-                GuiTexts.name(messages, name, fallback),
+        return new MenuButton(new MenuButton.Spec(Material.ARROW,
+                GuiTexts.name(texts.messages(), name, fallback),
                 null, false, false,
-                player -> self[0].window().scrollLine(delta));
+                player -> self[0].window().scrollLine(delta), null, null, MenuButton.SoundPolicy.CLICK, null));
     }
 
     private void patch(String id, Consumer<ModifierEntry> patch) {
@@ -333,7 +320,7 @@ public final class ModifierDetailMenus {
         if (player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)) {
             return false;
         }
-        messages.messageRaw(player, command.getNoPermission());
+        texts.messages().messageRaw(player, texts.command().getNoPermission());
         return true;
     }
 

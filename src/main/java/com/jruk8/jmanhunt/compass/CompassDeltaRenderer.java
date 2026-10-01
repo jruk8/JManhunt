@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.Role;
@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
  */
 final class CompassDeltaRenderer {
 
-    private final JManhuntPlugin plugin;
+    private final TaskScheduler tasks;
     private final CompassSettingsFacade settings;
     private final MessageService messages;
     private final Map<UUID, Component> actionbars;
@@ -29,9 +29,9 @@ final class CompassDeltaRenderer {
     /** Blink revert generation per holder; stale reverts never land. */
     private final Map<UUID, Long> deltaGenerations = new HashMap<>();
 
-    CompassDeltaRenderer(JManhuntPlugin plugin, CompassSettingsFacade settings,
+    CompassDeltaRenderer(TaskScheduler tasks, CompassSettingsFacade settings,
             MessageService messages, Map<UUID, Component> actionbars) {
-        this.plugin = plugin;
+        this.tasks = tasks;
         this.settings = settings;
         this.messages = messages;
         this.actionbars = actionbars;
@@ -77,7 +77,7 @@ final class CompassDeltaRenderer {
         UUID id = holder.getUniqueId();
         long generation = deltaGenerations.merge(id, 1L, Long::sum);
         long delayTicks = blinkDelayTicks(settings.deltaBlinkDurationSeconds(lobby));
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        tasks.runLater(() -> {
             if (deltaGenerations.getOrDefault(id, 0L) != generation) {
                 return;
             }

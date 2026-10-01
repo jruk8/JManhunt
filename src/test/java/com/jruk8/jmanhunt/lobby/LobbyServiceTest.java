@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.lobby;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.config.WorldEngineConfig;
 import com.jruk8.jmanhunt.match.GameInstance;
@@ -142,7 +141,7 @@ class LobbyServiceTest {
         LobbiesConfig lobbySettings = new LobbiesConfig();
         lobbySettings.setMidMatchSetplayer(MidMatchPolicy.HOLD);
         LobbyService lobbies =
-                new LobbyService(null, lobbySettings, new WorldEngineConfig(), null);
+                new LobbyService(null, null, lobbySettings, new WorldEngineConfig());
 
         assertEquals(MidMatchPolicy.HOLD, lobbies.midMatchPolicy());
     }
@@ -226,20 +225,18 @@ class LobbyServiceTest {
 
     /** Wired service with one lobby-less non-fake player outside any match. */
     private static Fixture fixture(boolean collisionsDisabled) {
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         LobbiesConfig lobbySettings = new LobbiesConfig();
         lobbySettings.setDisablePlayerCollisions(collisionsDisabled);
         GameManager game = mock(GameManager.class);
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
-        when(plugin.game()).thenReturn(game);
-        when(plugin.fakeSpectators()).thenReturn(fakes);
         Player player = mock(Player.class);
         UUID id = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(id);
         when(game.instanceOf(id)).thenReturn(Optional.empty());
         when(fakes.isFakeSpectator(player)).thenReturn(false);
         return new Fixture(
-                new LobbyService(plugin, lobbySettings, new WorldEngineConfig(), null),
+                new LobbyService(new LobbyService.LobbyPlayers(() -> game, fakes), null,
+                        lobbySettings, new WorldEngineConfig()),
                 player, id, game, fakes);
     }
 

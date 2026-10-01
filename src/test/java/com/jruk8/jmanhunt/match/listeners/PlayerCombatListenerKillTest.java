@@ -12,6 +12,9 @@ import static org.mockito.Mockito.when;
 import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.PlayerSettings;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -20,6 +23,8 @@ import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
 import com.jruk8.jmanhunt.player.SpawnCampService;
 import com.jruk8.jmanhunt.stats.StatsManager;
@@ -60,11 +65,19 @@ class PlayerCombatListenerKillTest {
         settings.getFriendlyFire().setHunter(false);
         settings.getFriendlyFire().setSpeedrunner(false);
         settings.getRespawn().getHunter().setEnabled(false);
-        PlayerCombatListener listener = new PlayerCombatListener(plugin, players, game,
-                settings, mock(CompassManager.class), mock(StatsManager.class),
-                mock(LobbyService.class), mock(WorldEngineService.class),
-                mock(WinConditionEngine.class), mock(PlayerRespawnListener.class),
-                mock(SpeedrunnerDisconnectTracker.class), new HashMap<>(), new GameMessages());
+        PlayerCombatListener listener = new PlayerCombatListener(
+                new PlayerCombatListener.CombatReads(players,
+                        mock(FakeSpectatorService.class), settings, new GameMessages()),
+                new PlayerCombatListener.CombatMatch(game, mock(StatsManager.class),
+                        mock(WinConditionEngine.class),
+                        mock(SpeedrunnerDisconnectTracker.class), new HashMap<>()),
+                new PlayerCombatListener.CombatWorld(mock(CompassManager.class),
+                        mock(LobbyService.class), mock(WorldEngineService.class),
+                        mock(PlayerRespawnListener.class)),
+                new PlayerCombatListener.CombatEdge(plugin.spawnCamp(),
+                        mock(RoleTeamService.class), mock(JManhuntLogger.class),
+                        mock(LobbyConfig.class)),
+                mock(TaskScheduler.class));
         return new Fixture(listener, killer, players, game, instance, commands);
     }
 

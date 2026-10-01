@@ -1,15 +1,15 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.PlayerSettings;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpectatorTravelService;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import com.jruk8.jmanhunt.world.cell.CellBounds;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -27,26 +27,31 @@ public final class MatchBorderEnforcer {
     /** Enforcement cadence in ticks: rubber-band, travel cap, elapsed cache. */
     private static final long ENFORCE_PERIOD_TICKS = 5L;
 
-    private final JManhuntPlugin plugin;
-    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
+    /** Engine settings plus service. */
+    public record BorderEngine(com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
+            WorldEngineService worldEngine) {
+    }
+
+    /** Role plus fake-spectator reads. */
+    public record BorderPlayers(PlayerStateStore states, FakeSpectatorService fakes) {
+    }
+
+    private final TaskScheduler tasks;
+    private final BorderEngine engine;
     private final PlayerSettings.Spectator.Travel travel;
     private final MatchStore store;
-    private final WorldEngineService worldEngine;
-    private final PlayerStateStore playerStates;
+    private final BorderPlayers players;
 
-    public MatchBorderEnforcer(JManhuntPlugin plugin,
-            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
-            PlayerSettings.Spectator.Travel travel, MatchStore store,
-            WorldEngineService worldEngine, PlayerStateStore playerStates) {
-        this.plugin = plugin;
-        this.engineSettings = engineSettings;
+    public MatchBorderEnforcer(TaskScheduler tasks, BorderEngine engine,
+            PlayerSettings.Spectator.Travel travel, MatchStore store, BorderPlayers players) {
+        this.tasks = tasks;
+        this.engine = engine;
         this.travel = travel;
         this.store = store;
-        this.worldEngine = worldEngine;
-        this.playerStates = playerStates;
+        this.players = players;
         // Quarter-second tick: pseudo-border guard, spectator travel limit,
         // and the elapsed-time cache (ended matches ignore the refresh).
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+        tasks.runTimer(() -> {
             enforcePseudoBorders();
             enforceSpectatorTravel();
             long now = System.currentTimeMillis();
@@ -65,7 +70,7 @@ public final class MatchBorderEnforcer {
      * non-Nether worlds the surface treatment.
      */
     private void enforcePseudoBorders() {
-        WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engine.engineSettings());
         if (!config.enabled() || !config.worldBorderEnabled()) {
             return;
         }
@@ -77,10 +82,10 @@ public final class MatchBorderEnforcer {
                     config.cellSize(), config.startBorderDiameter(),
                     config.useStartBorder(instance.begun()));
             for (Player player : store.onlineActivePlayers(instance)) {
-                if (plugin.fakeSpectators().isFakeSpectator(player)) {
+                if (players.fakes().isFakeSpectator(player)) {
                     continue;
                 }
-                if (!worldEngine.isBorderedWorld(player.getWorld())) {
+                if (!engine.worldEngine().isBorderedWorld(player.getWorld())) {
                     continue;
                 }
                 boolean nether = player.getWorld().getEnvironment() == World.Environment.NETHER;
@@ -121,12 +126,12 @@ public final class MatchBorderEnforcer {
             if (instance.cellIndex().isEmpty()) {
                 continue;
             }
-            Location center = worldEngine.cellCenter(instance.cellIndex().getAsLong()).orElse(null);
+            Location center = engine.worldEngine().cellCenter(instance.cellIndex().getAsLong()).orElse(null);
             List<Location> anchors = travelAnchors(instance);
             for (Player player : store.onlineActivePlayers(instance)) {
-                Role role = playerStates.role(player);
+                Role role = players.states().role(player);
                 boolean watching = role == Role.SPECTATOR
-                        || (plugin.fakeSpectators().isFakeSpectator(player) && !role.isParticipant());
+                        || (players.fakes().isFakeSpectator(player) && !role.isParticipant());
                 if (!watching) {
                     continue;
                 }
@@ -140,13 +145,13 @@ public final class MatchBorderEnforcer {
     private List<Location> travelAnchors(GameInstance instance) {
         List<Location> anchors = new ArrayList<>();
         for (Player player : store.onlineActivePlayers(instance)) {
-            if (playerStates.role(player).isParticipant()) {
+            if (players.states().role(player).isParticipant()) {
                 anchors.add(player.getLocation());
             }
         }
-        Map<UUID, Map<UUID, Location>> sightings = playerStates.sightings();
+        Map<UUID, Map<UUID, Location>> sightings = players.states().sightings();
         for (UUID playerId : instance.assignedPlayerIds()) {
-            if (!playerStates.role(playerId).isParticipant()) {
+            if (!players.states().role(playerId).isParticipant()) {
                 continue;
             }
             Map<UUID, Location> seen = sightings.get(playerId);

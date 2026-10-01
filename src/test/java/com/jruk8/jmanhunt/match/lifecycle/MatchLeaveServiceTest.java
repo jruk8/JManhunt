@@ -60,11 +60,14 @@ class MatchLeaveServiceTest {
         MatchMessaging messaging = mock(MatchMessaging.class);
         @SuppressWarnings("unchecked")
         Consumer<GameInstance> afterLeave = mock(Consumer.class);
-        MatchLeaveService leaves = new MatchLeaveService(plugin, mock(MessageService.class), texts(),
-                players, mock(CompassManager.class), mock(GameStateCommandManager.class),
-                new JManhuntConfig().getWorldEngine(), match,
-                mock(WorldEngineService.class), store, messaging,
-                mock(FlagStore.class), afterLeave);
+        MatchLeaveService leaves = new MatchLeaveService(
+                new MatchLeaveService.LeaveReads(match,
+                        new JManhuntConfig().getWorldEngine(), plugin.fakeSpectators(),
+                        plugin.roleTeams()),
+                new MatchLeaveService.LeaveMatch(players, mock(CompassManager.class),
+                        mock(GameStateCommandManager.class), mock(WorldEngineService.class),
+                        store, mock(FlagStore.class), afterLeave),
+                mock(MessageService.class), texts(), messaging);
         GameInstance instance = mock(GameInstance.class);
         when(instance.active()).thenReturn(true);
         when(instance.begun()).thenReturn(false);

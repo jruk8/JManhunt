@@ -1,7 +1,9 @@
 package com.jruk8.jmanhunt.command;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.WorldEngineConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.bounds.LobbyBounds;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyBundle;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
 import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
@@ -51,28 +53,32 @@ public final class DevSchemCommand {
         }
     }
 
-    private final JManhuntPlugin plugin;
-    private final MessageService messages;
-    private final DevMessages dev;
-    private final CommandMessages command;
+    /** Chat halves of dev schem feedback. */
+    public record Texts(MessageService messages, DevMessages dev, CommandMessages command) {
+    }
+
     private final LobbySchematicService schematics;
+    private final LobbyConfig lobbyConfig;
+    private final WorldEngineConfig engineSettings;
+    private final JManhuntLogger log;
+    private final Texts texts;
     private final Map<UUID, Location> pos1 = new HashMap<>();
     private final Map<UUID, Location> pos2 = new HashMap<>();
     private final Map<UUID, PendingLoad> pendingLoads = new HashMap<>();
 
-    public DevSchemCommand(JManhuntPlugin plugin, MessageService messages, DevMessages dev,
-            CommandMessages command) {
-        this.plugin = plugin;
-        this.messages = messages;
-        this.dev = dev;
-        this.command = command;
-        this.schematics = new LobbySchematicService(plugin);
+    public DevSchemCommand(LobbySchematicService schematics, LobbyConfig lobbyConfig,
+            WorldEngineConfig engineSettings, JManhuntLogger log, Texts texts) {
+        this.schematics = schematics;
+        this.lobbyConfig = lobbyConfig;
+        this.engineSettings = engineSettings;
+        this.log = log;
+        this.texts = texts;
     }
 
     /** Runs one schem action; args[0] is the action, args[1] the name if any. */
     public boolean execute(CommandSender sender, String[] args) {
         if (args.length == 0) {
-            messages.messageRaw(sender, dev.getUsage());
+            texts.messages().messageRaw(sender, texts.dev().getUsage());
             return true;
         }
         String action = args[0].toLowerCase(Locale.ROOT);
@@ -84,7 +90,7 @@ public final class DevSchemCommand {
             case "load" -> load(sender, name);
             case "list" -> list(sender);
             default -> {
-                messages.messageRaw(sender, dev.getUsage());
+                texts.messages().messageRaw(sender, texts.dev().getUsage());
                 yield true;
             }
         };
@@ -97,7 +103,7 @@ public final class DevSchemCommand {
         // Feet block at execution time: Location is already feet-based.
         Location corner = player.getLocation().clone();
         (first ? pos1 : pos2).put(player.getUniqueId(), corner);
-        messages.messageRaw(sender, first ? dev.getPos1() : dev.getPos2(),
+        texts.messages().messageRaw(sender, first ? texts.dev().getPos1() : texts.dev().getPos2(),
                 Map.of("pos", blockCoords(corner)));
         return true;
     }
@@ -107,7 +113,7 @@ public final class DevSchemCommand {
             return playerOnly(sender);
         }
         if (name == null || !validName(name)) {
-            messages.messageRaw(sender, name == null ? dev.getUsage() : dev.getInvalidName());
+            texts.messages().messageRaw(sender, name == null ? texts.dev().getUsage() : texts.dev().getInvalidName());
             return true;
         }
         List<Location> selection = selection(sender, player);
@@ -125,20 +131,20 @@ public final class DevSchemCommand {
         try {
             nbt = captureNbt(structure);
         } catch (IOException failed) {
-            plugin.logger().warning("Dev schem save failed: " + failed.getMessage());
-            messages.messageRaw(sender, dev.getSaveFailed(), Map.of("name", name));
+            log.warning("Dev schem save failed: " + failed.getMessage());
+            texts.messages().messageRaw(sender, texts.dev().getSaveFailed(), Map.of("name", name));
             return true;
         }
         JmhLobbyService.SavedCounts counts;
         try {
             counts = bundleLobby(name, nbt, corners);
         } catch (IOException failed) {
-            plugin.logger().warning("Dev schem save failed: " + failed.getMessage());
-            messages.messageRaw(sender, dev.getSaveFailed(), Map.of("name", name));
+            log.warning("Dev schem save failed: " + failed.getMessage());
+            texts.messages().messageRaw(sender, texts.dev().getSaveFailed(), Map.of("name", name));
             return true;
         }
         BlockVector size = structure.getSize();
-        messages.messageRaw(sender, dev.getSaved(), Map.of("name", name, "size",
+        texts.messages().messageRaw(sender, texts.dev().getSaved(), Map.of("name", name, "size",
                 size.getBlockX() + "x" + size.getBlockY() + "x" + size.getBlockZ(),
                 "lobbies", lobbySummary(counts)));
         return true;
@@ -149,11 +155,11 @@ public final class DevSchemCommand {
         Location first = pos1.get(player.getUniqueId());
         Location second = pos2.get(player.getUniqueId());
         if (first == null || second == null) {
-            messages.messageRaw(sender, dev.getNeedSelection());
+            texts.messages().messageRaw(sender, texts.dev().getNeedSelection());
             return null;
         }
         if (first.getWorld() == null || !first.getWorld().equals(second.getWorld())) {
-            messages.messageRaw(sender, dev.getWorldMismatch());
+            texts.messages().messageRaw(sender, texts.dev().getWorldMismatch());
             return null;
         }
         return List.of(first, second);
@@ -166,8 +172,8 @@ public final class DevSchemCommand {
         try {
             structure.fill(corners.get(0).toLocation(world), corners.get(1).toLocation(world), true);
         } catch (RuntimeException failed) {
-            plugin.logger().warning("Dev schem fill failed: " + failed.getMessage());
-            messages.messageRaw(sender, dev.getSaveFailed(), Map.of("name", name));
+            log.warning("Dev schem fill failed: " + failed.getMessage());
+            texts.messages().messageRaw(sender, texts.dev().getSaveFailed(), Map.of("name", name));
             return null;
         }
         return structure;
@@ -190,9 +196,9 @@ public final class DevSchemCommand {
             String name, byte[] nbt, List<BlockVector> corners) throws IOException {
         BlockVector min = corners.get(0);
         BlockVector max = corners.get(1);
-        return new JmhLobbyService(plugin).saveBundle(
+        return schematics.getLobbies().saveBundle(
                 new File(schematics.schematicDir(), name + JmhLobbyService.BUNDLE_SUFFIX),
-                nbt, plugin.lobbyConfig().getLobbies(),
+                nbt, lobbyConfig.getLobbies(),
                 new LobbyBounds.Bound(min.getBlockX(), min.getBlockY(), min.getBlockZ(),
                         max.getBlockX(), max.getBlockY(), max.getBlockZ()),
                 new JmhLobbyBundle.Offset(min.getBlockX(), min.getBlockY(), min.getBlockZ()));
@@ -227,13 +233,13 @@ public final class DevSchemCommand {
             return playerOnly(sender);
         }
         if (name == null) {
-            messages.messageRaw(sender, dev.getUsage());
+            texts.messages().messageRaw(sender, texts.dev().getUsage());
             return true;
         }
         File bundle = new File(schematics.schematicDir(), name + JmhLobbyService.BUNDLE_SUFFIX);
         File legacy = new File(schematics.schematicDir(), name + ".nbt");
         if (!bundle.isFile() && !legacy.isFile()) {
-            messages.messageRaw(sender, dev.getLoadMissing(), Map.of("name", name));
+            texts.messages().messageRaw(sender, texts.dev().getLoadMissing(), Map.of("name", name));
             return true;
         }
         if (bundle.isFile() && confirmRequired(player, name, bundle)) {
@@ -245,9 +251,9 @@ public final class DevSchemCommand {
         File file = bundle.isFile() ? bundle : legacy;
         if (schematics.pasteFile(player.getWorld(), file, player.getLocation())) {
             pendingLoads.remove(player.getUniqueId());
-            messages.messageRaw(sender, dev.getPasted(), Map.of("name", name));
+            texts.messages().messageRaw(sender, texts.dev().getPasted(), Map.of("name", name));
         } else {
-            messages.messageRaw(sender, dev.getLoadFailed(), Map.of("name", name));
+            texts.messages().messageRaw(sender, texts.dev().getLoadFailed(), Map.of("name", name));
         }
         return true;
     }
@@ -259,7 +265,7 @@ public final class DevSchemCommand {
      * skip the gate; the paste reports them.
      */
     private boolean confirmRequired(Player player, String name, File bundleFile) {
-        JmhLobbyService lobbies = new JmhLobbyService(plugin);
+        JmhLobbyService lobbies = schematics.getLobbies();
         if (!player.getWorld().getName().equals(lobbies.lobbyWorldName())) {
             return false;
         }
@@ -270,8 +276,8 @@ public final class DevSchemCommand {
             return false;
         }
         Set<Integer> overwritten = JmhLobbyService.overwrittenIds(
-                plugin.lobbyConfig().getLobbies(), bundle,
-                plugin.lobbyService().multiLobbyAllowed());
+                lobbyConfig.getLobbies(), bundle,
+                engineSettings.isEnabled());
         if (overwritten.isEmpty()) {
             return false;
         }
@@ -283,7 +289,7 @@ public final class DevSchemCommand {
         }
         pendingLoads.put(player.getUniqueId(),
                 new PendingLoad(name, System.currentTimeMillis()));
-        messages.messageRaw(player, dev.getLoadOverwriteConfirm(),
+        texts.messages().messageRaw(player, texts.dev().getLoadOverwriteConfirm(),
                 Map.of("name", name, "ids", overwritten.stream().sorted()
                         .map(String::valueOf)
                         .collect(Collectors.joining(", "))));
@@ -293,15 +299,16 @@ public final class DevSchemCommand {
     private boolean list(CommandSender sender) {
         List<String> names = schematicNames();
         if (names.isEmpty()) {
-            messages.messageRaw(sender, dev.getListEmpty());
+            texts.messages().messageRaw(sender, texts.dev().getListEmpty());
         } else {
-            messages.messageRaw(sender, dev.getList(), Map.of("value", ListFormatter.joinOxford(names)));
+            texts.messages().messageRaw(sender, texts.dev().getList(),
+                    Map.of("value", ListFormatter.joinOxford(names)));
         }
         return true;
     }
 
     private boolean playerOnly(CommandSender sender) {
-        messages.messageRaw(sender, command.getPlayerOnly());
+        texts.messages().messageRaw(sender, texts.command().getPlayerOnly());
         return true;
     }
 

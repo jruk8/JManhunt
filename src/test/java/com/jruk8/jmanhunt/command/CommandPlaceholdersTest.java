@@ -100,11 +100,10 @@ class CommandPlaceholdersTest {
     }
 
     private TagContext matchContext(List<String> warnings) {
-        return TagContext.of(matchScope(warnings), "test",
-                text -> warnings.add("global:" + text),
-                text -> warnings.add("player:" + text),
+        return TagContext.of(new TagContext.TagIdentity(matchScope(warnings), "test"),
+                text -> warnings.add("global:" + text), text -> warnings.add("player:" + text),
                 (id, pitch, volume) -> warnings.add("gsound:" + id),
-                (id, pitch, volume) -> warnings.add("psound:" + id));
+                        (id, pitch, volume) -> warnings.add("psound:" + id));
     }
 
     @Test
@@ -279,7 +278,7 @@ class CommandPlaceholdersTest {
     void expandAllPlayersFansOut() {
         List<String> warnings = new ArrayList<>();
         assertEquals(List.of("tp Alice Steve", "tp Bob Steve"),
-                CommandPlaceholders.expandAllPlayers("tp @a Steve", matchScope(warnings)));
+                SelectorExpansion.expandAllPlayers("tp @a Steve", matchScope(warnings)));
         assertTrue(warnings.isEmpty());
     }
 
@@ -287,9 +286,9 @@ class CommandPlaceholdersTest {
     void expandAllPlayersHonorsTeamFilter() {
         List<String> warnings = new ArrayList<>();
         assertEquals(List.of("give Bob apple"),
-                CommandPlaceholders.expandAllPlayers("give @a[team=SPEEDRUNNER] apple", matchScope(warnings)));
+                SelectorExpansion.expandAllPlayers("give @a[team=SPEEDRUNNER] apple", matchScope(warnings)));
         assertEquals(List.of("give Alice apple"),
-                CommandPlaceholders.expandAllPlayers("give @a[team=HUNTER] apple", matchScope(warnings)));
+                SelectorExpansion.expandAllPlayers("give @a[team=HUNTER] apple", matchScope(warnings)));
         assertTrue(warnings.isEmpty());
     }
 
@@ -297,9 +296,9 @@ class CommandPlaceholdersTest {
     void expandAllPlayersLeavesNameListTagAlone() {
         List<String> warnings = new ArrayList<>();
         assertEquals(List.of("say <all-players> win"),
-                CommandPlaceholders.expandAllPlayers("say <all-players> win", matchScope(warnings)));
+                SelectorExpansion.expandAllPlayers("say <all-players> win", matchScope(warnings)));
         assertEquals(List.of("say <all-players:HUNTER> win"),
-                CommandPlaceholders.expandAllPlayers("say <all-players:HUNTER> win", matchScope(warnings)));
+                SelectorExpansion.expandAllPlayers("say <all-players:HUNTER> win", matchScope(warnings)));
         assertTrue(warnings.isEmpty());
     }
 
@@ -318,7 +317,8 @@ class CommandPlaceholdersTest {
     @Test
     void allPlayersEmptyScopeWarnsAndYieldsEmptyList() {
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.of(ModifierTagScope.executor("Steve", warnings::add), "test",
+        TagContext context = TagContext.of(new TagContext.TagIdentity(ModifierTagScope.executor("Steve",
+                warnings::add), "test"),
                 text -> { }, text -> { },
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { });
         assertEquals("say [] win",
@@ -342,7 +342,8 @@ class CommandPlaceholdersTest {
     @Test
     void fanoutMarkerOutsideFanoutCoversExecutor() {
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.of(ModifierTagScope.executor("Steve", warnings::add), "test",
+        TagContext context = TagContext.of(new TagContext.TagIdentity(ModifierTagScope.executor("Steve",
+                warnings::add), "test"),
                 text -> { }, text -> { },
                 (id, pitch, volume) -> { }, (id, pitch, volume) -> { });
         assertEquals("give Steve apple",
@@ -354,7 +355,7 @@ class CommandPlaceholdersTest {
     void expandAllPlayersEmptyScopeSkipsWithWarning() {
         List<String> warnings = new ArrayList<>();
         ModifierTagScope scope = ModifierTagScope.executor("Steve", warnings::add);
-        assertEquals(List.of(), CommandPlaceholders.expandAllPlayers("tp @a Steve", scope));
+        assertEquals(List.of(), SelectorExpansion.expandAllPlayers("tp @a Steve", scope));
         assertEquals(1, warnings.size());
     }
 
@@ -362,7 +363,7 @@ class CommandPlaceholdersTest {
     void expandAllPlayersLeavesPlainCommandsAlone() {
         List<String> warnings = new ArrayList<>();
         assertEquals(List.of("say hi"),
-                CommandPlaceholders.expandAllPlayers("say hi", matchScope(warnings)));
+                SelectorExpansion.expandAllPlayers("say hi", matchScope(warnings)));
         assertTrue(warnings.isEmpty());
     }
 

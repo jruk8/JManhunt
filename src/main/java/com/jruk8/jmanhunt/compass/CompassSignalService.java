@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -20,20 +19,22 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Signal interference verdicts for tracking attempts and scrolls. */
 final class CompassSignalService {
-    private final JManhuntPlugin plugin;
     private final CompassSettingsFacade settings;
     private final PlayerStateStore playerStates;
+    private GameManager game;
 
-    CompassSignalService(JManhuntPlugin plugin, CompassSettingsFacade settings,
-            PlayerStateStore playerStates) {
-        this.plugin = plugin;
+    CompassSignalService(CompassSettingsFacade settings, PlayerStateStore playerStates) {
         this.settings = settings;
         this.playerStates = playerStates;
     }
 
+    /** Wires the game after construction; verdicts need matches. */
+    void setGameManager(GameManager game) {
+        this.game = game;
+    }
+
     /** Origin lobby of the holder's match, or null outside matches. */
     private Integer lobbyOf(Player holder) {
-        GameManager game = plugin.game();
         return game == null ? null : game.lobbyOfPlayer(holder.getUniqueId());
     }
 

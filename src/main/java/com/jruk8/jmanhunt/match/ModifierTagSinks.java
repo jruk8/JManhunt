@@ -1,11 +1,11 @@
 package com.jruk8.jmanhunt.match;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.CommandSyntax;
 import com.jruk8.jmanhunt.command.EngineEscapes;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
 import com.jruk8.jmanhunt.config.MiscConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -24,28 +24,28 @@ import java.util.Optional;
  * console dispatch with the command blacklist enforced.
  */
 public final class ModifierTagSinks {
-    private final JManhuntPlugin plugin;
-    private final MessageService messages;
-    private final ModifiersMessages texts;
-    private final SoundService sounds;
+    /** Message bus, modifier texts, and sounds. */
+    public record SinkBus(MessageService messages, ModifiersMessages modifiers,
+            SoundService sounds) {
+    }
+
+    private final JManhuntLogger log;
+    private final SinkBus bus;
     private final GameManager game;
     private final PlayerStateStore playerStates;
     private final MiscConfig.Interop interop;
 
-    public ModifierTagSinks(JManhuntPlugin plugin, MessageService messages, ModifiersMessages texts,
-            SoundService sounds,
-            GameManager game, PlayerStateStore playerStates, MiscConfig.Interop interop) {
-        this.plugin = plugin;
-        this.messages = messages;
-        this.texts = texts;
-        this.sounds = sounds;
+    public ModifierTagSinks(JManhuntLogger log, SinkBus bus, GameManager game,
+            PlayerStateStore playerStates, MiscConfig.Interop interop) {
+        this.log = log;
+        this.bus = bus;
         this.game = game;
         this.playerStates = playerStates;
         this.interop = interop;
     }
 
     String formatEngineMessage(String text) {
-        return NamedPlayerSinks.formatEngineMessage(texts, messages, text);
+        return NamedPlayerSinks.formatEngineMessage(bus.modifiers(), bus.messages(), text);
     }
 
     /**
@@ -57,7 +57,7 @@ public final class ModifierTagSinks {
         String restored = EngineEscapes.restore(line);
         Collection<String> blocked = interop.getBlacklistedModifierCommands();
         if (CommandSyntax.isBlockedCommand(restored, blocked)) {
-            plugin.logger().severe("Blocked blacklisted modifier command '"
+            log.severe("Blocked blacklisted modifier command '"
                     + restored + "' at " + provenance + ".");
             return;
         }
@@ -73,14 +73,14 @@ public final class ModifierTagSinks {
         roleMembers("rmessage", name, matchId, scope, role).ifPresent(members -> {
             String formatted = formatEngineMessage(text);
             for (Player member : members) {
-                messages.sendText(member, formatted);
+                bus.messages().sendText(member, formatted);
             }
         });
     }
 
     /**
      * {@code <rsound>} sink: plays for every online assigned player
-     * of the named role. Unknown ids skip like engine sounds.
+     * of the named role. Unknown ids skip like engine bus.sounds().
      */
     void playRoleSound(String name, long matchId, ModifierTagScope scope,
             String role, String soundId, float pitch, float volume) {
@@ -88,13 +88,13 @@ public final class ModifierTagSinks {
         if (members.isEmpty()) {
             return;
         }
-        if (!sounds.isValidSound(soundId)) {
-            plugin.logger().warning("modifier \"" + name
+        if (!bus.sounds().isValidSound(soundId)) {
+            log.warning("modifier \"" + name
                     + "\" tried playing invalid sound \"" + soundId + "\"");
             return;
         }
         for (Player member : members.get()) {
-            sounds.playCustomSound(member, soundId, pitch, volume);
+            bus.sounds().playCustomSound(member, soundId, pitch, volume);
         }
     }
 
@@ -137,14 +137,14 @@ public final class ModifierTagSinks {
      * administrator, and cancels the match.
      */
     void loopLimitExceeded(String detail, long matchId) {
-        plugin.logger().severe("JMHScript loop exceeded 1000 steps at " + detail);
+        log.severe("JMHScript loop exceeded 1000 steps at " + detail);
         Optional<GameInstance> instance = game.instance(matchId);
         if (instance.isEmpty()) {
             return;
         }
-        String text = texts.getLoopLimit();
+        String text = bus.modifiers().getLoopLimit();
         for (Player player : game.onlineParticipants(matchId)) {
-            messages.sendText(player, text);
+            bus.messages().sendText(player, text);
         }
         game.cancel(instance.get());
     }
@@ -181,17 +181,17 @@ public final class ModifierTagSinks {
      */
     void playEngineSound(String containerId, Player target, String soundId,
             float pitch, float volume) {
-        if (!sounds.isValidSound(soundId)) {
-            plugin.logger().warning("modifier \"" + containerId
+        if (!bus.sounds().isValidSound(soundId)) {
+            log.warning("modifier \"" + containerId
                     + "\" tried playing invalid sound \"" + soundId + "\"");
             return;
         }
         if (target != null) {
-            sounds.playCustomSound(target, soundId, pitch, volume);
+            bus.sounds().playCustomSound(target, soundId, pitch, volume);
             return;
         }
         for (Player online : Bukkit.getOnlinePlayers()) {
-            sounds.playCustomSound(online, soundId, pitch, volume);
+            bus.sounds().playCustomSound(online, soundId, pitch, volume);
         }
     }
 }

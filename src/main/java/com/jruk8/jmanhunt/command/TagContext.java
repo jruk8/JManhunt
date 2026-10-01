@@ -94,116 +94,73 @@ public final class TagContext {
     private int stepBudget = TagLoops.LOOP_LIMIT;
     private boolean limitFired;
 
-    private TagContext(ModifierTagScope scope, String containerId,
-            Consumer<String> globalMessage, Consumer<String> playerMessage,
+    /** Who evaluates plus the container id ({@code <id>}). */
+    public record TagIdentity(ModifierTagScope scope, String containerId) {
+    }
+
+    /** Message, sound, and command sinks behind the tag lines. */
+    public record TagSinks(Consumer<String> globalMessage, Consumer<String> playerMessage,
             SoundSink globalSound, SoundSink playerSound,
-            BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
-            long matchId, TagBackends backends, List<String> eventArgs,
-            Map<String, String> localFlags, Consumer<String> loopLimit,
-            BiConsumer<String, String> roleMessage, RoleSoundSink roleSound,
             BiConsumer<String, String> commandRun) {
-        this.scope = scope;
-        this.containerId = containerId;
-        this.globalMessage = globalMessage;
-        this.playerMessage = playerMessage;
-        this.globalSound = globalSound;
-        this.playerSound = playerSound;
-        this.losePlayer = losePlayer;
-        this.winMatch = winMatch;
-        this.matchId = matchId;
-        this.backends = backends;
-        this.eventArgs = eventArgs;
-        this.localFlags = localFlags;
+        /** Sinks with the warn-only command fallback for the scope. */
+        public static TagSinks simple(Consumer<String> globalMessage,
+                Consumer<String> playerMessage, SoundSink globalSound,
+                SoundSink playerSound, ModifierTagScope scope) {
+            return new TagSinks(globalMessage, playerMessage, globalSound, playerSound,
+                    defaultCommandRun(scope));
+        }
+    }
+
+    /** Role sinks behind {@code <rmessage>} and {@code <rsound>}. */
+    public record TagRole(BiConsumer<String, String> roleMessage, RoleSoundSink roleSound) {
+        /** Silent role sinks. */
+        public static TagRole silent() {
+            return new TagRole((role, text) -> { }, (role, id, pitch, volume) -> { });
+        }
+    }
+
+    /** Match id, backends, event args, limits, and outcomes. */
+    public record TagMatch(long matchId, TagBackends backends, List<String> eventArgs,
+            Consumer<String> loopLimit, BiConsumer<String, String> losePlayer,
+            BiConsumer<String, String> winMatch) {
+        /** Match with empty args and a silent loop sink. */
+        public static TagMatch simple(long matchId, TagBackends backends,
+                BiConsumer<String, String> losePlayer,
+                BiConsumer<String, String> winMatch) {
+            return new TagMatch(matchId, backends, List.of(), detail -> { }, losePlayer,
+                    winMatch);
+        }
+    }
+
+    private TagContext(TagIdentity identity, TagSinks sinks, TagRole role, TagMatch match) {
+        this.scope = identity.scope();
+        this.containerId = identity.containerId();
+        this.globalMessage = sinks.globalMessage();
+        this.playerMessage = sinks.playerMessage();
+        this.globalSound = sinks.globalSound();
+        this.playerSound = sinks.playerSound();
+        this.losePlayer = match.losePlayer();
+        this.winMatch = match.winMatch();
+        this.matchId = match.matchId();
+        this.backends = match.backends();
+        this.eventArgs = List.copyOf(match.eventArgs());
+        this.localFlags = new HashMap<>();
         this.loopItems = new ArrayDeque<>();
-        this.loopLimit = loopLimit;
-        this.roleMessage = roleMessage;
-        this.roleSound = roleSound;
-        this.commandRun = commandRun;
-        this.provenance = Provenance.of(containerId, -1, "");
+        this.loopLimit = match.loopLimit();
+        this.roleMessage = role.roleMessage();
+        this.roleSound = role.roleSound();
+        this.commandRun = sinks.commandRun();
+        this.provenance = Provenance.of(identity.containerId(), -1, "");
     }
 
     /**
-     * Full run context for one modifier or debuff dispatch: match id
-     * (or {@link #NO_MATCH}), shared backends, and a fresh
-     * {@code <lflag>} map that dies with the run. Event args default
-     * to empty (every {@code <args>} index reads {@code "null"}).
+     * Full run context for one modifier or debuff dispatch: identity,
+     * sinks, role sinks, and match. Event args copy and freeze; the
+     * {@code <lflag>} map is fresh per run.
      */
-    public static TagContext run(ModifierTagScope scope, String containerId,
-            Consumer<String> globalMessage, Consumer<String> playerMessage,
-            SoundSink globalSound, SoundSink playerSound,
-            BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
-            long matchId, TagBackends backends) {
-        return run(scope, containerId, globalMessage, playerMessage,
-                globalSound, playerSound, losePlayer, winMatch,
-                matchId, backends, List.of());
-    }
-
-    /**
-     * Full run context with trigger event args behind
-     * {@code <args:index>}. The list is copied and frozen. Loop
-     * limits resolve to {@code "null"} with no match response.
-     */
-    public static TagContext run(ModifierTagScope scope, String containerId,
-            Consumer<String> globalMessage, Consumer<String> playerMessage,
-            SoundSink globalSound, SoundSink playerSound,
-            BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
-            long matchId, TagBackends backends, List<String> eventArgs) {
-        return run(scope, containerId, globalMessage, playerMessage,
-                globalSound, playerSound, losePlayer, winMatch,
-                matchId, backends, eventArgs, detail -> { });
-    }
-
-    /**
-     * Full run context with a loop-limit sink behind over-step
-     * {@code <while>} and {@code <for>} loops: managers log, tell
-     * the match, and cancel it. Role tags stay silent.
-     */
-    public static TagContext run(ModifierTagScope scope, String containerId,
-            Consumer<String> globalMessage, Consumer<String> playerMessage,
-            SoundSink globalSound, SoundSink playerSound,
-            BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
-            long matchId, TagBackends backends, List<String> eventArgs,
-            Consumer<String> loopLimit) {
-        return run(scope, containerId, globalMessage, playerMessage,
-                globalSound, playerSound, losePlayer, winMatch,
-                matchId, backends, eventArgs, loopLimit,
-                (role, text) -> { }, (role, id, pitch, volume) -> { });
-    }
-
-    /**
-     * Full run context with role sinks behind {@code <rmessage>} and
-     * {@code <rsound>}: managers reach the named role members.
-     * {@code <run>} warns without a command sink.
-     */
-    public static TagContext run(ModifierTagScope scope, String containerId,
-            Consumer<String> globalMessage, Consumer<String> playerMessage,
-            SoundSink globalSound, SoundSink playerSound,
-            BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
-            long matchId, TagBackends backends, List<String> eventArgs,
-            Consumer<String> loopLimit, BiConsumer<String, String> roleMessage,
-            RoleSoundSink roleSound) {
-        return run(scope, containerId, globalMessage, playerMessage,
-                globalSound, playerSound, losePlayer, winMatch,
-                matchId, backends, eventArgs, loopLimit,
-                roleMessage, roleSound, defaultCommandRun(scope));
-    }
-
-    /**
-     * Full run context with a command sink behind {@code <run>}: the
-     * line plus the dispatch provenance it reports under. Managers
-     * dispatch from the console with the blacklist enforced.
-     */
-    public static TagContext run(ModifierTagScope scope, String containerId,
-            Consumer<String> globalMessage, Consumer<String> playerMessage,
-            SoundSink globalSound, SoundSink playerSound,
-            BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
-            long matchId, TagBackends backends, List<String> eventArgs,
-            Consumer<String> loopLimit, BiConsumer<String, String> roleMessage,
-            RoleSoundSink roleSound, BiConsumer<String, String> commandRun) {
-        return new TagContext(scope, containerId, globalMessage, playerMessage,
-                globalSound, playerSound, losePlayer, winMatch,
-                matchId, backends, List.copyOf(eventArgs), new HashMap<>(), loopLimit,
-                roleMessage, roleSound, commandRun);
+    public static TagContext run(TagIdentity identity, TagSinks sinks, TagRole role,
+            TagMatch match) {
+        return new TagContext(identity, sinks, role, match);
     }
 
     /** Warns that {@code <run>} only dispatches inside wired runs. */
@@ -212,23 +169,25 @@ public final class TagContext {
                 + line);
     }
 
-    /** Full context for one modifier or debuff dispatch. */
-    public static TagContext of(ModifierTagScope scope, String containerId,
-            Consumer<String> globalMessage, Consumer<String> playerMessage,
-            SoundSink globalSound, SoundSink playerSound) {
-        return new TagContext(scope, containerId, globalMessage, playerMessage,
-                globalSound, playerSound, (player, reason) -> { }, (role, reason) -> { },
-                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { },
-                (role, text) -> { }, (role, id, pitch, volume) -> { }, defaultCommandRun(scope));
+    /** Full context for one modifier or debuff dispatch outside any match. */
+    public static TagContext of(TagIdentity identity, Consumer<String> globalMessage,
+            Consumer<String> playerMessage, SoundSink globalSound, SoundSink playerSound) {
+        return new TagContext(identity,
+                TagSinks.simple(globalMessage, playerMessage, globalSound, playerSound,
+                        identity.scope()),
+                TagRole.silent(),
+                TagMatch.simple(NO_MATCH, TagBackends.inert(), (player, reason) -> { },
+                        (role, reason) -> { }));
     }
 
     /** Inert context for scope-only callers: empty id, silent sinks. */
     public static TagContext inert(ModifierTagScope scope) {
-        return new TagContext(scope, "", text -> { }, text -> { },
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                NO_MATCH, TagBackends.inert(), List.of(), new HashMap<>(), detail -> { },
-                (role, text) -> { }, (role, id, pitch, volume) -> { }, defaultCommandRun(scope));
+        return new TagContext(new TagIdentity(scope, ""),
+                TagSinks.simple(text -> { }, text -> { },
+                        (id, pitch, volume) -> { }, (id, pitch, volume) -> { }, scope),
+                TagRole.silent(),
+                TagMatch.simple(NO_MATCH, TagBackends.inert(), (player, reason) -> { },
+                        (role, reason) -> { }));
     }
 
     public ModifierTagScope scope() {

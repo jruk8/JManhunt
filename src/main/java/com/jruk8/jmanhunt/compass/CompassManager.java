@@ -1,6 +1,8 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.JManhuntPlaceholders;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -8,6 +10,7 @@ import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
@@ -15,29 +18,35 @@ import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.CompassMeta;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public final class CompassManager {
-    private final JManhuntPlugin plugin;
-    private final MessageService messages;
-    private final CompassMessages compass;
-    private final ModifiersMessages modifiers;
-    private final SoundService sounds;
-    private final PlayerStateStore playerStates;
+    /** Chat, item, debuff, and click-sound halves. */
+    public record ManagerTexts(MessageService messages, CompassMessages compass,
+            ModifiersMessages modifiers, SoundService sounds) {
+    }
+
+    /** Role plus fake-spectator reads. */
+    public record ManagerPlayers(PlayerStateStore playerStates, FakeSpectatorService fakes) {
+    }
+
+    /** Scheduler, logger, placeholder, and item-key edge. */
+    public record ManagerEdge(TaskScheduler tasks, JManhuntLogger log,
+            java.util.function.Supplier<JManhuntPlaceholders> placeholders,
+            NamespacedKey compassKey) {
+    }
+
     private final CompassSettingsFacade settings;
-    private final CompassTargetService targets;
+    private final ManagerTexts texts;
+    private final ManagerPlayers players;
     private final CompassSignalService signal;
     private final HotspotService hotspots;
-    private final CompassInaccuracyService inaccuracy;
     private final CompassLockService locks;
     private final CompassItemService items;
     private final CompassCache cache = new CompassCache();
@@ -48,33 +57,56 @@ public final class CompassManager {
     private final Map<UUID, Component> compassActionbars = new HashMap<>();
     private final CompassDeltaRenderer deltas;
     private final CompassAnalysisSessions sessions;
+    private final CompassRefreshService refresh;
     private GameManager game;
 
-    public CompassManager(JManhuntPlugin plugin, MessageService messages, CompassMessages compass,
-            ModifiersMessages modifiers, SoundService sounds, PlayerStateStore playerStates,
-            NamespacedKey compassKey) {
-        this.plugin = plugin;
-        this.messages = messages;
-        this.compass = compass;
-        this.modifiers = modifiers;
-        this.sounds = sounds;
-        this.playerStates = playerStates;
-        this.settings = new CompassSettingsFacade(plugin.overrides(),
-                plugin.configRoot().getSettings().getCompass());
-        this.targets = new CompassTargetService(playerStates, plugin.fakeSpectators());
-        this.signal = new CompassSignalService(plugin, settings, playerStates);
+    public CompassManager(CompassSettingsFacade settings, ManagerTexts texts,
+            ManagerPlayers players, ManagerEdge edge) {
+        this.settings = settings;
+        this.texts = texts;
+        this.players = players;
+        PlayerStateStore playerStates = players.playerStates();
+        FakeSpectatorService fakes = players.fakes();
+        MessageService messages = texts.messages();
+        CompassMessages compass = texts.compass();
+        ModifiersMessages modifiers = texts.modifiers();
+        SoundService sounds = texts.sounds();
+        CompassTargetService targets = new CompassTargetService(playerStates, fakes);
+        this.signal = new CompassSignalService(settings, playerStates);
         this.hotspots = new HotspotService(settings, playerStates);
-        this.inaccuracy = new CompassInaccuracyService(settings, hotspots);
-        this.items = new CompassItemService(plugin, settings, messages, compass,
-                playerStates, compassKey);
-        this.sessions = new CompassAnalysisSessions(plugin, settings, messages, compass,
-                playerStates, targets, signal, items, compassActionbars, sounds);
-        this.locks = new CompassLockService(plugin, settings, playerStates, sounds, messages,
-                compass, modifiers, targets, compassActionbars, this::refreshCompass,
-                this::resolveClickRefresh, this::renderFromCache, sessions::beginAnalysisSpot,
-                cache, lastClick, sessions);
+        CompassInaccuracyService inaccuracy = new CompassInaccuracyService(settings, hotspots);
+        this.items = new CompassItemService(settings,
+                new CompassItemService.ItemPlayers(playerStates, fakes),
+                new CompassItemService.ItemTexts(messages, compass), edge.log(),
+                edge.compassKey());
+        this.sessions = new CompassAnalysisSessions(settings,
+                new CompassAnalysisSessions.SessionTexts(messages, compass, sounds),
+                new CompassAnalysisSessions.SessionServices(targets, signal, items),
+                new CompassAnalysisSessions.SessionPlayers(playerStates, fakes),
+                compassActionbars);
+        CompassAnalysisRunner runner = new CompassAnalysisRunner(settings,
+                new CompassAnalysisRunner.RunnerFeedback(messages, compass, modifiers, sounds,
+                        edge.log()),
+                new CompassAnalysisRunner.RunnerCallbacks(this::resolveClickRefresh,
+                        this::refreshCompass, sessions::beginAnalysisSpot, sessions,
+                        edge.tasks()),
+                new CompassAnalysisRunner.RunnerShared(compassActionbars, lastClick),
+                new CompassAnalysisRunner.RunnerData(playerStates, fakes,
+                        edge.placeholders()));
+        this.locks = new CompassLockService(settings,
+                new CompassLockService.LockCycle(targets, cache, this::renderFromCache,
+                        this::refreshCompass),
+                runner, new CompassLockService.LockTexts(messages, compass, sounds),
+                new CompassLockService.LockPlayers(playerStates, fakes));
         sessions.setLockService(locks);
-        this.deltas = new CompassDeltaRenderer(plugin, settings, messages, compassActionbars);
+        this.deltas = new CompassDeltaRenderer(edge.tasks(), settings, messages, compassActionbars);
+        this.refresh = new CompassRefreshService(settings,
+                new CompassRefreshService.RefreshInputs(targets, signal, items, inaccuracy,
+                        deltas),
+                new CompassRefreshService.RefreshSession(locks, sessions, cache,
+                        compassActionbars),
+                new CompassRefreshService.RefreshTexts(messages, compass, sounds),
+                new CompassRefreshService.RefreshPlayers(playerStates, fakes));
     }
 
     /** Wires the game after construction so targets resolve within one match. */
@@ -84,6 +116,8 @@ public final class CompassManager {
         items.setGameManager(game);
         sessions.setGameManager(game);
         hotspots.setGameManager(game);
+        signal.setGameManager(game);
+        refresh.setGameManager(game);
     }
 
     /** Origin lobby of the holder's match, or null outside matches. */
@@ -158,6 +192,8 @@ public final class CompassManager {
         if (!active) {
             return;
         }
+        MessageService messages = texts.messages();
+        CompassMessages compass = texts.compass();
         Bukkit.getOnlinePlayers().stream().filter(p -> role(p).isParticipant())
                 .filter(p -> inLiveInstance(p))
                 .filter(p -> items.isCompass(p.getInventory().getItemInMainHand())
@@ -185,10 +221,7 @@ public final class CompassManager {
     }
 
     public void refreshCompass(Player holder) {
-        if (holder.isDead()) {
-            return;
-        }
-        refreshCompassOutcome(holder);
+        refresh.refreshCompass(holder);
     }
 
     /** Flips emptied teammate modes in one match back to opponents. */
@@ -220,25 +253,6 @@ public final class CompassManager {
                 .forEach(this::refreshCompass);
     }
 
-    /**
-     * Refreshes the compass, reporting whether it now tracks a target.
-     * NEARBY, TOO_FAR, bad signal, and no-target outcomes all report
-     * false so click callers can play the failure sound instead.
-     */
-    boolean refreshCompassOutcome(Player holder) {
-        UUID id = holder.getUniqueId();
-        // Analysis resolutions consume the press-time snapshots; every
-        // other path renders from live positions.
-        boolean analysis = sessions.hasAnalysisSnapshots(id);
-        try {
-            return refreshCompassResolved(holder);
-        } finally {
-            if (analysis) {
-                sessions.cancelAnalysisSnapshots(id);
-            }
-        }
-    }
-
 
     /**
      * Cached holder spot when one is pending for this resolution and
@@ -252,92 +266,6 @@ public final class CompassManager {
         return live;
     }
 
-
-    private boolean refreshCompassResolved(Player holder) {
-        Optional<RefreshSlot> slot = refreshSlot(holder);
-        if (slot.isEmpty()) {
-            return false;
-        }
-        Optional<RefreshMatch> match = refreshMatch(holder, slot.get());
-        if (match.isEmpty()) {
-            return false;
-        }
-        RefreshMatch target = match.get();
-        writeCache(holder, target.instance());
-        List<CompassCandidate> opponents = targets.collectOpponents(holder, target.targetRole(),
-                target.instance());
-        List<CompassSighting> sightings = targets.collectSightings(holder, target.targetRole(),
-                target.instance(), holder.getLocation());
-        CompassLockService.LockedTargets narrowed = locks.narrowToLock(holder.getUniqueId(),
-                opponents, sightings);
-        CompassPick pick = resolveCompassPick(settings, target.instance().originLobbyId(),
-                target.holderRole(), narrowed.opponents(), narrowed.sightings());
-        return renderCompassPick(holder, slot.get().item(), slot.get().slot(), pick,
-                target.targetRoleString(), narrowed.locked());
-    }
-
-    /** Compass slot and item that are eligible for a refresh. */
-    private record RefreshSlot(int slot, ItemStack item) {
-    }
-
-    /** Match context for a compass refresh. */
-    private record RefreshMatch(GameInstance instance, Role holderRole, Role targetRole,
-            String targetRoleString) {
-    }
-
-    /** Finds the compass slot and item to refresh, if any. */
-    private Optional<RefreshSlot> refreshSlot(Player holder) {
-        items.deduplicateCompasses(holder);
-        int slot = items.findCompassSlot(holder);
-        if (slot < 0) {
-            return Optional.empty();
-        }
-        ItemStack item = holder.getInventory().getItem(slot);
-        if (!items.isCompass(item)) {
-            return Optional.empty();
-        }
-        return Optional.of(new RefreshSlot(slot, item));
-    }
-
-    /**
-     * Snapshots the closest hunters plus the closest speedrunners for one
-     * holder, capped at the clamped max-targets each. Every refresh event
-     * funnels through here, so clicks always read a fresh cache.
-     */
-    private void writeCache(Player holder, GameInstance instance) {
-        int cap = CompassCache.clampMaxTargets(
-                settings.targetCyclingMaxTargets(lobbyOf(holder)));
-        cache.replace(holder.getUniqueId(), holder.getLocation().clone(),
-                targets.collectSnapshots(holder, Role.HUNTER, instance, cap),
-                targets.collectSnapshots(holder, Role.SPEEDRUNNER, instance, cap));
-    }
-
-    /** Resolves the match and roles for a refresh, rendering the spectator fallback. */
-    private Optional<RefreshMatch> refreshMatch(Player holder, RefreshSlot slot) {
-        if (isVanillaSpectator(holder)) {
-            return Optional.empty();
-        }
-        Role holderRole = role(holder);
-        if (!holderRole.isParticipant()) {
-            locks.clearMatchState(holder.getUniqueId());
-            return Optional.empty();
-        }
-        Role targetRole = locks.targetRole(holder);
-        String targetRoleString = messages.roleName(targetRole);
-        if (plugin.fakeSpectators().isFakeSpectator(holder)) {
-            showNoTarget(holder, slot.item(), slot.slot(), targetRoleString);
-            return Optional.empty();
-        }
-        if (game == null) {
-            return Optional.empty();
-        }
-        Optional<GameInstance> match = game.instanceOf(holder.getUniqueId());
-        if (match.isEmpty()) {
-            locks.clearMatchState(holder.getUniqueId());
-            return Optional.empty();
-        }
-        return Optional.of(new RefreshMatch(match.get(), holderRole, targetRole, targetRoleString));
-    }
 
     /** Resolves the compass pick for the narrowed targets. */
     static CompassPick resolveCompassPick(CompassSettingsFacade settings, Integer lobby,
@@ -355,265 +283,9 @@ public final class CompassManager {
         return CompassPick.resolve(opponents, sightings, minOn, min, max);
     }
 
-    /**
-     * Renders a resolved pick onto the compass item and actionbar. True
-     * when the needle now tracks a live target or sighting.
-     */
-    private boolean renderCompassPick(Player holder, ItemStack item, int slot, CompassPick pick,
-            String targetRoleString, boolean locked) {
-        Location spot = sessions.resolutionSpot(holder);
-        Location targetPress = sessions.targetPressSpot(holder.getUniqueId(), pick.id());
-        double holderMoved = sessions.analysisMaxMoved(holder);
-        Optional<SignalInterference.Reason> reason = pick.kind() == CompassPick.Kind.NONE
-                ? Optional.empty()
-                : signal.reasonForPick(holder, spot, targetPress, pick, holderMoved);
-        if (reason.isPresent()) {
-            showBadSignal(holder, item, slot, reason.get());
-            return false;
-        }
-        return switch (pick.kind()) {
-            case TRACK_PLAYER -> trackPlayer(holder, item, slot, pick, targetRoleString, locked);
-            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked,
-                    sessions.resolutionSpot(holder));
-            case NEARBY -> {
-                spinNeedle(item, holder);
-                holder.getInventory().setItem(slot, item);
-                compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getNearbyActionbar(),
-                        Map.of("player", pick.name())));
-                yield false;
-            }
-            case TOO_FAR -> {
-                spinNeedle(item, holder);
-                holder.getInventory().setItem(slot, item);
-                compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getTooFarActionbar(),
-                        Map.of("player", pick.name())));
-                yield false;
-            }
-            case NONE -> {
-                showNoTarget(holder, item, slot, targetRoleString);
-                yield false;
-            }
-        };
-    }
-
-    /**
-     * Renders the holder's current lock and mode from the snapshot cache
-     * only. Accepted clicks call this instead of refreshing, so browsing
-     * never fetches a live position and never touches the refresh
-     * cooldown. Uncached targets show a reasonless Bad Signal.
-     */
-    void renderFromCache(Player holder) {
-        Optional<RefreshSlot> slot = refreshSlot(holder);
-        if (slot.isEmpty()) {
-            return;
-        }
-        Optional<RefreshMatch> match = refreshMatch(holder, slot.get());
-        if (match.isEmpty()) {
-            return;
-        }
-        RefreshMatch target = match.get();
-        int maxTargets = CompassCache.clampMaxTargets(
-                settings.targetCyclingMaxTargets(lobbyOf(holder)));
-        CompassLockService.CachedCycle cycle =
-                locks.buildCycle(holder, target.instance(), target.targetRole(), maxTargets);
-        CompassLockService.LockedTargets narrowed = locks.narrowToLockCached(holder.getUniqueId(),
-                cycle.cached(), cycle.sightings(), cycle.trackableIds());
-        CompassPick pick = resolveCompassPick(settings, target.instance().originLobbyId(),
-                target.holderRole(), narrowed.opponents(), narrowed.sightings());
-        renderCachedPick(holder, slot.get().item(), slot.get().slot(), pick,
-                target.targetRoleString(), narrowed.locked());
-    }
-
-    /**
-     * Renders a cache-resolved pick. Signal interference is deliberately
-     * not consulted: evaluating it would read live positions, and the
-     * switch must serve whatever is currently cached.
-     */
-    private void renderCachedPick(Player holder, ItemStack item, int slot, CompassPick pick,
-            String targetRoleString, boolean locked) {
-        switch (pick.kind()) {
-            case TRACK_PLAYER -> trackCachedPlayer(holder, item, slot, pick, locked);
-            case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked,
-                    effectiveSpot(cache.holderSpotFor(holder.getUniqueId()),
-                            sessions.resolutionSpot(holder)));
-            case NEARBY -> {
-                spinNeedle(item, holder);
-                holder.getInventory().setItem(slot, item);
-                compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getNearbyActionbar(),
-                        Map.of("player", pick.name())));
-            }
-            case TOO_FAR -> {
-                spinNeedle(item, holder);
-                holder.getInventory().setItem(slot, item);
-                compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getTooFarActionbar(),
-                        Map.of("player", pick.name())));
-            }
-            case NONE -> showCacheBadSignal(holder, item, slot);
-        }
-    }
-
-    /** Points the needle at a snapshotted location, or Bad Signals when gone. */
-    private void trackCachedPlayer(Player holder, ItemStack item, int slot, CompassPick pick,
-            boolean locked) {
-        Location spot = cache.spotsFor(holder.getUniqueId()).get(pick.id());
-        if (spot == null || spot.getWorld() == null
-                || !spot.getWorld().getUID().equals(holder.getWorld().getUID())) {
-            showCacheBadSignal(holder, item, slot);
-            return;
-        }
-        Location origin = effectiveSpot(cache.holderSpotFor(holder.getUniqueId()),
-                sessions.resolutionSpot(holder));
-        CompassInaccuracyService.Result drifted =
-                resolveInaccuracy(holder, origin, spot, pick.id());
-        setLodestone(item, drifted.needleSpot());
-        holder.getInventory().setItem(slot, item);
-        String template = trackingTemplate(holder, locked, false);
-        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), template, pick.name(), pick.id(),
-                drifted.feedbackDistance(), Map.of(), drifted);
-    }
-
-    /**
-     * Drifts one true spot through the inaccuracy service: the shared
-     * helper behind live, sighting, and cache renders, so scrolled
-     * targets drift exactly like refreshed ones. The target id feeds
-     * the hotspot reduction (null for unknown owners).
-     */
-    private CompassInaccuracyService.Result resolveInaccuracy(Player holder, Location origin,
-            Location truth, UUID targetId) {
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        return inaccuracy.resolve(lobbyOf(holder), origin, truth, targetId, random.nextDouble(),
-                random.nextDouble());
-    }
-
     /** One hotspot sampling tick, driven by the plugin scheduler. */
     public void sampleHotspots() {
         hotspots.tick(System.currentTimeMillis());
-    }
-
-    /** Reasonless Bad Signal for uncached switch targets, by spec. */
-    private void showCacheBadSignal(Player holder, ItemStack item, int slot) {
-        spinNeedle(item, holder);
-        holder.getInventory().setItem(slot, item);
-        compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getBadSignalActionbar()));
-    }
-
-    /** Tracking actionbar key for the holder's mode, lock, and sighting state. */
-    private String trackingTemplate(Player holder, boolean locked, boolean lastSeen) {
-        boolean teammate = locks.teammateMode(holder.getUniqueId());
-        if (lastSeen) {
-            if (teammate) {
-                return locked ? compass.getTeammateLastSeenLockedActionbar()
-                        : compass.getTeammateLastSeenActionbar();
-            }
-            return locked ? compass.getCompassLastSeenLockedActionbar()
-                    : compass.getCompassLastSeenActionbar();
-        }
-        if (teammate) {
-            return locked ? compass.getTeammateLockedActionbar() : compass.getTeammateActionbar();
-        }
-        return locked ? compass.getCompassLockedActionbar() : compass.getCompassActionbar();
-    }
-
-    private boolean trackPlayer(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
-            boolean locked) {
-        Player target = Bukkit.getPlayer(pick.id());
-        if (target == null) {
-            showNoTarget(holder, item, slot, targetRoleString);
-            return false;
-        }
-        Location truth = target.getLocation();
-        CompassInaccuracyService.Result drifted = resolveInaccuracy(holder,
-                sessions.resolutionSpot(holder), truth, pick.id());
-        setLodestone(item, drifted.needleSpot());
-        holder.getInventory().setItem(slot, item);
-        String template = trackingTemplate(holder, locked, false);
-        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), template, target.getName(), pick.id(),
-                drifted.feedbackDistance(), Map.of(), drifted);
-        return true;
-    }
-
-    private boolean trackSighting(Player holder, ItemStack item, int slot, CompassPick pick, String targetRoleString,
-            boolean locked, Location origin) {
-        Location location = playerStates.sightings().getOrDefault(pick.id(), Map.of())
-                .get(holder.getWorld().getUID());
-        Player seen = Bukkit.getPlayer(pick.id());
-        if (location == null || location.getWorld() == null
-                || skipLastSeen(seen != null,
-                        seen != null && plugin.fakeSpectators().isFakeSpectator(seen))) {
-            showNoTarget(holder, item, slot, targetRoleString);
-            return false;
-        }
-        CompassInaccuracyService.Result drifted =
-                resolveInaccuracy(holder, origin, location, pick.id());
-        setLodestone(item, drifted.needleSpot());
-        holder.getInventory().setItem(slot, item);
-        String reason = seen != null ? "Another Dimension" : "Log-Out";
-        String template = trackingTemplate(holder, locked, true);
-        deltas.putTrackingBar(holder, role(holder), lobbyOf(holder), template, pick.name(), pick.id(),
-                drifted.feedbackDistance(), Map.of("reason", reason), drifted);
-        return true;
-    }
-
-    private void showNoTarget(Player holder, ItemStack item, int slot, String targetRoleString) {
-        spinNeedle(item, holder);
-        holder.getInventory().setItem(slot, item);
-        compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getNoTargetActionbar(),
-                Map.of("role", targetRoleString)));
-    }
-
-    private void showBadSignal(Player holder, ItemStack item, int slot,
-            SignalInterference.Reason reason) {
-        spinNeedle(item, holder);
-        holder.getInventory().setItem(slot, item);
-        if (settings.showReasonInActionbar(lobbyOf(holder))) {
-            compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getBadSignalReasonActionbar(),
-                    Map.of("reason", reasonText(reason))));
-            return;
-        }
-        compassActionbars.put(holder.getUniqueId(), messages.componentRaw(compass.getBadSignalActionbar()));
-    }
-
-    /**
-     * Display text for one interference reason: the signal-reason
-     * message for the option id, prefixed for target-side failures.
-     */
-    private String reasonText(SignalInterference.Reason reason) {
-        String text = compass.getSignalReason().getOrDefault(reason.id(), reason.id());
-        return reason.targetSide() ? "target " + text : text;
-    }
-
-    /**
-     * Spins the needle by pointing at spawn of a dimension the holder is
-     * not in, which the client cannot resolve to a direction. With no
-     * other dimension loaded, the lodestone is cleared instead, so the
-     * compass falls back to vanilla behavior.
-     */
-    private void spinNeedle(ItemStack item, Player holder) {
-        World.Environment here = holder.getWorld().getEnvironment();
-        World other = Bukkit.getWorlds().stream()
-                .filter(world -> world.getEnvironment() != here)
-                .findFirst()
-                .orElse(null);
-        if (other == null) {
-            clearLodestone(item);
-            return;
-        }
-        setLodestone(item, new Location(other, 0.0, 64.0, 0.0));
-    }
-
-    private void setLodestone(ItemStack item, Location location) {
-        if (item != null && item.getItemMeta() instanceof CompassMeta meta) {
-            meta.setLodestone(location);
-            meta.setLodestoneTracked(false);
-            item.setItemMeta(meta);
-        }
-    }
-
-    private void clearLodestone(ItemStack item) {
-        if (item != null && item.getItemMeta() instanceof CompassMeta meta) {
-            meta.clearLodestone();
-            item.setItemMeta(meta);
-        }
     }
 
     /**
@@ -668,7 +340,7 @@ public final class CompassManager {
         if (!settings.manualEnabled(lobby)) {
             return;
         }
-        if (plugin.fakeSpectators().isFakeSpectator(player)) {
+        if (players.fakes().isFakeSpectator(player)) {
             return;
         }
         if (locks.isAnalyzing(player.getUniqueId())) {
@@ -702,17 +374,14 @@ public final class CompassManager {
         resolveClickRefresh(player);
     }
 
-    /**
-     * Click-initiated refresh with exactly one outcome sound: the
-     * refresh click when the needle tracks, the failure sound when it
-     * lands on nearby, too far, bad signal, or no target.
-     */
+    /** Renders the holder's lock and mode from the snapshot cache only. */
+    void renderFromCache(Player holder) {
+        refresh.renderFromCache(holder);
+    }
+
+    /** Click-initiated refresh with exactly one outcome sound. */
     void resolveClickRefresh(Player holder) {
-        if (refreshCompassOutcome(holder)) {
-            sounds.playSound(holder, "compass.right-click");
-        } else {
-            sounds.playSound(holder, "compass.failure");
-        }
+        refresh.resolveClickRefresh(holder);
     }
 
     /**
@@ -745,6 +414,6 @@ public final class CompassManager {
     }
 
     private Role role(Player player) {
-        return playerStates.role(player);
+        return players.playerStates().role(player);
     }
 }

@@ -9,7 +9,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
@@ -29,10 +28,8 @@ class ModifierToggleSyncTest {
     }
 
     private static Fixture fixture(boolean begun, boolean ending, boolean effective, boolean dedup) {
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        JManhuntLogger log = mock(JManhuntLogger.class);
         OverrideService overrides = mock(OverrideService.class);
-        when(plugin.overrides()).thenReturn(overrides);
         when(overrides.modifierEnabled(any(), eq("m"))).thenReturn(effective);
         when(overrides.getBoolean(any(), eq("advanced.misc.modifier-editor.prevent-duplicate-toggle"),
                 eq(true))).thenReturn(dedup);
@@ -51,7 +48,8 @@ class ModifierToggleSyncTest {
         when(game.onlineParticipants(7L)).thenReturn(List.of(player));
         ModifierToggleService.Commands commands = mock(ModifierToggleService.Commands.class);
         when(commands.afterPrestart("m", 0)).thenReturn(false);
-        ModifierToggleService sync = new ModifierToggleService(plugin, config, game,
+        ModifierToggleService sync = new ModifierToggleService(
+                new ModifierToggleService.ToggleReads(overrides, log, config), game,
                 mock(IntervalDispatcher.class), commands);
         return new Fixture(sync, commands, player);
     }
@@ -140,10 +138,8 @@ class ModifierToggleSyncTest {
 
     @Test
     void preStartEnableSkipsDeferredStarts() {
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        JManhuntLogger log = mock(JManhuntLogger.class);
         OverrideService overrides = mock(OverrideService.class);
-        when(plugin.overrides()).thenReturn(overrides);
         when(overrides.modifierEnabled(any(), eq("m"))).thenReturn(true);
         ConfigService config = mock(ConfigService.class);
         when(config.behaviorIndexes("m")).thenReturn(List.of(0, 1));
@@ -158,7 +154,8 @@ class ModifierToggleSyncTest {
         ModifierToggleService.Commands commands = mock(ModifierToggleService.Commands.class);
         when(commands.afterPrestart("m", 0)).thenReturn(false);
         when(commands.afterPrestart("m", 1)).thenReturn(true);
-        ModifierToggleService sync = new ModifierToggleService(plugin, config, game,
+        ModifierToggleService sync = new ModifierToggleService(
+                new ModifierToggleService.ToggleReads(overrides, log, config), game,
                 mock(IntervalDispatcher.class), commands);
 
         sync.syncModifierToggles(List.of("m"));

@@ -21,9 +21,9 @@ public final class AddStick {
     /** Silent stick; the prompt it opens plays its own dialog sound. */
     public static MenuButton button(MessageService messages, String name, List<String> lore,
             Consumer<Player> action) {
-        return new MenuButton(Material.STICK,
+        return new MenuButton(new MenuButton.Spec(Material.STICK,
                 GuiTexts.name(messages, name, name),
                 GuiTexts.lore(messages, lore),
-                false, false, action).silent();
+                false, false, action, null, null, MenuButton.SoundPolicy.CLICK, null)).silent();
     }
 }

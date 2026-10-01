@@ -1,6 +1,8 @@
 package com.jruk8.jmanhunt.lobby.schem;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.config.LobbiesConfig;
+import com.jruk8.jmanhunt.config.WorldEngineConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.bounds.LobbyBounds;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
@@ -31,10 +33,17 @@ public final class JmhLobbyService {
     /** Suffix of the bundled lobby schematic format. */
     public static final String BUNDLE_SUFFIX = ".jmhlobby";
 
-    private final JManhuntPlugin plugin;
+    private final JManhuntLogger log;
+    private final LobbyConfig lobbyConfig;
+    private final WorldEngineConfig engineSettings;
+    private final LobbiesConfig lobbyNames;
 
-    public JmhLobbyService(JManhuntPlugin plugin) {
-        this.plugin = plugin;
+    public JmhLobbyService(JManhuntLogger log, LobbyConfig lobbyConfig,
+            WorldEngineConfig engineSettings, LobbiesConfig lobbyNames) {
+        this.log = log;
+        this.lobbyConfig = lobbyConfig;
+        this.engineSettings = engineSettings;
+        this.lobbyNames = lobbyNames;
     }
 
     /** Save counts for the bundled confirmation. */
@@ -147,7 +156,7 @@ public final class JmhLobbyService {
         }
         CollectedTeleports teleports = collectTeleports(lobbies, region, origin, boundedIds);
         for (OrphanTeleport orphan : teleports.dropped()) {
-            plugin.logger().warning("Dev schem save '" + target.getName() + "': lobby "
+            log.warning("Dev schem save '" + target.getName() + "': lobby "
                     + orphan.lobby() + " teleport at (" + orphan.x() + ", " + orphan.y() + ", "
                     + orphan.z() + ") has no collected boundary; dropping it.");
         }
@@ -215,11 +224,10 @@ public final class JmhLobbyService {
      */
     public BuiltCounts buildIntoLobbyConfig(JmhLobbyBundle bundle,
             int pasteX, int pasteY, int pasteZ) {
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
-        boolean multiLobby = plugin.configRoot().getWorldEngine().isEnabled();
+        boolean multiLobby = engineSettings.isEnabled();
         Set<Integer> overwritten = overwrittenIds(lobbyConfig.getLobbies(), bundle, multiLobby);
         if (!overwritten.isEmpty()) {
-            plugin.logger().warning("Lobby bundle overwrites stored lobby "
+            log.warning("Lobby bundle overwrites stored lobby "
                     + (overwritten.size() == 1 ? "entry" : "entries") + " for "
                     + "lobby id" + (overwritten.size() == 1 ? "" : "s") + ": "
                     + overwritten.stream().sorted()
@@ -231,7 +239,7 @@ public final class JmhLobbyService {
         int teleports = 0;
         for (BoundEntry entry : bundle.bounds()) {
             if (!multiLobby && entry.lobby() != 0) {
-                plugin.logger().warning("Skipping bundled lobby " + entry.lobby()
+                log.warning("Skipping bundled lobby " + entry.lobby()
                         + " bounds: the world engine is off, so only lobby 0 applies.");
                 continue;
             }
@@ -246,7 +254,7 @@ public final class JmhLobbyService {
         }
         for (TeleportEntry entry : bundle.teleports()) {
             if (!multiLobby && entry.lobby() != 0) {
-                plugin.logger().warning("Skipping bundled lobby " + entry.lobby()
+                log.warning("Skipping bundled lobby " + entry.lobby()
                         + " teleport: the world engine is off, so only lobby 0 applies.");
                 continue;
             }
@@ -262,7 +270,7 @@ public final class JmhLobbyService {
 
     /** Configured lobby world name for the paste gate. */
     public String lobbyWorldName() {
-        return plugin.configRoot().getAdvanced().getLobbies().getLobbyWorldName();
+        return lobbyNames.getLobbyWorldName();
     }
 
     private static LobbyConfig.LobbyEntry entryFor(LobbyConfig lobbyConfig, int lobbyId) {

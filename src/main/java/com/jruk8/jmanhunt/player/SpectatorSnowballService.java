@@ -1,9 +1,9 @@
 package com.jruk8.jmanhunt.player;
 
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SpectatorMessages;
 import com.jruk8.jmanhunt.message.SoundService;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -11,7 +11,6 @@ import org.bukkit.entity.Snowball;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.plugin.Plugin;
 
 import java.util.Map;
 
@@ -26,15 +25,15 @@ public class SpectatorSnowballService {
     /** Projectile metadata tagging spectator snowballs. */
     public static final String TAG = "jmanhunt-spectator-snowball";
 
-    private final Plugin plugin;
+    private final TaskScheduler tasks;
     private final SpectatorToolbarService toolbar;
     private final MessageService messages;
     private final SpectatorMessages spectator;
     private final SoundService sounds;
 
-    public SpectatorSnowballService(Plugin plugin, SpectatorToolbarService toolbar,
+    public SpectatorSnowballService(TaskScheduler tasks, SpectatorToolbarService toolbar,
             MessageService messages, SpectatorMessages spectator, SoundService sounds) {
-        this.plugin = plugin;
+        this.tasks = tasks;
         this.toolbar = toolbar;
         this.messages = messages;
         this.spectator = spectator;
@@ -72,7 +71,7 @@ public class SpectatorSnowballService {
             return;
         }
         restoreSnowball(shooter);
-        snowball.setMetadata(TAG, new FixedMetadataValue(plugin, true));
+        snowball.setMetadata(TAG, new FixedMetadataValue(tasks.plugin(), true));
         int ticks = cooldownTicks(toolbar.snowballCooldownSeconds(shooter));
         if (ticks <= 0) {
             return;
@@ -112,7 +111,7 @@ public class SpectatorSnowballService {
             return;
         }
         int seconds = toolbar.snowballCooldownSeconds(shooter);
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        tasks.run(() -> {
             if (!shooter.isOnline() || !toolbar.isDeployed(shooter)) {
                 return;
             }

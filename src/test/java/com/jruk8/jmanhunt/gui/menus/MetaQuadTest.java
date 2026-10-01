@@ -129,8 +129,10 @@ class MetaQuadTest {
         messages = new MessageService();
         texts = new MessagesConfig();
         messages.reload(texts);
-        meta = new MetaQuad(messages, texts.getModifiersGui(), texts.getModifiers(),
-                texts.getCommand(), null, null, null);
+        meta = new MetaQuad(
+                new MetaQuad.MetaTexts(messages, texts.getModifiersGui(), texts.getModifiers(),
+                        texts.getCommand(), null),
+                null, null);
     }
 
     @Test
@@ -171,8 +173,10 @@ class MetaQuadTest {
     @SuppressWarnings("unchecked")
     void idRenameMessageShowsIdNotDisplayName() {
         SettingDialog dialogs = mock(SettingDialog.class);
-        MetaQuad quad = new MetaQuad(messages, texts.getModifiersGui(), texts.getModifiers(),
-                texts.getCommand(), mock(SoundService.class), mock(GuiService.class), dialogs);
+        MetaQuad quad = new MetaQuad(
+                new MetaQuad.MetaTexts(messages, texts.getModifiersGui(), texts.getModifiers(),
+                        texts.getCommand(), mock(SoundService.class)),
+                mock(GuiService.class), dialogs);
         Menu menu = quad.menu(target(), null, id -> null);
         Player player = mock(Player.class);
         when(player.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
@@ -194,8 +198,10 @@ class MetaQuadTest {
     @Test
     void iconEditShowsSpriteWhileOtherFieldsStayPlain() {
         SettingDialog dialogs = mock(SettingDialog.class);
-        MetaQuad quad = new MetaQuad(messages, texts.getModifiersGui(), texts.getModifiers(),
-                texts.getCommand(), mock(SoundService.class), mock(GuiService.class), dialogs);
+        MetaQuad quad = new MetaQuad(
+                new MetaQuad.MetaTexts(messages, texts.getModifiersGui(), texts.getModifiers(),
+                        texts.getCommand(), mock(SoundService.class)),
+                mock(GuiService.class), dialogs);
         Menu menu = quad.menu(target(), null, id -> null);
         Player player = mock(Player.class);
 

@@ -1,10 +1,11 @@
 package com.jruk8.jmanhunt.lobby;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.config.WorldEngineConfig;
+import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -27,20 +29,28 @@ public final class LobbyService {
     /** Collisions toggle path, shared with the change subscription. */
     public static final String COLLISIONS_PATH = "advanced.lobbies.disable-player-collisions";
 
-    private final JManhuntPlugin plugin;
+    /** Match plus visibility reads; the game arrives after bootstrap. */
+    public record LobbyPlayers(Supplier<GameManager> games, FakeSpectatorService fakes) {
+    }
+
+    /** Lobby change chat halves. */
+    public record LobbyTexts(MessageService messages, ManhuntMessages manhunt) {
+    }
+
+    private final LobbyPlayers players;
+    private final LobbyTexts texts;
     private final LobbiesConfig lobbySettings;
     private final WorldEngineConfig engineSettings;
-    private final ManhuntMessages manhunt;
     private final Map<Integer, Lobby> lobbies = new HashMap<>();
     private final Map<UUID, Integer> membership = new HashMap<>();
     private final Map<Integer, Integer> nextSubIds = new HashMap<>();
 
-    public LobbyService(JManhuntPlugin plugin, LobbiesConfig lobbySettings,
-            WorldEngineConfig engineSettings, ManhuntMessages manhunt) {
-        this.plugin = plugin;
+    public LobbyService(LobbyPlayers players, LobbyTexts texts, LobbiesConfig lobbySettings,
+            WorldEngineConfig engineSettings) {
+        this.players = players;
+        this.texts = texts;
         this.lobbySettings = lobbySettings;
         this.engineSettings = engineSettings;
-        this.manhunt = manhunt;
     }
 
     /**
@@ -148,7 +158,7 @@ public final class LobbyService {
         if (!lobbySettings.isDisablePlayerCollisions()) {
             return;
         }
-        if (plugin.game().instanceOf(player.getUniqueId()).isPresent()) {
+        if (players.games().get().instanceOf(player.getUniqueId()).isPresent()) {
             return;
         }
         if (lobbyOf(player.getUniqueId()).isEmpty()) {
@@ -162,7 +172,7 @@ public final class LobbyService {
      * disable restores them later and re-applies lobby state.
      */
     public void restoreCollisions(Player player) {
-        if (plugin.fakeSpectators().isFakeSpectator(player)) {
+        if (players.fakes().isFakeSpectator(player)) {
             return;
         }
         player.setCollidable(true);
@@ -184,9 +194,9 @@ public final class LobbyService {
     void reapplyCollisions(Collection<? extends Player> onlinePlayers) {
         boolean disabled = lobbySettings.isDisablePlayerCollisions();
         for (Player online : onlinePlayers) {
-            if (plugin.fakeSpectators().isFakeSpectator(online)) {
+            if (players.fakes().isFakeSpectator(online)) {
                 online.setCollidable(false);
-            } else if (plugin.game().instanceOf(online.getUniqueId()).isPresent()) {
+            } else if (players.games().get().instanceOf(online.getUniqueId()).isPresent()) {
                 online.setCollidable(true);
             } else if (lobbyOf(online.getUniqueId()).isPresent()) {
                 online.setCollidable(!disabled);
@@ -209,7 +219,7 @@ public final class LobbyService {
         if (!toSelf && !toMembers) {
             return;
         }
-        MessageService messages = plugin.messages();
+        MessageService messages = texts.messages();
         if (oldId.isPresent() && oldId.getAsInt() > 0) {
             announceLeave(subject, oldId.getAsInt(), toSelf, toMembers, messages);
         }
@@ -221,22 +231,22 @@ public final class LobbyService {
     private void announceLeave(Player subject, int lobbyId, boolean toSelf,
             boolean toMembers, MessageService messages) {
         if (toSelf) {
-            messages.messageRaw(subject, manhunt.getLobbyLeft(),
+            messages.messageRaw(subject, texts.manhunt().getLobbyLeft(),
                     Map.of("lobby", String.valueOf(lobbyId)));
         }
         if (toMembers) {
-            announceToMembers(lobbyId, subject, manhunt.getLobbyLeftMember(), messages);
+            announceToMembers(lobbyId, subject, texts.manhunt().getLobbyLeftMember(), messages);
         }
     }
 
     private void announceJoin(Player subject, int lobbyId, boolean toSelf,
             boolean toMembers, MessageService messages) {
         if (toSelf) {
-            messages.messageRaw(subject, manhunt.getLobbyJoined(),
+            messages.messageRaw(subject, texts.manhunt().getLobbyJoined(),
                     Map.of("lobby", String.valueOf(lobbyId)));
         }
         if (toMembers) {
-            announceToMembers(lobbyId, subject, manhunt.getLobbyJoinedMember(), messages);
+            announceToMembers(lobbyId, subject, texts.manhunt().getLobbyJoinedMember(), messages);
         }
     }
 

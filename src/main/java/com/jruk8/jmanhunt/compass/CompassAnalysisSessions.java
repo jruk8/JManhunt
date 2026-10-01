@@ -1,12 +1,12 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
@@ -28,16 +28,24 @@ import java.util.stream.Collectors;
  */
 final class CompassAnalysisSessions implements AnalysisHost {
 
-    private final JManhuntPlugin plugin;
+    /** Poverty feedback chat plus texts.sounds(). */
+    record SessionTexts(MessageService messages, CompassMessages compass, SoundService sounds) {
+    }
+
+    /** Resolution inputs: targets, verdicts, services.items(). */
+    record SessionServices(CompassTargetService targets, CompassSignalService signal,
+            CompassItemService items) {
+    }
+
+    /** Role plus fake-spectator reads. */
+    record SessionPlayers(PlayerStateStore states, FakeSpectatorService fakes) {
+    }
+
     private final CompassSettingsFacade settings;
-    private final MessageService messages;
-    private final CompassMessages compass;
-    private final PlayerStateStore playerStates;
-    private final CompassTargetService targets;
-    private final CompassSignalService signal;
-    private final CompassItemService items;
+    private final SessionTexts texts;
+    private final SessionServices services;
+    private final SessionPlayers players;
     private final Map<UUID, Component> compassActionbars;
-    private final SoundService sounds;
     /** Last cost-too-high block per holder; gates refreshes while fresh. */
     private final Map<UUID, Long> lastFailure = new HashMap<>();
     /** Analysis press-time holder spots, consumed by one resolution. */
@@ -49,21 +57,14 @@ final class CompassAnalysisSessions implements AnalysisHost {
     private CompassLockService locks;
     private GameManager game;
 
-    CompassAnalysisSessions(JManhuntPlugin plugin, CompassSettingsFacade settings,
-            MessageService messages, CompassMessages compass,
-            PlayerStateStore playerStates, CompassTargetService targets,
-            CompassSignalService signal, CompassItemService items,
-            Map<UUID, Component> compassActionbars, SoundService sounds) {
-        this.plugin = plugin;
+    CompassAnalysisSessions(CompassSettingsFacade settings, SessionTexts texts,
+            SessionServices services, SessionPlayers players,
+            Map<UUID, Component> compassActionbars) {
         this.settings = settings;
-        this.messages = messages;
-        this.compass = compass;
-        this.playerStates = playerStates;
-        this.targets = targets;
-        this.signal = signal;
-        this.items = items;
+        this.texts = texts;
+        this.services = services;
+        this.players = players;
         this.compassActionbars = compassActionbars;
-        this.sounds = sounds;
     }
 
     /** Failure stamps, exposed for tests. */
@@ -138,10 +139,10 @@ void beginAnalysisSpot(Player holder) {
     int cap = CompassCache.clampMaxTargets(
             settings.targetCyclingMaxTargets(lobbyOf(holder)));
     Map<UUID, Location> spots = new HashMap<>();
-    for (CompassSnapshot snap : targets.collectSnapshots(holder, Role.HUNTER, match.get(), cap)) {
+    for (CompassSnapshot snap : services.targets().collectSnapshots(holder, Role.HUNTER, match.get(), cap)) {
         spots.put(snap.id(), snap.location());
     }
-    for (CompassSnapshot snap : targets.collectSnapshots(holder, Role.SPEEDRUNNER, match.get(), cap)) {
+    for (CompassSnapshot snap : services.targets().collectSnapshots(holder, Role.SPEEDRUNNER, match.get(), cap)) {
         spots.put(snap.id(), snap.location());
     }
     analysisTargets.put(id, spots);
@@ -172,9 +173,9 @@ public boolean analysisDoomed(Player holder) {
     if (CompassManager.isVanillaSpectator(holder) || holder.isDead() || game == null) {
         return false;
     }
-    Role holderRole = playerStates.role(holder);
+    Role holderRole = players.states().role(holder);
     if (!holderRole.isParticipant()
-            || plugin.fakeSpectators().isFakeSpectator(holder)) {
+            || players.fakes().isFakeSpectator(holder)) {
         return false;
     }
     Optional<GameInstance> match = game.instanceOf(holder.getUniqueId());
@@ -183,8 +184,8 @@ public boolean analysisDoomed(Player holder) {
     }
     Role targetRole = locks.targetRole(holder);
     List<CompassCandidate> opponents =
-            targets.collectOpponents(holder, targetRole, match.get());
-    List<CompassSighting> sightings = targets.collectSightings(holder, targetRole, match.get(),
+            services.targets().collectOpponents(holder, targetRole, match.get());
+    List<CompassSighting> sightings = services.targets().collectSightings(holder, targetRole, match.get(),
             holder.getLocation());
     UUID id = holder.getUniqueId();
     CompassLockService.LockedTargets narrowed =
@@ -194,13 +195,13 @@ public boolean analysisDoomed(Player holder) {
             narrowed.sightings());
     Location targetPress = pick.id() == null ? null
             : analysisTargets.getOrDefault(id, Map.of()).get(pick.id());
-    return signal.reasonForPick(holder, resolutionSpot(holder), targetPress, pick,
+    return services.signal().reasonForPick(holder, resolutionSpot(holder), targetPress, pick,
             analysisMaxMoved(holder)).isPresent();
 }
 
 @Override
 public boolean isMainhandCompass(Player holder) {
-    return items.isCompass(holder.getInventory().getItemInMainHand());
+    return services.items().isCompass(holder.getInventory().getItemInMainHand());
 }
 
 @Override
@@ -245,7 +246,7 @@ private boolean tryCost(Player holder, String point) {
     List<String> lacking = AnalysisCost.lacking(stats, payment);
     if (!lacking.isEmpty() && settings.povertyCancelWhenPoor(lobby)) {
         showCostTooHigh(holder, lacking, settings.povertyShowReason(lobby));
-        sounds.playSound(holder, "compass.cost-too-high");
+        texts.sounds().playSound(holder, "compass.cost-too-high");
         recordFailure(holder.getUniqueId(), lobby);
         return false;
     }
@@ -275,7 +276,7 @@ private boolean tryCost(Player holder, String point) {
         if (types.isEmpty()) {
             return;
         }
-        sounds.playSound(holder, "compass.cost-used-" + pickUsedType(types, ThreadLocalRandom.current()));
+        texts.sounds().playSound(holder, "compass.cost-used-" + pickUsedType(types, ThreadLocalRandom.current()));
     }
 
     /**
@@ -303,14 +304,14 @@ private AnalysisCost.Payment costPayment(Integer lobby) {
  * when show-reason holds. Never chats.
  */
 private void showCostTooHigh(Player holder, List<String> lacking, boolean showReason) {
-    String text = compass.getAnalysisCostTooHigh();
+    String text = texts.compass().getAnalysisCostTooHigh();
     if (showReason && !lacking.isEmpty()) {
         String reasons = lacking.stream()
-                .map(id -> compass.getSignalReason().getOrDefault(id, id))
+                .map(id -> texts.compass().getSignalReason().getOrDefault(id, id))
                 .collect(Collectors.joining(", "));
         text += " (" + reasons + ")";
     }
-    compassActionbars.put(holder.getUniqueId(), messages.renderLiteral(text, Map.of()));
+    compassActionbars.put(holder.getUniqueId(), texts.messages().renderLiteral(text, Map.of()));
 }
 /** Resolution spot for one holder: press-time when analyzing, live otherwise. */
 Location resolutionSpot(Player holder) {

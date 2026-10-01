@@ -19,8 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class GuiClickRoutingTest {
 
     private static MenuButton button(Consumer<Player> action, Consumer<Player> right) {
-        return new MenuButton(Material.PAPER, Component.text("b"), List.of(),
-                false, false, action, right);
+        return new MenuButton(new MenuButton.Spec(Material.PAPER, Component.text("b"), List.of(),
+                false, false, action, right, null, MenuButton.SoundPolicy.CLICK, null));
     }
 
     @Test
@@ -71,8 +71,8 @@ class GuiClickRoutingTest {
     @Test
     void legacyButtonsKeepSingleAction() {
         AtomicReference<String> fired = new AtomicReference<>();
-        MenuButton button = new MenuButton(Material.PAPER, null, null,
-                false, false, player -> fired.set("main"));
+        MenuButton button = new MenuButton(new MenuButton.Spec(Material.PAPER, null, null,
+                false, false, player -> fired.set("main"), null, null, MenuButton.SoundPolicy.CLICK, null));
 
         assertNull(button.rightAction());
         GuiService.clickAction(button, ClickType.RIGHT).accept(null);

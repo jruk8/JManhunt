@@ -28,11 +28,13 @@ class TagPlaceholdersTest {
                 lastPlayer = name;
                 return values.getOrDefault(text, text);
             };
-            return TagContext.run(scope, "get-stronger-on-kill", warnings::add, warnings::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), new FlagStore(), resolver,
-                            RosterValues.inert(), PlayerSinks.inert()));
+            return TagContext.run(new TagContext.TagIdentity(scope, "get-stronger-on-kill"),
+                    TagContext.TagSinks.simple(warnings::add, warnings::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { }, scope),
+                    TagContext.TagRole.silent(),
+                    TagContext.TagMatch.simple(7L, new TagBackends(StatValues.inert(),
+                            new FlagStore(), resolver, RosterValues.inert(), PlayerSinks.inert()),
+                                    (player, reason) -> { }, (role, reason) -> { }));
         }
 
         String replace(String command, String executor) {
@@ -60,11 +62,13 @@ class TagPlaceholdersTest {
     void consoleExecutorWarnsAndYieldsEmpty() {
         Fixture fixture = new Fixture();
         ModifierTagScope scope = ModifierTagScope.executor(null, fixture.warnings::add);
-        TagContext context = TagContext.run(scope, "gear-dice", fixture.warnings::add,
-                fixture.warnings::add, (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                7L, new TagBackends(StatValues.inert(), new FlagStore(),
-                        (text, name) -> text, RosterValues.inert(), PlayerSinks.inert()));
+        TagContext context = TagContext.run(new TagContext.TagIdentity(scope, "gear-dice"),
+                TagContext.TagSinks.simple(fixture.warnings::add, fixture.warnings::add,
+                        (id, pitch, volume) -> { }, (id, pitch, volume) -> { }, scope),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(7L, new TagBackends(StatValues.inert(), new FlagStore(),
+                        (text, name) -> text, RosterValues.inert(), PlayerSinks.inert()),
+                                (player, reason) -> { }, (role, reason) -> { }));
         assertEquals("", CommandPlaceholders.replace("<placeholder:x>", null, 0, 0, 0, context));
         assertEquals(1, fixture.warnings.size());
     }

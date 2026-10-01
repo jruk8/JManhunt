@@ -10,7 +10,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,19 +36,14 @@ import java.util.regex.Pattern;
 public final class CommandPlaceholders {
     private static final Pattern TILDE_PATTERN = Pattern.compile("~([+-]?\\d+(?:\\.\\d+)?)?");
     /** Innermost tag: an angle pair containing no further angle brackets. */
-    private static final Pattern INNER_TAG = Pattern.compile("<([^<>]*)>");
+    static final Pattern INNER_TAG = Pattern.compile("<([^<>]*)>");
     /** Bare @a/@r plus optional vanilla [...] args, never @admin-style words. */
-    private static final Pattern SELECTOR_ALL = Pattern.compile("@a(?![A-Za-z0-9_])(\\[[^\\]]*\\])?");
-    private static final Pattern SELECTOR_RANDOM = Pattern.compile("@r(?![A-Za-z0-9_])(\\[[^\\]]*\\])?");
     /** Bare @p/@s plus optional vanilla [...] args, never @server-style words. */
-    private static final Pattern SELECTOR_SELF = Pattern.compile("@[ps](?![A-Za-z0-9_])(\\[[^\\]]*\\])?");
     /** team=HUNTER inside vanilla selector args. */
-    private static final Pattern TEAM_ARGUMENT = Pattern.compile("(?i)(?:^|[,\\[])\\s*team\\s*=\\s*([^,\\]]+)");
     /**
      * Hidden fan-out token from {@code @a} conversion, with an optional
      * :TEAM filter. Never advertised: it stays out of the tag table.
      */
-    private static final Pattern FANOUT_TOKEN = Pattern.compile("<all-fanout(?::([A-Za-z]+))?>");
     /** Maximal no-space runs for the bare math pass. */
     private static final Pattern MATH_TOKEN = Pattern.compile("\\S+");
     /** Safety cap for the inside-out evaluation loop. */
@@ -187,26 +181,20 @@ public final class CommandPlaceholders {
     static String convertSelectors(String command) {
         List<int[]> spans = topLevelTagSpans(command);
         if (spans.isEmpty()) {
-            return convertSelectorRun(command);
+            return SelectorExpansion.convertSelectorRun(command);
         }
         StringBuilder out = new StringBuilder();
         int cursor = 0;
         for (int[] span : spans) {
-            out.append(convertSelectorRun(command.substring(cursor, span[0])));
+            out.append(SelectorExpansion.convertSelectorRun(command.substring(cursor, span[0])));
             out.append(command, span[0], span[1]);
             cursor = span[1];
         }
-        out.append(convertSelectorRun(command.substring(cursor)));
+        out.append(SelectorExpansion.convertSelectorRun(command.substring(cursor)));
         return out.toString();
     }
 
     /** Selector conversion for one tag-free run. Pure for tests. */
-    private static String convertSelectorRun(String run) {
-        String converted = replaceSelector(run, SELECTOR_ALL, true);
-        converted = replaceSelector(converted, SELECTOR_RANDOM, false);
-        return replaceSelfSelector(converted);
-    }
-
     /**
      * Top-level {@code <...>} spans as [start, end) pairs. Angle
      * brackets inside quotes do not count, and a {@code <} with no
@@ -255,64 +243,6 @@ public final class CommandPlaceholders {
         return -1;
     }
 
-    private static String replaceSelfSelector(String command) {
-        Matcher matcher = SELECTOR_SELF.matcher(command);
-        StringBuffer result = new StringBuffer();
-        while (matcher.find()) {
-            matcher.appendReplacement(result, Matcher.quoteReplacement("<p>"));
-        }
-        matcher.appendTail(result);
-        return result.toString();
-    }
-
-    private static String replaceSelector(String command, Pattern pattern, boolean keepTeam) {
-        Matcher matcher = pattern.matcher(command);
-        StringBuffer result = new StringBuffer();
-        while (matcher.find()) {
-            String replacement = "<all-fanout>";
-            if (!keepTeam) {
-                replacement = "<random-player>";
-            } else if (matcher.group(1) != null) {
-                Matcher team = TEAM_ARGUMENT.matcher(matcher.group(1));
-                if (team.find()) {
-                    replacement = "<all-fanout:" + team.group(1).trim().toUpperCase(Locale.ROOT) + ">";
-                }
-            }
-            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
-        }
-        matcher.appendTail(result);
-        return result.toString();
-    }
-
-    /**
-     * Fans a command out to one copy per in-match participant when it holds
-     * the hidden {@code @a} fan-out marker. With nobody to cover, warns and
-     * returns no commands so nothing leaks outside the match. The
-     * {@code <all-players>} tag is NOT expanded here: it resolves to a name
-     * list during tag evaluation instead. Pure for tests.
-     */
-    public static List<String> expandAllPlayers(String command, ModifierTagScope scope) {
-        String substituted = EngineEscapes.substitute(command);
-        String converted = convertSelectors(substituted);
-        Matcher matcher = FANOUT_TOKEN.matcher(converted);
-        if (!matcher.find()) {
-            return List.of(substituted);
-        }
-        String team = matcher.group(1);
-        List<String> names = scope.participantNames(team);
-        if (names.isEmpty()) {
-            scope.warn("Skipping command with @a"
-                    + (team == null ? "" : "[team=" + team + "]")
-                    + " because the match has no covered players: " + command);
-            return List.of();
-        }
-        List<String> expanded = new ArrayList<>(names.size());
-        for (String name : names) {
-            expanded.add(matcher.replaceAll(Matcher.quoteReplacement(name)));
-        }
-        return expanded;
-    }
-
     /**
      * Pre-resolves random-mob and random-item tags to activation-shared rolls
      * so PER_INVOKE sees one mob and one item across every executor. Rolls
@@ -328,7 +258,7 @@ public final class CommandPlaceholders {
             java.util.function.Function<String, String> roller) {
         boolean wanted = false;
         for (String line : lines) {
-            if (containsSharedRandom(line)) {
+            if (SharedRandomRolls.containsSharedRandom(line)) {
                 wanted = true;
                 break;
             }
@@ -344,20 +274,6 @@ public final class CommandPlaceholders {
     }
 
     /** Draws one shared roll for a random tag name. */
-    public static String rollSharedRandom(String name) {
-        return "random-mob".equals(name) ? randomMob() : randomItem();
-    }
-
-    private static boolean containsSharedRandom(String line) {
-        Matcher matcher = INNER_TAG.matcher(line);
-        while (matcher.find()) {
-            if (isSharedRandom(matcher.group(1))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static String preresolveLine(String line, Map<String, String> sharedDraws,
             java.util.function.Function<String, String> roller) {
         String current = line;
@@ -368,7 +284,7 @@ public final class CommandPlaceholders {
             while (matcher.find()) {
                 String name = tagName(matcher.group(1));
                 String draw = sharedDraws.get(name);
-                if (draw == null && isSharedRandom(matcher.group(1))) {
+                if (draw == null && SharedRandomRolls.isSharedRandom(matcher.group(1))) {
                     draw = roller.apply(name);
                     sharedDraws.put(name, draw);
                 }
@@ -389,15 +305,10 @@ public final class CommandPlaceholders {
     }
 
     /** Tag name: before any colon, trimmed, lowercase. Mirrors tag evaluation. */
-    private static String tagName(String body) {
+    static String tagName(String body) {
         int separator = body.indexOf(':');
         String name = separator < 0 ? body : body.substring(0, separator);
         return name.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private static boolean isSharedRandom(String body) {
-        String name = tagName(body);
-        return "random-mob".equals(name) || "random-item".equals(name);
     }
 
     /**
@@ -501,8 +412,8 @@ public final class CommandPlaceholders {
         String args = separator < 0 ? "" : body.substring(separator + 1);
         return switch (name) {
             case "p" -> playerName != null ? playerName : tag;
-            case "random-mob" -> randomMob();
-            case "random-item" -> randomItem();
+            case "random-mob" -> SharedRandomRolls.randomMob();
+            case "random-item" -> SharedRandomRolls.randomItem();
             case "random-num" -> randomNumber(args, scope, tag);
             case "random-pick" -> randomPick(args, scope, tag);
             case "random-player", "all-players", "all-fanout" -> scopeTag(tag, name, args, playerName, context);
@@ -604,7 +515,7 @@ public final class CommandPlaceholders {
                     long high = Math.max(firstBound, secondBound);
                     long span = high - low + 1;
                     if (span > 0) {
-                        long rolled = low + nextLong(scope, span);
+                        long rolled = low + SharedRandomRolls.nextLong(scope, span);
                         if (rolled >= Integer.MIN_VALUE && rolled <= Integer.MAX_VALUE) {
                             return String.valueOf(rolled);
                         }
@@ -619,11 +530,6 @@ public final class CommandPlaceholders {
     }
 
     /** Bounded long draw from the scope's random source. */
-    private static long nextLong(ModifierTagScope scope, long bound) {
-        long drawn = scope.random().nextLong() >>> 1;
-        return drawn % bound;
-    }
-
     /**
      * Picks one item from a comma list. Items may be bare, double-quoted, or
      * single-quoted, and may hold spaces; spaces after a comma are skipped.
@@ -763,13 +669,4 @@ public final class CommandPlaceholders {
         return items;
     }
 
-    private static String randomMob() {
-        List<EntityType> mobs = spawnableLivingEntities();
-        return mobs.get(ThreadLocalRandom.current().nextInt(mobs.size())).name().toLowerCase(Locale.ROOT);
-    }
-
-    private static String randomItem() {
-        List<Material> itemList = items();
-        return itemList.get(ThreadLocalRandom.current().nextInt(itemList.size())).name().toLowerCase(Locale.ROOT);
-    }
 }

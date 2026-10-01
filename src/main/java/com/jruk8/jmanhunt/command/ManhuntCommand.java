@@ -18,6 +18,8 @@ import com.jruk8.jmanhunt.lobby.bounds.LobbyBounds;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
+import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.match.GameInstance;
@@ -136,34 +138,55 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         this.lobbyTeleporter = lobbyTeleporter; this.debugService = debugService;
         this.lobbies = lobbyService;
         this.roster = new StatusRosterService(messages, messages.manhunt(), playerStates);
-        this.devSchem = new DevSchemCommand(plugin, messages, messages.dev(), messages.command());
+        this.devSchem = new DevSchemCommand(
+                new LobbySchematicService(new JmhLobbyService(plugin.logger(), plugin.lobbyConfig(),
+                        plugin.configRoot().getWorldEngine(),
+                        plugin.configRoot().getAdvanced().getLobbies()),
+                        plugin.devConfig(), plugin.getDataFolder().toPath(), plugin.logger(),
+                        plugin::getResource),
+                plugin.lobbyConfig(), plugin.configRoot().getWorldEngine(), plugin.logger(),
+                new DevSchemCommand.Texts(messages, messages.dev(), messages.command()));
         this.feedback = new SettingFeedback(messages, messages.manhunt(), config, sounds);
-        this.modifiersCmd = new ModifiersCommand(config, messages,
-                messages.modifiers(), messages.command(),
-                plugin.guiService(), viewer -> modifierMenus.mainMenu(viewer, null), sounds,
-                new ModifierTestService(game.stateCommands(), playerStates, messages,
-                        messages.modifiers(), sounds));
-        this.overrideCmd = new OverrideCommand(plugin.overrides(), config, messages,
-                messages.manhunt(), messages.modifiers(), feedback, sounds);
-        this.setupService = new SetupService(plugin, game, messages, messages.manhunt(), sounds, feedback);
-        SettingDialogs dialogs = new SettingDialogs(config, plugin.overrides(), messages,
-                messages.manhuntGui(), sounds, plugin.guiService(), feedback, plugin.guiConfig(),
+        this.modifiersCmd = new ModifiersCommand(config,
+                new ModifiersCommand.ModifiersDeps(plugin.guiService(),
+                        viewer -> modifierMenus.mainMenu(viewer, null),
+                        new ModifierTestService(game.stateCommands(), playerStates,
+                                messages, messages.modifiers(), sounds)),
+                new ModifiersCommand.ModifiersTexts(messages, messages.modifiers(),
+                        messages.command(), sounds));
+        this.overrideCmd = new OverrideCommand(plugin.overrides(), config,
+                new OverrideCommand.OverrideTexts(messages, messages.manhunt(),
+                        messages.modifiers(), sounds),
+                feedback);
+        this.setupService = new SetupService(game,
+                new SetupService.Announcer(messages, messages.manhunt(), sounds), feedback,
+                plugin::observeWorldEngine, plugin::markSetupDone);
+        SettingDialogs dialogs = new SettingDialogs(
+                new SettingDialogs.SettingStores(config, plugin.overrides()),
+                new SettingDialogs.SettingTexts(messages, messages.manhuntGui(), sounds),
+                new SettingDialogs.SettingUi(plugin.guiService(), feedback, plugin.guiConfig()),
                 plugin);
         ModifierDialogs modifierDialogs = new ModifierDialogs(messages, messages.modifiersGui(),
-                messages.manhuntGui(), sounds, plugin.guiService(), plugin);
-        this.modifierMenus = new ModifierMenus(config.modifiers(), messages,
-                messages.modifiersGui(), messages.manhuntGui(), messages.modifiers(),
-                messages.command(), sounds, plugin.guiService(), modifiersCmd, dialogs,
-                modifierDialogs,
-                () -> config.getBoolean(
-                        "advanced.misc.modifier-editor.validate-commands", true),
-                plugin.overrides(), feedback, new ModifierEditorMemory(plugin.engineStates(),
-                        plugin.logger(),
+                messages.manhuntGui(), sounds, plugin);
+        this.modifierMenus = new ModifierMenus(config.modifiers(),
+                new ModifierMenus.MenusTexts(messages, messages.modifiersGui(),
+                        messages.manhuntGui(), messages.modifiers(), messages.command(), sounds),
+                new ModifierMenus.MenusDeps(plugin.guiService(), modifiersCmd, dialogs,
+                        modifierDialogs,
                         () -> config.getBoolean(
-                                "advanced.misc.modifier-editor.remember-gui-commands", false)));
-        this.menus = new ManhuntMenus(config, plugin.overrides(), plugin.guiConfig(),
-                messages, messages.manhuntGui(), sounds, plugin.guiService(), dialogs, feedback,
-                plugin.stats(), modifierMenus, modifierDialogs);
+                                "advanced.misc.modifier-editor.validate-commands", true),
+                        plugin.overrides(), feedback,
+                        new ModifierEditorMemory(plugin.engineStates(), plugin.logger(),
+                                () -> config.getBoolean(
+                                        "advanced.misc.modifier-editor.remember-gui-commands",
+                                        false))));
+        this.menus = new ManhuntMenus(
+                new SettingDialogs.SettingStores(config, plugin.overrides()),
+                new SettingDialogs.SettingTexts(messages, messages.manhuntGui(), sounds),
+                new SettingDialogs.SettingUi(plugin.guiService(), feedback,
+                        plugin.guiConfig()),
+                new ManhuntMenus.ManhuntDeps(dialogs, plugin.stats(), modifierMenus,
+                        modifierDialogs));
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {

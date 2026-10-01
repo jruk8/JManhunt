@@ -8,8 +8,8 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,6 +18,9 @@ import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.PlayerSettings;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
+import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
@@ -40,15 +43,10 @@ import java.util.HashMap;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitScheduler;
-import org.bukkit.scheduler.BukkitTask;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 class PlayerCombatListenerDeathTest {
 
@@ -88,10 +86,21 @@ class PlayerCombatListenerDeathTest {
         when(game.instanceOf(victimId)).thenReturn(Optional.of(instance));
         PlayerSettings settings = new PlayerSettings();
         settings.getRespawn().getHunter().setEnabled(false);
-        PlayerCombatListener listener = new PlayerCombatListener(plugin, players, game,
-                settings, compass, stats, mock(LobbyService.class),
-                mock(WorldEngineService.class), mock(WinConditionEngine.class), respawn,
-                mock(SpeedrunnerDisconnectTracker.class), new HashMap<>(), texts());
+        TaskScheduler tasks = mock(TaskScheduler.class);
+        doAnswer(invocation -> {
+            invocation.getArgument(0, Runnable.class).run();
+            return null;
+        }).when(tasks).run(any(Runnable.class));
+        PlayerCombatListener listener = new PlayerCombatListener(
+                new PlayerCombatListener.CombatReads(players, fakes, settings, texts()),
+                new PlayerCombatListener.CombatMatch(game, stats,
+                        mock(WinConditionEngine.class),
+                        mock(SpeedrunnerDisconnectTracker.class), new HashMap<>()),
+                new PlayerCombatListener.CombatWorld(compass, mock(LobbyService.class),
+                        mock(WorldEngineService.class), respawn),
+                new PlayerCombatListener.CombatEdge(plugin.spawnCamp(), plugin.roleTeams(),
+                        mock(JManhuntLogger.class), mock(LobbyConfig.class)),
+                tasks);
         return new Fixture(listener, victim, victimId, players, instance, compass, fakes,
                 respawn);
     }
@@ -106,16 +115,7 @@ class PlayerCombatListenerDeathTest {
     private static void kill(Fixture fixture) {
         PlayerDeathEvent event = mock(PlayerDeathEvent.class);
         when(event.getEntity()).thenReturn(fixture.victim());
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            BukkitScheduler scheduler = mock(BukkitScheduler.class);
-            when(Bukkit.getScheduler()).thenReturn(scheduler);
-            when(scheduler.runTask(any(Plugin.class), any(Runnable.class))).thenAnswer(
-                    invocation -> {
-                        invocation.getArgument(1, Runnable.class).run();
-                        return mock(BukkitTask.class);
-                    });
-            fixture.listener().onDeath(event);
-        }
+        fixture.listener().onDeath(event);
     }
 
     @Test

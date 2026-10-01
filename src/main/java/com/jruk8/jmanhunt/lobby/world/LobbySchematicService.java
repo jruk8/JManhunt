@@ -1,7 +1,8 @@
 package com.jruk8.jmanhunt.lobby.world;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
+import com.jruk8.jmanhunt.config.DevConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyBundle;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
 import org.bukkit.Bukkit;
@@ -19,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
+import lombok.Getter;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 
 /**
@@ -36,10 +39,20 @@ public final class LobbySchematicService {
     /** Bundled schematic resources, below the jar root. */
     static final String BUNDLED_DIR = "dev/lobby-schematics";
 
-    private final JManhuntPlugin plugin;
+    @Getter
+    private final JmhLobbyService lobbies;
+    private final DevConfig devConfig;
+    private final Path dataFolder;
+    private final JManhuntLogger log;
+    private final Function<String, InputStream> resources;
 
-    public LobbySchematicService(JManhuntPlugin plugin) {
-        this.plugin = plugin;
+    public LobbySchematicService(JmhLobbyService lobbies, DevConfig devConfig, Path dataFolder,
+            JManhuntLogger log, Function<String, InputStream> resources) {
+        this.lobbies = lobbies;
+        this.devConfig = devConfig;
+        this.dataFolder = dataFolder;
+        this.log = log;
+        this.resources = resources;
     }
 
     /** Pastes the schematic, then runs preset commands. Always in this order. */
@@ -49,7 +62,7 @@ public final class LobbySchematicService {
     }
 
     private void pasteSchematic(World world, LobbyPreset preset) {
-        String name = plugin.devConfig().schematicFor(preset.name());
+        String name = devConfig.schematicFor(preset.name());
         if (name == null || name.isBlank()) {
             return;
         }
@@ -58,7 +71,7 @@ public final class LobbySchematicService {
 
     /** Dev authoring dir for saved schematics, created on demand. */
     public File schematicDir() {
-        File dir = new File(plugin.getDataFolder(), "settings/world-engine/lobby-schematics");
+        File dir = dataFolder.resolve("settings/world-engine/lobby-schematics").toFile();
         dir.mkdirs();
         return dir;
     }
@@ -89,7 +102,7 @@ public final class LobbySchematicService {
         String nbtName = name + ".nbt";
         byte[] nbt = bundledBytes(nbtName);
         if (nbt == null) {
-            plugin.logger().warning("Lobby schematic '" + name
+            log.warning("Lobby schematic '" + name
                     + "' is missing from the bundled dev/lobby-schematics/; leaving void.");
             return false;
         }
@@ -104,16 +117,16 @@ public final class LobbySchematicService {
      */
     public boolean pasteFile(World world, File file, Location midpoint) {
         if (!file.isFile()) {
-            plugin.logger().warning("Lobby schematic '" + file.getName()
+            log.warning("Lobby schematic '" + file.getName()
                     + "' is missing from settings/world-engine/lobby-schematics/.");
             return false;
         }
         if (file.getName().endsWith(JmhLobbyService.BUNDLE_SUFFIX)) {
             JmhLobbyBundle unbundled;
             try {
-                unbundled = new JmhLobbyService(plugin).readBundle(file);
+                unbundled = lobbies.readBundle(file);
             } catch (IOException unreadable) {
-                plugin.logger().warning("Could not read lobby bundle '" + file.getName()
+                log.warning("Could not read lobby bundle '" + file.getName()
                         + "': " + unreadable.getMessage());
                 return false;
             }
@@ -123,7 +136,7 @@ public final class LobbySchematicService {
         try {
             structure = Bukkit.getStructureManager().loadStructure(file);
         } catch (IOException unreadable) {
-            plugin.logger().warning("Could not load lobby schematic '" + file.getName()
+            log.warning("Could not load lobby schematic '" + file.getName()
                     + "': " + unreadable.getMessage());
             return false;
         }
@@ -132,10 +145,10 @@ public final class LobbySchematicService {
 
     /** One bundled resource's bytes, or null when it is missing or unreadable. */
     private byte[] bundledBytes(String file) {
-        try (InputStream in = plugin.getResource(BUNDLED_DIR + "/" + file)) {
+        try (InputStream in = resources.apply(BUNDLED_DIR + "/" + file)) {
             return in == null ? null : in.readAllBytes();
         } catch (IOException unreadable) {
-            plugin.logger().warning("Could not read bundled lobby schematic '" + file
+            log.warning("Could not read bundled lobby schematic '" + file
                     + "': " + unreadable.getMessage());
             return null;
         }
@@ -146,9 +159,9 @@ public final class LobbySchematicService {
             byte[] bytes) {
         JmhLobbyBundle unbundled;
         try {
-            unbundled = new JmhLobbyService(plugin).readBundle(bytes);
+            unbundled = lobbies.readBundle(bytes);
         } catch (IOException unreadable) {
-            plugin.logger().warning("Could not read lobby bundle '" + fileName
+            log.warning("Could not read lobby bundle '" + fileName
                     + "': " + unreadable.getMessage());
             return false;
         }
@@ -165,7 +178,7 @@ public final class LobbySchematicService {
             Files.write(staging, bytes);
             structure = Bukkit.getStructureManager().loadStructure(staging.toFile());
         } catch (IOException unreadable) {
-            plugin.logger().warning("Could not load lobby schematic '" + fileName
+            log.warning("Could not load lobby schematic '" + fileName
                     + "': " + unreadable.getMessage());
             return false;
         } finally {
@@ -182,7 +195,6 @@ public final class LobbySchematicService {
      */
     private boolean pasteParsedBundle(World world, String fileName, Location midpoint,
             JmhLobbyBundle unbundled) {
-        JmhLobbyService lobbies = new JmhLobbyService(plugin);
         Path staging = null;
         Structure structure;
         try {
@@ -190,7 +202,7 @@ public final class LobbySchematicService {
             Files.write(staging, unbundled.nbt());
             structure = Bukkit.getStructureManager().loadStructure(staging.toFile());
         } catch (IOException unreadable) {
-            plugin.logger().warning("Could not load lobby schematic '" + fileName
+            log.warning("Could not load lobby schematic '" + fileName
                     + "': " + unreadable.getMessage());
             return false;
         } finally {
@@ -201,13 +213,13 @@ public final class LobbySchematicService {
             return false;
         }
         if (!world.getName().equals(lobbies.lobbyWorldName())) {
-            plugin.logger().info("Pasted lobby bundle '" + fileName
+            log.info("Pasted lobby bundle '" + fileName
                     + "' outside the lobby world; skipping its bounds and teleports.");
             return true;
         }
         JmhLobbyService.BuiltCounts built = lobbies.buildIntoLobbyConfig(unbundled,
                 corner.getBlockX(), corner.getBlockY(), corner.getBlockZ());
-        plugin.logger().info("Built " + built.bounds() + " bounds and " + built.teleports()
+        log.info("Built " + built.bounds() + " bounds and " + built.teleports()
                 + " teleports into the lobby config from '" + fileName + "'.");
         return true;
     }
@@ -220,7 +232,7 @@ public final class LobbySchematicService {
             structure.place(corner, true, StructureRotation.NONE, Mirror.NONE, 0, 1.0f,
                     ThreadLocalRandom.current());
         } catch (RuntimeException failed) {
-            plugin.logger().warning("Could not paste lobby schematic '" + fileName
+            log.warning("Could not paste lobby schematic '" + fileName
                     + "': " + failed.getMessage());
             return false;
         }
@@ -239,7 +251,7 @@ public final class LobbySchematicService {
     }
 
     private void runCommands(World world, LobbyPreset preset) {
-        List<String> commands = plugin.devConfig().commandsFor(preset.name());
+        List<String> commands = devConfig.commandsFor(preset.name());
         for (String command : commands) {
             if (command.isBlank()) {
                 continue;
@@ -251,7 +263,7 @@ public final class LobbySchematicService {
             try {
                 QuietConsoleDispatch.dispatch(parsed);
             } catch (Exception exception) {
-                plugin.logger().severe(
+                log.severe(
                         "Failed to run lobby preset command '" + command + "'. Skipping..",
                         exception);
             }

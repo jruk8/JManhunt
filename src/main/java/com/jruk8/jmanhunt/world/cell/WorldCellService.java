@@ -1,9 +1,10 @@
 package com.jruk8.jmanhunt.world.cell;
 
 import com.jruk8.jmanhunt.core.DebugLevel;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.message.DebugMessages;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.world.end.EndCellManager;
 import lombok.Setter;
 import org.bukkit.Bukkit;
@@ -24,6 +25,7 @@ import java.util.function.BooleanSupplier;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
 import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.SpectatorSpawnResolver;
 
@@ -31,11 +33,19 @@ import com.jruk8.jmanhunt.player.SpectatorSpawnResolver;
 public final class WorldCellService {
     private static final int MAX_CELL_ALLOCATE_ATTEMPTS = 20;
 
-    private final JManhuntPlugin plugin;
+    /** Role plus fake-spectator reads for spawn resolution. */
+    public record WorldCellPlayers(PlayerStateStore states, FakeSpectatorService fakes) {
+    }
+
+    /** Logger plus refill scheduler. */
+    public record WorldCellEdge(JManhuntLogger log, TaskScheduler tasks) {
+    }
+
+    private final WorldCellEdge edge;
     private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
     private final WorldCellAllocator cellAllocator;
     private final EndCellManager endCells;
-    private final PlayerStateStore playerStates;
+    private final WorldCellPlayers players;
     // Ready cells kept ahead of match starts so matches never wait on
     // allocation or pregeneration.
     private final Deque<CellOrigin> cellBuffer = new ArrayDeque<>();
@@ -44,15 +54,15 @@ public final class WorldCellService {
     @Setter
     private BooleanSupplier matchRunningSupplier = () -> false;
 
-    public WorldCellService(JManhuntPlugin plugin,
+    public WorldCellService(WorldCellEdge edge,
             com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
             EngineStateRepository engineState,
-            EndCellManager endCells, PlayerStateStore playerStates) {
-        this.plugin = plugin;
+            EndCellManager endCells, WorldCellPlayers players) {
+        this.edge = edge;
         this.engineSettings = engineSettings;
         this.cellAllocator = new WorldCellAllocator(engineState);
         this.endCells = endCells;
-        this.playerStates = playerStates;
+        this.players = players;
     }
 
     /**
@@ -78,7 +88,7 @@ public final class WorldCellService {
                 origin = fetchCell(world, config)
                         .orElseThrow(Exception::new);
             } catch (Exception e) {
-                plugin.logger().severe("Could not find a valid spawn cell for world-engine after "
+                edge.log().severe("Could not find a valid spawn cell for world-engine after "
                         + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Skipping teleport.");
                 return OptionalLong.empty();
             }
@@ -102,9 +112,9 @@ public final class WorldCellService {
             return;
         }
         List<Player> participants = joiners.stream()
-                .filter(joiner -> playerStates.role(joiner).isParticipant()).toList();
+                .filter(joiner -> players.states().role(joiner).isParticipant()).toList();
         List<Player> watchers = joiners.stream()
-                .filter(joiner -> !playerStates.role(joiner).isParticipant()).toList();
+                .filter(joiner -> !players.states().role(joiner).isParticipant()).toList();
         if (!participants.isEmpty()) {
             WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
             World world = center.get().getWorld();
@@ -120,7 +130,7 @@ public final class WorldCellService {
         }
         if (!watchers.isEmpty()) {
             SpectatorSpawnResolver resolver =
-                    new SpectatorSpawnResolver(playerStates, plugin.fakeSpectators());
+                    new SpectatorSpawnResolver(players.states(), players.fakes());
             List<SpectatorSpawnResolver.SpawnCandidate> candidates = resolver.candidatesOf(instance);
             for (Player watcher : watchers) {
                 Location spawn = SpectatorSpawnResolver.resolve(candidates, center.get())
@@ -188,7 +198,7 @@ public final class WorldCellService {
             }
             cellBuffer.add(fetched.get());
             runPreloadingCommands(config, fetched.get());
-            plugin.logger().debug(DebugLevel.INFO, DebugMessages::getCellBufferAdd, Map.of(
+            edge.log().debug(DebugLevel.INFO, DebugMessages::getCellBufferAdd, Map.of(
                     "index", String.valueOf(fetched.get().index()),
                     "count", String.valueOf(cellBuffer.size()),
                     "target", String.valueOf(target)));
@@ -204,7 +214,7 @@ public final class WorldCellService {
     /** Allocates one valid cell, logging it for debug recipients. */
     private Optional<CellOrigin> fetchCell(World world, WorldEngineConfig config) {
         Optional<CellOrigin> origin = findValidOrigin(world, config);
-        origin.ifPresent(cell -> plugin.logger().debug(DebugLevel.INFO, DebugMessages::getCellFetched, Map.of(
+        origin.ifPresent(cell -> edge.log().debug(DebugLevel.INFO, DebugMessages::getCellFetched, Map.of(
                 "index", String.valueOf(cell.index()),
                 "x", String.valueOf(cell.x()),
                 "z", String.valueOf(cell.z()))));
@@ -216,8 +226,8 @@ public final class WorldCellService {
         if (refillRetryTask != null) {
             return;
         }
-        plugin.logger().debug(DebugLevel.SEVERE, DebugMessages::getCellFetchFailed, Map.of("seconds", "30"));
-        refillRetryTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        edge.log().debug(DebugLevel.SEVERE, DebugMessages::getCellFetchFailed, Map.of("seconds", "30"));
+        refillRetryTask = edge.tasks().runLater(() -> {
             refillRetryTask = null;
             refillBuffer();
         }, 600L);
@@ -277,7 +287,7 @@ public final class WorldCellService {
     private void enforceCellIndexCap(WorldEngineConfig config) {
         OptionalLong current = cellAllocator.currentStartIndex();
         if (current.isPresent() && current.getAsLong() > maxCellIndex(config.cellSize())) {
-            plugin.logger().warning("World-engine cell index " + current.getAsLong()
+            edge.log().warning("World-engine cell index " + current.getAsLong()
                     + " exceeds the addressable grid for cell size " + config.cellSize()
                     + ". Restarting the index at zero; the world should be manually reset "
                     + "because new cells may overlap old ones.");
@@ -290,7 +300,7 @@ public final class WorldCellService {
         if (!config.spawnpointAlgorithmEnabled() || !config.spawnCloseToStructureEnabled()) {
             return CloseToStructureFetch.inactive();
         }
-        return CloseToStructureFetch.armed(config, plugin);
+        return CloseToStructureFetch.armed(config, edge.log());
     }
 
     /** Last raw pass when the raw loop exhausts, else empty. */
@@ -327,7 +337,7 @@ public final class WorldCellService {
                 }
 
                 if (isLastAttempt && bad) {
-                    plugin.logger().warning("Could not find a valid spawn cell after "
+                    edge.log().warning("Could not find a valid spawn cell after "
                             + MAX_CELL_ALLOCATE_ATTEMPTS + " attempts. Using last attempted cell.");
                 }
 
@@ -386,7 +396,7 @@ public final class WorldCellService {
             try {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), parsed);
             } catch (Exception e) {
-                plugin.logger().severe("Failed to run preloading command '%s'. Skipping..".formatted(command), e);
+                edge.log().severe("Failed to run preloading command '%s'. Skipping..".formatted(command), e);
             }
         }
     }

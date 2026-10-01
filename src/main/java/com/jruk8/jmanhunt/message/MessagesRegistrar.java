@@ -5,8 +5,9 @@ import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
 import lombok.Getter;
-import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
+import java.nio.file.Path;
+import java.util.logging.Logger;
 
 /**
  * Creates and reloads the Okaeri messages store. The file generates
@@ -16,22 +17,24 @@ import java.io.File;
  */
 public final class MessagesRegistrar {
 
-    private final JavaPlugin plugin;
+    private final Path dataFolder;
+    private final Logger log;
     private final SectionPinner sections = new SectionPinner();
     @Getter
     private MessagesConfig messagesConfig;
 
-    public MessagesRegistrar(JavaPlugin plugin) {
-        this.plugin = plugin;
+    public MessagesRegistrar(Path dataFolder, Logger log) {
+        this.dataFolder = dataFolder;
+        this.log = log;
     }
 
     public void register() {
-        File file = new File(plugin.getDataFolder(), "messages.yml");
+        File file = dataFolder.resolve("messages.yml").toFile();
         this.messagesConfig = ConfigManager.create(MessagesConfig.class, it -> {
             it.withConfigurer(new YamlBukkitConfigurer(), new SerdesBukkit());
             it.withBindFile(file);
             it.withRemoveOrphans(true);
-            it.withLogger(plugin.getLogger());
+            it.withLogger(log);
         });
         reload();
     }
@@ -50,7 +53,7 @@ public final class MessagesRegistrar {
             messagesConfig.load(true);
             sections.pin(messagesConfig);
         } catch (RuntimeException exception) {
-            plugin.getLogger().warning("Could not load messages.yml (" + exception.getMessage()
+            log.warning("Could not load messages.yml (" + exception.getMessage()
                     + "); check the file, then run /mh reload.");
         }
     }

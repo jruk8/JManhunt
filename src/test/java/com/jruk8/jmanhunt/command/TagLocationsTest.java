@@ -72,13 +72,15 @@ class TagLocationsTest {
                 return "Steve".equals(playerName) ? Optional.of(spot) : Optional.empty();
             }
         };
-        TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add),
-                "locs", warnings::add, warnings::add,
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, new TagBackends(StatValues.inert(), new FlagStore(),
-                        (text, name) -> text, roster, PlayerSinks.inert()));
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                List.of(), new Random(5), warnings::add), "locs"),
+                TagContext.TagSinks.simple(warnings::add, warnings::add, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { },
+                                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(7L, new TagBackends(StatValues.inert(), new FlagStore(),
+                        (text, name) -> text, roster, PlayerSinks.inert()),
+                                (player, reason) -> { }, (role, reason) -> { }));
 
         assertEquals("[100, 64, -30, world, 12, 90]",
                 CommandPlaceholders.replace("<plocation:Steve>", "Steve", 0, 0, 0, context));
@@ -90,12 +92,13 @@ class TagLocationsTest {
     @Test
     void distanceMeasuresXyzOnly() {
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add),
-                "locs", warnings::add, warnings::add,
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, TagBackends.inert());
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                List.of(), new Random(5), warnings::add), "locs"),
+                TagContext.TagSinks.simple(warnings::add, warnings::add, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { },
+                                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(7L, TagBackends.inert(), (player, reason) -> { }, (role, reason) -> { }));
 
         assertEquals("5", CommandPlaceholders.replace(
                 "<distance:[0,0,0],[3,4,0]>", "Steve", 0, 0, 0, context));
@@ -115,12 +118,13 @@ class TagLocationsTest {
     @Test
     void distanceYieldsNullSilentlyCrossDimension() {
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add),
-                "locs", warnings::add, warnings::add,
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, TagBackends.inert());
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                List.of(), new Random(5), warnings::add), "locs"),
+                TagContext.TagSinks.simple(warnings::add, warnings::add, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { },
+                                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(7L, TagBackends.inert(), (player, reason) -> { }, (role, reason) -> { }));
 
         assertEquals("null", CommandPlaceholders.replace(
                 "<distance:[0, 0, 0, world, 0, 0],[3, 4, 0, world_nether, 90, 12]>",
@@ -131,12 +135,13 @@ class TagLocationsTest {
     @Test
     void distanceYieldsNullSilentlyForNullSides() {
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add),
-                "locs", warnings::add, warnings::add,
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, TagBackends.inert());
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                List.of(), new Random(5), warnings::add), "locs"),
+                TagContext.TagSinks.simple(warnings::add, warnings::add, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { },
+                                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(7L, TagBackends.inert(), (player, reason) -> { }, (role, reason) -> { }));
 
         assertEquals("null", CommandPlaceholders.replace(
                 "<distance:null,[3,4,0]>", "Steve", 0, 0, 0, context));
@@ -242,12 +247,13 @@ class TagLocationsTest {
     @Test
     void distanceRejectsMalformedLists() {
         List<String> warnings = new ArrayList<>();
-        TagContext context = TagContext.run(
-                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add),
-                "locs", warnings::add, warnings::add,
-                (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                (player, reason) -> { }, (role, reason) -> { },
-                7L, TagBackends.inert());
+        TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
+                List.of(), new Random(5), warnings::add), "locs"),
+                TagContext.TagSinks.simple(warnings::add, warnings::add, (id, pitch, volume) -> { },
+                        (id, pitch, volume) -> { },
+                                ModifierTagScope.match("Steve", List.of(), new Random(5), warnings::add)),
+                TagContext.TagRole.silent(),
+                TagContext.TagMatch.simple(7L, TagBackends.inert(), (player, reason) -> { }, (role, reason) -> { }));
 
         assertEquals("null", CommandPlaceholders.replace(
                 "<distance:plain,[3,4,0]>", "Steve", 0, 0, 0, context));
@@ -321,13 +327,16 @@ class TagLocationsTest {
         }
 
         private String replace(String command, String sender) {
-            TagContext context = TagContext.run(
-                    ModifierTagScope.match(sender, List.of(), new Random(5), warnings::add),
-                    "locs", warnings::add, warnings::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), new FlagStore(),
-                            (text, name) -> text, roster, PlayerSinks.inert()));
+            TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match(sender,
+                    List.of(), new Random(5), warnings::add), "locs"),
+                    TagContext.TagSinks.simple(warnings::add, warnings::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                            ModifierTagScope.match(sender, List.of(), new Random(5), warnings::add)),
+                    TagContext.TagRole.silent(),
+                    TagContext.TagMatch.simple(7L, new TagBackends(StatValues.inert(),
+                            new FlagStore(),
+                                    (text, name) -> text, roster, PlayerSinks.inert())
+                                    , (player, reason) -> { }, (role, reason) -> { }));
             return CommandPlaceholders.replace(command, sender, 0, 0, 0, context);
         }
     }

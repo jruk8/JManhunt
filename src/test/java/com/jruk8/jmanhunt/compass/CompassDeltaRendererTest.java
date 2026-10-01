@@ -1,8 +1,8 @@
 package com.jruk8.jmanhunt.compass;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.config.ConfigService;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
@@ -156,10 +156,8 @@ class CompassDeltaRendererTest {
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         OverrideService overrides =
                 new OverrideService(configService, new LobbyConfig(), () -> { });
-        when(plugin.overrides()).thenReturn(overrides);
         CompassSettingsFacade settings =
                 new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         MessageService messages = new MessageService();
@@ -167,7 +165,7 @@ class CompassDeltaRendererTest {
         Map<UUID, Component> bars = new HashMap<>();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(UUID.randomUUID());
-        return new Fixture(new CompassDeltaRenderer(plugin, settings, messages, bars), player, bars);
+        return new Fixture(new CompassDeltaRenderer(mock(TaskScheduler.class), settings, messages, bars), player, bars);
     }
 
     private static String text(Component component) {
@@ -213,10 +211,8 @@ class CompassDeltaRendererTest {
         log.setUseParentHandlers(false);
         ConfigService configService = new ConfigService(root,
                 new ModifierStore(ModifierFiles.inMemory(), log));
-        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         OverrideService overrides =
                 new OverrideService(configService, new LobbyConfig(), () -> { });
-        when(plugin.overrides()).thenReturn(overrides);
         CompassSettingsFacade settings =
                 new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         MessageService messages = new MessageService();
@@ -224,6 +220,6 @@ class CompassDeltaRendererTest {
         Map<UUID, Component> bars = new HashMap<>();
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(UUID.randomUUID());
-        return new Fixture(new CompassDeltaRenderer(plugin, settings, messages, bars), player, bars);
+        return new Fixture(new CompassDeltaRenderer(mock(TaskScheduler.class), settings, messages, bars), player, bars);
     }
 }

@@ -6,15 +6,22 @@ import com.jruk8.jmanhunt.command.EngineEscapes;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
 import com.jruk8.jmanhunt.command.TagBackends;
+import com.jruk8.jmanhunt.command.TagControlFlow;
+import com.jruk8.jmanhunt.command.SelectorExpansion;
+import com.jruk8.jmanhunt.command.SharedRandomRolls;
 import com.jruk8.jmanhunt.command.TagContext;
-import com.jruk8.jmanhunt.command.TagExpressions;
 import com.jruk8.jmanhunt.core.PlaceholderPass;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.MiscConfig;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
+import com.jruk8.jmanhunt.lobby.config.OverrideService;
+import com.jruk8.jmanhunt.core.JManhuntPlaceholders;
+import com.jruk8.jmanhunt.config.EngineStateRepository;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerResetService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -31,12 +38,19 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Executes game rules and modifiers at match state transitions. */
 public final class GameStateCommandManager implements ModifierToggleService.Commands {
+    /** States, modifier reads, interop, and player settings. */
+    public record CommandReads(PlayerStateStore playerStates, ConfigService configService,
+            MiscConfig.Interop interop, PlayersSettingsFacade players) {
+    }
 
-    private final JManhuntPlugin plugin;
-    private final PlayerStateStore playerStates;
-    private final ConfigService configService;
-    private final MiscConfig.Interop interop;
-    private final PlayersSettingsFacade players;
+    /** Engine states, fakes, logger, overrides, placeholders, and scheduler. */
+    public record CommandEdge(EngineStateRepository engineStates, FakeSpectatorService fakes,
+            JManhuntLogger log, OverrideService overrides, JManhuntPlaceholders placeholders,
+            TaskScheduler tasks) {
+    }
+
+    private final CommandReads reads;
+    private final CommandEdge edge;
     private final MessageService messages;
     private final SoundService sounds;
     private final GameManager game;
@@ -46,25 +60,30 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     private final MatchDefaultsService defaults;
     private final ModifierTagSinks sinks;
 
-    public GameStateCommandManager(JManhuntPlugin plugin, PlayerStateStore playerStates,
-                                   ConfigService configService, MiscConfig.Interop interop,
-                                   PlayersSettingsFacade players, MessageService messages,
-                                   SoundService sounds, GameManager game) {
-        this.plugin = plugin;
-        this.playerStates = playerStates;
-        this.configService = configService;
-        this.interop = interop;
-        this.players = players;
+    public GameStateCommandManager(CommandReads reads, CommandEdge edge,
+            MessageService messages, SoundService sounds, GameManager game) {
+        this.reads = reads;
+        this.edge = edge;
         this.messages = messages;
         this.sounds = sounds;
         this.game = game;
-        this.intervals = new IntervalDispatcher(plugin, configService, game, playerStates,
+        this.intervals = new IntervalDispatcher(
+                new IntervalDispatcher.IntervalReads(reads.configService(), edge.overrides()),
+                new IntervalDispatcher.IntervalRuntime(game, reads.playerStates(), edge.fakes()),
+                new IntervalDispatcher.IntervalEdge(edge.log(), edge.tasks()),
                 this::dispatchModifier);
-        this.toggles = new ModifierToggleService(plugin, configService, game, intervals, this);
-        this.wipes = new PlayerWipeService(plugin, new PlayerResetService(plugin.overrides()));
-        this.defaults = new MatchDefaultsService(plugin, players, playerStates, wipes);
-        this.sinks = new ModifierTagSinks(plugin, messages, messages.modifiers(), sounds, game,
-                playerStates, interop);
+        this.toggles = new ModifierToggleService(
+                new ModifierToggleService.ToggleReads(edge.overrides(), edge.log(),
+                        reads.configService()),
+                game, intervals, this);
+        this.wipes = new PlayerWipeService(edge.engineStates(), edge.log(),
+                new PlayerResetService(edge.overrides()));
+        this.defaults = new MatchDefaultsService(edge.overrides(), edge.log(), reads.players(),
+                wipes, new MatchDefaultsService.DefaultsStates(reads.playerStates(),
+                        edge.fakes()));
+        this.sinks = new ModifierTagSinks(edge.log(),
+                new ModifierTagSinks.SinkBus(messages, messages.modifiers(), sounds),
+                game, reads.playerStates(), reads.interop());
     }
 
     public void runStart(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId) {
@@ -83,8 +102,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      */
     public void runPostStartModifiers(long matchId) {
         for (String name : intervals.enabledModifiers(matchId)) {
-            for (int index : configService.behaviorIndexes(name)) {
-                if (!ModifierTriggers.runsOn(configService.runsOn(name, index), "ON_START")) {
+            for (int index : reads.configService().behaviorIndexes(name)) {
+                if (!ModifierTriggers.runsOn(reads.configService().runsOn(name, index), "ON_START")) {
                     continue;
                 }
                 if (!afterPrestart(name, index)) {
@@ -111,9 +130,9 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     /** Console cleanup for one modifier; reused by toggle sync. */
     void runConsoleCleanup(String name, long matchId) {
         ModifierTagScope scope = ModifierTagScope.executor(null,
-                EngineEscapes.restoring(plugin.logger()::warning));
-        for (int index : configService.behaviorIndexes(name)) {
-            runCommandList(configService.commandList(name, index, "console-cleanup"), null,
+                EngineEscapes.restoring(edge.log()::warning));
+        for (int index : reads.configService().behaviorIndexes(name)) {
+            runCommandList(reads.configService().commandList(name, index, "console-cleanup"), null,
                     tagContext(name, null, scope, matchId, List.of()),
                     TagContext.Provenance.of(name, index, "console-cleanup"));
         }
@@ -127,9 +146,9 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
 
     /** Player cleanup for one modifier; reused by toggle sync. */
     void runPlayerCleanup(String name, long matchId, List<Player> participants) {
-        for (int index : configService.behaviorIndexes(name)) {
+        for (int index : reads.configService().behaviorIndexes(name)) {
             for (Player player : participants) {
-                runCommandList(configService.commandList(name, index, "player-cleanup"), player,
+                runCommandList(reads.configService().commandList(name, index, "player-cleanup"), player,
                         tagContext(name, player, matchScope(player, participants), matchId, List.of()),
                         TagContext.Provenance.of(name, index, "player-cleanup"));
             }
@@ -154,7 +173,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
 
     @Override
     public boolean afterPrestart(String name, int index) {
-        return ModifierTriggers.runsAfterPrestart(configService.preStartOrder(name, index));
+        return ModifierTriggers.runsAfterPrestart(reads.configService().preStartOrder(name, index));
     }
 
     /**
@@ -166,11 +185,11 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         List<ModifierTagScope.Participant> scope = new ArrayList<>(participants.size());
         for (Player participant : participants) {
             scope.add(new ModifierTagScope.Participant(participant.getName(),
-                    playerStates.role(participant).name()));
+                    reads.playerStates().role(participant).name()));
         }
         return ModifierTagScope.match(executor == null ? null : executor.getName(),
                 scope, ThreadLocalRandom.current(),
-                EngineEscapes.restoring(plugin.logger()::warning));
+                EngineEscapes.restoring(edge.log()::warning));
     }
 
     /** Starts interval modifiers; see {@link IntervalDispatcher}. */
@@ -215,8 +234,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
             return;
         }
         for (String name : intervals.enabledModifiers(matchId)) {
-            for (int index : configService.behaviorIndexes(name)) {
-                if (!ModifierTriggers.runsOn(configService.runsOn(name, index), event)) {
+            for (int index : reads.configService().behaviorIndexes(name)) {
+                if (!ModifierTriggers.runsOn(reads.configService().runsOn(name, index), event)) {
                     continue;
                 }
                 intervals.runDelayed(name, index,
@@ -234,11 +253,11 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     private void dispatchModifier(String name, int index, List<Player> targets, long matchId,
             List<String> eventArgs) {
         List<Player> match = game.onlineParticipants(matchId);
-        double chance = ModifierTriggers.clampChance(configService.chance(name, index));
+        double chance = ModifierTriggers.clampChance(reads.configService().chance(name, index));
         ModifierTriggers.TriggerScope chanceScope =
-                ModifierTriggers.parseScope(configService.chanceBehavior(name, index));
+                ModifierTriggers.parseScope(reads.configService().chanceBehavior(name, index));
         ModifierTriggers.TriggerScope pickScope =
-                ModifierTriggers.parseScope(configService.pickBehavior(name, index));
+                ModifierTriggers.parseScope(reads.configService().pickBehavior(name, index));
         ThreadLocalRandom random = ThreadLocalRandom.current();
         boolean sharedPicks = pickScope == ModifierTriggers.TriggerScope.PER_INVOKE;
         Map<String, List<String>> shared = sharedLists(name, index, sharedPicks);
@@ -280,7 +299,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
             for (String list : List.of("console", "player", "hunter", "speedrunner")) {
                 shared.put(list, CommandPlaceholders.preresolveSharedRandoms(
                         resolveCommandList(name, index, list), sharedDraws,
-                        CommandPlaceholders::rollSharedRandom));
+                        SharedRandomRolls::rollSharedRandom));
             }
         }
         return shared;
@@ -291,7 +310,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                                         boolean useShared, TagContext context) {
         runCommandList(useShared ? shared.get("player") : resolveCommandList(name, index, "player"), target,
                 context, TagContext.Provenance.of(name, index, "player"));
-        String roleCommands = playerStates.role(target) == Role.HUNTER ? "hunter" : "speedrunner";
+        String roleCommands = reads.playerStates().role(target) == Role.HUNTER ? "hunter" : "speedrunner";
         runCommandList(useShared ? shared.get(roleCommands) : resolveCommandList(name, index, roleCommands),
                 target, context, TagContext.Provenance.of(name, index, roleCommands));
     }
@@ -299,34 +318,45 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     /** Tag context for one modifier dispatch run: id, sinks, stats, flags, event args. */
     private TagContext tagContext(String name, Player executor, ModifierTagScope scope, long matchId,
             List<String> eventArgs) {
-        TagContext context = TagContext.run(scope, name,
-                text -> messages.broadcastText(sinks.formatEngineMessage(text)),
-                text -> {
-                    if (executor != null) {
-                        messages.sendText(executor, sinks.formatEngineMessage(text));
-                    } else {
-                        scope.warn("Tag <pmessage> needs an executor player: skipped in '" + name + "'.");
-                    }
-                },
-                (soundId, pitch, volume) -> sinks.playEngineSound(name, null, soundId, pitch, volume),
-                (soundId, pitch, volume) -> {
-                    if (executor != null) {
-                        sinks.playEngineSound(name, executor, soundId, pitch, volume);
-                    } else {
-                        scope.warn("Tag <psound> needs an executor player: skipped in '" + name + "'.");
-                    }
-                },
-                (target, reason) -> sinks.losePlayerByName(name, target, reason, scope, matchId),
-                (role, reason) -> sinks.winForRole(name, role, reason, scope, matchId),
-                matchId, new TagBackends(game.matchStatValues(matchId), game.flagStore(),
-                        new PlaceholderPass(plugin.placeholderValues()),
-                        new MatchRosterValues(game, playerStates, plugin.fakeSpectators(), matchId),
-                        NamedPlayerSinks.of(messages, messages.modifiers(), sounds, plugin.logger()::warning, name)),
-                eventArgs, detail -> sinks.loopLimitExceeded(detail, matchId),
-                (role, text) -> sinks.sendRoleMessage(name, matchId, scope, role, text),
-                (role, soundId, pitch, volume) -> sinks.playRoleSound(name, matchId, scope, role,
-                        soundId, pitch, volume),
-                (line, provenance) -> sinks.runTagCommand(line, provenance));
+        TagContext context = TagContext.run(new TagContext.TagIdentity(scope, name),
+                new TagContext.TagSinks(
+                        text -> messages.broadcastText(sinks.formatEngineMessage(text)),
+                        text -> {
+                            if (executor != null) {
+                                messages.sendText(executor, sinks.formatEngineMessage(text));
+                            } else {
+                                scope.warn("Tag <pmessage> needs an executor player: skipped in '"
+                                        + name + "'.");
+                            }
+                        },
+                        (soundId, pitch, volume) -> sinks.playEngineSound(name, null, soundId,
+                                pitch, volume),
+                        (soundId, pitch, volume) -> {
+                            if (executor != null) {
+                                sinks.playEngineSound(name, executor, soundId, pitch, volume);
+                            } else {
+                                scope.warn("Tag <psound> needs an executor player: skipped in '"
+                                        + name + "'.");
+                            }
+                        },
+                        (line, provenance) -> sinks.runTagCommand(line, provenance)),
+                new TagContext.TagRole(
+                        (role, text) -> sinks.sendRoleMessage(name, matchId, scope, role,
+                                text),
+                        (role, soundId, pitch, volume) -> sinks.playRoleSound(name, matchId,
+                                scope, role, soundId, pitch, volume)),
+                new TagContext.TagMatch(matchId,
+                        new TagBackends(game.matchStatValues(matchId), game.flagStore(),
+                                new PlaceholderPass(edge.placeholders()),
+                                new MatchRosterValues(game, reads.playerStates(), edge.fakes(),
+                                        matchId),
+                                NamedPlayerSinks.of(messages, messages.modifiers(), sounds,
+                                        edge.log()::warning, name)),
+                        eventArgs, detail -> sinks.loopLimitExceeded(detail, matchId),
+                        (target, reason) -> sinks.losePlayerByName(name, target, reason, scope,
+                                matchId),
+                        (role, reason) -> sinks.winForRole(name, role, reason, scope,
+                                matchId)));
         context.setCooldowns(game.cooldownStore());
         return context;
     }
@@ -337,12 +367,12 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      * PICK_RANDOM} returns {@code pick-random.count} randomly drawn lines.
      */
     private List<String> resolveCommandList(String name, int index, String listKey) {
-        List<String> commands = configService.commandList(name, index, listKey);
-        if (ModifierTriggers.parseSelection(configService.selection(name, index))
+        List<String> commands = reads.configService().commandList(name, index, listKey);
+        if (ModifierTriggers.parseSelection(reads.configService().selection(name, index))
                 != ModifierTriggers.Selection.PICK_RANDOM) {
             return commands;
         }
-        int count = Math.max(1, configService.pickCount(name, index));
+        int count = Math.max(1, reads.configService().pickCount(name, index));
         return ModifierTriggers.pickCommands(commands, count, ThreadLocalRandom.current());
     }
 
@@ -354,8 +384,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     /** Runs ON_START modifiers that do not wait out the pre-start window. */
     private void runModifierStarts(long matchId) {
         for (String name : intervals.enabledModifiers(matchId)) {
-            for (int index : configService.behaviorIndexes(name)) {
-                if (ModifierTriggers.runsOn(configService.runsOn(name, index), "ON_START")
+            for (int index : reads.configService().behaviorIndexes(name)) {
+                if (ModifierTriggers.runsOn(reads.configService().runsOn(name, index), "ON_START")
                         && !afterPrestart(name, index)) {
                     runModifierCommands(name, index, matchId, List.of());
                 }
@@ -370,14 +400,14 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      */
     void runCommandList(List<String> commands, Player player, TagContext context,
             TagContext.Provenance base) {
-        Collection<String> blocked = interop.getBlacklistedModifierCommands();
+        Collection<String> blocked = reads.interop().getBlacklistedModifierCommands();
         for (int lineIndex = 0; lineIndex < commands.size(); lineIndex++) {
             String command = commands.get(lineIndex);
             context.setProvenance(base.withLine(lineIndex));
             if (command.isBlank()) {
                 continue;
             }
-            if (TagExpressions.isExitMisuse(command)) {
+            if (TagControlFlow.isExitMisuse(command)) {
                 context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
                 continue;
             }
@@ -386,15 +416,15 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                 double x = player != null ? player.getLocation().getX() : 0.0;
                 double y = player != null ? player.getLocation().getY() : 0.0;
                 double z = player != null ? player.getLocation().getZ() : 0.0;
-                for (String expanded : CommandPlaceholders.expandAllPlayers(command, context.scope())) {
+                for (String expanded : SelectorExpansion.expandAllPlayers(command, context.scope())) {
                     String parsed = CommandPlaceholders.replace(expanded, playerName, x, y, z, context);
                     if (playerName != null) {
                         parsed = context.placeholders().resolve(parsed, playerName);
                     }
-                    if (TagExpressions.isExit(parsed)) {
+                    if (TagControlFlow.isExit(parsed)) {
                         return;
                     }
-                    if (TagExpressions.isExitMisuse(parsed)) {
+                    if (TagControlFlow.isExitMisuse(parsed)) {
                         context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
                         continue;
                     }
@@ -403,7 +433,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                     }
                 }
             } catch (Exception e) {
-                plugin.logger().severe("Failed to run command '%s'. Skipping..".formatted(command), e);
+                edge.log().severe("Failed to run command '%s'. Skipping..".formatted(command), e);
             }
         }
     }
@@ -417,15 +447,15 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      */
     private boolean dispatchModifierLine(String parsed, TagContext context,
             Collection<String> blocked) {
-        Optional<String> dispatchable = TagExpressions.dispatchableLine(parsed);
-        if (dispatchable.isPresent() && TagExpressions.isPureNull(dispatchable.get())) {
-            plugin.logger().warning("Skipping command that resolved to pure \"null\" at "
+        Optional<String> dispatchable = TagControlFlow.dispatchableLine(parsed);
+        if (dispatchable.isPresent() && TagControlFlow.isPureNull(dispatchable.get())) {
+            edge.log().warning("Skipping command that resolved to pure \"null\" at "
                     + context.provenance().describe() + ".");
             return true;
         }
         if (dispatchable.isPresent()
                 && CommandSyntax.isBlockedCommand(dispatchable.get(), blocked)) {
-            plugin.logger().severe("Blocked blacklisted modifier command '"
+            edge.log().severe("Blocked blacklisted modifier command '"
                     + dispatchable.get() + "' at " + context.provenance().describe()
                     + "; aborting the command list.");
             return false;

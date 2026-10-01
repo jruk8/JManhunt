@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.world.teleport;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
@@ -18,14 +18,14 @@ import com.jruk8.jmanhunt.world.WorldEngineConfig;
 
 /** Lobby teleports plus shared spawn and coordinate math. Public for GameManager. */
 public final class MatchTeleportService implements LobbyTeleporter {
-    private final JManhuntPlugin plugin;
+    private final LobbyService lobbyService;
     private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
     private final LobbyWorldService lobbyWorlds;
 
-    public MatchTeleportService(JManhuntPlugin plugin,
+    public MatchTeleportService(LobbyService lobbyService,
             com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
             LobbyWorldService lobbyWorlds) {
-        this.plugin = plugin;
+        this.lobbyService = lobbyService;
         this.engineSettings = engineSettings;
         this.lobbyWorlds = lobbyWorlds;
     }
@@ -54,7 +54,7 @@ public final class MatchTeleportService implements LobbyTeleporter {
             entity.teleport(lobby);
         }
         for (Player target : targets) {
-            plugin.lobbyService().applyLobbyCollisions(target);
+            lobbyService.applyLobbyCollisions(target);
         }
         return true;
     }

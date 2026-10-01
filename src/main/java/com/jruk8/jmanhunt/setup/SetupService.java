@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.setup;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.command.ManhuntCommand;
 import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
@@ -26,21 +25,23 @@ import org.bukkit.entity.Player;
  */
 public final class SetupService {
 
-    private final JManhuntPlugin plugin;
-    private final GameManager game;
-    private final MessageService messages;
-    private final ManhuntMessages manhunt;
-    private final SoundService sounds;
-    private final SettingFeedback feedback;
+    /** Chat plus sound half of setup confirmation. */
+    public record Announcer(MessageService messages, ManhuntMessages manhunt, SoundService sounds) {
+    }
 
-    public SetupService(JManhuntPlugin plugin, GameManager game, MessageService messages,
-            ManhuntMessages manhunt, SoundService sounds, SettingFeedback feedback) {
-        this.plugin = plugin;
+    private final GameManager game;
+    private final Announcer announcer;
+    private final SettingFeedback feedback;
+    private final Runnable observeWorldEngine;
+    private final Runnable markSetupDone;
+
+    public SetupService(GameManager game, Announcer announcer, SettingFeedback feedback,
+            Runnable observeWorldEngine, Runnable markSetupDone) {
         this.game = game;
-        this.messages = messages;
-        this.manhunt = manhunt;
-        this.sounds = sounds;
+        this.announcer = announcer;
         this.feedback = feedback;
+        this.observeWorldEngine = observeWorldEngine;
+        this.markSetupDone = markSetupDone;
     }
 
     /** Runs the recommended setup for the clicking player. */
@@ -50,7 +51,9 @@ public final class SetupService {
             feedback.failed(clicker, enabled);
             return;
         }
-        plugin.observeWorldEngine();
+        observeWorldEngine.run();
+        MessageService messages = announcer.messages();
+        ManhuntMessages manhunt = announcer.manhunt();
         if (game.lobbyWorldNameClashes()) {
             messages.messageRaw(clicker, manhunt.getWorldengineTptoLobbyWorldClash());
             return;
@@ -81,9 +84,9 @@ public final class SetupService {
         }
         messages.messageRaw(clicker, manhunt.getWorldengineTptoSuccess(),
                 Map.of("count", String.valueOf(teleported), "world", worldName));
-        plugin.markSetupDone();
+        markSetupDone.run();
         messages.messageRaw(clicker, manhunt.getSetupOneclickDone(),
                 Map.of("count", String.valueOf(teleported)));
-        sounds.playNeutralSound(clicker);
+        announcer.sounds().playNeutralSound(clicker);
     }
 }

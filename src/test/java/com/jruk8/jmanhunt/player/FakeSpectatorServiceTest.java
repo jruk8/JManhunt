@@ -11,6 +11,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -28,13 +29,15 @@ class FakeSpectatorServiceTest {
 
     private static Fixture fixture() {
         Plugin plugin = mock(Plugin.class);
+        TaskScheduler tasks = mock(TaskScheduler.class);
+        when(tasks.plugin()).thenReturn(plugin);
         PlayerStateStore players = new PlayerStateStore();
         Player watched = mock(Player.class);
         when(watched.getUniqueId()).thenReturn(UUID.randomUUID());
         Player viewer = mock(Player.class);
         when(viewer.getUniqueId()).thenReturn(UUID.randomUUID());
         FakeSpectatorService fakes =
-                new FakeSpectatorService(plugin, players, () -> List.of(watched, viewer));
+                new FakeSpectatorService(tasks, players, () -> List.of(watched, viewer));
         return new Fixture(fakes, plugin, players, watched, viewer);
     }
 
@@ -237,13 +240,14 @@ class FakeSpectatorServiceTest {
 
     @Test
     void offlineRoleResetDropsTrackingWithoutBukkitCalls() {
-        Plugin plugin = mock(Plugin.class);
+        TaskScheduler tasks = mock(TaskScheduler.class);
+        when(tasks.plugin()).thenReturn(mock(Plugin.class));
         PlayerStateStore players = new PlayerStateStore();
         Player watched = mock(Player.class);
         UUID watchedId = UUID.randomUUID();
         when(watched.getUniqueId()).thenReturn(watchedId);
         List<Player> online = new ArrayList<>(List.of(watched));
-        FakeSpectatorService fakes = new FakeSpectatorService(plugin, players, () -> online);
+        FakeSpectatorService fakes = new FakeSpectatorService(tasks, players, () -> online);
         players.setRole(watched, Role.SPECTATOR);
         fakes.enable(watched);
         assertTrue(fakes.isFakeSpectator(watchedId));

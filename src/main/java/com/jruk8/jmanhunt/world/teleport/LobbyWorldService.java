@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.world.teleport;
 
 import com.jruk8.jmanhunt.core.DebugLevel;
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
@@ -22,23 +22,26 @@ import com.jruk8.jmanhunt.world.WorldEngineConfig;
 
 /** Lobby world loading, lobby teleports, care sweeps, and void rescue. */
 public final class LobbyWorldService {
-    private final JManhuntPlugin plugin;
-    private final MessageService messages;
-    private final ManhuntMessages manhunt;
-    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
+    /** No-lobby chat halves. */
+    public record LobbyWorldTexts(MessageService messages, ManhuntMessages manhunt) {
+    }
+
     private final LobbyWorldManager lobbyWorlds;
+    private final LobbyConfig lobbyConfig;
+    private final JManhuntLogger log;
+    private final LobbyWorldTexts texts;
+    private final com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings;
     /** Last lobby-care sweep, for the configured repeat interval. */
     private long lastCareMillis;
 
-    public LobbyWorldService(JManhuntPlugin plugin, MessageService messages,
-            ManhuntMessages manhunt,
-            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
-            com.jruk8.jmanhunt.config.LobbiesConfig lobbySettings) {
-        this.plugin = plugin;
-        this.messages = messages;
-        this.manhunt = manhunt;
+    public LobbyWorldService(LobbyWorldManager lobbyWorlds, LobbyConfig lobbyConfig,
+            JManhuntLogger log, LobbyWorldTexts texts,
+            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings) {
+        this.lobbyWorlds = lobbyWorlds;
+        this.lobbyConfig = lobbyConfig;
+        this.log = log;
+        this.texts = texts;
         this.engineSettings = engineSettings;
-        this.lobbyWorlds = new LobbyWorldManager(plugin, lobbySettings, engineSettings);
     }
 
     /** Configured lobby world name. */
@@ -146,7 +149,7 @@ public final class LobbyWorldService {
     }
 
     private LobbyConfig.CareData careConfig() {
-        LobbyConfig config = plugin.lobbyConfig();
+        LobbyConfig config = lobbyConfig;
         return config == null ? null : config.getCare();
     }
 
@@ -192,7 +195,7 @@ public final class LobbyWorldService {
             return true;
         }
         WorldEngineConfig config = WorldEngineConfig.fromSettings(engineSettings);
-        plugin.logger().warning("advanced.lobbies.lobby-world-name '" + lobbyWorlds.lobbyWorldName()
+        log.warning("advanced.lobbies.lobby-world-name '" + lobbyWorlds.lobbyWorldName()
                 + "' matches the game world '" + config.worldName()
                 + "'. Lobby world loading stays disabled until it is renamed.");
         return false;
@@ -216,7 +219,7 @@ public final class LobbyWorldService {
         }
         int fallback = tps.keySet().stream().min(Integer::compare).orElseThrow();
         if (logFallback) {
-            plugin.logger().debug(DebugLevel.WARN, DebugMessages::getLobbyFallback, Map.of(
+            log.debug(DebugLevel.WARN, DebugMessages::getLobbyFallback, Map.of(
                     "lobby", String.valueOf(lobbyId), "fallback", String.valueOf(fallback)));
         }
         return toLobbyLocation(lobbyWorld, tps.get(fallback));
@@ -228,7 +231,6 @@ public final class LobbyWorldService {
      */
     public Optional<Location> lowestLobbyTeleport() {
         World lobbyWorld = Bukkit.getWorld(lobbyWorlds.lobbyWorldName());
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
         if (lobbyWorld == null || lobbyConfig == null) {
             return Optional.empty();
         }
@@ -255,13 +257,13 @@ public final class LobbyWorldService {
         if (lobby != null) {
             return lobby;
         }
-        plugin.logger().debug(DebugLevel.SEVERE, DebugMessages::getLobbyMissing,
+        log.debug(DebugLevel.SEVERE, DebugMessages::getLobbyMissing,
                 Map.of("lobby", String.valueOf(lobbyId)));
         if (!announce) {
             return null;
         }
         for (Player target : targets) {
-            messages.messageRaw(target, manhunt.getLobbyNoLocationAnywhere(),
+            texts.messages().messageRaw(target, texts.manhunt().getLobbyNoLocationAnywhere(),
                     Map.of("lobby", String.valueOf(lobbyId)));
         }
         return null;
@@ -270,7 +272,6 @@ public final class LobbyWorldService {
     /** Valid lobbytps keyed by lobby id: integer keys with a stored lobbytp. */
     private Map<Integer, LobbyConfig.LobbyTp> lobbyTps() {
         Map<Integer, LobbyConfig.LobbyTp> tps = new HashMap<>();
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
         if (lobbyConfig == null || lobbyConfig.getLobbies() == null) {
             return tps;
         }

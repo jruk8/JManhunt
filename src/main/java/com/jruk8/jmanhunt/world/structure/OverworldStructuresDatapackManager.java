@@ -1,6 +1,9 @@
 package com.jruk8.jmanhunt.world.structure;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
+import org.bukkit.Server;
+import java.nio.file.Path;
+import java.util.function.Consumer;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -12,8 +15,9 @@ import java.util.Map;
  * generate in the overworld.
  */
 public final class OverworldStructuresDatapackManager extends DatapackManager {
-    public OverworldStructuresDatapackManager(JManhuntPlugin plugin) {
-        super(plugin);
+    public OverworldStructuresDatapackManager(Server server, Path dataFolder, JManhuntLogger log,
+            Consumer<String> saveResource) {
+        super(server, dataFolder, log, saveResource);
     }
 
     @Override

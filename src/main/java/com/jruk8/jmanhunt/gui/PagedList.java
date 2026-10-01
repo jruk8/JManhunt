@@ -60,8 +60,8 @@ public final class PagedList {
             fixed.put(8, side.top());
         }
         fixed.put(9, arrow(scrollUpName, self, -1));
-        fixed.put(18, new MenuButton(Material.PAPER, backName, null, false, false,
-                player -> gui.back(player, self[0])));
+        fixed.put(18, new MenuButton(new MenuButton.Spec(Material.PAPER, backName, null, false, false,
+                player -> gui.back(player, self[0]), null, null, MenuButton.SoundPolicy.CLICK, null)));
         if (side.middle() != null) {
             fixed.put(26, side.middle());
         }
@@ -73,7 +73,7 @@ public final class PagedList {
     }
 
     private static MenuButton arrow(Component name, Menu[] self, int delta) {
-        return new MenuButton(Material.ARROW, name, null, false, false,
-                player -> self[0].window().scrollLine(delta));
+        return new MenuButton(new MenuButton.Spec(Material.ARROW, name, null, false, false,
+                player -> self[0].window().scrollLine(delta), null, null, MenuButton.SoundPolicy.CLICK, null));
     }
 }

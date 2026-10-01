@@ -1,7 +1,7 @@
 package com.jruk8.jmanhunt.message;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.SoundsConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
@@ -19,7 +19,7 @@ public class SoundService {
     private static final String NEUTRAL_SOUND_KEY = "ui.neutral-sound";
     private static final String ANGRY_SOUND_KEY = "ui.angry-sound";
     private static final String DESTRUCTIVE_SOUND_KEY = "ui.destructive-sound";
-    private final JManhuntPlugin plugin;
+    private final JManhuntLogger log;
     private final SoundsConfig sounds;
     private final Set<UUID> neutralSuppressed = new HashSet<>();
 
@@ -27,8 +27,8 @@ public class SoundService {
      * @param sounds live sounds store, held by reference across reloads
      *        (null only in unit tests that never play stored sounds)
      */
-    public SoundService(JManhuntPlugin plugin, SoundsConfig sounds) {
-        this.plugin = plugin;
+    public SoundService(JManhuntLogger log, SoundsConfig sounds) {
+        this.log = log;
         this.sounds = sounds;
     }
 
@@ -44,7 +44,7 @@ public class SoundService {
             }
             player.playSound(player.getLocation(), settings.sound(), settings.volume(), settings.pitch());
         } catch (IllegalArgumentException exception) {
-            plugin.logger().warning(
+            log.warning(
                     "Could not play configured sound '" + settings.configKey() + "': " + exception.getMessage());
         }
     }
@@ -88,12 +88,12 @@ public class SoundService {
         try {
             NamespacedKey soundKey = validSoundKey(sound);
             if (soundKey == null) {
-                plugin.logger().warning("Sound '" + sound + "' is invalid. Using default sound.");
+                log.warning("Sound '" + sound + "' is invalid. Using default sound.");
                 soundKey = NamespacedKey.fromString(FALLBACK_SOUND);
             }
             player.playSound(player.getLocation(), soundKey.asString(), volume, pitch);
         } catch (IllegalArgumentException exception) {
-            plugin.logger().warning("Could not play sound '" + sound + "': " + exception.getMessage());
+            log.warning("Could not play sound '" + sound + "': " + exception.getMessage());
         }
     }
 
@@ -131,7 +131,7 @@ public class SoundService {
         }
         String sound = (Registry.SOUNDS.get(soundKey) == null) ? null : soundKey.asString();
         if (sound == null) {
-            plugin.logger().warning(
+            log.warning(
                     "Sound '" + soundInput + "' for config key '" + configKey + "' is invalid."
                             + " Using default sound.");
             sound = FALLBACK_SOUND;

@@ -1,13 +1,12 @@
 package com.jruk8.jmanhunt.lobby.bounds;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.core.DebugService;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.match.GameManager;
-import com.jruk8.jmanhunt.message.MessageService;
-import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.RoleTeamService;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -40,42 +39,33 @@ import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
  */
 public final class LobbyBoundsService implements Listener {
 
-    private final JManhuntPlugin plugin;
-    private final LobbiesConfig.Bounds boundsSettings;
-    private final LobbyService lobbies;
-    private final PlayerStateStore playerStates;
-    private final GameManager game;
-    private final MessageService messages;
-    private final SoundService sounds;
-    private final Supplier<String> lobbyWorldName;
-    private final DebugService debug;
-    private final Supplier<Map<UUID, Location>> boundPos1;
-    private final Supplier<Map<UUID, Location>> boundPos2;
-    private final Supplier<Map<UUID, Location>> devPos1;
-    private final Supplier<Map<UUID, Location>> devPos2;
+    /** World name plus pending-corner views. */
+    public record BoundsSuppliers(Supplier<String> lobbyWorldName,
+            Supplier<Map<UUID, Location>> boundPos1, Supplier<Map<UUID, Location>> boundPos2,
+            Supplier<Map<UUID, Location>> devPos1, Supplier<Map<UUID, Location>> devPos2) {
+    }
+
+    /** Lobby, bounds, player, match, and debug context. */
+    public record BoundsContext(LobbyService lobbies, LobbiesConfig.Bounds boundsSettings,
+            PlayerStateStore playerStates, GameManager game, DebugService debug) {
+    }
+
+    /** Scheduler, role teams, and lobby store edge. */
+    public record BoundsEdge(TaskScheduler tasks, RoleTeamService roleTeams,
+            LobbyConfig lobbyConfig) {
+    }
+
+    private final BoundsSuppliers suppliers;
+    private final BoundsContext context;
+    private final BoundsEdge edge;
     /** Last checked block position per player, packed for one-lookup exits. */
     private final Map<UUID, Long> lastChecked = new HashMap<>();
 
-    public LobbyBoundsService(JManhuntPlugin plugin, LobbiesConfig.Bounds boundsSettings,
-            LobbyService lobbies, PlayerStateStore playerStates,
-            GameManager game, MessageService messages, SoundService sounds, Supplier<String> lobbyWorldName,
-            DebugService debug, Supplier<Map<UUID, Location>> boundPos1,
-            Supplier<Map<UUID, Location>> boundPos2, Supplier<Map<UUID, Location>> devPos1,
-            Supplier<Map<UUID, Location>> devPos2) {
-        this.plugin = plugin;
-        this.boundsSettings = boundsSettings;
-        this.lobbies = lobbies;
-        this.playerStates = playerStates;
-        this.game = game;
-        this.messages = messages;
-        this.sounds = sounds;
-        this.lobbyWorldName = lobbyWorldName;
-        this.debug = debug;
-        this.boundPos1 = boundPos1;
-        this.boundPos2 = boundPos2;
-        this.devPos1 = devPos1;
-        this.devPos2 = devPos2;
-        Bukkit.getScheduler().runTaskTimer(plugin, this::showBoundsParticles,
+    public LobbyBoundsService(BoundsSuppliers suppliers, BoundsContext context, BoundsEdge edge) {
+        this.suppliers = suppliers;
+        this.context = context;
+        this.edge = edge;
+        edge.tasks().runTimer(this::showBoundsParticles,
                 LobbyBoundsPalette.refreshTicks(), LobbyBoundsPalette.refreshTicks());
     }
 
@@ -95,7 +85,7 @@ public final class LobbyBoundsService implements Listener {
     }
 
     private void check(Player player) {
-        if (!player.getWorld().getName().equals(lobbyWorldName.get())) {
+        if (!player.getWorld().getName().equals(suppliers.lobbyWorldName().get())) {
             return;
         }
         Location location = player.getLocation();
@@ -115,21 +105,21 @@ public final class LobbyBoundsService implements Listener {
             return;
         }
         int lobbyId = match.getAsInt();
-        Optional<Lobby> current = lobbies.lobbyOf(player.getUniqueId());
+        Optional<Lobby> current = context.lobbies().lobbyOf(player.getUniqueId());
         if (current.isPresent() && current.get().id() == lobbyId) {
             return;
         }
-        if (!lobbies.multiLobbyAllowed() && lobbyId != 0) {
+        if (!context.lobbies().multiLobbyAllowed() && lobbyId != 0) {
             return;
         }
-        if (game.instanceOf(player.getUniqueId()).isPresent()) {
+        if (context.game().instanceOf(player.getUniqueId()).isPresent()) {
             return;
         }
-        lobbies.setLobby(player.getUniqueId(), lobbyId);
-        playerStates.setRole(player, Role.NONE);
-        plugin.roleTeams().sync(player);
-        lobbies.announceLobbyChange(player, lobbyIdOf(current), OptionalInt.of(lobbyId));
-        game.updateAutostartState();
+        context.lobbies().setLobby(player.getUniqueId(), lobbyId);
+        context.playerStates().setRole(player, Role.NONE);
+        edge.roleTeams().sync(player);
+        context.lobbies().announceLobbyChange(player, lobbyIdOf(current), OptionalInt.of(lobbyId));
+        context.game().updateAutostartState();
     }
 
     /**
@@ -139,15 +129,15 @@ public final class LobbyBoundsService implements Listener {
      * pending lobby and dev schem corners.
      */
     private void showBoundsParticles() {
-        if (debug.playerLevels().isEmpty()) {
+        if (context.debug().playerLevels().isEmpty()) {
             return;
         }
         Map<Integer, LobbyBounds.Bound> bounds = boundsByLobby();
         List<Integer> ids = new ArrayList<>(bounds.keySet());
         ids.sort(Integer::compareTo);
         double radiusSquared = LobbyBoundsPalette.CHECK_RADIUS_BLOCKS * LobbyBoundsPalette.CHECK_RADIUS_BLOCKS;
-        String lobbyWorld = lobbyWorldName.get();
-        for (UUID playerId : debug.playerLevels().keySet()) {
+        String lobbyWorld = suppliers.lobbyWorldName().get();
+        for (UUID playerId : context.debug().playerLevels().keySet()) {
             Player player = Bukkit.getPlayer(playerId);
             if (player == null) {
                 continue;
@@ -167,8 +157,8 @@ public final class LobbyBoundsService implements Listener {
                     }
                 }
             }
-            drawPending(player, boundPos1.get().get(playerId), boundPos2.get().get(playerId));
-            drawPending(player, devPos1.get().get(playerId), devPos2.get().get(playerId));
+            drawPending(player, suppliers.boundPos1().get().get(playerId), suppliers.boundPos2().get().get(playerId));
+            drawPending(player, suppliers.devPos1().get().get(playerId), suppliers.devPos2().get().get(playerId));
         }
     }
 
@@ -189,11 +179,11 @@ public final class LobbyBoundsService implements Listener {
      * never for players in a live match.
      */
     private void exitBounds(Player player, Map<Integer, LobbyBounds.Bound> bounds) {
-        Optional<Lobby> current = lobbies.lobbyOf(player.getUniqueId());
+        Optional<Lobby> current = context.lobbies().lobbyOf(player.getUniqueId());
         if (current.isEmpty() || !bounds.containsKey(current.get().id())) {
             return;
         }
-        if (game.instanceOf(player.getUniqueId()).isPresent()) {
+        if (context.game().instanceOf(player.getUniqueId()).isPresent()) {
             return;
         }
         int lobbyId = current.get().id();
@@ -205,28 +195,28 @@ public final class LobbyBoundsService implements Listener {
                 at.getX(), at.getY(), at.getZ());
         if (transition.isPresent()) {
             int target = transition.getAsInt();
-            lobbies.setLobby(player.getUniqueId(), target);
-            lobbies.announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.of(target));
-            game.updateAutostartState();
+            context.lobbies().setLobby(player.getUniqueId(), target);
+            context.lobbies().announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.of(target));
+            context.game().updateAutostartState();
             return;
         }
-        int target = boundsSettings.getExitLobbyId();
-        int destination = exitDestination(lobbyId, target, lobbies.multiLobbyAllowed());
+        int target = context.boundsSettings().getExitLobbyId();
+        int destination = exitDestination(lobbyId, target, context.lobbies().multiLobbyAllowed());
         if (destination == lobbyId) {
             return;
         }
         if (destination < 0) {
-            lobbies.remove(player.getUniqueId());
-            lobbies.announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.empty());
+            context.lobbies().remove(player.getUniqueId());
+            context.lobbies().announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.empty());
         } else {
-            lobbies.setLobby(player.getUniqueId(), destination);
-            lobbies.announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.of(destination));
+            context.lobbies().setLobby(player.getUniqueId(), destination);
+            context.lobbies().announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.of(destination));
         }
-        game.updateAutostartState();
+        context.game().updateAutostartState();
     }
 
     private LobbyBoundsExitBehavior exitBehavior() {
-        return LobbyBoundsExitBehavior.parse(boundsSettings.getExitBehavior());
+        return LobbyBoundsExitBehavior.parse(context.boundsSettings().getExitBehavior());
     }
 
     /**
@@ -285,7 +275,7 @@ public final class LobbyBoundsService implements Listener {
     /** Complete bounds boxes keyed by lobby id; partial entries are skipped. */
     private Map<Integer, LobbyBounds.Bound> boundsByLobby() {
         Map<Integer, LobbyBounds.Bound> bounds = new HashMap<>();
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
+        LobbyConfig lobbyConfig = edge.lobbyConfig();
         if (lobbyConfig == null || lobbyConfig.getLobbies() == null) {
             return bounds;
         }

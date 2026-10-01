@@ -6,11 +6,13 @@ import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
 import lombok.Getter;
-import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
+import java.util.function.Function;
+import java.util.logging.Logger;
 
 /**
  * Creates and reloads the Okaeri tutorial store. The bundled
@@ -20,19 +22,24 @@ import java.io.UncheckedIOException;
  */
 public final class TutorialConfigRegistrar {
 
-    private final JavaPlugin plugin;
+    private final Path dataFolder;
+    private final Logger log;
+    private final Function<String, InputStream> resources;
     private final SectionPinner sections = new SectionPinner();
     @Getter
     private TutorialConfig tutorialConfig;
 
-    public TutorialConfigRegistrar(JavaPlugin plugin) {
-        this.plugin = plugin;
+    public TutorialConfigRegistrar(Path dataFolder, Logger log,
+            Function<String, InputStream> resources) {
+        this.dataFolder = dataFolder;
+        this.log = log;
+        this.resources = resources;
     }
 
     public void register() {
-        File stale = new File(plugin.getDataFolder(), "Core/tutorial.yml");
+        File stale = dataFolder.resolve("Core/tutorial.yml").toFile();
         if (stale.isFile()) {
-            plugin.getLogger().warning("Ignoring " + stale.getPath()
+            log.warning("Ignoring " + stale.getPath()
                     + ": the setup dialogue is bundled and no longer editable.");
         }
         this.tutorialConfig = ConfigManager.create(TutorialConfig.class, it -> {
@@ -46,7 +53,7 @@ public final class TutorialConfigRegistrar {
         if (this.tutorialConfig == null) {
             return;
         }
-        try (InputStream bundled = plugin.getResource("Core/tutorial.yml")) {
+        try (InputStream bundled = resources.apply("Core/tutorial.yml")) {
             if (bundled == null) {
                 throw new IOException("bundled Core/tutorial.yml is missing");
             }

@@ -1,12 +1,12 @@
 package com.jruk8.jmanhunt.lobby.config;
 
-import com.jruk8.jmanhunt.JManhuntPlugin;
 import com.jruk8.jmanhunt.config.SectionPinner;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import eu.okaeri.configs.yaml.bukkit.serdes.SerdesBukkit;
 import java.io.File;
+import java.nio.file.Path;
 import lombok.Getter;
 
 /**
@@ -17,17 +17,17 @@ import lombok.Getter;
  */
 public final class LobbyConfigRegistrar {
 
-    private final JManhuntPlugin plugin;
+    private final Path dataFolder;
     private final SectionPinner sections = new SectionPinner();
     @Getter
     private LobbyConfig lobbyConfig;
 
-    public LobbyConfigRegistrar(JManhuntPlugin plugin) {
-        this.plugin = plugin;
+    public LobbyConfigRegistrar(Path dataFolder) {
+        this.dataFolder = dataFolder;
     }
 
     public void register() {
-        File file = new File(plugin.getDataFolder(), "settings/world-engine/lobby-config.yml");
+        File file = dataFolder.resolve("settings/world-engine/lobby-config.yml").toFile();
         File parent = file.getParentFile();
         if (parent != null) {
             parent.mkdirs();

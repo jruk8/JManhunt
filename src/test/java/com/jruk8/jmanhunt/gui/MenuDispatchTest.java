@@ -22,8 +22,8 @@ import static org.mockito.Mockito.verify;
 class MenuDispatchTest {
 
     private static MenuButton button(String name, List<String> clicked) {
-        return new MenuButton(Material.STONE, Component.text(name), null,
-                false, false, player -> clicked.add(name));
+        return new MenuButton(new MenuButton.Spec(Material.STONE, Component.text(name), null,
+                false, false, player -> clicked.add(name), null, null, MenuButton.SoundPolicy.CLICK, null));
     }
 
     @Test

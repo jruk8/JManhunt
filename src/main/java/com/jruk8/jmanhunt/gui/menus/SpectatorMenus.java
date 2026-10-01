@@ -72,10 +72,10 @@ public final class SpectatorMenus {
         final Menu[] self = new Menu[1];
         self[0] = new Menu(GuiTexts.title(messages, texts.getPlayersTitle()),
                 layout, () -> Map.of(ScalingLayout.backSlot(layout.rowCount()),
-                        new MenuButton(Material.PAPER,
+                        new MenuButton(new MenuButton.Spec(Material.PAPER,
                                 GuiTexts.name(messages, texts.getBack(), "Back"),
                                 null, false, false,
-                                player -> gui.back(player, self[0]))),
+                                player -> gui.back(player, self[0]), null, null, MenuButton.SoundPolicy.CLICK, null))),
                 content::get, null);
         return self[0];
     }
@@ -91,13 +91,14 @@ public final class SpectatorMenus {
                     : texts.getLobbiesEntryHint();
             String lore = texts.getLobbiesEntryLore()
                     .replace("{info}", info).replace("{hint}", hint);
-            buttons.add(new MenuButton(Material.ENDER_EYE,
+            buttons.add(new MenuButton(new MenuButton.Spec(Material.ENDER_EYE,
                     GuiTexts.name(messages,
                             texts.getLobbiesEntryName()
                                     .replace("{label}", entry.label()),
                             entry.label()),
                     GuiTexts.lore(messages, lore), entry.subLobby(), false,
-                    player -> toolbar.swapSpectator(player, entry.matchId())).silent());
+                    player -> toolbar.swapSpectator(player, entry.matchId()), null, null,
+                            MenuButton.SoundPolicy.CLICK, null)).silent());
         }
         return buttons;
     }
@@ -105,13 +106,14 @@ public final class SpectatorMenus {
     private List<MenuButton> playerButtons(Player spectator) {
         List<MenuButton> buttons = new ArrayList<>();
         for (SpectatorToolbarService.PlayerEntry entry : toolbar.playerEntries(spectator)) {
-            buttons.add(new MenuButton(Material.PLAYER_HEAD,
+            buttons.add(new MenuButton(new MenuButton.Spec(Material.PLAYER_HEAD,
                     GuiTexts.name(messages, entry.name(), entry.name()),
                     GuiTexts.lore(messages, List.of(
                             messages.roleName(entry.role()),
                             texts.getPlayersEntryHint())),
                     entry.locked(), false,
-                    player -> toolbar.teleportAndLock(player, entry.id()))
+                    player -> toolbar.teleportAndLock(player, entry.id()), null, null,
+                            MenuButton.SoundPolicy.CLICK, null))
                     .silent()
                     .withMeta(meta -> {
                         if (meta instanceof SkullMeta skull) {

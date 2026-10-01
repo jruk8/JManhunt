@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class StatsManagerWinsTest {
 
     private StatsManager manager() {
-        return new StatsManager(null, null, null, null);
+        return new StatsManager(null, null, null, null, null);
     }
 
     private UUID join(StatsManager manager, long matchId, Role role) {

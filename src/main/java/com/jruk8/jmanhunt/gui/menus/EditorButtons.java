@@ -38,12 +38,12 @@ public final class EditorButtons {
     public static MenuButton valueButton(MessageService messages, ModifiersGuiMessages guiTexts,
             Material material, String label, String value, String hint, boolean glow,
             Consumer<Player> action) {
-        return new MenuButton(material,
+        return new MenuButton(new MenuButton.Spec(material,
                 GuiTexts.name(messages, label, label),
                 GuiTexts.lore(messages, List.of(
                         currentLine(guiTexts, value),
                         hint)),
-                glow, false, action).silent();
+                glow, false, action, null, null, MenuButton.SoundPolicy.CLICK, null)).silent();
     }
 
     /** Action button without glow. */
@@ -60,10 +60,10 @@ public final class EditorButtons {
     public static MenuButton actionButton(MessageService messages, Material material,
             String label, List<String> lines, boolean glow,
             Consumer<Player> action) {
-        return new MenuButton(material,
+        return new MenuButton(new MenuButton.Spec(material,
                 GuiTexts.name(messages, label, label),
                 GuiTexts.lore(messages, lines),
-                glow, false, action);
+                glow, false, action, null, null, MenuButton.SoundPolicy.CLICK, null));
     }
 
     /** Single Current line; the only place the prefix is built. */

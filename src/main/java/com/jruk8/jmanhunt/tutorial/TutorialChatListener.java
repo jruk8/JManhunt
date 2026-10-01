@@ -1,12 +1,11 @@
 package com.jruk8.jmanhunt.tutorial;
 
-import org.bukkit.Bukkit;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.plugin.java.JavaPlugin;
 
 /**
  * Routes tutorial participants' chat into the engine. The event fires
@@ -16,11 +15,11 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class TutorialChatListener implements Listener {
 
-    private final JavaPlugin plugin;
+    private final TaskScheduler tasks;
     private final TutorialService tutorial;
 
-    public TutorialChatListener(JavaPlugin plugin, TutorialService tutorial) {
-        this.plugin = plugin;
+    public TutorialChatListener(TaskScheduler tasks, TutorialService tutorial) {
+        this.tasks = tasks;
         this.tutorial = tutorial;
     }
 
@@ -34,7 +33,7 @@ public final class TutorialChatListener implements Listener {
         if (tutorial.isConsumableInput(player.getUniqueId(), trimmed)) {
             event.setCancelled(true);
         }
-        Bukkit.getScheduler().runTask(plugin, () -> tutorial.handleInput(player, trimmed));
+        tasks.run(() -> tutorial.handleInput(player, trimmed));
     }
 
     @EventHandler

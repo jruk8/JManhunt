@@ -114,13 +114,15 @@ class TagPlayersTest {
         }
 
         TagContext context() {
-            return TagContext.run(
-                    ModifierTagScope.match("Steve", List.of(), new Random(31), warnings::add),
-                    "players", warnings::add, warnings::add,
-                    (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
-                    (player, reason) -> { }, (role, reason) -> { },
-                    7L, new TagBackends(StatValues.inert(), new FlagStore(),
-                            (text, name) -> text, roster, sinks));
+            return TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve", List.of(),
+                    new Random(31), warnings::add), "players"),
+                    TagContext.TagSinks.simple(warnings::add, warnings::add,
+                            (id, pitch, volume) -> { }, (id, pitch, volume) -> { },
+                            ModifierTagScope.match("Steve", List.of(), new Random(31), warnings::add)),
+                    TagContext.TagRole.silent(),
+                    TagContext.TagMatch.simple(7L,
+                            new TagBackends(StatValues.inert(), new FlagStore(), (text, name) -> text, roster, sinks),
+                            (player, reason) -> { }, (role, reason) -> { }));
         }
 
         String replace(String command, TagContext context) {
