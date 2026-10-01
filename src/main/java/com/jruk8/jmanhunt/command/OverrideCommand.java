@@ -1,9 +1,11 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.config.ConfigDrill;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.SettingDescriptor;
 import com.jruk8.jmanhunt.config.SettingRegistry;
 import com.jruk8.jmanhunt.config.SettingType;
+import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
@@ -11,11 +13,13 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.OptionalInt;
+import java.util.Set;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -34,16 +38,18 @@ public final class OverrideCommand {
 
     private final OverrideService overrides;
     private final ConfigService config;
+    private final LobbyService lobbies;
     private final OverrideTexts texts;
     private final SettingFeedback feedback;
     private final PendingConfirmations confirms = new PendingConfirmations();
 
     public OverrideCommand(OverrideService overrides, ConfigService config,
-            OverrideTexts texts, SettingFeedback feedback) {
+            OverrideTexts texts, SettingFeedback feedback, LobbyService lobbies) {
         this.overrides = overrides;
         this.config = config;
         this.texts = texts;
         this.feedback = feedback;
+        this.lobbies = lobbies;
     }
 
     /** Runs one override action; args[0] is "override". */
@@ -452,11 +458,11 @@ public final class OverrideCommand {
         String template = texts.manhunt().getConfigEntry();
         texts.messages().messageRaw(sender, texts.manhunt().getConfigList(),
                 Map.of("key", key, "entries",
-                        ManhuntCommand.renderEntries(entries, template)));
+                        ConfigDrill.renderEntries(entries, template)));
     }
 
     private DrillResolve resolveDrill(int lobby, List<String> segments) {
-        return ManhuntCommand.resolveDrill(segments,
+        return ConfigDrill.resolveDrill(segments,
                 path -> overrides.getStringList(lobby, path));
     }
 
@@ -517,5 +523,104 @@ public final class OverrideCommand {
     private boolean invalid(CommandSender sender) {
         texts.messages().messageRaw(sender, texts.manhunt().getSettingInvalid());
         return true;
+    }
+
+    /** Tab completion for per-lobby overrides. Null when inapplicable. */
+    public List<String> completeOverrideTab(String[] args) {
+        if (!args[0].equalsIgnoreCase("override")) {
+            return null;
+        }
+        if (args.length == 2) {
+            return CommandSupport.partial(args[1], overrideLobbyOptions());
+        }
+        if (args.length == 3) {
+            return CommandSupport.partial(args[2], List.of("settings", "modifiers", "clear"));
+        }
+        if (args[2].equalsIgnoreCase("clear")) {
+            return List.of();
+        }
+        if (args.length == 4) {
+            if (args[2].equalsIgnoreCase("settings") || args[2].equalsIgnoreCase("modifiers")) {
+                return CommandSupport.partial(args[3], List.of("get", "set", "clear"));
+            }
+            return List.of();
+        }
+        if (args[2].equalsIgnoreCase("modifiers")) {
+            return completeOverrideModifiersTab(args);
+        }
+        if (args[2].equalsIgnoreCase("settings")) {
+            return completeOverrideSettingsTab(args);
+        }
+        return List.of();
+    }
+
+    /** Id and state completion for override modifiers verbs. */
+    private List<String> completeOverrideModifiersTab(String[] args) {
+        String verb = args[3].toLowerCase(Locale.ROOT);
+        if (!verb.equals("get") && !verb.equals("set") && !verb.equals("clear")) {
+            return null;
+        }
+        if (args.length == 5) {
+            List<String> ids = new ArrayList<>(sortedNames(config.modifierNames()));
+            ids.addAll(sortedNames(config.presetNames()));
+            ids.sort(String.CASE_INSENSITIVE_ORDER);
+            return CommandSupport.partial(args[4], ids);
+        }
+        if (args.length == 6 && verb.equals("set")) {
+            return CommandSupport.partial(args[5], List.of("true", "false"));
+        }
+        return List.of();
+    }
+
+    /** Drill completion for override settings verbs, reusing the config drill. */
+    private List<String> completeOverrideSettingsTab(String[] args) {
+        String verb = args[3].toLowerCase(Locale.ROOT);
+        if (!verb.equals("get") && !verb.equals("set") && !verb.equals("clear")) {
+            return null;
+        }
+        List<String> segments = new ArrayList<>();
+        for (int index = 4; index < args.length - 1; index++) {
+            segments.add(args[index]);
+        }
+        String completing = args[args.length - 1];
+        if (verb.equals("get") || verb.equals("clear")) {
+            if (segments.isEmpty()) {
+                return CommandSupport.partial(completing, SettingRegistry.topCategories());
+            }
+            return CommandSupport.partial(completing, ConfigDrill.drillChildren(segments, config::getStringList));
+        }
+        String[] shifted = new String[segments.size() + 2];
+        shifted[0] = "config";
+        for (int index = 0; index < segments.size(); index++) {
+            shifted[index + 1] = segments.get(index);
+        }
+        shifted[shifted.length - 1] = completing;
+        List<String> options = ConfigDrill.completeDrill(shifted, config);
+        DrillResolve parent = segments.isEmpty() ? null
+                : ConfigDrill.resolveDrill(segments, config::getStringList);
+        if (parent != null && SettingRegistry.isListPath(parent.path())
+                && parent.remainder().isEmpty()) {
+            options = options.stream()
+                    .filter(option -> !option.equalsIgnoreCase("reset")).toList();
+        }
+        return options;
+    }
+
+    /** Lobby id completion: live ids plus override holders, sorted. */
+    private List<String> overrideLobbyOptions() {
+        Set<Integer> ids = new HashSet<>();
+        for (String raw : CommandSupport.lobbyIdOptions(lobbies)) {
+            try {
+                ids.add(Integer.parseInt(raw.trim()));
+            } catch (NumberFormatException expected) {
+                // Live ids are always numeric; ignore anything else.
+            }
+        }
+        if (overrides != null) {
+            ids.addAll(overrides.overrideLobbyIds());
+        }
+        List<Integer> sorted = new ArrayList<>(ids);
+        sorted.sort(Integer::compareTo);
+        return sorted.stream().map(String::valueOf).toList();
     }
 }

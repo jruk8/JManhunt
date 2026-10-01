@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import java.util.Map;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -212,7 +213,7 @@ public final class SettingFeedback {
     }
 
     private void announce(CommandSender sender, String keySlot, String valueSlot) {
-        ManhuntCommand.announceSettingChange(messages,
+        announceSettingChange(messages,
                 config.server().isAnnounceConfigChanges(),
                 sender, manhunt.getSettingChangeAnnounced(), keySlot, valueSlot);
     }
@@ -220,6 +221,24 @@ public final class SettingFeedback {
     private void neutralSound(CommandSender sender) {
         if (sender instanceof Player player) {
             sounds.playNeutralSound(player);
+        }
+    }
+
+    /**
+     * Broadcasts a config change to online players except the changer.
+     * Console changes reach everyone.
+     */
+    public static void announceSettingChange(MessageService messages, boolean announceEnabled,
+            CommandSender sender, String template, String keySlot, String valueSlot) {
+        if (!announceEnabled) {
+            return;
+        }
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (sender instanceof Player changer && online.getUniqueId().equals(changer.getUniqueId())) {
+                continue;
+            }
+            messages.messageRaw(online, template,
+                    Map.of("player", sender.getName(), "key", keySlot, "value", valueSlot));
         }
     }
 }

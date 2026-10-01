@@ -1,5 +1,7 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.command.units.SetPlayerUnit;
+
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -9,7 +11,7 @@ class SetPlayerFlagsTest {
 
     @Test
     void noFlagsLeavesArgsAlone() {
-        ManhuntCommand.SetPlayerFlags flags = ManhuntCommand.parseSetPlayerFlags(
+        SetPlayerUnit.SetPlayerFlags flags = SetPlayerUnit.parseSetPlayerFlags(
                 new String[]{"setplayer", "@s", "hunter"});
 
         assertFalse(flags.force());
@@ -19,7 +21,7 @@ class SetPlayerFlagsTest {
 
     @Test
     void forceAndSilentShorthands() {
-        ManhuntCommand.SetPlayerFlags flags = ManhuntCommand.parseSetPlayerFlags(
+        SetPlayerUnit.SetPlayerFlags flags = SetPlayerUnit.parseSetPlayerFlags(
                 new String[]{"setplayer", "@s", "hunter", "-f", "-s"});
 
         assertTrue(flags.force());
@@ -29,7 +31,7 @@ class SetPlayerFlagsTest {
 
     @Test
     void longFlagsInAnyOrder() {
-        ManhuntCommand.SetPlayerFlags flags = ManhuntCommand.parseSetPlayerFlags(
+        SetPlayerUnit.SetPlayerFlags flags = SetPlayerUnit.parseSetPlayerFlags(
                 new String[]{"setplayer", "@s", "hunter", "-silent", "-force"});
 
         assertTrue(flags.force());
@@ -39,7 +41,7 @@ class SetPlayerFlagsTest {
 
     @Test
     void nonFlagTailStopsParsing() {
-        ManhuntCommand.SetPlayerFlags flags = ManhuntCommand.parseSetPlayerFlags(
+        SetPlayerUnit.SetPlayerFlags flags = SetPlayerUnit.parseSetPlayerFlags(
                 new String[]{"setplayer", "@s", "hunter", "-f", "bogus"});
 
         assertFalse(flags.force());

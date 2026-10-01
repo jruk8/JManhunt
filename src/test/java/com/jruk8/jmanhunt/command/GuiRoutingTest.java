@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt.command;
 
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import com.jruk8.jmanhunt.command.units.SetupUnit;
+
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,12 +18,12 @@ class GuiRoutingTest {
 
     @Test
     void bareCommandFromGuiHolderOpens() {
-        assertTrue(ManhuntCommand.opensGui(new String[0], playerWithGui(true)));
+        assertTrue(SetupUnit.opensGui(new String[0], playerWithGui(true)));
     }
 
     @Test
     void bareCommandFromPlayerWithoutNodeKeepsStatus() {
-        assertFalse(ManhuntCommand.opensGui(new String[0], playerWithGui(false)));
+        assertFalse(SetupUnit.opensGui(new String[0], playerWithGui(false)));
     }
 
     @Test
@@ -29,13 +31,13 @@ class GuiRoutingTest {
         CommandSender console = mock(CommandSender.class);
         when(console.hasPermission("jmanhunt.gui")).thenReturn(true);
 
-        assertFalse(ManhuntCommand.opensGui(new String[0], console));
+        assertFalse(SetupUnit.opensGui(new String[0], console));
     }
 
     @Test
     void commandWithArgumentsKeepsStatus() {
-        assertFalse(ManhuntCommand.opensGui(new String[]{"all"}, playerWithGui(true)));
-        assertFalse(ManhuntCommand.opensGui(new String[]{"status"}, playerWithGui(true)));
+        assertFalse(SetupUnit.opensGui(new String[]{"all"}, playerWithGui(true)));
+        assertFalse(SetupUnit.opensGui(new String[]{"status"}, playerWithGui(true)));
     }
 
     private static Player playerWithGui(boolean allowed) {

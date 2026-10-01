@@ -4,7 +4,11 @@ import com.jruk8.jmanhunt.command.CommandSupport;
 import com.jruk8.jmanhunt.command.PendingConfirmations;
 import com.jruk8.jmanhunt.command.units.EndUnit;
 import com.jruk8.jmanhunt.command.units.HelpUnit;
+import com.jruk8.jmanhunt.command.units.LobbyUnit;
 import com.jruk8.jmanhunt.command.units.QuickStartUnit;
+import com.jruk8.jmanhunt.command.units.SetPlayerUnit;
+import com.jruk8.jmanhunt.command.units.WorldEngineTpto;
+import com.jruk8.jmanhunt.command.units.WorldEngineUnit;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -30,18 +34,18 @@ class ManhuntCommandTest {
 
     @Test
     void forceFlagAcceptsShortAndLongForms() {
-        assertTrue(ManhuntCommand.isForceFlag("-f"));
-        assertTrue(ManhuntCommand.isForceFlag("-force"));
-        assertTrue(ManhuntCommand.isForceFlag("-F"));
-        assertTrue(ManhuntCommand.isForceFlag("-FORCE"));
+        assertTrue(SetPlayerUnit.isForceFlag("-f"));
+        assertTrue(SetPlayerUnit.isForceFlag("-force"));
+        assertTrue(SetPlayerUnit.isForceFlag("-F"));
+        assertTrue(SetPlayerUnit.isForceFlag("-FORCE"));
     }
 
     @Test
     void forceFlagRejectsAnythingElse() {
-        assertFalse(ManhuntCommand.isForceFlag("force"));
-        assertFalse(ManhuntCommand.isForceFlag("-i"));
-        assertFalse(ManhuntCommand.isForceFlag(""));
-        assertFalse(ManhuntCommand.isForceFlag("-forced"));
+        assertFalse(SetPlayerUnit.isForceFlag("force"));
+        assertFalse(SetPlayerUnit.isForceFlag("-i"));
+        assertFalse(SetPlayerUnit.isForceFlag(""));
+        assertFalse(SetPlayerUnit.isForceFlag("-forced"));
     }
 
     @Test
@@ -61,11 +65,11 @@ class ManhuntCommandTest {
 
     @Test
     void noTeleportFlagAcceptsOnlyLongForm() {
-        assertTrue(ManhuntCommand.isNoTeleportFlag("-notp"));
-        assertTrue(ManhuntCommand.isNoTeleportFlag("-NOTP"));
-        assertFalse(ManhuntCommand.isNoTeleportFlag("-n"));
-        assertFalse(ManhuntCommand.isNoTeleportFlag("notp"));
-        assertFalse(ManhuntCommand.isNoTeleportFlag(""));
+        assertTrue(LobbyUnit.isNoTeleportFlag("-notp"));
+        assertTrue(LobbyUnit.isNoTeleportFlag("-NOTP"));
+        assertFalse(LobbyUnit.isNoTeleportFlag("-n"));
+        assertFalse(LobbyUnit.isNoTeleportFlag("notp"));
+        assertFalse(LobbyUnit.isNoTeleportFlag(""));
     }
 
     @Test
@@ -83,24 +87,24 @@ class ManhuntCommandTest {
 
     @Test
     void nextFreeBoundsIdFindsFirstGap() {
-        assertEquals(0, ManhuntCommand.nextFreeBoundsId(Set.of()));
-        assertEquals(1, ManhuntCommand.nextFreeBoundsId(Set.of(0)));
-        assertEquals(0, ManhuntCommand.nextFreeBoundsId(Set.of(1, 2)));
-        assertEquals(2, ManhuntCommand.nextFreeBoundsId(Set.of(0, 1, 3)));
+        assertEquals(0, WorldEngineUnit.nextFreeBoundsId(Set.of()));
+        assertEquals(1, WorldEngineUnit.nextFreeBoundsId(Set.of(0)));
+        assertEquals(0, WorldEngineUnit.nextFreeBoundsId(Set.of(1, 2)));
+        assertEquals(2, WorldEngineUnit.nextFreeBoundsId(Set.of(0, 1, 3)));
     }
 
     @Test
     void parseLobbyTpCoordsAcceptsFiveNumbers() {
         assertArrayEquals(new double[]{1.5, 65.0, -3.0, 90.0, 0.0},
-                ManhuntCommand.parseLobbyTpCoords("1.5", "65", "-3", "90", "0"));
+                WorldEngineUnit.parseLobbyTpCoords("1.5", "65", "-3", "90", "0"));
         assertArrayEquals(new double[]{0.0, 0.0, 0.0, 0.0, 0.0},
-                ManhuntCommand.parseLobbyTpCoords(" 0 ", "0", "0", "0", "0"));
+                WorldEngineUnit.parseLobbyTpCoords(" 0 ", "0", "0", "0", "0"));
     }
 
     @Test
     void parseLobbyTpCoordsRejectsNonNumbers() {
-        assertNull(ManhuntCommand.parseLobbyTpCoords("1", "65", "three", "0", "0"));
-        assertNull(ManhuntCommand.parseLobbyTpCoords("1", "65", "3", "0", ""));
+        assertNull(WorldEngineUnit.parseLobbyTpCoords("1", "65", "three", "0", "0"));
+        assertNull(WorldEngineUnit.parseLobbyTpCoords("1", "65", "3", "0", ""));
     }
 
     @Test
@@ -108,28 +112,28 @@ class ManhuntCommandTest {
         LobbyConfig lobbyConfig = new LobbyConfig();
         lobbyConfig.getLobbies().clear();
 
-        assertFalse(ManhuntCommand.lobbyConfigHasLobby(lobbyConfig, 0));
-        assertFalse(ManhuntCommand.lobbyConfigHasLobby(null, 0));
+        assertFalse(WorldEngineUnit.lobbyConfigHasLobby(lobbyConfig, 0));
+        assertFalse(WorldEngineUnit.lobbyConfigHasLobby(null, 0));
 
         lobbyConfig.getLobbies().put("1", new LobbyConfig.LobbyEntry());
-        assertTrue(ManhuntCommand.lobbyConfigHasLobby(lobbyConfig, 1));
-        assertFalse(ManhuntCommand.lobbyConfigHasLobby(lobbyConfig, 2));
+        assertTrue(WorldEngineUnit.lobbyConfigHasLobby(lobbyConfig, 1));
+        assertFalse(WorldEngineUnit.lobbyConfigHasLobby(lobbyConfig, 2));
     }
 
     @Test
     void silentFlagAcceptsShortAndLongForms() {
-        assertTrue(ManhuntCommand.isSilentFlag("-s"));
-        assertTrue(ManhuntCommand.isSilentFlag("-silent"));
-        assertTrue(ManhuntCommand.isSilentFlag("-S"));
-        assertTrue(ManhuntCommand.isSilentFlag("-SILENT"));
+        assertTrue(SetPlayerUnit.isSilentFlag("-s"));
+        assertTrue(SetPlayerUnit.isSilentFlag("-silent"));
+        assertTrue(SetPlayerUnit.isSilentFlag("-S"));
+        assertTrue(SetPlayerUnit.isSilentFlag("-SILENT"));
     }
 
     @Test
     void silentFlagRejectsAnythingElse() {
-        assertFalse(ManhuntCommand.isSilentFlag("silent"));
-        assertFalse(ManhuntCommand.isSilentFlag("-f"));
-        assertFalse(ManhuntCommand.isSilentFlag(""));
-        assertFalse(ManhuntCommand.isSilentFlag("-silence"));
+        assertFalse(SetPlayerUnit.isSilentFlag("silent"));
+        assertFalse(SetPlayerUnit.isSilentFlag("-f"));
+        assertFalse(SetPlayerUnit.isSilentFlag(""));
+        assertFalse(SetPlayerUnit.isSilentFlag("-silence"));
     }
 
     @Test
@@ -151,12 +155,12 @@ class ManhuntCommandTest {
 
     @Test
     void afkGuardTripsOnlyForWakingOthers() {
-        assertTrue(ManhuntCommand.needsAfkGuard(Role.AFK, Role.HUNTER, false));
-        assertTrue(ManhuntCommand.needsAfkGuard(Role.AFK, Role.NONE, false));
-        assertFalse(ManhuntCommand.needsAfkGuard(Role.AFK, Role.HUNTER, true));
-        assertFalse(ManhuntCommand.needsAfkGuard(Role.AFK, Role.AFK, false));
-        assertFalse(ManhuntCommand.needsAfkGuard(Role.NONE, Role.HUNTER, false));
-        assertFalse(ManhuntCommand.needsAfkGuard(Role.HUNTER, Role.AFK, false));
+        assertTrue(SetPlayerUnit.needsAfkGuard(Role.AFK, Role.HUNTER, false));
+        assertTrue(SetPlayerUnit.needsAfkGuard(Role.AFK, Role.NONE, false));
+        assertFalse(SetPlayerUnit.needsAfkGuard(Role.AFK, Role.HUNTER, true));
+        assertFalse(SetPlayerUnit.needsAfkGuard(Role.AFK, Role.AFK, false));
+        assertFalse(SetPlayerUnit.needsAfkGuard(Role.NONE, Role.HUNTER, false));
+        assertFalse(SetPlayerUnit.needsAfkGuard(Role.HUNTER, Role.AFK, false));
     }
 
     @Test
@@ -214,18 +218,18 @@ class ManhuntCommandTest {
 
     @Test
     void parseTptoTargetAcceptsBothWords() {
-        assertEquals(Optional.of(ManhuntCommand.TptoTarget.LOBBY),
-                ManhuntCommand.parseTptoTarget("lobbyworld"));
-        assertEquals(Optional.of(ManhuntCommand.TptoTarget.LOBBY),
-                ManhuntCommand.parseTptoTarget("LobbyWorld"));
-        assertEquals(Optional.of(ManhuntCommand.TptoTarget.GAME),
-                ManhuntCommand.parseTptoTarget("gameworld"));
+        assertEquals(Optional.of(WorldEngineTpto.TptoTarget.LOBBY),
+                WorldEngineTpto.parseTptoTarget("lobbyworld"));
+        assertEquals(Optional.of(WorldEngineTpto.TptoTarget.LOBBY),
+                WorldEngineTpto.parseTptoTarget("LobbyWorld"));
+        assertEquals(Optional.of(WorldEngineTpto.TptoTarget.GAME),
+                WorldEngineTpto.parseTptoTarget("gameworld"));
     }
 
     @Test
     void parseTptoTargetRejectsAnythingElse() {
-        assertEquals(Optional.empty(), ManhuntCommand.parseTptoTarget("lobby"));
-        assertEquals(Optional.empty(), ManhuntCommand.parseTptoTarget(""));
+        assertEquals(Optional.empty(), WorldEngineTpto.parseTptoTarget("lobby"));
+        assertEquals(Optional.empty(), WorldEngineTpto.parseTptoTarget(""));
     }
 
     @Test

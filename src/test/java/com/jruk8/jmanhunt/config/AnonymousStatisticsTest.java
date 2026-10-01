@@ -1,6 +1,5 @@
 package com.jruk8.jmanhunt.config;
 
-import com.jruk8.jmanhunt.command.ManhuntCommand;
 import eu.okaeri.configs.ConfigManager;
 import eu.okaeri.configs.yaml.bukkit.YamlBukkitConfigurer;
 import org.junit.jupiter.api.Test;
@@ -62,7 +61,7 @@ class AnonymousStatisticsTest {
 
     @Test
     void inGameDrillCannotReachToggleAsEditableLeaf() {
-        var resolved = ManhuntCommand.resolveDrill(
+        var resolved = ConfigDrill.resolveDrill(
                 List.of("send-anonymous-statistics"), path -> null);
 
         // The key exists in the file, but it must never resolve as a leaf the
@@ -71,7 +70,7 @@ class AnonymousStatisticsTest {
         if (resolved != null) {
             assertFalse(resolved.leaf());
         }
-        assertFalse(ManhuntCommand.drillChildren(List.of(), path -> null)
+        assertFalse(ConfigDrill.drillChildren(List.of(), path -> null)
                 .contains("send-anonymous-statistics"));
     }
 

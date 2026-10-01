@@ -57,7 +57,7 @@ class OverrideCommandTest {
         command = new OverrideCommand(overrides, config,
                 new OverrideCommand.OverrideTexts(messages, texts.getManhunt(),
                         texts.getModifiers(), null),
-                new SettingFeedback(messages, texts.getManhunt(), config, null));
+                new SettingFeedback(messages, texts.getManhunt(), config, null), null);
     }
 
     @Test

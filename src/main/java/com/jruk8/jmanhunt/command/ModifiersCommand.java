@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.gui.GuiService;
 import com.jruk8.jmanhunt.gui.Menu;
 import com.jruk8.jmanhunt.match.ModifierTestService;
+import com.jruk8.jmanhunt.match.ModifierTriggers;
 import com.jruk8.jmanhunt.message.CommandMessages;
 import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -200,7 +201,7 @@ public final class ModifiersCommand {
         }
         texts.messages().messageRaw(sender, texts.modifiers().getSetmodSuccess(),
                 Map.of("name", name, "state", value ? "on" : "off"));
-        ManhuntCommand.announceSettingChange(texts.messages(),
+        SettingFeedback.announceSettingChange(texts.messages(),
                 config.server().isAnnounceConfigChanges(),
                 sender, texts.modifiers().getToggleAnnounced(), "modifier " + name, value ? "on" : "off");
         return true;
@@ -264,7 +265,7 @@ public final class ModifiersCommand {
         texts.messages().messageRaw(sender, texts.modifiers().getSetpresetSuccess(),
                 Map.of("name", id, "state", value ? "on" : "off",
                         "count", String.valueOf(config.presetMembers(id).size())));
-        ManhuntCommand.announceSettingChange(texts.messages(),
+        SettingFeedback.announceSettingChange(texts.messages(),
                 config.server().isAnnounceConfigChanges(),
                 sender, texts.modifiers().getToggleAnnounced(), "preset " + id, value ? "on" : "off");
         return true;
@@ -474,8 +475,66 @@ public final class ModifiersCommand {
         String state = value ? "on" : "off";
         texts.messages().messageRaw(sender, texts.modifiers().getToggleAllSuccess(),
                 Map.of("count", String.valueOf(count), "kind", kind, "state", state));
-        ManhuntCommand.announceSettingChange(texts.messages(),
+        SettingFeedback.announceSettingChange(texts.messages(),
                 config.server().isAnnounceConfigChanges(),
                 sender, texts.modifiers().getToggleAllAnnounced(), count + " " + kind, state);
+    }
+
+    /** Tab completion for modifiers toggles. Null when inapplicable. */
+    public List<String> completeModifiersTab(String[] args) {
+        if (args.length == 2 && args[0].equalsIgnoreCase("modifiers")) {
+            return CommandSupport.partial(args[1],
+                    List.of("setmod", "setpreset", "export", "import", "create", "test"));
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {
+            if (args[1].equalsIgnoreCase("setmod")) {
+                return CommandSupport.partial(args[2], modifierNameOptions());
+            }
+            if (args[1].equalsIgnoreCase("setpreset")) {
+                return CommandSupport.partial(args[2], presetIdOptions());
+            }
+            if (args[1].equalsIgnoreCase("export") || args[1].equalsIgnoreCase("import")
+                    || args[1].equalsIgnoreCase("create")) {
+                return CommandSupport.partial(args[2], List.of("modifier", "preset"));
+            }
+            if (args[1].equalsIgnoreCase("test")) {
+                return CommandSupport.partial(args[2], List.of("speedrunner", "hunter"));
+            }
+            return null;
+        }
+        if (args.length >= 4 && args[0].equalsIgnoreCase("modifiers")
+                && args[1].equalsIgnoreCase("create")) {
+            return completeCreateTab(args);
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("modifiers")
+                && (args[1].equalsIgnoreCase("setmod") || args[1].equalsIgnoreCase("setpreset"))) {
+            return CommandSupport.partial(args[3], List.of("true", "false"));
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("modifiers")
+                && args[1].equalsIgnoreCase("export")) {
+            if (args[2].equalsIgnoreCase("preset")) {
+                return CommandSupport.partial(args[3], presetIdOptions());
+            }
+            return CommandSupport.partial(args[3], modifierNameOptions());
+        }
+        return null;
+    }
+
+    /** Flag and flag-value completion for modifiers create. */
+    private List<String> completeCreateTab(String[] args) {
+        boolean preset = args[2].equalsIgnoreCase("preset");
+        String current = args[args.length - 1];
+        if (current.startsWith("--")) {
+            return CommandSupport.partial(current, ModifierCreateArgs.flagsFor(preset));
+        }
+        String previous = args[args.length - 2].toLowerCase(Locale.ROOT);
+        return switch (previous) {
+            case "--trigger" -> CommandSupport.partial(current, ModifierTriggers.KNOWN);
+            case "--member" -> CommandSupport.partial(current, modifierNameOptions());
+            case "--on-start", "--selection" -> CommandSupport.partial(current, List.of("IN_ORDER", "PICK_RANDOM"));
+            case "--interval-scope", "--chance-scope", "--pick-scope" ->
+                    CommandSupport.partial(current, List.of("PER_INVOKE", "PER_EXECUTOR"));
+            default -> null;
+        };
     }
 }

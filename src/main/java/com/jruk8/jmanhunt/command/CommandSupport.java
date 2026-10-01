@@ -4,8 +4,11 @@ import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
+import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +67,10 @@ public final class CommandSupport {
         return messages.prefix();
     }
 
+    public String roleName(Role role) {
+        return messages.roleName(role);
+    }
+
     public PendingConfirmations confirms() {
         return confirms;
     }
@@ -86,5 +93,38 @@ public final class CommandSupport {
     /** Live match ids for completion, oldest first. */
     public static List<String> instanceIdOptions(GameManager game) {
         return game.liveInstances().stream().map(instance -> String.valueOf(instance.matchId())).toList();
+    }
+
+    /** Stable confirm key for a sender: player uuid, or "console". */
+    public static String senderKey(CommandSender sender) {
+        if (sender instanceof Player player) {
+            return player.getUniqueId().toString();
+        }
+        return "console";
+    }
+
+    /**
+     * Selects online players by vanilla selector. Null when the
+     * selector itself is broken; empty when it matches nothing.
+     */
+    public static List<Player> selectPlayers(CommandSender sender, String selector) {
+        List<Player> targets = new ArrayList<>();
+        try {
+            for (Entity entity : Bukkit.selectEntities(sender, selector)) {
+                if (entity instanceof Player player) {
+                    targets.add(player);
+                }
+            }
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+        return targets;
+    }
+
+    /** Selector completion: vanilla selectors plus online player names. */
+    public static List<String> selectorOptions() {
+        List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p"));
+        Bukkit.getOnlinePlayers().forEach(player -> selectors.add(player.getName()));
+        return selectors;
     }
 }

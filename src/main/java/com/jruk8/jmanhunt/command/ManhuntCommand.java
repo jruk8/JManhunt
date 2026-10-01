@@ -1,16 +1,19 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.command.units.ConfigUnit;
 import com.jruk8.jmanhunt.command.units.DebugUnit;
 import com.jruk8.jmanhunt.command.units.EndUnit;
+import com.jruk8.jmanhunt.command.units.GameUnit;
 import com.jruk8.jmanhunt.command.units.HelpUnit;
+import com.jruk8.jmanhunt.command.units.LobbyUnit;
 import com.jruk8.jmanhunt.command.units.QuickStartUnit;
 import com.jruk8.jmanhunt.command.units.ReloadUnit;
+import com.jruk8.jmanhunt.command.units.SetPlayerUnit;
+import com.jruk8.jmanhunt.command.units.SetupUnit;
 import com.jruk8.jmanhunt.command.units.StartUnit;
+import com.jruk8.jmanhunt.command.units.StatusUnit;
+import com.jruk8.jmanhunt.command.units.WorldEngineUnit;
 import com.jruk8.jmanhunt.config.ConfigService;
-import com.jruk8.jmanhunt.config.SettingDescriptor;
-import com.jruk8.jmanhunt.config.SettingRegistry;
-import com.jruk8.jmanhunt.config.SettingType;
-import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.gui.dialog.ModifierDialogs;
 import com.jruk8.jmanhunt.gui.dialog.SettingDialogs;
@@ -18,54 +21,30 @@ import com.jruk8.jmanhunt.gui.menus.ManhuntMenus;
 import com.jruk8.jmanhunt.gui.menus.ModifierEditorMemory;
 import com.jruk8.jmanhunt.gui.menus.ModifierMenus;
 import com.jruk8.jmanhunt.JManhuntPlugin;
-import com.jruk8.jmanhunt.lobby.Lobby;
-import com.jruk8.jmanhunt.lobby.bounds.LobbyBounds;
-import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
-import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.schem.JmhLobbyService;
 import com.jruk8.jmanhunt.lobby.world.LobbySchematicService;
-import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
-import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
-import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.ModifierTestService;
-import com.jruk8.jmanhunt.match.ModifierTriggers;
 import com.jruk8.jmanhunt.match.StatusRosterService;
-import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
-import com.jruk8.jmanhunt.message.ListFormatter;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
-import com.jruk8.jmanhunt.player.CapLimits;
 import com.jruk8.jmanhunt.player.LobbyTeleporter;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
-import com.jruk8.jmanhunt.world.WorldEngineService;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import com.jruk8.jmanhunt.setup.SetupService;
-import java.util.Optional;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
-import java.util.Set;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.UUID;
 
 public final class ManhuntCommand implements CommandExecutor, TabCompleter {
@@ -92,9 +71,6 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private final StatusRosterService roster;
     private ModifierMenus modifierMenus;
     private final ManhuntMenus menus;
-    /** Lobby-bounds corners per player, separate from the dev schem selection. */
-    private final Map<UUID, Location> boundPos1 = new HashMap<>();
-    private final Map<UUID, Location> boundPos2 = new HashMap<>();
     private final Map<String, SubcommandUnit> units = new HashMap<>();
     // Init-once in initUnits (blank finals cannot assign from a helper).
     private HelpUnit helpUnit;
@@ -103,6 +79,14 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     private QuickStartUnit quickStartUnit;
     private ReloadUnit reloadUnit;
     private DebugUnit debugUnit;
+    private StatusUnit statusUnit;
+    private GameUnit gameUnit;
+    private LobbyUnit lobbyUnit;
+    private SetPlayerUnit setPlayerUnit;
+    private ConfigUnit configUnit;
+    private WorldEngineUnit worldEngineUnit;
+    private SetupUnit setupUnit;
+    private CommandSupport support;
 
     public ManhuntCommand(JManhuntPlugin plugin, MessageService messages, ConfigService config,
                           SoundService sounds, PlayerStateStore playerStates, GameManager game,
@@ -148,21 +132,66 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         initUnits();
     }
 
-    /** Builds the extracted Phase 1 units and routes verbs to them. */
+    /** Builds the extracted units and routes verbs to them. */
     private void initUnits() {
-        CommandSupport support = new CommandSupport(messages, sounds, confirms);
+        support = new CommandSupport(messages, sounds, confirms);
+        CapSupport caps = new CapSupport(playerStates, game, config);
+        initEarlyUnits();
+        initLateUnits(caps);
+    }
+
+    private void initEarlyUnits() {
         helpUnit = new HelpUnit(messages.manhunt(), support);
         startUnit = new StartUnit(game, lobbies, messages.manhunt(), support);
         endUnit = new EndUnit(game, messages.manhunt(), support);
         quickStartUnit = new QuickStartUnit(game, lobbies, messages.manhunt(), support);
         reloadUnit = new ReloadUnit(plugin, game, messages.manhunt(), support);
         debugUnit = new DebugUnit(debugService, messages.manhunt(), support);
+        statusUnit = new StatusUnit(
+                new StatusUnit.StatusDeps(game, lobbies, config, roster,
+                        plugin.respawnListener()),
+                new StatusUnit.StatusTexts(messages.manhunt(), messages.command(), support));
+        gameUnit = new GameUnit(
+                new GameUnit.GameDeps(game, playerStates, confirms),
+                new GameUnit.GameTexts(messages.manhunt(), messages.game(), messages.command(),
+                        support));
         registerUnit(helpUnit);
         registerUnit(startUnit);
         registerUnit(endUnit);
         registerUnit(quickStartUnit);
         registerUnit(reloadUnit);
         registerUnit(debugUnit);
+        registerUnit(statusUnit);
+        registerUnit(gameUnit);
+    }
+
+    private void initLateUnits(CapSupport caps) {
+        lobbyUnit = new LobbyUnit(
+                new LobbyUnit.LobbyDeps(game, lobbies, playerStates, config, lobbyTeleporter,
+                        plugin.roleTeams(), caps),
+                new LobbyUnit.LobbyTexts(messages.manhunt(), messages.command(), support));
+        registerUnit(lobbyUnit);
+        setPlayerUnit = new SetPlayerUnit(
+                new SetPlayerUnit.SetPlayerDeps(playerStates, game, lobbies, caps,
+                        plugin.roleTeams(), plugin.getLogger(), confirms),
+                new SetPlayerUnit.SetPlayerTexts(messages.manhunt(), messages.command(),
+                        support));
+        registerUnit(setPlayerUnit);
+        configUnit = new ConfigUnit(
+                new ConfigUnit.ConfigDeps(game, config, feedback, plugin::observeWorldEngine),
+                new ConfigUnit.ConfigTexts(messages.manhunt(), support));
+        registerUnit(configUnit);
+        worldEngineUnit = new WorldEngineUnit(
+                new WorldEngineUnit.WorldEngineDeps(game, config, lobbies, lobbyTeleporter,
+                        plugin.lobbyConfig(), plugin.devConfig(), confirms),
+                new WorldEngineUnit.WorldEngineTexts(messages.manhunt(), messages.command(),
+                        support));
+        registerUnit(worldEngineUnit);
+        setupUnit = new SetupUnit(
+                new SetupUnit.SetupDeps(plugin.guiService(), plugin.tutorial(), setupService,
+                        menus, plugin::isSetupDone, plugin::markSetupDone),
+                new SetupUnit.SetupTexts(messages.command(), support));
+        registerUnit(setupUnit);
     }
 
     private void registerUnit(SubcommandUnit unit) {
@@ -200,7 +229,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return new OverrideCommand(plugin.overrides(), config,
                 new OverrideCommand.OverrideTexts(messages, messages.manhunt(),
                         messages.modifiers(), sounds),
-                feedback);
+                feedback, lobbies);
     }
 
     private SetupService newSetupService(JManhuntPlugin plugin, GameManager game,
@@ -211,285 +240,44 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (opensGui(args, sender)) {
-            return openGui((Player) sender);
+        if (setupUnit.routeGui(sender, args)) {
+            return true;
         }
         String sub = args.length == 0 ? "status" : args[0].toLowerCase(Locale.ROOT);
         if (!canUseSubcommand(sender, sub)) {
-            return message(sender, messages.command().getNoPermission());
+            return support.message(sender, messages.command().getNoPermission());
         }
         return switch (sub) {
             case "help" -> helpUnit.execute(sender, args);
-            case "status" -> status(sender, args);
+            case "status" -> statusUnit.execute(sender, args);
             case "challenges" -> helpUnit.execute(sender, args);
-            case "setplayer" -> setPlayer(sender, args);
+            case "setplayer" -> setPlayerUnit.execute(sender, args);
             case "start" -> startUnit.execute(sender, args);
             case "end" -> endUnit.execute(sender, args);
-            case "game" -> game(sender, args);
-            case "config" -> configCommand(sender, args);
+            case "game" -> gameUnit.execute(sender, args);
+            case "config" -> configUnit.execute(sender, args);
             case "modifiers" -> modifiers(sender, args);
             case "override" -> overrideCmd.execute(sender, args);
-            case "worldengine" -> worldEngine(sender, args);
+            case "worldengine" -> worldEngineUnit.execute(sender, args);
             case "quickstart", "qs" -> quickStartUnit.execute(sender, args);
             case "reload" -> reloadUnit.execute(sender, args);
             case "debug" -> debugUnit.execute(sender, args);
-            case "lobby" -> lobby(sender, args);
-            case "setup" -> setup(sender);
+            case "lobby" -> lobbyUnit.execute(sender, args);
+            case "setup" -> setupUnit.execute(sender, args);
             case "support" -> helpUnit.execute(sender, args);
             case "dev" -> dev(sender, args);
-            default -> message(sender, messages.command().getInvalid());
+            default -> support.message(sender, messages.command().getInvalid());
         };
     }
 
-    /** Starts the interactive setup tutorial. Players only: it runs over chat. */
-    private boolean setup(CommandSender sender) {
-        if (!(sender instanceof Player player)) {
-            return message(sender, messages.command().getPlayerOnly());
-        }
-        plugin.markSetupDone();
-        plugin.tutorial().start(player);
-        return true;
-    }
-
-    /**
-     * Bare /manhunt opens the admin GUI, but only for players holding
-     * the GUI node. Everyone else, including the console, gets status.
-     */
-    static boolean opensGui(String[] args, CommandSender sender) {
-        return args.length == 0 && sender instanceof Player
-                && sender.hasPermission("jmanhunt.gui");
-    }
-
-    /**
-     * Opens the root GUI, showing the Setup First panel once when the
-     * global flag is unset. Confirm runs the one-click recommended
-     * setup; Cancel closes the GUI and runs /mh setup through the
-     * same permission and player-only checks as the command.
-     */
-    private boolean openGui(Player player) {
-        plugin.guiService().clearOverrideLobby(player);
-        if (!plugin.isSetupDone()) {
-            plugin.guiService().open(player, menus.setupFirstMenu(
-                    confirmed -> {
-                        confirmed.closeInventory();
-                        setupService.recommendedSetup(confirmed);
-                    },
-                    skipped -> {
-                        skipped.closeInventory();
-                        if (!canUseSubcommand(skipped, "setup")) {
-                            message(skipped, messages.command().getNoPermission());
-                            return;
-                        }
-                        setup(skipped);
-                    }));
-            sounds.playNeutralSound(player);
-            return true;
-        }
-        plugin.guiService().open(player, menus.rootMenu(player));
-        sounds.playNeutralSound(player);
-        return true;
-    }
-
-    /**
-     * Shows match status with instance context: an id shows one match
-     * roster, {@code all} lists every running match, and no argument shows
-     * the sender's own match, else their lobby queue.
-     */
-    private boolean status(CommandSender sender, String[] args) {
-        if (args.length > 2) {
-            return message(sender, messages.manhunt().getStatusUsage());
-        }
-        if (args.length == 2) {
-            if (!canUseStatusArgs(sender)) {
-                return message(sender, messages.command().getNoPermission());
-            }
-            if (args[1].equalsIgnoreCase("all")) {
-                return statusAll(sender);
-            }
-            Optional<GameInstance> instance = game.resolveInstance(args[1]);
-            if (instance.isEmpty()) {
-                return message(sender, messages.manhunt().getInvalidInstanceId());
-            }
-            return statusInstance(sender, instance.get());
-        }
-        if (sender instanceof Player player) {
-            Optional<GameInstance> own = game.instanceOf(player.getUniqueId());
-            if (own.isPresent()) {
-                return statusInstance(sender, own.get());
-            }
-            Optional<Lobby> lobby = lobbies.lobbyOf(player.getUniqueId());
-            if (lobby.isEmpty()) {
-                return message(sender, messages.manhunt().getNotInMatch());
-            }
-            return statusLobby(sender, lobby.get());
-        }
-        return message(sender, messages.manhunt().getConsoleRequiresId());
-    }
-
-    /** One match roster: every online member grouped by role. */
-    private boolean statusInstance(CommandSender sender, GameInstance instance) {
-        List<Player> players = game.onlineMatchRoster(instance);
-        message(sender, messages.manhunt().getStatusHeader(),
-                Map.of("status", instance.ending() ? "ENDING" : "ACTIVE"));
-        sendMatchRoleBlocks(sender, players, instance.deadPlayers());
-        sendWinConditionLines(sender);
-        sendModifiersLine(sender);
-        sendElapsedLine(sender, instance);
-        sendIdLine(sender, instance.lobbyTag() + "|G" + instance.matchId());
-        neutralSound(sender);
-        return true;
-    }
-
-    /** One lobby queue: every online member outside matches, grouped by role. */
-    private boolean statusLobby(CommandSender sender, Lobby lobby) {
-        List<Player> players = Bukkit.getOnlinePlayers().stream()
-                .filter(p -> lobby.contains(p.getUniqueId()))
-                .filter(p -> game.instanceOf(p.getUniqueId()).isEmpty())
-                .map(p -> (Player) p).toList();
-        message(sender, messages.manhunt().getStatusHeader(), Map.of("status", "INACTIVE"));
-        sendMatchRoleBlocks(sender, players, List.of());
-        sendWinConditionLines(sender);
-        sendIdLine(sender, "L" + lobby.id());
-        neutralSound(sender);
-        return true;
-    }
-
-    /** The four role blocks plus the spectator roll call, shared by both rosters. */
-    private void sendMatchRoleBlocks(CommandSender sender, List<Player> players,
-            List<GameInstance.DeadPlayer> dead) {
-        Predicate<UUID> respawning = StatusRosterService.respawning(plugin.respawnListener());
-        roster.sendRoleSection(sender, players, Role.SPEEDRUNNER, messages.manhunt().getSpeedrunnersHeader(),
-                dead, respawning);
-        roster.sendRoleSection(sender, players, Role.HUNTER, messages.manhunt().getHuntersHeader(), dead,
-                respawning);
-        roster.sendRoleSection(sender, players, Role.AFK, messages.manhunt().getAfkHeader(), dead, respawning);
-        roster.sendRoleSection(sender, players, Role.NONE, messages.manhunt().getNoneHeader(), dead, respawning);
-        roster.sendSpectatorLine(sender, players);
-    }
-
-    /** Optional per-side win rules, off by default to keep status compact. */
-    private void sendWinConditionLines(CommandSender sender) {
-        if (!config.getBoolean("settings.server.status.show-win-conditions", false)) {
-            return;
-        }
-        message(sender, messages.manhunt().getStatusWinSpeedrunners(),
-                Map.of("conditions", game.speedrunnerWinConditions()));
-        message(sender, messages.manhunt().getStatusWinHunters(), Map.of("conditions", game.hunterWinConditions()));
-    }
-
-    /** Optional enabled-modifier roll call: hidden when off or when none are enabled. */
-    private void sendModifiersLine(CommandSender sender) {
-        if (!config.getBoolean("settings.server.status.show-modifiers", false)) {
-            return;
-        }
-        List<String> enabled = new ArrayList<>();
-        for (String name : config.modifierNames()) {
-            if (config.modifierEnabled(name)) {
-                String display = config.modifiers().metaName(name);
-                enabled.add(display == null || display.isBlank() ? name : display);
-            }
-        }
-        if (enabled.isEmpty()) {
-            return;
-        }
-        enabled.sort(String.CASE_INSENSITIVE_ORDER);
-        message(sender, messages.manhunt().getStatusModifiers(),
-                Map.of("modifiers", ListFormatter.joinOxford(enabled)));
-    }
-
-    /** Optional match runtime, off by default. */
-    private void sendElapsedLine(CommandSender sender, GameInstance instance) {
-        if (!config.getBoolean("settings.server.status.show-elapsed-time", false)) {
-            return;
-        }
-        message(sender, messages.manhunt().getStatusElapsed(), Map.of("duration",
-                DurationFormat.format(instance.elapsedSeconds(System.currentTimeMillis()))));
-    }
-
-    /** Optional lobby/game tag (L1, L1-0|G2 when sublobbed), on by default. */
-    private void sendIdLine(CommandSender sender, String value) {
-        if (!config.getBoolean("settings.server.status.show-ids", true)) {
-            return;
-        }
-        message(sender, messages.manhunt().getStatusIds(), Map.of("value", value));
-    }
-
-    /**
-     * Every running match plus every populated lobby queue: ids with
-     * active and assigned counts and durations first, then one line per
-     * lobby holding at least one queued member or match member. Quiet
-     * servers still print the games empty line so the lobby section
-     * never hides alone.
-     */
-    private boolean statusAll(CommandSender sender) {
-        List<GameInstance> live = game.liveInstances();
-        if (live.isEmpty()) {
-            message(sender, messages.manhunt().getStatusAllEmpty());
-        } else {
-            message(sender, messages.manhunt().getStatusAllHeader());
-            long now = System.currentTimeMillis();
-            for (GameInstance instance : live) {
-                message(sender, messages.manhunt().getStatusAllEntry(), Map.of(
-                        "lobby", instance.lobbyTag(),
-                        "id", String.valueOf(instance.matchId()),
-                        "remaining", String.valueOf(instance.activeIds().size()),
-                        "assigned", String.valueOf(instance.assignedCount()),
-                        "duration", DurationFormat.format(instance.elapsedSeconds(now))));
-            }
-        }
-        sendLobbyQueues(sender);
-        neutralSound(sender);
-        return true;
-    }
-
-    /**
-     * One line per lobby holding queued or match members, by lobby id.
-     * The in-match count unions active ids across the lobby's matches,
-     * so disconnected members read until they are kicked; the in-lobby
-     * count is online queue members outside any match.
-     */
-    private void sendLobbyQueues(CommandSender sender) {
-        List<Lobby> queued = new ArrayList<>();
-        for (int id : lobbies.lobbyIds()) {
-            lobbies.get(id).ifPresent(queued::add);
-        }
-        queued.sort(Comparator.comparingInt(Lobby::id));
-        boolean header = false;
-        for (Lobby lobby : queued) {
-            Set<UUID> inMatch = new HashSet<>();
-            for (GameInstance instance : game.instancesForLobby(lobby.id())) {
-                inMatch.addAll(instance.activeIds());
-            }
-            long inLobby = Bukkit.getOnlinePlayers().stream()
-                    .filter(player -> lobby.contains(player.getUniqueId()))
-                    .filter(player -> game.instanceOf(player.getUniqueId()).isEmpty())
-                    .count();
-            if (inLobby < 1 && inMatch.isEmpty()) {
-                continue;
-            }
-            if (!header) {
-                message(sender, messages.manhunt().getStatusAllLobbiesHeader());
-                header = true;
-            }
-            message(sender, messages.manhunt().getStatusAllLobbyEntry(), Map.of(
-                    "lobby", String.valueOf(lobby.id()),
-                    "detail", StatusRosterService.lobbyDetail(inLobby, inMatch.size())));
-        }
-    }
-
-    /**
-     * Whether the sender may run the given first level subcommand. Aliases
-     * share their canonical permission node, and setplayer additionally
-     * accepts the self-only node (setPlayer enforces the self target).
-     */
     /** Live pending lobby corners for the debug particle draft boxes. */
     public Map<UUID, Location> boundPos1View() {
-        return Collections.unmodifiableMap(boundPos1);
+        return worldEngineUnit.boundPos1View();
     }
 
     /** Live pending lobby corners for the debug particle draft boxes. */
     public Map<UUID, Location> boundPos2View() {
-        return Collections.unmodifiableMap(boundPos2);
+        return worldEngineUnit.boundPos2View();
     }
 
     /** Live pending dev schem corners for the debug particle draft boxes. */
@@ -507,11 +295,16 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * status needs only the base node; an instance id or all needs the
      * args node on top of it.
      */
-    static boolean canUseStatusArgs(CommandSender sender) {
+    public static boolean canUseStatusArgs(CommandSender sender) {
         return sender.hasPermission(STATUS_OTHER_PERMISSION);
     }
 
-    static boolean canUseSubcommand(CommandSender sender, String sub) {
+    /**
+     * Whether the sender may run the given first level subcommand. Aliases
+     * share their canonical permission node, and setplayer additionally
+     * accepts the self-only node (setPlayer enforces the self target).
+     */
+    public static boolean canUseSubcommand(CommandSender sender, String sub) {
         return switch (sub.toLowerCase(Locale.ROOT)) {
             case "dev" -> sender.hasPermission("jmanhunt.command.dev.schem");
             case "modifiers" -> sender.hasPermission("jmanhunt.modifiers");
@@ -528,7 +321,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
      * base worldengine node implies every action; otherwise each action
      * needs its own node.
      */
-    static boolean canUseWorldEngineAction(CommandSender sender, String action) {
+    public static boolean canUseWorldEngineAction(CommandSender sender, String action) {
         if (sender.hasPermission("jmanhunt.command.worldengine")) {
             return true;
         }
@@ -540,7 +333,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         };
     }
 
-    static String rolePermissionNode(Role role) {
+    public static String rolePermissionNode(Role role) {
         return switch (role) {
             case HUNTER -> "jmanhunt.hunter";
             case SPEEDRUNNER -> "jmanhunt.speedrunner";
@@ -550,7 +343,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         };
     }
 
-    static boolean isSelfOnlySelection(CommandSender sender, List<Entity> selected) {
+    public static boolean isSelfOnlySelection(CommandSender sender, List<Entity> selected) {
         if (!(sender instanceof Player self) || selected.size() != 1) {
             return false;
         }
@@ -558,1378 +351,11 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 && target.getUniqueId().equals(self.getUniqueId());
     }
 
-    /**
-     * Assigns queued roles. While the target's lobby has no running match
-     * this assigns directly; with a live match and the world engine on,
-     * lobbies.mid-match-setplayer decides between holding the player for
-     * the next game and joining them mid-match. Players already in the
-     * match need -f for any role change. A forced change to spectator
-     * leaves the match like /manhunt game leave; to AFK or NONE it
-     * leaves the match and returns to the lobby. Any forced change that
-     * leaves the match without both sides cancels it. With the engine
-     * off the in-match block stays, and -force never bypasses it.
-     * Waking someone else's AFK role needs a second run within 10 seconds.
-     */
-    private boolean setPlayer(CommandSender sender, String[] args) {
-        SetPlayerFlags flags = parseSetPlayerFlags(args);
-        if (flags.end() != 3) {
-            return message(sender, messages.manhunt().getSetplayerUsage());
-        }
-        Optional<Role> parsed = Role.parse(args[2]);
-        if (parsed.isEmpty()) {
-            return message(sender, messages.manhunt().getSetplayerUsage());
-        }
-        Role role = parsed.get();
-        List<Entity> selected;
-        try { selected = Bukkit.selectEntities(sender, args[1]); }
-        catch (IllegalArgumentException exception) { return message(sender, messages.manhunt().getSetplayerUsage()); }
-        // The full setplayer permission overrides every other check: any
-        // selector and any role. Otherwise the sender needs the self node,
-        // the selector must resolve to exactly the sender, and the sender
-        // must hold the permission for the requested role.
-        if (!sender.hasPermission("jmanhunt.command.setplayer")
-                && (!isSelfOnlySelection(sender, selected)
-                || !sender.hasPermission(rolePermissionNode(role)))) {
-            return message(sender, messages.command().getNoPermission());
-        }
-        if (selected.stream().noneMatch(entity -> entity instanceof Player)) {
-            return message(sender, messages.command().getNoTargets());
-        }
-        int afkWakes = countAfkWakes(sender, selected, role, flags.force());
-        if (afkWakes > 0 && !confirms.confirm("setplayer-afk:" + senderKey(sender))) {
-            message(sender, messages.manhunt().getSetAfkConfirm(), Map.of("count", String.valueOf(afkWakes)));
-            return true;
-        }
-        SetPlayerTally tally = new SetPlayerTally();
-        for (Entity entity : selected) {
-            if (entity instanceof Player player) {
-                applySetPlayerToPlayer(sender, player, role, flags.force(), flags.silent(), tally);
-            }
-        }
-        reportSetPlayerResults(sender, role, tally);
-        return true;
-    }
-
-    /** Trailing -force/-silent flags plus the remaining argument count. Pure for tests. */
-    static SetPlayerFlags parseSetPlayerFlags(String[] args) {
-        boolean force = false;
-        boolean silent = false;
-        int end = args.length;
-        while (end > 3 && (isForceFlag(args[end - 1]) || isSilentFlag(args[end - 1]))) {
-            if (isForceFlag(args[end - 1])) {
-                force = true;
-            } else {
-                silent = true;
-            }
-            end--;
-        }
-        return new SetPlayerFlags(force, silent, end);
-    }
-
-    /** Assigns one selected player their role, recording the outcome. */
-    private void applySetPlayerToPlayer(CommandSender sender, Player player, Role role, boolean force,
-            boolean silent, SetPlayerTally tally) {
-        if (playerStates.role(player) == role) {
-            tally.unchanged++;
-            return;
-        }
-        if (!player.hasPermission(rolePermissionNode(role))) {
-            tally.skipped++;
-            return;
-        }
-        Optional<Lobby> targetLobby = lobbies.lobbyOf(player.getUniqueId());
-        Optional<GameInstance> live = targetLobby.flatMap(lobby -> game.instanceForLobby(lobby.id()));
-        if (live.isPresent()) {
-            applySetPlayerInMatch(sender, player, role, force, silent, targetLobby, live.get(), tally);
-            return;
-        }
-        if (!capAllows(lobbies.lobbyOf(player.getUniqueId()), role, force, tally.cappedIn)) {
-            return;
-        }
-        assignSetPlayerRole(sender, player, role, silent, tally);
-    }
-
-    /** Assigns a player whose lobby has a live match: mid-match join or hold. */
-    private void applySetPlayerInMatch(CommandSender sender, Player player, Role role, boolean force,
-            boolean silent, Optional<Lobby> targetLobby, GameInstance live, SetPlayerTally tally) {
-        if (!lobbies.multiLobbyAllowed()) {
-            message(sender, messages.manhunt().getSetInMatch(), Map.of("player", player.getName()));
-            return;
-        }
-        boolean member = live.isActive(player.getUniqueId());
-        if (member && !force) {
-            message(sender, messages.manhunt().getSetplayerNeedsForce(), Map.of("player", player.getName()));
-            return;
-        }
-        if (member && role == Role.SPECTATOR) {
-            leaveMatchForSetPlayer(player, silent, live, tally);
-            return;
-        }
-        if (member && (role == Role.AFK || role == Role.NONE)) {
-            leaveMatchToLobbyForSetPlayer(player, role, silent, live, tally);
-            return;
-        }
-        MidMatchPolicy policy = lobbies.midMatchPolicy();
-        GameInstance target = targetLobby.map(lobby ->
-                game.midMatchJoinTarget(policy, lobby.id(), live, role)).orElse(live);
-        if (policy.joinsMidMatch(role)
-                && game.joinPlayers(target, List.of(player), role) == 1) {
-            tally.joined++;
-            tally.assigned.add(player.getUniqueId());
-            return;
-        }
-        if (!member && !capAllows(targetLobby, role, force, tally.cappedIn)) {
-            return;
-        }
-        assignSetPlayerRole(sender, player, role, silent, tally);
-        if (member) {
-            cancelMatchIfInvalid(sender, live);
-        } else {
-            recordQueuedRole(player, role, silent, policy, tally);
-        }
-    }
-
-    /** Tallies a non-member queued under a live match and tells them where they wait. */
-    private void recordQueuedRole(Player player, Role role, boolean silent,
-            MidMatchPolicy policy, SetPlayerTally tally) {
-        if (policy.usesSubLobbies()) {
-            tally.queued++;
-        } else {
-            tally.held++;
-        }
-        if (!silent && role != Role.AFK) {
-            message(player, policy.queueMessageTemplate(messages.manhunt()), Map.of("role", messages.roleName(role)));
-        }
-    }
-
-    /** Mid-match setplayer to spectator: the same leave /manhunt game leave performs. */
-    private void leaveMatchForSetPlayer(Player player, boolean silent, GameInstance live,
-            SetPlayerTally tally) {
-        Role from = playerStates.role(player);
-        int removed = game.leaveMatch(live, List.of(player), live.begun());
-        if (removed == 0) {
-            return;
-        }
-        tally.changed++;
-        tally.assigned.add(player.getUniqueId());
-        Role after = playerStates.role(player);
-        if (!silent && after != from) {
-            game.messaging().announceRoleChange(player, from, after);
-        }
-    }
-
-    /** Mid-match setplayer to AFK or NONE: a full leave plus a lobby return. */
-    private void leaveMatchToLobbyForSetPlayer(Player player, Role role, boolean silent,
-            GameInstance live, SetPlayerTally tally) {
-        Role from = playerStates.role(player);
-        int removed = game.leaveMatchToLobby(live, player, role);
-        if (removed == 0) {
-            return;
-        }
-        tally.changed++;
-        tally.assigned.add(player.getUniqueId());
-        if (!silent) {
-            game.messaging().announceRoleChange(player, from, role);
-        }
-    }
-
-    /** Cancels a live match a forced role change left without both sides. */
-    private void cancelMatchIfInvalid(CommandSender sender, GameInstance live) {
-        int hunters = game.activeHunterCount(live);
-        int runners = game.activeRunnerCount(live);
-        if (MatchFinishService.canProgress(hunters, runners) || !live.active() || live.ending()) {
-            return;
-        }
-        String reason = MatchFinishService.invalidReason(hunters, runners);
-        message(sender, messages.manhunt().getSetplayerInvalidCancel(),
-                Map.of("id", live.lobbyTag(), "reason", reason));
-        plugin.getLogger().warning(
-                "Match " + live.lobbyTag() + " cancelled by setplayer: " + reason + ".");
-        game.cancel(live);
-    }
-
-    /** Sets one player's role with teams sync and announcements. */
-    private void assignSetPlayerRole(CommandSender sender, Player player, Role role, boolean silent,
-            SetPlayerTally tally) {
-        Role from = playerStates.role(player);
-        playerStates.setRole(player, role);
-        tally.changed++;
-        plugin.roleTeams().sync(player);
-        if (!silent) {
-            game.messaging().announceRoleChange(player, from, role);
-        }
-        tally.assigned.add(player.getUniqueId());
-        if (!silent) {
-            message(player, messages.manhunt().getRoleAssigned(), Map.of("role", messages.roleName(role)));
-            sounds.playNeutralSound(player);
-        }
-    }
-
-    /** Reports one setplayer run: summary, skips, joins, holds, and caps. */
-    private void reportSetPlayerResults(CommandSender sender, Role role, SetPlayerTally tally) {
-        message(sender, tally.unchanged == 0 ? messages.manhunt().getSetSuccess()
-                : messages.manhunt().getSetSuccessUnchanged(),
-                Map.of("count", String.valueOf(tally.changed), "role", messages.roleName(role),
-                        "unchanged", String.valueOf(tally.unchanged)));
-        if (tally.skipped > 0) {
-            message(sender, messages.manhunt().getSetSkipped(), Map.of("count", String.valueOf(tally.skipped)));
-        }
-        if (tally.joined > 0) {
-            message(sender, messages.manhunt().getSetplayerJoined(),
-                    Map.of("count", String.valueOf(tally.joined), "role", messages.roleName(role)));
-        }
-        if (tally.held > 0) {
-            message(sender, messages.manhunt().getSetplayerHeldSummary(), Map.of("count", String.valueOf(tally.held)));
-        }
-        if (tally.queued > 0) {
-            message(sender, messages.manhunt().getSetplayerQueuedSublobbySummary(),
-                    Map.of("count", String.valueOf(tally.queued)));
-        }
-        for (Map.Entry<Integer, Set<Role>> entry : tally.cappedIn.entrySet()) {
-            for (Role cappedRole : entry.getValue()) {
-                message(sender, messages.manhunt().getLobbyFull(), Map.of("lobby", String.valueOf(entry.getKey()),
-                        "role", messages.roleName(cappedRole)));
-            }
-        }
-        if (sender instanceof Player player && !tally.assigned.contains(player.getUniqueId())) {
-            sounds.playNeutralSound(player);
-        }
-        if (tally.changed > 0) {
-            game.updateAutostartState();
-        }
-    }
-
-    /** Trailing flags parsed from a setplayer invocation. */
-    record SetPlayerFlags(boolean force, boolean silent, int end) {
-    }
-
-    /** Mutable counters for one setplayer run. */
-    private static final class SetPlayerTally {
-        int changed;
-        int unchanged;
-        int skipped;
-        int joined;
-        int held;
-        int queued;
-        final Set<java.util.UUID> assigned = new HashSet<>();
-        final Map<Integer, Set<Role>> cappedIn = new LinkedHashMap<>();
-    }
-
-    /**
-     * Queue-cap gate shared by idle and held assignments. Records the cap
-     * and returns false when the lobby is full for the role.
-     */
-    private boolean capAllows(Optional<Lobby> lobby, Role role, boolean force,
-            Map<Integer, Set<Role>> cappedIn) {
-        if (force || !role.isParticipant() || lobby.isEmpty()) {
-            return true;
-        }
-        if (CapLimits.allows(lobbyRoleCount(lobby.get(), role), capFor(role))) {
-            return true;
-        }
-        cappedIn.computeIfAbsent(lobby.get().id(), key -> new HashSet<>()).add(role);
-        return false;
-    }
-
-    /** AFK players a setplayer run would actually wake (non-self only). */
-    private int countAfkWakes(CommandSender sender, List<Entity> selected, Role role, boolean force) {
-        int wakes = 0;
-        for (Entity entity : selected) {
-            if (!(entity instanceof Player player)) {
-                continue;
-            }
-            if (!needsAfkGuard(playerStates.role(player), role, isSelfTarget(sender, player))) {
-                continue;
-            }
-            if (!player.hasPermission(rolePermissionNode(role))) {
-                continue;
-            }
-            Optional<Lobby> lobby = lobbies.lobbyOf(player.getUniqueId());
-            if (lobby.isPresent() && game.instanceForLobby(lobby.get().id()).isPresent()) {
-                continue;
-            }
-            if (!force && role.isParticipant() && lobby.isPresent()
-                    && !CapLimits.allows(lobbyRoleCount(lobby.get(), role), capFor(role))) {
-                continue;
-            }
-            wakes++;
-        }
-        return wakes;
-    }
-
-    /** True when waking someone else's AFK role, which needs confirmation. Pure for tests. */
-    static boolean needsAfkGuard(Role from, Role to, boolean self) {
-        return from == Role.AFK && to != Role.AFK && !self;
-    }
-
-    private static boolean isSelfTarget(CommandSender sender, Player player) {
-        return sender instanceof Player self && self.getUniqueId().equals(player.getUniqueId());
-    }
-
-    private boolean lobby(CommandSender sender, String[] args) {
-        if (args.length < 2 || args[1].isBlank()) {
-            return message(sender, messages.manhunt().getLobbyUsage());
-        }
-        String action = args[1].toLowerCase(Locale.ROOT);
-        if (action.equals("join")) {
-            return lobbyJoin(sender, args);
-        }
-        if (action.equals("leave")) {
-            return lobbyLeave(sender, args);
-        }
-        return message(sender, messages.manhunt().getLobbyUsage());
-    }
-
-    /**
-     * Moves players to a lobby: join &lt;selector&gt; &lt;lobby-id&gt; [role]
-     * [-f|-force] [-notp] [-s|-silent]. The role defaults to none and
-     * joiners teleport to the lobby unless -notp is given. Silent joiners
-     * get no role message or sound.
-     */
-    private boolean lobbyJoin(CommandSender sender, String[] args) {
-        LobbyJoinFlags flags = parseLobbyJoinFlags(args);
-        if (flags.end() != 4 && flags.end() != 5) {
-            return message(sender, messages.manhunt().getLobbyJoinUsage());
-        }
-        OptionalInt lobbyId = LobbyService.parseId(args[3]);
-        if (lobbyId.isEmpty()) {
-            return message(sender, messages.manhunt().getLobbyInvalidId());
-        }
-        Role role = Role.NONE;
-        if (flags.end() == 5) {
-            Optional<Role> parsed = Role.parse(args[4]);
-            if (parsed.isEmpty()) {
-                return message(sender, messages.manhunt().getLobbyJoinUsage());
-            }
-            role = parsed.get();
-        }
-        if (!lobbies.multiLobbyAllowed() && lobbyId.getAsInt() != 0) {
-            return message(sender, messages.manhunt().getLobbyWorldengineRequired());
-        }
-        List<Player> targets = selectPlayers(sender, args[2]);
-        if (targets == null) {
-            return message(sender, messages.manhunt().getLobbyJoinUsage());
-        }
-        if (targets.isEmpty()) {
-            return message(sender, messages.command().getNoTargets());
-        }
-        List<Player> moved = new ArrayList<>();
-        Set<Role> capped = new HashSet<>();
-        for (Player target : targets) {
-            applyLobbyJoinToPlayer(sender, target, lobbyId.getAsInt(), role, flags.force(),
-                    moved, capped);
-        }
-        reportLobbyJoinResults(sender, moved, capped, lobbyId.getAsInt(), role, flags.noTeleport());
-        return true;
-    }
-
-    /** Trailing join flags plus the remaining argument count. */
-    private LobbyJoinFlags parseLobbyJoinFlags(String[] args) {
-        boolean force = false;
-        boolean noTeleport = false;
-        int end = args.length;
-        while (end > 2 && (isForceFlag(args[end - 1]) || isNoTeleportFlag(args[end - 1]))) {
-            if (isForceFlag(args[end - 1])) {
-                force = true;
-            } else {
-                noTeleport = true;
-            }
-            end--;
-        }
-        return new LobbyJoinFlags(force, noTeleport, end);
-    }
-
-    /** Moves one player into a lobby, recording moves and caps. */
-    private void applyLobbyJoinToPlayer(CommandSender sender, Player target, int lobbyId, Role role,
-            boolean force, List<Player> moved, Set<Role> capped) {
-        if (game.instanceOf(target.getUniqueId()).isPresent()) {
-            message(sender, messages.manhunt().getLobbyJoinInMatch(), Map.of("player", target.getName()));
-            return;
-        }
-        Optional<Lobby> current = lobbies.lobbyOf(target.getUniqueId());
-        if (current.isPresent() && current.get().id() == lobbyId
-                && playerStates.role(target) == role) {
-            message(sender, messages.manhunt().getLobbyAlreadyMember(), Map.of("player", target.getName(),
-                    "lobby", String.valueOf(lobbyId), "role", messages.roleName(role)));
-            return;
-        }
-        Lobby lobby = lobbies.get(lobbyId).orElse(null);
-        int count = lobby == null ? 0 : lobbyRoleCount(lobby, role);
-        if (!force && role.isParticipant() && !CapLimits.allows(count, capFor(role))) {
-            capped.add(role);
-            return;
-        }
-        OptionalInt before = current.map(own -> OptionalInt.of(own.id())).orElseGet(OptionalInt::empty);
-        lobbies.setLobby(target.getUniqueId(), lobbyId);
-        lobbies.applyLobbyCollisions(target);
-        playerStates.setRole(target, role);
-        plugin.roleTeams().sync(target);
-        moved.add(target);
-        lobbies.announceLobbyChange(target, before, OptionalInt.of(lobbyId));
-    }
-
-    /** Reports one lobby join run and teleports the movers. */
-    private void reportLobbyJoinResults(CommandSender sender, List<Player> moved, Set<Role> capped,
-            int lobbyId, Role role, boolean noTeleport) {
-        for (Role cappedRole : capped) {
-            message(sender, messages.manhunt().getLobbyFull(), Map.of("lobby", String.valueOf(lobbyId),
-                    "role", messages.roleName(cappedRole)));
-        }
-        message(sender, messages.manhunt().getLobbyJoinSuccess(), Map.of("count", String.valueOf(moved.size()),
-                "lobby", String.valueOf(lobbyId), "role", messages.roleName(role)));
-        if (sender instanceof Player player) {
-            sounds.playNeutralSound(player);
-        }
-        if (!moved.isEmpty() && !noTeleport
-                && config.getBoolean("advanced.lobbies.join-teleports-to-lobby", true)) {
-            teleportJoinersToLobby(sender, moved, lobbyId);
-        }
-        if (!moved.isEmpty()) {
-            game.updateAutostartState();
-        }
-    }
-
-    /** Trailing flags parsed from a lobby join invocation. */
-    private record LobbyJoinFlags(boolean force, boolean noTeleport, int end) {
-    }
-
-    /**
-     * Teleports lobby joiners to their lobby location when join teleporting
-     * is enabled. Lobbies without a location keep their joiners in place.
-     */
-    private void teleportJoinersToLobby(CommandSender sender, List<Player> moved, int lobbyId) {
-        if (!lobbies.multiLobbyAllowed()) {
-            return;
-        }
-        if (!lobbyTeleporter.teleportToLobby(moved, lobbyId)) {
-            message(sender, messages.manhunt().getLobbyNoLocation(), Map.of("lobby", String.valueOf(lobbyId)));
-        }
-    }
-
-    /** Removes players from whatever lobby they are in: leave [selector]. */
-    private boolean lobbyLeave(CommandSender sender, String[] args) {
-        if (!lobbies.multiLobbyAllowed()) {
-            return message(sender, messages.manhunt().getLobbyWorldengineRequired());
-        }
-        if (args.length > 3) {
-            return message(sender, messages.manhunt().getLobbyLeaveUsage());
-        }
-        List<Player> targets = selectPlayers(sender, args.length == 3 ? args[2] : "@s");
-        if (targets == null) {
-            return message(sender, messages.manhunt().getLobbyLeaveUsage());
-        }
-        if (targets.isEmpty()) {
-            return message(sender, messages.command().getNoTargets());
-        }
-        for (Player target : targets) {
-            Optional<Lobby> lobby = lobbies.lobbyOf(target.getUniqueId());
-            if (lobby.isEmpty()) {
-                message(sender, messages.manhunt().getLobbyLeaveNotMember(), Map.of("player", target.getName()));
-                continue;
-            }
-            if (game.instanceOf(target.getUniqueId()).isPresent()) {
-                message(sender, messages.manhunt().getLobbyLeaveInMatch(), Map.of("player", target.getName()));
-                continue;
-            }
-            lobbies.remove(target.getUniqueId());
-            lobbies.restoreCollisions(target);
-            message(sender, messages.manhunt().getLobbyLeaveSuccess(), Map.of("player", target.getName(),
-                    "lobby", String.valueOf(lobby.get().id())));
-        }
-        neutralSound(sender);
-        game.updateAutostartState();
-        return true;
-    }
-
-    /** True for the -f and -force flags accepted by setplayer and lobby join. */
-    static boolean isForceFlag(String arg) {
-        return arg.equalsIgnoreCase("-f") || arg.equalsIgnoreCase("-force");
-    }
-
-    /** True for the -s and -silent flags accepted by setplayer and lobby join. */
-    static boolean isSilentFlag(String arg) {
-        return arg.equalsIgnoreCase("-s") || arg.equalsIgnoreCase("-silent");
-    }
-
-    /** True for the -notp flag accepted by lobby join (no shorthand, for clarity). */
-    static boolean isNoTeleportFlag(String arg) {
-        return arg.equalsIgnoreCase("-notp");
-    }
-
-    /** Online queued members of a lobby holding a role, live matches excluded. */
-    private int lobbyRoleCount(Lobby lobby, Role role) {
-        int count = 0;
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (playerStates.role(online) == role && lobby.contains(online.getUniqueId())
-                    && game.instanceOf(online.getUniqueId()).isEmpty()) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    /** Configured queue cap for a participant role, -1 when uncapped. */
-    private int capFor(Role role) {
-        return config.getInt(
-                "advanced.lobbies.queue-caps." + role.name().toLowerCase(Locale.ROOT), -1);
-    }
-
-    /** Joins players to or removes them from a running match. */
-    private boolean game(CommandSender sender, String[] args) {
-        if (args.length < 2 || args[1].isBlank()) {
-            return message(sender, messages.manhunt().getGameUsage());
-        }
-        String action = args[1].toLowerCase(Locale.ROOT);
-        if (action.equals("join")) {
-            return gameJoin(sender, args);
-        }
-        if (action.equals("leave")) {
-            return gameLeave(sender, args);
-        }
-        return message(sender, messages.manhunt().getGameUsage());
-    }
-
-    /** Adds players to a running match: game join <id> [role] [selector]. */
-    private boolean gameJoin(CommandSender sender, String[] args) {
-        if (args.length < 3 || args.length > 5) {
-            return message(sender, messages.manhunt().getGameJoinUsage());
-        }
-        Optional<GameInstance> instance = game.resolveInstance(args[2]);
-        if (instance.isEmpty() || instance.get().ending()) {
-            return message(sender, messages.manhunt().getInvalidInstanceId());
-        }
-        Role role = Role.SPECTATOR;
-        if (args.length >= 4) {
-            Optional<Role> parsed = Role.parse(args[3]);
-            if (parsed.isEmpty() || parsed.get() == Role.AFK) {
-                return message(sender, messages.game().getJoinInvalidRole());
-            }
-            role = parsed.get();
-        }
-        List<Player> targets = selectPlayers(sender, args.length == 5 ? args[4] : "@s");
-        if (targets == null) {
-            return message(sender, messages.manhunt().getGameJoinUsage());
-        }
-        if (targets.isEmpty()) {
-            return message(sender, messages.command().getNoTargets());
-        }
-        Map<UUID, Role> before = new HashMap<>();
-        for (Player target : targets) {
-            before.put(target.getUniqueId(), playerStates.role(target));
-        }
-        int added = game.joinPlayers(instance.get(), targets, role);
-        if (added == 0) {
-            return message(sender, messages.game().getJoinNoChange());
-        }
-        for (Player target : targets) {
-            Role from = before.get(target.getUniqueId());
-            Role after = playerStates.role(target);
-            if (after != from) {
-                game.messaging().announceRoleChange(target, from, after);
-            }
-        }
-        message(sender, messages.game().getJoinSuccess(), Map.of("count", String.valueOf(added),
-                "id", String.valueOf(instance.get().matchId()), "role", messages.roleName(role)));
-        neutralSound(sender);
-        game.updateAutostartState();
-        return true;
-    }
-
-    /**
-     * Removes players from a match: game leave [id] [selector]. Leaving
-     * alive participants drop their gear and need a second run within 10
-     * seconds; everyone else leaves at once.
-     */
-    private boolean gameLeave(CommandSender sender, String[] args) {
-        if (args.length > 4) {
-            return message(sender, messages.manhunt().getGameLeaveUsage());
-        }
-        List<Player> targets = selectPlayers(sender, args.length == 4 ? args[3] : "@s");
-        if (targets == null) {
-            return message(sender, messages.manhunt().getGameLeaveUsage());
-        }
-        if (targets.isEmpty()) {
-            return message(sender, messages.command().getNoTargets());
-        }
-        Map<GameInstance, List<Player>> byMatch = groupLeaversByMatch(sender, targets, args);
-        if (byMatch == null) {
-            return true;
-        }
-        if (byMatch.isEmpty()) {
-            return message(sender, messages.game().getLeaveNotInMatch());
-        }
-        boolean needsConfirm = byMatch.values().stream().flatMap(List::stream)
-                .anyMatch(player -> playerStates.role(player).isParticipant());
-        if (needsConfirm && !confirms.confirm("gameleave:" + senderKey(sender))) {
-            return message(sender, messages.game().getLeaveConfirm());
-        }
-        int removed = removeLeavers(byMatch);
-        Set<java.util.UUID> leaverIds = byMatch.values().stream().flatMap(List::stream)
-                .map(Player::getUniqueId).collect(java.util.stream.Collectors.toSet());
-        if (!(sender instanceof Player self) || !leaverIds.contains(self.getUniqueId())) {
-            message(sender, messages.game().getLeaveRemoved(), Map.of("count", String.valueOf(removed)));
-        }
-        neutralSound(sender);
-        game.updateAutostartState();
-        return true;
-    }
-
-    /**
-     * Groups leavers by match: the named instance, or each player's own.
-     * Null when the named instance is invalid (message already sent).
-     */
-    private Map<GameInstance, List<Player>> groupLeaversByMatch(CommandSender sender, List<Player> targets,
-            String[] args) {
-        Map<GameInstance, List<Player>> byMatch = new LinkedHashMap<>();
-        if (args.length >= 3) {
-            Optional<GameInstance> instance = game.resolveInstance(args[2]);
-            if (instance.isEmpty()) {
-                message(sender, messages.manhunt().getInvalidInstanceId());
-                return null;
-            }
-            List<Player> leavers = targets.stream()
-                    .filter(player -> instance.get().isActive(player.getUniqueId())).toList();
-            if (!leavers.isEmpty()) {
-                byMatch.put(instance.get(), leavers);
-            }
-        } else {
-            for (Player target : targets) {
-                game.instanceOf(target.getUniqueId()).ifPresent(instance ->
-                        byMatch.computeIfAbsent(instance, key -> new ArrayList<>()).add(target));
-            }
-        }
-        return byMatch;
-    }
-
-    /** Removes grouped leavers from their matches, announcing role changes. */
-    private int removeLeavers(Map<GameInstance, List<Player>> byMatch) {
-        Map<java.util.UUID, Role> before = new HashMap<>();
-        for (List<Player> leavers : byMatch.values()) {
-            for (Player leaver : leavers) {
-                before.put(leaver.getUniqueId(), playerStates.role(leaver));
-            }
-        }
-        int removed = 0;
-        for (Map.Entry<GameInstance, List<Player>> entry : byMatch.entrySet()) {
-            removed += game.leaveMatch(entry.getKey(), entry.getValue(), entry.getKey().begun());
-        }
-        for (List<Player> leavers : byMatch.values()) {
-            for (Player leaver : leavers) {
-                Role from = before.get(leaver.getUniqueId());
-                Role after = playerStates.role(leaver);
-                if (after != from) {
-                    game.messaging().announceRoleChange(leaver, from, after);
-                }
-            }
-        }
-        return removed;
-    }
-
-    /**
-     * Resolves a player selector: null when the selector itself is broken,
-     * an empty list when it matches no players.
-     */
-    private List<Player> selectPlayers(CommandSender sender, String selector) {
-        List<Player> targets = new ArrayList<>();
-        try {
-            for (Entity entity : Bukkit.selectEntities(sender, selector)) {
-                if (entity instanceof Player player) {
-                    targets.add(player);
-                }
-            }
-        } catch (IllegalArgumentException exception) {
-            return null;
-        }
-        return targets;
-    }
-
-    /** Stable confirm key for a sender: player uuid, or "console". */
-    private static String senderKey(CommandSender sender) {
-        if (sender instanceof Player player) {
-            return player.getUniqueId().toString();
-        }
-        return "console";
-    }
-
-    /**
-     * Views or changes configuration by category: /manhunt config
-     * &lt;category&gt; &lt;path...&gt; [value]. Every argument drills one level
-     * deeper and tab completion only suggests the children of the current
-     * level. A path resolving to a section lists its settings; a path
-     * resolving to an editable leaf views it, or sets it when a value follows.
-     */
-    private boolean configCommand(CommandSender sender, String[] args) {
-        List<String> segments = new ArrayList<>();
-        for (int i = 1; i < args.length; i++) {
-            segments.add(args[i]);
-        }
-        if (segments.isEmpty()) {
-            Map<String, String> categories = new LinkedHashMap<>();
-            for (String category : SettingRegistry.topCategories()) {
-                categories.put(category, "");
-            }
-            listEntries(sender, "config", categories);
-            neutralSound(sender);
-            return true;
-        }
-        DrillResolve resolved = resolveDrill(segments, config::getStringList);
-        if (resolved == null) {
-            return message(sender, messages.manhunt().getSettingInvalid());
-        }
-        if (resolved.leaf()) {
-            return showOrUpdateSetting(sender, resolved.path(), resolved.remainder());
-        }
-        if (SettingRegistry.isListPath(resolved.path())) {
-            return listCommand(sender, resolved.path(), resolved.remainder());
-        }
-        if (!resolved.section() || !resolved.remainder().isEmpty()) {
-            return message(sender, messages.manhunt().getConfigUsage());
-        }
-        SettingRegistry.DrillChildren listing = SettingRegistry.children(resolved.path());
-        Map<String, String> entries = new LinkedHashMap<>();
-        for (String section : listing.sections()) {
-            entries.put(section, "");
-        }
-        for (String leaf : listing.leaves()) {
-            entries.put(leaf, ": " + ConfigService.displayValue(
-                    game.getSettingValue(resolved.path() + "." + leaf)));
-        }
-        listEntries(sender, resolved.path(), entries);
-        neutralSound(sender);
-        return true;
-    }
-
-    /**
-     * Lists entries dir-style under one header, so browsing never spams one
-     * prefixed line per entry.
-     */
-    private void listEntries(CommandSender sender, String key, Map<String, String> entries) {
-        String template = messages.manhunt().getConfigEntry();
-        message(sender, messages.manhunt().getConfigList(),
-                Map.of("key", key, "entries", renderEntries(entries, template)));
-    }
-
-    public static String renderEntries(Map<String, String> entries, String entryTemplate) {
-        StringBuilder out = new StringBuilder();
-        for (Map.Entry<String, String> entry : entries.entrySet()) {
-            out.append(entryTemplate.replace("{key}", entry.getKey()).replace("{suffix}", entry.getValue()));
-        }
-        return out.toString();
-    }
-
-    /**
-     * Browses or edits one string list: bare lists entries by index with the
-     * add, remove, and reset forms; {@code add} appends, {@code remove}
-     * deletes, {@code reset} restores the schema defaults.
-     */
-    private boolean listCommand(CommandSender sender, String listPath, List<String> args) {
-        if (args.isEmpty()) {
-            return listListEntries(sender, listPath);
-        }
-        if (args.get(0).equalsIgnoreCase("add")) {
-            return listAddEntry(sender, listPath, args);
-        }
-        if (args.get(0).equalsIgnoreCase("remove") && args.size() == 2) {
-            return listRemoveEntry(sender, listPath, args.get(1));
-        }
-        if (args.get(0).equalsIgnoreCase("reset") && args.size() == 1) {
-            return listResetEntries(sender, listPath);
-        }
-        return message(sender, messages.manhunt().getConfigUsage());
-    }
-
-    private boolean listListEntries(CommandSender sender, String listPath) {
-        List<String> entries = config.getStringList(listPath);
-        Map<String, String> rows = new LinkedHashMap<>();
-        for (int index = 0; index < entries.size(); index++) {
-            rows.put(String.valueOf(index), ": " + entries.get(index));
-        }
-        rows.put("add <value>", "");
-        rows.put("remove <index>", "");
-        rows.put("reset", "");
-        listEntries(sender, listPath, rows);
-        neutralSound(sender);
-        return true;
-    }
-
-    private boolean listAddEntry(CommandSender sender, String listPath, List<String> args) {
-        if (args.size() < 2) {
-            return message(sender, messages.manhunt().getConfigUsage());
-        }
-        ConfigService.SetOutcome outcome = config.listAdd(
-                listPath, String.join(" ", args.subList(1, args.size())));
-        if (!outcome.ok()) {
-            feedback.failed(sender, outcome);
-            return true;
-        }
-        feedback.listAdded(sender, listPath, outcome);
-        return true;
-    }
-
-    private boolean listRemoveEntry(CommandSender sender, String listPath, String rawIndex) {
-        int index;
-        try {
-            index = Integer.parseInt(rawIndex.trim());
-        } catch (NumberFormatException expected) {
-            message(sender, messages.manhunt().getSettingIndexInvalid(), Map.of("setting", listPath,
-                    "index", rawIndex.trim(),
-                    "size", String.valueOf(config.getStringList(listPath).size())));
-            return true;
-        }
-        ConfigService.SetOutcome outcome = config.listRemove(listPath, index);
-        if (!outcome.ok()) {
-            feedback.failed(sender, outcome);
-            return true;
-        }
-        feedback.listRemoved(sender, listPath, outcome);
-        return true;
-    }
-
-    private boolean listResetEntries(CommandSender sender, String listPath) {
-        ConfigService.SetOutcome outcome = config.listReset(listPath);
-        if (!outcome.ok()) {
-            feedback.failed(sender, outcome);
-            return true;
-        }
-        feedback.listReset(sender, listPath, outcome);
-        return true;
-    }
-
-    private boolean showOrUpdateSetting(CommandSender sender, String setting, List<String> values) {
-        Object oldValue = game.getSettingValue(setting);
-        if (values.isEmpty()) {
-            message(sender, messages.manhunt().getSettingStatus(),
-                    Map.of("setting", setting, "value", ConfigService.displayValue(oldValue)));
-            neutralSound(sender);
-            return true;
-        }
-        SettingDescriptor descriptor = config.describe(setting);
-        boolean freeform = (descriptor != null && descriptor.type() == SettingType.STRING)
-                || config.isIndexPath(setting);
-        String raw;
-        if (freeform) {
-            raw = String.join(" ", values);
-        } else if (values.size() > 1) {
-            return message(sender, messages.manhunt().getConfigUsage());
-        } else {
-            raw = values.get(0);
-        }
-        ConfigService.SetOutcome outcome = game.setSetting(setting, raw);
-        if (!outcome.ok()) {
-            feedback.failed(sender, outcome);
-            return true;
-        }
-        feedback.scalarUpdated(sender, setting, outcome);
-        if (setting.equals("world-engine.enabled")) {
-            plugin.observeWorldEngine();
-        }
-        return true;
-    }
-
-    /**
-     * Broadcasts a setting or modifier change to every online player except
-     * the one who made it, when announcing is enabled. Changes made from the
-     * console reach every online player.
-     */
-    static void announceSettingChange(MessageService messages, boolean announceEnabled,
-            CommandSender sender, String template, String keySlot, String valueSlot) {
-        if (!announceEnabled) {
-            return;
-        }
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (sender instanceof Player changer && online.getUniqueId().equals(changer.getUniqueId())) {
-                continue;
-            }
-            messages.messageRaw(online, template,
-                    Map.of("player", sender.getName(), "key", keySlot, "value", valueSlot));
-        }
-    }
-
-
-    /**
-     * Resolves drill segments against the setting registry: each segment
-     * matches a child case-insensitively, list indices descend into list
-     * entries, and anything past a leaf is the value remainder.
-     */
-    public static DrillResolve resolveDrill(List<String> segments,
-            Function<String, List<String>> lists) {
-        String current = "";
-        int consumed = 0;
-        for (String segment : segments) {
-            String match = matchChild(current, segment, lists);
-            if (match == null) {
-                break;
-            }
-            current = current.isEmpty() ? match : current + "." + match;
-            consumed++;
-            if (SettingRegistry.byPath(current) != null || isIndexPath(current, lists)) {
-                break;
-            }
-        }
-        if (consumed == 0) {
-            return null;
-        }
-        boolean leaf = SettingRegistry.byPath(current) != null || isIndexPath(current, lists);
-        boolean section = !leaf
-                && (SettingRegistry.isSection(current) || SettingRegistry.isListPath(current));
-        return new DrillResolve(current, leaf, section,
-                List.copyOf(segments.subList(consumed, segments.size())));
-    }
-
-    private static String matchChild(String parent, String segment,
-            Function<String, List<String>> lists) {
-        if (!parent.isEmpty() && SettingRegistry.isListPath(parent)) {
-            List<String> entries = lists == null ? null : lists.apply(parent);
-            if (entries == null) {
-                return null;
-            }
-            try {
-                int index = Integer.parseInt(segment.trim());
-                return index >= 0 && index < entries.size() ? String.valueOf(index) : null;
-            } catch (NumberFormatException expected) {
-                return null;
-            }
-        }
-        List<String> candidates = new ArrayList<>();
-        if (parent.isEmpty()) {
-            candidates.addAll(SettingRegistry.topCategories());
-        } else {
-            SettingRegistry.DrillChildren children = SettingRegistry.children(parent);
-            candidates.addAll(children.sections());
-            candidates.addAll(children.leaves());
-        }
-        for (String candidate : candidates) {
-            if (candidate.equalsIgnoreCase(segment)) {
-                return candidate;
-            }
-        }
-        return null;
-    }
-
-    /** True when the path addresses one list entry with a live index. */
-    private static boolean isIndexPath(String path, Function<String, List<String>> lists) {
-        int dot = path.lastIndexOf('.');
-        if (dot == -1 || !SettingRegistry.isListPath(path.substring(0, dot))) {
-            return false;
-        }
-        List<String> entries = lists == null ? null : lists.apply(path.substring(0, dot));
-        if (entries == null) {
-            return false;
-        }
-        try {
-            int index = Integer.parseInt(path.substring(dot + 1).trim());
-            return index >= 0 && index < entries.size();
-        } catch (NumberFormatException expected) {
-            return false;
-        }
-    }
-
-    /**
-     * Next-level completion options for the given prefix: child sections
-     * and leaves, or list indices with add and remove under lists, so
-     * completion never suggests dead ends.
-     */
-    public static List<String> drillChildren(List<String> prefix,
-            Function<String, List<String>> lists) {
-        String current = "";
-        for (String segment : prefix) {
-            String match = matchChild(current, segment, lists);
-            if (match == null) {
-                return List.of();
-            }
-            current = current.isEmpty() ? match : current + "." + match;
-            if (SettingRegistry.byPath(current) != null || isIndexPath(current, lists)) {
-                return List.of();
-            }
-        }
-        List<String> options = new ArrayList<>();
-        if (current.isEmpty()) {
-            options.addAll(SettingRegistry.topCategories());
-        } else if (SettingRegistry.isListPath(current)) {
-            List<String> entries = lists == null ? null : lists.apply(current);
-            if (entries != null) {
-                for (int index = 0; index < entries.size(); index++) {
-                    options.add(String.valueOf(index));
-                }
-            }
-            options.add("add");
-            options.add("remove");
-            options.add("reset");
-        } else {
-            SettingRegistry.DrillChildren children = SettingRegistry.children(current);
-            options.addAll(children.sections());
-            options.addAll(children.leaves());
-        }
-        options.sort(String.CASE_INSENSITIVE_ORDER);
-        return options;
-    }
-
-    private boolean worldEngine(CommandSender sender, String[] args) {
-        if (!config.getBoolean("world-engine.enabled", false)) {
-            return message(sender, messages.manhunt().getWorldengineDisabled());
-        }
-        if (args.length == 1 || args[1].isBlank()) {
-            return message(sender, messages.manhunt().getWorldengineUsage());
-        }
-
-        String sub = args[1].toLowerCase(Locale.ROOT);
-        if (!canUseWorldEngineAction(sender, sub)) {
-            return message(sender, messages.command().getNoPermission());
-        }
-        if (sub.equals("lobbyconfig")) {
-            return worldEngineLobbyConfig(sender, args);
-        }
-        if (sub.equals("tpto")) {
-            return worldEngineTpto(sender, args);
-        }
-        if (sub.equals("cellindex")) {
-            return worldEngineCellIndex(sender, args);
-        }
-        return message(sender, messages.manhunt().getWorldengineUsage());
-    }
-
-    private boolean worldEngineCellIndex(CommandSender sender, String[] args) {
-        if (args.length < 3 || args[2].isBlank()) {
-            return message(sender, messages.manhunt().getWorldengineCellindexUsage());
-        }
-        String action = args[2].toLowerCase(Locale.ROOT);
-        if (action.equals("buffer")) {
-            return cellIndexBuffer(sender, args);
-        }
-        if (action.equals("get")) {
-            return cellIndexGet(sender, args);
-        }
-        if (action.equals("set")) {
-            return cellIndexSet(sender, args);
-        }
-        return message(sender, messages.manhunt().getWorldengineCellindexUsage());
-    }
-
-    /** Lists the buffered world-engine cell indexes. */
-    private boolean cellIndexBuffer(CommandSender sender, String[] args) {
-        if (args.length > 3) {
-            return message(sender, messages.manhunt().getWorldengineCellindexUsage());
-        }
-        message(sender, messages.manhunt().getWorldengineCellindexBufferHeader());
-        for (long index : game.bufferedCellIndexes()) {
-            message(sender, messages.manhunt().getWorldengineCellindexBufferEntry(),
-                    Map.of("index", String.valueOf(index)));
-        }
-        neutralSound(sender);
-        return true;
-    }
-
-    /** Shows the current world-engine cell index. */
-    private boolean cellIndexGet(CommandSender sender, String[] args) {
-        if (args.length > 3) {
-            return message(sender, messages.manhunt().getWorldengineCellindexUsage());
-        }
-        OptionalLong index = game.cellIndex();
-        if (index.isEmpty()) {
-            return message(sender, messages.manhunt().getWorldengineCellindexUnavailable());
-        }
-        message(sender, messages.manhunt().getWorldengineCellindexGet(),
-                Map.of("index", String.valueOf(index.getAsLong())));
-        neutralSound(sender);
-        return true;
-    }
-
-    /** Sets the world-engine cell index, clamped to the cap. */
-    private boolean cellIndexSet(CommandSender sender, String[] args) {
-        if (args.length != 4) {
-            return message(sender, messages.manhunt().getWorldengineCellindexUsage());
-        }
-        long max = game.cellIndexCap();
-        long value;
-        try {
-            value = Long.parseLong(args[3].trim());
-        } catch (NumberFormatException exception) {
-            message(sender, messages.manhunt().getWorldengineCellindexInvalid(),
-                    Map.of("max", String.valueOf(max)));
-            return true;
-        }
-        OptionalLong before = game.cellIndex();
-        long clamped = WorldEngineService.clampCellIndex(value, max);
-        if (!game.cellIndex(clamped)) {
-            return message(sender, messages.manhunt().getWorldengineCellindexUnavailable());
-        }
-        message(sender, messages.manhunt().getWorldengineCellindexSet(), Map.of("index", String.valueOf(clamped),
-                "was", before.isPresent() ? String.valueOf(before.getAsLong()) : "none",
-                "max", String.valueOf(max)));
-        neutralSound(sender);
-        return true;
-    }
-
-    /**
-     * Stores a lobby teleport: setlobbytp &lt;lobby-id&gt;
-     * [x y z yaw pitch]. Coords are all-or-none; omitted coords use the
-     * sender's position, so the console must pass all five. The
-     * position path requires standing in the lobby world; explicit
-     * coords skip that check.
-     */
-    private boolean lobbyConfigSetTp(CommandSender sender, String[] args) {
-        if (args.length != 4 && args.length != 9) {
-            return message(sender, messages.manhunt().getWorldengineLobbyconfigSetlobbytpUsage());
-        }
-        OptionalInt lobbyId = LobbyService.parseId(args[3]);
-        if (lobbyId.isEmpty()) {
-            return message(sender, messages.manhunt().getLobbyInvalidId());
-        }
-        if (!lobbies.multiLobbyAllowed() && lobbyId.getAsInt() != 0) {
-            return message(sender, messages.manhunt().getLobbyWorldengineRequired());
-        }
-        LobbyTpTarget target = resolveLobbyTpTarget(sender, args);
-        if (target == null) {
-            return true;
-        }
-        saveLobbyTp(lobbyId.getAsInt(), target.location());
-        List<Player> targets = new ArrayList<>();
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (game.instanceOf(online.getUniqueId()).isEmpty()) {
-                targets.add(online);
-            }
-        }
-        lobbyTeleporter.setSpawnToLobby(targets, lobbyId.getAsInt());
-        message(sender, messages.manhunt().getWorldengineLobbyconfigSetlobbytpSuccess(), Map.of(
-                "lobby", String.valueOf(lobbyId.getAsInt()), "location", target.shown()));
-        neutralSound(sender);
-        return true;
-    }
-
-    /**
-     * Resolves the setlobbytp target: explicit coords, or the sender's
-     * spot in the lobby world. Null when invalid (message already sent).
-     */
-    private LobbyTpTarget resolveLobbyTpTarget(CommandSender sender, String[] args) {
-        if (args.length == 9) {
-            double[] coords = parseLobbyTpCoords(args[4], args[5], args[6], args[7], args[8]);
-            if (coords == null) {
-                message(sender, messages.manhunt().getWorldengineInvalidLocation());
-                return null;
-            }
-            Location location = new Location(null, coords[0], coords[1], coords[2],
-                    (float) coords[3], (float) coords[4]);
-            return new LobbyTpTarget(location,
-                    formatCoords(coords[0], coords[1], coords[2], coords[3], coords[4]));
-        }
-        if (!(sender instanceof Player player)) {
-            message(sender, messages.command().getPlayerOnly());
-            return null;
-        }
-        String lobbyWorld = game.lobbyWorldName();
-        if (player.getWorld() == null || !player.getWorld().getName().equals(lobbyWorld)) {
-            message(sender, messages.manhunt().getWorldengineLobbyconfigSetlobbytpWrongWorld(),
-                    Map.of("world", lobbyWorld));
-            return null;
-        }
-        Location location = player.getLocation();
-        return new LobbyTpTarget(location, formatLocation(location));
-    }
-
-    /** A resolved setlobbytp target: where, plus how to show it. */
-    private record LobbyTpTarget(Location location, String shown) {
-    }
-
-    /**
-     * Parses setlobbytp coords: x, y, z, yaw, pitch. Null when any part
-     * is not a number. Pure for tests.
-     */
-    static double[] parseLobbyTpCoords(String xText, String yText, String zText,
-            String yawText, String pitchText) {
-        try {
-            return new double[]{
-                    Double.parseDouble(xText.trim()),
-                    Double.parseDouble(yText.trim()),
-                    Double.parseDouble(zText.trim()),
-                    Double.parseDouble(yawText.trim()),
-                    Double.parseDouble(pitchText.trim())};
-        } catch (NumberFormatException expected) {
-            return null;
-        }
-    }
-
-    private static String formatCoords(double x, double y, double z, double yaw, double pitch) {
-        return String.format("%.2f, %.2f, %.2f, %.2f, %.2f", x, y, z, yaw, pitch);
-    }
-
-    /**
-     * Manages lobby teleports and boundary boxes in the lobby store:
-     * pos1|pos2 records the executing player's feet block as a bounds
-     * corner, setbounds stores both corners, setlobbytp stores a
-     * teleport, and deletelobby removes the whole entry.
-     */
-    private boolean worldEngineLobbyConfig(CommandSender sender, String[] args) {
-        if (args.length < 3 || args[2].isBlank()) {
-            return message(sender, messages.manhunt().getWorldengineLobbyconfigUsage());
-        }
-        String action = args[2].toLowerCase(Locale.ROOT);
-        switch (action) {
-            case "pos1", "pos2" -> {
-                return lobbyConfigPos(sender, action.equals("pos1"), args);
-            }
-            case "setbounds" -> {
-                return lobbyConfigSetBounds(sender, args);
-            }
-            case "setlobbytp" -> {
-                return lobbyConfigSetTp(sender, args);
-            }
-            case "deletelobby" -> {
-                return lobbyConfigDelete(sender, args);
-            }
-            default -> {
-                return message(sender, messages.manhunt().getWorldengineLobbyconfigUsage());
-            }
-        }
-    }
-
-    private boolean lobbyConfigPos(CommandSender sender, boolean first, String[] args) {
-        if (!(sender instanceof Player player)) {
-            return message(sender, messages.command().getPlayerOnly());
-        }
-        if (args.length != 3) {
-            return message(sender, messages.manhunt().getWorldengineLobbyconfigUsage());
-        }
-        (first ? boundPos1 : boundPos2).put(player.getUniqueId(), player.getLocation().clone());
-        message(sender, first ? messages.manhunt().getWorldengineLobbyconfigPos1()
-                        : messages.manhunt().getWorldengineLobbyconfigPos2(),
-                Map.of("pos", blockCoords(player.getLocation())));
-        neutralSound(sender);
-        return true;
-    }
-
-    /**
-     * Stores both recorded corners as a lobby's bounds. Player-only,
-     * since the corners come from the sender. Overwriting existing
-     * bounds needs a second run within 10 seconds.
-     */
-    private boolean lobbyConfigSetBounds(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            return message(sender, messages.command().getPlayerOnly());
-        }
-        if (args.length != 4) {
-            return message(sender, messages.manhunt().getWorldengineLobbyconfigSetboundsUsage());
-        }
-        OptionalInt lobbyId = LobbyService.parseId(args[3]);
-        if (lobbyId.isEmpty()) {
-            return message(sender, messages.manhunt().getLobbyInvalidId());
-        }
-        if (!lobbies.multiLobbyAllowed() && lobbyId.getAsInt() != 0) {
-            return message(sender, messages.manhunt().getLobbyWorldengineRequired());
-        }
-        Location first = boundPos1.get(player.getUniqueId());
-        Location second = boundPos2.get(player.getUniqueId());
-        if (first == null || second == null) {
-            return message(sender, messages.manhunt().getWorldengineLobbyconfigNeedSelection());
-        }
-        if (first.getWorld() == null || !first.getWorld().equals(second.getWorld())) {
-            return message(sender, messages.manhunt().getWorldengineLobbyconfigWorldMismatch());
-        }
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
-        OptionalInt duplicate = LobbyBounds.duplicateOf(lobbyConfig.getLobbies(), lobbyId.getAsInt(),
-                first.getBlockX(), first.getBlockY(), first.getBlockZ(),
-                second.getBlockX(), second.getBlockY(), second.getBlockZ());
-        if (duplicate.isPresent()) {
-            message(sender, messages.manhunt().getWorldengineLobbyconfigDuplicateBounds(),
-                    Map.of("other", String.valueOf(duplicate.getAsInt())));
-            return true;
-        }
-        LobbyConfig.LobbyEntry entry =
-                lobbyConfig.getLobbies().get(String.valueOf(lobbyId.getAsInt()));
-        boolean hasBounds = entry != null && entry.getBounds() != null
-                && entry.getBounds().getPos1() != null && entry.getBounds().getPos2() != null;
-        if (hasBounds && !confirms.confirm(
-                "lobbyconfig-setbounds:" + senderKey(sender) + ":" + lobbyId.getAsInt())) {
-            message(sender, messages.manhunt().getWorldengineLobbyconfigSetboundsConfirm(),
-                    Map.of("lobby", String.valueOf(lobbyId.getAsInt())));
-            return true;
-        }
-        writeLobbyBounds(sender, lobbyId.getAsInt(), first, second);
-        return true;
-    }
-
-    /** Writes one lobby's bounds box from two corners and reports it. */
-    private void writeLobbyBounds(CommandSender sender, int lobbyId, Location first, Location second) {
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
-        LobbyConfig.LobbyEntry entry =
-                lobbyConfig.getLobbies().get(String.valueOf(lobbyId));
-        if (entry == null) {
-            entry = new LobbyConfig.LobbyEntry();
-            lobbyConfig.getLobbies().put(String.valueOf(lobbyId), entry);
-        }
-        LobbyConfig.BoundsData bounds = new LobbyConfig.BoundsData();
-        bounds.setPos1(LobbyConfig.Position.of(first.getBlockX(), first.getBlockY(), first.getBlockZ()));
-        bounds.setPos2(LobbyConfig.Position.of(second.getBlockX(), second.getBlockY(), second.getBlockZ()));
-        entry.setBounds(bounds);
-        lobbyConfig.save();
-        message(sender, messages.manhunt().getWorldengineLobbyconfigSetboundsSuccess(), Map.of(
-                "lobby", String.valueOf(lobbyId),
-                "from", blockCoords(first), "to", blockCoords(second)));
-        neutralSound(sender);
-    }
-
-    /**
-     * Deletes a lobby entry (teleport plus bounds) from the lobby
-     * store. Live lobbies, members, and matches are untouched.
-     * Console-capable. Needs a second run within 10 seconds.
-     */
-    private boolean lobbyConfigDelete(CommandSender sender, String[] args) {
-        if (args.length != 4) {
-            return message(sender, messages.manhunt().getWorldengineLobbyconfigDeletelobbyUsage());
-        }
-        OptionalInt lobbyId = LobbyService.parseId(args[3]);
-        if (lobbyId.isEmpty()) {
-            return message(sender, messages.manhunt().getLobbyInvalidId());
-        }
-        if (!lobbies.multiLobbyAllowed() && lobbyId.getAsInt() != 0) {
-            return message(sender, messages.manhunt().getLobbyWorldengineRequired());
-        }
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
-        if (!lobbyConfigHasLobby(lobbyConfig, lobbyId.getAsInt())) {
-            message(sender, messages.manhunt().getWorldengineLobbyconfigDeletelobbyMissing(),
-                    Map.of("lobby", String.valueOf(lobbyId.getAsInt())));
-            return true;
-        }
-        if (!confirms.confirm(
-                "lobbyconfig-delete:" + senderKey(sender) + ":" + lobbyId.getAsInt())) {
-            message(sender, messages.manhunt().getWorldengineLobbyconfigDeletelobbyConfirm(),
-                    Map.of("lobby", String.valueOf(lobbyId.getAsInt())));
-            return true;
-        }
-        lobbyConfig.getLobbies().remove(String.valueOf(lobbyId.getAsInt()));
-        lobbyConfig.save();
-        message(sender, messages.manhunt().getWorldengineLobbyconfigDeletelobbySuccess(),
-                Map.of("lobby", String.valueOf(lobbyId.getAsInt())));
-        neutralSound(sender);
-        return true;
-    }
-
-    /**
-     * True when the lobby store defines the index. A lobby counts as
-     * existing with an index alone, even without a teleport or bounds.
-     * Pure for tests.
-     */
-    static boolean lobbyConfigHasLobby(LobbyConfig lobbyConfig, int lobbyId) {
-        return lobbyConfig != null && lobbyConfig.getLobbies() != null
-                && lobbyConfig.getLobbies().containsKey(String.valueOf(lobbyId));
-    }
-
-    /** Smallest lobby id without bounds yet. Pure for tests. */
-    static int nextFreeBoundsId(Set<Integer> boundedIds) {
-        int id = 0;
-        while (boundedIds.contains(id)) {
-            id++;
-        }
-        return id;
-    }
-
-    private static String blockCoords(Location corner) {
-        return corner.getBlockX() + ", " + corner.getBlockY() + ", " + corner.getBlockZ();
-    }
 
     /** Developer tools. Only schem exists for now; usage covers the rest. */
     private boolean dev(CommandSender sender, String[] args) {
         if (args.length < 2 || !args[1].equalsIgnoreCase("schem")) {
-            return message(sender, messages.dev().getUsage());
+            return support.message(sender, messages.dev().getUsage());
         }
         return devSchem.execute(sender, java.util.Arrays.copyOfRange(args, 2, args.length));
     }
@@ -1943,7 +369,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
             // Only suggest subcommands the sender may actually run.
             List<String> options = subcommandOptions();
             options.removeIf(option -> !canUseSubcommand(sender, option));
-            return partial(args[0], options);
+            return CommandSupport.partial(args[0], options);
         }
         SubcommandUnit unit = units.get(args[0].toLowerCase(Locale.ROOT));
         if (unit != null) {
@@ -1952,461 +378,19 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
                 return unitCompletion;
             }
         }
-        List<String> completion = completeStatusTab(sender, args);
-        if (completion == null) {
-            completion = completeGameTab(args);
+        if (args[0].equalsIgnoreCase("modifiers")) {
+            return modifiersCmd.completeModifiersTab(args);
         }
-        if (completion == null) {
-            completion = completeDevTab(args);
+        if (args[0].equalsIgnoreCase("override")) {
+            return overrideCmd.completeOverrideTab(args);
         }
-        if (args.length >= 2
-                && args[0].equalsIgnoreCase("config")) {
-            return completeDrill(args);
-        }
-        if (completion == null) {
-            completion = completeWorldEngineTab(sender, args);
-        }
-        if (completion == null) {
-            completion = completeSetPlayerTab(args);
-        }
-        if (completion == null) {
-            completion = completeLobbyTab(args);
-        }
-        if (completion == null) {
-            completion = completeModifiersTab(args);
-        }
-        if (completion == null) {
-            completion = completeOverrideTab(args);
-        }
-        return completion == null ? List.of() : completion;
-    }
-
-    /** Tab completion for modifiers toggles. Null when inapplicable. */
-    private List<String> completeModifiersTab(String[] args) {
-        if (args.length == 2 && args[0].equalsIgnoreCase("modifiers")) {
-            return partial(args[1],
-                    List.of("setmod", "setpreset", "export", "import", "create", "test"));
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("modifiers")) {
-            if (args[1].equalsIgnoreCase("setmod")) {
-                return partial(args[2], modifiersCmd.modifierNameOptions());
-            }
-            if (args[1].equalsIgnoreCase("setpreset")) {
-                return partial(args[2], modifiersCmd.presetIdOptions());
-            }
-            if (args[1].equalsIgnoreCase("export") || args[1].equalsIgnoreCase("import")
-                    || args[1].equalsIgnoreCase("create")) {
-                return partial(args[2], List.of("modifier", "preset"));
-            }
-            if (args[1].equalsIgnoreCase("test")) {
-                return partial(args[2], List.of("speedrunner", "hunter"));
-            }
-            return null;
-        }
-        if (args.length >= 4 && args[0].equalsIgnoreCase("modifiers")
-                && args[1].equalsIgnoreCase("create")) {
-            return completeCreateTab(args);
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("modifiers")
-                && (args[1].equalsIgnoreCase("setmod") || args[1].equalsIgnoreCase("setpreset"))) {
-            return partial(args[3], List.of("true", "false"));
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("modifiers")
-                && args[1].equalsIgnoreCase("export")) {
-            if (args[2].equalsIgnoreCase("preset")) {
-                return partial(args[3], modifiersCmd.presetIdOptions());
-            }
-            return partial(args[3], modifiersCmd.modifierNameOptions());
-        }
-        return null;
-    }
-
-    /** Tab completion for per-lobby overrides. Null when inapplicable. */
-    private List<String> completeOverrideTab(String[] args) {
-        if (!args[0].equalsIgnoreCase("override")) {
-            return null;
-        }
-        if (args.length == 2) {
-            return partial(args[1], overrideLobbyOptions());
-        }
-        if (args.length == 3) {
-            return partial(args[2], List.of("settings", "modifiers", "clear"));
-        }
-        if (args[2].equalsIgnoreCase("clear")) {
-            return List.of();
-        }
-        if (args.length == 4) {
-            if (args[2].equalsIgnoreCase("settings") || args[2].equalsIgnoreCase("modifiers")) {
-                return partial(args[3], List.of("get", "set", "clear"));
-            }
-            return List.of();
-        }
-        if (args[2].equalsIgnoreCase("modifiers")) {
-            return completeOverrideModifiersTab(args);
-        }
-        if (args[2].equalsIgnoreCase("settings")) {
-            return completeOverrideSettingsTab(args);
+        if (args[0].equalsIgnoreCase("dev")) {
+            return devSchem.completeDevTab(args);
         }
         return List.of();
     }
 
-    /** Id and state completion for override modifiers verbs. */
-    private List<String> completeOverrideModifiersTab(String[] args) {
-        String verb = args[3].toLowerCase(Locale.ROOT);
-        if (!verb.equals("get") && !verb.equals("set") && !verb.equals("clear")) {
-            return null;
-        }
-        if (args.length == 5) {
-            List<String> ids = new ArrayList<>(modifiersCmd.modifierNameOptions());
-            ids.addAll(modifiersCmd.presetIdOptions());
-            ids.sort(String.CASE_INSENSITIVE_ORDER);
-            return partial(args[4], ids);
-        }
-        if (args.length == 6 && verb.equals("set")) {
-            return partial(args[5], List.of("true", "false"));
-        }
-        return List.of();
-    }
 
-    /** Drill completion for override settings verbs, reusing the config drill. */
-    private List<String> completeOverrideSettingsTab(String[] args) {
-        String verb = args[3].toLowerCase(Locale.ROOT);
-        if (!verb.equals("get") && !verb.equals("set") && !verb.equals("clear")) {
-            return null;
-        }
-        List<String> segments = new ArrayList<>();
-        for (int index = 4; index < args.length - 1; index++) {
-            segments.add(args[index]);
-        }
-        String completing = args[args.length - 1];
-        if (verb.equals("get") || verb.equals("clear")) {
-            if (segments.isEmpty()) {
-                return partial(completing, SettingRegistry.topCategories());
-            }
-            return partial(completing, drillChildren(segments, config::getStringList));
-        }
-        String[] shifted = new String[segments.size() + 2];
-        shifted[0] = "config";
-        for (int index = 0; index < segments.size(); index++) {
-            shifted[index + 1] = segments.get(index);
-        }
-        shifted[shifted.length - 1] = completing;
-        List<String> options = completeDrill(shifted);
-        DrillResolve parent = segments.isEmpty() ? null
-                : resolveDrill(segments, config::getStringList);
-        if (parent != null && SettingRegistry.isListPath(parent.path())
-                && parent.remainder().isEmpty()) {
-            options = options.stream()
-                    .filter(option -> !option.equalsIgnoreCase("reset")).toList();
-        }
-        return options;
-    }
-
-    /** Lobby id completion: live ids plus override holders, sorted. */
-    private List<String> overrideLobbyOptions() {
-        Set<Integer> ids = new HashSet<>();
-        for (String raw : lobbyIdOptions()) {
-            try {
-                ids.add(Integer.parseInt(raw.trim()));
-            } catch (NumberFormatException expected) {
-                // Live ids are always numeric; ignore anything else.
-            }
-        }
-        if (plugin.overrides() != null) {
-            ids.addAll(plugin.overrides().overrideLobbyIds());
-        }
-        List<Integer> sorted = new ArrayList<>(ids);
-        sorted.sort(Integer::compareTo);
-        return sorted.stream().map(String::valueOf).toList();
-    }
-
-    /** Flag and flag-value completion for modifiers create. */
-    private List<String> completeCreateTab(String[] args) {
-        boolean preset = args[2].equalsIgnoreCase("preset");
-        String current = args[args.length - 1];
-        if (current.startsWith("--")) {
-            return partial(current, ModifierCreateArgs.flagsFor(preset));
-        }
-        String previous = args[args.length - 2].toLowerCase(Locale.ROOT);
-        return switch (previous) {
-            case "--trigger" -> partial(current, ModifierTriggers.KNOWN);
-            case "--member" -> partial(current, modifiersCmd.modifierNameOptions());
-            case "--on-start", "--selection" -> partial(current, List.of("IN_ORDER", "PICK_RANDOM"));
-            case "--interval-scope", "--chance-scope", "--pick-scope" ->
-                    partial(current, List.of("PER_INVOKE", "PER_EXECUTOR"));
-            default -> null;
-        };
-    }
-
-    /** Tab completion for status, start, and end. Null when inapplicable. */
-    private List<String> completeStatusTab(CommandSender sender, String[] args) {
-        if (args.length == 2 && args[0].equalsIgnoreCase("status")) {
-            if (!canUseStatusArgs(sender)) {
-                return List.of();
-            }
-            List<String> options = new ArrayList<>(List.of("all"));
-            options.addAll(instanceIdOptions());
-            return partial(args[1], options);
-        }
-        return null;
-    }
-
-    /** Tab completion for game join and leave. Null when inapplicable. */
-    private List<String> completeGameTab(String[] args) {
-        if (args.length == 2 && args[0].equalsIgnoreCase("game")) {
-            return partial(args[1], List.of("join", "leave"));
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("game")
-                && (args[1].equalsIgnoreCase("join") || args[1].equalsIgnoreCase("leave"))) {
-            return partial(args[2], instanceIdOptions());
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("game") && args[1].equalsIgnoreCase("join")) {
-            return partial(args[3], List.of("hunter", "speedrunner", "spectator", "none"));
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("game") && args[1].equalsIgnoreCase("leave")) {
-            return partial(args[3], selectorOptions());
-        }
-        if (args.length == 5 && args[0].equalsIgnoreCase("game") && args[1].equalsIgnoreCase("join")) {
-            return partial(args[4], selectorOptions());
-        }
-        return null;
-    }
-
-    /** Tab completion for dev and debug. Null when inapplicable. */
-    private List<String> completeDevTab(String[] args) {
-        if (args.length == 2 && args[0].equalsIgnoreCase("dev")) {
-            return partial(args[1], List.of("schem"));
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("dev") && args[1].equalsIgnoreCase("schem")) {
-            return partial(args[2], List.of("pos1", "pos2", "save", "load", "list"));
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("dev") && args[1].equalsIgnoreCase("schem")
-                && args[2].equalsIgnoreCase("load")) {
-            return partial(args[3], devSchem.schematicNames());
-        }
-        return null;
-    }
-
-    /** Tab completion for worldengine actions. Null when inapplicable. */
-    private List<String> completeWorldEngineTab(CommandSender sender, String[] args) {
-        if (args.length == 2 && args[0].equalsIgnoreCase("worldengine")) {
-            List<String> actions = new ArrayList<>(List.of("lobbyconfig", "cellindex", "tpto"));
-            actions.removeIf(action -> !canUseWorldEngineAction(sender, action));
-            return partial(args[1], actions);
-        }
-        if (args.length >= 3 && args[0].equalsIgnoreCase("worldengine")
-                && args[1].equalsIgnoreCase("lobbyconfig")) {
-            return completeWorldEngineLobbyConfigTab(sender, args);
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("cellindex")) {
-            if (!canUseWorldEngineAction(sender, "cellindex")) {
-                return List.of();
-            }
-            return partial(args[2], List.of("get", "set", "buffer"));
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("tpto")) {
-            return partial(args[2], List.of("lobbyworld", "gameworld"));
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("tpto")) {
-            return partial(args[3], selectorOptions());
-        }
-        if (args.length == 5 && args[0].equalsIgnoreCase("worldengine") && args[1].equalsIgnoreCase("tpto")
-                && args[2].equalsIgnoreCase("lobbyworld")) {
-            return partial(args[4], lobbyPresetOptions());
-        }
-        return null;
-    }
-
-    /** Tab completion for worldengine lobbyconfig. Null when inapplicable. */
-    private List<String> completeWorldEngineLobbyConfigTab(CommandSender sender, String[] args) {
-        if (args.length == 3 && args[0].equalsIgnoreCase("worldengine")
-                && args[1].equalsIgnoreCase("lobbyconfig")) {
-            if (!canUseWorldEngineAction(sender, "lobbyconfig")) {
-                return List.of();
-            }
-            return partial(args[2], List.of("pos1", "pos2", "setbounds", "setlobbytp", "deletelobby"));
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("worldengine")
-                && args[1].equalsIgnoreCase("lobbyconfig") && args[2].equalsIgnoreCase("setbounds")) {
-            if (!canUseWorldEngineAction(sender, "lobbyconfig")) {
-                return List.of();
-            }
-            return partial(args[3], lobbyBoundsSetOptions());
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("worldengine")
-                && args[1].equalsIgnoreCase("lobbyconfig") && args[2].equalsIgnoreCase("setlobbytp")) {
-            if (!canUseWorldEngineAction(sender, "lobbyconfig")) {
-                return List.of();
-            }
-            return partial(args[3], lobbyIdOptions());
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("worldengine")
-                && args[1].equalsIgnoreCase("lobbyconfig") && args[2].equalsIgnoreCase("deletelobby")) {
-            if (!canUseWorldEngineAction(sender, "lobbyconfig")) {
-                return List.of();
-            }
-            return partial(args[3], lobbyConfigIdOptions());
-        }
-        return null;
-    }
-
-    /** Tab completion for setplayer. Null when inapplicable. */
-    private List<String> completeSetPlayerTab(String[] args) {
-        if (args.length == 2 && args[0].equalsIgnoreCase("setplayer")) {
-            if (args[1].startsWith("@a[")) {
-                return partial(args[1], List.of("@a[distance=", "@a[limit=", "@a[name=", "@a[gamemode="));
-            }
-            return partial(args[1], selectorOptions());
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("setplayer")) {
-            return partial(args[2], List.of("hunter", "speedrunner", "spectator", "afk", "none"));
-        }
-        if ((args.length == 4 || args.length == 5) && args[0].equalsIgnoreCase("setplayer")) {
-            return partial(args[args.length - 1], List.of("-f", "-force", "-s", "-silent"));
-        }
-        return null;
-    }
-
-    /** Tab completion for lobby join and leave. Null when inapplicable. */
-    private List<String> completeLobbyTab(String[] args) {
-        if (args.length == 2 && args[0].equalsIgnoreCase("lobby")) {
-            return partial(args[1], List.of("join", "leave"));
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join")) {
-            return partial(args[2], selectorOptions());
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("leave")) {
-            return partial(args[2], selectorOptions());
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join")) {
-            return partial(args[3], lobbyIdOptions());
-        }
-        if (args.length == 5 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join")) {
-            return partial(args[4], List.of("hunter", "speedrunner", "spectator", "afk", "none",
-                    "-f", "-force", "-notp", "-s", "-silent"));
-        }
-        if (args.length == 6 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join")) {
-            return partial(args[5], List.of("-f", "-force", "-notp", "-s", "-silent"));
-        }
-        if (args.length == 7 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join")) {
-            return partial(args[6], List.of("-f", "-force", "-notp", "-s", "-silent"));
-        }
-        if (args.length == 8 && args[0].equalsIgnoreCase("lobby") && args[1].equalsIgnoreCase("join")) {
-            return partial(args[7], List.of("-f", "-force", "-notp", "-s", "-silent"));
-        }
-        return null;
-    }
-
-    /**
-     * Completes one drill-down argument: categories at the first position,
-     * value candidates after an editable leaf, otherwise only the children of
-     * the resolved prefix.
-     */
-    private List<String> completeDrill(String[] args) {
-        List<String> prefix = new ArrayList<>();
-        for (int i = 1; i < args.length - 1; i++) {
-            prefix.add(args[i]);
-        }
-        String completing = args[args.length - 1];
-        if (!prefix.isEmpty() && prefix.get(prefix.size() - 1).equalsIgnoreCase("remove")) {
-            DrillResolve parent = resolveDrill(
-                    prefix.subList(0, prefix.size() - 1), config::getStringList);
-            if (parent != null && SettingRegistry.isListPath(parent.path())
-                    && parent.remainder().isEmpty()) {
-                List<String> indices = new ArrayList<>();
-                for (int index = 0; index < config.getStringList(parent.path()).size(); index++) {
-                    indices.add(String.valueOf(index));
-                }
-                return partial(completing, indices);
-            }
-            return List.of();
-        }
-        if (prefix.isEmpty()) {
-            return partial(completing, SettingRegistry.topCategories());
-        }
-        DrillResolve resolved = resolveDrill(prefix, config::getStringList);
-        if (resolved != null && resolved.leaf() && resolved.remainder().isEmpty()) {
-            SettingDescriptor descriptor = config.describe(resolved.path());
-            if (descriptor != null && descriptor.type() == SettingType.BOOL) {
-                return partial(completing, List.of("true", "false"));
-            }
-            if (descriptor != null && descriptor.type() == SettingType.OPTION) {
-                return partial(completing, descriptor.options());
-            }
-            Object defaultValue = config.defaultValue(resolved.path());
-            if (defaultValue != null) {
-                return partial(completing, List.of(ConfigService.displayValue(defaultValue)));
-            }
-            return List.of();
-        }
-        return partial(completing, drillChildren(prefix, config::getStringList));
-    }
-
-    /** Lobby id completion: live lobby ids, falling back to 0 when none exist. */
-    private List<String> lobbyIdOptions() {
-        return CommandSupport.lobbyIdOptions(lobbies);
-    }
-
-    /**
-     * Lobby id completion for lobbyconfig setbounds: the next id
-     * without bounds first, then live lobby ids. Any valid id stays
-     * accepted.
-     */
-    private List<String> lobbyBoundsSetOptions() {
-        Set<Integer> bounded = new HashSet<>();
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
-        if (lobbyConfig != null && lobbyConfig.getLobbies() != null) {
-            for (Map.Entry<String, LobbyConfig.LobbyEntry> entry : lobbyConfig.getLobbies().entrySet()) {
-                int id;
-                try {
-                    id = Integer.parseInt(entry.getKey().trim());
-                } catch (NumberFormatException expected) {
-                    continue;
-                }
-                LobbyConfig.LobbyEntry value = entry.getValue();
-                if (id >= 0 && value != null && value.getBounds() != null
-                        && value.getBounds().getPos1() != null && value.getBounds().getPos2() != null) {
-                    bounded.add(id);
-                }
-            }
-        }
-        List<String> options = new ArrayList<>();
-        options.add(String.valueOf(nextFreeBoundsId(bounded)));
-        for (String id : lobbyIdOptions()) {
-            if (!options.contains(id)) {
-                options.add(id);
-            }
-        }
-        return options;
-    }
-
-    /**
-     * Lobby id completion for lobbyconfig deletelobby: indexes defined
-     * in the lobby store, sorted. Empty when none are defined.
-     */
-    private List<String> lobbyConfigIdOptions() {
-        List<Integer> ids = new ArrayList<>();
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
-        if (lobbyConfig != null && lobbyConfig.getLobbies() != null) {
-            for (String key : lobbyConfig.getLobbies().keySet()) {
-                try {
-                    int id = Integer.parseInt(key.trim());
-                    if (id >= 0) {
-                        ids.add(id);
-                    }
-                } catch (NumberFormatException expected) {
-                    // Skip non-numeric indexes.
-                }
-            }
-        }
-        return ids.stream().sorted().map(String::valueOf).toList();
-    }
-
-    /**
-     * Top-level subcommand completion, in display order. The client shows
-     * these bottom-up, so the source lists them reversed to read properly
-     * in game.
-     */
     /**
      * First-level completions. {@code dev} stays out on purpose (developer
      * tooling), but everything after a typed {@code dev} still completes.
@@ -2415,221 +399,5 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         return new ArrayList<>(List.of("challenges", "help", "support", "reload", "worldengine", "config",
                 "modifiers", "override", "debug", "lobby", "qs", "quickstart", "game", "end",
                 "start", "setplayer", "setup", "status"));
-    }
-
-    /** Instance id completion: live match ids, oldest first. */
-    private List<String> instanceIdOptions() {
-        return CommandSupport.instanceIdOptions(game);
-    }
-
-    /** Selector completion: vanilla selectors plus online player names. */
-    private static List<String> selectorOptions() {
-        List<String> selectors = new ArrayList<>(List.of("@a", "@r", "@s", "@p"));
-        Bukkit.getOnlinePlayers().forEach(player -> selectors.add(player.getName()));
-        return selectors;
-    }
-
-    private List<String> partial(String value, List<String> options) {
-        String normalized = value.toLowerCase(Locale.ROOT);
-        return options.stream().filter(option -> option.toLowerCase(Locale.ROOT).startsWith(normalized)).toList();
-    }
-
-    /**
-     * Teleports to the lobby world or the game world: tpto
-     * &lt;lobbyworld|gameworld&gt; [selector] [preset]. The lobby world is
-     * generated on a confirmed second run when it does not exist yet. The
-     * preset only applies to lobbyworld fresh generation and is ignored
-     * once the world exists.
-     */
-    private boolean worldEngineTpto(CommandSender sender, String[] args) {
-        if (args.length < 3 || args.length > 5) {
-            return message(sender, messages.manhunt().getWorldengineTptoUsage());
-        }
-        Optional<TptoTarget> target = parseTptoTarget(args[2]);
-        if (target.isEmpty()) {
-            return message(sender, messages.manhunt().getWorldengineTptoUsage());
-        }
-        if (args.length == 5 && target.get() != TptoTarget.LOBBY) {
-            return message(sender, messages.manhunt().getWorldengineTptoUsage());
-        }
-        Optional<LobbyPreset> preset = Optional.empty();
-        if (args.length == 5) {
-            Optional<LobbyPreset> parsed = LobbyPreset.tryParse(args[4]);
-            if (parsed.isEmpty()) {
-                return worldEngineTptoInvalidPreset(sender);
-            }
-            preset = parsed;
-        }
-        List<Player> targets = new ArrayList<>();
-        if (args.length == 3) {
-            if (!(sender instanceof Player player)) {
-                return message(sender, messages.command().getPlayerOnly());
-            }
-            targets.add(player);
-        } else {
-            try {
-                for (Entity entity : Bukkit.selectEntities(sender, args[3])) {
-                    if (entity instanceof Player player) {
-                        targets.add(player);
-                    }
-                }
-            } catch (IllegalArgumentException exception) {
-                return message(sender, messages.manhunt().getWorldengineInvalidSelector());
-            }
-            if (targets.isEmpty()) {
-                return message(sender, messages.manhunt().getWorldengineNoTargets());
-            }
-        }
-        if (target.get() == TptoTarget.GAME) {
-            return worldEngineTptoGame(sender, targets);
-        }
-        return worldEngineTptoLobby(sender, targets, preset);
-    }
-
-    /**
-     * Invalid preset notice, naming the valid presets. Falls back to the
-     * usage line when the key is missing (pre-existing messages.yml files
-     * predate it and get no migration).
-     */
-    private boolean worldEngineTptoInvalidPreset(CommandSender sender) {
-        if (messages.manhunt().getWorldengineTptoInvalidPreset() == null) {
-            return message(sender, messages.manhunt().getWorldengineTptoUsage());
-        }
-        message(sender, messages.manhunt().getWorldengineTptoInvalidPreset(),
-                Map.of("presets", String.join(", ", lobbyPresetOptions())));
-        return true;
-    }
-
-    /**
-     * Preset names for completion and error text: the dev-data
-     * lobby-presets keys that name a real preset, else every preset.
-     */
-    private List<String> lobbyPresetOptions() {
-        List<String> options = new ArrayList<>();
-        for (String key : plugin.devConfig().presetKeys()) {
-            if (LobbyPreset.tryParse(key).isPresent() && !options.contains(key)) {
-                options.add(key);
-            }
-        }
-        if (options.isEmpty()) {
-            for (LobbyPreset preset : LobbyPreset.values()) {
-                options.add(preset.name());
-            }
-        }
-        return options;
-    }
-
-    /** Teleports targets to the game world spawn. Never generates anything. */
-    private boolean worldEngineTptoGame(CommandSender sender, List<Player> targets) {
-        String worldName = config.getString("world-engine.world-name", "world");
-        World world = Bukkit.getWorld(worldName);
-        if (world == null) {
-            message(sender, messages.manhunt().getWorldengineTptoNoWorld(), Map.of("world", worldName));
-            return true;
-        }
-        Location spawn = world.getSpawnLocation();
-        for (Player target : targets) {
-            target.teleport(spawn);
-        }
-        message(sender, messages.manhunt().getWorldengineTptoSuccess(),
-                Map.of("count", String.valueOf(targets.size()), "world", worldName));
-        neutralSound(sender);
-        return true;
-    }
-
-    /** Teleports targets to the lobby world, generating it once confirmed. */
-    private boolean worldEngineTptoLobby(CommandSender sender, List<Player> targets, Optional<LobbyPreset> preset) {
-        if (game.lobbyWorldNameClashes()) {
-            return message(sender, messages.manhunt().getWorldengineTptoLobbyWorldClash());
-        }
-        String worldName = game.lobbyWorldName();
-        String senderKey = sender instanceof Player player ? player.getUniqueId().toString() : "console";
-        if (!game.lobbyWorldExists()) {
-            if (!game.confirmLobbyGeneration(senderKey)) {
-                message(sender, messages.manhunt().getWorldengineTptoConfirm(),
-                        Map.of("world", worldName, "seconds", "10"));
-                return true;
-            }
-            message(sender, messages.manhunt().getWorldengineTptoCreating(), Map.of("world", worldName));
-        }
-        Optional<LobbyWorld> ensured = game.ensureLobbyWorld(preset);
-        if (ensured.isEmpty()) {
-            message(sender, messages.manhunt().getWorldengineTptoFailed(), Map.of("world", worldName));
-            return true;
-        }
-        World world = ensured.get().world();
-        if (ensured.get().lobbyZeroSet()) {
-            message(sender, messages.manhunt().getWorldengineLobbyconfigSetlobbytpSuccess(), Map.of(
-                    "lobby", "0", "location", formatLocation(world.getSpawnLocation())));
-        }
-        Location spawn = game.lowestLobbyTeleport().orElseGet(world::getSpawnLocation);
-        spawn.setWorld(world);
-        for (Player target : targets) {
-            target.teleport(spawn);
-        }
-        message(sender, messages.manhunt().getWorldengineTptoSuccess(),
-                Map.of("count", String.valueOf(targets.size()), "world", worldName));
-        neutralSound(sender);
-        return true;
-    }
-
-    /** tpto destination words. */
-    enum TptoTarget {
-        LOBBY,
-        GAME
-    }
-
-    static Optional<TptoTarget> parseTptoTarget(String raw) {
-        if (raw.equalsIgnoreCase("lobbyworld")) {
-            return Optional.of(TptoTarget.LOBBY);
-        }
-        if (raw.equalsIgnoreCase("gameworld")) {
-            return Optional.of(TptoTarget.GAME);
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * Saves a lobby teleport in the lobby store. The world is never
-     * stored: teleports always resolve in the lobby world.
-     */
-    private void saveLobbyTp(int lobbyId, Location location) {
-        LobbyConfig lobbyConfig = plugin.lobbyConfig();
-        LobbyConfig.LobbyEntry entry = lobbyConfig.getLobbies()
-                .computeIfAbsent(String.valueOf(lobbyId), key -> new LobbyConfig.LobbyEntry());
-        entry.setLobbytp(LobbyConfig.LobbyTp.of(location.getX(), location.getY(), location.getZ(),
-                location.getYaw(), location.getPitch()));
-        lobbyConfig.save();
-    }
-
-    /** Renders a teleport target for chat. Pure for tests. */
-    public static String formatLocation(Location location) {
-        String worldName = location.getWorld() == null ? "null" : location.getWorld().getName();
-        String xFormatted = String.format("%.2f", location.getX());
-        String yFormatted = String.format("%.2f", location.getY());
-        String zFormatted = String.format("%.2f", location.getZ());
-        String yawFormatted = String.format("%.2f", location.getYaw());
-        String pitchFormatted = String.format("%.2f", location.getPitch());
-        return worldName + " @ " + xFormatted + ", " + yFormatted + ", " + zFormatted
-                + ", " + yawFormatted + ", " + pitchFormatted;
-    }
-
-    /**
-     * Loads the default value for a setting from the bundled default
-     * config.yml so that tab completion can suggest the default entry.
-     */
-
-
-    private boolean message(CommandSender sender, String raw) {
-        messages.messageRaw(sender, raw, Map.of());
-        return true;
-    }
-    private void message(CommandSender sender, String raw, Map<String, String> values) {
-        messages.messageRaw(sender, raw, values);
-    }
-    private void neutralSound(CommandSender sender) {
-        if (sender instanceof Player player) {
-            sounds.playNeutralSound(player);
-        }
     }
 }

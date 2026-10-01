@@ -370,4 +370,19 @@ public final class DevSchemCommand {
         return name != null && !name.isBlank()
                 && !name.contains("/") && !name.contains("\\") && !name.contains("..");
     }
+
+    /** Tab completion for dev and debug. Null when inapplicable. */
+    public List<String> completeDevTab(String[] args) {
+        if (args.length == 2 && args[0].equalsIgnoreCase("dev")) {
+            return CommandSupport.partial(args[1], List.of("schem"));
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("dev") && args[1].equalsIgnoreCase("schem")) {
+            return CommandSupport.partial(args[2], List.of("pos1", "pos2", "save", "load", "list"));
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("dev") && args[1].equalsIgnoreCase("schem")
+                && args[2].equalsIgnoreCase("load")) {
+            return CommandSupport.partial(args[3], schematicNames());
+        }
+        return null;
+    }
 }

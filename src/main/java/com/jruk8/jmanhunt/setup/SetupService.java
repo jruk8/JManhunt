@@ -1,6 +1,6 @@
 package com.jruk8.jmanhunt.setup;
 
-import com.jruk8.jmanhunt.command.ManhuntCommand;
+import com.jruk8.jmanhunt.command.units.WorldEngineUnit;
 import com.jruk8.jmanhunt.command.SettingFeedback;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
@@ -75,7 +75,7 @@ public final class SetupService {
         if (zeroSet) {
             messages.messageRaw(clicker, manhunt.getWorldengineLobbyconfigSetlobbytpSuccess(),
                     Map.of("lobby", "0",
-                            "location", ManhuntCommand.formatLocation(spawn)));
+                            "location", WorldEngineUnit.formatLocation(spawn)));
         }
         int teleported = 0;
         for (Player target : Bukkit.getOnlinePlayers()) {

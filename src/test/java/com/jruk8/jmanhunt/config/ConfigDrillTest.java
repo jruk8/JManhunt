@@ -1,7 +1,6 @@
 package com.jruk8.jmanhunt.config;
 
 import com.jruk8.jmanhunt.command.DrillResolve;
-import com.jruk8.jmanhunt.command.ManhuntCommand;
 import org.junit.jupiter.api.Test;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,7 +28,7 @@ class ConfigDrillTest {
 
     @Test
     void fullLeafPathResolvesWithEmptyRemainder() {
-        DrillResolve resolved = ManhuntCommand.resolveDrill(
+        DrillResolve resolved = ConfigDrill.resolveDrill(
                 List.of("settings", "compass", "obtaining", "given-to", "hunters"), noLists());
 
         assertEquals("settings.compass.obtaining.given-to.hunters", resolved.path());
@@ -39,7 +38,7 @@ class ConfigDrillTest {
 
     @Test
     void trailingValueStaysAsRemainder() {
-        DrillResolve resolved = ManhuntCommand.resolveDrill(
+        DrillResolve resolved = ConfigDrill.resolveDrill(
                 List.of("settings", "compass", "obtaining", "given-to", "hunters", "true"), noLists());
 
         assertEquals("settings.compass.obtaining.given-to.hunters", resolved.path());
@@ -49,7 +48,7 @@ class ConfigDrillTest {
 
     @Test
     void sectionResolvesAsSection() {
-        DrillResolve resolved = ManhuntCommand.resolveDrill(
+        DrillResolve resolved = ConfigDrill.resolveDrill(
                 List.of("settings", "compass"), noLists());
 
         assertEquals("settings.compass", resolved.path());
@@ -59,12 +58,12 @@ class ConfigDrillTest {
 
     @Test
     void unknownFirstSegmentResolvesToNull() {
-        assertNull(ManhuntCommand.resolveDrill(List.of("bogus"), noLists()));
+        assertNull(ConfigDrill.resolveDrill(List.of("bogus"), noLists()));
     }
 
     @Test
     void unknownDeeperSegmentLeavesSectionRemainder() {
-        DrillResolve resolved = ManhuntCommand.resolveDrill(
+        DrillResolve resolved = ConfigDrill.resolveDrill(
                 List.of("settings", "bogus"), noLists());
 
         assertEquals("settings", resolved.path());
@@ -75,7 +74,7 @@ class ConfigDrillTest {
 
     @Test
     void matchingIsCaseInsensitiveButCanonical() {
-        DrillResolve resolved = ManhuntCommand.resolveDrill(
+        DrillResolve resolved = ConfigDrill.resolveDrill(
                 List.of("SETTINGS", "Compass", "Obtaining", "Given-To", "HUNTERS"), noLists());
 
         assertEquals("settings.compass.obtaining.given-to.hunters", resolved.path());
@@ -85,21 +84,21 @@ class ConfigDrillTest {
     @Test
     void topLevelChildrenAreRegistryCategories() {
         assertEquals(List.of("advanced", "settings", "statistics",
-                "update-checker", "world-engine"), ManhuntCommand.drillChildren(List.of(), noLists()));
+                "update-checker", "world-engine"), ConfigDrill.drillChildren(List.of(), noLists()));
     }
 
     @Test
     void childrenOfferSectionsAndLeaves() {
         assertEquals(List.of("compass", "match", "players", "server"),
-                ManhuntCommand.drillChildren(List.of("settings"), noLists()));
-        assertEquals(List.of("hunters", "speedrunners"), ManhuntCommand.drillChildren(
+                ConfigDrill.drillChildren(List.of("settings"), noLists()));
+        assertEquals(List.of("hunters", "speedrunners"), ConfigDrill.drillChildren(
                 List.of("settings", "compass", "obtaining", "given-to"), noLists()));
     }
 
     @Test
     void childrenOfUnknownPrefixAreEmpty() {
-        assertTrue(ManhuntCommand.drillChildren(List.of("bogus"), noLists()).isEmpty());
-        assertTrue(ManhuntCommand.drillChildren(
+        assertTrue(ConfigDrill.drillChildren(List.of("bogus"), noLists()).isEmpty());
+        assertTrue(ConfigDrill.drillChildren(
                 List.of("settings", "compass", "given-to", "hunters"), noLists()).isEmpty());
     }
 
@@ -109,7 +108,7 @@ class ConfigDrillTest {
                 lists(Map.of("advanced.advanced-match-controls.end-statistics", List.of("a", "b")));
 
         assertEquals(List.of("0", "1", "add", "remove", "reset"),
-                ManhuntCommand.drillChildren(List.of("advanced", "advanced-match-controls",
+                ConfigDrill.drillChildren(List.of("advanced", "advanced-match-controls",
                         "end-statistics"), fixtures));
     }
 
@@ -118,7 +117,7 @@ class ConfigDrillTest {
         Function<String, List<String>> fixtures =
                 lists(Map.of("advanced.advanced-match-controls.end-statistics", List.of("a", "b")));
 
-        DrillResolve resolved = ManhuntCommand.resolveDrill(
+        DrillResolve resolved = ConfigDrill.resolveDrill(
                 List.of("advanced", "advanced-match-controls", "end-statistics", "1"), fixtures);
 
         assertEquals("advanced.advanced-match-controls.end-statistics.1", resolved.path());
@@ -131,7 +130,7 @@ class ConfigDrillTest {
         Function<String, List<String>> fixtures =
                 lists(Map.of("advanced.advanced-match-controls.end-statistics", List.of("a", "b")));
 
-        DrillResolve resolved = ManhuntCommand.resolveDrill(
+        DrillResolve resolved = ConfigDrill.resolveDrill(
                 List.of("advanced", "advanced-match-controls", "end-statistics", "7"), fixtures);
 
         assertEquals("advanced.advanced-match-controls.end-statistics", resolved.path());
@@ -147,13 +146,13 @@ class ConfigDrillTest {
         entries.put("settings", "");
         assertEquals("\n<green>» <white>settings.match.autostart.enabled</white><gray>: true</gray></white>"
                         + "\n<green>» <white>settings</white><gray></gray></white>",
-                ManhuntCommand.renderEntries(
+                ConfigDrill.renderEntries(
                         entries, "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>"));
     }
 
     @Test
     void emptyEntriesRenderEmpty() {
-        assertEquals("", ManhuntCommand.renderEntries(
+        assertEquals("", ConfigDrill.renderEntries(
                 Map.of(), "\n<green>» <white>{key}</white><gray>{suffix}</gray></white>"));
     }
 
