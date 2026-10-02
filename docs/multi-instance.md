@@ -1,10 +1,9 @@
 # Concurrent Matches
 
-With the world engine enabled, JManhunt runs several matches at the same
-time, one per lobby. Each match gets its own world cell, compass tracking,
-statistics, border confinement, and end dimension, so matches never see or
-interfere with each other. With the world engine **off**, everyone shares lobby
-0 and only one match runs at a time.
+With the world engine on, each lobby can run its own match at the same
+time: every match gets its own map and compass tracking, so they never
+interfere. With the world engine **off**, everyone shares lobby 0 and
+only one match runs at a time.
 
 ## Lobbies
 

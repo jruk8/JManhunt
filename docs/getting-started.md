@@ -1,58 +1,42 @@
 ![JManhunt banner](assets/banner-1280x640.png)
 # Getting Started
 
-> **Prerequisite:** Make sure you have installed the plugin first. See: [Installation](installation.md)
+> Just installed? See [Installation](installation.md) first (two steps).
 
-## Interactive Setup
+Pick one path. Both end with a working lobby.
 
-New here? Run `/mh` once and the setup panel offers two paths. The
-green button does the recommended setup in one click: it enables
-the world engine, generates the lobby world with lobby 0, and
-teleports everyone there. The red button starts the step-by-step
-tour in chat instead: it walks you through first-time setup,
-modifiers, the compass, and the config command as a short
-dialogue. Type the number of your answer, `b` to go back, or `q`
-to quit; anything the tour runs (such as enabling the world
-engine) uses your own permissions, and it times out after 5 idle
-minutes. You can restart the tour any time with `/mh setup`.
+> **Note:** The lobby system, multi-instancing, and World Engine are
+> only for **dedicated servers**. Enabling these features will partition
+> the Overworld into cells. It can always be disabled, but some gamerules
+> may be modified after.
 
-Either path ends the same way: walk onto a basket (colored
-concrete) to pick Hunter or Speedrunner, then start with
-`/mh start` or wait for autostart. Restart the server after setup
-so the world engine fully applies.
+## Path 1: One click (most admins)
 
-## Your First Match
+1. Run `/manhunt` in-game.
+2. Click the green button.
+3. Done. Your lobby is built and the world engine is on.
 
-1. Assign at least one hunter and one speedrunner:
+Restart the server once when you get a chance so everything fully applies.
 
-   ```text
-   /manhunt setplayer <selector> hunter
-   /manhunt setplayer <selector> speedrunner
-   ```
+## Path 2: Guided tour (learn as you go)
 
-   Selectors such as `PlayerName`, `@a`, `@p`, and `@a[distance=..10]` are supported.
+Run `/manhunt setup` in-game. It walks you through setup, mods, and the
+compass in short chat steps. Answer with a number, `b` to go back,
+`q` to quit.
 
-   You may also run `/manhunt quickstart` (or `/mh qs`) to quickly start a match
-   with one random speedrunner and the rest being hunters. Unassigned
-   (`none`) players are always included, so a fresh lobby starts as-is.
+## Play your first match
 
-2. Start the match with `/manhunt start`.
-3. Check the teams at any time with `/manhunt status` (or simply `/manhunt`.)
-4. The match ends when Hunters kill their targets, a Speedrunner escapes The End, 
-   or manually through `/manhunt end`.
+1. Pick teams: walk onto a colored pad in the lobby
+   (red = hunter, green = speedrunner), or run `/mh qs` to assign
+   everyone at random.
+2. Start with `/mh start` (or just wait, it starts on its own).
+3. Check teams anytime with `/mh`. End early with `/mh end`.
 
-After dabbling with this, set up [world resets](configuration/world-engine.md).
-It only takes 3 minutes (enable the engine, run
-`/manhunt worldengine tpto lobbyworld` twice to generate a lobby world, and
-restart) and greatly improves the user experience.
+That's the whole loop. Everything else is optional.
 
-## Next Steps
+## What's next?
 
-After playing a few matches, check out the built-in settings and custom
-modifiers to enhance your experience:
-
-- [Commands](commands.md)
-- [Concurrent Matches](multi-instance.md): lobbies and several matches at once.
-- [Configuration](configuration.md): overview, settings, world engine,
-  statistics, and sounds.
-- [Placeholders](placeholders.md)
+- [Lobby Quick Start](lobby-quick-start.md): bring players in, run matches.
+- [Commands](commands.md): the full list.
+- [Configuration](configuration.md): settings, world engine, mods, sounds.
+- [Concurrent Matches](multi-instance.md): run several matches at once.

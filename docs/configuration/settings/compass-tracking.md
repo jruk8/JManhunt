@@ -577,15 +577,3 @@ WorldEdit teleports players who click with a compass, which fights the
 tracking compass. `advanced.misc.interop.disable-worldedit-navwand`
 (default on) blocks that teleport for compass clicks without needing
 WorldEdit installed. Turn it off if you rely on the navwand.
-
-## QA Checklist
-
-1. As a hunter, shift-left-click and confirm the compass tracks a
-   fellow hunter; shift-left-click again and confirm it tracks a
-   speedrunner.
-2. Lock a target with left-click, shift-left-click, and confirm the
-   lock is gone and the mode flipped.
-3. Set `actions.teammates.enabled` to false and confirm shift-left-click
-   cycles locks exactly like left-click.
-4. End the match and confirm a new match starts in enemy mode.
-5. In spectator mode, shift-left-click and confirm nothing happens.

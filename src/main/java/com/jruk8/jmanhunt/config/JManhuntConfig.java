@@ -34,7 +34,7 @@ import lombok.Setter;
         "- https://github.com/jruk8/JManhunt/issues",
         "For quick assistance and community modifiers, join our Discord server:",
         "- https://discord.gg/hkWmCVmWDC",
-        "Support our development on Ko-fi:",
+        "Support my development on Ko-fi:",
         "- https://ko-fi.com/jruk",
         "",
         "Built by Starburst Studios",

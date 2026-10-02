@@ -4,10 +4,10 @@ All commands are available under `/manhunt` and its alias `/mh`.
 
 | Command                                           | What it does | Permission |
 |---------------------------------------------------| --- | --- |
-| `/manhunt`                                      | Opens the [admin GUI](gui.md) (needs `jmanhunt.gui`) or shows your match roster. | `jmanhunt.gui`, `jmanhunt.command.status` |
+| `/manhunt`                                      | First run: one-click setup. Later: opens the [admin GUI](gui.md) (needs `jmanhunt.gui`) or shows your teams. | `jmanhunt.gui`, `jmanhunt.command.status` |
 | `/manhunt status [id\|all]`                    | Shows one match roster by id, or every running match plus populated lobbies with `all`. | `jmanhunt.command.status`, `jmanhunt.command.status.other` for the argument |
 | `/manhunt help`                                   | Shows the in-game command list. | `jmanhunt.command.help` |
-| `/manhunt setup`                                  | Starts the interactive setup tutorial (players only). | `jmanhunt.command.setup` |
+| `/manhunt setup`                                  | Step-by-step setup tour in chat (players only). For learning as you go. | `jmanhunt.command.setup` |
 | `/manhunt support`                                | Shows Discord, GitHub, and Ko-fi links. | `jmanhunt.command.support` |
 | `/manhunt challenges`                             | Shows a chat notice with a clickable link to the optional Challenges addon. | `jmanhunt.command.challenges` |
 | `/manhunt setplayer <selector> <role>`            | Assigns `hunter`, `speedrunner`, `spectator`, `afk`, or `none` in queues without a running match. | `jmanhunt.command.setplayer` (`jmanhunt.command.setplayer.self` for your own role only) |

@@ -1,5 +1,7 @@
 # Developer Tools
 
+> For: advanced users and developers only.
+
 > These commands exist for developers: primarily for authoring
 > default lobby presets. They offer no safety rails and are not intended
 > for production servers.
@@ -8,7 +10,7 @@
 
 `/manhunt dev schem` saves and loads lobby schematics in
 `JManhunt/settings/world-engine/lobby-schematics/`. The
-[lobby presets](configuration/world-engine.md#lobby-presets) do not
+[lobby presets](lobby-quick-start.md#lobby-presets) do not
 read that directory: they paste only the bundled
 `dev/lobby-schematics/` resources, so ship a finished preset by
 copying its file there and rebuilding. Requires
@@ -103,3 +105,22 @@ Legacy `.nbt` files still load through the old blocks-only path. Where
 both exist for one name, the bundle wins; `list` shows both kinds.
 
 `dev` is deliberately hidden from `/manhunt <tab>` completion.
+
+## Lobby Preset Internals
+
+Presets are dev-time data: they live in `Core/dev.yml` inside the jar,
+never in the plugin data folder, and cannot be edited at runtime. To
+change a preset's schematic or commands, edit that file (plus
+`dev/lobby-schematics/` for the artwork) and rebuild.
+
+Each preset pastes its schematic from the bundled
+`dev/lobby-schematics/` resources with the structure midpoint at
+0,64,0, then runs its console commands (meant for lobby teleports;
+`{world}` and `{preset}` are substituted) before the first teleport
+lands. A missing schematic warns in the console and leaves void, with a
+bare spawn at y=65 as the fallback. Where a preset name has a
+`.jmhlobby` bundle, it wins over the legacy `.nbt`, and its bundled
+bounds and teleports build into the lobby config at the paste corner.
+Files dropped into the data-folder `lobby-schematics/` directory are
+ignored by preset pastes: that folder is the dev authoring workspace
+only.

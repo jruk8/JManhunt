@@ -74,11 +74,3 @@ The buffer tops up on:
 
 These commands run in the background, once per fetched cell. If a fetch
 fails, it is retried once after 30 seconds.
-
-## QA Checklist
-
-1. On a fresh config, confirm `stored-cells-buffer` is `3`.
-2. Run `/manhunt worldengine cellindex buffer` and confirm up to
-   three ready cells are kept.
-3. Set `stored-cells-buffer` to `0` and confirm it is refused
-   (minimum `1`).

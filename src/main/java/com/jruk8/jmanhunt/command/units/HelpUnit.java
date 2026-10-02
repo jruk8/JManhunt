@@ -125,7 +125,7 @@ public final class HelpUnit implements SubcommandUnit {
                         + "<#de7766><click:open_url:'" + DISCORD_URL + "'>"
                         + "<underlined>Discord server</underlined></click></#de7766>!</green>"));
         sender.sendMessage(support.miniMessage(
-                "<green>Support our development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
+                "<green>Support my development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
                         + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
         support.neutralSound(sender);
         return true;
@@ -155,7 +155,7 @@ public final class HelpUnit implements SubcommandUnit {
                         "<green>Star us on <#de7766><click:open_url:'" + GITHUB_URL + "'>"
                                 + "<underlined>GitHub</underlined></click></#de7766>.</green>"),
                 support.miniMessage(
-                        "<green>Support our development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
+                        "<green>Support my development on <#de7766><click:open_url:'" + KOFI_URL + "'>"
                                 + "<underlined>Ko-fi</underlined></click></#de7766>.</green>"));
     }
 

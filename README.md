@@ -4,66 +4,66 @@
 
 # JManhunt
 
-JManhunt is a deeply configurable Paper plugin for 26.2+ Manhunts. It comes
-with an automated world reset engine, compass tracking, placeholders, statistics,
-and a bunch of actions and custom modifiers. The plug-and-play defaults work **instantly** for simple Manhunts with a fully tracking compass and fully automated world resets.
+JManhunt is a deeply customizable Paper plugin for 26.2+ Manhunts. It comes with an
+automated world reset engine, compass tracking, placeholders, statistics, and a bunch of
+config options and modifiers. The plug-and-play defaults work **instantly** for simple
+Manhunts with a fully tracking compass and fully automated world resets.
 
 ## Key Features
 
-- **Deep configurability** » Toggle actions and settings on or off, or create
-  entirely new gameplay through easy-to-use custom modifiers.
-- **World reset engine** » Grid-based single-world Manhunt engine with
-  persistent spiral cell assignment and per-match End dimensions.
-- **Concurrent matches** » Lobby queues with caps and autostart, each
-  running its own isolated match at the same time.
-- **Compass tracking** » Hunter compass with configurable refresh and
-  right-click behavior. Last-seen location locks onto portals.
-- **Placeholders & statistics** » Career statistics with PlaceholderAPI
-  support.
-- **API** » Devs may hook into the Manhunt lifecycle through the API.
+- **One-click setup** » Get World Engine and concurrent matches running in seconds.
+- **World Reset Engine** » Grid-based single-world Manhunt engine with persistent spiral 
+  cell assignment and automatic world resets.
+- **Compass tracking** » Fully tunable tracking compass with jamming, hotspots, 
+  teammate tracking, and target cycling.
+- **Concurrent matches** » Each lobby runs its own match at the same time, with a native per-match
+  spectator system.
+- **Mods** » A library of twists made with **JMHScript**, our DSL. Make your own, browse default
+  ones in our GUI, or community-made ones in our Discord.
+- **Also for serious deployment** » PostgreSQL stats, multiple game queues, per-lobby
+  mod/setting overrides, disconnect handling, ready-cell caching, and team chat.
 
-## Challenges
+## Why Choose JManhunt?
 
-The plugin provides dedicated **Custom Modifiers** which allow you to easily create or toggle gamemode presets. These can be as simple as a list of give commands for items, or as configurable as giving a random item on every achievement or mob killed. Best yet, if the modifier engine is not enough (e.g., you're a server network), you can hook custom datapack functions or hook into the API. Modifier options can be accessed in-game via `/mh config modifiers`, or through the config file.
+Manhunts shouldn't need a server restart after each match. We noticed a lot of plugins that 
+didn't have any automated world management, nor any real customizability or toggles. We built an
+in-house **World Engine** from the ground-up. It segments the world into near-infinite cells without
+restarts and thus makes matches feel seamless.
 
-Default custom modifiers include:
+We also built a complete [JMHScript DSL](https://jruk8.github.io/JManhunt/configuration/modifiers/) solely
+to make developing **Modifiers** easy and fast. Basic ones like per-role starting kits, random rolls, 
+or basic status effects need no scripting knowledge. You can get started with pure Minecraft commands like 
+`give @p cooked_beef 8`. You can write mods in-game through the **Modifier/Preset GUI**.
 
-- Speedrunners' speed potion
-- Full iron kit
-- Regen on kill
-- One diamond given on any advancement
-- Random item or mob every 60 seconds
+Individual mods can be either downloaded drag-and-drop style from our Discord or imported as strings
+through the GUI. The default engine bundles over 15 default modifiers. 
 
-and so much more (over 15).
+What can you do with custom ones? Well..
 
-JManhunt can even alter Piglin loot tables and structure generation to make Manhunts more balanced for Speedrunners (or, you know, fake a manhunt).
+- **Lifesteal** » All kills steal a full heart from the victim. Permadeath on 0. (find on Discord)
+- **Huddle for Warmth** » Stay close to teammates or wither away. (also Discord)
+- **Abilities** » Invisibility on hit for runners, gapple on low health, blind nearby Hunters on
+  kill...
 
-> If the default (or custom) challenges do not provide enough fun, you can install the
-> [JManhunt-Challenges](https://builtbybit.com/resources/jmanhunt-challenges.121574)
-> addon for special ones like lucky blocks and no jump.
+The engine is still maturing and the ones mentioned above are just some examples of what
+you can do. We can't wait to see what admins build with the powerful scripting engine.
 
 # Getting Started 🗺️
 
 1. **Install the plugin** and restart your server.
-2. **Start a quick match** by running `/mh qs`. This picks one random speedrunner automatically.
-   - *Or*, to manually assign roles:
-     1. Run `/mh setplayer <selector> <role>` for each player, setting them to **HUNTER**, **SPEEDRUNNER**, **AFK**, or **NONE**.
-     2. Run `/mh start`.
-3. Get **World Resets** working in three minutes by reading [this section](https://jruk8.github.io/JManhunt/configuration/world-engine/).
+2. Run **`/manhunt`** in-game and click the **green button**.
+   This sets up the World Engine and creates a default lobby.
+3. Walk onto a colored pad to pick a team (red = hunter,
+   green = speedrunner), then wait for autostart, or run **`/mh start`**.
 
-If you'd like to explore settings, view `config.yml` in your plugins folder. It may look overwhelming at first. That's when the [documentation](https://jruk8.github.io/JManhunt/) comes handy.
+For simple Manhunts with fully automated world resets, this is all you need to do with **zero commands**
+after. 
 
-## Documentation
+Alternatively, you can run `/manhunt setup` for a more intermediate dialogue-based setup.
 
-Full documentation is available at the
-[JManhunt documentation site](https://jruk8.github.io/JManhunt/).
+View our comprehensive [documentation](https://jruk8.github.io/JManhunt/).
 
-# Update
+# Community Mods
 
-When installing a MAJOR update (e.g. v3.8.0 => 4.0.0), back-up your current JManhunt resources folder. This is because major updates may modify things with no backward compatibility. Minor and hotfix releases are fully safe to update.
-
-# Contributing
-
-Contributions are welcome! You may contribute by submitting issues or PRs. See our GitHub README for additional details.
-
-© 2026 jruk8. Licensed under GNU AGPLv3.
+Visit our [Discord](https://discord.gg/hkWmCVmWDC) to browse the modifiers/presets catalogue, chat
+with other admins, or get quick support.

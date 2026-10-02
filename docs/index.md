@@ -1,36 +1,44 @@
 ![JManhunt banner](assets/banner-1280x640.png)
 # JManhunt
 
-JManhunt is a deeply configurable Paper plugin for 26.2+ Manhunts. It comes
-with a lean world reset engine, compass tracking, placeholders, statistics,
-and a variety of built-in actions and modifiers.
+Manhunt for your Paper server. Hunters chase speedrunners, with a tracking
+compass, fresh maps, and optional mods.
 
-## Get Started
+## Start here
 
-- [Quick Setup](getting-started.md)
+You only need one command: `/manhunt`
 
-## Key Features
+1. Install the plugin and restart your server.
+2. Run `/manhunt` in-game and click the green button.
+3. Done: your lobby and world engine are ready. Walk onto a colored pad
+   to pick a team, then run `/mh start`.
 
-- **Deep configurability**: Toggle built-in mechanics on or off, or create
-  new gameplay through easy-to-use modifiers.
-- **World Engine**: Grid-based single-world Manhunt engine with
-  persistent spiral cell assignment and automatic End resets.
-- **Compass tracking**: Hunter compass with configurable refresh and
-  right-click behavior.
-- **Placeholders & statistics**: Career statistics with PlaceholderAPI
-  support.
-- **Public API**: If you're a developer, this is for you!
+Want to learn as you go instead? Run `/manhunt setup` for the
+step-by-step tour.
 
-## Documentation
+[Full quick setup](getting-started.md) · [Installation](installation.md)
+
+## What you get
+
+- **One-click setup**: lobby plus world engine, working in seconds.
+- **Tracking compass**: hunters always know where to go.
+- **Fresh map every match**: everything is automated and highly crash-safe.
+- **Mods**: small add-ons that change the game (kits, boosts, twists).
+- **Stats**: wins, kills, and playtime per player.
+
+## Docs
 
 - [Installation](installation.md)
 - [Getting Started](getting-started.md)
 - [Gallery](gallery.md)
-- [Configuration](configuration.md): overview, settings, world engine,
-  statistics, and sounds.
 - [Commands](commands.md)
+- [Configuration](configuration.md)
 - [Permissions](permissions.md)
 - [Placeholders](placeholders.md)
 - [API](api.md)
+
+**Friendly warning:** I have used AI tools in most of these docs. They may
+be jargon-heavy but rest assured fully accurate. If anything is not immediately
+obvious, the fastest way to get help is through our Discord.
 
 © 2026 jruk8. Licensed under GNU GPLv3.

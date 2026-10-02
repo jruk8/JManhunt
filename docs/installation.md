@@ -1,26 +1,25 @@
 # Installation
 
-Download the latest release from
-[Modrinth](https://modrinth.com/plugin/jmanhunt) and place the jar in your
-server's `plugins/` folder. Restart the server to generate the default
-configuration files.
+1. Download the latest release from
+   [Modrinth](https://modrinth.com/plugin/jmanhunt) and drop the jar into
+   your server's `plugins/` folder.
+2. Restart the server.
 
-## Get Started
+That's it. Next: run `/manhunt` in-game and click the green button.
+See [Getting Started](getting-started.md).
 
-- [Quick Setup](getting-started.md)
+## Optional add-ons
 
-## Optional Dependencies
-
-1. (Optional) Install [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/)
-   to use JManhunt's placeholders.
-2. (Optional) Install [JManhunt-Challenges](https://builtbybit.com/resources/jmanhunt-challenges.121574/)
-   to play special challenges (lucky-blocks, no-jump and more).
-3. (Optional) Install [Chunky](https://modrinth.com/plugin/chunky) for advanced World Engine features.
+- [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/):
+  shows JManhunt stats in other plugins.
+- [JManhunt-Challenges](https://builtbybit.com/resources/jmanhunt-challenges.121574/):
+  extra game modes like lucky blocks.
+- [Chunky](https://modrinth.com/plugin/chunky): faster map loading on
+  smaller servers.
 
 # Contributing
 
-Contributions are welcome! See
-[CONTRIBUTING.md](https://github.com/jruk8/JManhunt/blob/main/CONTRIBUTING.md)
-for contributor setup and the
-[GitHub repository](https://github.com/jruk8/JManhunt) for issues and pull
-requests.
+Contributions are welcome! See our CONTRIBUTING.md
+for setup, and the [GitHub repository](https://github.com/jruk8/JManhunt) for issues and pull
+requests. (the project is developed in free time, but I'll fix
+breaking bugs ASAP)

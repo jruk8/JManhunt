@@ -1,50 +1,93 @@
-# Lobby Quick Start
+# Lobby System
 
-Get from zero to a queued lobby in five minutes. This guide assumes the
-world engine is on; with it off, everyone simply shares lobby 0.
+> For: everyone running matches. Presets and pads cover intermediate tweaks too.
 
-## 1. Generate the lobby world
+A lobby is where players wait and pick teams before a match. The Lobby
+System switches on by itself once the world engine is on and the lobby
+world exists, which the green button in `/manhunt` handles for you.
 
-Run `/manhunt worldengine tpto lobbyworld` twice. The first run warns
-the world does not exist yet; the second (within 10 seconds) generates
-it, pastes your lobby schematic, and teleports you in. Lobby 0 is
-pointed at the spawn automatically. See [World
-Engine](configuration/world-engine.md) for presets and regeneration.
+> Already clicked the green button in `/manhunt`? Your lobby is ready:
+> skip to step 2.
+
+## 1. Build the lobby (only if you skipped the green button)
+
+Run this:
+
+```text
+/manhunt worldengine tpto lobbyworld
+```
+
+This generates the **lobbyworld**. After this, all players automatically
+spawn here on join.
 
 ## 2. Bring players in
 
-Players join the default lobby on login. To move people yourself:
+Tell players to reconnect, or run the previous command again with a selector
+like `@a` at the end.
 
-- `/manhunt lobby join <selector> <lobby-id> [role] [-notp] [-s]`: moves
-  players into a lobby queue and teleports them there (add `-notp` to skip
-  the teleport, `-s` to skip the role message). Unknown lobby ids are
-  created on join.
-- `/manhunt lobby leave [selector]`: removes players from a lobby.
+## 3. Pick teams
 
-## 3. Assign roles
+- Walk onto a colored pad (defaults): red = HUNTER, green = SPEEDRUNNER,
+  yellow = AFK, and gray = NONE.
+- Or from chat: `/manhunt setplayer <player> <ROLE>`.
+- Or start a match instantly: `/mh qs [percentage-of-runers]`
+  - Optional arg specifies percentage of players to become runners. Leave out
+    for strictly one runner.
 
-Pick whichever fits your server:
+## 4. Start
 
-- `/manhunt setplayer <selector> <role>`: direct assignment with
-  queue-cap and permission checks.
-- **Role pads**: stand on a colored concrete pad in the lobby world to
-  take its role (lime: speedrunner, red: hunter, yellow: afk, light
-  gray: spectator, gray: none). Runs **setplayer** commands under the hood.
+Wait for autostart, or run:
 
-## 4. Start the match
+```text
+/manhunt start
+```
 
-- `/manhunt start [lobby-id]`: starts a match in the given lobby.
-- `/manhunt quickstart [percentage]`: assigns teams and starts in one
-  go, great for larger servers.
-- **Autostart**: eligible lobbies count down and start on their own.
+New players who join mid-match wait in the lobby for the next game.
 
-While a match runs, the lobby keeps queueing: newcomers wait (or join
-as spectators) under `advanced.lobbies.mid-match-setplayer`.
+## Lobby Presets
+
+New lobby worlds are built from a preset: `EMPTY`, `DEFAULT`, or
+`ADVANCED`. Skip the choice and you get `DEFAULT`.
+
+To pick one up front, name it when you generate the lobby:
+
+```text
+/manhunt worldengine tpto lobbyworld @a ADVANCED
+```
+
+To switch presets later, stop the server, delete the `jmh_lobby` world
+folder, start up again, and follow the quick start above. Presets only
+apply to freshly generated lobbies. Existing worlds are never touched.
+
+If a preset's schematic is missing, the console warns you and the lobby
+stays a void world with a bare spawn platform.
+
+Want to build your own preset? That is developer territory: see the
+[schematic tools](dev-tools.md#schematic-tools).
+
+## Role Pads
+
+Role pads are blocks in the lobby that assign a role when a player
+stands on them. They only work in the lobby world.
+
+| Block | Role |
+| --- | --- |
+| `LIME_CONCRETE` | speedrunner |
+| `RED_CONCRETE` | hunter |
+| `YELLOW_CONCRETE` | afk |
+| `LIGHT_GRAY_CONCRETE` | spectator |
+| `GRAY_CONCRETE` | none |
+
+Players take the role the moment they step on a pad. Queue caps and
+mid-match rules still apply, and nothing happens if the player already
+has that role. Spectators are never affected by pads.
+
+To change the blocks, edit `advanced.lobbies.role-pads.blocks`. Set
+`silent-role-assignment: true` to assign roles without a message or
+sound.
 
 ## Next steps
 
-- [Concurrent Matches](multi-instance.md): sublobbies, caps, joining
-  live matches, and status output.
-- [Commands](commands.md): the full command reference.
-- [World Engine](configuration/world-engine.md): presets, role pads,
-  cells, and borders.
+- [Concurrent Matches](multi-instance.md): run several matches at once.
+- [Commands](commands.md): the full list.
+- [World Engine](configuration/world-engine.md): maps, cells, borders.

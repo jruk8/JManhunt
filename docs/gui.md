@@ -1,15 +1,13 @@
 # Admin GUI
 
-Bare `/manhunt` opens a chest-menu admin panel for players holding
-`jmanhunt.gui` (default: op). Everyone else sees their match roster,
-exactly as before, and the console always gets status. Every GUI edit
-can also be made from chat or the console through
+`/manhunt` opens the admin panel (needs `jmanhunt.gui`, default: op).
+Everyone else sees their teams, and the console always gets status.
+Anything here can also be changed with
 [`/manhunt config`](commands.md#editing-settings-in-game).
 
-The first ever open shows a one-time setup panel instead: the green
-button runs the recommended setup in one click, the red button
-starts the step-by-step guide in chat. Either way the panel never
-reappears; see [Interactive Setup](getting-started.md#interactive-setup).
+First time opening it, you get a setup panel instead: green sets
+everything up in one click, red starts the step-by-step tour in chat.
+It only shows once (see [Getting Started](getting-started.md)).
 
 ## Root Menu
 
@@ -145,15 +143,3 @@ plays the compass click once; opening a dialog and committing a
 value play `ui.neutral-sound`; validation failures and blocked
 clicks play `ui.angry-sound` plus a chat error. Fast clicks never
 double-fire.
-
-## QA Checklist
-
-1. Open both editor roots and confirm the four quad buttons plus Back.
-2. In Behavior Options, deselect INTERVAL and confirm Interval Settings
-   blocks with an error; reselect it, change the interval, then
-   right-click the row and confirm the reset.
-3. In Command Lists, save `asd asd` and confirm refusal, then save
-   `give <p> cooked_beef 8` and confirm the ordinal chat line.
-4. Toggle `modifier-editor.validate-commands` off, save `asd asd`,
-   then toggle it back on.
-5. Import a share string through the bottom-right loom in both lists.
