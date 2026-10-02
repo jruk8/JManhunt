@@ -22,4 +22,4 @@ behavior:
         - '<if:"<phasitem:<p>,golden_apple> == true","exit">'
         - '<if:"<pcooldown:<p>,<id>,300> == true","give <p> golden_apple","exit">'
         - '<pmessage:<p>,"\<yellow\>Second wind!">'
-        - '<psound:<p>,"">'
+        - '<psound:<p>,"block.amethyst_block.step">'
