@@ -17,13 +17,6 @@ Rather be walked through it? Run `/manhunt setup` instead: same
 systems, step by step, with preset and compass choices along the way.
 Answer with a number, `b` to go back, `q` to quit.
 
-On a survival server with normal play going on? Skip the green button:
-it builds a separate lobby world and sets aside map areas for matches,
-which only fits a Manhunt-only server. Playing without it means giving
-up the automated part (fresh maps with zero commands after setup) and
-the Lobby System, and playing with `/mh qs` in the main world instead.
-Run `/manhunt setup` and pick the no resets route to get there.
-
 ## Play your first match
 
 1. Pick teams: walk onto a colored pad in the lobby

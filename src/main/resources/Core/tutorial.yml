@@ -45,15 +45,13 @@ nodes:
   setup_root:
     question:
       - "Let's get started. What is your goal?"
-      - "<gray>The first option fits a Manhunt-only server: it builds a lobby world and match maps. On a survival server with normal play, pick the second.</gray>"
-      - "<gray>In a hurry? The green button in the /mh panel runs the recommended answers in one click.</gray>"
     answers:
       - text: "Classic Manhunts with World Engine and a fully automated lobby. <gray>(3 minutes)</gray>"
         recommended: true
         commands:
           - "jmanhunt:mh config world-engine enabled true"
         next: "we_lobby"
-      - text: "Classic Manhunts with no world resets, played in this world. <gray>(instant)</gray>"
+      - text: "Classic Manhunts with no world resets. <gray>(instant)</gray>"
         notrecommended: true
         next: "nr_start"
   we_lobby:
