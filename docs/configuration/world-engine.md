@@ -9,8 +9,9 @@ time, each in its own isolated part of the world.
 ## Quick Start
 
 Run `/manhunt` and click the green button. That turns the world engine on
-and builds your lobby. Matches work right away. Restart once when you can:
-the stronghold spread needs it.
+and builds your lobby. Matches work right away. Restart once when you
+can: until you do, strongholds stay in their vanilla ring near the
+world origin, so new maps can end up with no reachable End portal.
 
 Prefer typing? This does the same thing:
 

@@ -27,7 +27,7 @@ like `@a` at the end.
 
 ## 3. Pick teams
 
-- Walk onto a colored pad (defaults): red = HUNTER, green = SPEEDRUNNER,
+- Walk onto a colored pad (defaults): red = HUNTER, lime = SPEEDRUNNER,
   yellow = AFK, and gray = NONE.
 - Or from chat: `/manhunt setplayer <player> <ROLE>`.
 - Or start a match instantly: `/mh qs [percentage-of-runers]`
