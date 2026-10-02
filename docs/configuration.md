@@ -1,5 +1,7 @@
 # Configuration
 
+> For: intermediate admins. Start at [Settings](configuration/settings.md).
+
 The plugin creates `config.yml` in its data folder. You can find it in
 `plugins/JManhunt/config.yml`.
 
@@ -15,9 +17,27 @@ See the individual configuration pages for detailed documentation:
   run timing, and match-end cleanup.
 - [Game Rules](configuration/game-rules.md): built-in
   game-state actions applied at match start and end.
-- [Statistics & PlaceholderAPI](configuration/statistics.md): career
+- [Statistics](configuration/statistics.md): career
   statistics database and placeholder configuration.
 - [Sounds](configuration/sounds.md): sound configuration for game events.
+
+## What Settings Cover
+
+Settings modify the game flow. This includes things like:
+
+- autostart when enough players join
+- starting the game only when a speedrunner hits a hunter
+- adventure mode during the pre-start window
+- compass tracking rules and distances
+- friendly fire rules for hunters and speedrunners
+- delayed respawns and per-role lives
+- head starts for either side
+- alternate win conditions (exit End, survive time, acquire item, reach advancement)
+- custom bartering loot tables for higher ender pearl pulls
+
+The built-in challenges (no-jump, one-heart and lucky-blocks) come
+from the companion plugin
+[JManhunt-Challenges](https://github.com/jruk8/JManhunt-Challenges).
 
 ## Core Settings
 
@@ -30,6 +50,27 @@ Set any message in `messages.yml` to an empty string (`""`) to disable it:
 it will never be sent. (A single space still counts as a message.) Each
 role's color lives under `role-colors:` as one key per role, used by role
 headers and every message that names a role; `&` codes work there too.
+
+## Update Checker
+
+JManhunt compares the running version against the latest GitHub release
+(never a pre-release) and tells admins when an update is out. The check
+runs once, shortly after the plugin enables; admins who join later hear
+about a pending update when they log in. Only players holding
+`jmanhunt.admin` (default: op) see the notice.
+
+```yaml
+update-checker:
+  enabled: true
+  releases:
+    major: true
+    minor: true
+    hotfix: false
+```
+
+Each severity toggles separately: with the defaults, new major and minor
+releases notify while hotfixes stay silent. Failed checks (no network,
+GitHub down) log one warning and never affect startup.
 
 ## Upgrading
 

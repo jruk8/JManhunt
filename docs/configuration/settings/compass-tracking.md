@@ -1,45 +1,28 @@
 # Compass
 
-The compass is an integral component for manhunts. JManhunt's compass supports dimensional 
-tracking, min/max distance, and support for both hunters and speedrunners.
+> For: intermediate admins tuning tracking. The deep end lives in [Compass: Advanced](compass-advanced.md).
 
-Settings for the compass are categorized under `settings.compass`:
-```yaml
-settings:
-  compass:
-```
+The tracking compass points hunters at speedrunners (and back again),
+with dimensional tracking, min/max distance, and per-role rules. Every
+setting below lives under `settings.compass`.
 
 ## Target Selection
 
-**Target Selection** determines the **target** of the compass. The target refers to a live
-player of the opposite role.
+The **target** is a live player of the opposite role. **Dimensional
+tracking** means only same-dimension targets count; the compass falls
+back to the target's last seen location in your dimension, which is
+handy for finding the portal they left through. **Online tracking**
+means disconnects record a last seen location but are never live
+targets. Respawning players are never targets at all.
 
-**Dimensional tracking** means tracking is enabled only when the target is in the same dimension.
-While this means players may not track targets that are away, it also means that the compass
-tracks the player's last seen location in the current dimension. This is useful for locating
-portals where the target left the current dimension.
-
-**Online tracking** means only online players are actively tracked. However, a target's last
-seen location is still recorded when they disconnect.
-
-In any case, targets who are **active in the same dimension** are prioritized over inactive
-ones. Players who are still respawning (in spectator mode) are never
-targets, neither live nor through their last seen location.
-
-When several options exist, the compass ranks them: the nearest
-in-range live player first, then a too-close player, then another
-player's last seen location. Anything else (no targets at all, or
-only out-of-range ones) makes the needle spin instead of freezing.
-
-The compass does nothing while its holder is in spectator mode:
-refreshes show no target and clicks are ignored. Holders in vanilla
-spectator mode (for example admins) get nothing at all: no refresh,
-no actionbar, and no click behavior.
+Ranking: nearest in-range live player first, then a too-close player,
+then another player's last seen location. With nothing trackable, the
+needle spins. The compass does nothing while its holder is in
+spectator mode, and vanilla spectators (admins) get nothing at all.
 
 ## Given to Roles
 
-Under `settings.compass.obtaining.given-to`, you can configure which roles
-receive a compass when a match starts (and on respawn):
+Which roles receive a compass on match start (and on respawn):
 
 ```yaml
 given-to:
@@ -54,9 +37,9 @@ If you'd like to disable the compass entirely, set both to false.
 
 ## Compass Item
 
-Under `settings.compass.obtaining.item`, you can choose which item is handed out as
-the tracking compass, in modern `minecraft:material_name` format (the
-`minecraft:` namespace may be omitted):
+Which item is handed out as the tracking compass, in
+`minecraft:material_name` format (the `minecraft:` namespace may be
+omitted):
 
 ```yaml
 compass:
@@ -90,10 +73,9 @@ compass at all: the item is removed instead.
 
 ## Inventory Lock
 
-Under `settings.compass.lock-to-inventory`, you can configure whether the
-compass must stay in the player's inventory. This allows the player to change
-its slot but not drop it or put it to a container. Dropping on death is
-controlled by the [Drop on Death](#drop-on-death) setting.
+Whether the compass must stay in the player's inventory: the slot
+may change, but dropping and containers are blocked. Dropping on death
+is controlled by [Drop on Death](#drop-on-death).
 
 ```yaml
 compass:
@@ -102,9 +84,8 @@ compass:
 
 ## Drop on Death
 
-Under `settings.compass.obtaining.drop-on-death`, you can configure whether
-the compass is dropped on death. This is useful for allowing speedrunners to
-pick up the hunter's compass after death and track them.
+Whether the compass drops on death: handy for letting speedrunners
+pick up a dead hunter's compass and track back.
 
 Only one compass may exist in the inventory at a time. Duplicate ones are removed.
 
@@ -115,13 +96,10 @@ drop-on-death:
 
 ## Refresh Time
 
-Under `settings.compass.actions.auto`, you can configure how often the
-compass should refresh its target on its own. Set `enabled` to false to
-disable automatic refreshing. Each holder runs their own interval: two
-players who clicked at different times refresh at different times, and
-a holder who just joined refreshes on the next tick. `deviation` adds
-a random plus-or-minus jitter to the interval per refresh, capped at
-the interval itself.
+How often the compass refreshes its target on its own. Set `enabled`
+to false to disable automatic refreshing. Each holder runs their own
+interval, and `deviation` adds a random plus-or-minus jitter per
+refresh, capped at the interval itself.
 
 ```yaml
 actions:
@@ -131,14 +109,12 @@ actions:
     deviation: 0.0        # in seconds
 ```
 
-Under `settings.compass.actions.manual`, you can configure right-clicking
-the compass to refresh it. Right-clicks run on their own `cooldown`
-and apart from the automatic interval, so a fresh automatic refresh
-never blocks them; each click still restarts the automatic interval.
-Left-click and shift-left-click never touch this cooldown: they only
-browse the snapshot cache (see below). Deaths refresh immediately as
-well: when a target dies, every unlocked compass in the match
-re-resolves at once instead of waiting for the interval.
+Right-clicking the compass to refresh it. Right-clicks run on their
+own `cooldown`, apart from the automatic interval, and each click
+restarts the automatic interval. Left-clicks never touch this
+cooldown: they only browse the snapshot cache. Deaths refresh
+immediately too: when a target dies, every unlocked compass in the
+match re-resolves at once.
 
 ```yaml
 actions:
@@ -147,17 +123,13 @@ actions:
     cooldown: 3.0      # in seconds
 ```
 
-Under `settings.compass.actions.target-cycling`, you can let holders
-left-click the compass to cycle a manual target lock through the nearest
-candidates:
-cached opponents nearest-first, then last-seen locations
-nearest-first, then uncached players, up to `max-targets` total
-(minimum 1, maximum 20). While locked, the actionbar shows `LOCKED`
-and automatic refreshes keep pointing at the locked target, within the
-same min/max distance limits. Cycling past
-the last candidate returns to automatic tracking, as does clicking again
-after the locked target left the candidate set. Only left-clicks on air or
-blocks cycle the lock; attacking an entity with the compass does not.
+Left-clicking the compass to cycle a manual target lock through the
+nearest candidates: cached opponents nearest-first, then last-seen
+locations, then uncached players, up to `max-targets` total (1 to 20).
+While locked, the actionbar shows `LOCKED` and refreshes keep pointing
+at the locked target within the min/max limits. Cycling past the last
+candidate returns to automatic tracking. Only left-clicks on air or
+blocks cycle the lock; attacking an entity does not.
 
 ```yaml
 actions:
@@ -169,31 +141,20 @@ actions:
 
 Every refresh snapshots the closest hunters plus the closest
 speedrunners (capped at `max-targets` each), and cycling reads only
-those snapshots: it never fetches a live position and never touches
-the refresh cooldown, so browsing targets cannot reveal anyone early.
-A target with no snapshot yet shows a Bad Signal without a reason
-until the next refresh.
+those snapshots, so browsing cannot reveal anyone early.
 
 `scroll-cooldown` is the seconds between accepted scrolls; clicks inside
-the window are ignored, so holding the button cannot scroll. Set it to
-`0` for no throttling. Scrolls never run an analysis and are only
-refused while an analysis is running.
-
-With one or fewer candidates there is nothing to lock onto: the click
-quits silently without any sound, but still starts the scroll
-cooldown so failed clicks cannot be spammed. Each successful scroll
-plays a short click. You can change it under
-`sounds.compass.left-click`, or turn it off there.
+the window are ignored. Set it to `0` for no throttling. With one or
+fewer candidates the click quits silently but still starts the
+cooldown. Each successful scroll plays a short click, changeable under
+`sounds.compass.left-click`.
 
 ## Teammate Tracking
 
-Under `settings.compass.actions.teammates`, shift-left-clicking the
-compass toggles between tracking enemies and tracking teammates instead
-of cycling a lock. Teammate mode tracks same-role players with the same
-distance limits and signal rules, and the actionbar reads `Tracking
-teammate ...`; toggling back returns to the other role. The toggle
-drops any manual lock and renders the current snapshot cache at once,
-without fetching or touching the refresh cooldown:
+Shift-left-clicking the compass toggles between tracking enemies and
+tracking teammates instead of cycling a lock. Teammate mode tracks
+same-role players with the same distance limits, and the actionbar
+reads `Tracking teammate ...`. The toggle drops any manual lock:
 
 ```yaml
 actions:
@@ -203,25 +164,20 @@ actions:
 ```
 
 `switch-cooldown` is the seconds between accepted switches; switches
-inside the window are ignored silently. Set it to `0` for no
-throttling.
+inside the window are ignored. Set it to `0` for no throttling.
 
-The mode is per holder and clears when their match ends, like manual
-locks. Spectators cannot toggle, and respawning players are never
-targets either way. Entering teammate mode needs at least one
-teammate: with nobody to track, the toggle is refused with a chat
-message, but still starts the switch cooldown so failed toggles
-cannot be spammed. When the last teammate leaves the game, holders in
-teammate mode flip back to opponents automatically. Set `enabled`
+The mode is per holder and clears when their match ends. Entering
+teammate mode needs at least one teammate; when the last teammate
+leaves, holders flip back to opponents automatically. Set `enabled`
 to false to make shift-left-click lock exactly like a normal
 left-click.
 
 ## Actionbar
 
-Under `settings.compass.feedback.actionbar`, `refresh-ticks` sets how
-often the tracking actionbar is pushed to holders, in ticks (default 1,
-minimum 1). This is frontend only: the tracking refresh interval is
-untouched, so lowering it redraws the same snapshot more often.
+`refresh-ticks` sets how often the tracking actionbar is pushed to
+holders, in ticks (default 1, minimum 1). Frontend only: the tracking
+interval is untouched, so lowering it redraws the same snapshot more
+often.
 
 ```yaml
 feedback:
@@ -240,43 +196,33 @@ feedback:
 ```
 
 `show-distance-delta` colors the distance by movement since the last
-refresh: a green up triangle when the rounded distance grew, a red
-down triangle when it shrank. The first sighting of a target, and
-any refresh where the rounded distance did not change, renders the
-plain white distance. Deltas only show within `max-distance` meters,
-and only when the change reaches `min-delta-to-show` meters, so
-small wobbles far away do not clutter the screen. Both formats
-support `{distance}` and MiniMessage (the bar itself adds the `m`).
-With `reverse-on-hunter` (default true), hunters see the two formats
-swapped, green on closer and red on further, so approaching the prey
-reads as progress; speedrunners always see the unswapped formats.
+refresh: a green up triangle when it grew, a red down triangle when it
+shrank. Deltas only show within `max-distance` and past
+`min-delta-to-show`, so small wobbles far away do not clutter the
+screen. Both formats support `{distance}` and MiniMessage. With
+`reverse-on-hunter` (default true), hunters see the formats swapped,
+so approaching the prey reads as progress.
 
 `mode` picks how long the triangle stays: `HOLD` keeps it until the
 next refresh, `BLINK` shows it for `blink-duration-seconds`, then
-reverts to the plain white distance. A blink of `0` skips the
-triangle entirely.
+reverts to plain white. A blink of `0` skips the triangle entirely.
 
 `show-distance` (default on) toggles the distance readout itself.
-With it off, the bar shows direction without any distance, delta
-triangle, or distance history.
+With it off, the bar shows direction without any distance.
 
 ### Show Accuracy
 
-Under `settings.compass.feedback.actionbar.show-accuracy`, `enabled`
-(default off) appends a stepped accuracy percent after the tracked
-name: `Tracking Alex (80%)`. The percent snaps to tens and its color
-lerps on the same stepped value, so holders can never exploit
-sub-step precision: 0% is the worst possible error for the settings,
-100% is the true spot. With inaccuracy off, every bar reads 100%.
-`accurate-color` (default `#63d42a`) and `inaccurate-color` (default
-`#cc472d`) set the lerp ends as `#rrggbb`; junk values fall back to
-the defaults.
+`enabled` (default off) appends a stepped accuracy percent after the
+tracked name: `Tracking Alex (80%)`. The percent snaps to tens: 0% is
+the worst possible error, 100% is the true spot. With inaccuracy off,
+every bar reads 100%. `accurate-color` (default `#63d42a`) and
+`inaccurate-color` (default `#cc472d`) set the ends as `#rrggbb`; junk
+values fall back to the defaults.
 
 ## Chat Messages
 
-Under `settings.compass.feedback.chat-messages`, compass actions can
-chat the holder: locking onto a target, switching teammate mode on and
-off, and the death of a locked target:
+Compass actions can chat the holder: locking onto a target, switching
+teammate mode on and off, and the death of a locked target:
 
 ```yaml
 feedback:
@@ -284,138 +230,19 @@ feedback:
     enabled: true
 ```
 
-The lines come from `compass.locked-chat`,
-`compass.teammate-on-chat`, `compass.teammate-off-chat`, and
-`compass.locked-target-died-chat` in `messages.yml`. Refused or
-silent outcomes (no teammates, single-candidate quits) stay silent.
+The lines come from `compass.locked-chat`, `compass.teammate-on-chat`,
+`compass.teammate-off-chat`, and `compass.locked-target-died-chat` in
+`messages.yml`.
 
 ## Spinning
 
 When the compass has nothing to point at, its needle spins by aiming at
 a dimension you are not in. There is nothing to configure.
 
-## Analysis Delay
-
-Under `settings.compass.actions.manual.analysis`, a right-click refresh
-can take a purposeful moment to resolve instead of answering instantly.
-Analysis is strictly right-click only: automatic interval refreshes
-always resolve at once. While analyzing, the actionbar reads
-`Analyzing...`, no second refresh can start, and compass clicks are
-ignored until it resolves. The automatic clock stamps when the analysis
-starts, but the shared click cooldown stamps when it resolves, so the
-full cooldown always runs after the refresh. Interference checks and the
-distance math use your position from when you pressed analyze, not
-where you moved to during the delay:
-
-```yaml
-actions:
-  manual:
-    analysis:
-      enabled: true
-      delay-seconds: 5.0
-      delay-deviation-seconds: 3.0
-```
-
-`delay-seconds` is how long each analysis takes, and
-`delay-deviation-seconds` adds a random plus-or-minus jitter per
-analysis (capped at the delay, `0` for none).
-`sound-interval-seconds` ticks the analysis sound while it runs (rounded
-to whole ticks, at least one, at most 3 seconds). An analysis ends
-with the refresh click sound on success, or the failure sound when
-the needle lands on nothing trackable.
-
-The compass must stay in the main hand for the whole run: switching
-away cancels the analysis at once with a `Bad signal (cancelled)`
-readout and the failure sound. Movement interference measures the
-longest displacement reached at any point during the run, so moving
-out and back cannot hide.
-
-### Analysis Debuffs
-
-Under `settings.compass.actions.manual.analysis.debuffs`, you can run
-console commands every time an analysis starts, in modifier style: `<p>`
-is the compass holder, `~` resolves against their location, and
-`<duration>` is the analysis delay in whole seconds (floored). The
-`player` list runs for every analyzing holder plus their own role list,
-and only participants are affected:
-
-```yaml
-debuffs:
-  enabled: false
-  commands:
-    player:
-      - "effect give <p> minecraft:slowness <duration> 1 true"
-    speedrunner: []
-    hunter:
-      - "summon lightning_bolt ~ ~ ~"
-```
-
-### Analysis Cost
-
-Under `settings.compass.actions.manual.analysis.cost`, each analysis
-can charge the holder in hunger, health, and experience. `cost-on`
-picks when to charge: `INITIATE` at the press, `SUCCESS` at the
-resolution, or `BOTH` at each. Each `payment` container toggles
-separately:
-
-```yaml
-cost:
-  enabled: false
-  cost-on: INITIATE
-  payment:
-    saturation:
-      enabled: false
-      value: 3
-    health:
-      enabled: false
-      value: 4
-      can-kill: true
-    exp-level:
-      enabled: true
-      value: 1
-    failure-cooldown: 1.0
-  poverty-behavior:
-    cancel-when-poor: true
-    show-reason: true
-```
-
-Saturation drains from a 0-40 hunger pool: hidden saturation first,
-then the visible hunger bar. Health drains in health points (20 is
-full vanilla health); `can-kill` lets the charge kill, otherwise
-health never drops below half a heart. Experience drains whole
-levels. A holder who cannot pay aborts with a `Cost too high!`
-actionbar message when `cancel-when-poor` is on (never a chat
-message); `show-reason` names each lacking charge with the
-player-stat words (`low health`, `hungry`, `low exp level`). With
-cancelling off, the holder pays whatever they have. At `SUCCESS`,
-a poor holder's result is thrown away and the compass never updates.
-A cost-too-high block never touches the regular refresh cooldown,
-but `failure-cooldown` (seconds, `0` disables) holds further
-refreshes until it passes. Successful charges and blocks each play
-a sound (`sounds.md`, compass section); when several cost types
-apply, one used sound is picked at random.
-
-### Cancel Early
-
-Under `settings.compass.actions.manual.analysis.cancel-early`,
-an analysis that is already doomed finishes early instead of
-running the full delay. `time-multiplier` (0 to 1) keeps that
-fraction of the remaining time: `0` resolves at once, `1` leaves
-the duration untouched. Doom is checked at the press and every
-half second during the run.
-
-```yaml
-cancel-early:
-  enabled: true
-  time-multiplier: 0.3
-```
-
 ## Tracking Distance
 
-Each role gets its own tracking limits under
-`settings.compass.distance-limits.hunter` and
-`settings.compass.distance-limits.speedrunner`. The compass uses the block
-matching the role of the player holding it.
+Each role gets its own tracking limits. The compass uses the block
+matching the role of the player holding it:
 
 ```yaml
 distance-limits:
@@ -446,134 +273,3 @@ A manually locked target obeys both limits: a locked target that is
 too close shows the nearby message, and one that is too far shows the
 out-of-range message.
 
-## Signal Interference
-
-Under `settings.compass.signal.interference`, you can make tracking fail
-with a gray Bad signal readout when conditions are bad. The master
-`enabled` switch defaults to on, with only the `invisible` option
-on, so invisibility interferes out of the box while everything else
-stays opt-in.
-
-Each sub-option watches one thing (all default to off except
-`invisible`):
-
-- `light-level`: fails in the dark, with separate sky and block light
-  minimums. Only applies in the overworld. `interfere-when` picks
-  whether one unmet minimum is enough (`ONE_UNMET`) or both must be
-  unmet (`BOTH_UNMET`, the default).
-- `underground`: fails under too many solid blocks overhead. Glass,
-  leaves, and other non-whole blocks do not count unless you turn
-  `ignore-transparent` off.
-- `underwater`: fails under too much water overhead, but only while
-  the feet block itself is water. Works like `underground` but
-  counts fluid blocks above the feet.
-- `altitude`: fails outside a min/max height band.
-- `weather`: fails during the listed weather (`STORM`, `RAIN`,
-  `CLEAR`). Pick the values from the in-game checklist.
-- `biome`: fails in the listed biomes, written as full keys like
-  `minecraft:desert`.
-- `movement`: fails when the refresher's longest displacement during
-  the run passes `threshold-blocks` (default 0.2) from their press
-  spot. Only fires on the analysis path, since instant refreshes
-  have no gap to move in.
-- `line-of-sight`: fails based on whether the holder can see the
-  target. One eye-to-eye ray is checked; glass and leaves never block
-  it. `interfere-when` picks the failing side (`VISIBLE` by
-  default, `NOT_VISIBLE` for the opposite), and `max-ray-distance`
-  (default 300) caps the ray: past it, there is no line of sight.
-  Only live targets in the same world are checked.
-- `invisible`: fails when a side is under the invisibility effect
-  (on by default). Its `check-on` default of `BOTH` means either
-  side's invisibility interferes.
-- `player-stats`: fails when a side's stats run low.
-  `health` fails below `min-health` health points (default 8, where
-  20 is full vanilla health), `hunger` below `min-hunger` hunger
-  bar levels (default 10), and `experience` below `min-exp-level`
-  levels (default 5). Each has its own `check-on` key defaulting
-  to `SELF`.
-
-Every option except `line-of-sight` and `weather` has its own
-`check-on` key: `SELF` checks only the holder's spot, `TARGET`
-checks only the target's press-time spot, and `BOTH` checks each.
-Light, movement, and the player stats default to `SELF`;
-underground, underwater, altitude, biome, and invisible default to
-`BOTH`. Weather is always evaluated at the holder's spot only and
-has no `check-on` key; line of sight is relational, so it is
-evaluated once for the holder-target pair instead. Each side counts
-its own failures against `required-to-fail`
-(default 1), and `chance-to-bypass` gives a bad signal a random
-chance to track anyway. Locked targets can fail too. The nearby and
-out-of-range readouts consult interference as well; only the no-target
-readout never does.
-
-With `show-reason-in-actionbar` (default on), a bad signal names its
-cause: `:( Bad signal (underground)`. When several options fail at
-once, the most recently found one shows; the holder side wins ties.
-Target-side failures are prefixed: `:( Bad signal (target weather)`.
-The names come from the `compass.signal-reason` messages and can be
-reworded there.
-
-Interference works best with automatic refreshes off
-(`actions.auto.enabled: false`), analysis on
-(`actions.manual.analysis.enabled: true`), and right-click refreshes
-on (`actions.manual.enabled: true`): instant refreshes leave no gap
-for movement, doom, or stat changes to matter.
-
-## Signal Inaccuracy
-
-Under `settings.compass.signal.inaccuracy`, the compass can drift off
-the truth instead of failing outright. Every refresh picks a random
-point inside a ring (a donut) around the true spot: the ring grows with
-the true distance, so far targets read fuzzier than near ones. Close
-range stays exact until the `thresholds.min-distance` gate passes.
-
-- `enabled` (default off) is the master switch.
-- `inner-deadzone` (default 0.4) is the hole in the middle of the
-  donut, from 0 up to (but not including) 1. At 0.5 no sample ever
-  lands inside half the outer radius; at 0 the sample may land right
-  on the true spot.
-- `drift-radius` (default 0.6) is how far the readout may wander, as a
-  share of the true distance. At 1 the error reaches up to the full
-  distance away; near 0 it hugs the truth. It clamps to 0.01 at the
-  bottom so the error never fully vanishes while enabled.
-- `thresholds.min-distance` (default 100) is the range past which the
-  error kicks in. Set it to -1 to always apply the error. It must stay
-  below `max-distance` while max is set.
-- `thresholds.max-distance` (default 1000) is the range past which the
-  error stops growing: longer true distances reuse this range for the
-  donut. Set it to -1 for unbounded growth.
-- `inaccurate-on` (default BOTH) picks what drifts: NEEDLE moves only
-  the needle, DISTANCE_FEEDBACK moves only the shown distance, BOTH
-  moves both.
-
-Two guardrails keep the drift honest. The needle only drifts on a plain
-`compass` obtaining item: any other item has no settable needle, so its
-needle stays exact. The distance only drifts while a distance readout
-is visible (`show-distance` or `show-distance-delta.enabled`); with
-both off there is nothing to drift. Scrolled (cache-only) targets drift
-exactly like refreshed ones.
-
-### Hotspot
-
-Under `settings.compass.signal.inaccuracy.accuracy-hotspot`, idling targets get
-easier to pin down: every `sample-interval` seconds (default 10) the
-plugin records each live participant's spot, keeping the last
-`max-points` spots (default 40). When many of a target's saved spots
-sit within `hotspot-radius` meters (default 50) of where they stand
-now, the error donut shrinks, like averaging noisy fixes to find the
-truth. Movers keep the full error.
-
-`full-accuracy-fraction` (default 0.5) is the share of `max-points`
-needed inside the radius for the full bonus: 40 points at 0.5 means 20
-idling samples max it out, with partial credit below that.
-`max-reduction` (default 0.9) is how much error the full bonus removes:
-at 0.9 a fully idling target reads with a tenth of the normal error.
-Histories clear when the player leaves or loses their compass, and
-offline players are pruned.
-
-## WorldEdit Navwand
-
-WorldEdit teleports players who click with a compass, which fights the
-tracking compass. `advanced.misc.interop.disable-worldedit-navwand`
-(default on) blocks that teleport for compass clicks without needing
-WorldEdit installed. Turn it off if you rely on the navwand.

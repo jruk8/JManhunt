@@ -65,6 +65,7 @@ nav:
           - Overview: configuration/settings.md
           - Match Start & End: configuration/settings/match-start-end.md
           - Compass Tracking: configuration/settings/compass-tracking.md
+          - Compass Advanced: configuration/settings/compass-advanced.md
           - Roles: configuration/settings/roles.md
           - Win Conditions & End Screen: configuration/settings/win-conditions-end-screen.md
           - Game Boosts: configuration/settings/game-boosts.md
@@ -84,11 +85,10 @@ nav:
           - Tags Basics: configuration/modifiers/tags-basics.md
           - Tags Advanced: configuration/modifiers/tags-advanced.md
       - Game Rules: configuration/game-rules.md
-      - Statistics & PlaceholderAPI: configuration/statistics.md
+      - Statistics: configuration/statistics.md
       - Sounds: configuration/sounds.md
   - Permissions: permissions.md
   - Placeholders: placeholders.md
-  - Update Checker: update-checker.md
   - API: api.md
   - Developer Tools: dev-tools.md
 
