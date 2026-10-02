@@ -1,7 +1,7 @@
 ![JManhunt banner](assets/banner-1280x640.png)
-# JManhunt
+**Demo server:** `play.jmanhunt.com`
 
-> For: everyone. Start here.
+# JManhunt
 
 Manhunt for your Paper server. Hunters chase speedrunners, with a tracking
 compass, fresh maps, and optional mods.
@@ -20,13 +20,14 @@ step-by-step tour.
 
 [Full quick setup](getting-started.md) · [Installation](installation.md)
 
-## What you get
+## Key Features
 
-- **One-click setup**: lobby plus world engine, working in seconds.
-- **Tracking compass**: hunters always know where to go.
-- **Fresh map every match**: everything is automated and highly crash-safe.
-- **Mods**: small add-ons that change the game (kits, boosts, twists).
-- **Stats**: wins, kills, and playtime per player.
+» **World Reset Engine**: Automates fresh map creation for each match, so your Manhunts are ready in seconds.
+» **Hunt Tracking**: Real-time hunter compass with deep config options, tweaks and targeting logic. Never lose your runners.
+» **Effortless Lobby System**: A guided setup with team selection, queue management, and tunable boundaries.
+» **Highly Configurable**: 280+ config options for all levels of players, designed to be accessible, where defaults are plug and play.
+» **Modifier Framework**: Build custom twists with our simple scripting language.
+» **Serious for deployments**: full admin CLI support, placeholders, and even crash recovery.
 
 ## Docs
 

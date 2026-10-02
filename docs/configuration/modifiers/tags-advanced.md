@@ -217,7 +217,7 @@ non-letter-or-digit boundary on each side (spaces work, so does the
 edge of the condition), which keeps them distinct from tag brackets:
 
 ```yaml
-- '<if:"<pstat:<p>,health> le 7 and <gstat:duration>-<default:<pflag:lastuse-<id>>,-999999> gt 300","give <p> golden_apple","exit">'
+- '<if:"<pstat:<p>,health> le 7 and <gstat:duration> gt 300","give <p> golden_apple","exit">'
 ```
 
 An `<if>` without an else branch yields nothing when the condition

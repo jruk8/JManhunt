@@ -113,6 +113,23 @@ class TagCooldownsTest {
     }
 
     @Test
+    void playerGateInsideIfMatchesGappleShape() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+        String line = "<if:\"<pcooldown:<p>,<id>,300> == true\","
+                + "\"give <p> golden_apple\",\"exit\">";
+        String precheck = "<if:\"<pcooldown.get:<p>,<id>,300> gt 0\",\"exit\">";
+
+        assertEquals("", fixture.replace(precheck, context));
+        assertEquals("give Steve golden_apple", fixture.replace(line, context));
+        assertEquals("exit", fixture.replace(precheck, context));
+        assertEquals("exit", fixture.replace(line, context));
+        fixture.now += 300000;
+        assertEquals("give Steve golden_apple", fixture.replace(line, context));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
     void misuseWarnsWithNull() {
         Fixture fixture = new Fixture();
         TagContext context = fixture.context();

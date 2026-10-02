@@ -130,8 +130,8 @@ leaves players the modifier never ran for untouched.
 
 ### Gapple On Low HP
 
-Runs every 3 seconds for speedrunners. The first line gives a golden
-apple when health is at most 7 and more than 300 seconds passed since
-the last give; otherwise it exits, which skips the second line while
-cooling down. The second line stamps the give time into a per-player
-flag. Runners who never got one are treated as due.
+Runs every 2 seconds for speedrunners. Lines exit cheapest-first:
+the cooldown read (no stamp), then the health check, then the
+inventory scan. The last line is the gate itself: `<pcooldown>` yields
+`true` and stamps at most every 300 seconds, so the apple lands only
+when all four pass. Runners who never got one are treated as due.
