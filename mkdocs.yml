@@ -78,12 +78,11 @@ nav:
           - Troubleshooting: configuration/world-engine/troubleshooting.md
       - Modifiers:
           - Overview: configuration/modifiers.md
-          - Mod Files: configuration/mods-files.md
+          - Your First Modifier: configuration/modifiers/first-modifier.md
+          - Creating: configuration/modifiers/creating.md
           - Behaviors: configuration/modifiers/behaviors.md
-          - Command Lists: configuration/modifiers/command-lists.md
           - Tags Basics: configuration/modifiers/tags-basics.md
           - Tags Advanced: configuration/modifiers/tags-advanced.md
-          - Creating: configuration/modifiers/creating.md
       - Game Rules: configuration/game-rules.md
       - Statistics & PlaceholderAPI: configuration/statistics.md
       - Sounds: configuration/sounds.md

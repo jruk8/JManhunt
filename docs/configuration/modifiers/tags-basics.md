@@ -1,5 +1,12 @@
 # Tags: Basics
 
+> For: intermediate authors. Straightforward tags up front; the full cheatsheet lives in [Tags: Advanced](tags-advanced.md).
+
+Straight to the most useful ones: `<random-num:4,12>` rolls a whole
+number, `<random-pick:a,b>` picks one item, and interval triggers (see
+[Behaviors](behaviors.md)) run lines on a timer. Everything below builds
+from there.
+
 ## Placeholders in Commands
 
 Modifier commands run through JMHScript (JMHS), the tag engine: tags
@@ -49,13 +56,10 @@ selectors there stay verbatim.
 ### Escaping Special Characters
 
 A backslash before any char makes it literal text: `\<yellow\>`
-survives tag parsing and renders MiniMessage yellow,
-`say a\,b` keeps one arg with a comma, and `\\` collapses to
-`\`. Structural chars (`< > , " ' \ : @ ~ ? & | ! = + - * / %
-( ) [ ] { }`, space, tab) hide from every scanner; any other
-escaped char (letters, digits) emits as-is, so word operators
-are unaffected. Escaped text never evaluates as tags, math,
-conditions, lists, selectors, or tildes.
+survives tag parsing and renders MiniMessage yellow, `say a\,b`
+keeps one arg with a comma, and `\\` collapses to `\`. Escaped
+text never evaluates as tags, math, conditions, lists, selectors,
+or tildes.
 
 ```yaml
 - '<pmessage:<p>,\<yellow\>This is yellow text!>'
@@ -222,3 +226,25 @@ A line that resolves to exactly `null` (lowercase, nothing else on
 it) is never dispatched: the console logs a warning naming the
 modifier, behavior, list, and line instead. Anything else holding
 `null` runs as usual.
+
+## Mod Files and Load Order
+
+Modifiers load fully before presets. Inside each tree, every
+directory loads its subdirectories first (sorted naturally by name,
+each processed with this same rule), then its own `.yml` files
+sorted naturally by filename. Root-level files therefore load after
+everything nested. Sorting is Explorer style: case-insensitive,
+with digit runs compared numerically (`mod2` before `mod10`).
+
+Two files of the same kind with the same id in different folders
+are a duplicate: the first in load order wins and the rest are
+skipped, with a console warning naming both paths. A modifier and
+a preset may share an id; they are separate namespaces.
+
+Non-`.yml` files are reported as unknown files on reload (temp
+files and dotfiles are ignored silently). A `.yml` file that fails
+to parse or validate is logged as `<path>: <error>`, skipped, and
+reported; fixing it later reloads quietly. A preset that names an
+unknown modifier id warns and skips that member in memory only: the
+file keeps the id, so a later reload picks it up once the modifier
+exists.

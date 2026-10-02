@@ -1,228 +1,82 @@
 # Modifiers
 
-**Modifiers** are named command bundles in `mods/modifiers/` that run
-console or per-player commands on match triggers. They are disabled
-by default; details live in [Behaviors](modifiers/behaviors.md),
-[Command Lists and Targeting](modifiers/command-lists.md),
-[Tags: Basics](modifiers/tags-basics.md),
-[Tags: Advanced](modifiers/tags-advanced.md),
-[Creating and Sharing](modifiers/creating.md), and
-[Mod Files](mods-files.md).
+> For: everyone spicing up the game. No scripting needed.
 
-## Tag cheat sheet
+Modifiers are ready-made game twists: starter kits, random chaos,
+buffs, and rule changes. 19 modifiers and 3 presets ship with the
+plugin, all switched off until you switch them on.
 
-Every engine tag, one line each. Signatures show the common shape;
-see the Tags pages for full rules.
+## Switch Some On
 
-### Basic
+Open `/manhunt` and pick **Modifiers**. Click entries to switch them
+on and off; the counts stay live. Try `gear-dice` (random gear),
+`random-mob-spawner`, `full-iron-kit`, or the `chaos-mode` preset.
 
-| Tag | Meaning |
-| --- | --- |
-| `<p>` | The participating player's name. |
-| `<id>` | Name of the running modifier (or trigger). |
-| `<args:0>` | Trigger's event arg by index; bare `<args>` reads `0`. |
-| `<placeholder:key>` | PlaceholderAPI (or in-house `jmanhunt_*`) value as a tag. |
-| `<random-mob>` | Random spawnable entity type, lowercase. |
-| `<random-item>` | Random item material, lowercase. |
-| `<random-num:4,12>` | Random whole number in range, order free. |
-| `<random-pick:a,b>` | One random item from the list. |
-| `<random-player>` | One random participant. |
-| `<all-players>` | Every participant as a name list (`:ROLE` filters). |
+Prefer typing? This does the same thing:
 
-### Messages and Sounds
+```text
+/manhunt modifiers setmod gear-dice true
+```
 
-| Tag | Meaning |
-| --- | --- |
-| `<gmessage:text>` | Send text to every participant; leaves nothing behind (alias `<gmsg>`). |
-| `<pmessage:player,text>` | Send text to one player (alias `<pmsg>`). |
-| `<rmessage:role,text>` | Send text to one role (`ALL` sends to both; alias `<rmsg>`). |
-| `<gsound:id,pitch,volume>` | Play a sound for every participant. |
-| `<psound:player,id,pitch,volume>` | Play a sound for one player. |
-| `<rsound:role,id,pitch,volume>` | Play a sound for one role (`ALL` plays for both). |
+## Taste One in 3 Minutes
 
-### Stats and Roster
-
-| Tag | Meaning |
-| --- | --- |
-| `<pstat:player,key>` | One player's stat (`health`, `hunger`, ...). |
-| `<gstat:key>` | Match-wide stat (`duration`, ...). |
-| `<phasitem:player,item,count>` | `true` when the player holds count of item. |
-| `<pheld:player>` | Main-hand material, else `null`. |
-| `<active-players:ROLE>` | Eligible names as a list (`ALL` lists both sides). |
-| `<plocation:player>` | Player spot as `[x, y, z, world, pitch, yaw]`. |
-| `<overlap-players:origin,role,radius,max>` | Names near an origin, nearest first. |
-| `<nearby-players:player,role,radius,max>` | Names near a player, sender excluded. |
-| `<pworld:player>` | `nether`, `end`, or the raw world name (`<world:player>` alias). |
-| `<px:player>` | Single coords (`py`, `pz`, `pyaw`, `ppitch`). |
-| `<prole:player>` | `HUNTER` or `SPEEDRUNNER`, else `null`. |
-| `<distance:loc1,loc2>` | 3D distance on xyz; cross-dimension full lists yield silent `null`. |
-
-### Math
-
-| Tag | Meaning |
-| --- | --- |
-| `<min:a,b>` | The smaller number. |
-| `<max:a,b>` | The larger number. |
-| `<clamp:x,low,high>` | `x` clamped into range. |
-| `<floor:2.7>` | `2`, rounds down. |
-| `<ceil:2.3>` | `3`, rounds up. |
-| `<round:2.5>` | `3`, rounds half up. |
-| `<abs:-4>` | `4`. |
-| `<sign:-4>` | `-1`, else `0` or `1`. |
-| `<sqrt:9>` | `3`, square root (`null` for negatives). |
-| `<cbrt:-8>` | `-2`, cube root. |
-| `<root:16,4>` | `2`, the nth root of `x`. |
-| `<range:1,5>` | `[1, 2, 3, 4]`, Python style. |
-| `<len:list>` | Item count, `0` when no list. |
-| `<format:"{0} found {1}",[Alex,gold]>` | Plain `{n}` substitution, silent on mismatch. |
-| `<format>` mismatch rules | Missing indexes, `{x}`, and stray braces stay verbatim silently; `{0:D}`-style specifiers stay literal; malformed shape warns plus `null`. |
-
-### Conditions
-
-| Tag | Meaning |
-| --- | --- |
-| `<if:"a == b","y","n">` | `y` when the condition holds, else `n` (else omittable). |
-
-### Lists
-
-| Tag | Meaning |
-| --- | --- |
-| `<list.append:list,x>` | Append `x`, store back, empty. |
-| `<list.get:list,index>` | Item at index, `null` when missing. |
-| `<list.set:list,index,x>` | Set index, store back, empty. |
-| `<list.remove:list,x>` | Remove first `x`, `true`/`false`. |
-| `<list.contains:list,x>` | `true` when `x` is an item. |
-| `<list.clear:list>` | Empty the list, store back. |
-| `<list.pop:list>` | Remove and return the first item. |
-| `<list.shuffle:list>` | Shuffle, store back, empty. |
-| `<list.filter:list,cond>` | Items whose condition is `true` (`<i>` bound). |
-| `<list.reverse:list>` | Reversed copy. |
-| `<list.join:list,sep>` | Items joined with `sep`. |
-| `<list.slice:list,start,end>` | Python-style slice. |
-| `<list.first:list>` | First item, `null` when empty. |
-| `<list.last:list>` | Last item, `null` when empty. |
-
-### Strings
-
-| Tag | Meaning |
-| --- | --- |
-| `<str.join:list,sep>` | Same join as `<list.join>`. |
-| `<str.split:text,delim>` | Literal split to a list. |
-| `<str.lower:text>` | Lowercase. |
-| `<str.upper:text>` | Uppercase. |
-| `<str.contains:text,needle>` | `true` when held (case-sensitive). |
-
-### Cooldowns
-
-| Tag | Meaning |
-| --- | --- |
-| `<pcooldown:player,key,seconds>` | `true` when ready, stamps. |
-| `<pcooldown.get:player,key,seconds>` | Seconds left, else `0`. |
-| `<pcooldown.reset:player,key>` | Clears, `true`. |
-| `<gcooldown:key,seconds>` | Match-wide gate, `true` when ready. |
-| `<gcooldown.get:key,seconds>` | Seconds left, else `0`. |
-| `<gcooldown.reset:key>` | Clears, `true`. |
-
-### Vectors
-
-| Tag | Meaning |
-| --- | --- |
-| `<vec.add:a,b>` | Element-wise sum. |
-| `<vec.sub:a,b>` | A minus B. |
-| `<vec.mult:vec,scalar>` | Scaled vector. |
-| `<vec.normalize:vec>` | Unit vector (`[0, 0, 0]` for zero). |
-| `<vec.sqrdist:a,b>` | Squared distance. |
-| `<vec.dist:a,b>` | Euclidean distance. |
-| `<vec.dot:a,b>` | Dot product. |
-| `<vec.cross:a,b>` | Cross product. |
-| `<loc.shift:loc,dir,dist>` | Shifted location, world and angles carried. |
-| `<pdir:player>` | Unit look direction, else `null`. |
-| `<ploc:player>` | Alias of `<plocation:player>`. |
-
-### Players
-
-| Tag | Meaning |
-| --- | --- |
-| `<pstate:player,state>` | `true`/`false` for SNEAK, SPRINT, GLIDE, SWIM, GROUND. |
-| `<pstandingon:player>` | Upper-case block below the feet (`AIR` over void). |
-| `<ptitle:player,title,sub>` | Center title, empty (optional stay, in, out seconds). |
-| `<pslot:player,slot>` | Get `[MATERIAL, qty]`, `null` when empty. |
-| `<pslot:player,slot,item>` | Set from `[material, qty]` or bare material, empty. |
-| `<pstat:player,exp-level>` | Vanilla experience level. |
-
-### Flags
-
-| Tag | Meaning |
-| --- | --- |
-| `<gflag:name,value>` | Match-wide flag (alias `<gf>`). |
-| `<pflag:name,value>` | Per-player flag (alias `<pf>`). |
-| `<lflag:name,value>` | Run-only flag (alias `<lf>`). |
-| `<rflag:role,name,value>` | Flag of the named role (`ALL` fans out sets, reads consensus). |
-| `<default:value,fallback>` | Fallback when blank or `null`. |
-
-### Loops and Functions
-
-| Tag | Meaning |
-| --- | --- |
-| `<while:cond,body>` | Repeat the body while the condition holds. |
-| `<for:[a,b],body>` | Run the body per item with the item behind `<i>`. |
-| `<i>` | Innermost for-loop item, else `null`. |
-| `<def:double,x+x,x>` | Run-local function. |
-| `<run:say hi>` | Run a console command, empty. |
-
-### Match Control
-
-| Tag | Meaning |
-| --- | --- |
-| `<loseplayer:player,reason>` | Eliminate a player, empty. |
-| `<win:ROLE,reason>` | End the match for a role, empty. |
-
-## 3-minute quickstart
-
-1. Enable the bundled beef modifier:
+1. Enable the beef modifier:
    `/manhunt modifiers setmod everyone-gets-beef true`.
-2. In `plugins/JManhunt/mods/modifiers/everyone-gets-beef.yml`, change
-   `give <p> minecraft:cooked_beef 8` to `... cooked_beef 16`.
-3. Run `/manhunt reload`.
-4. Start a match: every participant gets 16 steak.
+2. Start a match: every participant gets 8 steak.
+3. Want 16 instead, or your own kit? See
+   [Your First Modifier](modifiers/first-modifier.md).
 
-## 20-minute JMHScript quickstart
+## Import from Discord
 
-File layout: `plugins/JManhunt/mods/modifiers/` holds one `.yml`
-file per modifier, named after its id. Each file has `enabled`,
-`meta:` (name, description, icon, author), and `behavior:` with
-numbered blocks. See [Mod Files](mods-files.md) for subdirectories,
-load order, and file problems.
+The community shares modifiers and presets as click-to-copy strings in
+our [Discord](https://discord.gg/hkWmCVmWDC) modifier forum. Taking one
+in is one step: open the Modifiers panel and use the import button, or
+run:
 
-Behavior anatomy: each block picks triggers under `runs-on:`
-(`ON_START`, `INTERVAL`, kill and portal events, ...), optional
-timing options, and `commands:` lists. List flavors are `player`
-(everyone), `hunter`, `speedrunner`, and `console`. See
-[Behaviors](modifiers/behaviors.md) and
-[Command Lists](modifiers/command-lists.md).
+```text
+/manhunt modifiers import modifier JMH1D:...
+```
 
-Evaluate-then-dispatch: tags resolve to text first, then the whole
-line runs as one console command. A line resolving to exactly
-`null` never dispatches; a lone `exit` stops the list.
+Sharing yours works the other way with `export`, which prints your own
+string. See [Creating and Sharing](modifiers/creating.md).
 
-Tags nest inside out: `<random-pick:coal <random-num:4,12>>`
-rolls the number, then picks. A backslash escapes any char:
-`\<yellow\>` stays literal for MiniMessage, `\,` keeps one arg
-with a comma. Write escaped lines single-quoted. See
-[Tags: Basics](modifiers/tags-basics.md).
+## Make Your Own
 
-Flags hold state: `<gflag>` match-wide, `<pflag>` per player,
-`<lflag>` for the run only. `<if>` branches with `==`, word
-operators (`lt`, `le`, `gt`, `ge`), `and`/`or`/`not`; only the
-chosen branch runs. See [Tags: Advanced](modifiers/tags-advanced.md).
+Plain Minecraft commands need no scripting: `give @p cooked_beef 8`
+works as-is inside a modifier. Build entries in the GUI editor (create
+button, top-right of the lists) or straight from chat. Start here:
 
-Test from chat: `/manhunt modifiers test hunter give <p> bread`
-runs lines as a hunter with mock vitals; the GUI editor's test
-button does the same per list.
+- [Your First Modifier](modifiers/first-modifier.md): a runner kit,
+  zero scripting.
+- [Creating and Sharing](modifiers/creating.md): the full creation
+  flow, validation rules, and share strings.
+- [Behaviors](modifiers/behaviors.md): triggers, timing, and command
+  lists.
+- [Tags: Basics](modifiers/tags-basics.md): straightforward tags like
+  `<random-num:4,12>`.
+- [Tags: Advanced](modifiers/tags-advanced.md): the full JMHScript
+  cheatsheet and reference.
 
-One complete modifier, annotated:
+## How Modifiers Think
 
-`mods/modifiers/gapple-comeback.yml`:
+One `.yml` file per modifier under `mods/modifiers/`, named after its
+id. Each file has `enabled`, `meta:` (name, description, icon,
+author), and `behavior:` with numbered blocks. Each block picks
+triggers under `runs-on:` (`ON_START`, `INTERVAL`, kill and portal
+events), optional timing, and `commands:` lists (`player`, `hunter`,
+`speedrunner`, `console`, plus cleanups).
+
+Tags resolve to text first, then the whole line runs as one console
+command. A line resolving to exactly `null` never runs; a lone `exit`
+stops the list. Tags nest inside out, flags hold state (`<gflag>`
+match-wide, `<pflag>` per player), and `<if>` branches. Dry-run any
+line from chat:
+
+```text
+/manhunt modifiers test hunter give <p> bread
+```
+
+One complete modifier, annotated (`mods/modifiers/gapple-comeback.yml`):
 
 ```yaml
 enabled: false

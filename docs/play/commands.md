@@ -207,7 +207,7 @@ console must pass one).
 
 Browse and toggle mods with `setmod` and `setpreset`, through the
 [admin GUI](gui.md), or by editing files under `mods/` and running
-`/manhunt reload` (see [Mod Files](../configuration/mods-files.md)).
+`/manhunt reload` (see [Creating Modifiers](../configuration/modifiers/creating.md)).
 Share one with `export` and take one in with `import`:
 
 ```text

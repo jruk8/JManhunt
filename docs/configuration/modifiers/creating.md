@@ -1,23 +1,19 @@
 # Creating and Sharing Modifiers
 
-**Modifiers** are named command bundles you define as one `.yml`
-file each under `mods/modifiers/`, with presets beside them under
-`mods/presets/`. They are disabled by default. A modifier can run
-commands when a match starts, on a recurring interval during the match, when
-specific game events happen, and when the match ends, either from the console
-or once for each participating player.
+> For: intermediate admins making mods, plus advanced authors going deep.
 
-All command examples are the default config settings. Refer to the latest
-bundled files in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/mods/).
+Modifiers are named command bundles: one `.yml` file each under
+`mods/modifiers/`, presets beside them under `mods/presets/`. The id
+is the filename minus `.yml`, so `gear-dice.yml` is the `gear-dice`
+modifier. Subdirectories are allowed and load recursively. A modifier
+can run commands when a match starts, on an interval, on game events,
+and when the match ends, from the console or per player. New entries
+start disabled.
 
-Each modifier is one file named after its id (full layout rules
-live in [Mod Files](../mods-files.md)):
-
-`mods/modifiers/everyone-gets-beef.yml`:
-
-```yaml
-enabled: false
-```
+Bundled defaults ship with the plugin and copy in the first time each
+folder is created. Deleting a file removes it for good: defaults are
+never restored. All examples below match the bundled files; the latest
+live in the [GitHub repository](https://github.com/jruk8/JManhunt/blob/main/src/main/resources/mods/).
 
 Writing commands by hand is tedious. Use
 [mcstacker.net](https://mcstacker.net/) to generate up-to-date commands,
@@ -26,46 +22,33 @@ then paste them into your modifier.
 ## Creating Modifiers and Presets
 
 Build entries in the GUI or inline from chat; both write the same
-per-file entries that manual editing produces, and manual
-editing keeps working as before. Everything created this way starts
-disabled, and lands as a root-level file: `mods/modifiers/<id>.yml`
-or `mods/presets/<id>.yml`. Ids use letters, numbers, `-` and `_`
-(up to 64 chars); a name that is taken gets ` {n}` numbering.
+per-file entries manual editing produces. Everything lands as a
+root-level file: `mods/modifiers/<id>.yml` or `mods/presets/<id>.yml`.
+Ids use letters, numbers, `-` and `_`, up to 64 chars; a taken name
+gets ` {n}` numbering.
 
-In the GUI, a create button sits at the top-right of the modifiers
-and presets lists. It prompts for a display name (you become the
-author) and opens the new entry in its editor. Right-clicking any
-existing entry opens the same editor. The `create` command behaves
-the same: without `--author`, the sender becomes the author, and
-the console records `CONSOLE`.
+In the GUI, the create button sits top-right of the lists. It prompts
+for a display name (you become the author) and opens the new entry in
+its editor; right-clicking any existing entry opens the same editor.
+The `create` command behaves the same (the console records `CONSOLE`
+as author). The modifier editor covers every field: meta, triggers,
+timing and chance options, and every command list. Blank answers clear
+optional fields back to defaults. See
+[Your First Modifier](first-modifier.md) for a worked kit example.
 
-The modifier editor covers every field: name, description, icon,
-author, the enabled toggle, trigger toggles, pre-start order, all
-timing and chance options, and every command list. The preset editor
-covers name, description, icon, and membership toggles. Both editors
-also export, rename the id, and delete after a confirm panel.
-Buttons that prompt for optional values treat a blank answer as
-clearing the field back to its default.
+Commands validate on save: unbalanced brackets, empty commands,
+malformed random args, unknown root commands, and unknown `give` items
+are refused with an error, while unknown tags only warn. Set
+`advanced.misc.modifier-editor.validate-commands` to false to skip the
+root and item checks. See
+[Modifiers](../../play/commands.md#modifiers) for the create flags.
 
-Commands validate when you save them: unbalanced angle brackets,
-empty commands, malformed `<random-num:>` or `<random-pick:>`
-arguments, unknown root commands, and unknown `give` items are
-refused with an error, while unknown tags and skipped pick items
-only warn. `<duration>` is compass-only and warns on modifiers.
-Set `advanced.misc.modifier-editor.validate-commands`
-to false to skip the root and item checks; placeholder checks
-always run. The command-line creator enforces the same rules; see
-[Modifiers](../../play/commands.md#modifiers) for its flags.
+Toggling a modifier mid-match runs its start commands at most once and
+its cleanup at most once, so rewards never duplicate. Set
+`advanced.misc.modifier-editor.prevent-duplicate-toggle` to false for
+rapid testing; every toggle then runs.
 
-Toggling a modifier back and forth in one match runs its enable
-commands at most once and its disable commands at most once, so
-effects like granted items never duplicate. Set
-`advanced.misc.modifier-editor.prevent-duplicate-toggle` to false
-for rapid testing if you are a modifier creator; every toggle
-then runs.
-
-Presets keep their display data under `meta:`, exactly like
-modifiers, with the member list beside it:
+Presets keep display data under `meta:` with the member list beside it:
 
 `mods/presets/chaos-mode.yml`:
 
@@ -79,16 +62,18 @@ modifiers:
   - random-item-giver
 ```
 
-Presets written in the old flat shape (name and friends next to
+Presets written in the old flat shape (display keys next to
 `modifiers:`) no longer load: re-indent the four display keys under
-`meta:`. Old preset share strings need a fresh export too.
+`meta:`, and re-export old share strings. Upgrading from the single
+`modifiers.yml` layout: copy entries into per-file form by hand,
+nothing migrates automatically.
 
 ## Sharing Modifiers and Presets
 
-Export any modifier or preset to a share string: a click-to-copy chat
-line you can paste to friends or the community. Import takes one back
-in; colliding names get numbered automatically. Strings that fail
-their checksum or schema check are refused without touching anything.
+Export any entry to a share string: a click-to-copy chat line for
+friends or the community. Import takes one back in; colliding names
+get numbered automatically. Strings that fail their checksum or schema
+check are refused without touching anything.
 
 ```text
 /manhunt modifiers export modifier gear-dice
@@ -96,13 +81,12 @@ their checksum or schema check are refused without touching anything.
 /manhunt modifiers import modifier JMH1D:...
 ```
 
-The modifiers and presets menus carry an import loom in the
-bottom-right corner that prompts for the string, and every editor has
-an export button that copies its own share string.
+The lists carry an import button that prompts for the string, and every
+editor has an export button for its own share string.
 
 ## Example
 
-A minimal modifier that hands every participant a starter kit looks like this:
+A minimal starter kit for every participant:
 
 `mods/modifiers/starter-kit.yml`:
 
@@ -113,19 +97,14 @@ behavior:
     commands:
       player:
         - "give <p> cooked_beef 8"
-      hunter: []
-      speedrunner: []
-      console: []
-      console-cleanup: []
-      player-cleanup: []
 ```
 
-The bundled `mods/modifiers/` files ship more examples to copy from:
-`full-iron-kit`, `speedrunner-health-advantage`, `random-mob-spawner`,
+The bundled files ship more examples to copy from: `full-iron-kit`,
+`speedrunner-health-advantage`, `random-mob-spawner`,
 `random-item-giver`, `random-start-resources`, `gear-dice`,
 `regen-on-kill`, `diamond-on-advancement`, `fireres-on-nether-enter`,
-`hunter-start-debuffs` (slowness II plus weakness I on every hunter at
-match start), `get-stronger-on-kill`, and `speedrunner-gapple-on-low-hp`.
+`hunter-start-debuffs`, `get-stronger-on-kill`, and
+`speedrunner-gapple-on-low-hp`.
 
 ### Get Stronger On Kill
 
