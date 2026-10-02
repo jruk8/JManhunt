@@ -3,10 +3,11 @@
 
 > For: everyone setting up the plugin. Just installed? See [Installation](installation.md) first (two steps).
 
-> **Note:** The Lobby System, multi-instancing, and World Engine are
-> only for **dedicated servers**. Enabling these features will partition
-> the Overworld into cells. It can always be disabled, but some gamerules
-> may be modified after.
+> **Note:** The green button assumes a **dedicated server**: it switches
+> on the Lobby System and the World Engine, which partitions the
+> Overworld into cells. It can always be disabled, but some gamerules
+> may be modified after. No dedicated backend, or no lobbies wanted? Run
+> `/manhunt setup` instead and pick the no resets route.
 
 ## Set up in one click
 
