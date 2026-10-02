@@ -22,12 +22,12 @@ step-by-step tour.
 
 ## Key Features
 
-» **World Reset Engine**: Automates fresh map creation for each match, so your Manhunts are ready in seconds.
-» **Hunt Tracking**: Real-time hunter compass with deep config options, tweaks and targeting logic. Never lose your runners.
-» **Effortless Lobby System**: A guided setup with team selection, queue management, and tunable boundaries.
-» **Highly Configurable**: 280+ config options for all levels of players, designed to be accessible, where defaults are plug and play.
-» **Modifier Framework**: Build custom twists with our simple scripting language.
-» **Serious for deployments**: full admin CLI support, placeholders, and even crash recovery.
+- **World Reset Engine** » Automates fresh map creation for each match, so your Manhunts are ready in seconds.
+- **Hunt Tracking** » Real-time hunter compass with deep config options, tweaks and targeting logic. Never lose your runners.
+- **Effortless Lobby System** » A guided setup with team selection, queue management, and tunable boundaries.
+- **Highly Configurable** » 280+ config options for all levels of players, designed to be accessible, where defaults are plug and play.
+- **Modifier Framework** » Build custom twists with our simple scripting language.
+- **Serious for deployments** » full admin CLI support, placeholders, and even crash recovery.
 
 ## Docs
 
@@ -44,4 +44,4 @@ step-by-step tour.
 Stuck? The fastest way to get help is our
 [Discord](https://discord.gg/hkWmCVmWDC).
 
-© 2026 jruk8. Licensed under GNU AGPLv3.
+© 2026 jruk. Licensed under GNU AGPLv3.

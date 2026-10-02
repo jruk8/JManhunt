@@ -7,6 +7,9 @@ repo_name: jruk8/JManhunt
 theme:
   name: material
   language: en
+  custom_dir: overrides
+  logo: assets/logo.png
+  favicon: assets/favicon.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -23,10 +26,13 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
+    - announce.dismiss
     - social
     - navigation.instant
     - navigation.tracking
     - navigation.top
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.footer
     - search.suggest
     - search.highlight
