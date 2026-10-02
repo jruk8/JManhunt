@@ -23,8 +23,8 @@ actions:
   manual:
     analysis:
       enabled: true
-      delay-seconds: 5.0
-      delay-deviation-seconds: 3.0
+      delay-seconds: 2.0
+      delay-deviation-seconds: 1.0
 ```
 
 `delay-seconds` is how long each analysis takes, and

@@ -73,8 +73,8 @@ private static void addCompassEntries(List<SettingDescriptor> entries) {
 private static void addCompassAnalysisEntries(List<SettingDescriptor> entries) {
     String root = "settings.compass.actions.manual.analysis.";
     entries.add(bool(root + "enabled", true));
-    entries.add(floatVal(root + "delay-seconds", 5.0, 0.0, null));
-    entries.add(floatVal(root + "delay-deviation-seconds", 3.0, 0.0, null));
+    entries.add(floatVal(root + "delay-seconds", 2.0, 0.0, null));
+    entries.add(floatVal(root + "delay-deviation-seconds", 1.0, 0.0, null));
     entries.add(floatVal(root + "sound-interval-seconds", 0.5, 0.05, 3.0));
     entries.add(bool(root + "debuffs.enabled", true));
     addAnalysisCostEntries(entries, root + "cost.");
