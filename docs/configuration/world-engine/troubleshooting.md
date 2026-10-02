@@ -1,5 +1,12 @@
 # Troubleshooting
 
+> For: everyone.
+
+**Q: Do I need to restart after enabling the engine?**
+
+A: You can start playing now, but restart soon so every new map has a
+reachable End portal.
+
 **Q: The datapack stays red and won't enable no matter what I do.**
 
 A: Regenerate `JManhunt/settings/world-engine` by deleting it and restarting
@@ -15,9 +22,9 @@ certain point due to the Vanilla 128-per-world limit.
 
 **Q: I want to disable the world engine.**
 
-A: Set `world-engine.enabled` to `false` in `config.yml` and disable
-the `jmanhunt_world_engine` datapack with
-`/datapack disable jmanhunt_world_engine`.
+A: Run `/manhunt config world-engine enabled false` (or set it in
+`config.yml`) and restart. The plugin removes its datapack itself;
+cells already generated stay as they were.
 
 **Q: Will this work in [specific Minecraft version]?**
 

@@ -31,13 +31,13 @@ see [Lobby System](../../play/lobby-system/index.md).
 
 > **Tip:** On smaller servers, install
 > [Chunky](https://modrinth.com/plugin/chunky) and
-> [hook it up](world-engine/pregenerating-cells.md) so maps load faster.
+> [hook it up](world-engine/preloading-cells.md) so maps load faster.
 
 ## Next Steps
 
 - [Cells & Spawns](world-engine/cells-spawns.md): game world, cell size,
   spawn selection
-- [Pre-generating Cells](world-engine/pregenerating-cells.md): commands
+- [Preloading Cells](world-engine/preloading-cells.md): commands
   that run when a new cell is allocated
 - [Borders](world-engine/borders.md): cell border and shrinking start
   border

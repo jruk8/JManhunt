@@ -1,8 +1,9 @@
 # Cell & Spawns
 
-Under `world-engine`, you can configure the game world, the size of each
-spiral cell, where players spawn inside a cell, and where they return after
-a match.
+> For: intermediate admins tuning maps, plus advanced users sizing cells.
+
+The game world, the size of each spiral cell, where players spawn inside
+a cell, and where they return after a match:
 
 ```yaml
 world-engine:
@@ -21,71 +22,56 @@ world-engine:
       max-distance: 125
 ```
 
-When `enabled`, teleports participants to a fresh cell when a match
-starts and returns them to the lobby when it ends. Queued `spectator`
-players always travel to the match with everyone else, and players with
-role `none` join them when `settings.roles.turn-nones-spectator` is
-enabled; both land on the shared spectator spawn pick (top-progression
-runner, then hunter, then last-seen spots, then cell center). They return
-to the lobby with everyone else. Enabling it additionally
-modifies stronghold generation to bypass the 128-per-world limit and spread
-strongholds around like normal structures. You can tweak the rates in
-`settings/world-engine/strongholds.json` (defaults imitate average distance
-in a normal world from world origin 0,0).
+When `enabled`, matches teleport participants to a fresh cell on start
+and return them to the lobby at the end. Spectators and `none` players
+(with `turn-nones-spectator`) travel along and land on the shared
+spectator spawn. Enabling it also spreads strongholds past the vanilla
+128-per-world limit; tweak the rates in
+`settings/world-engine/strongholds.json`.
 
-`world-name` is the name of the world that is partitioned into cells. Don't modify
-unless you have a particular reason to not use the default overworld.
+`world-name` is the world partitioned into cells. Leave it on the
+default overworld unless you have a reason not to.
 
 ## Cell Size
 
-`cell-size` is the size of one spiral cell in blocks. It is hard-capped at
-50,000. Too low values may cause issues. In general, don't go below 5,000.
-
-Do not change `cell-size` after cells have already been generated. Every
-cell size lays its own grid over the world, so cells generated under one
-size can overlap and clip into cells generated under another.
+`cell-size` is the size of one spiral cell in blocks, hard-capped at
+50,000. Do not go below 5,000, and do not change it after cells have
+already been generated: every size lays its own grid, so cells from two
+sizes can overlap and clip into each other.
 
 ## Cell Index
 
-The engine hands out cells from a persistent counter. You can inspect it
-with `/manhunt worldengine cellindex get` and overwrite it with
-`/manhunt worldengine cellindex set <value>`. Set values are clamped
-between 0 and the addressable grid for the current cell size. If the
-counter ever grows past that grid, it restarts at zero on the next fetch
-with a console warning telling you to reset the world manually.
+The engine hands out cells from a persistent counter. Inspect it with
+`/manhunt worldengine cellindex get` and overwrite it with
+`/manhunt worldengine cellindex set <value>`. Set values clamp to the
+addressable grid; if the counter ever grows past it, it restarts at
+zero on the next fetch with a console warning telling you to reset the
+world manually.
 
 ## Spawn Spread
 
-`tp-spread-radius` is the radius from each cell center used when selecting
-player spawn points. A reasonable value is between 5 and 15. It is
-hard-capped at `cell-size / 2`. The [Start Border](borders.md#start-border) uses this value
-in its size calculation.
+`tp-spread-radius` is the radius around each cell center used when
+picking player spawns. Keep it between 5 and 15; it hard-caps at
+`cell-size / 2`. The [Start Border](borders.md#start-border) uses this
+value in its size calculation.
 
 ## Spawnpoint Algorithm
 
-`spawnpoint-algorithm`, when enabled, validates every player spawn: it
-lands below tree leaves and requires an air gap at the feet and head
-blocks. Transparent, non-solid blocks like grass and torches count as
-air; pressure plates do not. Water, lava, and powder snow are never
-picked. Ocean and lava cells are skipped when fetching.
+Validates every spawn: below tree leaves, with air at the feet and head
+blocks (grass and torches count as air; pressure plates do not). Water,
+lava, and powder snow are never picked, and ocean and lava cells are
+skipped when fetching.
 
-Spawns are also height-leveled: everyone rolls once, the median height
-becomes the target, and anyone outside `y-tolerance` blocks of it
-re-rolls up to `max-retries` times (minimum 0). Without a fitting roll
-the closest candidate wins; with no valid roll at all, the center is
-the fallback. This fixes bad spawns, but may cause server lag if many
-checks are required. Turn the algorithm off for plain highest-block
-spawns.
+Spawns are height-leveled around the median roll within `y-tolerance`,
+re-rolling up to `max-retries` times. Turn the algorithm off for plain
+highest-block spawns.
 
 ### Spawn Close to Structure
 
-`spawn-close-to-structure`, when enabled, keeps a raw-passing cell
-only when a listed structure sits within `max-distance` blocks of it.
-Each cell fetch after the raw terrain checks runs up to `attempts`
-structure lookups (1 to 5, default 3): the first hit wins at once,
-and on exhaustion the last raw-passing spawn is kept so later fetches
-never revisit the skipped cells. `max-distance` accepts 50 to 200
-(default 125). Allowed words:
+Keeps a cell only when a listed structure sits within `max-distance`
+(50 to 200, default 125) blocks of it. Each fetch runs up to `attempts`
+lookups (1 to 5, default 3); on exhaustion the last passing spawn is
+kept. Allowed words:
 
 - `VILLAGE`: any village type
 - `TEMPLE`: desert pyramid or jungle pyramid
@@ -97,11 +83,9 @@ never revisit the skipped cells. `max-distance` accepts 50 to 200
 - `MANSION`
 - `PILLAGER_OUTPOST`
 
-Unknown words are skipped with a warning. The more entries, the higher
-the chance of a hit. Each lookup carries a medium performance cost on
-cell fetch, so keep the list focused. Highly recommended: enable the
-[overworld structure boosts](../settings/game-boosts.md) alongside
-this setting.
+Unknown words are skipped with a warning. Keep the list focused: each
+lookup costs performance on cell fetch. Pair this with the
+[overworld structure boosts](../settings/game-boosts.md).
 
 ## Lobby Teleports & Bounds
 

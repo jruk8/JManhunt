@@ -169,7 +169,7 @@ next startup. See [End Dimensions](configuration/world-engine/end-dimensions.md)
 
 The engine keeps ready cells buffered so matches start without waiting on
 allocation or chunk generation. See
-[Preloading Cells](configuration/world-engine/pregenerating-cells.md).
+[Preloading Cells](configuration/world-engine/preloading-cells.md).
 
 ## Debug Output
 

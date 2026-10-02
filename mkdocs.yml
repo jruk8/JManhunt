@@ -71,7 +71,7 @@ nav:
       - World Engine:
           - Overview: configuration/world-engine.md
           - Cells & Spawns: configuration/world-engine/cells-spawns.md
-          - Pre-generating Cells: configuration/world-engine/pregenerating-cells.md
+          - Preloading Cells: configuration/world-engine/preloading-cells.md
           - Borders: configuration/world-engine/borders.md
           - End Dimensions: configuration/world-engine/end-dimensions.md
           - Pseudoborder Particles: configuration/world-engine/pseudoborder-particles.md
