@@ -13,6 +13,7 @@ import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -139,7 +140,8 @@ class SignalInaccuracyTest {
         when(plugin.overrides()).thenReturn(overrides);
         CompassSettingsFacade settings =
                 new CompassSettingsFacade(overrides, root.getSettings().getCompass());
-        HotspotService hotspots = new HotspotService(settings, new PlayerStateStore());
+        HotspotService hotspots = new HotspotService(settings, new PlayerStateStore(),
+                mock(FakeSpectatorService.class));
         return new ServiceFixture(new CompassInaccuracyService(settings, hotspots),
                 root, hotspots, mock(World.class));
     }

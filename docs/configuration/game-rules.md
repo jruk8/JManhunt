@@ -1,3 +1,7 @@
+---
+icon: material/gavel
+---
+
 # Game Rules
 
 > For: intermediate admins scripting match start and end behavior.

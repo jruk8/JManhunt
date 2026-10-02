@@ -1,3 +1,7 @@
+---
+icon: material/shimmer
+---
+
 # Pseudoborder Particles
 
 > For: intermediate admins styling borders.

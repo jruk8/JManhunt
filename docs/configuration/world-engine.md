@@ -1,3 +1,7 @@
+---
+icon: material/earth
+---
+
 # World Engine
 
 > For: everyone setting up the plugin.

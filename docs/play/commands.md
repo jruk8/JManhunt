@@ -1,3 +1,7 @@
+---
+icon: material/console
+---
+
 # Commands
 
 > For: intermediate admins. Casual players only need `status`, `qs`, and `start`.

@@ -1,3 +1,7 @@
+---
+icon: material/image-multiple
+---
+
 > For: everyone browsing screenshots.
 
 ![1](assets/gallery/1.png)

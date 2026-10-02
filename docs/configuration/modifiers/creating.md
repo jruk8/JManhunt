@@ -1,3 +1,7 @@
+---
+icon: material/plus-circle
+---
+
 # Creating and Sharing Modifiers
 
 > For: intermediate admins making mods, plus advanced authors going deep.

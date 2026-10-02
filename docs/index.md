@@ -1,10 +1,15 @@
+---
+icon: material/home
+---
+
 ![JManhunt banner](assets/banner-1280x640.png)
 **Demo server:** `play.jmanhunt.com`
 
-# JManhunt
+# JManhunt 5
 
-Manhunt for your Paper server. Hunters chase speedrunners, with a tracking
-compass, fresh maps, and optional mods.
+JManhunt is a deeply customizable Paper plugin for 26.2+ Manhunts. It comes with an
+automated world reset engine, compass tracking, placeholders, statistics, and a bunch of
+config options and modifiers.
 
 ## Start here
 
@@ -22,12 +27,12 @@ step-by-step tour.
 
 ## Key Features
 
-- **World Reset Engine** » Automates fresh map creation for each match, so your Manhunts are ready in seconds.
-- **Hunt Tracking** » Real-time hunter compass with deep config options, tweaks and targeting logic. Never lose your runners.
+- **World Reset Engine** » Automates fresh cell creation for each match, so your Manhunts are ready in seconds.
+- **Hunt Tracking** » Real-time hunter/runner compass with deep config options, tweaks and targeting logic. Never lose your runners.
 - **Effortless Lobby System** » A guided setup with team selection, queue management, and tunable boundaries.
-- **Highly Configurable** » 280+ config options for all levels of players, designed to be accessible, where defaults are plug and play.
-- **Modifier Framework** » Build custom twists with our simple scripting language.
-- **Serious for deployments** » full admin CLI support, placeholders, and even crash recovery.
+- **Highly Configurable** » 280+ config options for all levels of players, designed to be accessible, where defaults are plug-and-play.
+- **Modifier Framework** » Build custom twists with Minecraft commands or our JMHScript.
+- **Serious for deployments** » Full admin CLI support, placeholders, and even crash recovery.
 
 ## Docs
 

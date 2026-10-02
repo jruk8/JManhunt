@@ -1,3 +1,7 @@
+---
+icon: material/lightning-bolt
+---
+
 # Modifier Behaviors
 
 > For: intermediate authors wiring triggers, plus advanced authors tuning timing.

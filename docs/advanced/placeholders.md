@@ -1,3 +1,7 @@
+---
+icon: material/percent
+---
+
 # Placeholders
 
 > For: advanced users feeding stats into other plugins.

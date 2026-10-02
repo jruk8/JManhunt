@@ -349,6 +349,7 @@ public final class MatchFinishService {
         clearIds.removeAll(transferred);
         services.stateCommands().untrackMatchExit(clearIds);
         services.playerStates().clearMatchFor(clearIds);
+        services.compass().clearHotspotHistories(clearIds);
         services.stats().clearMatch(teardownId);
         services.flagStore().clearMatch(teardownId);
         services.cooldowns().clearMatch(teardownId);

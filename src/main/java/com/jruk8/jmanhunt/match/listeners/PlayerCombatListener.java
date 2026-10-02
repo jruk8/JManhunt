@@ -185,6 +185,7 @@ public final class PlayerCombatListener implements Listener {
         reads.states().setRole(player.getUniqueId(), Role.SPECTATOR);
         edge.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());
+        world.compass().clearHotspotHistory(player.getUniqueId());
         world.compass().reconcileTeammateModes(instance);
         this.match.game().flagStore().removePlayer(matchId, player.getName());
         tasks.run(() -> {
@@ -203,6 +204,7 @@ public final class PlayerCombatListener implements Listener {
         reads.states().setRole(player.getUniqueId(), Role.SPECTATOR);
         edge.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());
+        world.compass().clearHotspotHistory(player.getUniqueId());
         world.compass().reconcileTeammateModes(instance);
         this.match.game().flagStore().removePlayer(matchId, player.getName());
         Player finalKiller = player.getKiller();

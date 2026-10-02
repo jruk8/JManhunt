@@ -1,3 +1,7 @@
+---
+icon: material/trophy
+---
+
 # Win Conditions
 
 > For: intermediate admins picking how matches are won.

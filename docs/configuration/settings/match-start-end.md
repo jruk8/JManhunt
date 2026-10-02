@@ -1,3 +1,7 @@
+---
+icon: material/flag-checkered
+---
+
 # Match Start & End
 
 > For: intermediate admins tuning the match flow.

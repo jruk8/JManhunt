@@ -1,3 +1,7 @@
+---
+icon: material/cog
+---
+
 # Configuration
 
 > For: intermediate admins. Start at [Settings](configuration/settings.md).

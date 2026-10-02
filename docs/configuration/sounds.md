@@ -1,3 +1,7 @@
+---
+icon: material/volume-high
+---
+
 # Sounds
 
 > For: intermediate admins styling feedback.

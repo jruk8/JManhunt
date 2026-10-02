@@ -1,3 +1,7 @@
+---
+icon: material/weather-night
+---
+
 # End Dimensions
 
 > For: advanced users.

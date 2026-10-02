@@ -136,6 +136,7 @@ class PlayerCombatListenerDeathTest {
                 Role.SPEEDRUNNER), fixture.instance().deadPlayers().get(0));
         verify(fixture.fakes()).enable(fixture.victim());
         verify(fixture.compass()).removeCompasses(fixture.victim());
+        verify(fixture.compass()).clearHotspotHistory(fixture.victimId());
     }
 
     @Test
@@ -150,6 +151,7 @@ class PlayerCombatListenerDeathTest {
         assertEquals(Role.HUNTER, fixture.instance().deadPlayers().get(0).formerRole());
         verify(fixture.fakes()).enable(fixture.victim());
         verify(fixture.compass()).removeCompasses(fixture.victim());
+        verify(fixture.compass()).clearHotspotHistory(fixture.victimId());
     }
 
     @Test
@@ -164,6 +166,7 @@ class PlayerCombatListenerDeathTest {
         verify(fixture.respawn()).scheduleRespawn(fixture.victim(), fixture.instance(), false,
                 0, "respawn tpl", 7L);
         verify(fixture.fakes(), never()).enable(any(Player.class));
+        verify(fixture.compass(), never()).clearHotspotHistory(any(UUID.class));
     }
 
     @Test

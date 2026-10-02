@@ -20,6 +20,7 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +74,7 @@ public final class CompassManager {
         SoundService sounds = texts.sounds();
         CompassTargetService targets = new CompassTargetService(playerStates, fakes);
         this.signal = new CompassSignalService(settings, playerStates);
-        this.hotspots = new HotspotService(settings, playerStates);
+        this.hotspots = new HotspotService(settings, playerStates, fakes);
         CompassInaccuracyService inaccuracy = new CompassInaccuracyService(settings, hotspots);
         this.items = new CompassItemService(settings,
                 new CompassItemService.ItemPlayers(playerStates, fakes),
@@ -320,7 +321,16 @@ public final class CompassManager {
         items.removeCompasses(player);
         deltas.forget(player.getUniqueId());
         sessions.cancelAnalysisSnapshots(player.getUniqueId());
-        hotspots.clear(player.getUniqueId());
+    }
+
+    /** Drops one player's hotspot history: permanent-elimination cleanup. */
+    public void clearHotspotHistory(UUID playerId) {
+        hotspots.clear(playerId);
+    }
+
+    /** Drops every listed hotspot history: game-end cleanup for one match. */
+    public void clearHotspotHistories(Collection<UUID> playerIds) {
+        hotspots.clearAll(playerIds);
     }
 
     public boolean isCompass(ItemStack item) {

@@ -2,7 +2,6 @@ package com.jruk8.jmanhunt.compass;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
@@ -14,19 +13,19 @@ import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.match.prestart.HeadstartState;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -36,7 +35,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class HotspotServiceTest {
 
     private record Fixture(HotspotService hotspots, JManhuntConfig root, PlayerStateStore players,
-            GameManager game, GameInstance instance, World world) {
+            GameManager game, GameInstance instance, World world, FakeSpectatorService fakes,
+            HeadstartState headstart) {
     }
 
     private static Fixture fixture() {
@@ -52,13 +52,17 @@ class HotspotServiceTest {
         CompassSettingsFacade settings =
                 new CompassSettingsFacade(overrides, root.getSettings().getCompass());
         PlayerStateStore players = new PlayerStateStore();
-        HotspotService hotspots = new HotspotService(settings, players);
+        FakeSpectatorService fakes = mock(FakeSpectatorService.class);
+        HotspotService hotspots = new HotspotService(settings, players, fakes);
         GameManager game = mock(GameManager.class);
         GameInstance instance = mock(GameInstance.class);
+        HeadstartState headstart = new HeadstartState();
         when(instance.originLobbyId()).thenReturn(0);
+        when(instance.headstart(any())).thenReturn(headstart);
         when(game.liveInstances()).thenReturn(List.of(instance));
         hotspots.setGameManager(game);
-        return new Fixture(hotspots, root, players, game, instance, mock(World.class));
+        return new Fixture(hotspots, root, players, game, instance, mock(World.class), fakes,
+                headstart);
     }
 
     private static Player tracked(Fixture fixture, Role role, double x, double z) {
@@ -109,15 +113,29 @@ class HotspotServiceTest {
     }
 
     @Test
-    void pruneOfflineDropsGonePlayers() {
+    void tickKeepsHistoriesOfUnsampledPlayers() {
         Fixture fixture = fixture();
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
         UUID id = UUID.randomUUID();
-        fixture.hotspots().record(id, 0.0, 0.0, 40);
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            bukkit.when(() -> Bukkit.getPlayer(any(UUID.class))).thenReturn(null);
-            fixture.hotspots().pruneOffline();
+        for (int point = 0; point < 3; point++) {
+            fixture.hotspots().record(id, point, 0.0, 40);
         }
-        assertEquals(0, fixture.hotspots().historySize(id));
+        when(fixture.game().onlineActivePlayers(fixture.instance())).thenReturn(List.of());
+        fixture.hotspots().tick(60_000L);
+        assertEquals(3, fixture.hotspots().historySize(id));
+    }
+
+    @Test
+    void clearAllDropsListedHistories() {
+        Fixture fixture = fixture();
+        UUID kept = UUID.randomUUID();
+        UUID dropped = UUID.randomUUID();
+        fixture.hotspots().record(kept, 0.0, 0.0, 40);
+        fixture.hotspots().record(dropped, 0.0, 0.0, 40);
+        fixture.hotspots().clearAll(List.of(dropped));
+        assertEquals(1, fixture.hotspots().historySize(kept));
+        assertEquals(0, fixture.hotspots().historySize(dropped));
     }
 
     @Test
@@ -128,29 +146,60 @@ class HotspotServiceTest {
         ConfigPathMapper.set(fixture.root(),
                 "settings.compass.signal.inaccuracy.accuracy-hotspot.sample-interval", 10);
         Player player = tracked(fixture, Role.HUNTER, 100.0, 200.0);
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            bukkit.when(() -> Bukkit.getPlayer(any(UUID.class))).thenReturn(player);
-            fixture.hotspots().tick(10_000L);
-            assertEquals(1, fixture.hotspots().historySize(player.getUniqueId()));
-            fixture.hotspots().tick(15_000L);
-            assertEquals(1, fixture.hotspots().historySize(player.getUniqueId()));
-            fixture.hotspots().tick(21_000L);
-            assertEquals(2, fixture.hotspots().historySize(player.getUniqueId()));
-        }
+        fixture.hotspots().tick(10_000L);
+        assertEquals(1, fixture.hotspots().historySize(player.getUniqueId()));
+        fixture.hotspots().tick(15_000L);
+        assertEquals(1, fixture.hotspots().historySize(player.getUniqueId()));
+        fixture.hotspots().tick(21_000L);
+        assertEquals(2, fixture.hotspots().historySize(player.getUniqueId()));
     }
 
     @Test
     void tickSkipsSpectatorsAndDisabled() {
         Fixture fixture = fixture();
         Player watcher = tracked(fixture, Role.SPECTATOR, 100.0, 200.0);
-        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
-            bukkit.when(() -> Bukkit.getPlayer(any(UUID.class))).thenReturn(watcher);
-            fixture.hotspots().tick(60_000L);
-            assertEquals(0, fixture.hotspots().historySize(watcher.getUniqueId()));
-            ConfigPathMapper.set(fixture.root(),
-                    "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
-            fixture.hotspots().tick(120_000L);
-            assertEquals(0, fixture.hotspots().historySize(watcher.getUniqueId()));
-        }
+        fixture.hotspots().tick(60_000L);
+        assertEquals(0, fixture.hotspots().historySize(watcher.getUniqueId()));
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
+        fixture.hotspots().tick(120_000L);
+        assertEquals(0, fixture.hotspots().historySize(watcher.getUniqueId()));
+    }
+
+    @Test
+    void tickSkipsFakeSpectators() {
+        Fixture fixture = fixture();
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
+        Player player = tracked(fixture, Role.HUNTER, 100.0, 200.0);
+        fixture.hotspots().record(player.getUniqueId(), 1.0, 2.0, 40);
+        when(fixture.fakes().isFakeSpectator(player)).thenReturn(true);
+        fixture.hotspots().tick(60_000L);
+        assertEquals(1, fixture.hotspots().historySize(player.getUniqueId()));
+    }
+
+    @Test
+    void tickSkipsDeadPlayers() {
+        Fixture fixture = fixture();
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
+        Player player = tracked(fixture, Role.HUNTER, 100.0, 200.0);
+        when(player.isDead()).thenReturn(true);
+        fixture.hotspots().tick(60_000L);
+        assertEquals(0, fixture.hotspots().historySize(player.getUniqueId()));
+    }
+
+    @Test
+    void tickSkipsArmedHeadstart() {
+        Fixture fixture = fixture();
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
+        Player player = tracked(fixture, Role.HUNTER, 100.0, 200.0);
+        fixture.headstart().setArmed(true);
+        fixture.hotspots().tick(60_000L);
+        assertEquals(0, fixture.hotspots().historySize(player.getUniqueId()));
+        fixture.headstart().setArmed(false);
+        fixture.hotspots().tick(120_000L);
+        assertEquals(1, fixture.hotspots().historySize(player.getUniqueId()));
     }
 }

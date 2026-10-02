@@ -1,3 +1,7 @@
+---
+icon: material/eye
+---
+
 # Spectating
 
 > For: everyone watching or managing matches.

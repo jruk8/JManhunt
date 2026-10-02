@@ -1,3 +1,7 @@
+---
+icon: material/school
+---
+
 # Your First Modifier
 
 > For: intermediate admins making their first tweak. Zero scripting.

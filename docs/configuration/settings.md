@@ -1,3 +1,7 @@
+---
+icon: material/tune
+---
+
 # Settings
 
 > For: intermediate admins. Every page keeps its YAML blocks and per-feature headers.

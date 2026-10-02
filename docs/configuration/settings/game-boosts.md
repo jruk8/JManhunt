@@ -1,3 +1,7 @@
+---
+icon: material/rocket
+---
+
 # Game Boosts
 
 > For: intermediate admins boosting speedrunner odds.

@@ -223,6 +223,7 @@ public final class PlayerConnectionListener implements Listener {
         instance.recordDeath(playerId, playerName != null ? playerName : playerId.toString(), role);
         reads.states().setRole(playerId, Role.NONE);
         instance.deactivate(playerId);
+        this.match.compass().clearHotspotHistory(playerId);
         this.match.compass().reconcileTeammateModes(instance);
         if (playerName != null) {
             this.match.game().flagStore().removePlayer(matchId, playerName);

@@ -1,3 +1,7 @@
+---
+icon: material/wrench
+---
+
 # Troubleshooting
 
 > For: everyone.

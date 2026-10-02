@@ -1,3 +1,7 @@
+---
+icon: material/download
+---
+
 # Installation
 
 > For: everyone setting up the plugin.

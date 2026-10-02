@@ -1,3 +1,7 @@
+---
+icon: material/crosshairs
+---
+
 # Compass: Advanced
 
 > For: advanced users tuning analysis, signal, and edge cases.
@@ -174,10 +178,20 @@ true spot: the ring grows with the true distance, so far targets read
 fuzzier than near ones. Close range stays exact until the
 `thresholds.min-distance` gate passes.
 
+![Compass inaccuracy system sheet](../../assets/system-sheets/compass-inaccuracy.png)
+
+The sheet shows the defaults. The green dot is the true spot and the
+red dot is the tracker at the full true distance. Each red X is one
+refresh's picked point: every X lands somewhere in the black band,
+never in the white hole, and never outside the band. The dashed circle
+is the full true distance; `drift-radius` sets the band's outer edge
+as a share of it, and `inner-deadzone` sets the white hole as a share
+of that outer edge.
+
 - `enabled` (default off) is the master switch.
 - `inner-deadzone` (default 0.4) is the hole in the middle of the
   donut, from 0 up to (but not including) 1. At 0.5 no sample ever
-  lands inside half the outer radius; at 0 the sample may land right
+  lands inside half the drift radius; at 0 the sample may land right
   on the true spot.
 - `drift-radius` (default 0.6) is how far the readout may wander, as a
   share of the true distance. At 1 the error reaches up to the full
@@ -202,16 +216,31 @@ distance only drifts while a distance readout is visible. Scrolled
 
 Idling targets get easier to pin down: every `sample-interval`
 seconds (default 10) the plugin records each live participant's spot,
-keeping the last `max-points` spots (default 40). When many of a
+keeping the last `max-points` spots (default 40). Players who are
+offline, dead, respawning, or held for a headstart are skipped, and
+nothing is recorded while a headstart countdown runs. Skipping never
+erases what is already recorded. When many of a
 target's saved spots sit within `hotspot-radius` meters (default 50)
-of where they stand now, the error donut shrinks. Movers keep the
-full error.
+of where they stand now, the error donut shrinks (the black band in
+the sheet above narrows). Movers keep the full error.
+
+![Compass hotspot system sheet](../../assets/system-sheets/compass-hotspot.png)
+
+The sheet compares both cases. The gold dots are the target's recorded
+history along their walking path, and the dashed circle is
+`hotspot-radius` around where they stand now. On the left the mover
+has only three dots inside, which earns only partial credit, so the
+donut stays wide. On the right the camper's history piles up inside
+and the donut collapses. That is the anti-camping effect: idlers get
+pinpointed while movers keep their cover.
 
 `full-accuracy-fraction` (default 0.5) is the share of `max-points`
 needed inside the radius for the full bonus, with partial credit
 below that. `max-reduction` (default 0.9) is how much error the full
-bonus removes. Histories clear when the player leaves or loses their
-compass.
+bonus removes. Saved spots disappear only when their player is
+knocked out of the match for good, or when the match ends. Leaving
+on your own, a short disconnect, a respawn, or losing a compass
+keeps them.
 
 ## WorldEdit Navwand
 

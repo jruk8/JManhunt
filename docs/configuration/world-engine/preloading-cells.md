@@ -1,3 +1,7 @@
+---
+icon: material/cached
+---
+
 # Preloading Cells
 
 > For: intermediate admins fighting lag.

@@ -1,3 +1,7 @@
+---
+icon: material/fence
+---
+
 # Multi-Lobby Boundaries
 
 > For: intermediate admins running more than one lobby.

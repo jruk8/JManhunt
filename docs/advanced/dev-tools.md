@@ -1,3 +1,7 @@
+---
+icon: material/tools
+---
+
 # Developer Tools
 
 > For: advanced users and developers only.

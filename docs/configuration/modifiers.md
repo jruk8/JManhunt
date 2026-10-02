@@ -1,3 +1,7 @@
+---
+icon: material/puzzle
+---
+
 # Modifiers
 
 > For: everyone spicing up the game. No scripting needed.

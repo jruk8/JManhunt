@@ -1,3 +1,7 @@
+---
+icon: material/border-all
+---
+
 # World Border
 
 > For: intermediate admins.

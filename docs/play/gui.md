@@ -1,3 +1,7 @@
+---
+icon: material/view-dashboard
+---
+
 # Admin GUI
 
 > For: everyone with access. Casuals browse mods here; intermediates change settings.

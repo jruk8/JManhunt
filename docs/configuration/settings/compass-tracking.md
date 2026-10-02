@@ -1,3 +1,7 @@
+---
+icon: material/compass
+---
+
 # Compass
 
 > For: intermediate admins tuning tracking. The deep end lives in [Compass: Advanced](compass-advanced.md).

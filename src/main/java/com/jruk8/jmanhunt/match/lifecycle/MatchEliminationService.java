@@ -80,6 +80,7 @@ public final class MatchEliminationService {
         players.states().setRole(player.getUniqueId(), Role.SPECTATOR);
         edge.roleTeams().sync(player);
         instance.deactivate(player.getUniqueId());
+        compass.clearHotspotHistory(player.getUniqueId());
         compass.reconcileTeammateModes(instance);
         this.match.flagStore().removePlayer(matchId, player.getName());
         edge.tasks().run(() -> {

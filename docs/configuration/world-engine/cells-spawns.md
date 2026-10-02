@@ -1,3 +1,7 @@
+---
+icon: material/grid
+---
+
 # Cell & Spawns
 
 > For: intermediate admins tuning maps, plus advanced users sizing cells.

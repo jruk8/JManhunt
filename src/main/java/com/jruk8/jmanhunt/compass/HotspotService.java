@@ -3,10 +3,12 @@ package com.jruk8.jmanhunt.compass;
 import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
-import org.bukkit.Bukkit;
+import com.jruk8.jmanhunt.player.Role;
 import org.bukkit.entity.Player;
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,15 +23,18 @@ import java.util.UUID;
 final class HotspotService {
     private final CompassSettingsFacade settings;
     private final PlayerStateStore playerStates;
+    private final FakeSpectatorService fakes;
     /** Past positions per player, oldest first, x/z pairs only. */
     private final Map<UUID, ArrayDeque<double[]>> histories = new HashMap<>();
     /** Last sample time per origin lobby, for per-lobby intervals. */
     private final Map<Integer, Long> lastSampleByLobby = new HashMap<>();
     private GameManager game;
 
-    HotspotService(CompassSettingsFacade settings, PlayerStateStore playerStates) {
+    HotspotService(CompassSettingsFacade settings, PlayerStateStore playerStates,
+            FakeSpectatorService fakes) {
         this.settings = settings;
         this.playerStates = playerStates;
+        this.fakes = fakes;
     }
 
     /** Wires the game after construction; sampling needs live matches. */
@@ -40,10 +45,10 @@ final class HotspotService {
     /**
      * One sampling tick: every live match whose origin lobby is due
      * under its own sample-interval records its online active
-     * participants. Offline histories are pruned first.
+     * participants. Skipped players keep their history untouched:
+     * nothing is ever pruned here.
      */
     void tick(long nowMillis) {
-        pruneOffline();
         if (game == null) {
             return;
         }
@@ -55,7 +60,7 @@ final class HotspotService {
     /** Samples one match when its lobby interval is due. */
     private void tickLobby(GameInstance instance, long nowMillis) {
         Integer lobby = instance.originLobbyId();
-        if (!settings.hotspotEnabled(lobby)) {
+        if (!settings.hotspotEnabled(lobby) || headstartArmed(instance)) {
             return;
         }
         int interval = SignalInaccuracy.clampSampleInterval(
@@ -71,9 +76,21 @@ final class HotspotService {
             if (!playerStates.role(player).isParticipant()) {
                 continue;
             }
+            // Dead, fake-spectating, and reviving players sit out
+            // without losing history: revives route through fake
+            // spectator mode, and vanilla death screens read dead.
+            if (player.isDead() || fakes.isFakeSpectator(player)) {
+                continue;
+            }
             record(player.getUniqueId(), player.getLocation().getX(),
                     player.getLocation().getZ(), maxPoints);
         }
+    }
+
+    /** True while either side's headstart hold is still armed. */
+    private static boolean headstartArmed(GameInstance instance) {
+        return instance.headstart(Role.HUNTER).armed()
+                || instance.headstart(Role.SPEEDRUNNER).armed();
     }
 
     /**
@@ -120,19 +137,19 @@ final class HotspotService {
         return SignalInaccuracy.hotspotReduction(inside, maxPoints, fraction, maxReduction);
     }
 
-    /** Drops one player's history: leave and death cleanup. */
+    /** Drops one player's history: permanent-elimination cleanup. */
     void clear(UUID playerId) {
         histories.remove(playerId);
+    }
+
+    /** Drops every listed history: game-end cleanup for one match. */
+    void clearAll(Collection<UUID> playerIds) {
+        playerIds.forEach(histories::remove);
     }
 
     /** History size for one player, 0 when unknown. Pure for tests. */
     int historySize(UUID playerId) {
         ArrayDeque<double[]> history = histories.get(playerId);
         return history == null ? 0 : history.size();
-    }
-
-    /** Drops histories of offline players. */
-    void pruneOffline() {
-        histories.keySet().removeIf(id -> Bukkit.getPlayer(id) == null);
     }
 }

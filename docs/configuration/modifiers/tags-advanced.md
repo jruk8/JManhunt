@@ -1,3 +1,7 @@
+---
+icon: material/code-braces
+---
+
 # Tags: Advanced
 
 > For: advanced users. This is the full JMHScript cheatsheet plus the complete reference.

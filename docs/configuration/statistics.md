@@ -1,3 +1,7 @@
+---
+icon: material/chart-bar
+---
+
 # Statistics
 
 > For: intermediate admins keeping career stats, plus advanced multi-server setups.

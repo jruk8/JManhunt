@@ -1,3 +1,7 @@
+---
+icon: material/tag
+---
+
 # Tags: Basics
 
 > For: intermediate authors. Straightforward tags up front; the full cheatsheet lives in [Tags: Advanced](tags-advanced.md).

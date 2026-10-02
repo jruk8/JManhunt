@@ -1,3 +1,7 @@
+---
+icon: material/account-group
+---
+
 # Lobby System
 
 > For: everyone running matches. Presets and pads cover intermediate tweaks too.

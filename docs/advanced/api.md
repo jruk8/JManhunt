@@ -1,3 +1,7 @@
+---
+icon: material/api
+---
+
 # API
 
 > For: developers extending JManhunt.
