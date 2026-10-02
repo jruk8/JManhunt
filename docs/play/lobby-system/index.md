@@ -11,14 +11,15 @@ world exists, which the green button in `/manhunt` handles for you.
 
 ## 1. Build the lobby (only if you skipped the green button)
 
-Run this:
+Run this twice:
 
 ```text
 /manhunt worldengine tpto lobbyworld
 ```
 
-This generates the **lobbyworld**. After this, all players automatically
-spawn here on join.
+The first run asks for confirmation; the second generates the
+**lobbyworld**. After this, all players automatically spawn here on
+join.
 
 ## 2. Bring players in
 
@@ -89,6 +90,6 @@ sound.
 ## Next steps
 
 - [Multi-Lobby Boundaries](boundaries.md): teleports, boxes, upkeep.
-- [Concurrent Matches](../../multi-instance.md): run several matches at once.
-- [Commands](../../commands.md): the full list.
+- [Concurrent Matches](../concurrent-matches.md): run several matches at once.
+- [Commands](../commands.md): look up any command.
 - [World Engine](../../configuration/world-engine.md): maps, cells, borders.

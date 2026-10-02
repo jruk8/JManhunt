@@ -76,7 +76,7 @@ settings:
 ```
 
 `SPECTATOR` keeps them at the match as a watcher; `LOBBY` sends them back
-to their lobby as `NONE`. See [Joining and Leaving](../../commands.md#joining-and-leaving-a-running-match).
+to their lobby as `NONE`. See [Joining and Leaving](../../play/commands.md#joining-and-leaving-a-running-match).
 
 # Anti-Spawn-Camp
 
@@ -222,4 +222,4 @@ exactly 9 characters. `lock-on` follows teleported-to players, pulling
 the spectator back within `tp-distance` blocks every 5 ticks until
 they move. `snowball` is the rechargeable spectator snowball (zero
 damage, zero knockback) with its own toggle and recharge time in
-seconds. See [Spectating](../../spectating.md) for the full behavior.
+seconds. See [Spectating](../../play/spectating.md) for the full behavior.

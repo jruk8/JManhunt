@@ -34,7 +34,7 @@ step-by-step tour.
 - [Getting Started](getting-started.md)
 - [Gallery](gallery.md)
 - [Lobby System](play/lobby-system/index.md)
-- [Commands](commands.md)
+- [Commands](play/commands.md)
 - [Configuration](configuration.md)
 - [Permissions](permissions.md)
 - [Placeholders](placeholders.md)

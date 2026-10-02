@@ -108,7 +108,7 @@ advanced:
 removes already-queued players.
 
 Each lobby runs its own match at the same time: see
-[Concurrent Matches](../../multi-instance.md).
+[Concurrent Matches](../concurrent-matches.md).
 
 ## Lobby Upkeep
 

@@ -51,14 +51,14 @@ nav:
   - Installation: installation.md
   - Getting Started: getting-started.md
   - Gallery: gallery.md
-  - Commands: commands.md
-  - Admin GUI: gui.md
-  - Concurrent Matches: multi-instance.md
   - Play:
       - Lobby System:
           - Overview: play/lobby-system/index.md
           - Multi-Lobby Boundaries: play/lobby-system/boundaries.md
-  - Spectating: spectating.md
+      - Concurrent Matches: play/concurrent-matches.md
+      - Spectating: play/spectating.md
+      - Commands: play/commands.md
+      - Admin GUI: play/gui.md
   - Configuration:
       - Overview: configuration.md
       - Settings:

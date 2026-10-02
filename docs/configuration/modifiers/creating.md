@@ -55,7 +55,7 @@ only warn. `<duration>` is compass-only and warns on modifiers.
 Set `advanced.misc.modifier-editor.validate-commands`
 to false to skip the root and item checks; placeholder checks
 always run. The command-line creator enforces the same rules; see
-[Modifiers](../../commands.md#modifiers) for its flags.
+[Modifiers](../../play/commands.md#modifiers) for its flags.
 
 Toggling a modifier back and forth in one match runs its enable
 commands at most once and its disable commands at most once, so

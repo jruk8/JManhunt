@@ -24,7 +24,7 @@ settings:
 Autostart triggers once each role reaches its `minimums` queued players
 (one hunter and one speedrunner by default; hard minimum 1 per role).
 Each lobby runs its own countdown and starts its own match;
-see [Concurrent Matches](../../multi-instance.md). Minimums and
+see [Concurrent Matches](../../play/concurrent-matches.md). Minimums and
 maximums (`-1` disables a role, the default for both) only gate
 autostart: manual `/manhunt start` keeps its own
 one-hunter-one-speedrunner check. If a minimum sits above its maximum,

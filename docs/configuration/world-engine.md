@@ -44,5 +44,5 @@ see [Lobby System](../../play/lobby-system/index.md).
 - [Troubleshooting](world-engine/troubleshooting.md): common questions
   and fixes
 - [Lobby System](../../play/lobby-system/index.md): lobbies, presets, role pads
-- [Concurrent Matches](../multi-instance.md): running several matches at
+- [Concurrent Matches](../play/concurrent-matches.md): running several matches at
   once

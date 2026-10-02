@@ -43,6 +43,6 @@ modifiers panel: kits, boosts, and game twists, no config needed.
 
 - [Lobby System](play/lobby-system/index.md): bring players in, run matches.
 - [Modifiers](configuration/modifiers.md): spice up the game.
-- [Commands](commands.md): look up any command.
+- [Commands](play/commands.md): look up any command.
 - [Configuration](configuration.md): change a setting.
-- [Concurrent Matches](multi-instance.md): run several matches at once.
+- [Concurrent Matches](play/concurrent-matches.md): run several matches at once.
