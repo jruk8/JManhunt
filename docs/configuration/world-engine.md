@@ -27,7 +27,7 @@ world-engine:
 
 That is it. Matches now reset themselves. The green button already built
 your lobby too, so go run your first match:
-see [Lobby System](../../play/lobby-system/index.md).
+see [Lobby System](../play/lobby-system/index.md).
 
 > **Tip:** On smaller servers, install
 > [Chunky](https://modrinth.com/plugin/chunky) and
@@ -43,6 +43,6 @@ see [Lobby System](../../play/lobby-system/index.md).
   border
 - [Troubleshooting](world-engine/troubleshooting.md): common questions
   and fixes
-- [Lobby System](../../play/lobby-system/index.md): lobbies, presets, role pads
+- [Lobby System](../play/lobby-system/index.md): lobbies, presets, role pads
 - [Concurrent Matches](../play/concurrent-matches.md): running several matches at
   once

@@ -245,11 +245,11 @@ The complete modifier reference lives in
 
 Play built-in challenges through our
 companion plugin [**JManhunt-Challenges**](https://github.com/jruk8/JManhunt-Challenges),
-which natively hooks into the [JManhunt API](../api.md). Install
+which natively hooks into the [JManhunt API](../advanced/api.md). Install
 alongside JManhunt and toggle with `/jmhchallenges toggle <challenge>`.
 
 ### Developer Tools
 
 `/manhunt dev schem` saves and loads `.jmhlobby` bundles (structure
 plus lobby bounds and teleports) for authoring lobby presets. See
-[Developer Tools](../dev-tools.md); only `list` works from the console.
+[Developer Tools](../advanced/dev-tools.md); only `list` works from the console.

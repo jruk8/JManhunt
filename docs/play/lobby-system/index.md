@@ -64,7 +64,7 @@ If a preset's schematic is missing, the console warns you and the lobby
 stays a void world with a bare spawn platform.
 
 Want to build your own preset? That is developer territory: see the
-[schematic tools](../../dev-tools.md#schematic-tools).
+[schematic tools](../../advanced/dev-tools.md#schematic-tools).
 
 ## Role Pads
 

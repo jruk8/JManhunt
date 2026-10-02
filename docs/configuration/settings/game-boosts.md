@@ -1,20 +1,23 @@
 # Game Boosts
 
-Under `settings.game-boosts`, a set of settings that skew world generation
-and loot odds in the speedrunners' favor, without touching any actual
-gameplay rules. The structure boosts work whether or not the world engine is
-enabled: each datapack follows only its own flag.
+> For: intermediate admins boosting speedrunner odds.
+
+Settings that skew world generation and loot odds in the speedrunners'
+favor, without touching any actual gameplay rules. The structure boosts
+work whether or not the world engine is enabled: each datapack follows
+only its own flag.
 
 ```yaml
 settings:
-  game-boosts:
-    nether-structures:
-      enabled: false
-    overworld-structures:
-      enabled: false
-    disable-brutes:
-      enabled: true
-    custom-piglin-barter: true
+  match:
+    game-boosts:
+      nether-structures:
+        enabled: false
+      overworld-structures:
+        enabled: false
+      disable-brutes:
+        enabled: true
+      custom-piglin-barter: true
 ```
 
 ## Nether Structures

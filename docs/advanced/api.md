@@ -1,5 +1,7 @@
 # API
 
+> For: developers extending JManhunt.
+
 JManhunt exposes a small public API so other plugins can read match state and
 react to match lifecycle changes. An example usage is the paid
 [**JManhunt-Challenges**](https://builtbybit.com/resources/jmanhunt-challenges.121574/) addon for dedicated challenges.

@@ -1,5 +1,7 @@
 # Game Rules
 
+> For: intermediate admins scripting match start and end behavior.
+
 **Game rules** are the plugin's own game-state actions, configured in
 `config.yml` under `advanced.advanced-match-controls.game-rules`. They run at both match start and
 match end when enabled, and can be browsed and toggled in-game with

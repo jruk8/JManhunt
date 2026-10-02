@@ -87,10 +87,11 @@ nav:
       - Game Rules: configuration/game-rules.md
       - Statistics: configuration/statistics.md
       - Sounds: configuration/sounds.md
-  - Permissions: permissions.md
-  - Placeholders: placeholders.md
-  - API: api.md
-  - Developer Tools: dev-tools.md
+  - Advanced:
+      - Permissions: advanced/permissions.md
+      - Placeholders: advanced/placeholders.md
+      - API: advanced/api.md
+      - Developer Tools: advanced/dev-tools.md
 
 extra:
   social:

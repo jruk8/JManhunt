@@ -36,9 +36,9 @@ step-by-step tour.
 - [Lobby System](play/lobby-system/index.md)
 - [Commands](play/commands.md)
 - [Configuration](configuration.md)
-- [Permissions](permissions.md)
-- [Placeholders](placeholders.md)
-- [API](api.md)
+- [Permissions](advanced/permissions.md)
+- [Placeholders](advanced/placeholders.md)
+- [API](advanced/api.md)
 
 Stuck? The fastest way to get help is our
 [Discord](https://discord.gg/hkWmCVmWDC).

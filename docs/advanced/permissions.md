@@ -1,5 +1,7 @@
 # Permissions
 
+> For: intermediate admins wiring ranks, plus advanced setups.
+
 ## Command Permissions
 
 | Permission | Description | Default |

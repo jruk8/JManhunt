@@ -1,3 +1,5 @@
+> For: everyone browsing screenshots.
+
 ![1](assets/gallery/1.png)
 ![2](assets/gallery/2.png)
 ![3](assets/gallery/3.png)

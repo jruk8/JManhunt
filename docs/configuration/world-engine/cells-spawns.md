@@ -91,7 +91,7 @@ lookup costs performance on cell fetch. Pair this with the
 
 Lobby teleport points, boundary boxes, and upkeep live on their own
 page now: see
-[Multi-Lobby Boundaries](../../../play/lobby-system/boundaries.md).
+[Multi-Lobby Boundaries](../../play/lobby-system/boundaries.md).
 
 The fastest way to get a lobby is `/manhunt worldengine tpto lobbyworld`,
 run twice: it generates the `jmh_lobby` void world (filled by the

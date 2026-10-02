@@ -8,7 +8,7 @@ to `postgresql` and point every server at the same database.
 
 With PlaceholderAPI installed, JManhunt provides placeholders such as
 `%jmanhunt_total_kills%`. The complete list lives in
-[Placeholders](../placeholders.md).
+[Placeholders](../advanced/placeholders.md).
 
 ## How Wins Are Counted
 

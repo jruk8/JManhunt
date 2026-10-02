@@ -81,10 +81,18 @@ without touching JManhunt internals.
 ## Documentation Expectations
 
 - Update `docs/` when adding or changing user-facing features.
-- Update `docs/commands.md` for new commands.
+- Update `docs/play/commands.md` for new commands.
 - Update `docs/configuration` for new configuration options.
-- Update `docs/permissions.md` for new permissions.
+- Update `docs/advanced/permissions.md` for new permissions.
 - Keep documentation accurate and concise.
+
+## Developer Certificate of Origin
+
+By adding `git commit -s` to your commits, you certify that you have
+the right to submit the code under our AGPLv3 license per the
+Developer Certificate of Origin (DCO). Read the full text at
+https://developercertificate.org/ before your first signed commit.
+Pull requests without a `Signed-off-by` trailer will not be merged.
 
 ## Pull Request Guidelines
 

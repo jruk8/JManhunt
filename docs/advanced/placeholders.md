@@ -1,5 +1,7 @@
 # Placeholders
 
+> For: advanced users feeding stats into other plugins.
+
 JManhunt provides built-in PlaceholderAPI identifiers. All placeholders must
 be used with the prefix `%jmanhunt_<placeholder>%` (e.g.
 `%jmanhunt_total_kills%`, `%jmanhunt_game_phase_0%`).
