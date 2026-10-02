@@ -23,17 +23,17 @@ public class CompassAnalysisSettings extends OkaeriConfig {
     @CustomKey("delay-seconds")
     @Comment({
             "Seconds the analysis takes before the compass updates.",
-            "Default: 5.0"
+            "Default: 2.0"
     })
-    private double delaySeconds = 5.0;
+    private double delaySeconds = 2.0;
 
     @CustomKey("delay-deviation-seconds")
     @Comment({
             "Random plus-or-minus jitter applied to delay-seconds per",
             "analysis. Capped at the delay itself.",
-            "Default: 3.0"
+            "Default: 1.0"
     })
-    private double delayDeviationSeconds = 3.0;
+    private double delayDeviationSeconds = 1.0;
 
     @CustomKey("sound-interval-seconds")
     @Comment({
