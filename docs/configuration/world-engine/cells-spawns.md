@@ -105,83 +105,12 @@ this setting.
 
 ## Lobby Teleports & Bounds
 
-Lobby teleport points and boundary boxes live in
-`settings/world-engine/lobby-config.yml`, generated with defaults on first
-load and reloaded with `/manhunt reload`. They are keyed by lobby id, one
-entry per lobby:
-
-```yaml
-lobbies:
-  '0':
-    lobbytp:
-      x: 0.0
-      y: 65.0
-      z: 0.0
-      yaw: 0.0
-      pitch: 0.0
-    bounds:
-      pos1: null
-      pos2: null
-```
-
-Set a teleport by standing in the lobby world and running
-`/manhunt worldengine lobbyconfig setlobbytp <lobby-id>`, or pass coords
-directly (`setlobbytp <lobby-id> <x y z yaw pitch>`, which also works
-from the console). The world is never stored: teleports always land in
-the configured lobby world. When a lobby has no teleport of its own,
-players fall back to the lowest lobby id that has one (noted in debug
-output). When no teleport exists anywhere, or the lobby world itself is
-missing, players are told no lobby exists and to contact an
-administrator. This file is not editable through
-`/manhunt config`.
-
-The same file holds lobby upkeep under `care`: arrivals are healed
-and fed at once, and everyone inside is topped up every `interval`
-seconds. Both toggles default to on:
-
-```yaml
-care:
-  heal:
-    enabled: true
-  saturate:
-    enabled: true
-  interval: 15
-```
-
-Boundary boxes auto-join walkers: a player who steps into a lobby's box
-while in the lobby world joins that lobby with role `none`, the same as
-`/manhunt lobby join` with role `none` (no teleport, since they are
-already there). Players already in that lobby, and players in a running
-match, are left alone. Where boxes overlap, the box whose midpoint is
-nearest wins. Walking out of every box is governed by
-`advanced.lobbies.bounds.exit-behavior`: `KEEP_IN_LOBBY` (default) keeps the
-membership, so the walk-out is ignored; `EXIT_LOBBY` leaves the lobby,
-moving members to `advanced.lobbies.bounds.exit-lobby-id` (lobby-less by
-default), unless the destination lands straight inside another lobby's
-box, in which case they join that lobby instead. Either way this only
-fires for members whose lobby has complete bounds, and never for
-players in a live match. Record two opposite feet-block corners with
-`/manhunt worldengine lobbyconfig pos1|pos2`, then store them with
-`/manhunt worldengine lobbyconfig setbounds <lobby-id>` (tab completion
-suggests the next id without bounds; overwriting existing bounds needs
-the command run twice within 10 seconds). Bounds identical to another
-lobby's box are refused. Remove a whole entry with
-`/manhunt worldengine lobbyconfig deletelobby <lobby-id>`, also run
-twice to confirm. This only deletes the stored entry, never the live
-lobby or its players.
+Lobby teleport points, boundary boxes, and upkeep live on their own
+page now: see
+[Multi-Lobby Boundaries](../../../play/lobby-system/boundaries.md).
 
 The fastest way to get a lobby is `/manhunt worldengine tpto lobbyworld`,
 run twice: it generates the `jmh_lobby` void world (filled by the
 `DEFAULT` preset, or the preset you name) and points lobby 0 at the
 spawn automatically.
 Set `advanced.lobbies.lobby-world-name` to use your own world instead.
-
-Players who fall into the void in the lobby world pop back at their lobby
-teleport (or lobby 0 when theirs is unset) instead of dying. This never
-applies in the game world, and can be turned off with
-`lobby-world-void-rescue` in the same file.
-
-The same file protects the lobby world with `protected` (on by default):
-breaking and placing blocks, interacting, damaging entities, and losing
-hunger all need `jmanhunt.editlobby`. Give that node to builders, or turn
-`protected` off while setting the lobby up by hand.

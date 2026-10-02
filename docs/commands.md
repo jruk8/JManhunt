@@ -121,7 +121,7 @@ who hears those lines. `/manhunt lobby leave [selector]` removes players
 from whatever lobby they are in. Re-joining the same lobby with the same
 role is refused with a notice. Multiple lobbies need the world engine;
 with it off, everyone shares lobby 0. New to lobbies? Start with the
-[Lobby Quick Start](lobby-quick-start.md).
+[Lobby System](play/lobby-system/index.md).
 
 ## Team Chat
 

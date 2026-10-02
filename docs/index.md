@@ -1,6 +1,8 @@
 ![JManhunt banner](assets/banner-1280x640.png)
 # JManhunt
 
+> For: everyone. Start here.
+
 Manhunt for your Paper server. Hunters chase speedrunners, with a tracking
 compass, fresh maps, and optional mods.
 
@@ -31,14 +33,14 @@ step-by-step tour.
 - [Installation](installation.md)
 - [Getting Started](getting-started.md)
 - [Gallery](gallery.md)
+- [Lobby System](play/lobby-system/index.md)
 - [Commands](commands.md)
 - [Configuration](configuration.md)
 - [Permissions](permissions.md)
 - [Placeholders](placeholders.md)
 - [API](api.md)
 
-**Friendly warning:** I have used AI tools in most of these docs. They may
-be jargon-heavy but rest assured fully accurate. If anything is not immediately
-obvious, the fastest way to get help is through our Discord.
+Stuck? The fastest way to get help is our
+[Discord](https://discord.gg/hkWmCVmWDC).
 
-© 2026 jruk8. Licensed under GNU GPLv3.
+© 2026 jruk8. Licensed under GNU AGPLv3.

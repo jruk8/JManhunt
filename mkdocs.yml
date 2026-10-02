@@ -54,7 +54,10 @@ nav:
   - Commands: commands.md
   - Admin GUI: gui.md
   - Concurrent Matches: multi-instance.md
-  - Lobby Quick Start: lobby-quick-start.md
+  - Play:
+      - Lobby System:
+          - Overview: play/lobby-system/index.md
+          - Multi-Lobby Boundaries: play/lobby-system/boundaries.md
   - Spectating: spectating.md
   - Configuration:
       - Overview: configuration.md

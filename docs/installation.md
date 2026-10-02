@@ -1,5 +1,7 @@
 # Installation
 
+> For: everyone setting up the plugin.
+
 1. Download the latest release from
    [Modrinth](https://modrinth.com/plugin/jmanhunt) and drop the jar into
    your server's `plugins/` folder.
@@ -17,9 +19,8 @@ See [Getting Started](getting-started.md).
 - [Chunky](https://modrinth.com/plugin/chunky): faster map loading on
   smaller servers.
 
-# Contributing
+## Contributing
 
-Contributions are welcome! See our CONTRIBUTING.md
-for setup, and the [GitHub repository](https://github.com/jruk8/JManhunt) for issues and pull
-requests. (the project is developed in free time, but I'll fix
-breaking bugs ASAP)
+Contributions are welcome, see CONTRIBUTING.md on
+[GitHub](https://github.com/jruk8/JManhunt). The project is built in free
+time, but breaking bugs get fixed ASAP.

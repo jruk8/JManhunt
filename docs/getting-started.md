@@ -1,11 +1,13 @@
 ![JManhunt banner](assets/banner-1280x640.png)
 # Getting Started
 
+> For: everyone setting up the plugin.
+
 > Just installed? See [Installation](installation.md) first (two steps).
 
 Pick one path. Both end with a working lobby.
 
-> **Note:** The lobby system, multi-instancing, and World Engine are
+> **Note:** The Lobby System, multi-instancing, and World Engine are
 > only for **dedicated servers**. Enabling these features will partition
 > the Overworld into cells. It can always be disabled, but some gamerules
 > may be modified after.
@@ -16,7 +18,8 @@ Pick one path. Both end with a working lobby.
 2. Click the green button.
 3. Done. Your lobby is built and the world engine is on.
 
-Restart the server once when you get a chance so everything fully applies.
+Matches work right away. Restart once when you can: the stronghold
+spread needs it.
 
 ## Path 2: Guided tour (learn as you go)
 
@@ -36,7 +39,7 @@ That's the whole loop. Everything else is optional.
 
 ## What's next?
 
-- [Lobby Quick Start](lobby-quick-start.md): bring players in, run matches.
+- [Lobby System](play/lobby-system/index.md): bring players in, run matches.
 - [Commands](commands.md): the full list.
 - [Configuration](configuration.md): settings, world engine, mods, sounds.
 - [Concurrent Matches](multi-instance.md): run several matches at once.

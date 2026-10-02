@@ -10,7 +10,7 @@
 
 `/manhunt dev schem` saves and loads lobby schematics in
 `JManhunt/settings/world-engine/lobby-schematics/`. The
-[lobby presets](lobby-quick-start.md#lobby-presets) do not
+[lobby presets](play/lobby-system/index.md#lobby-presets) do not
 read that directory: they paste only the bundled
 `dev/lobby-schematics/` resources, so ship a finished preset by
 copying its file there and rebuilding. Requires

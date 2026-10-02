@@ -63,7 +63,7 @@ If a preset's schematic is missing, the console warns you and the lobby
 stays a void world with a bare spawn platform.
 
 Want to build your own preset? That is developer territory: see the
-[schematic tools](dev-tools.md#schematic-tools).
+[schematic tools](../../dev-tools.md#schematic-tools).
 
 ## Role Pads
 
@@ -88,6 +88,7 @@ sound.
 
 ## Next steps
 
-- [Concurrent Matches](multi-instance.md): run several matches at once.
-- [Commands](commands.md): the full list.
-- [World Engine](configuration/world-engine.md): maps, cells, borders.
+- [Multi-Lobby Boundaries](boundaries.md): teleports, boxes, upkeep.
+- [Concurrent Matches](../../multi-instance.md): run several matches at once.
+- [Commands](../../commands.md): the full list.
+- [World Engine](../../configuration/world-engine.md): maps, cells, borders.
