@@ -31,8 +31,6 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.top
-    - navigation.tabs
-    - navigation.tabs.sticky
     - navigation.footer
     - search.suggest
     - search.highlight

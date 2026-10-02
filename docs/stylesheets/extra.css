@@ -1,12 +1,23 @@
-/* JManhunt brand color. Keep in sync with the primary hex in the messages config. */
+/* JManhunt brand colors. Header uses the darker shade, tabs keep the signature hex. */
 :root {
-  --md-primary-fg-color: #de7766;
+  --md-primary-fg-color: #c05d4d;
   --md-primary-fg-color--light: #e89583;
-  --md-primary-fg-color--dark: #b95a47;
+  --md-primary-fg-color--dark: #de7766;
   --md-primary-bg-color: #fff;
   --md-primary-bg-color--light: hsla(0, 0%, 100%, .7);
   --md-accent-fg-color: #de7766;
   --md-accent-fg-color--transparent: rgba(222, 119, 102, .1);
   --md-accent-bg-color: #fff;
   --md-accent-bg-color--light: hsla(0, 0%, 100%, .7);
+}
+
+/* Tabs bar keeps the signature brand color. */
+.md-tabs {
+  background-color: #de7766;
+}
+
+/* Header logo renders small by default, so bump it up a little. */
+.md-header__button.md-logo img {
+  height: 1.8rem;
+  width: auto;
 }
