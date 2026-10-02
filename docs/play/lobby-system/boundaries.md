@@ -133,3 +133,9 @@ The same file protects the lobby world with `protected` (on by
 default): breaking and placing blocks, interacting, damaging entities,
 and losing hunger all need `jmanhunt.editlobby`. Give that node to
 builders, or turn `protected` off while setting the lobby up by hand.
+
+Fresh lobby worlds are also created with safe defaults: peaceful
+difficulty, frozen time and weather, no locator bar, and no mob,
+trader, phantom, patrol, or griefing activity. These apply once at
+generation and never change after, and they never touch the game
+world.
