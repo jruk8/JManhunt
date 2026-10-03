@@ -19,7 +19,7 @@ import lombok.Setter;
         "Sound names are namespaced Minecraft keys.",
         "eg. block.note_block.pling",
         "It's recommended to use a sound explorer like",
-        "https://mudkipdev.github.io/minecraft-sound-explorer/"
+        "https://jruk8.github.io/JSoundExplorer/"
 })
 @Getter
 @Setter

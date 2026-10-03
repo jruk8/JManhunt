@@ -37,6 +37,10 @@ see below for full rules.
 | `<psound:player,id,pitch,volume>` | Play a sound for one player. |
 | `<rsound:role,id,pitch,volume>` | Play a sound for one role (`ALL` plays for both). |
 
+> Sound ids are namespaced Minecraft keys (e.g.
+`block.note_block.pling`); pick them with
+[JSoundExplorer](https://jruk8.github.io/JSoundExplorer/).
+
 ### Stats and Roster
 
 | Tag | Meaning |

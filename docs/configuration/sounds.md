@@ -8,7 +8,7 @@ icon: material/volume-high
 
 Sound names are namespaced Minecraft keys (e.g.
 `block.note_block.pling`). A sound explorer like
-[mudkipdev's Minecraft Sound Explorer](https://mudkipdev.github.io/minecraft-sound-explorer/)
+[JSoundExplorer](https://jruk8.github.io/JSoundExplorer/)
 helps pick them.
 
 Sounds live in `sounds.yml`. Each entry supports `enabled`, `sound`,
