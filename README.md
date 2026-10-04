@@ -56,11 +56,22 @@ Find these modifiers on our [**Discord**](https://discord.gg/hkWmCVmWDC) communi
 Alternatively, you can run `/manhunt setup` for a more intermediate dialogue-based setup.
 See more with our comprehensive [**documentation**](https://jruk8.github.io/JManhunt/).
 
+### Requirements
+
+- Server Software » [Paper](https://papermc.io/downloads/paper) **26.2+**
+- Java Version » Java **25**
+- Dependencies » **None**
+- Soft Deps » [PlaceholderAPI](https://modrinth.com/plugin/placeholderapi) and [Chunky](https://modrinth.com/plugin/chunky) (or similar)
+
 ### Links
 
-Visit our [Discord](https://discord.gg/hkWmCVmWDC) to browse a modifiers/presets catalogue, chat with other admins, or get quick support.
+- [Discord & Community Mods](https://discord.gg/hkWmCVmWDC)
+- [Modrinth](https://modrinth.com/plugin/jmanhunt)
+- [Hangar](https://hangar.papermc.io/jruk/JManhunt)
+- [Documentation](https://jruk8.github.io/JManhunt/)
+- [GitHub](https://github.com/jruk8/JManhunt)
 
-### Donate
+### ☕ Donate
 
 Developing JManhunt has taken me a lot of time and effort.
 You can help support the upkeep and future of this plugin by making a [**small donation**](https://ko-fi.com/jruk). **Thanks!** 👐
