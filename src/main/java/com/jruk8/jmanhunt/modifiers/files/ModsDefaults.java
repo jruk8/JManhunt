@@ -16,7 +16,7 @@ public final class ModsDefaults {
             "hunters-wooden-sword",
             "hunter-start-debuffs",
             "speedrunner-start-buffs",
-            "full-iron-kit",
+            "full-leather-kit",
             "speedrunner-health-advantage",
             "perma-night",
             "random-mob-spawner",

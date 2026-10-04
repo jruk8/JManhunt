@@ -103,7 +103,7 @@ behavior:
         - "give <p> cooked_beef 8"
 ```
 
-The bundled files ship more examples to copy from: `full-iron-kit`,
+The bundled files ship more examples to copy from: `full-leather-kit`,
 `speedrunner-health-advantage`, `random-mob-spawner`,
 `random-item-giver`, `random-start-resources`, `gear-dice`,
 `regen-on-kill`, `diamond-on-advancement`, `fireres-on-nether-enter`,

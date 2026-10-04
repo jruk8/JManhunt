@@ -31,6 +31,7 @@ nodes:
   start:
     question:
       - "What would you like to do?"
+      - "Tip: <white>/manhunt</white> opens the visual GUI for all of this."
     answers:
       - text: "Set up JManhunt as a first-timer. <gray>(~3 minutes)</gray>"
         next: "setup_root"
@@ -94,7 +95,7 @@ nodes:
     question:
       - "That is basically it. Walk onto the baskets (colored concrete blocks) to pick <#de666e>Hunter</#de666e> or <#74de66>Speedrunner</#74de66>, then start with <gray>/mh start</gray> or wait for autostart."
       - "Remember to restart the server so World Engine fully applies."
-      - "Want to go further?"
+      - "Want to go further? The <white>/manhunt</white> GUI covers modifiers, compass, and config visually."
     answers:
       - text: "Learn about Modifiers."
         next: "mod_intro"
@@ -159,11 +160,13 @@ nodes:
   mod_intro:
     question:
       - "Modifiers are ready-made game twists you can switch on or off."
-      - "For example, <white>everyone-gets-beef</white> hands every player 8 steaks when the match starts."
+      - "The fastest way: run <white>/manhunt</white> and open Modifiers, or <white>/mh modifiers</white> directly: every modifier with instant toggle, no commands to memorize."
     answers:
-      - text: "Show me the fun ones to turn on."
+      - text: "Open the modifiers GUI now."
         recommended: true
-        next: "mod_fun"
+        commands:
+          - "jmanhunt:mh modifiers"
+        next: "mod_toggle"
       - text: "How do I turn them on and off?"
         next: "mod_toggle"
       - text: "How do I make my own?"
@@ -172,45 +175,12 @@ nodes:
         next: "discord"
       - text: "Exit the setup."
         next: "EXIT"
-  mod_fun:
-    question:
-      - "Pick n' mix! Note that this setup does not support disabling modifiers <gray>(disable with /mh modifiers setmod NAME false)</gray>."
-    answers:
-      - text: "Speedrunners get a speed potion."
-        commands:
-          - "jmanhunt:mh modifiers setmod speedrunners-speed-potion enabled true"
-        next: "mod_fun"
-      - text: "Everyone starts with an iron kit."
-        commands:
-          - "jmanhunt:mh modifiers setmod full-iron-kit enabled true"
-        next: "mod_fun"
-      - text: "Killers regenerate health."
-        commands:
-          - "jmanhunt:mh modifiers setmod regen-on-kill enabled true"
-        next: "mod_fun"
-      - text: "A diamond for every advancement."
-        commands:
-          - "jmanhunt:mh modifiers setmod diamond-on-advancement enabled true"
-        next: "mod_fun"
-      - text: "A random mob visits the runners."
-        commands:
-          - "jmanhunt:mh modifiers setmod random-mob-spawner enabled true"
-        next: "mod_fun"
-      - text: "A random item for everyone."
-        commands:
-          - "jmanhunt:mh modifiers setmod random-item-giver enabled true"
-        next: "mod_fun"
-      - text: "<yellow>Back to modifiers.</yellow>"
-        next: "mod_intro"
   mod_toggle:
     question:
-      - "Run <gray>/mh modifiers</gray> to browse every modifier in a menu."
-      - "Or switch one from chat with <gray>/mh modifiers setmod NAME true</gray>, or <gray>false</gray> to switch it off."
+      - "Fastest: <white>/manhunt</white> to Modifiers, or <white>/mh modifiers</white>: click to toggle on or off."
+      - "Or switch one from chat with <gray>/mh modifiers setmod NAME true|false</gray>."
       - "Example: <gray>/mh modifiers setmod everyone-gets-beef true</gray>"
     answers:
-      - text: "Show me the fun ones."
-        recommended: true
-        next: "mod_fun"
       - text: "How do I make my own?"
         next: "mod_create"
       - text: "Back to modifiers."
@@ -242,7 +212,7 @@ nodes:
         next: "EXIT"
   compass_detail:
     question:
-      - "Right-click refreshes the target, left-click cycles it, shift-left-click flips between enemies and teammates. Tune min and max distance, lock behavior, and signal interference under <gray>settings.compass</gray>."
+      - "Right-click refreshes the target, left-click cycles it, shift-left-click flips between enemies and teammates. Tune min and max distance, lock behavior, and signal interference under <gray>settings.compass</gray>, or point-and-click in the <white>/manhunt</white> GUI."
     answers:
       - text: "Learn about Modifiers."
         next: "mod_intro"
@@ -255,6 +225,7 @@ nodes:
   cfg_intro:
     question:
       - "<white>/mh config</white> browses every setting in-game: each word drills one level deeper. A section lists its keys; a leaf shows its value, plus a value to set it."
+      - "Prefer clicking? Browse the same settings visually with <white>/manhunt</white>."
       - "Example: <white>/mh config world-engine enabled true</white> (needs a restart)."
       - "Modifiers work the same way: <white>/mh config modifiers everyone-gets-beef enabled true</white>"
     answers:

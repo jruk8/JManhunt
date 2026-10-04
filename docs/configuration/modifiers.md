@@ -14,7 +14,7 @@ plugin, all switched off until you switch them on.
 
 Open `/manhunt` and pick **Modifiers**. Click entries to switch them
 on and off; the counts stay live. Try `gear-dice` (random gear),
-`random-mob-spawner`, `full-iron-kit`, or the `chaos-mode` preset.
+`random-mob-spawner`, `full-leather-kit`, or the `chaos-mode` preset.
 
 Prefer typing? This does the same thing:
 
