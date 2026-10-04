@@ -145,7 +145,9 @@ actions:
 
 Every refresh snapshots the closest hunters plus the closest
 speedrunners (capped at `max-targets` each), and cycling reads only
-those snapshots, so browsing cannot reveal anyone early.
+those snapshots, so browsing cannot reveal anyone early. When the
+last refresh hit a bad signal, cached browsing keeps showing Bad
+Signal instead of the snapshots until the next refresh.
 
 `scroll-cooldown` is the seconds between accepted scrolls; clicks inside
 the window are ignored. Set it to `0` for no throttling. With one or

@@ -1,10 +1,12 @@
 package com.jruk8.jmanhunt.compass;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.bukkit.Location;
 import org.junit.jupiter.api.Test;
@@ -84,5 +86,46 @@ class CompassCacheTest {
         cache.clear(holder);
 
         assertTrue(cache.spotsFor(holder).isEmpty());
+    }
+
+    @Test
+    void freshHolderHasNoBadSignal() {
+        CompassCache cache = new CompassCache();
+
+        assertTrue(cache.badSignalFor(UUID.randomUUID()).isEmpty());
+    }
+
+    @Test
+    void markSignalStoresReason() {
+        CompassCache cache = new CompassCache();
+        UUID holder = UUID.randomUUID();
+        SignalInterference.Reason reason = new SignalInterference.Reason("moved", false);
+
+        cache.markSignal(holder, Optional.of(reason));
+
+        assertEquals(Optional.of(reason), cache.badSignalFor(holder));
+    }
+
+    @Test
+    void markSignalEmptyClearsBadSignal() {
+        CompassCache cache = new CompassCache();
+        UUID holder = UUID.randomUUID();
+        cache.markSignal(holder, Optional.of(new SignalInterference.Reason("moved", false)));
+
+        cache.markSignal(holder, Optional.empty());
+
+        assertTrue(cache.badSignalFor(holder).isEmpty());
+    }
+
+    @Test
+    void clearDropsBadSignal() {
+        CompassCache cache = new CompassCache();
+        UUID holder = UUID.randomUUID();
+        cache.markSignal(holder, Optional.of(new SignalInterference.Reason("moved", true)));
+
+        cache.clear(holder);
+
+        assertTrue(cache.badSignalFor(holder).isEmpty());
+        assertFalse(cache.badSignalFor(UUID.randomUUID()).isPresent());
     }
 }

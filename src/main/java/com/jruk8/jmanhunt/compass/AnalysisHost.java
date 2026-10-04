@@ -5,8 +5,9 @@ import java.util.UUID;
 
 /**
  * Analysis sampling hooks hosted by the facade: movement sampling,
- * doom checks, main-hand checks, snapshot cleanup, and success costs.
- * The lock service owns the timer; the facade owns the snapshots.
+ * doom and location checks, main-hand checks, snapshot cleanup, and
+ * success costs. The lock service owns the timer; the facade owns the
+ * snapshots.
  */
 interface AnalysisHost {
 
@@ -15,6 +16,9 @@ interface AnalysisHost {
 
     /** True when the holder's in-flight analysis is already doomed. */
     boolean analysisDoomed(Player holder);
+
+    /** True when the holder's doom-check pick has no location at all. */
+    boolean noLocationAvailable(Player holder);
 
     /** True when the holder carries a compass in their main hand. */
     boolean isMainhandCompass(Player holder);

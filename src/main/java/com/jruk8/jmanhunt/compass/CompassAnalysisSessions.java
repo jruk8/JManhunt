@@ -168,35 +168,53 @@ double analysisMaxMoved(Player holder) {
     return Math.sqrt(maxSq);
 }
 
+    /**
+     * Doom-check pick: the lock-narrowed opponents and sightings
+     * resolved to one pick. Empty when any gate fails.
+     */
+    private Optional<CompassPick> resolveDoomPick(Player holder) {
+        if (CompassManager.isVanillaSpectator(holder) || holder.isDead() || game == null) {
+            return Optional.empty();
+        }
+        Role holderRole = players.states().role(holder);
+        if (!holderRole.isParticipant()
+                || players.fakes().isFakeSpectator(holder)) {
+            return Optional.empty();
+        }
+        Optional<GameInstance> match = game.instanceOf(holder.getUniqueId());
+        if (match.isEmpty()) {
+            return Optional.empty();
+        }
+        Role targetRole = locks.targetRole(holder);
+        List<CompassCandidate> opponents =
+                services.targets().collectOpponents(holder, targetRole, match.get());
+        List<CompassSighting> sightings = services.targets().collectSightings(holder, targetRole,
+                match.get(), holder.getLocation());
+        CompassLockService.LockedTargets narrowed =
+                locks.narrowToLock(holder.getUniqueId(), opponents, sightings);
+        return Optional.of(CompassManager.resolveCompassPick(settings,
+                match.get().originLobbyId(), holderRole, narrowed.opponents(),
+                narrowed.sightings()));
+    }
+
 @Override
 public boolean analysisDoomed(Player holder) {
-    if (CompassManager.isVanillaSpectator(holder) || holder.isDead() || game == null) {
+    Optional<CompassPick> pick = resolveDoomPick(holder);
+    if (pick.isEmpty()) {
         return false;
     }
-    Role holderRole = players.states().role(holder);
-    if (!holderRole.isParticipant()
-            || players.fakes().isFakeSpectator(holder)) {
-        return false;
-    }
-    Optional<GameInstance> match = game.instanceOf(holder.getUniqueId());
-    if (match.isEmpty()) {
-        return false;
-    }
-    Role targetRole = locks.targetRole(holder);
-    List<CompassCandidate> opponents =
-            services.targets().collectOpponents(holder, targetRole, match.get());
-    List<CompassSighting> sightings = services.targets().collectSightings(holder, targetRole, match.get(),
-            holder.getLocation());
     UUID id = holder.getUniqueId();
-    CompassLockService.LockedTargets narrowed =
-            locks.narrowToLock(id, opponents, sightings);
-    CompassPick pick = CompassManager.resolveCompassPick(settings,
-            match.get().originLobbyId(), holderRole, narrowed.opponents(),
-            narrowed.sightings());
-    Location targetPress = pick.id() == null ? null
-            : analysisTargets.getOrDefault(id, Map.of()).get(pick.id());
-    return services.signal().reasonForPick(holder, resolutionSpot(holder), targetPress, pick,
-            analysisMaxMoved(holder)).isPresent();
+    Location targetPress = pick.get().id() == null ? null
+            : analysisTargets.getOrDefault(id, Map.of()).get(pick.get().id());
+    return services.signal().reasonForPick(holder, resolutionSpot(holder), targetPress,
+            pick.get(), analysisMaxMoved(holder)).isPresent();
+}
+
+@Override
+public boolean noLocationAvailable(Player holder) {
+    return resolveDoomPick(holder)
+            .map(pick -> pick.kind() == CompassPick.Kind.NONE)
+            .orElse(false);
 }
 
 @Override

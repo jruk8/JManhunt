@@ -19,6 +19,28 @@ final class AnalysisTiming {
         return (long) Math.ceil(Math.max(0L, remainingTicks) * clamped);
     }
 
+    /** No-location exit state: ticks left, banked cut, and latched flag. */
+    record LocationExit(long remaining, long locCut, boolean noLoc) {
+    }
+
+    /**
+     * No-location early-exit transition: entering shortens the
+     * remaining ticks and banks the cut; recovering restores it, so a
+     * mid-analysis recovery analyzes exactly as if no exit triggered.
+     * Staying put keeps everything. Pure for tests.
+     */
+    static LocationExit locationExitTransition(long remaining, double multiplier,
+            boolean wasNoLoc, boolean nowNoLoc, long locCut) {
+        if (!wasNoLoc && nowNoLoc) {
+            long next = shortenedTicks(remaining, multiplier);
+            return new LocationExit(next, remaining - next, true);
+        }
+        if (wasNoLoc && !nowNoLoc) {
+            return new LocationExit(remaining + locCut, 0L, false);
+        }
+        return new LocationExit(remaining, locCut, nowNoLoc);
+    }
+
     /**
      * Jittered analysis delay: the deviation is clamped to the delay,
      * then a uniform sample in delay +- deviation, never negative.

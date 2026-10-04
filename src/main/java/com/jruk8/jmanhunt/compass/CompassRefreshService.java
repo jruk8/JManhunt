@@ -202,6 +202,7 @@ final class CompassRefreshService {
         Optional<SignalInterference.Reason> reason = pick.kind() == CompassPick.Kind.NONE
                 ? Optional.empty()
                 : inputs.signal().reasonForPick(holder, spot, targetPress, pick, holderMoved);
+        session.cache().markSignal(holder.getUniqueId(), reason);
         if (reason.isPresent()) {
             showBadSignal(holder, item, slot, reason.get());
             return false;
@@ -263,12 +264,19 @@ final class CompassRefreshService {
     }
 
     /**
-     * Renders a cache-resolved pick. Signal interference is deliberately
-     * not consulted: evaluating it would read live positions, and the
-     * switch must serve whatever is currently cached.
+     * Renders a cache-resolved pick. Live interference is deliberately
+     * not evaluated (it would read live positions), but the last
+     * refresh's stored signal is honored: a bad signal renders Bad
+     * Signal with the stored reason and reveals nothing cached.
      */
     private void renderCachedPick(Player holder, ItemStack item, int slot, CompassPick pick,
             String targetRoleString, boolean locked) {
+        Optional<SignalInterference.Reason> badSignal =
+                session.cache().badSignalFor(holder.getUniqueId());
+        if (badSignal.isPresent()) {
+            showBadSignal(holder, item, slot, badSignal.get());
+            return;
+        }
         switch (pick.kind()) {
             case TRACK_PLAYER -> trackCachedPlayer(holder, item, slot, pick, locked);
             case TRACK_SIGHTING -> trackSighting(holder, item, slot, pick, targetRoleString, locked,

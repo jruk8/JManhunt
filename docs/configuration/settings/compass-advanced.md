@@ -106,6 +106,12 @@ cancel-early:
   time-multiplier: 0.3
 ```
 
+The same keys cover analyses with no location at all: with no
+trackable targets the analysis exits early instead of running the
+full delay to a No Target. If a location becomes available again
+mid-analysis, the cut time is restored and the analysis runs as if
+the location had been there all along.
+
 ## Signal Interference
 
 Tracking can fail with a gray Bad signal readout when conditions are

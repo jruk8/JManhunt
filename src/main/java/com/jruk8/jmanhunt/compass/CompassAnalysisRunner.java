@@ -107,7 +107,7 @@ final class CompassAnalysisRunner {
      * shows "Analyzing...", ticks the analysis sound on the configured
      * interval, counts one repeating timer down, then refreshes. Each
      * tick samples movement and requires the compass in the main hand;
-     * every tenth tick re-checks doom. No second analysis starts while
+     * every tenth tick re-checks doom and location. No second analysis starts while
      * one runs. Runs stamp the shared click cooldown at resolution, so
      * the full cooldown runs after the refresh, and close with the
      * outcome click sound.
@@ -120,14 +120,11 @@ final class CompassAnalysisRunner {
         callbacks.analysisStarter().accept(holder);
         long generation = generations.merge(id, 1L, Long::sum);
         Integer lobby = lobbyOf(holder);
-        double effectiveDelay = AnalysisTiming.jitteredDelay(
+        double multiplier = cancelEarlyMultiplier(lobby);
+        double effectiveDelay = doomedStartDelay(holder, AnalysisTiming.jitteredDelay(
                 settings.analysisDelaySeconds(lobby),
                 settings.analysisDelayDeviationSeconds(lobby),
-                ThreadLocalRandom.current().nextDouble());
-        double multiplier = cancelEarlyMultiplier(lobby);
-        if (callbacks.analysisHost().analysisDoomed(holder)) {
-            effectiveDelay = effectiveDelay * multiplier;
-        }
+                ThreadLocalRandom.current().nextDouble()), multiplier);
         runAnalysisDebuffs(holder, effectiveDelay);
         shared.actionbars().put(id, feedback.messages()
                 .componentRaw(feedback.compass().getAnalyzingActionbar()));
@@ -138,13 +135,16 @@ final class CompassAnalysisRunner {
         long[] remaining = {AnalysisTiming.analyzeDelayTicks(effectiveDelay)};
         long[] elapsed = {0L};
         boolean[] doomed = {false};
+        boolean[] noLoc = {false};
+        long[] locCut = {0L};
+        applyNoLocationStart(holder, remaining, noLoc, locCut, multiplier);
         callbacks.tasks().runTimer(task -> {
             if (!analyzing.contains(id) || generations.getOrDefault(id, 0L) != generation) {
                 task.cancel();
                 return;
             }
-            if (tickAnalysisOnline(task, id, holder, remaining, elapsed, doomed, multiplier,
-                    intervalTicks)) {
+            if (tickAnalysisOnline(task, id, holder, remaining, elapsed, doomed, noLoc, locCut,
+                    multiplier, intervalTicks)) {
                 return;
             }
             remaining[0]--;
@@ -155,9 +155,34 @@ final class CompassAnalysisRunner {
         }, 1L, 1L);
     }
 
+    /** Fresh analysis delay after the start-time doom scaling. */
+    private double doomedStartDelay(Player holder, double effectiveDelay, double multiplier) {
+        if (callbacks.analysisHost().analysisDoomed(holder)) {
+            return effectiveDelay * multiplier;
+        }
+        return effectiveDelay;
+    }
+
+    /**
+     * No-location early exit at analysis start: shortens the fresh
+     * duration and banks the cut when no location is available.
+     */
+    private void applyNoLocationStart(Player holder, long[] remaining, boolean[] noLoc,
+            long[] locCut, double multiplier) {
+        if (!callbacks.analysisHost().noLocationAvailable(holder)) {
+            return;
+        }
+        AnalysisTiming.LocationExit exit = AnalysisTiming.locationExitTransition(
+                remaining[0], multiplier, false, true, 0L);
+        remaining[0] = exit.remaining();
+        locCut[0] = exit.locCut();
+        noLoc[0] = true;
+    }
+
     /** One online analysis tick; true when the run ended inside it. */
     private boolean tickAnalysisOnline(BukkitTask task, UUID id, Player holder, long[] remaining,
-            long[] elapsed, boolean[] doomed, double multiplier, long intervalTicks) {
+            long[] elapsed, boolean[] doomed, boolean[] noLoc, long[] locCut, double multiplier,
+            long intervalTicks) {
         if (!holder.isOnline()) {
             return false;
         }
@@ -173,6 +198,12 @@ final class CompassAnalysisRunner {
                 remaining[0] = AnalysisTiming.shortenedTicks(remaining[0], multiplier);
             }
             doomed[0] = nowDoomed;
+            boolean nowNoLoc = callbacks.analysisHost().noLocationAvailable(holder);
+            AnalysisTiming.LocationExit exit = AnalysisTiming.locationExitTransition(
+                    remaining[0], multiplier, noLoc[0], nowNoLoc, locCut[0]);
+            remaining[0] = exit.remaining();
+            locCut[0] = exit.locCut();
+            noLoc[0] = exit.noLoc();
         }
         if (elapsed[0] % intervalTicks == 0L) {
             feedback.sounds().playSound(holder, "compass.analysis");

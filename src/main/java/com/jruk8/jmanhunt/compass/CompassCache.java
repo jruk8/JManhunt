@@ -4,6 +4,7 @@ import org.bukkit.Location;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -23,6 +24,12 @@ public final class CompassCache {
 
     /** Holder id to the holder's own refresh-time position. */
     private final Map<UUID, Location> holders = new HashMap<>();
+
+    /**
+     * Holder id to the last refresh's interference reason. Presence is
+     * the bad-signal flag: cached browsing honors it without live reads.
+     */
+    private final Map<UUID, SignalInterference.Reason> badSignals = new HashMap<>();
 
     /** max-targets clamped to its supported range. Pure for tests. */
     public static int clampMaxTargets(int raw) {
@@ -53,9 +60,27 @@ public final class CompassCache {
         return holders.get(holderId);
     }
 
+    /**
+     * Marks the last refresh's signal: a reason stores the bad-signal
+     * flag, empty clears it (good signal or no target).
+     */
+    public void markSignal(UUID holderId, Optional<SignalInterference.Reason> reason) {
+        if (reason.isEmpty()) {
+            badSignals.remove(holderId);
+            return;
+        }
+        badSignals.put(holderId, reason.get());
+    }
+
+    /** Last refresh's interference reason, or empty on a good signal. */
+    public Optional<SignalInterference.Reason> badSignalFor(UUID holderId) {
+        return Optional.ofNullable(badSignals.get(holderId));
+    }
+
     /** Drops one holder's snapshots, for example on match leave. */
     public void clear(UUID holderId) {
         spots.remove(holderId);
         holders.remove(holderId);
+        badSignals.remove(holderId);
     }
 }
