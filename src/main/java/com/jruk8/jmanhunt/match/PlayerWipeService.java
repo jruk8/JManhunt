@@ -21,7 +21,11 @@ public final class PlayerWipeService {
     private final JManhuntLogger log;
     private final PlayerResetService resets;
     private final Set<UUID> pendingEndWipes = new HashSet<>();
-    /** In-match UUIDs still owed a post-crash wipe; mirrored in crash_cleanup. */
+    /**
+     * UUIDs owed a post-crash wipe, loaded from crash_cleanup only when the
+     * previous run crashed. Live match entries never arm this set: a clean
+     * disconnect plus rejoin must never wipe.
+     */
     private final Set<UUID> pendingCrashWipes = new HashSet<>();
 
     public PlayerWipeService(EngineStateRepository engineStates, JManhuntLogger log,
@@ -68,12 +72,12 @@ public final class PlayerWipeService {
 
     /**
      * Tracks match-state entry for post-crash cleanup: every
-     * speedrunner, hunter, and spectator activation. The memory set
-     * answers joins; the crash_cleanup rows survive the crash itself.
+     * speedrunner, hunter, and spectator activation. Only the
+     * crash_cleanup rows are written here, as crash evidence for the next
+     * enable; the memory wipe set stays empty so live rejoins never wipe.
      * Failures log and continue, never blocking the match.
      */
     public void trackMatchEntry(Collection<UUID> playerIds) {
-        pendingCrashWipes.addAll(playerIds);
         EngineStateRepository repository = engineStates;
         if (repository == null) {
             return;
@@ -110,10 +114,14 @@ public final class PlayerWipeService {
     }
 
     /**
-     * Loads surviving crash_cleanup rows after enable. Rows are honored
-     * regardless of the crash flag so a player who misses the first
-     * post-crash restart is still wiped on their next join; each row
-     * deletes only when its player is actually wiped.
+     * Loads surviving crash_cleanup rows after enable, but only when the
+     * previous run crashed. Loaded rows arm one wipe each, so a player who
+     * misses the first post-crash restart is still wiped on their next
+     * join; each row deletes only when its player is actually wiped. After
+     * a clean shutdown every match member was already untracked through
+     * teardown, so leftover rows are stale and are dropped instead. The
+     * flag is armed for this run last, so a failed load retries the same
+     * branch on the next enable.
      */
     public void loadCrashCleanup() {
         EngineStateRepository repository = engineStates;
@@ -121,7 +129,12 @@ public final class PlayerWipeService {
             return;
         }
         try {
-            pendingCrashWipes.addAll(repository.crashCleanupIds());
+            if (repository.getCrashFlag()) {
+                pendingCrashWipes.addAll(repository.crashCleanupIds());
+            } else {
+                repository.clearCrashCleanup();
+            }
+            repository.setCrashFlag(true);
         } catch (SQLException failed) {
             log.warning("Could not load crash cleanup rows: " + failed.getMessage());
         }

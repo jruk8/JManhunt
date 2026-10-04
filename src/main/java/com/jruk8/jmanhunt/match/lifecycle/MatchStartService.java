@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
+import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
@@ -61,8 +62,9 @@ public final class MatchStartService {
     /** Fallback origin spread: random point within this of 0,0. */
     static final int SURROUND_FALLBACK_RADIUS = 5000;
 
-    /** Match/player settings, engine settings, and logger. */
+    /** Match/player settings, config service, engine settings, and logger. */
     public record StartReads(MatchSettingsFacade match, PlayersSettingsFacade players,
+            ConfigService config,
             com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings, JManhuntLogger log) {
     }
 
@@ -306,7 +308,9 @@ public final class MatchStartService {
         gameStartListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JMatchStartEvent(instance.matchId(), lobbyId, matchCell));
         texts.messaging().playInstanceNeutral(instance);
-        announce.showStatusToInstance(instance, players);
+        if (reads.config().getBoolean("settings.server.status.show-on-start", true)) {
+            announce.showStatusToInstance(instance, players);
+        }
         announce.announceRoles(lobbyId, players, spectators);
     }
 

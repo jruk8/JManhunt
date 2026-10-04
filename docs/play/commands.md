@@ -28,7 +28,9 @@ every running match first and then every populated lobby. Four extras
 can be toggled under `settings.server.status`: win conditions, running
 time, enabled modifiers, and the gray `L{lobby}|G{game}` tag (off by
 default). Long rosters truncate, and dead players get a skull line
-(tune all of it in `messages.yml` under `manhunt.status-*`).
+(tune all of it in `messages.yml` under `manhunt.status-*`). The same
+section holds `show-on-start` (on by default): when off, matches start
+without the automatic roster while `/manhunt status` keeps working.
 
 ## Teams
 

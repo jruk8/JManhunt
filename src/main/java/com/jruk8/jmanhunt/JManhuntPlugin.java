@@ -247,8 +247,8 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
     /**
      * Reads the crash flag left by the previous run: a set flag means the
      * server crashed (disable never ran), so stale end reservations are
-     * cleared after orphan deletion already consumed them. The flag is
-     * then set for this run and cleared again on disable.
+     * cleared after orphan deletion already consumed them. The flag stays
+     * untouched here; the crash cleanup load arms it for this run later.
      */
     private void checkCrashFlag() {
         if (engineState == null) {
@@ -260,7 +260,6 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
                         + "clearing stale match reservations from the engine database.");
                 engineState.clearEndReservations();
             }
-            engineState.setCrashFlag(true);
         } catch (Exception exception) {
             logger().warning("Could not check the crash flag: " + exception.getMessage());
         }

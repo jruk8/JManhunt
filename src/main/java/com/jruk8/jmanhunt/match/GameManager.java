@@ -182,8 +182,8 @@ public final class GameManager implements MatchControl {
     private MatchStartService newMatchStart(
             com.jruk8.jmanhunt.config.WorldEngineConfig engine) {
         return new MatchStartService(
-                new MatchStartService.StartReads(matchSettings, playersSettings, engine,
-                        edge.log()),
+                new MatchStartService.StartReads(matchSettings, playersSettings,
+                        reads.configService(), engine, edge.log()),
                 new MatchStartService.StartMatch(services.playerStates(), services.compass(),
                         services.stats(), stateCommands, reads.worldEngine(), reads.lobbies(),
                         store, timeLimits, prestart, autostart),
@@ -580,7 +580,7 @@ public final class GameManager implements MatchControl {
         return stateCommands.applyPendingEndWipe(player);
     }
 
-    /** Loads surviving crash cleanup rows into the pending wipe set. */
+    /** Loads surviving crash cleanup rows into the pending wipe set after a crash. */
     public void loadCrashCleanup() {
         stateCommands.loadCrashCleanup();
     }

@@ -547,7 +547,7 @@ class GameStateCommandManagerTest {
     }
 
     @Test
-    void pendingCrashWipeRunsOnceAndClearsRow() throws Exception {
+    void trackMatchEntryArmsNoWipe() throws Exception {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
         EngineStateRepository repository = mock(EngineStateRepository.class);
@@ -556,15 +556,12 @@ class GameStateCommandManagerTest {
         Player player = mock(Player.class);
         UUID playerId = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(playerId);
-        doNothing().when(manager).resetPlayer(player);
 
         manager.trackMatchEntry(List.of(playerId));
         verify(repository).markCrashCleanup(playerId);
 
-        assertTrue(manager.applyPendingCrashWipe(player));
-        verify(manager).resetPlayer(player);
-        verify(repository).clearCrashCleanup(playerId);
         assertFalse(manager.applyPendingCrashWipe(player));
+        verify(manager, never()).resetPlayer(player);
     }
 
     @Test
@@ -597,12 +594,38 @@ class GameStateCommandManagerTest {
         UUID playerId = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(playerId);
         doNothing().when(manager).resetPlayer(player);
+        when(repository.getCrashFlag()).thenReturn(true);
         when(repository.crashCleanupIds()).thenReturn(Set.of(playerId));
 
         manager.loadCrashCleanup();
 
         assertTrue(manager.applyPendingCrashWipe(player));
         verify(manager).resetPlayer(player);
+        verify(repository).clearCrashCleanup(playerId);
+        assertFalse(manager.applyPendingCrashWipe(player));
+        verify(repository).setCrashFlag(true);
+    }
+
+    @Test
+    void loadCrashCleanupSkipsRowsWithoutCrash() throws Exception {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
+        EngineStateRepository repository = mock(EngineStateRepository.class);
+        when(plugin.engineStates()).thenReturn(repository);
+        GameStateCommandManager manager = spy(wipeManager(plugin));
+        Player player = mock(Player.class);
+        UUID playerId = UUID.randomUUID();
+        when(player.getUniqueId()).thenReturn(playerId);
+        when(repository.getCrashFlag()).thenReturn(false);
+        when(repository.crashCleanupIds()).thenReturn(Set.of(playerId));
+
+        manager.loadCrashCleanup();
+
+        assertFalse(manager.applyPendingCrashWipe(player));
+        verify(manager, never()).resetPlayer(player);
+        verify(repository, never()).crashCleanupIds();
+        verify(repository).clearCrashCleanup();
+        verify(repository).setCrashFlag(true);
     }
 
     @Test

@@ -193,6 +193,19 @@ public final class EngineStateRepository implements AutoCloseable {
         }
     }
 
+    /**
+     * Drops the whole crash cleanup roster. Clean shutdowns untrack every
+     * match member through teardown, so rows surviving to a clean enable are
+     * stale (a swallowed clear, or a pre-fix shutdown) and must not linger.
+     */
+    public synchronized void clearCrashCleanup() throws SQLException {
+        try (Connection connection = connection();
+                PreparedStatement delete = connection.prepareStatement(
+                        "DELETE FROM crash_cleanup")) {
+            delete.executeUpdate();
+        }
+    }
+
     /** Every UUID currently on the crash cleanup roster. Corrupt rows are skipped. */
     public synchronized Set<UUID> crashCleanupIds() throws SQLException {
         Set<UUID> ids = new LinkedHashSet<>();

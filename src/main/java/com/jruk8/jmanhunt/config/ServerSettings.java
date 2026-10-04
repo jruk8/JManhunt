@@ -162,5 +162,12 @@ public class ServerSettings extends OkaeriConfig {
         })
         private boolean showIds = false;
 
+        @CustomKey("show-on-start")
+        @Comment({
+                "Show the status roster automatically when a match starts.",
+                "Default: true"
+        })
+        private boolean showOnStart = true;
+
     }
 }

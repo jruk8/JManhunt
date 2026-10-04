@@ -503,7 +503,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     }
 
     /**
-     * Loads surviving crash_cleanup rows after enable.
+     * Loads surviving crash_cleanup rows after enable when the previous
+     * run crashed; drops stale rows after a clean shutdown.
      * See {@link PlayerWipeService}.
      */
     public void loadCrashCleanup() {

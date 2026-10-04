@@ -430,6 +430,7 @@ descriptions:
   "settings.server.status.show-ids": "Show lobby and game ids in status output."
   "settings.server.status.show-elapsed-time": "Show elapsed time in status output."
   "settings.server.status.show-modifiers": "Show modifiers in status output."
+  "settings.server.status.show-on-start": "Show the status roster automatically on match start."
   "settings.server.status.show-win-conditions": "Show win conditions in status output."
   "advanced.advanced-match-controls": "Match lifecycle: delays, reminders, rules."
   "advanced.lobbies": "Lobby queues, bounds exits, and the lobby world."
