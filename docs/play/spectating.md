@@ -12,6 +12,12 @@ with flight, an invisibility effect, and hiding from every alive
 player. Spectators see each other (marked by their own player heads);
 no alive player ever sees them.
 
+This makes spectators ideal tournament observers and casters:
+invisible flight cameras the players never notice. The match browser
+jumps between concurrent matches, the player browser plus lock-on
+follow keeps a shoutcaster glued to the action, and the watched
+players see nothing, so point-of-view recordings stay clean.
+
 ## Role Versus Mode
 
 The role is an assignment; the mode is the flight-and-hidden state.
@@ -107,3 +113,5 @@ runs, they return to the lobby as `none` with their inventory restored.
 - There is no config for fake spectator mode; it is always on.
 - Use `/manhunt setplayer <name> spectator` to move someone into the
   spectator role, or the role pads and lobby flows that already do.
+- Casters covering several matches need `jmanhunt.spectator.swaplobby`
+  to hop between lobbies from the match browser.

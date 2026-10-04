@@ -30,6 +30,7 @@ step-by-step tour.
 - **World Reset Engine** » Automates fresh cell creation for each match, so your Manhunts are ready in seconds.
 - **Hunt Tracking** » Real-time hunter/runner compass with deep config options, tweaks and targeting logic. Never lose your runners.
 - **Effortless Lobby System** » A guided setup with team selection, queue management, and tunable boundaries.
+- [**Team Chat**](play/commands.md#team-chat) » Coordinate privately with `@team`: same-team lines stay inside the match or lobby.
 - **Highly Configurable** » 280+ config options for all levels of players, designed to be accessible, where defaults are plug-and-play.
 - **Modifier Framework** » Build custom twists with Minecraft commands or our JMHScript.
 - **Serious for deployments** » Full admin CLI support, placeholders, and even crash recovery.
