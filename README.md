@@ -6,6 +6,8 @@
 
 ### [Wiki](https://jruk8.github.io/JManhunt/) · [Community Mods](https://discord.com/invite/hkWmCVmWDC) · [Donate](https://jruk8.github.io/JManhunt/donate/)
 
+<br>
+
 <!-- Key Features Animated Section -->
 <img src="docs/assets/core/clip-system/clip-header.gif" alt="Key Features Header" width="100%">
 <img src="docs/assets/core/clip-system/clips/clip-one-click.gif" alt="One-Click Setup" width="50%" align="top"><img src="docs/assets/core/clip-system/clips/clip-easy-matches.gif" alt="Easy Matches" width="50%" align="top"><img src="docs/assets/core/clip-system/clips/clip-compass.gif" alt="Compass Target Switching and Signal Interference" width="50%" align="top"><img src="docs/assets/core/clip-system/clips/clip-gui.gif" alt="GUI Menus and Usage" width="50%" align="top">
