@@ -223,6 +223,12 @@ public final class PlayerConnectionListener implements Listener {
         instance.recordDeath(playerId, playerName != null ? playerName : playerId.toString(), role);
         reads.states().setRole(playerId, Role.NONE);
         instance.deactivate(playerId);
+        // Elimination is terminal for match membership: deactivated players
+        // rejoin to the lobby, never the match, so the owed end wipe is
+        // marked now, while the role still proves participant gear.
+        if (this.match.game().stateCommands().endWipeEnabled(instance.originLobbyId())) {
+            this.match.game().stateCommands().markPendingEndWipe(List.of(playerId));
+        }
         this.match.compass().clearHotspotHistory(playerId);
         this.match.compass().reconcileTeammateModes(instance);
         if (playerName != null) {

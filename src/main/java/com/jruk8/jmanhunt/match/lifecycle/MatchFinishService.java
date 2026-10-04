@@ -269,6 +269,7 @@ public final class MatchFinishService {
             player.showTitle(Title.title(titleComponent, Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
+        markOfflineEndWipes(instance);
         services.playerStates().resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
         texts.messaging().playInstanceSound(instance, winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
         services.stats().completeMatch(instance.matchId(), winner);
@@ -414,8 +415,11 @@ public final class MatchFinishService {
 
     /**
      * Defers the match-end wipe for assigned participants who are
-     * offline at teardown; they get wiped on rejoin instead. Must run
-     * before roles reset, while roles still identify participants.
+     * offline; they get wiped on rejoin instead. Must run before roles
+     * reset, while roles still identify participants: finish and cancel
+     * call it ahead of the offline reset, and the teardown call covers
+     * the paths without one (shutdown, prestart expiry). Marking twice
+     * is harmless; eliminated players are marked at elimination time.
      */
     private void markOfflineEndWipes(GameInstance instance) {
         if (!services.stateCommands().endWipeEnabled(instance.originLobbyId())) {
@@ -527,6 +531,7 @@ public final class MatchFinishService {
                     Component.empty(),
                     Title.Times.times(Duration.ofMillis(500), Duration.ofSeconds(3), Duration.ofMillis(500))));
         }
+        markOfflineEndWipes(instance);
         services.playerStates().resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
         texts.messaging().playInstanceSound(instance, "game.cancelled-sound");
 

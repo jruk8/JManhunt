@@ -32,8 +32,9 @@ public final class PlayerResetService {
     }
 
     /**
-     * Full match-end style wipe for one player: inventory, vitals, and
-     * advancements. Used by auto-leave so a removed player restarts clean.
+     * Full match-end style wipe for one player: inventory, ender chest,
+     * vitals, and advancements. Used by auto-leave so a removed player
+     * restarts clean.
      */
     public void resetPlayer(Player player) {
         resetPlayerStats(player, true, true);
@@ -69,9 +70,15 @@ public final class PlayerResetService {
         player.getInventory().setItemInOffHand(null);
     }
 
+    /** Clears the player inventory plus the ender chest. Package-visible for tests. */
+    static void clearContainers(Player player) {
+        player.getInventory().clear();
+        player.getEnderChest().clear();
+    }
+
     private void resetPlayerStats(Player player, boolean clearInventory, boolean wipeAdvancements) {
         if (clearInventory) {
-            player.getInventory().clear();
+            clearContainers(player);
         }
         player.setLevel(0);
         player.setExp(0.0f);
