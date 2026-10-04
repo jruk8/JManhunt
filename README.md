@@ -51,10 +51,7 @@ Find these modifiers on our [**Discord**](https://discord.gg/hkWmCVmWDC) communi
 
 1. Run **`/manhunt`** and click the **green button**.
 
-**That's it!** Performant World Engine and parallel matches, all in one click.
-
-Alternatively, you can run `/manhunt setup` for a more intermediate dialogue-based setup.
-See more with our comprehensive [**documentation**](https://jruk8.github.io/JManhunt/).
+**That's it!** Performant World Engine and parallel matches, all in one click. Alternatively, run `/manhunt setup` for a more intermediate dialogue-based setup.
 
 ### Requirements
 
@@ -71,7 +68,7 @@ See more with our comprehensive [**documentation**](https://jruk8.github.io/JMan
 - [Documentation](https://jruk8.github.io/JManhunt/)
 - [GitHub](https://github.com/jruk8/JManhunt)
 
-### ☕ Donate
+### Donate ☕
 
 Developing JManhunt has taken me a lot of time and effort.
 You can help support the upkeep and future of this plugin by making a [**small donation**](https://ko-fi.com/jruk). **Thanks!** 👐
