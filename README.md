@@ -2,27 +2,15 @@
 
 ![JManhunt banner](docs/assets/core/banner-1280x640.png)
 
-<p style="font-size: 20px; font-weight: bold; margin: 10px 0;">
-  JManhunt is a deeply customizable plugin for 26.x Manhunts.
-</p>
+<h3>JManhunt is a deeply customizable plugin for 26.x Manhunts.</h3>
 
 ### [Wiki](https://jruk8.github.io/JManhunt/) · [Community Mods](https://discord.com/invite/hkWmCVmWDC) · [Donate](https://jruk8.github.io/JManhunt/donate/)
 
-<!-- Header: Polished header with spinning compass -->
-<img src="docs/assets/core/clip-system/clip-header.gif" alt="Key Features Header" style="width: 100%; display: block;">
+<!-- Key Features Animated Section -->
+<img src="docs/assets/core/clip-system/clip-header.gif" alt="Key Features Header" width="100%">
+<img src="docs/assets/core/clip-system/clips/clip-one-click.gif" alt="One-Click Setup" width="50%" align="top"><img src="docs/assets/core/clip-system/clips/clip-easy-matches.gif" alt="Easy Matches" width="50%" align="top"><img src="docs/assets/core/clip-system/clips/clip-compass.gif" alt="Compass Target Switching and Signal Interference" width="50%" align="top"><img src="docs/assets/core/clip-system/clips/clip-gui.gif" alt="GUI Menus and Usage" width="50%" align="top">
 
-<!-- First Horizontal Group -->
-<div style="display: flex; gap: 0;">
-  <img src="docs/assets/core/clip-system/clips/clip-one-click.gif" alt="One-Click Setup" style="width: 50%;">
-  <img src="docs/assets/core/clip-system/clips/clip-easy-matches.gif" alt="Easy Matches" style="width: 50%;">
-</div>
-<!-- Second Horizontal Group -->
-<div style="display: flex; gap: 0;">
-  <img src="docs/assets/core/clip-system/clips/clip-compass.gif" alt="Compass Target Switching and Signal Interference" style="width: 50%;">
-  <img src="docs/assets/core/clip-system/clips/clip-gui.gif" alt="GUI Menus and Usage" style="width: 50%;">
-</div>
-
-### **Test server**: `play.alttari.games
+### **Test server**: `play.alttari.games`
 
 </div>
 
