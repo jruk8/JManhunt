@@ -1,0 +1,261 @@
+## [5.0.0] - 2026-10-04
+
+### 🚀 Features
+
+- [**breaking**] Multi instances draft 1
+- Lobbyworld and gameworld native
+- 25 new features or fixes
+- Compass spin, setplayer, lobby, sublobby, lobby presets, win cons
+- 26 feats or fixes
+- Phase 1
+- Phase 2 (compass cycling)
+- Phase 3 (silent flag -silent, autostart minimums, quickstart polish, dev autocomplete remove)
+- Phase 4 (okaeri config, lobby-config, adds)
+- Phase E
+- Worldengine lobbyconfig command
+- Nag seeding, role pads silent
+- Per-role compass tracking distance
+- Compass interference, compass spin fix, compass refresh fix
+- Feats
+- Interference options, compass polish
+- Surround feature on non-WE, fixes
+- Care block
+- Tutorial adds
+- Cancel conditions
+- Spawn algo additions, lobby bounds particles on debug
+- Placeholders refactor and new ones, tutorial changes
+- Phase 3
+- Modifiers GUI
+- Many changes and fixes and ux
+- 14 feats and fixes
+- Gui list reset, dialog fixes, and message cleanup
+- Compass click cooldown unify
+- Spawn height leveling
+- Modifier behavior options group
+- Modifier import export
+- Modifier creator backend and create cli
+- Modifier creator gui
+- Creator docs and qa fixes
+- Add quad and twin panel shells for creator roots
+- Rebuild edit preset root on quad panel
+- Add modifier behavior panels with options glow
+- Rework command lists, validation, and feedback
+- Tag expression engine with if, math, min-max-clamp, messages, sounds, exit
+- Player and global stats plus flag stores
+- PAPI parsing plus kill and gapple default modifiers
+- Showcase plus swap modifiers
+- Per-lobby setting and modifier overrides with GUI sessions
+- Compass teammate tracking
+- One-click setup, support links, batch docs sweep
+- Support autocomplete and root panel shortcut
+- Author head profiles, dialog description first, icon sprite previews
+- Destructive delete sound and compass failure sound
+- Split ON_EVERY_KILL into ON_MOB_KILL and ON_PLAYER_KILL
+- Sublobby spectator policy, setplayer force gate and match validation
+- Fake spectator mode replacing vanilla spectator gamemode
+- Spectator toolbar with match browser, player follow, and lock-on
+- Lobby bounds exit behavior with keep and exit modes
+- .jmhlobby bundles pairing schematics with lobby bounds and teleports
+- Confirm overwrite on schem bundle load, warn overwritten lobby ids
+- Keep one-decimal teleport precision in lobby bundles
+- Shared reusable end dimension pool with portal assignment
+- Pseudoborder wall particles with interval and sine-wave pulse
+- Author auto-set and override clear rerun guard
+- Word comparison operators and command dialog help
+- Disable-brutes game boost
+- Team chat with aliases and spectator visibility
+- Spawn close to structure selection
+- Cache-only compass switching decoupled from refresh cooldown
+- Compass chat messages and friendly fire kill broadcasts
+- Spectator menu unification, follow exits, role decoupling
+- Advanced config root with General/Advanced settings panels
+- Lobby collisions, autostart cancel sound, end all
+- More robust end dim logs
+- Relocate lobby presets to dev config and reorganize settings
+- Compass frontend, spawn camp roles, and support prefix
+- Win screen reasons, meta panel, and rules options
+- JMHScript behaviors, control tags, and event args
+- JMHScript lists, roster, locations, math, and loops
+- JMHScript role flags, not conditions, and null logging
+- Explicit roles for rflag, rmessage, and rsound
+- Double-shift follow exit and team chat prefix
+- *(jmhscript)* Add def functions, sqrt/cbrt/root tags
+- *(modifiers)* Blacklist dangerous commands from dispatch
+- Spawn camp first punishment plus kill on second offense
+- Compass delta blink, strict auto refresh, right-click analysis
+- Per-option compass signal interference
+- Once-per-match modifier toggles, status ids off by default
+- Autostart maximums and hunter delta reverse
+- Leveled debug output and remove debug root setting
+- Support decimals in tag ordering comparisons
+- Rename kill triggers to actor verbs with killer semantics
+- New tag <run:command> dispatches console commands
+- Run, distance null, runs-on idiomaticy
+- Refresh sound, blacklist, afk color, and autostart defaults
+- Pre-start BEFORE label, import duplicate warning, toggle-all confirm
+- Compass gates, frozen click distances, show-distance, invisible interference
+- Def-aware warnings, flag aliases, ON_DAMAGE_TAKEN
+- Oxford roster, death spectators, containerized match users
+- Restructure compass config into actions, obtaining, feedback, distance-limits
+- Analysis costs, player-stats interference, doom-shortened analyses
+- Announce sounds toggle, role-pads move, lobby locator off, reload timing
+- Quiet dispatch, phasitem tag, named pmessage/psound, modifiers test runs
+- Shared icon dialog, meta icon sprite, editor twin panel, test-a-command memory
+- *(commands)* Engine escapes, <format> tag, silent-null fixes
+- Spectator rechargeable snowball in toolbar slot 4
+- Mutual spectator visibility with profile heads
+- Match started sound after prestart
+- Pmsg, gmsg, rmsg tag aliases
+- Compass signal inaccuracy with donut sampling
+- Compass hotspot accuracy from idle targets
+- Compass actionbar accuracy percentage
+- Versus autostart countdown style plus support and nearby message fixes
+- Compass cost option plus failure cooldown and cost sounds
+- Modifier toggle dedup plus distance null and test dialog fixes
+- Location reorder plus proximity, role-all, and world tags
+- List, string, cooldown, and fallback tags; remove coalesce operator
+- Vector math and location shift tags
+- Player state, slot, and title tags plus exp-level stat
+- Async mods reload with diff report and targeted intervals
+- Centralize mods duplicate checks and document mods layout
+- Lombok message getters, raw send primitives, section pinning
+- ON_DEATH trigger, random-pick lists, pinned dispatch
+
+### 🐛 Bug Fixes
+
+- Fixes
+- End-dimension cleanup
+- *(checkstyle)* 205 fixes
+- Defaults and crlf to lf
+- Centralize gui click sounds and debounce fast clicks
+- Prefill dialog strings, clean current lore, clamp floats
+- Config defaults changes
+- Align exported message schema default with bundled text
+- Drop compass-only duration tag from modifier validation
+- Move import button, fix preset lore, document gui batch
+- Gamemode role pads, preset meta, behavior options, dialog keys, selectors
+- Windows test fail and checkstyle
+- Live preset member counts, preset lore description, empty preset guard, member grouping
+- Override global sound, support rename, status names, worldedit comment
+- Meta refresh, delete cancel target, line clamp, no-change notice
+- Teammate compass guards and death refresh
+- Border guards, rubberband height, particle spread
+- Count loaded end worlds in pool scan across layouts
+- Lobby teleport, spectator flow, and border behavior
+- Skip tag-only lines that evaluate to blank instead of dispatching
+- Update buggy defaults
+- Lock spectator toolbar, reset fake-spectator fall, refuse portals
+- Freeze match clock at end and scope stats to players
+- Modifier defaults (known broken modifier, will get fixed in next commits)
+- Preserve creative flight, cancel empty matches, wipe rejoin state
+- Reload-safe modifier intervals and mid-match toggles
+- Paste lobby presets from bundled schematics
+- Pseudo-border interval, spacing, particle types, and thinning
+- Faster border enforcement, never in lobby world
+- Default messages color unify
+- Simplify get-stronger-on-kill
+- Resolve given-to compass toggles from config
+- Invalid default sound id
+- Volume ux
+- Compass death NPE, autostart dupe, logger funnel, drop three game rules
+- Sublobby policies queue child matches
+- Promote queued spectators on match start
+- *(commands)* Resolve same-line tags left-to-right
+- Transfer spectators to oldest running match on end
+- Persist in-match players for post-crash wipe
+- Test-run error output and in-game logger colors
+- Prestart targeting, snowball restore, spectate feedback, cancel bar
+- Scope match traffic to match id; split lobby status counts
+- Default message for snowball
+- Split cooldown tags into pcooldown and gcooldown
+- Hotspot getting cleared on dcs and death  docs: add compass system sheets
+- Align compass analysis delay defaults with schema
+- Add sound to speedrunner-gapple-on-low-hp
+- Replace mudkipdev sound explorer with jsoundexplorer
+- Crash-only wipes, add match-start status flag
+- Compass no-location early exit and bad-signal scroll lock
+- Lobby gen teleport, lobby team chat, collisions, advancements
+- Wipe offline members on match end, clear ender chests
+
+### 📚 Documentation
+
+- Update README
+- Update config comment
+- Update AGENTS
+- Docs cleanup
+- Some doc changes
+- Update README
+- Defaults changes and LF line endings
+- Empty changelog for v5
+- Batch user-facing changes across sounds, modifiers, compass, status
+- *(modifiers)* Split page, add flow callouts and <format> rows
+- Correct fail-sound default volume and key
+- Draft 1
+- Phase 1 start track and Lobby System home
+- Address phase 1 review on getting started gateway
+- Steer non-dedicated setups to the setup tour
+- Fold dedicated-server note into gateway prose
+- Phase 2 trim world engine children
+- Phase 3 play track into play folder
+- Phase 4 casual-first modifiers track
+- Phase 5 settings reference with compass split
+- Phase 6 advanced track, DCO, final audit
+- Drop survival-server steering from gateway
+- General improvements
+- Add logo, navtabs, announcement bar
+- Update style
+- Update logo
+- Update config comments
+- Update mkdocs server ip
+- Update README.md
+- Donation page, team chat visibility, spectator framing
+- Require signed-off commits
+- *(license)* Media license
+- Huge docs rehaul
+- *(readme)* Fix broken formatting
+- Update README.md
+
+### 🚜 Refactor
+
+- [**breaking**] Group classes into domain packages
+- Initial schema
+- Compass
+- Gamemana
+- Gamemana
+- Match handling
+- Gamemanager 2
+- Move to subpackages
+- Modifiers to okaeri
+- Unify modifier option rows with settings lore schema
+- Drop lobby-preset option, clamp headstarts, rename lobby, buffer default 3
+- Pseudo-borders for all matches and shared dimension worlds
+- Extract helpers to satisfy checkstyle file length
+- Rename analysis cancel-immediate to cancel-early
+- Split oversized match services under 600 lines
+- Move compass item, inventory lock, and signal paths; retune defaults
+- Match-only message audience; nest hotspot under inaccuracy
+- Interference check-on options plus line-of-sight default
+- Split modifiers.yml into mods/modifiers and mods/presets
+- Typed message subconfigs for all consumers, delete keyed sends
+- Typed settings sections, override facades, config Lombok
+- Narrow DI edges, group ctors into records, extract tag and menu units
+- Seamed command units for reload debug help start end quickstart
+- Seamed command units for remaining subcommands
+
+### 🎨 Styling
+
+- Resolve checkstyle warnings except ManhuntCommand FileLength
+
+### 🧪 Testing
+
+- Remove default config tests
+
+### ⚙️ Miscellaneous Tasks
+
+- *(changelog)* Update for v4.2.3 [skip ci]
+
+### 💼 Other
+
+- Ssot for config defaults
+- Add default schematics
+- Setup GUI push and leather kit rename
