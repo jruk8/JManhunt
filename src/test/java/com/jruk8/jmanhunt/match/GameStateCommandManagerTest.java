@@ -82,6 +82,12 @@ class GameStateCommandManagerTest {
     }
 
     @Test
+    void deathTriggerIsKnown() {
+        assertTrue(ModifierTriggers.KNOWN.contains("ON_DEATH"));
+        assertTrue(ModifierTriggers.runsOn(List.of("on_death"), "ON_DEATH"));
+    }
+
+    @Test
     void matchingIgnoresCaseAndSurroundingWhitespace() {
         assertEquals("on_first_enter_nether",
                 ModifierTriggers.normalizeTrigger("  on_first_enter_nether "));

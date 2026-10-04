@@ -97,7 +97,7 @@ final class TagSyntaxErrors {
             return;
         }
         if ("random-pick".equals(name) && args != null) {
-            List<String> items = CommandPlaceholders.splitPickArgs(args);
+            List<String> items = CommandPlaceholders.pickItems(args);
             for (int index = 0; index < items.size(); index++) {
                 if (CommandPlaceholders.parsePickItem(items.get(index)).isEmpty()) {
                     found.add("Skipping invalid <random-pick> item (" + items.get(index).trim()
@@ -143,7 +143,7 @@ final class TagSyntaxErrors {
         if (args == null || args.isBlank()) {
             return Optional.of("Tag <random-pick> needs at least one item.");
         }
-        for (String item : CommandPlaceholders.splitPickArgs(args)) {
+        for (String item : CommandPlaceholders.pickItems(args)) {
             if (CommandPlaceholders.parsePickItem(item).isPresent()) {
                 return Optional.empty();
             }

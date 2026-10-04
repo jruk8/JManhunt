@@ -30,7 +30,8 @@ public final class ModifierTriggers {
             "ON_RESPAWN",
             "ON_SPEEDRUNNER_RESPAWN",
             "ON_HUNTER_RESPAWN",
-            "ON_DAMAGE_TAKEN");
+            "ON_DAMAGE_TAKEN",
+            "ON_DEATH");
 
     /** Per-activation versus per-executor random behavior. */
     enum TriggerScope {

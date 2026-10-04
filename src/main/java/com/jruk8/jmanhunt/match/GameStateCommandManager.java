@@ -226,8 +226,9 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
 
     /**
      * Event dispatch with trigger args behind {@code <args:index>}:
-     * kill victims, portal worlds, advancement keys, or the death
-     * location list, depending on the trigger.
+     * kill victims, portal worlds, advancement keys, the death
+     * location list, or the dead player plus killer names,
+     * depending on the trigger.
      */
     public void runEventModifiers(String event, Player player, long matchId, List<String> eventArgs) {
         if (player == null) {
@@ -428,7 +429,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                         context.scope().warn("'exit' must stand alone on its line, skipping: " + command);
                         continue;
                     }
-                    if (!dispatchModifierLine(parsed, context, blocked)) {
+                    if (!dispatchModifierLine(parsed, context, blocked, player)) {
                         return;
                     }
                 }
@@ -443,10 +444,12 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      * line names a blacklisted command: the hit logs severe and the
      * caller aborts the rest of the list. A line that resolved to
      * pure {@code "null"} warns with the source line and never
-     * dispatches, like blank lines.
+     * dispatches, like blank lines. A non-null executor pins the
+     * dispatch to their world and facing; a null one keeps the plain
+     * console context.
      */
     private boolean dispatchModifierLine(String parsed, TagContext context,
-            Collection<String> blocked) {
+            Collection<String> blocked, Player player) {
         Optional<String> dispatchable = TagControlFlow.dispatchableLine(parsed);
         if (dispatchable.isPresent() && TagControlFlow.isPureNull(dispatchable.get())) {
             edge.log().warning("Skipping command that resolved to pure \"null\" at "
@@ -460,7 +463,13 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                     + "; aborting the command list.");
             return false;
         }
-        dispatchable.ifPresent(QuietConsoleDispatch::dispatch);
+        if (dispatchable.isPresent()) {
+            if (player == null) {
+                QuietConsoleDispatch.dispatch(dispatchable.get());
+            } else {
+                QuietConsoleDispatch.dispatchAt(player, dispatchable.get());
+            }
+        }
         return true;
     }
 

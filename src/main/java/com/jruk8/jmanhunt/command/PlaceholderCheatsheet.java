@@ -18,7 +18,7 @@ public final class PlaceholderCheatsheet {
             Map.entry("random-mob", new String[]{"<random-mob>", "random living entity type"}),
             Map.entry("random-item", new String[]{"<random-item>", "random item material"}),
             Map.entry("random-num", new String[]{"<random-num:min,max>", "random whole number"}),
-            Map.entry("random-pick", new String[]{"<random-pick:a,b>", "random entry from the list"}),
+            Map.entry("random-pick", new String[]{"<random-pick:a,b>", "random entry from a,b or [a,b]"}),
             Map.entry("random-player", new String[]{"<random-player>", "random participating player"}),
             Map.entry("all-players", new String[]{"<all-players>",
                     "participant names as a list (:ROLE filters)"}),
@@ -174,7 +174,7 @@ public final class PlaceholderCheatsheet {
         lines.add("<green>»</green> <white><random-num:min,max></white> "
                 + "<gray>random whole number</gray>");
         lines.add("<green>»</green> <white><random-pick:a,b></white> "
-                + "<gray>random entry from the list</gray>");
+                + "<gray>random entry from a,b or [a,b]</gray>");
         lines.add("<gray>For statistics, if conditionals, and placeholders, "
                 + "read the Modifiers docs page.</gray>");
         return lines;

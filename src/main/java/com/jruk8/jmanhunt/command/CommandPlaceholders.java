@@ -541,8 +541,10 @@ public final class CommandPlaceholders {
     /**
      * Picks one item from a comma list. Items may be bare, double-quoted, or
      * single-quoted, and may hold spaces; spaces after a comma are skipped.
-     * Invalid items warn with the item in parentheses plus its index while
-     * another candidate is tried, up to ten draws or until every unique item
+     * The args may also be one bracketed list ({@code [a,b]}), which splits
+     * with list semantics instead of the quote-aware split. Invalid items
+     * warn with the item in parentheses plus its index while another
+     * candidate is tried, up to ten draws or until every unique item
      * is exhausted. Total failure warns and yields an empty string.
      */
     static String randomPick(String args, ModifierTagScope scope, String tag) {
@@ -550,7 +552,7 @@ public final class CommandPlaceholders {
             scope.warn("Empty <random-pick:...> tag: " + tag);
             return "";
         }
-        List<String> rawItems = splitPickArgs(args);
+        List<String> rawItems = pickItems(args);
         Set<String> seen = new LinkedHashSet<>();
         List<Integer> candidates = new ArrayList<>();
         for (int index = 0; index < rawItems.size(); index++) {
@@ -571,6 +573,17 @@ public final class CommandPlaceholders {
         }
         scope.warn("No valid <random-pick> item, using an empty string: " + tag);
         return "";
+    }
+
+    /**
+     * Candidate items for a pick: a bracketed list literal parses with the
+     * shared list splitter, anything else with the quote-aware comma split.
+     */
+    static List<String> pickItems(String args) {
+        if (TagLists.isList(args)) {
+            return TagLists.parse(args);
+        }
+        return splitPickArgs(args);
     }
 
     /** Splits pick args on commas outside single or double quotes. */

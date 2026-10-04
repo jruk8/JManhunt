@@ -109,6 +109,9 @@ public final class PlayerCombatListener implements Listener {
         } else if (role == Role.HUNTER) {
             handleHunterDeath(player, instance, quiet);
         }
+        if (role.isParticipant()) {
+            fireDeathTrigger(player, instance);
+        }
         world.compass().clearLocksOnTargetDeath(player.getUniqueId());
         if (!quiet) {
             broadcastFriendlyFireKill(instance, player);
@@ -116,6 +119,14 @@ public final class PlayerCombatListener implements Listener {
         // Next tick: state is final, and compass items are safe to touch
         // outside the death event. Unlocked picks re-resolve at once.
         tasks.run(() -> world.compass().refreshInstance(instance));
+    }
+
+    /** Fires ON_DEATH for the dead player: dead name plus killer name or "null". */
+    private void fireDeathTrigger(Player player, GameInstance instance) {
+        Player killer = player.getKiller();
+        String killerName = killer == null ? "null" : killer.getName();
+        this.match.game().stateCommands().runEventModifiers("ON_DEATH", player,
+                instance.matchId(), List.of(player.getName(), killerName));
     }
 
     /** Mocking lobby broadcast for same-team kills, when enabled. */

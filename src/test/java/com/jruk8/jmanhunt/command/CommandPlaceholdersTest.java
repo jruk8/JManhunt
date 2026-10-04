@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.function.Function;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -254,6 +255,42 @@ class CommandPlaceholdersTest {
                 "Steve", 0, 0, 0, matchContext(warnings));
         assertEquals("give Steve ", result);
         assertEquals(3, warnings.size());
+    }
+
+    @Test
+    void randomPickListFormDrawsListedItems() {
+        for (int attempt = 0; attempt < 25; attempt++) {
+            List<String> warnings = new ArrayList<>();
+            String result = CommandPlaceholders.replace("give <p> <random-pick:[coal, dirt]>",
+                    "Steve", 0, 0, 0, matchContext(warnings));
+            assertTrue(result.equals("give Steve coal") || result.equals("give Steve dirt"), result);
+            assertTrue(warnings.isEmpty());
+        }
+    }
+
+    @Test
+    void randomPickListFormSingleItem() {
+        List<String> warnings = new ArrayList<>();
+        assertEquals("give Steve only", CommandPlaceholders.replace("give <p> <random-pick:[only]>",
+                "Steve", 0, 0, 0, matchContext(warnings)));
+        assertTrue(warnings.isEmpty());
+    }
+
+    @Test
+    void randomPickListFormUnquotesItems() {
+        List<String> warnings = new ArrayList<>();
+        assertEquals("give Steve golden apple", CommandPlaceholders.replace(
+                "give <p> <random-pick:[\"golden apple\"]>", "Steve", 0, 0, 0, matchContext(warnings)));
+        assertTrue(warnings.isEmpty());
+    }
+
+    @Test
+    void randomPickEmptyListYieldsEmpty() {
+        List<String> warnings = new ArrayList<>();
+        String result = CommandPlaceholders.replace("give <p> <random-pick:[]>",
+                "Steve", 0, 0, 0, matchContext(warnings));
+        assertEquals("give Steve ", result);
+        assertFalse(warnings.isEmpty());
     }
 
     @Test

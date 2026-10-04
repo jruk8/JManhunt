@@ -68,9 +68,11 @@ class CommandSyntaxTest {
     void randomPickRules() {
         assertTrue(CommandSyntax.error("give <p> <random-pick:apple, bread>").isEmpty());
         assertTrue(CommandSyntax.error("give <p> <random-pick:\"golden apple\", bread>").isEmpty());
+        assertTrue(CommandSyntax.error("give <p> <random-pick:[apple, bread]>").isEmpty());
         assertTrue(CommandSyntax.error("give <p> <random-pick:>").isPresent());
         assertTrue(CommandSyntax.error("give <p> <random-pick>").isPresent());
         assertTrue(CommandSyntax.error("give <p> <random-pick:\"oops, 'oops>").isPresent());
+        assertTrue(CommandSyntax.error("give <p> <random-pick:[]>").isPresent());
     }
 
     @Test

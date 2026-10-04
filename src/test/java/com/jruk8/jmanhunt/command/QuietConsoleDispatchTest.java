@@ -9,14 +9,17 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.bukkit.GameRule;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Mute-around-dispatch ordering for {@link QuietConsoleDispatch}.
@@ -58,5 +61,32 @@ class QuietConsoleDispatchTest {
         InOrder order = inOrder(world);
         order.verify(world).setGameRule(isNull(), eq(false));
         order.verify(world).setGameRule(isNull(), eq(true));
+    }
+
+    @Test
+    void dispatchAtWrapsLineAndMutesExecutorWorld() {
+        Player executor = mock(Player.class);
+        UUID executorId = UUID.randomUUID();
+        when(executor.getUniqueId()).thenReturn(executorId);
+        World world = mock(World.class);
+        when(executor.getWorld()).thenReturn(world);
+        doReturn(Boolean.TRUE).when(world).getGameRuleValue((GameRule<Boolean>) null);
+        List<String> delivered = new ArrayList<>();
+        QuietConsoleDispatch.dispatchAt(executor, null, "summon pig 1 2 3", delivered::add);
+        assertEquals(List.of("execute as " + executorId + " at @s run summon pig 1 2 3"), delivered);
+        InOrder order = inOrder(world);
+        order.verify(world).setGameRule(isNull(), eq(false));
+        order.verify(world).setGameRule(isNull(), eq(true));
+    }
+
+    @Test
+    void dispatchAtNullWorldDeliversWithoutMute() {
+        Player executor = mock(Player.class);
+        UUID executorId = UUID.randomUUID();
+        when(executor.getUniqueId()).thenReturn(executorId);
+        when(executor.getWorld()).thenReturn(null);
+        List<String> delivered = new ArrayList<>();
+        QuietConsoleDispatch.dispatchAt(executor, null, "say hi", delivered::add);
+        assertEquals(List.of("execute as " + executorId + " at @s run say hi"), delivered);
     }
 }

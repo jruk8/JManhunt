@@ -31,7 +31,7 @@ Commands can use these tags:
 | `<all-players:HUNTER>` | Same, but only hunters. `SPEEDRUNNER` works too. |
 | `<random-player>` | One random participating player in this match. |
 | `<random-num:4,12>` | A random whole number between 4 and 12. Order does not matter: `<random-num:12,4>` works the same. |
-| `<random-pick:coal, "dirt", 'sand'>` | One random item from the list. Items can be bare, `"double-quoted"`, or `'single-quoted'`, and may hold spaces. |
+| `<random-pick:coal, "dirt", 'sand'>` | One random item from the list. Items can be bare, `"double-quoted"`, or `'single-quoted'`, and may hold spaces. A bracketed list works too (`<random-pick:[coal, dirt]>`), but it splits every comma, so quoted commas need the `a,b` form. |
 
 Tags evaluate from the inside out, so they nest. The bundled
 `random-start-resources` modifier uses this to hand out a random ore stash:

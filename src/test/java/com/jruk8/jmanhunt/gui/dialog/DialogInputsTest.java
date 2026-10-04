@@ -111,7 +111,7 @@ class DialogInputsTest {
     void triggerKeysAreIndexed() {
         assertEquals("trigger_0", DialogInputs.triggerKey(0));
         assertEquals("trigger_13", DialogInputs.triggerKey(13));
-        assertEquals(15, com.jruk8.jmanhunt.match.ModifierTriggers.KNOWN.size());
+        assertEquals(16, com.jruk8.jmanhunt.match.ModifierTriggers.KNOWN.size());
     }
 
     @Test

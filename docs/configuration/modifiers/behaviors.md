@@ -78,6 +78,7 @@ The commands (other than cleanup) run on these triggers:
 | `ON_SPEEDRUNNER_RESPAWN` | When a speedrunner respawns (only the executing player) |
 | `ON_HUNTER_RESPAWN` | When a hunter respawns (only the executing player) |
 | `ON_DAMAGE_TAKEN` | When a player takes damage from any source (runs for the damaged player only) |
+| `ON_DEATH` | When a participant dies (runs for the dead player only; `<args:0>` is the exact dead-player name, `<args:1>` is the exact killer name or null) |
 
 If `runs-on` is omitted, the modifier defaults to `ON_START`.
 To count every kill, enable both `ON_MOB_KILLED` and `ON_PLAYER_KILLS`.

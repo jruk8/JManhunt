@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -40,6 +41,7 @@ import com.jruk8.jmanhunt.stats.Stats;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.UUID;
@@ -52,7 +54,8 @@ class PlayerCombatListenerDeathTest {
 
     private record Fixture(PlayerCombatListener listener, Player victim, UUID victimId,
             PlayerStateStore players, GameInstance instance, CompassManager compass,
-            FakeSpectatorService fakes, PlayerRespawnListener respawn) {
+            FakeSpectatorService fakes, PlayerRespawnListener respawn,
+            GameStateCommandManager commands) {
     }
 
     private static TaskScheduler immediateTasks() {
@@ -72,7 +75,8 @@ class PlayerCombatListenerDeathTest {
         when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore players = new PlayerStateStore();
         GameManager game = mock(GameManager.class);
-        when(game.stateCommands()).thenReturn(mock(GameStateCommandManager.class));
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        when(game.stateCommands()).thenReturn(commands);
         when(game.flagStore()).thenReturn(mock(FlagStore.class));
         when(game.messaging()).thenReturn(mock(MatchMessaging.class));
         StatsManager stats = mock(StatsManager.class);
@@ -95,7 +99,6 @@ class PlayerCombatListenerDeathTest {
         when(game.instanceOf(victimId)).thenReturn(Optional.of(instance));
         PlayerSettings settings = new PlayerSettings();
         settings.getRespawn().getHunter().setEnabled(false);
-        TaskScheduler tasks = immediateTasks();
         PlayerCombatListener listener = new PlayerCombatListener(
                 new PlayerCombatListener.CombatReads(players, fakes, settings, texts()),
                 new PlayerCombatListener.CombatMatch(game, stats,
@@ -105,9 +108,9 @@ class PlayerCombatListenerDeathTest {
                         mock(WorldEngineService.class), respawn),
                 new PlayerCombatListener.CombatEdge(plugin.spawnCamp(), plugin.roleTeams(),
                         mock(JManhuntLogger.class), mock(LobbyConfig.class)),
-                tasks);
+                immediateTasks());
         return new Fixture(listener, victim, victimId, players, instance, compass, fakes,
-                respawn);
+                respawn, commands);
     }
 
     private static GameMessages texts() {
@@ -121,6 +124,40 @@ class PlayerCombatListenerDeathTest {
         PlayerDeathEvent event = mock(PlayerDeathEvent.class);
         when(event.getEntity()).thenReturn(fixture.victim());
         fixture.listener().onDeath(event);
+    }
+
+    @Test
+    void deathFiresOnDeathWithNullKiller() {
+        Fixture fixture = fixture(Role.HUNTER, -1, true);
+
+        kill(fixture);
+
+        verify(fixture.commands()).runEventModifiers(eq("ON_DEATH"), eq(fixture.victim()),
+                eq(7L), eq(List.of("Victor", "null")));
+    }
+
+    @Test
+    void deathFiresOnDeathWithKillerName() {
+        Fixture fixture = fixture(Role.SPEEDRUNNER, -1, true);
+        Player killer = mock(Player.class);
+        when(killer.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(killer.getName()).thenReturn("Kira");
+        when(fixture.victim().getKiller()).thenReturn(killer);
+
+        kill(fixture);
+
+        verify(fixture.commands()).runEventModifiers(eq("ON_DEATH"), eq(fixture.victim()),
+                eq(7L), eq(List.of("Victor", "Kira")));
+    }
+
+    @Test
+    void spectatorDeathFiresNoOnDeath() {
+        Fixture fixture = fixture(Role.SPECTATOR, -1, true);
+
+        kill(fixture);
+
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_DEATH"), any(),
+                anyLong(), any());
     }
 
     @Test

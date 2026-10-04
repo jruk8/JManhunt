@@ -22,7 +22,7 @@ see below for full rules.
 | `<random-mob>` | Random spawnable entity type, lowercase. |
 | `<random-item>` | Random item material, lowercase. |
 | `<random-num:4,12>` | Random whole number in range, order free. |
-| `<random-pick:a,b>` | One random item from the list. |
+| `<random-pick:a,b>` | One random item from the list (`<random-pick:[a,b]>` works too). |
 | `<random-player>` | One random participant. |
 | `<all-players>` | Every participant as a name list (`:ROLE` filters). |
 
@@ -515,6 +515,7 @@ A missing index yields `null`; a non-numeric index warns and yields
 | `ON_EVERY_ADVANCEMENT` | `0`: the advancement's namespaced key (e.g. `minecraft:nether/root`). |
 | `ON_RESPAWN`, `ON_SPEEDRUNNER_RESPAWN`, `ON_HUNTER_RESPAWN` | `0`: the death location as one list, `[x, y, z, world, pitch, yaw]`. |
 | `ON_DAMAGE_TAKEN` | `0`: the damaged player's name. `1`: damage taken in half hearts. `2`: the damage dealer's name, or `null` for mobs and the environment. |
+| `ON_DEATH` | `0`: the exact name of the player who died. `1`: the exact name of the killer, or `null`. |
 
 ## Match control
 
