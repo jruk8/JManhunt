@@ -61,7 +61,7 @@ public class LobbyConfig extends OkaeriConfig {
 
     private static Map<String, LobbyEntry> defaultLobbies() {
         LobbyEntry zero = new LobbyEntry();
-        zero.setLobbytp(LobbyTp.of(0.0, 65.0, 0.0, 0.0f, 0.0f));
+        zero.setLobbytp(LobbyTp.of(0.5, 65.0, 0.5, 0.0f, 0.0f));
         Map<String, LobbyEntry> lobbies = new LinkedHashMap<>();
         lobbies.put("0", zero);
         return lobbies;

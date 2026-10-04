@@ -118,6 +118,7 @@ public final class LobbyBoundsService implements Listener {
         context.lobbies().setLobby(player.getUniqueId(), lobbyId);
         context.playerStates().setRole(player, Role.NONE);
         edge.roleTeams().sync(player);
+        context.lobbies().applyLobbyCollisions(player);
         context.lobbies().announceLobbyChange(player, lobbyIdOf(current), OptionalInt.of(lobbyId));
         context.game().updateAutostartState();
     }
@@ -196,6 +197,7 @@ public final class LobbyBoundsService implements Listener {
         if (transition.isPresent()) {
             int target = transition.getAsInt();
             context.lobbies().setLobby(player.getUniqueId(), target);
+            context.lobbies().applyLobbyCollisions(player);
             context.lobbies().announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.of(target));
             context.game().updateAutostartState();
             return;
@@ -207,9 +209,11 @@ public final class LobbyBoundsService implements Listener {
         }
         if (destination < 0) {
             context.lobbies().remove(player.getUniqueId());
+            edge.roleTeams().sync(player);
             context.lobbies().announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.empty());
         } else {
             context.lobbies().setLobby(player.getUniqueId(), destination);
+            context.lobbies().applyLobbyCollisions(player);
             context.lobbies().announceLobbyChange(player, OptionalInt.of(lobbyId), OptionalInt.of(destination));
         }
         context.game().updateAutostartState();

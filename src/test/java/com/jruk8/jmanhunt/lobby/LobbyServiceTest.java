@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.config.WorldEngineConfig;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import com.jruk8.jmanhunt.player.RoleTeamService;
 import java.util.List;
 import java.util.Optional;
 import org.bukkit.entity.Player;
@@ -141,13 +142,20 @@ class LobbyServiceTest {
         LobbiesConfig lobbySettings = new LobbiesConfig();
         lobbySettings.setMidMatchSetplayer(MidMatchPolicy.HOLD);
         LobbyService lobbies =
-                new LobbyService(null, null, lobbySettings, new WorldEngineConfig());
+                new LobbyService(null, null, lobbySettings, new WorldEngineConfig(), null);
 
         assertEquals(MidMatchPolicy.HOLD, lobbies.midMatchPolicy());
     }
 
     private static LobbyService service() {
-        return new LobbyService(null, null, null, null);
+        return new LobbyService(null, null, null, null, null);
+    }
+
+    @Test
+    void lobbyTeamNamesStayCompact() {
+        assertEquals("jl0", LobbyService.lobbyTeamName(0));
+        assertEquals("jl7", LobbyService.lobbyTeamName(7));
+        assertEquals("jl2147483647", LobbyService.lobbyTeamName(Integer.MAX_VALUE));
     }
 
     @Test
@@ -236,7 +244,7 @@ class LobbyServiceTest {
         when(fakes.isFakeSpectator(player)).thenReturn(false);
         return new Fixture(
                 new LobbyService(new LobbyService.LobbyPlayers(() -> game, fakes), null,
-                        lobbySettings, new WorldEngineConfig()),
+                        lobbySettings, new WorldEngineConfig(), mock(RoleTeamService.class)),
                 player, id, game, fakes);
     }
 

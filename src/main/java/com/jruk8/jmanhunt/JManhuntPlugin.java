@@ -23,6 +23,7 @@ import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfigRegistrar;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.lobby.config.WinConditionsSettingsFacade;
+import com.jruk8.jmanhunt.lobby.LobbyAdvancementService;
 import com.jruk8.jmanhunt.lobby.LobbyProtectionService;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.RolePadService;
@@ -209,7 +210,8 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         fakeSpectators = new FakeSpectatorService(this, playerStates);
         lobbyService = new LobbyService(new LobbyService.LobbyPlayers(this::game, fakeSpectators),
                 new LobbyService.LobbyTexts(messages, messages.manhunt()),
-                configRegistrar.getRoot().getAdvanced().getLobbies(), configRegistrar.getRoot().getWorldEngine());
+                configRegistrar.getRoot().getAdvanced().getLobbies(), configRegistrar.getRoot().getWorldEngine(),
+                roleTeams);
         setupStatistics();
         setupEngineState();
         stats = new StatsManager(new StatsManager.StatsLogs(logger, getLogger(), this), this::game, overrideService,
@@ -398,8 +400,8 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
                 new RolePadService.RolePadPlayers(playerStates, fakeSpectators), game,
                 new RolePadService.RolePadEdge(logger, roleTeams));
         manager.registerEvents(pads, this);
-        manager.registerEvents(
-                new LobbyProtectionService(lobbyConfig(), worldEngine::lobbyWorldName), this);
+        manager.registerEvents(new LobbyProtectionService(lobbyConfig(), worldEngine::lobbyWorldName), this);
+        manager.registerEvents(new LobbyAdvancementService(worldEngine::isLobbyWorld), this);
         manager.registerEvents(new LobbyBoundsService(
                 new LobbyBoundsService.BoundsSuppliers(worldEngine::lobbyWorldName,
                         command::boundPos1View, command::boundPos2View, command::devPos1View,
@@ -427,8 +429,8 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
     /** Registers chat listeners: team chat plus the setup tutorial. */
     private void setupChatListeners() {
         var teamChat = configRegistrar.getRoot().getSettings().getServer().getTeamChat();
-        var chat = new TeamChatService(game, new TeamChatService.TeamReads(playerStates, fakeSpectators, teamChat),
-                new TeamChatService.TeamTexts(messages, messages.chat(), sounds));
+        var reads = new TeamChatService.TeamReads(playerStates, fakeSpectators, lobbyService, teamChat);
+        var chat = new TeamChatService(game, reads, new TeamChatService.TeamTexts(messages, messages.chat(), sounds));
         getServer().getPluginManager().registerEvents(new TeamChatListener(this, chat), this);
         getServer().getPluginManager().registerEvents(new TutorialChatListener(this, tutorialService), this);
     }

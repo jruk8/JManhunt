@@ -12,7 +12,7 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
  * Catches prefixed team chat lines. The event fires async, so this
  * only decides synchronously whether the line is consumed; delivery
  * always runs on the main thread. Ineligible senders (wrong role,
- * outside a match, feature off) broadcast raw with the prefix intact.
+ * outside a match and lobby, feature off) broadcast raw with the prefix intact.
  */
 public final class TeamChatListener implements Listener {
     private final TaskScheduler tasks;

@@ -219,9 +219,9 @@ public final class LobbyUnit implements SubcommandUnit {
         }
         OptionalInt before = current.map(own -> OptionalInt.of(own.id())).orElseGet(OptionalInt::empty);
         lobbies.setLobby(target.getUniqueId(), lobbyId);
-        lobbies.applyLobbyCollisions(target);
         playerStates.setRole(target, role);
         teams.sync(target);
+        lobbies.applyLobbyCollisions(target);
         moved.add(target);
         lobbies.announceLobbyChange(target, before, OptionalInt.of(lobbyId));
     }

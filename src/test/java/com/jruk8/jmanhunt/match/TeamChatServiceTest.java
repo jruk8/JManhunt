@@ -75,4 +75,37 @@ class TeamChatServiceTest {
                 TeamChatService.filterRecipients(members, Role.HUNTER, false);
         assertEquals(1, hidden.size());
     }
+
+    @Test
+    void filterLobbyRecipientsKeepsSameLobbyAndRole() {
+        List<TeamChatService.LobbyMember> members = List.of(
+                new TeamChatService.LobbyMember(0, Role.HUNTER, false, false),
+                new TeamChatService.LobbyMember(0, Role.HUNTER, false, false),
+                new TeamChatService.LobbyMember(1, Role.HUNTER, false, false),
+                new TeamChatService.LobbyMember(0, Role.SPEEDRUNNER, false, false),
+                new TeamChatService.LobbyMember(0, Role.HUNTER, false, true));
+
+        List<TeamChatService.LobbyMember> recipients =
+                TeamChatService.filterLobbyRecipients(members, 0, Role.HUNTER, true);
+
+        assertEquals(2, recipients.size());
+        assertTrue(recipients.stream().allMatch(member -> member.lobbyId() == 0
+                && member.role() == Role.HUNTER && !member.inMatch()));
+    }
+
+    @Test
+    void filterLobbyRecipientsSpectatorToggle() {
+        TeamChatService.LobbyMember watcher = new TeamChatService.LobbyMember(0, Role.NONE, true, false);
+        List<TeamChatService.LobbyMember> members = List.of(
+                new TeamChatService.LobbyMember(0, Role.HUNTER, false, false), watcher);
+
+        List<TeamChatService.LobbyMember> shown =
+                TeamChatService.filterLobbyRecipients(members, 0, Role.HUNTER, true);
+        assertEquals(2, shown.size());
+        assertTrue(shown.contains(watcher));
+
+        List<TeamChatService.LobbyMember> hidden =
+                TeamChatService.filterLobbyRecipients(members, 0, Role.HUNTER, false);
+        assertEquals(1, hidden.size());
+    }
 }

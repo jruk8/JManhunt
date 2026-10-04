@@ -6,6 +6,7 @@ import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.ManhuntMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
+import com.jruk8.jmanhunt.player.RoleTeamService;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,6 +19,8 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 
 /**
  * Owns lobby membership. Unknown ids are created on join and empty lobbies
@@ -41,16 +44,18 @@ public final class LobbyService {
     private final LobbyTexts texts;
     private final LobbiesConfig lobbySettings;
     private final WorldEngineConfig engineSettings;
+    private final RoleTeamService roleTeams;
     private final Map<Integer, Lobby> lobbies = new HashMap<>();
     private final Map<UUID, Integer> membership = new HashMap<>();
     private final Map<Integer, Integer> nextSubIds = new HashMap<>();
 
     public LobbyService(LobbyPlayers players, LobbyTexts texts, LobbiesConfig lobbySettings,
-            WorldEngineConfig engineSettings) {
+            WorldEngineConfig engineSettings, RoleTeamService roleTeams) {
         this.players = players;
         this.texts = texts;
         this.lobbySettings = lobbySettings;
         this.engineSettings = engineSettings;
+        this.roleTeams = roleTeams;
     }
 
     /**
@@ -133,6 +138,7 @@ public final class LobbyService {
         if (lobbyId == null) {
             return Optional.empty();
         }
+        removeLobbyTeamEntryFor(playerId);
         Lobby lobby = lobbies.get(lobbyId);
         if (lobby == null) {
             return Optional.empty();
@@ -140,6 +146,7 @@ public final class LobbyService {
         lobby.remove(playerId);
         if (lobby.isEmpty()) {
             lobbies.remove(lobbyId);
+            unregisterLobbyTeam(lobbyId);
         }
         return Optional.of(lobby);
     }
@@ -149,8 +156,15 @@ public final class LobbyService {
         return lobbyId == null ? Optional.empty() : Optional.ofNullable(lobbies.get(lobbyId));
     }
 
+    /** Scoreboard team name for a lobby. Compact for legacy limits. Pure for tests. */
+    public static String lobbyTeamName(int lobbyId) {
+        return "jl" + lobbyId;
+    }
+
     /**
-     * Disables collisions for a lobby member when the toggle is on.
+     * Disables collisions for a lobby member when the toggle is on:
+     * the lobby scoreboard team (collision rule NEVER) carries the
+     * no-push, and the collidable flag stays as belt and braces.
      * Match members and lobby outsiders are left untouched, as is
      * everyone when the toggle is off.
      */
@@ -161,21 +175,25 @@ public final class LobbyService {
         if (players.games().get().instanceOf(player.getUniqueId()).isPresent()) {
             return;
         }
-        if (lobbyOf(player.getUniqueId()).isEmpty()) {
+        Optional<Lobby> lobby = lobbyOf(player.getUniqueId());
+        if (lobby.isEmpty()) {
             return;
         }
+        addLobbyTeamEntry(player, lobby.get().id());
         player.setCollidable(false);
     }
 
     /**
-     * Restores collisions unless fake spectator mode owns them: its
-     * disable restores them later and re-applies lobby state.
+     * Restores collisions: the lobby-team entry goes unconditionally
+     * and the role team is repaired, while fake spectator mode keeps
+     * owning the collidable flag (its disable re-applies lobby state).
      */
     public void restoreCollisions(Player player) {
-        if (players.fakes().isFakeSpectator(player)) {
-            return;
+        removeLobbyTeamEntry(player.getName());
+        roleTeams.sync(player);
+        if (!players.fakes().isFakeSpectator(player)) {
+            player.setCollidable(true);
         }
-        player.setCollidable(true);
     }
 
     /**
@@ -197,11 +215,79 @@ public final class LobbyService {
             if (players.fakes().isFakeSpectator(online)) {
                 online.setCollidable(false);
             } else if (players.games().get().instanceOf(online.getUniqueId()).isPresent()) {
-                online.setCollidable(true);
+                restoreCollisions(online);
             } else if (lobbyOf(online.getUniqueId()).isPresent()) {
-                online.setCollidable(!disabled);
+                if (disabled) {
+                    applyLobbyCollisions(online);
+                } else {
+                    restoreCollisions(online);
+                }
             }
         }
+    }
+
+    /**
+     * Moves a player onto their lobby team, creating it with collision
+     * rule NEVER when missing. Single-team membership drops them from
+     * the role team; datapack team selectors miss queuers while waiting.
+     */
+    private void addLobbyTeamEntry(Player player, int lobbyId) {
+        Scoreboard board = mainBoard();
+        if (board == null) {
+            return;
+        }
+        Team team = board.getTeam(lobbyTeamName(lobbyId));
+        if (team == null) {
+            team = board.registerNewTeam(lobbyTeamName(lobbyId));
+        }
+        team.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+        team.addEntry(player.getName());
+    }
+
+    /** Drops one entry from every known lobby team. */
+    private void removeLobbyTeamEntry(String entry) {
+        Scoreboard board = mainBoard();
+        if (board == null) {
+            return;
+        }
+        for (Integer lobbyId : lobbies.keySet()) {
+            Team team = board.getTeam(lobbyTeamName(lobbyId));
+            if (team != null) {
+                team.removeEntry(entry);
+            }
+        }
+    }
+
+    /** Drops one player's lobby-team entry, resolving their entry name first. */
+    private void removeLobbyTeamEntryFor(UUID playerId) {
+        if (Bukkit.getServer() == null) {
+            return;
+        }
+        Player online = Bukkit.getPlayer(playerId);
+        String name = online != null ? online.getName() : Bukkit.getOfflinePlayer(playerId).getName();
+        if (name != null) {
+            removeLobbyTeamEntry(name);
+        }
+    }
+
+    /** Unregisters one lobby team, mirroring the lobby map cleanup. */
+    private void unregisterLobbyTeam(int lobbyId) {
+        Scoreboard board = mainBoard();
+        if (board == null) {
+            return;
+        }
+        Team team = board.getTeam(lobbyTeamName(lobbyId));
+        if (team != null) {
+            team.unregister();
+        }
+    }
+
+    /** Main scoreboard, or null without a server (unit tests). */
+    private Scoreboard mainBoard() {
+        if (Bukkit.getServer() == null || Bukkit.getScoreboardManager() == null) {
+            return null;
+        }
+        return Bukkit.getScoreboardManager().getMainScoreboard();
     }
 
     /**

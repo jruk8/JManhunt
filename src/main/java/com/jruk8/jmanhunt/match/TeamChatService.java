@@ -1,6 +1,8 @@
 package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.config.ServerSettings;
+import com.jruk8.jmanhunt.lobby.Lobby;
+import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.message.ChatMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -22,9 +24,9 @@ import org.bukkit.entity.Player;
  * pure so they stay unit testable; delivery runs on the main thread.
  */
 public final class TeamChatService {
-    /** States, fakes, and team chat settings. */
+    /** States, fakes, lobbies, and team chat settings. */
     public record TeamReads(PlayerStateStore playerStates, FakeSpectatorService fakes,
-            ServerSettings.TeamChat teamChat) {
+            LobbyService lobbies, ServerSettings.TeamChat teamChat) {
     }
 
     /** Message bus, chat texts, and sounds. */
@@ -43,6 +45,10 @@ public final class TeamChatService {
 
     /** Membership row for the pure recipient filter. */
     public record Member(Role role, boolean fakeSpectator) {
+    }
+
+    /** Lobby queuer row for the pure lobby recipient filter. */
+    public record LobbyMember(int lobbyId, Role role, boolean fakeSpectator, boolean inMatch) {
     }
 
     /**
@@ -110,17 +116,48 @@ public final class TeamChatService {
         return reads.teamChat().isSpectatorsSee();
     }
 
-    /** Eligible senders: participants inside a match. Nobody else. */
+    /**
+     * True for queuers who receive lobby team chat: same lobby, no
+     * running match, the sender's role, plus fake spectators when
+     * spectators-see is on. Match players never match.
+     */
+    static boolean isLobbyRecipient(LobbyMember member, int senderLobbyId,
+            Role senderRole, boolean spectatorsSee) {
+        return !member.inMatch()
+                && member.lobbyId() == senderLobbyId
+                && (member.role() == senderRole || (spectatorsSee && member.fakeSpectator()));
+    }
+
+    /**
+     * Pure recipient filter over lobby queuers. Match members are
+     * excluded by the predicate, so lobby lines never leak into a
+     * running match, including hold and sublobby setups.
+     */
+    static List<LobbyMember> filterLobbyRecipients(List<LobbyMember> members, int senderLobbyId,
+            Role senderRole, boolean spectatorsSee) {
+        List<LobbyMember> recipients = new ArrayList<>();
+        for (LobbyMember member : members) {
+            if (isLobbyRecipient(member, senderLobbyId, senderRole, spectatorsSee)) {
+                recipients.add(member);
+            }
+        }
+        return recipients;
+    }
+
+    /** Eligible senders: participants inside a match, or queuers inside a lobby. */
     public boolean isEligible(Player sender) {
-        return reads.playerStates().role(sender).isParticipant()
-                && game.instanceOf(sender.getUniqueId()).isPresent();
+        if (!reads.playerStates().role(sender).isParticipant()) {
+            return false;
+        }
+        return game.instanceOf(sender.getUniqueId()).isPresent()
+                || reads.lobbies().lobbyOf(sender.getUniqueId()).isPresent();
     }
 
     /** Same-team online members plus watching fake spectators. */
     public List<Player> recipients(Player sender) {
         Optional<GameInstance> match = game.instanceOf(sender.getUniqueId());
         if (match.isEmpty()) {
-            return List.of();
+            return lobbyRecipients(sender);
         }
         long matchId = match.get().matchId();
         Role senderRole = reads.playerStates().role(sender);
@@ -133,6 +170,31 @@ public final class TeamChatService {
             }
             if (isRecipient(reads.playerStates().role(candidate), reads.fakes().isFakeSpectator(candidate),
                     senderRole, spectatorsSee)) {
+                recipients.add(candidate);
+            }
+        }
+        return recipients;
+    }
+
+    /** Same-lobby, same-role queuers outside any match, plus watching fake spectators. */
+    private List<Player> lobbyRecipients(Player sender) {
+        Optional<Lobby> lobby = reads.lobbies().lobbyOf(sender.getUniqueId());
+        if (lobby.isEmpty()) {
+            return List.of();
+        }
+        int lobbyId = lobby.get().id();
+        Role senderRole = reads.playerStates().role(sender);
+        boolean spectatorsSee = spectatorsSee();
+        List<Player> recipients = new ArrayList<>();
+        for (Player candidate : Bukkit.getOnlinePlayers()) {
+            Optional<Lobby> other = reads.lobbies().lobbyOf(candidate.getUniqueId());
+            if (other.isEmpty() || other.get().id() != lobbyId) {
+                continue;
+            }
+            LobbyMember member = new LobbyMember(lobbyId, reads.playerStates().role(candidate),
+                    reads.fakes().isFakeSpectator(candidate),
+                    game.instanceOf(candidate.getUniqueId()).isPresent());
+            if (isLobbyRecipient(member, lobbyId, senderRole, spectatorsSee)) {
                 recipients.add(candidate);
             }
         }

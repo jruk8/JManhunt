@@ -233,6 +233,7 @@ public final class RolePadService implements Listener {
         Role from = players.states().role(player);
         players.states().setRole(player, role);
         edge.roleTeams().sync(player);
+        lobby.lobbies().applyLobbyCollisions(player);
         if (!padSilent()) {
             texts.messages().messageRaw(player, texts.manhunt().getRoleAssigned(),
                     Map.of("role", texts.messages().roleName(role)));

@@ -118,7 +118,9 @@ line with `@team` or `@t`. A bare prefix chats a usage hint; anyone
 else sends raw with the prefix intact. Under
 `settings.server.team-chat`, `enabled` toggles the feature, `prefixes`
 lists the aliases, and `spectators-see` lets watchers read every team
-line.
+line. Queuers waiting in a lobby can use the same prefixes: lobby
+`@team` lines stay inside the same lobby and role and never reach
+players in a running match.
 
 ## Settings
 

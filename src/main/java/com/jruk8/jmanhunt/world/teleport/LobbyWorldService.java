@@ -93,9 +93,15 @@ public final class LobbyWorldService {
         if (world == null) {
             return false;
         }
-        String name = world.getName();
-        return name.equals(lobbyWorldName())
-                && !name.equals(engineSettings.getWorldName());
+        return isLobbyWorldName(world.getName(), lobbyWorldName(), engineSettings.getWorldName());
+    }
+
+    /**
+     * Pure core of {@link #isLobbyWorld(World)}: a lobby-world name
+     * match that never fires for the game world. Pure for tests.
+     */
+    static boolean isLobbyWorldName(String name, String lobbyWorldName, String gameWorldName) {
+        return name.equals(lobbyWorldName) && !name.equals(gameWorldName);
     }
 
     /**

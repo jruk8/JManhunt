@@ -194,12 +194,12 @@ public final class WorldEngineTpto {
             return true;
         }
         World world = ensured.get().world();
-        if (ensured.get().lobbyZeroSet()) {
-            support.message(sender, texts.getWorldengineLobbyconfigSetlobbytpSuccess(), Map.of(
-                    "lobby", "0", "location", WorldEngineUnit.formatLocation(world.getSpawnLocation())));
-        }
         Location spawn = game.lowestLobbyTeleport().orElseGet(world::getSpawnLocation);
         spawn.setWorld(world);
+        if (ensured.get().lobbyZeroSet()) {
+            support.message(sender, texts.getWorldengineLobbyconfigSetlobbytpSuccess(), Map.of(
+                    "lobby", "0", "location", WorldEngineUnit.formatLocation(spawn)));
+        }
         for (Player target : targets) {
             target.teleport(spawn);
         }

@@ -70,7 +70,7 @@ public final class SetupService {
             return;
         }
         World world = ensured.get().world();
-        Location spawn = world.getSpawnLocation();
+        Location spawn = game.lowestLobbyTeleport().orElseGet(world::getSpawnLocation);
         boolean zeroSet = ensured.get().lobbyZeroSet() || game.ensureLobbyZero(spawn);
         if (zeroSet) {
             messages.messageRaw(clicker, manhunt.getWorldengineLobbyconfigSetlobbytpSuccess(),

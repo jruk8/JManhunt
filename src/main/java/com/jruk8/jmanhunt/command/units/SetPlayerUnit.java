@@ -305,6 +305,7 @@ public final class SetPlayerUnit implements SubcommandUnit {
         playerStates.setRole(player, role);
         tally.changed++;
         teams.sync(player);
+        lobbies.applyLobbyCollisions(player);
         if (!silent) {
             game.messaging().announceRoleChange(player, from, role);
         }

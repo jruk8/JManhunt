@@ -129,6 +129,7 @@ public final class LobbyWorldManager {
         }
         World loaded = Bukkit.getWorld(name);
         if (loaded != null) {
+            silenceAdvancementAnnouncements(loaded);
             return Optional.of(new LobbyWorld(loaded, false, false));
         }
         File container = edge.server().getWorldContainer();
@@ -149,6 +150,7 @@ public final class LobbyWorldManager {
         }
         if (!fresh) {
             // Our leftover from before a restart: paste and spawn persist.
+            silenceAdvancementAnnouncements(world);
             return Optional.of(new LobbyWorld(world, false, false));
         }
         LobbyPreset preset = presetOverride.orElse(LobbyPreset.DEFAULT);
@@ -164,10 +166,12 @@ public final class LobbyWorldManager {
 
     /**
      * Safe defaults for a fresh lobby world: peaceful difficulty, frozen
-     * time and weather, no locator bar, and no mob, trader, phantom,
-     * patrol, or griefing activity. Generation-only: later loads never
-     * touch these again. Refuses game-world names outright, so a lobby
-     * misconfiguration can never freeze time and weather where matches run.
+     * time and weather, no locator bar, silent advancements, and no mob,
+     * trader, phantom, patrol, or griefing activity. Generation-only:
+     * later loads never touch these again, except the advancement
+     * announcement rule (see below). Refuses game-world names outright,
+     * so a lobby misconfiguration can never freeze time and weather
+     * where matches run.
      */
     private void applyLobbyDefaults(World world) {
         String gameWorldName = config.engineSettings().getWorldName();
@@ -180,11 +184,21 @@ public final class LobbyWorldManager {
         world.setGameRule(GameRules.ADVANCE_TIME, false);
         world.setGameRule(GameRules.ADVANCE_WEATHER, false);
         world.setGameRule(GameRules.LOCATOR_BAR, false);
+        silenceAdvancementAnnouncements(world);
         world.setGameRule(GameRules.SPAWN_MOBS, false);
         world.setGameRule(GameRules.SPAWN_WANDERING_TRADERS, false);
         world.setGameRule(GameRules.SPAWN_PHANTOMS, false);
         world.setGameRule(GameRules.SPAWN_PATROLS, false);
         world.setGameRule(GameRules.MOB_GRIEFING, false);
+    }
+
+    /**
+     * Silences advancement announcements in the lobby world. Deliberate
+     * exception to the generation-only policy: pre-existing lobby worlds
+     * predate the rule, and the flag is idempotent and lobby-scoped.
+     */
+    private void silenceAdvancementAnnouncements(World world) {
+        world.setGameRule(GameRules.SHOW_ADVANCEMENT_MESSAGES, false);
     }
 
     /**
