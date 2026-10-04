@@ -51,7 +51,9 @@ JManhunt is a Minecraft Manhunt plugin built on Paper. The project values:
 
 ## Commit Message Style
 
-Use [Conventional Commits](https://www.conventionalcommits.org/):
+Use [Conventional Commits](https://www.conventionalcommits.org/).
+Sign off every commit with `git commit -s` (see Developer Certificate
+of Origin below):
 
 ```
 <type>[optional scope]: <description>
