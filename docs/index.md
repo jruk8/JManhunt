@@ -2,7 +2,7 @@
 icon: material/home
 ---
 
-![JManhunt banner](assets/banner-1280x640.png)
+![JManhunt banner](assets/core/banner-1280x640.png)
 **Demo server:** `play.jmanhunt.games`
 
 # JManhunt 5

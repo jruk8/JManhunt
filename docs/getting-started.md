@@ -2,7 +2,7 @@
 icon: material/rocket-launch
 ---
 
-![JManhunt banner](assets/banner-1280x640.png)
+![JManhunt banner](assets/core/banner-1280x640.png)
 # Getting Started
 
 > For: everyone setting up the plugin. Not installed yet? See [Installation](installation.md) first (two steps).

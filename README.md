@@ -1,27 +1,30 @@
-![JManhunt banner](docs/assets/banner-1280x640.png)
+<div align="center">
 
-(Try out the latest version of the plugin at server IP: `play.alttari.games`)
+![JManhunt banner](docs/assets/core/banner-1280x640.png)
 
-# JManhunt
+<p style="font-size: 20px; font-weight: bold; margin: 10px 0;">
+  JManhunt is a deeply customizable plugin for 26.x Manhunts.
+</p>
 
-JManhunt is a deeply customizable Paper plugin for 26.2+ Manhunts. It comes with an
-automated world reset engine, compass tracking, placeholders, statistics, and a bunch of
-config options and modifiers. The plug-and-play defaults work **instantly** for simple
-Manhunts with a fully tracking compass and fully automated world resets.
+### [Wiki](https://jruk8.github.io/JManhunt/) · [Community Mods](https://discord.com/invite/hkWmCVmWDC) · [Donate](https://jruk8.github.io/JManhunt/donate/)
 
-# Key Features
+<!-- Header: Polished header with spinning compass -->
+<img src="docs/assets/core/clip-system/clip-header.gif" alt="Key Features Header" style="width: 100%; display: block;">
 
-- **One-click setup** » Get World Engine and concurrent matches running in 15 seconds.
-- **World Reset Engine** » Grid-based single-world Manhunt engine with persistent spiral 
-  cell assignment and automatic world resets.
-- **Compass tracking** » Fully tunable tracking compass with jamming, hotspots, 
-  teammate tracking, and target cycling.
-- **Concurrent matches** » Each lobby runs its own match at the same time, with a native per-match
-  spectator system.
-- **Mods** » A library of twists made with **JMHScript**, our DSL. Make your own, browse default
-  ones in our GUI, or community-made ones in our Discord.
-- **Also for serious deployment** » PostgreSQL stats, multiple game queues, per-lobby
-  mod/setting overrides, disconnect handling, 280+ config settings, and team chat.
+<!-- First Horizontal Group -->
+<div style="display: flex; gap: 0;">
+  <img src="docs/assets/core/clip-system/clips/clip-one-click.gif" alt="One-Click Setup" style="width: 50%;">
+  <img src="docs/assets/core/clip-system/clips/clip-easy-matches.gif" alt="Easy Matches" style="width: 50%;">
+</div>
+<!-- Second Horizontal Group -->
+<div style="display: flex; gap: 0;">
+  <img src="docs/assets/core/clip-system/clips/clip-compass.gif" alt="Compass Target Switching and Signal Interference" style="width: 50%;">
+  <img src="docs/assets/core/clip-system/clips/clip-gui.gif" alt="GUI Menus and Usage" style="width: 50%;">
+</div>
+
+### **Test server**: `play.alttari.games
+
+</div>
 
 # Why Choose JManhunt?
 
@@ -32,41 +35,42 @@ restarts. This makes matches feel seamless for not only small friend groups, but
 
 ### Scriptable Mods
 
-We also built a complete [JMHScript DSL](https://jruk8.github.io/JManhunt/configuration/modifiers/) solely
-to make developing **Modifiers** easy and fast. Basic ones like per-role starting kits, random rolls, 
-or basic status effects need no scripting knowledge. You can get started with pure Minecraft commands like 
-`give @p cooked_beef 8`. Mods can be written in-game through the **Modifier/Preset GUI** or through YML.
+We also built a complete [JMHScript DSL](https://jruk8.github.io/JManhunt/configuration/modifiers/) to make
+modifier development easy. Simple ones like starting kits, random rolls, or basic status effects need no scripting
+(like `give <p> cooked_beef 8`).
+Mods can be written in-game through the **Modifier/Preset GUI** or through YAML.
 
-Individual mods can be either downloaded drag-and-drop style from our Discord or imported as strings
-through the GUI. The default engine bundles over 15 default modifiers. 
+Find these modifiers on our [**Discord**](https://discord.gg/hkWmCVmWDC) community forum:
 
-What can you do with custom ones? Well..
-
-- **Lifesteal** » All kills steal a full heart from the victim. Permadeath on 0. (find on Discord)
-- **Huddle for Warmth** » Stay close to teammates or wither away. (also Discord)
+- **Lifesteal** » All kills steal a full heart from the victim. Permadeath on 0.
+- **Huddle for Warmth** » Stay close to teammates or wither away.
 - **Abilities** » Invisibility on hit for runners, gapple on low health, blind nearby Hunters on
   kill...
 
-These examples barely scratch the surface of what you can construct with JMHScript.
+# Features
 
-# Getting Started (15s) 🗺️
+- **One-click setup** » Get a World Engine lobby running **instantly**.
+- **World Reset Engine** » Grid-based single-world engine with spiral cell assignment and end resets.
+- **Compass tracking** » Fully tunable tracking compass with jamming, hotspots, and target cycling.
+- **Concurrent matches** » Run multiple matches in parallel alongside our spectator system.
+- **Mods** » Import community twists made with **JMHScript**, our DSL.
+- **Also for serious deployment** » PostgreSQL stats, multiple game queues, per-lobby
+  mod/setting overrides, disconnect handling, 280+ config settings, and team chat.
 
-1. **Install the plugin** and restart your server.
-2. Run **`/manhunt`** in-game and click the **green button**.
-   This sets up the World Engine and creates a default lobby.
-3. Walk onto a colored pad to pick a team (red = hunter,
-   green = speedrunner), then wait for autostart, or run **`/mh start`**.
+# Get Started 🗺️
 
-For simple Manhunts with fully automated world resets, this is all you need to do with **zero commands** after. 
+1. Run **`/manhunt`** and click the **green button**.
+
+**That's it!** Performant World Engine and parallel matches, all in one click.
 
 Alternatively, you can run `/manhunt setup` for a more intermediate dialogue-based setup.
+See more with our comprehensive [**documentation**](https://jruk8.github.io/JManhunt/).
 
-View our comprehensive [documentation](https://jruk8.github.io/JManhunt/).
+### Links
 
-# Links
+Visit our [Discord](https://discord.gg/hkWmCVmWDC) to browse a modifiers/presets catalogue, chat with other admins, or get quick support.
 
-Visit our [Discord](https://discord.gg/hkWmCVmWDC) to browse the modifiers/presets catalogue, chat with other admins, or get quick support.
+### Donate
 
-### Consider donating
-
-Developing JManhunt has taken me a lot of time and effort. You can help support the upkeep and future of this plugin by making a [small donation](https://ko-fi.com/jruk). **Thanks!** 👐
+Developing JManhunt has taken me a lot of time and effort.
+You can help support the upkeep and future of this plugin by making a [**small donation**](https://ko-fi.com/jruk). **Thanks!** 👐

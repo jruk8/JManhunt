@@ -1,7 +1,16 @@
-JManhunt licensing note: the software source code in this repository
-is licensed under the GNU Affero General Public License v3 below. Images
-and other media files are NOT covered by this license; all rights to them
-are reserved by jruk under the separate LICENSE-MEDIA file.
+This repository uses split licensing:
+
+- SOURCE CODE:
+  All source code files in this repository are licensed under the
+  GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later),
+  unless otherwise noted. See the full text below.
+
+- MEDIA & ASSETS:
+  All media assets, including images, textures, branding,
+  and design assets located in `/assets` or similar directories, are
+  ALL RIGHTS RESERVED by jruk.
+  You may not redistribute, modify, or use these assets for commercial
+  purposes without explicit written permission.
 
 ------------------------------------------------------------------------
 
