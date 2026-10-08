@@ -248,7 +248,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
 
     /**
      * Reads the crash flag left by the previous run: a set flag means the
-     * server crashed (disable never ran), so stale end reservations are
+     * server crashed or still owes wipes, so stale end reservations are
      * cleared after orphan deletion already consumed them. The flag stays
      * untouched here; the crash cleanup load arms it for this run later.
      */
@@ -258,7 +258,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         }
         try {
             if (engineState.getCrashFlag()) {
-                logger().warning("JManhunt did not shut down cleanly last run; "
+                logger().warning("JManhunt found unwiped crash state from an earlier run; "
                         + "clearing stale match reservations from the engine database.");
                 engineState.clearEndReservations();
             }
@@ -494,7 +494,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         if (stats != null) {
             stats.flush();
         }
-        clearCrashFlag();
+        writeCrashFlag();
         if (statistics != null) {
             statistics.close();
         }
@@ -503,15 +503,15 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         }
     }
 
-    /** Marks a clean shutdown; runs before the engine database closes. */
-    private void clearCrashFlag() {
+    /** Clean-shutdown flag write; stays set while crash wipes are still owed. */
+    private void writeCrashFlag() {
         if (engineState == null) {
             return;
         }
         try {
-            engineState.setCrashFlag(false);
+            engineState.setCrashFlag(game != null && game.hasPendingCrashWipes());
         } catch (Exception exception) {
-            getLogger().warning("Could not clear the crash flag: " + exception.getMessage());
+            getLogger().warning("Could not write the crash flag: " + exception.getMessage());
         }
     }
 

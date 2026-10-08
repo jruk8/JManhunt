@@ -19,6 +19,7 @@ import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.junit.jupiter.api.Test;
 
 class FakeSpectatorServiceTest {
@@ -348,5 +349,36 @@ class FakeSpectatorServiceTest {
         fixture.fakes().disable(fixture.watched());
 
         verify(fixture.watched()).removePotionEffect(any());
+    }
+
+    @Test
+    void clearDanglingRemovesStrandedInfiniteInvisibility() {
+        Fixture fixture = fixture();
+        when(fixture.watched().getPotionEffect(PotionEffectType.INVISIBILITY)).thenReturn(
+                new PotionEffect(PotionEffectType.INVISIBILITY, PotionEffect.INFINITE_DURATION, 0));
+
+        fixture.fakes().clearDanglingState(fixture.watched());
+
+        verify(fixture.watched()).removePotionEffect(PotionEffectType.INVISIBILITY);
+    }
+
+    @Test
+    void clearDanglingKeepsFiniteInvisibility() {
+        Fixture fixture = fixture();
+        when(fixture.watched().getPotionEffect(PotionEffectType.INVISIBILITY)).thenReturn(
+                new PotionEffect(PotionEffectType.INVISIBILITY, 200, 0));
+
+        fixture.fakes().clearDanglingState(fixture.watched());
+
+        verify(fixture.watched(), never()).removePotionEffect(PotionEffectType.INVISIBILITY);
+    }
+
+    @Test
+    void clearDanglingWithoutInvisibilityTouchesNothing() {
+        Fixture fixture = fixture();
+
+        fixture.fakes().clearDanglingState(fixture.watched());
+
+        verify(fixture.watched(), never()).removePotionEffect(PotionEffectType.INVISIBILITY);
     }
 }

@@ -114,14 +114,25 @@ public final class PlayerWipeService {
     }
 
     /**
+     * True when undelivered post-crash wipes remain for this run. Read at
+     * shutdown after teardown, so live members are already untracked and
+     * anything pending belongs to players who never rejoined.
+     */
+    public boolean hasPendingCrashWipes() {
+        return !pendingCrashWipes.isEmpty();
+    }
+
+    /**
      * Loads surviving crash_cleanup rows after enable, but only when the
-     * previous run crashed. Loaded rows arm one wipe each, so a player who
-     * misses the first post-crash restart is still wiped on their next
-     * join; each row deletes only when its player is actually wiped. After
-     * a clean shutdown every match member was already untracked through
-     * teardown, so leftover rows are stale and are dropped instead. The
-     * flag is armed for this run last, so a failed load retries the same
-     * branch on the next enable.
+     * previous run crashed or still owed wipes at a clean shutdown.
+     * Loaded rows arm one wipe each, so a player who misses the first
+     * post-crash restart is still wiped on their next join; each row
+     * deletes only when its player is actually wiped, so a second crash
+     * after partial delivery re-arms exactly the leftovers. After a
+     * clean shutdown with nothing owed, every match member was already
+     * untracked through teardown, so leftover rows are stale and are
+     * dropped instead. The flag is armed for this run last, so a failed
+     * load retries the same branch on the next enable.
      */
     public void loadCrashCleanup() {
         EngineStateRepository repository = engineStates;

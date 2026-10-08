@@ -610,6 +610,11 @@ public final class GameManager implements MatchControl {
         stateCommands.loadCrashCleanup();
     }
 
+    /** True when undelivered post-crash wipes remain for this run. */
+    public boolean hasPendingCrashWipes() {
+        return stateCommands.hasPendingCrashWipes();
+    }
+
     /** Runs the post-crash wipe for a rejoiner when one is pending. */
     public boolean applyPendingCrashWipe(Player player) {
         return stateCommands.applyPendingCrashWipe(player);

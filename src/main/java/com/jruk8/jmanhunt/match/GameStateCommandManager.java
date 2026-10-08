@@ -573,6 +573,11 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         wipes.loadCrashCleanup();
     }
 
+    /** True when undelivered post-crash wipes remain for this run. */
+    public boolean hasPendingCrashWipes() {
+        return wipes.hasPendingCrashWipes();
+    }
+
     /**
      * Runs the post-crash wipe for a rejoiner. Returns true when a wipe
      * was pending and ran. See {@link PlayerWipeService}.

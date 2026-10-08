@@ -234,9 +234,11 @@ public final class EngineStateRepository implements AutoCloseable {
     }
 
     /**
-     * True when the previous run never shut down cleanly. The flag is set
-     * on every enable and cleared on every disable, so a set flag at
-     * enable time means the server crashed (or was killed) mid-run.
+     * True when unwiped crash state survives from an earlier run. The flag
+     * is set on every enable and cleared on every disable unless crash
+     * wipes are still owed, so a set flag at enable time means the server
+     * crashed (or was killed) mid-run, or a clean shutdown still owed
+     * wipes to players who never rejoined.
      */
     public synchronized boolean getCrashFlag() throws SQLException {
         try (Connection connection = connection();

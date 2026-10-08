@@ -26,7 +26,7 @@ import org.bukkit.potion.PotionEffectType;
  * other roles.
  *
  * <p>State is memory only: a crash or restart always starts clean, and
- * quit plus join handlers reset any dangling flight.
+ * quit plus join handlers reset any dangling flight and invisibility.
  */
 public final class FakeSpectatorService {
     /** Notified after fake spectator mode turns on or off for a player. */
@@ -147,15 +147,29 @@ public final class FakeSpectatorService {
 
     /**
      * Clears joiner-side dangling state after a disconnect or crash:
-     * persisted flight flags plus visibility to everyone online.
-     * Creative players keep their flight.
+     * persisted flight flags, a stranded infinite invisibility, plus
+     * visibility to everyone online. Creative players keep their flight.
      */
     public void clearDanglingState(Player joiner) {
         stopFlightUnlessCreative(joiner);
+        clearStrandedInvisibility(joiner);
         for (Player viewer : onlinePlayers.get()) {
             if (!viewer.getUniqueId().equals(joiner.getUniqueId())) {
                 viewer.showPlayer(tasks.plugin(), joiner);
             }
+        }
+    }
+
+    /**
+     * Removes our infinite invisibility when a crash stranded it on a
+     * joiner: clean quits already drop fake mode through handleQuit, so
+     * an infinite effect is ours left behind when quit handlers never
+     * ran. Finite effects (vanilla potions) are never touched.
+     */
+    private static void clearStrandedInvisibility(Player joiner) {
+        PotionEffect active = joiner.getPotionEffect(PotionEffectType.INVISIBILITY);
+        if (active != null && active.getDuration() < 0) {
+            joiner.removePotionEffect(PotionEffectType.INVISIBILITY);
         }
     }
 
