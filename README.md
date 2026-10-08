@@ -4,7 +4,7 @@
 
 <h3>JManhunt is a deeply customizable plugin for 26.x Manhunts.</h3>
 
-### [Wiki](https://jruk8.github.io/JManhunt/) · [Community Mods](https://discord.com/invite/hkWmCVmWDC) · [Donate](https://jruk8.github.io/JManhunt/donate/)
+### [⭐Open Source](https://github.com/jruk8/JManhunt) · [Community Mods](https://discord.com/invite/hkWmCVmWDC) · [Wiki](https://jruk8.github.io/JManhunt/)
 
 <br>
 
@@ -31,7 +31,7 @@ Find these modifiers on our [**Discord**](https://discord.gg/hkWmCVmWDC) communi
 
 - **Lifesteal** » All kills steal a full heart from the victim. Permadeath on 0.
 - **Huddle for Warmth** » Stay close to teammates or wither away.
-- **Abilities** » Invisibility on hit for runners, gapple on low health, blind nearby Hunters on
+- **Abilities** » Runners invisibility on damage taken, gapple on low health, blind nearby Hunters on
   kill...
 
 # Features
