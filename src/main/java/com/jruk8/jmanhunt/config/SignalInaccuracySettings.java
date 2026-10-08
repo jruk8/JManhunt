@@ -12,16 +12,16 @@ import lombok.Setter;
 @Setter
 @SuppressWarnings("FieldMayBeFinal")
 public class SignalInaccuracySettings extends OkaeriConfig {
-    private boolean enabled = false;
+    private boolean enabled = true;
 
     @CustomKey("inner-deadzone")
     @Comment({
             "Hole in the middle of the error donut, from 0 up to (but not",
             "including) 1. 0.5 means no error ever lands inside half of the",
             "outer radius; 0 lets the error land right on the true spot.",
-            "Default: 0.4"
+            "Default: 0.65"
     })
-    private double innerDeadzone = 0.4;
+    private double innerDeadzone = 0.65;
 
     @CustomKey("drift-radius")
     @Comment({
@@ -29,9 +29,9 @@ public class SignalInaccuracySettings extends OkaeriConfig {
             "distance. 1 wanders up to the full distance away; values near",
             "0 stay near the truth. Clamped to 0.01 at the bottom so the",
             "error can never fully vanish while enabled.",
-            "Default: 0.6"
+            "Default: 0.8"
     })
-    private double driftRadius = 0.6;
+    private double driftRadius = 0.8;
 
     @Comment("Range gate for the error: when it starts and stops growing.")
     private Thresholds thresholds = new Thresholds();
@@ -86,15 +86,15 @@ public class SignalInaccuracySettings extends OkaeriConfig {
     @Setter
     @SuppressWarnings("FieldMayBeFinal")
     public static class Hotspot extends OkaeriConfig {
-        private boolean enabled = false;
+        private boolean enabled = true;
 
         @CustomKey("hotspot-radius")
         @Comment({
                 "How close recorded points must be to the target to count as",
                 "the same hotspot, in meters. Must stay above 0.",
-                "Default: 50.0"
+                "Default: 70.0"
         })
-        private double hotspotRadius = 50.0;
+        private double hotspotRadius = 70.0;
 
         @CustomKey("sample-interval")
         @Comment({

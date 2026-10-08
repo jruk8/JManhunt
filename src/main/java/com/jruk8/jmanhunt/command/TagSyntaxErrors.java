@@ -123,6 +123,11 @@ final class TagSyntaxErrors {
         if (firstItem.isEmpty() || secondItem.isEmpty()) {
             return Optional.of("Tag <random-num:" + args.trim() + "> mixes quotes.");
         }
+        // A masked nested tag resolves inside-out at runtime, so its
+        // value cannot be judged here; literals still must parse below.
+        if (firstItem.get().contains("?") || secondItem.get().contains("?")) {
+            return Optional.empty();
+        }
         try {
             long first = Long.parseLong(firstItem.get().strip());
             long second = Long.parseLong(secondItem.get().strip());

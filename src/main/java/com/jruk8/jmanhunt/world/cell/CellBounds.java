@@ -63,22 +63,24 @@ public final class CellBounds {
     }
 
     /**
-     * Nearest point inside the bounds, pulled {@code margin} blocks off the
-     * edge; null when already inside. Used to rubber-band players back in.
+     * Nearest point inside the bounds: each escaped axis is pulled
+     * {@code margin} blocks off its own edge, while an axis already
+     * inside keeps its exact value. Null when already inside. Used
+     * to rubber-band players back in.
      */
     public double[] clampInside(double x, double z, boolean nether, double margin) {
         double scale = nether ? 8.0 : 1.0;
         double scaledCenterX = centerX / scale;
         double scaledCenterZ = centerZ / scale;
-        double reach = halfSize / scale - margin;
-        if (reach <= 0.0) {
-            return new double[]{scaledCenterX, scaledCenterZ};
-        }
-        double clampedX = Math.clamp(x, scaledCenterX - reach, scaledCenterX + reach);
-        double clampedZ = Math.clamp(z, scaledCenterZ - reach, scaledCenterZ + reach);
-        if (clampedX == x && clampedZ == z) {
+        double half = halfSize / scale;
+        boolean outX = Math.abs(x - scaledCenterX) > half;
+        boolean outZ = Math.abs(z - scaledCenterZ) > half;
+        if (!outX && !outZ) {
             return null;
         }
+        double edge = Math.max(0.0, half - margin);
+        double clampedX = outX ? scaledCenterX + Math.signum(x - scaledCenterX) * edge : x;
+        double clampedZ = outZ ? scaledCenterZ + Math.signum(z - scaledCenterZ) * edge : z;
         return new double[]{clampedX, clampedZ};
     }
 }

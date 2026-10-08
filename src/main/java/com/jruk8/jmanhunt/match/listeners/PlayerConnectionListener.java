@@ -116,11 +116,6 @@ public final class PlayerConnectionListener implements Listener {
         // match as a spectator instead.
         if (reads.states().role(player) != Role.AFK && !this.match.game().hasLobbyLocation(lobbyId)) {
             this.match.game().joinLeastTimeMatch(player);
-        } else if (reads.states().role(player) == Role.NONE
-                && config.players().getRoles().getTurnNonesSpectator().isEnabled()) {
-            // Joining NONEs take fake spectator mode only with the
-            // toggle; AFK players keep their role and their mode.
-            reads.fakes().enable(player);
         }
     }
 
@@ -235,12 +230,9 @@ public final class PlayerConnectionListener implements Listener {
             this.match.game().flagStore().removePlayer(matchId, playerName);
         }
 
-        // Disconnect removal always lands on NONE; the toggle decides the
-        // mode. AFK players are never tracked, so they keep theirs.
+        // Disconnect removal always lands on NONE and keeps the mode.
+        // AFK players are never tracked, so they keep theirs.
         Player onlinePlayer = Bukkit.getPlayer(playerId);
-        if (onlinePlayer != null && config.players().getRoles().getTurnNonesSpectator().isEnabled()) {
-            reads.fakes().enable(onlinePlayer);
-        }
         if (onlinePlayer != null) {
             edge.roleTeams().sync(onlinePlayer);
         }

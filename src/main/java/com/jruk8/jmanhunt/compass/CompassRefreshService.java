@@ -114,10 +114,13 @@ final class CompassRefreshService {
         }
         RefreshMatch target = match.get();
         writeCache(holder, target.instance());
+        // Analysis resolutions judge the press-time snapshot; every
+        // other path resolves from the live spot, like the render.
+        Location origin = session.sessions().resolutionSpot(holder);
         List<CompassCandidate> opponents = inputs.targets().collectOpponents(holder,
-                target.targetRole(), target.instance());
+                target.targetRole(), target.instance(), origin);
         List<CompassSighting> sightings = inputs.targets().collectSightings(holder,
-                target.targetRole(), target.instance(), holder.getLocation());
+                target.targetRole(), target.instance(), origin);
         CompassLockService.LockedTargets narrowed = session.locks().narrowToLock(
                 holder.getUniqueId(), opponents, sightings);
         CompassPick pick = CompassManager.resolveCompassPick(settings,

@@ -36,20 +36,13 @@ settings:
         enabled: true
       reset-on-leave:
         enabled: true
-      turn-nones-spectator:
-        enabled: false
 ```
 
 `reset-on-game-end` returns every queued hunter and speedrunner to
 `NONE` when a match finishes, so players re-queue for the next one.
 `reset-on-leave` resets leavers to `NONE`, deferred until the game
-ends when their lobby has a match running.
-
-`turn-nones-spectator` puts `NONE` players into spectator mode. With
-the world engine on, they teleport to the match on start, land on the
-shared spectator spawn, and return to the lobby at the end.
-`SPECTATOR`-role players always travel regardless; `AFK` players are
-always left alone.
+ends when their lobby has a match running. `NONE` players keep their
+mode and wait in the lobby; use lobby queues to move them.
 
 ## Match Leave Destination
 

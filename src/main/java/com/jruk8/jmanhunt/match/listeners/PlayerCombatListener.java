@@ -110,9 +110,6 @@ public final class PlayerCombatListener implements Listener {
         } else if (role == Role.HUNTER) {
             handleHunterDeath(player, instance, quiet);
         }
-        if (role.isParticipant()) {
-            fireDeathTrigger(player, instance, role);
-        }
         world.compass().clearLocksOnTargetDeath(player.getUniqueId());
         if (!quiet) {
             broadcastFriendlyFireKill(instance, player);
@@ -120,6 +117,11 @@ public final class PlayerCombatListener implements Listener {
         // Next tick: state is final, and compass items are safe to touch
         // outside the death event. Unlocked picks re-resolve at once.
         tasks.run(() -> world.compass().refreshInstance(instance));
+        // Scripts run last: a converter like Infection must not rewrite
+        // roles before the friendly-fire check reads them.
+        if (role.isParticipant()) {
+            fireDeathTrigger(player, instance, role);
+        }
     }
 
     /** Fires ON_DEATH for the dead player: dead, killer or "null", former role. */

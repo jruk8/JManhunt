@@ -176,7 +176,7 @@ public class CompassSettings extends OkaeriConfig {
                 "distance drift around the true spot inside an error donut that",
                 "grows with distance. Close-range tracking stays exact until",
                 "the min-distance gate passes.",
-                "Default: false"
+                "Default: true"
         })
         private SignalInaccuracySettings inaccuracy = new SignalInaccuracySettings();
 

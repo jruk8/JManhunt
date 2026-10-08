@@ -147,7 +147,7 @@ public final class SignalInaccuracy {
     }
 
     /** Default hotspot radius used when the configured value is unusable. */
-    static final double DEFAULT_HOTSPOT_RADIUS = 50.0;
+    static final double DEFAULT_HOTSPOT_RADIUS = 70.0;
 
     /** Default sample interval used when the configured value is unusable. */
     static final int DEFAULT_SAMPLE_INTERVAL = 10;
@@ -163,7 +163,7 @@ public final class SignalInaccuracy {
 
     /**
      * Hotspot radius: must stay positive, so NaN, infinities, and values
-     * at or below 0 map to the 50 default. Pure.
+     * at or below 0 map to the 70 default. Pure.
      */
     public static double clampRadius(double value) {
         if (!Double.isFinite(value) || value <= 0.0) {

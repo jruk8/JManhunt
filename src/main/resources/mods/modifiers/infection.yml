@@ -4,7 +4,9 @@
 # hunter win once no runners remain. Disconnects are never converted:
 # the strike system removes quitters without firing ON_DEATH, so this
 # block never sees them. Engine elimination and win announcements still
-# run, so Infection lines may duplicate engine chat and sounds.
+# run, so Infection lines may duplicate engine chat and sounds. Two
+# blocks below: ON_DEATH converts and announces, INTERVAL debuffs the
+# infected hunters (root hunters are left alone).
 enabled: false
 meta:
   name: "Infection"
@@ -22,6 +24,11 @@ behavior:
         - '<if:"<args:2> != SPEEDRUNNER","exit">'
         # The victim was already eliminated: switch them back in as a hunter.
         - "<pswitch:<args:0>,HUNTER>"
+        # Remember the converted: the debuff block below tells infected
+        # hunters from root hunters by membership in this list. The
+        # verbatim flag reference stores back into the flag; an unset
+        # flag parses as empty, so the first convert starts the list.
+        - "<list.append:<gflag:infected>,<args:0>>"
         # Count the runners left after the conversion.
         - "<lflag:remaining,<len:<active-players:SPEEDRUNNER>>>"
         # Everyone converted: the engine hunter win follows on its own.
@@ -32,3 +39,32 @@ behavior:
         # Otherwise announce this victim with a random middle phrase.
         - '<if:"<lflag:remaining> != 0","<gmsg:\<red\>\<white\><args:0>\</white\> <random-pick:got infected,caught a cold,has fallen ill>! \<white\><lflag:remaining>\</white\> left.>">'
         - '<if:"<lflag:remaining> != 0","<gsound:event.mob_effect.trial_omen,0.8>">'
+  1:
+    # Block 2: debuffs for infected hunters only; root hunters exit on
+    # the first line. Each hunter runs this on their own 3-second
+    # timer (plus up to half a second of jitter either way).
+    runs-on:
+      - INTERVAL
+    options:
+      interval-settings:
+        interval: 3
+        deviation: 0.5
+        behavior: PER_EXECUTOR
+    commands:
+      hunter:
+        # Settings: sporadic effects plus a per-firing item drop.
+        # Effects are [id, amplifier, seconds] triples, so unlike the
+        # VIP list the duration is configurable per entry. Items are
+        # [item, min, max] triples with a rolled count each firing.
+        - "<lflag:effects,true>"
+        - "<lflag:effect_list,[[minecraft:blindness, 0, 1], [minecraft:weakness, 0, 1]]>"
+        - "<lflag:items,true>"
+        - "<lflag:item_list,[[minecraft:rotten_flesh, 3, 7], [minecraft:bone, 2, 4]]>"
+        # Never converted means never debuffed. An unset flag reads
+        # null, which contains no name, so this exits quietly too.
+        - '<if:"<list.contains:<default:<gflag:infected>,[]>,<p>> != true","exit">'
+        # Sporadic effects: roughly one firing in three lands these,
+        # each entry in turn with particles hidden.
+        - '<if:"<lflag:effects> == true and <random-num:1,3> == 1","<for:<lflag:effect_list>,<run:effect give <p> <list.get:<i>,0> <list.get:<i>,2> <list.get:<i>,1> true>>">'
+        # Groceries every firing: each entry rolls its own count.
+        - '<if:"<lflag:items> == true","<for:<lflag:item_list>,<run:give <p> <list.get:<i>,0> <random-num:<list.get:<i>,1>,<list.get:<i>,2>>>>">'

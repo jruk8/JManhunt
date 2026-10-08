@@ -78,7 +78,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                 game, intervals, this);
         this.wipes = new PlayerWipeService(edge.engineStates(), edge.log(),
                 new PlayerResetService(edge.overrides()));
-        this.defaults = new MatchDefaultsService(edge.overrides(), edge.log(), reads.players(),
+        this.defaults = new MatchDefaultsService(edge.overrides(), edge.log(),
                 wipes, new MatchDefaultsService.DefaultsStates(reads.playerStates(),
                         edge.fakes()));
         this.sinks = new ModifierTagSinks(edge.log(),

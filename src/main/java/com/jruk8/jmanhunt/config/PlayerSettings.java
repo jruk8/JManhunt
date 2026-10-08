@@ -65,17 +65,6 @@ public class PlayerSettings extends OkaeriConfig {
         })
         private Toggle resetOnLeave = new Toggle(true);
 
-        @CustomKey("turn-nones-spectator")
-        @Comment({
-                "Turn NONE-role players into spectators (gamemode plus match",
-                "spectating) wherever the plugin would otherwise leave them alone.",
-                "AFK players are always left alone.",
-                "true: NONEs are put in spectator",
-                "false: NONEs keep their gamemode and stay put, like AFK",
-                "Default: false"
-        })
-        private Toggle turnNonesSpectator = new Toggle(false);
-
     }
 
     /** Per-role respawn delay and lives. */

@@ -96,4 +96,39 @@ class CellBoundsTest {
         assertEquals(60.5, clamped[0], 0.0001);
         assertEquals(10.0, clamped[1], 0.0001);
     }
+
+    @Test
+    void clampInsideKeepsInsideAxisExact() {
+        CellBounds bounds = CellBounds.forCell(0L, 1000, 20, false);
+
+        // Z sits inside the real edge but outside the old margined box:
+        // only the escaped X moves, Z keeps its exact value.
+        double[] clamped = bounds.clampInside(600, 499.25, false, 2.0);
+
+        assertNotNull(clamped);
+        assertEquals(498.0, clamped[0], 0.0001);
+        assertEquals(499.25, clamped[1], 0.0001);
+    }
+
+    @Test
+    void clampInsideLandsQuarterBlockOffTheEdge() {
+        CellBounds bounds = CellBounds.forCell(0L, 1000, 20, false);
+
+        double[] clamped = bounds.clampInside(501, -100.5, false, 0.25);
+
+        assertNotNull(clamped);
+        assertEquals(499.75, clamped[0], 0.0001);
+        assertEquals(-100.5, clamped[1], 0.0001);
+    }
+
+    @Test
+    void clampInsidePullsBothEscapedAxes() {
+        CellBounds bounds = CellBounds.forCell(0L, 1000, 20, false);
+
+        double[] clamped = bounds.clampInside(600, -600, false, 2.0);
+
+        assertNotNull(clamped);
+        assertEquals(498.0, clamped[0], 0.0001);
+        assertEquals(-498.0, clamped[1], 0.0001);
+    }
 }

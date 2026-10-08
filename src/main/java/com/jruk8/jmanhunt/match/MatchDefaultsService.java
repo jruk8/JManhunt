@@ -3,7 +3,6 @@ package com.jruk8.jmanhunt.match;
 import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
-import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
@@ -25,15 +24,13 @@ public final class MatchDefaultsService {
 
     private final OverrideService overrides;
     private final JManhuntLogger log;
-    private final PlayersSettingsFacade players;
     private final PlayerWipeService wipes;
     private final DefaultsStates states;
 
     public MatchDefaultsService(OverrideService overrides, JManhuntLogger log,
-            PlayersSettingsFacade players, PlayerWipeService wipes, DefaultsStates states) {
+            PlayerWipeService wipes, DefaultsStates states) {
         this.overrides = overrides;
         this.log = log;
-        this.players = players;
         this.wipes = wipes;
         this.states = states;
     }
@@ -48,7 +45,7 @@ public final class MatchDefaultsService {
         if (wipes.endWipeEnabled(lobbyId)) {
             participants.forEach(wipes::resetPlayer);
         }
-        applyDefaultGamemodes(phase, participants, lobbySpectators, lobbyId);
+        applyDefaultGamemodes(phase, participants, lobbySpectators);
         applyWorldRules(Bukkit.getWorlds(), phase, lastMatch, rules);
         if (MatchConfig.GameRules.isRuleEnabled(rules, "SET_DAYTIME")) {
             Bukkit.getWorlds().forEach(this::setDaytime);
@@ -84,27 +81,22 @@ public final class MatchDefaultsService {
     }
 
     /**
-     * Default modes for a phase: participants to survival, NONEs to fake
-     * spectator on start (or back to survival on end) unless AFK. Nobody
-     * is teleported here: match travel belongs to the cell teleports.
+     * Default modes for a phase: participants to survival, and lobby
+     * watchers back to survival on end. Nobody is teleported here:
+     * match travel belongs to the cell teleports.
      */
     private void applyDefaultGamemodes(String phase, List<Player> participants,
-            List<Player> lobbySpectators, int lobbyId) {
-        // AFK players are skipped above and always left alone; NONEs follow
-        // the toggle, keeping their mode like AFK when it is off.
-        boolean setNoneSpectator = players.turnNonesSpectator(lobbyId);
+            List<Player> lobbySpectators) {
         for (Player player : participants) {
             states.fakes().disable(player);
         }
+        // AFK players are always left alone; everyone else keeps their
+        // mode on start and drops fake spectator on end.
         for (Player player : lobbySpectators) {
             if (states.states().role(player) == Role.AFK) {
                 continue; // AFK players are left alone
             }
-            if (phase.equals("start")) {
-                if (setNoneSpectator) {
-                    states.fakes().enable(player);
-                }
-            } else {
+            if (!phase.equals("start")) {
                 states.fakes().disable(player);
             }
         }

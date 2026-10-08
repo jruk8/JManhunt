@@ -454,6 +454,10 @@ public final class MatchStartService {
         if (plan.deactivate()) {
             instance.deactivate(playerId);
         }
+        // A swap back into the game un-dies the player (no status skull).
+        if (target.isParticipant()) {
+            instance.clearDeathRecord(playerId);
+        }
         applySwitchEdge(instance, player, playerId, plan, source, target);
         runSwitchCatchup(instance, player, target);
         applyJoinTiming(instance, player, timingSource, target);
@@ -519,10 +523,8 @@ public final class MatchStartService {
     /** Applies the fake spectator, pre-start, and headstart-hold modes for a joiner. */
     private void applyJoinGameMode(GameInstance instance, Player player, Role role) {
         Integer lobby = instance.originLobbyId();
-        if (role == Role.SPECTATOR
-                // NONE joiners take fake spectator mode only with the toggle;
-                // AFK cannot join at all (rejected in gameJoin).
-                || (!role.isParticipant() && reads.players().turnNonesSpectator(lobby))) {
+        // Spectators join watching; the rest keep their mode (AFK cannot join).
+        if (role == Role.SPECTATOR) {
             edge.fakes().enable(player);
         }
         if (!instance.begun()

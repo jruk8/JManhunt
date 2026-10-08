@@ -63,6 +63,16 @@ behavior:
         # Each effect in turn: duration is the interval seconds rounded
         # up plus one (ceil(x + 1) equals ceil(x) + 1), particles hidden.
         - '<if:"<lflag:effects> == true","<for:<lflag:effect_list>,<run:effect give <gflag:vip> <list.get:<i>,0> <ceil:<args:0>+1> <list.get:<i>,1> true>>">'
+        # Armor warning: pslot reads [MATERIAL, qty] per slot, null when
+        # empty. Any worn piece raises the flag for the scold below.
+        - "<lflag:has_armor,false>"
+        - '<if:"<pslot:<gflag:vip>,helmet> != null","<lflag:has_armor,true>">'
+        - '<if:"<pslot:<gflag:vip>,chestplate> != null","<lflag:has_armor,true>">'
+        - '<if:"<pslot:<gflag:vip>,leggings> != null","<lflag:has_armor,true>">'
+        - '<if:"<pslot:<gflag:vip>,boots> != null","<lflag:has_armor,true>">'
+        # Only scold when armor is on and about to be cleared.
+        - '<if:"<lflag:no_armor> == true and <lflag:has_armor> == true","<pmsg:<gflag:vip>,\<red\>You cannot have armor as a VIP!>">'
+        - '<if:"<lflag:no_armor> == true and <lflag:has_armor> == true","<psound:<gflag:vip>,block.sniffer_egg.hatch,1.0,1.0>">'
         # Armor slots cleared every second while enabled.
         - '<if:"<lflag:no_armor> == true","<run:item replace entity <gflag:vip> armor.head with air>">'
         - '<if:"<lflag:no_armor> == true","<run:item replace entity <gflag:vip> armor.chest with air>">'

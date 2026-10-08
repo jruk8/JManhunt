@@ -90,6 +90,8 @@ class HotspotServiceTest {
     @Test
     void reductionNeedsHistoryAndEnabledFlag() {
         Fixture fixture = fixture();
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", false);
         UUID id = UUID.randomUUID();
         assertEquals(0.0, fixture.hotspots().reductionFor(id, 0.0, 0.0, null), 0.0);
         for (int point = 0; point < 20; point++) {

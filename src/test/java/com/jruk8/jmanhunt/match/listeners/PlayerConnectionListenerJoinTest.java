@@ -145,16 +145,6 @@ class PlayerConnectionListenerJoinTest {
     }
 
     @Test
-    void noneTakesFakeModeWithToggle() {
-        JoinFixture fixture = joinFixture(Role.NONE);
-        fixture.config().getRoles().getTurnNonesSpectator().setEnabled(true);
-
-        join(fixture);
-
-        verify(fixture.fakes()).enable(fixture.player());
-    }
-
-    @Test
     void afkSkipsNewestMatchFallbackWithoutLobby() {
         JoinFixture fixture = joinFixture(Role.AFK);
         when(fixture.game().hasLobbyLocation(anyInt())).thenReturn(false);

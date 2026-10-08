@@ -27,6 +27,9 @@ public final class MatchBorderEnforcer {
     /** Enforcement cadence in ticks: rubber-band, travel cap, elapsed cache. */
     private static final long ENFORCE_PERIOD_TICKS = 5L;
 
+    /** Rubber-band landing: this far inside the escaped edge. */
+    private static final double RUBBERBAND_MARGIN = 0.25;
+
     /** Engine settings plus service. */
     public record BorderEngine(com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
             WorldEngineService worldEngine) {
@@ -94,7 +97,8 @@ public final class MatchBorderEnforcer {
                 if (outside <= 0.0) {
                     continue;
                 }
-                double[] inside = bounds.clampInside(location.getX(), location.getZ(), nether, 2.0);
+                double[] inside = bounds.clampInside(location.getX(), location.getZ(), nether,
+                        RUBBERBAND_MARGIN);
                 if (inside != null) {
                     double y = recoveryY(location.getWorld(), inside[0], inside[1], location.getY());
                     player.teleport(new Location(location.getWorld(), inside[0], y, inside[1],

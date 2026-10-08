@@ -194,12 +194,12 @@ is the full true distance; `drift-radius` sets the band's outer edge
 as a share of it, and `inner-deadzone` sets the white hole as a share
 of that outer edge.
 
-- `enabled` (default off) is the master switch.
-- `inner-deadzone` (default 0.4) is the hole in the middle of the
+- `enabled` (default on) is the master switch.
+- `inner-deadzone` (default 0.65) is the hole in the middle of the
   donut, from 0 up to (but not including) 1. At 0.5 no sample ever
   lands inside half the drift radius; at 0 the sample may land right
   on the true spot.
-- `drift-radius` (default 0.6) is how far the readout may wander, as a
+- `drift-radius` (default 0.8) is how far the readout may wander, as a
   share of the true distance. At 1 the error reaches up to the full
   distance away; near 0 it hugs the truth. It clamps to 0.01 at the
   bottom so the error never fully vanishes while enabled.
@@ -226,7 +226,7 @@ keeping the last `max-points` spots (default 40). Players who are
 offline, dead, respawning, or held for a headstart are skipped, and
 nothing is recorded while a headstart countdown runs. Skipping never
 erases what is already recorded. When many of a
-target's saved spots sit within `hotspot-radius` meters (default 50)
+target's saved spots sit within `hotspot-radius` meters (default 70)
 of where they stand now, the error donut shrinks (the black band in
 the sheet above narrows). Movers keep the full error.
 

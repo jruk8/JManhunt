@@ -25,10 +25,19 @@ final class CompassTargetService {
 
     /**
      * Live opponents of the given role in the same world and match,
-     * nearest first.
+     * nearest first. Distances measure from the holder's live spot.
      */
     List<CompassCandidate> collectOpponents(Player holder, Role targetRole, GameInstance instance) {
-        Location origin = holder.getLocation();
+        return collectOpponents(holder, targetRole, instance, holder.getLocation());
+    }
+
+    /**
+     * Same, but distances measure from the given origin: analysis
+     * resolutions pass the press-time holder snapshot so the
+     * min/max gates judge the press, not the moved position.
+     */
+    List<CompassCandidate> collectOpponents(Player holder, Role targetRole, GameInstance instance,
+            Location origin) {
         return liveTrackable(holder, targetRole, instance)
                 .map(player -> new CompassCandidate(player.getUniqueId(), player.getName(),
                         origin.distance(player.getLocation()),

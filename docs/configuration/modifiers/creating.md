@@ -151,7 +151,8 @@ match for the hunters, and a 1-second `INTERVAL` block with two
 toggles at the top of the console list: `effects` (the nested
 `effect_list` of `[id, amplifier]` pairs, reapplied with the
 interval seconds rounded up plus one) and `no_armor` (clears all
-four armor slots every second).
+four armor slots every second, warning the VIP with a message and
+sound when something was actually worn).
 
 ### Infection
 
@@ -161,4 +162,9 @@ Speedrunners who die their final death come back as hunters via
 (which never fire `ON_DEATH`) are never converted. When no runners
 remain, the engine ends the match with a hunter win on its own.
 Engine elimination and win announcements still run, so Infection
-lines may duplicate engine chat and sounds.
+lines may duplicate engine chat and sounds. A second block runs every
+3 seconds per hunter: converted hunters get sporadic blindness and
+weakness plus rotten flesh and bones, while root hunters exit
+untouched. Effect durations and item counts live in the block's
+`effect_list` (`[id, amplifier, seconds]`) and `item_list`
+(`[item, min, max]`) settings.

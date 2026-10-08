@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,6 +50,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 class PlayerCombatListenerDeathTest {
 
@@ -159,6 +161,27 @@ class PlayerCombatListenerDeathTest {
         assertEquals(Role.SPECTATOR, fixture.players().role(fixture.victimId()));
         verify(fixture.commands()).runEventModifiers(eq("ON_DEATH"), eq(fixture.victim()),
                 eq(7L), eq(List.of("Victor", "null", "SPEEDRUNNER")));
+    }
+
+    @Test
+    void onDeathDispatchesAfterInternalDeathHandling() {
+        Fixture fixture = fixture(Role.SPEEDRUNNER, 2, true);
+        Player killer = mock(Player.class);
+        UUID killerId = UUID.randomUUID();
+        when(killer.getUniqueId()).thenReturn(killerId);
+        when(killer.getName()).thenReturn("Kira");
+        fixture.players().setRole(killerId, Role.SPEEDRUNNER);
+        when(fixture.victim().getKiller()).thenReturn(killer);
+
+        kill(fixture);
+
+        // Lock clearing and the compass refresh both precede scripts, so
+        // a converter like Infection cannot disturb internal handling.
+        InOrder order = inOrder(fixture.compass(), fixture.commands());
+        order.verify(fixture.compass()).clearLocksOnTargetDeath(fixture.victimId());
+        order.verify(fixture.compass()).refreshInstance(fixture.instance());
+        order.verify(fixture.commands()).runEventModifiers(eq("ON_DEATH"), eq(fixture.victim()),
+                eq(7L), eq(List.of("Victor", "Kira", "SPEEDRUNNER")));
     }
 
     @Test

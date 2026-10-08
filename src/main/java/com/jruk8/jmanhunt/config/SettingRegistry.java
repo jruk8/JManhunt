@@ -554,7 +554,6 @@ public final class SettingRegistry {
     private static void addPlayerEntries(List<SettingDescriptor> entries) {
         entries.add(bool("settings.players.roles.reset-on-game-end.enabled", true));
         entries.add(bool("settings.players.roles.reset-on-leave.enabled", true));
-        entries.add(bool("settings.players.roles.turn-nones-spectator.enabled", false));
         entries.add(bool("settings.players.respawn.hunter.enabled", true));
         entries.add(intVal("settings.players.respawn.hunter.delay-seconds", 15, null, null));
         entries.add(intMinusOne("settings.players.respawn.hunter.lives", -1, 0));
@@ -591,8 +590,8 @@ public final class SettingRegistry {
                 Map.of("gear_wipe", "GEAR-WIPE"), "KILL", "GEAR-WIPE"));
         entries.add(bool("settings.server.anti-spawn-camp.kill-on-second-time", true));
         entries.add(bool("settings.server.status.show-win-conditions", false));
-        entries.add(bool("settings.server.status.show-elapsed-time", false));
-        entries.add(bool("settings.server.status.show-modifiers", false));
+        entries.add(bool("settings.server.status.show-elapsed-time", true));
+        entries.add(bool("settings.server.status.show-modifiers", true));
         entries.add(bool("settings.server.status.show-ids", false));
         entries.add(bool("settings.server.status.show-on-start", true));
         entries.add(bool("settings.server.team-chat.enabled", true));

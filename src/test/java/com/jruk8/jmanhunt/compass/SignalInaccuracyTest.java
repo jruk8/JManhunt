@@ -155,6 +155,7 @@ class SignalInaccuracyTest {
     @Test
     void disabledServiceStaysExact() {
         ServiceFixture fixture = serviceFixture();
+        ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", false);
         Location tracker = new Location(fixture.world(), 0.0, 64.0, 0.0);
         Location truth = new Location(fixture.world(), 500.0, 64.0, 0.0);
         CompassInaccuracyService.Result result =
@@ -163,7 +164,7 @@ class SignalInaccuracyTest {
         assertSame(truth, result.needleSpot());
         assertEquals(500.0, result.feedbackDistance(), 1e-9);
         assertEquals(0.0, result.errorDistance(), 0.0);
-        assertEquals(600.0, result.theoreticalMax(), 1e-9);
+        assertEquals(800.0, result.theoreticalMax(), 1e-9);
     }
 
     @Test
@@ -175,8 +176,8 @@ class SignalInaccuracyTest {
         CompassInaccuracyService.Result result =
                 fixture.service().resolve(null, tracker, truth, UUID.randomUUID(), 0.25, 0.5);
         assertTrue(result.applied());
-        assertTrue(result.errorDistance() >= 120.0 - 1e-9
-                && result.errorDistance() <= 300.0 + 1e-9,
+        assertTrue(result.errorDistance() >= 260.0 - 1e-9
+                && result.errorDistance() <= 400.0 + 1e-9,
                 "error out of ring: " + result.errorDistance());
         assertEquals(64.0, result.needleSpot().getY(), 0.0);
         assertSame(fixture.world(), result.needleSpot().getWorld());
@@ -255,9 +256,9 @@ class SignalInaccuracyTest {
 
     @Test
     void hotspotClampsCoverEdges() {
-        assertEquals(50.0, SignalInaccuracy.clampRadius(0.0), 0.0);
-        assertEquals(50.0, SignalInaccuracy.clampRadius(-5.0), 0.0);
-        assertEquals(50.0, SignalInaccuracy.clampRadius(Double.NaN), 0.0);
+        assertEquals(70.0, SignalInaccuracy.clampRadius(0.0), 0.0);
+        assertEquals(70.0, SignalInaccuracy.clampRadius(-5.0), 0.0);
+        assertEquals(70.0, SignalInaccuracy.clampRadius(Double.NaN), 0.0);
         assertEquals(12.5, SignalInaccuracy.clampRadius(12.5), 0.0);
         assertEquals(10, SignalInaccuracy.clampSampleInterval(0));
         assertEquals(10, SignalInaccuracy.clampSampleInterval(101));
@@ -304,16 +305,18 @@ class SignalInaccuracyTest {
         CompassInaccuracyService.Result result =
                 fixture.service().resolve(null, tracker, truth, target, 0.25, 0.5);
         assertTrue(result.applied());
-        assertTrue(result.errorDistance() >= 12.0 - 1e-9
-                && result.errorDistance() <= 30.0 + 1e-9,
+        assertTrue(result.errorDistance() >= 26.0 - 1e-9
+                && result.errorDistance() <= 40.0 + 1e-9,
                 "shrunk error out of ring: " + result.errorDistance());
-        assertEquals(600.0, result.theoreticalMax(), 1e-9);
+        assertEquals(800.0, result.theoreticalMax(), 1e-9);
     }
 
     @Test
     void hotspotOffLeavesResolvedError() {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", false);
         UUID target = UUID.randomUUID();
         for (int point = 0; point < 40; point++) {
             fixture.hotspots().record(target, 500.0, 0.0, 40);
@@ -323,7 +326,7 @@ class SignalInaccuracyTest {
         CompassInaccuracyService.Result result =
                 fixture.service().resolve(null, tracker, truth, target, 0.25, 0.5);
         assertTrue(result.applied());
-        assertTrue(result.errorDistance() >= 120.0 - 1e-9,
+        assertTrue(result.errorDistance() >= 260.0 - 1e-9,
                 "error shrank without hotspot: " + result.errorDistance());
     }
 }

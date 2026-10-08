@@ -138,6 +138,22 @@ class GameInstanceTest {
     }
 
     @Test
+    void clearDeathRecordDropsOnePlayer() {
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        instance.recordDeath(first, "amy", Role.HUNTER);
+        instance.recordDeath(second, "bob", Role.SPEEDRUNNER);
+
+        instance.clearDeathRecord(first);
+
+        assertEquals(1, instance.deadPlayers().size());
+        assertEquals("bob", instance.deadPlayers().get(0).name());
+        instance.clearDeathRecord(first);
+        assertEquals(1, instance.deadPlayers().size());
+    }
+
+    @Test
     void modifierToggleMarksFireOncePerName() {
         GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
 

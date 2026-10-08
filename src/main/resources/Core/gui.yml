@@ -85,7 +85,6 @@ categories:
   players/roles: NAME_TAG
   players/roles/reset-on-game-end: RECOVERY_COMPASS
   players/roles/reset-on-leave: MAGMA_CREAM
-  players/roles/turn-nones-spectator: GLASS
   players/friendly-fire: TNT
   players/invulnerability: SHIELD
   players/invulnerability/none-players: GHAST_TEAR
@@ -230,7 +229,6 @@ descriptions:
   "settings.players.roles": "Reset roles on leave and match end."
   "settings.players.roles.reset-on-game-end": "Clear roles when a match ends."
   "settings.players.roles.reset-on-leave": "Clear roles when players leave."
-  "settings.players.roles.turn-nones-spectator": "Park roleless players in spectator."
   "settings.players.spectator": "Spectator toolbar and lock-on follow."
   "settings.players.spectator.toolbar": "Hotbar buttons handed to spectators."
   "settings.players.spectator.travel": "Travel limit keeping spectators near the action."
@@ -393,7 +391,6 @@ descriptions:
   "settings.compass.signal.interference.weather.interfere-during": "Weather that interferes."
   "settings.players.roles.reset-on-game-end.enabled": "Reset roles to NONE when a match ends."
   "settings.players.roles.reset-on-leave.enabled": "Reset leavers to NONE."
-  "settings.players.roles.turn-nones-spectator.enabled": "Put NONE players in spectator mode."
   "settings.players.respawn.hunter.enabled": "Hunters respawn after dying."
   "settings.players.respawn.hunter.delay-seconds": "Seconds before hunters revive."
   "settings.players.respawn.hunter.lives": "Hunter lives; -1 is unlimited."

@@ -27,9 +27,9 @@ world-engine:
 ```
 
 When `enabled`, matches teleport participants to a fresh cell on start
-and return them to the lobby at the end. Spectators and `none` players
-(with `turn-nones-spectator`) travel along and land on the shared
-spectator spawn. Enabling it also spreads strongholds past the vanilla
+and return them to the lobby at the end. Spectators travel along and
+land on the shared spectator spawn. Enabling it also spreads
+strongholds past the vanilla
 128-per-world limit; tweak the rates in
 `settings/world-engine/strongholds.json`.
 

@@ -25,9 +25,10 @@ completion only suggests what the sender has permission to run.
 `/manhunt status` without an argument shows your own match, else your
 lobby queue. An id shows one match roster grouped by role; `all` lists
 every running match first and then every populated lobby. Four extras
-can be toggled under `settings.server.status`: win conditions, running
-time, enabled modifiers, and the gray `L{lobby}|G{game}` tag (off by
-default). Long rosters truncate, and dead players get a skull line
+can be toggled under `settings.server.status`: win conditions and the
+gray `L{lobby}|G{game}` tag (off by default), plus running time and
+enabled modifiers (on by default). Long rosters truncate, and dead
+players get a skull line
 (tune all of it in `messages.yml` under `manhunt.status-*`). The same
 section holds `show-on-start` (on by default): when off, matches start
 without the automatic roster while `/manhunt status` keeps working.

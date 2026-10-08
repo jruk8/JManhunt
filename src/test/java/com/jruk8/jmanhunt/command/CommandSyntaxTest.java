@@ -62,6 +62,8 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("give <p> apple <random-num>").isPresent());
         assertTrue(CommandSyntax.error("give <p> apple <random-num:0,99999999999>").isPresent());
         assertTrue(CommandSyntax.error("say <random-num:-9223372036854775808,9223372036854775807>").isPresent());
+        assertTrue(CommandSyntax.error("give <p> apple <random-num:<args:0>,6>").isEmpty());
+        assertTrue(CommandSyntax.error("give <p> apple <random-num:<list.get:<i>,1>,<list.get:<i>,2>>").isEmpty());
     }
 
     @Test

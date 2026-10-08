@@ -64,13 +64,6 @@ public final class PlayersSettingsFacade {
                 global.getRoles().getResetOnGameEnd().isEnabled());
     }
 
-    /** True when NONE joiners take fake spectator mode. */
-    public boolean turnNonesSpectator(Integer lobby) {
-        return overrides.getBoolean(lobby,
-                BASE + "roles.turn-nones-spectator.enabled",
-                global.getRoles().getTurnNonesSpectator().isEnabled());
-    }
-
     /** Configured hunter lives, -1 means unlimited. */
     public int hunterLives(Integer lobby) {
         return overrides.getInt(lobby, BASE + "respawn.hunter.lives",

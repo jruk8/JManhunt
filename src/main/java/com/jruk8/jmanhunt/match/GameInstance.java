@@ -154,6 +154,14 @@ public final class GameInstance {
         return List.copyOf(deadPlayers);
     }
 
+    /**
+     * Drops one player's death record: a role swap back into the game
+     * un-dies them, which also clears their status skull.
+     */
+    public void clearDeathRecord(UUID playerId) {
+        deadPlayers.removeIf(dead -> dead.playerId().equals(playerId));
+    }
+
     /** Marks a player as an active participant (also records the assignment). */
     public void activate(UUID playerId) {
         assigned.add(playerId);

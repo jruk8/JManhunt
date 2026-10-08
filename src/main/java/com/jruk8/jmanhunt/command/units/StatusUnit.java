@@ -184,7 +184,7 @@ public final class StatusUnit implements SubcommandUnit {
 
     /** Optional enabled-modifier roll call: hidden when off or when none are enabled. */
     private void sendModifiersLine(CommandSender sender) {
-        if (!config.getBoolean("settings.server.status.show-modifiers", false)) {
+        if (!config.getBoolean("settings.server.status.show-modifiers", true)) {
             return;
         }
         List<String> enabled = new ArrayList<>();
@@ -202,9 +202,9 @@ public final class StatusUnit implements SubcommandUnit {
                 Map.of("modifiers", ListFormatter.joinOxford(enabled)));
     }
 
-    /** Optional match runtime, off by default. */
+    /** Optional match runtime, on by default. */
     private void sendElapsedLine(CommandSender sender, GameInstance instance) {
-        if (!config.getBoolean("settings.server.status.show-elapsed-time", false)) {
+        if (!config.getBoolean("settings.server.status.show-elapsed-time", true)) {
             return;
         }
         support.message(sender, texts.getStatusElapsed(), Map.of("duration",

@@ -24,8 +24,8 @@ The role is an assignment; the mode is the flight-and-hidden state.
 Setting the role alone never enters the mode: only actually joining a
 match as a spectator (or a held or watching state) does. The mode also
 covers participants who are held or watching (headstart holds, death
-cam, respawn waits), and `none` players swept in by
-`turn-nones-spectator` get the mode without the role.
+cam, respawn waits). `NONE` players keep their mode and wait in the
+lobby.
 
 ## What Spectators Cannot Do
 

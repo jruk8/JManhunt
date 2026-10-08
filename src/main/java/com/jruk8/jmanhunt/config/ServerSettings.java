@@ -142,17 +142,17 @@ public class ServerSettings extends OkaeriConfig {
         @CustomKey("show-elapsed-time")
         @Comment({
                 "Show how long the match has been running.",
-                "Default: false"
+                "Default: true"
         })
-        private boolean showElapsedTime = false;
+        private boolean showElapsedTime = true;
 
         @CustomKey("show-modifiers")
         @Comment({
                 "Show enabled custom modifiers as \"Modifiers: a, b, and c\".",
                 "Hidden when no custom modifier is enabled.",
-                "Default: false"
+                "Default: true"
         })
-        private boolean showModifiers = false;
+        private boolean showModifiers = true;
 
         @CustomKey("show-ids")
         @Comment({
