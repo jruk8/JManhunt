@@ -25,16 +25,17 @@ Show a colored `[RUNNER]` or `[HUNTER]` tag after names in chat:
    render. [LPC Chat](https://modrinth.com/plugin/lpc-chat) works and
    supports MiniMessage. Without one, the suffixes below exist in
    LuckPerms data but never display.
-2. Add the speedrunner suffix:
+2. Add the speedrunner suffix (note the leading space: suffixes
+   always look like `" [suffix]"` so they never butt against the name):
 
    ```
-   /lp group default meta setsuffix 100 "<gray>[<#74de66>RUNNER</#74de66>]" jmh-role=speedrunner
+   /lp group default meta setsuffix 100 " <gray>[<#74de66>RUNNER</#74de66>]" jmh-role=speedrunner
    ```
 
 3. Add the hunter suffix:
 
    ```
-   /lp group default meta setsuffix 100 "<gray>[<#de666e>HUNTER</#de666e>]" jmh-role=hunter
+   /lp group default meta setsuffix 100 " <gray>[<#de666e>HUNTER</#de666e>]" jmh-role=hunter
    ```
 
 That is it: the `jmh-role` context swaps the suffix automatically as
