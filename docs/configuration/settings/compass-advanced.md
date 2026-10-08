@@ -96,9 +96,12 @@ is thrown away and the compass never updates. `failure-cooldown`
 ### Cancel Early
 
 An analysis that is already doomed finishes early instead of
-running the full delay. `time-multiplier` (0 to 1) keeps that
-fraction of the remaining time: `0` resolves at once, `1` leaves
-the duration untouched.
+running the full delay. Doomed covers failing interference plus
+every available target inside the min distance or past the max
+distance: resolutions judge press-time positions, so a gated
+press can never recover mid-analysis. `time-multiplier` (0 to 1)
+keeps that fraction of the remaining time: `0` resolves at once,
+`1` leaves the duration untouched.
 
 ```yaml
 cancel-early:

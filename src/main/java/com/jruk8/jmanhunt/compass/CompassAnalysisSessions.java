@@ -203,6 +203,13 @@ public boolean analysisDoomed(Player holder) {
     if (pick.isEmpty()) {
         return false;
     }
+    // Every available target inside the min gate or past the max
+    // gate: resolutions judge press-time snapshots, so a gated
+    // press can never recover and exits early like interference.
+    if (pick.get().kind() == CompassPick.Kind.NEARBY
+            || pick.get().kind() == CompassPick.Kind.TOO_FAR) {
+        return true;
+    }
     UUID id = holder.getUniqueId();
     Location targetPress = pick.get().id() == null ? null
             : analysisTargets.getOrDefault(id, Map.of()).get(pick.get().id());

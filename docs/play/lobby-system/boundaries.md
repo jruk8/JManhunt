@@ -137,6 +137,9 @@ The same file protects the lobby world with `protected` (on by
 default): breaking and placing blocks, interacting, damaging entities,
 and losing hunger all need `jmanhunt.editlobby`. Give that node to
 builders, or turn `protected` off while setting the lobby up by hand.
+Denials cancel at the earliest event priority, so other plugins
+(anti-glitch resyncs watching for cancelled placements included)
+always observe them.
 
 Fresh lobby worlds are also created with safe defaults: peaceful
 difficulty, frozen time and weather, no locator bar, and no mob,

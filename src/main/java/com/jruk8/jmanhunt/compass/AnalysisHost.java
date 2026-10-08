@@ -14,7 +14,11 @@ interface AnalysisHost {
     /** Folds one movement sample into the holder's running maximum. */
     void sampleAnalysisMovement(Player holder);
 
-    /** True when the holder's in-flight analysis is already doomed. */
+    /**
+     * True when the holder's in-flight analysis is already doomed:
+     * failing interference, or every available target inside the min
+     * gate or past the max gate.
+     */
     boolean analysisDoomed(Player holder);
 
     /** True when the holder's doom-check pick has no location at all. */

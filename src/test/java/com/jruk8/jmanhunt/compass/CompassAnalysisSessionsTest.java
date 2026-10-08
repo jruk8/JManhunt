@@ -44,6 +44,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CompassAnalysisSessionsTest {
 
     private static final String COST = "settings.compass.actions.manual.analysis.cost.";
+    private static final String HUNTER_LIMITS = "settings.compass.distance-limits.hunter.";
 
     @Test
     void poorHolderBlocksStampsFailureAndSoundsTooHigh() {
@@ -188,6 +189,69 @@ class CompassAnalysisSessionsTest {
         wireMatch(fixture, holder, opponents, List.of());
 
         assertFalse(fixture.sessions().noLocationAvailable(holder));
+    }
+
+    @Test
+    void doomedWhenAllTargetsNearby() {
+        Fixture fixture = fixture();
+        Player holder = holder(fixture, 20.0, 5.0f, 20, 5);
+        fixture.states().setRole(holder, Role.HUNTER);
+        set(fixture.root(), HUNTER_LIMITS + "min-distance.enabled", true);
+        set(fixture.root(), HUNTER_LIMITS + "min-distance.distance", 25.0);
+        set(fixture.root(), HUNTER_LIMITS + "max-distance.enabled", false);
+        List<CompassCandidate> opponents =
+                List.of(new CompassCandidate(UUID.randomUUID(), "Riva", 50.0, 5.0));
+        wireMatch(fixture, holder, opponents, List.of());
+
+        assertTrue(fixture.sessions().analysisDoomed(holder));
+    }
+
+    @Test
+    void doomedWhenAllTargetsTooFar() {
+        Fixture fixture = fixture();
+        Player holder = holder(fixture, 20.0, 5.0f, 20, 5);
+        fixture.states().setRole(holder, Role.HUNTER);
+        set(fixture.root(), HUNTER_LIMITS + "min-distance.enabled", false);
+        set(fixture.root(), HUNTER_LIMITS + "max-distance.enabled", true);
+        set(fixture.root(), HUNTER_LIMITS + "max-distance.distance", 100.0);
+        List<CompassCandidate> opponents =
+                List.of(new CompassCandidate(UUID.randomUUID(), "Riva", 500.0, 500.0));
+        wireMatch(fixture, holder, opponents, List.of());
+
+        assertTrue(fixture.sessions().analysisDoomed(holder));
+    }
+
+    @Test
+    void notDoomedWhenTargetInRange() {
+        Fixture fixture = fixture();
+        Player holder = holder(fixture, 20.0, 5.0f, 20, 5);
+        fixture.states().setRole(holder, Role.HUNTER);
+        set(fixture.root(), HUNTER_LIMITS + "min-distance.enabled", true);
+        set(fixture.root(), HUNTER_LIMITS + "min-distance.distance", 25.0);
+        set(fixture.root(), HUNTER_LIMITS + "max-distance.enabled", true);
+        set(fixture.root(), HUNTER_LIMITS + "max-distance.distance", 100.0);
+        List<CompassCandidate> opponents =
+                List.of(new CompassCandidate(UUID.randomUUID(), "Riva", 50.0, 50.0));
+        wireMatch(fixture, holder, opponents, List.of());
+
+        assertFalse(fixture.sessions().analysisDoomed(holder));
+    }
+
+    @Test
+    void notDoomedWhenSightingCoversGatedOpponents() {
+        Fixture fixture = fixture();
+        Player holder = holder(fixture, 20.0, 5.0f, 20, 5);
+        fixture.states().setRole(holder, Role.HUNTER);
+        set(fixture.root(), HUNTER_LIMITS + "min-distance.enabled", false);
+        set(fixture.root(), HUNTER_LIMITS + "max-distance.enabled", true);
+        set(fixture.root(), HUNTER_LIMITS + "max-distance.distance", 100.0);
+        List<CompassCandidate> opponents =
+                List.of(new CompassCandidate(UUID.randomUUID(), "Riva", 500.0, 500.0));
+        List<CompassSighting> sightings =
+                List.of(new CompassSighting(UUID.randomUUID(), "Riva", 50.0));
+        wireMatch(fixture, holder, opponents, sightings);
+
+        assertFalse(fixture.sessions().analysisDoomed(holder));
     }
 
     private static void wireMatch(Fixture fixture, Player holder, List<CompassCandidate> opponents,

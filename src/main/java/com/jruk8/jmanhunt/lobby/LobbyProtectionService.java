@@ -7,6 +7,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -21,7 +22,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
  * Guards the lobby world while lobby protection is on: breaking and
  * placing blocks, interacting, hurting entities, and losing hunger all
  * need jmanhunt.editlobby. Movement, chat, and commands pass through,
- * and void rescue still applies on top of this.
+ * and void rescue still applies on top of this. Every denial runs at
+ * LOWEST priority so downstream plugins (anti-glitch resyncs watching
+ * for cancelled placements included) observe the cancelled state.
  */
 public final class LobbyProtectionService implements Listener {
 
@@ -35,49 +38,49 @@ public final class LobbyProtectionService implements Listener {
         this.lobbyWorldName = lobbyWorldName;
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onBlockBreak(BlockBreakEvent event) {
         if (denies(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onBlockPlace(BlockPlaceEvent event) {
         if (denies(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onInteract(PlayerInteractEvent event) {
         if (denies(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onInteractEntity(PlayerInteractEntityEvent event) {
         if (denies(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onArmorStandManipulate(PlayerArmorStandManipulateEvent event) {
         if (denies(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onHangingBreak(HangingBreakByEntityEvent event) {
         if (event.getRemover() instanceof Player player && denies(player)) {
             event.setCancelled(true);
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onEntityDamage(EntityDamageByEntityEvent event) {
         Player attacker = attacker(event.getDamager());
         if (attacker != null && denies(attacker)) {
@@ -85,7 +88,7 @@ public final class LobbyProtectionService implements Listener {
         }
     }
 
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onHunger(FoodLevelChangeEvent event) {
         if (event.getEntity() instanceof Player player && protects(player.getWorld())) {
             event.setCancelled(true);

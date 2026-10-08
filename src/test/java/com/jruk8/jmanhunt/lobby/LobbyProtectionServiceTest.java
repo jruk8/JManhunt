@@ -1,12 +1,20 @@
 package com.jruk8.jmanhunt.lobby;
 
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
+import java.lang.reflect.Method;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.inventory.ItemStack;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -72,6 +80,35 @@ class LobbyProtectionServiceTest {
         service.onBlockBreak(event);
 
         assertTrue(event.isCancelled());
+    }
+
+    @Test
+    void cancelsPlacementsWithoutBypass() {
+        LobbyProtectionService service = service(new LobbyConfig());
+        World world = world("jmh-lobby");
+        Block block = mock(Block.class);
+        when(block.getWorld()).thenReturn(world);
+        BlockState replaced = mock(BlockState.class);
+        BlockPlaceEvent event = new BlockPlaceEvent(block, replaced, block,
+                new ItemStack(Material.STONE), player(world, false), true);
+
+        service.onBlockPlace(event);
+
+        assertTrue(event.isCancelled());
+    }
+
+    @Test
+    void denialsRunFirstForDownstreamPlugins() {
+        int handlers = 0;
+        for (Method method : LobbyProtectionService.class.getDeclaredMethods()) {
+            EventHandler handler = method.getAnnotation(EventHandler.class);
+            if (handler == null) {
+                continue;
+            }
+            handlers++;
+            assertEquals(EventPriority.LOWEST, handler.priority(), method.getName());
+        }
+        assertTrue(handlers > 0);
     }
 
     @Test
