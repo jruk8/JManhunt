@@ -49,7 +49,7 @@ public class JManhuntConfig extends OkaeriConfig {
 
     @CustomKey("config-version")
     @Comment("Used for config updates, don't change unless you know what you're doing.")
-    private int configVersion = 10;
+    private int configVersion = 11;
 
     @CustomKey("send-anonymous-statistics")
     @Comment({

@@ -468,6 +468,7 @@ descriptions:
   "advanced.lobbies.bounds.exit-lobby-id": "Lobby for bounds exits; -1 is none."
   "advanced.lobbies.bounds.exit-behavior": "Keep or drop membership on bounds exit."
   "advanced.lobbies.mid-match-setplayer": "How setplayer joins live matches."
+  "advanced.lobbies.join-timing": "What outsiders wait out when joining live matches."
   "advanced.lobbies.queue-caps.speedrunner": "Max queued speedrunners; -1 is unlimited."
   "advanced.lobbies.queue-caps.hunter": "Max queued hunters; -1 is unlimited."
   "advanced.lobbies.lobby-world-name": "Lobby world name; missing worlds generate."

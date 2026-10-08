@@ -90,6 +90,22 @@ Held players count against queue caps; joined players ignore them.
 Queue counts only cover queued players, never anyone already in a
 live match.
 
+## Mid-match Join Timing
+
+`advanced.lobbies.join-timing` decides what `NONE`, `SPECTATOR`, and
+`AFK` players wait out when they enter a live match through
+`/game join`, `pswitch`, or a joining `setplayer`. Players already in
+the game are never affected, and roles are lobby specific (a runner
+from another lobby counts as `NONE` in the target lobby):
+
+- `WAIT` (default) holds the joiner for the larger of the joined
+  role's headstart and respawn durations, or joins instantly when
+  both are disabled.
+- `INSTANT` always joins immediately.
+
+The hold releases into play without a respawn (no teleport, no heal,
+no triggers) and cancels cleanly on leave or match end.
+
 ## Sublobbies
 
 Under the sublobby policies (default), a lobby never hosts a match

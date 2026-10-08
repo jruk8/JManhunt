@@ -100,6 +100,14 @@ public final class LobbyService {
     }
 
     /**
+     * Mid-match join timing, live-read so reloads apply. Single
+     * reader of the path; every join-timing consumer calls this.
+     */
+    public JoinTiming joinTiming() {
+        return lobbySettings.getJoinTiming();
+    }
+
+    /**
      * Assigns the default lobby; a negative default leaves the player
      * lobby-less. With the world engine off everyone is forced to lobby 0.
      */

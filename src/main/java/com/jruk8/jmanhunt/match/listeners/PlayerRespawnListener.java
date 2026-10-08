@@ -104,6 +104,44 @@ public final class PlayerRespawnListener implements Listener {
     }
 
     /**
+     * Holds a match joiner in fake spectator mode for the WAIT timing,
+     * then releases them into play without the respawn revive (no
+     * teleport, no heal, no triggers). A non-positive wait joins
+     * instantly with no hold. Replaces any pending task for the
+     * player and cancels cleanly on leave or match end, like a
+     * respawn schedule.
+     */
+    public void scheduleJoinHold(Player player, GameInstance instance, int waitSeconds) {
+        UUID playerId = player.getUniqueId();
+        BukkitTask existing = respawnTasks.remove(playerId);
+        if (existing != null) {
+            existing.cancel();
+        }
+        if (waitSeconds <= 0) {
+            return;
+        }
+        long matchId = instance.matchId();
+        tasks.run(() -> players.fakes().enable(player));
+        BukkitTask task = tasks.runLater(() -> {
+            respawnTasks.remove(playerId);
+            if (!game.isActiveInInstance(matchId, playerId)) {
+                return;
+            }
+            releaseJoinHold(player, matchId);
+        }, waitSeconds * 20L);
+        respawnTasks.put(playerId, task);
+    }
+
+    /** Releases a join hold, keeping any headstart hold intact. */
+    private void releaseJoinHold(Player player, long matchId) {
+        Optional<GameInstance> match = game.instance(matchId);
+        if (match.isEmpty() || match.get().isHeadstartHeld(player.getUniqueId())) {
+            return;
+        }
+        players.fakes().disable(player);
+    }
+
+    /**
      * Puts the player in fake spectator mode, then revives them after the
      * given delay (in seconds). A delay of 0 or less revives immediately.
      */

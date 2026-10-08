@@ -252,6 +252,12 @@ public final class GameInstance {
         return role == Role.SPEEDRUNNER ? runnerHeadstart : hunterHeadstart;
     }
 
+    /** True while either headstart holds the player at a return point. */
+    public boolean isHeadstartHeld(UUID playerId) {
+        return hunterHeadstart.returnPoints().containsKey(playerId)
+                || runnerHeadstart.returnPoints().containsKey(playerId);
+    }
+
     public BukkitTask waitingReminderTask() {
         return waitingReminderTask;
     }

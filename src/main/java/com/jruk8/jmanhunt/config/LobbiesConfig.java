@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.config;
 
 import com.jruk8.jmanhunt.lobby.AnnounceMode;
+import com.jruk8.jmanhunt.lobby.JoinTiming;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import eu.okaeri.configs.OkaeriConfig;
 import eu.okaeri.configs.annotation.Comment;
@@ -69,6 +70,20 @@ public class LobbiesConfig extends OkaeriConfig {
             "Default: SUBLOBBY_WITH_SPECTATORS"
     })
     private MidMatchPolicy midMatchSetplayer = MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS;
+
+    @CustomKey("join-timing")
+    @Comment({
+            "What NONE, SPECTATOR, and AFK players wait out when they enter",
+            "a live match through /game join, pswitch, or a joining setplayer.",
+            "Players already in the game are never affected, and roles are",
+            "lobby specific (a runner from another lobby counts as NONE here).",
+            "- WAIT holds the joiner for the larger of the joined role's",
+            "headstart and respawn durations, or joins instantly when both",
+            "are disabled.",
+            "- INSTANT always joins immediately.",
+            "Default: WAIT"
+    })
+    private JoinTiming joinTiming = JoinTiming.WAIT;
 
     @CustomKey("queue-caps")
     @Comment({

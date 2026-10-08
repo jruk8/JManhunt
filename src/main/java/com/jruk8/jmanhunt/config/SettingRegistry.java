@@ -480,6 +480,7 @@ public final class SettingRegistry {
                 "KEEP_IN_LOBBY", "EXIT_LOBBY"));
         entries.add(option(root + "mid-match-setplayer", "SUBLOBBY_WITH_SPECTATORS",
                 "HOLD", "JOIN_ANY", "JOIN_SPECTATORS", "SUBLOBBY", "SUBLOBBY_WITH_SPECTATORS"));
+        entries.add(option(root + "join-timing", "WAIT", "WAIT", "INSTANT"));
         entries.add(intMinusOne(root + "queue-caps.speedrunner", -1, 1));
         entries.add(intMinusOne(root + "queue-caps.hunter", -1, 1));
         entries.add(string(root + "lobby-world-name", "jmh_lobby"));

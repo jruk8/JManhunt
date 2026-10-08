@@ -10,6 +10,7 @@ import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
 import com.jruk8.jmanhunt.api.events.JMatchStartEvent;
 import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
 import com.jruk8.jmanhunt.compass.CompassManager;
+import com.jruk8.jmanhunt.lobby.JoinTiming;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
@@ -395,6 +396,7 @@ public final class MatchStartService {
         if (instance.isActive(playerId) || services.store().isInLiveInstance(playerId)) {
             return false;
         }
+        Role source = entrantSourceRole(player, instance.originLobbyId());
         services.lobbies().setLobby(playerId, instance.originLobbyId());
         services.playerStates().setRole(player, role);
         edge.roleTeams().sync(player);
@@ -419,6 +421,7 @@ public final class MatchStartService {
         texts.messaging().sendToInstance(instance, texts.game().getJoinAnnounce(),
                 Map.of("player", player.getName(), "role", texts.messages().roleName(role)));
         services.stateCommands().trackMatchEntry(List.of(playerId));
+        applyJoinTiming(instance, player, source, role);
         return true;
     }
 
@@ -436,8 +439,9 @@ public final class MatchStartService {
         if (source == target) {
             return true;
         }
+        Role timingSource = entrantSourceRole(player, instance.originLobbyId());
         SwitchPlan plan = planSwitch(source, target, instance.isActive(playerId),
-                isHeadstartHeld(instance, playerId));
+                instance.isHeadstartHeld(playerId));
         services.playerStates().setRole(player, target);
         edge.roleTeams().sync(player);
         if (plan.runnerAlive() != null) {
@@ -452,6 +456,7 @@ public final class MatchStartService {
         }
         applySwitchEdge(instance, player, playerId, plan, source, target);
         runSwitchCatchup(instance, player, target);
+        applyJoinTiming(instance, player, timingSource, target);
         return true;
     }
 
@@ -490,12 +495,6 @@ public final class MatchStartService {
         if (instance.markRespawnFired(playerId, instance.lifeOf(playerId))) {
             services.stateCommands().runRespawnForPlayer(instance.matchId(), player);
         }
-    }
-
-    /** True while either headstart holds the player at a return point. */
-    private static boolean isHeadstartHeld(GameInstance instance, UUID playerId) {
-        return instance.headstart(Role.HUNTER).returnPoints().containsKey(playerId)
-                || instance.headstart(Role.SPEEDRUNNER).returnPoints().containsKey(playerId);
     }
 
     /** Pure role-switch roster plan behind pswitch. Pure for tests. */
@@ -600,6 +599,77 @@ public final class MatchStartService {
             case SPEEDRUNNER -> reads.players().speedrunnerLives(lobby);
             default -> -1;
         };
+    }
+
+    /**
+     * WAIT timing in seconds for a joined role: the larger of the
+     * headstart and respawn durations, each counting only when
+     * enabled and positive. Non-participant roles never wait.
+     * Pure for tests.
+     */
+    static int joinWaitSeconds(Role role, boolean headstartEnabled, int headstartDelay,
+            boolean respawnEnabled, int respawnDelay) {
+        if (!role.isParticipant()) {
+            return 0;
+        }
+        int headstart = headstartEnabled && headstartDelay > 0 ? headstartDelay : 0;
+        int respawn = respawnEnabled && respawnDelay > 0 ? respawnDelay : 0;
+        return Math.max(headstart, respawn);
+    }
+
+    /** True for the source roles join timing affects. Pure for tests. */
+    static boolean needsJoinTiming(Role sourceRole) {
+        return sourceRole == Role.NONE || sourceRole == Role.SPECTATOR || sourceRole == Role.AFK;
+    }
+
+    /**
+     * Source role in the target match lobby: members keep their
+     * stored role, outsiders and the lobby-less count as NONE.
+     * Pure for tests.
+     */
+    static Role sourceRoleIn(int originLobby, Optional<Integer> playerLobby, Role storedRole) {
+        if (playerLobby.isEmpty() || playerLobby.get() != originLobby) {
+            return Role.NONE;
+        }
+        return storedRole;
+    }
+
+    /** Applies WAIT/INSTANT timing to one match entrant. */
+    private void applyJoinTiming(GameInstance instance, Player player, Role source, Role target) {
+        if (services.lobbies().joinTiming() != JoinTiming.WAIT || !needsJoinTiming(source)) {
+            return;
+        }
+        boolean headstartEnabled;
+        int headstartDelay;
+        boolean respawnEnabled;
+        int respawnDelay;
+        if (target == Role.HUNTER) {
+            var headstart = reads.match().getHeadstarts().getHunter();
+            var respawn = reads.players().getRespawn().getHunter();
+            headstartEnabled = headstart.isEnabled();
+            headstartDelay = headstart.getDelaySeconds();
+            respawnEnabled = respawn.isEnabled();
+            respawnDelay = respawn.getDelaySeconds();
+        } else {
+            var headstart = reads.match().getHeadstarts().getSpeedrunner();
+            var respawn = reads.players().getRespawn().getSpeedrunner();
+            headstartEnabled = headstart.isEnabled();
+            headstartDelay = headstart.getDelaySeconds();
+            respawnEnabled = respawn.isEnabled();
+            respawnDelay = respawn.getDelaySeconds();
+        }
+        int wait = joinWaitSeconds(target, headstartEnabled, headstartDelay,
+                respawnEnabled, respawnDelay);
+        if (wait > 0) {
+            edge.respawn().scheduleJoinHold(player, instance, wait);
+        }
+    }
+
+    /** Source role of an entrant in the target match lobby. */
+    private Role entrantSourceRole(Player player, int originLobby) {
+        UUID playerId = player.getUniqueId();
+        Optional<Integer> lobby = services.lobbies().lobbyOf(playerId).map(Lobby::id);
+        return sourceRoleIn(originLobby, lobby, services.playerStates().role(player));
     }
 
     /** Online lobby members watching without playing: NONE and SPECTATOR, never AFK. */

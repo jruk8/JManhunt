@@ -106,6 +106,11 @@ public final class MatchSettingsFacade {
     }
 
     /** True when participants wait in adventure mode. */
+    /** Global headstarts section, mirroring the prestart path (no lobby override). */
+    public MatchSettings.Headstarts getHeadstarts() {
+        return global.getHeadstarts();
+    }
+
     public boolean startInAdventureMode(Integer lobby) {
         return overrides.getBoolean(lobby,
                 BASE + "start-on-speedrunner-damage.start-in-adventure-mode",

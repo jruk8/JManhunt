@@ -77,6 +77,11 @@ public final class PlayersSettingsFacade {
                 global.getRespawn().getHunter().getLives());
     }
 
+    /** Global respawn section, mirroring the engine revive path (no lobby override). */
+    public PlayerSettings.Respawn getRespawn() {
+        return global.getRespawn();
+    }
+
     /** Configured speedrunner lives, -1 means unlimited. */
     public int speedrunnerLives(Integer lobby) {
         return overrides.getInt(lobby, BASE + "respawn.speedrunner.lives",
