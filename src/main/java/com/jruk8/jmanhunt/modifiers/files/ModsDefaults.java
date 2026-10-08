@@ -13,7 +13,6 @@ public final class ModsDefaults {
     public static final List<String> MODIFIERS = List.of(
             "everyone-gets-beef",
             "speedrunners-speed-potion",
-            "hunters-wooden-sword",
             "hunter-start-debuffs",
             "speedrunner-start-buffs",
             "full-leather-kit",

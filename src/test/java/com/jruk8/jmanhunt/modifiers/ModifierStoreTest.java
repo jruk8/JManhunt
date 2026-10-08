@@ -336,7 +336,7 @@ class ModifierStoreTest {
 
     @Test
     void bundledDefaultsHaveCompleteMeta() throws Exception {
-        assertEquals(21, ModsDefaults.MODIFIERS.size());
+        assertEquals(20, ModsDefaults.MODIFIERS.size());
         for (String id : ModsDefaults.MODIFIERS) {
             YamlConfiguration yaml = bundledYaml("modifiers", id);
             assertTrue(yaml.contains("enabled"), id);
@@ -381,7 +381,7 @@ class ModifierStoreTest {
                 ModifierFiles.fromLoad(bundledRoot, seeder.load(bundledRoot)),
                 Logger.getAnonymousLogger());
 
-        assertEquals(21, bundled.modifierNames().size());
+        assertEquals(20, bundled.modifierNames().size());
         assertEquals(3, bundled.presetNames().size());
         assertEquals("PICK_RANDOM", bundled.selection("gear-dice", 0));
         assertEquals(15.0, bundled.intervalSeconds("gear-dice", 0));
@@ -391,6 +391,16 @@ class ModifierStoreTest {
         assertEquals("AFTER", bundled.preStartOrder("hunter-start-debuffs", 0));
         assertEquals(3, bundled.presetMembers("chaos-mode").size());
         assertEquals(Material.TNT, bundled.presetItem("chaos-mode"));
+    }
+
+    @Test
+    void fullLeatherKitTargetsSpeedrunnersOnly() throws Exception {
+        YamlConfiguration yaml = bundledYaml("modifiers", "full-leather-kit");
+        var commands = yaml.getConfigurationSection("behavior")
+                .getConfigurationSection("0").getConfigurationSection("commands");
+        assertTrue(commands.getKeys(false).contains("speedrunner"));
+        assertFalse(commands.getKeys(false).contains("player"));
+        assertFalse(commands.getKeys(false).contains("hunter"));
     }
 
     @Test
