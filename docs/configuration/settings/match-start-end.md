@@ -107,15 +107,16 @@ settings:
   match:
     headstarts:
       speedrunner:
-        enabled: false
-        delay-seconds: 30
+        enabled: true
+        delay-seconds: 20
       hunter:
         enabled: false
-        delay-seconds: 30
+        delay-seconds: 20
 ```
 
-Both sides are disabled out of the box. `delay-seconds` accepts 0 and
-up; 0 releases the held side immediately.
+Speedrunners start ahead out of the box (20 seconds, hunters held);
+the hunter side is disabled. `delay-seconds` accepts 0 and up; 0
+releases the held side immediately.
 
 If [Start on Speedrunner Damage](#start-on-speedrunner-damage) is also
 enabled, countdowns do not begin until that first hit lands. Each held

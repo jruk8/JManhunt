@@ -23,11 +23,13 @@ world-engine:
       radius: 10
 ```
 
-Players outside their cell are pulled back in and take `damage.amount`
-past `damage.buffer` blocks of grace. Only the escaped axis moves,
-landing a quarter block inside the edge; the other keeps its exact
-spot. Spectators bypass it entirely, and nothing applies in the lobby
-world. The walls render as particle grids; see
+Players outside their cell snap back to their last inside spot,
+recorded every 6 ticks while inside (outside spots are never
+recorded). Escapes with no usable snapshot fall back to the edge
+clamp, landing a quarter block inside the edge with height
+unchanged. Strays also take `damage.amount` past `damage.buffer`
+blocks of grace. Spectators bypass it entirely, and nothing applies
+in the lobby world. The walls render as particle grids; see
 [Pseudoborder Particles](pseudoborder-particles.md).
 
 ## Start Border

@@ -408,11 +408,6 @@ final class CompassLockService {
             return;
         }
         locks.put(player.getUniqueId(), next);
-        if (chatMessagesEnabled(lobbyOf(player))) {
-            String name = cycle.names().getOrDefault(next, players.states().playerName(next));
-            texts.messages().messageRaw(player, texts.compass().getLockedChat(),
-                    Map.of("player", name));
-        }
     }
 
     /** Sound interval clamped to its registry bounds, for stale files. */

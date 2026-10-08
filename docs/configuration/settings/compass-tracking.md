@@ -227,8 +227,9 @@ values fall back to the defaults.
 
 ## Chat Messages
 
-Compass actions can chat the holder: locking onto a target, switching
-teammate mode on and off, and the death of a locked target:
+Compass actions can chat the holder: switching teammate mode on and
+off, and the death of a locked target (locking itself stays silent;
+the actionbar already shows the target):
 
 ```yaml
 feedback:
@@ -236,7 +237,7 @@ feedback:
     enabled: true
 ```
 
-The lines come from `compass.locked-chat`, `compass.teammate-on-chat`,
+The lines come from `compass.teammate-on-chat`,
 `compass.teammate-off-chat`, and `compass.locked-target-died-chat` in
 `messages.yml`.
 

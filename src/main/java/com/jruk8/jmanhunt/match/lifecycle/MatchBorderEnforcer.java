@@ -14,8 +14,11 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -26,6 +29,9 @@ import java.util.UUID;
 public final class MatchBorderEnforcer {
     /** Enforcement cadence in ticks: rubber-band, travel cap, elapsed cache. */
     private static final long ENFORCE_PERIOD_TICKS = 5L;
+
+    /** Inside-position snapshot cadence in ticks for the rubber-band. */
+    private static final long SNAPSHOT_PERIOD_TICKS = 6L;
 
     /** Rubber-band landing: this far inside the escaped edge. */
     private static final double RUBBERBAND_MARGIN = 0.25;
@@ -44,6 +50,7 @@ public final class MatchBorderEnforcer {
     private final PlayerSettings.Spectator.Travel travel;
     private final MatchStore store;
     private final BorderPlayers players;
+    private final Map<UUID, Location> lastInside = new HashMap<>();
 
     public MatchBorderEnforcer(TaskScheduler tasks, BorderEngine engine,
             PlayerSettings.Spectator.Travel travel, MatchStore store, BorderPlayers players) {
@@ -62,15 +69,17 @@ public final class MatchBorderEnforcer {
                 instance.refreshElapsedCache(now);
             }
         }, ENFORCE_PERIOD_TICKS, ENFORCE_PERIOD_TICKS);
+        tasks.runTimer(this::snapshotInsidePositions, SNAPSHOT_PERIOD_TICKS, SNAPSHOT_PERIOD_TICKS);
     }
 
     /**
-     * Confines every match to its cell: players outside their cell are
-     * rubber-banded back in and take border damage past the damage
-     * buffer. Spectators bypass it. The End is skipped: end dimensions
-     * are assigned one per match, so no sharing needs confining; if
-     * that ever changes, the recovery helper below already gives
-     * non-Nether worlds the surface treatment.
+     * Confines every match to its cell: players outside their cell snap
+     * back to their last recorded inside spot and take border damage
+     * past the damage buffer. Escapes with no usable snapshot (or one
+     * in another world) fall back to the edge clamp with height
+     * unchanged. Spectators bypass it. The End is skipped: end
+     * dimensions are assigned one per match, so no sharing needs
+     * confining.
      */
     private void enforcePseudoBorders() {
         WorldEngineConfig config = WorldEngineConfig.fromSettings(engine.engineSettings());
@@ -97,18 +106,84 @@ public final class MatchBorderEnforcer {
                 if (outside <= 0.0) {
                     continue;
                 }
-                double[] inside = bounds.clampInside(location.getX(), location.getZ(), nether,
-                        RUBBERBAND_MARGIN);
-                if (inside != null) {
-                    double y = recoveryY(location.getWorld(), inside[0], inside[1], location.getY());
-                    player.teleport(new Location(location.getWorld(), inside[0], y, inside[1],
-                            location.getYaw(), location.getPitch()));
+                Location snapshot = lastInside.get(player.getUniqueId());
+                if (snapshot != null && snapshot.getWorld() != null
+                        && snapshot.getWorld().equals(location.getWorld())) {
+                    player.teleport(snapshot);
+                } else {
+                    rubberbandToEdge(player, bounds, nether, location);
                 }
                 if (outside > config.damageBuffer() && config.damageAmount() > 0.0) {
                     // damage.amount stays per-second across cadence changes.
                     player.damage(config.damageAmount() * ENFORCE_PERIOD_TICKS / 20.0);
                 }
             }
+        }
+    }
+
+    /**
+     * Records every confined player's current spot while it is still
+     * inside the cell, so escapes rubber-band back to real ground
+     * instead of a computed clamp. Outside spots are never stored;
+     * entries for departed players prune on every pass.
+     */
+    private void snapshotInsidePositions() {
+        WorldEngineConfig config = WorldEngineConfig.fromSettings(engine.engineSettings());
+        if (!config.enabled() || !config.worldBorderEnabled()) {
+            lastInside.clear();
+            return;
+        }
+        Set<UUID> seen = new HashSet<>();
+        for (GameInstance instance : store.liveInstances()) {
+            if (instance.cellIndex().isEmpty()) {
+                continue;
+            }
+            CellBounds bounds = CellBounds.forCell(instance.cellIndex().getAsLong(),
+                    config.cellSize(), config.startBorderDiameter(),
+                    config.useStartBorder(instance.begun()));
+            for (Player player : store.onlineActivePlayers(instance)) {
+                if (players.fakes().isFakeSpectator(player)) {
+                    continue;
+                }
+                if (!engine.worldEngine().isBorderedWorld(player.getWorld())) {
+                    continue;
+                }
+                seen.add(player.getUniqueId());
+                boolean nether = player.getWorld().getEnvironment() == World.Environment.NETHER;
+                Location location = player.getLocation();
+                if (bounds.outsideBy(location.getX(), location.getZ(), nether) <= 0.0) {
+                    lastInside.put(player.getUniqueId(), location.clone());
+                }
+            }
+        }
+        lastInside.keySet().retainAll(seen);
+    }
+
+    /**
+     * Clamp fallback for escapes with no usable snapshot: the escaped
+     * axes land a quarter block inside the edge with height unchanged,
+     * and the landing stores as the new snapshot.
+     */
+    private void rubberbandToEdge(Player player, CellBounds bounds, boolean nether,
+            Location location) {
+        double[] inside = bounds.clampInside(location.getX(), location.getZ(), nether,
+                RUBBERBAND_MARGIN);
+        if (inside == null) {
+            return;
+        }
+        Location landing = new Location(location.getWorld(), inside[0],
+                location.getY(), inside[1], location.getYaw(), location.getPitch());
+        player.teleport(landing);
+        storeSnapshot(player.getUniqueId(), bounds, nether, landing);
+    }
+
+    /**
+     * Stores one landing after a clamp fallback: the guarded twin of the
+     * snapshot pass, so even fallback escapes heal immediately.
+     */
+    private void storeSnapshot(UUID playerId, CellBounds bounds, boolean nether, Location landing) {
+        if (bounds.outsideBy(landing.getX(), landing.getZ(), nether) <= 0.0) {
+            lastInside.put(playerId, landing.clone());
         }
     }
 
@@ -164,19 +239,5 @@ public final class MatchBorderEnforcer {
             }
         }
         return anchors;
-    }
-
-    /**
-     * Rubberband height at the clamped spot: the highest block plus one
-     * for the Overworld and the End, capped below the ceiling; the live
-     * Y in the Nether, where the roof would corrupt the lookup. Testable
-     * with a stubbed world.
-     */
-    static double recoveryY(World world, double x, double z, double currentY) {
-        if (world.getEnvironment() == World.Environment.NETHER) {
-            return currentY;
-        }
-        int top = world.getHighestBlockYAt((int) Math.floor(x), (int) Math.floor(z));
-        return Math.min(top + 1.0, world.getMaxHeight() - 2.0);
     }
 }

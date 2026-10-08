@@ -510,10 +510,10 @@ public final class SettingRegistry {
         entries.add(option("settings.match.start-on-speedrunner-damage.on-expire", "FORCE_START",
                 "CANCEL", "FORCE_START"));
         entries.add(bool("settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true));
-        entries.add(bool("settings.match.headstarts.speedrunner.enabled", false));
-        entries.add(intVal("settings.match.headstarts.speedrunner.delay-seconds", 30, 0, null));
+        entries.add(bool("settings.match.headstarts.speedrunner.enabled", true));
+        entries.add(intVal("settings.match.headstarts.speedrunner.delay-seconds", 20, 0, null));
         entries.add(bool("settings.match.headstarts.hunter.enabled", false));
-        entries.add(intVal("settings.match.headstarts.hunter.delay-seconds", 30, 0, null));
+        entries.add(intVal("settings.match.headstarts.hunter.delay-seconds", 20, 0, null));
         entries.add(option("settings.match.game-leave.destination", "SPECTATOR", "SPECTATOR", "LOBBY"));
     }
 

@@ -5,21 +5,22 @@ import com.jruk8.jmanhunt.player.Role;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.jruk8.jmanhunt.match.prestart.Headstart;
 
 class HeadstartTest {
 
     @Test
-    void defaultsAreDisabledThirtySeconds() {
+    void defaultsAreRunnerTwentySeconds() {
         MatchSettings.Headstarts headstarts = new MatchSettings.Headstarts();
 
         Headstart hunter = Headstart.parse(headstarts, "hunter");
         Headstart runner = Headstart.parse(headstarts, "speedrunner");
 
         assertFalse(hunter.enabled());
-        assertEquals(30, hunter.delaySeconds());
-        assertFalse(runner.enabled());
-        assertEquals(30, runner.delaySeconds());
+        assertEquals(20, hunter.delaySeconds());
+        assertTrue(runner.enabled());
+        assertEquals(20, runner.delaySeconds());
     }
 
     @Test

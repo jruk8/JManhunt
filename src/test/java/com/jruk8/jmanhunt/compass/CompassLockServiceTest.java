@@ -200,7 +200,7 @@ class CompassLockServiceTest {
     }
 
     @Test
-    void lockCycleChatsLockedWhenEnabled() {
+    void lockCycleChatsNothing() {
         UUID locked = UUID.randomUUID();
         Fixture fixture = fixture(List.of(
                 new CompassCandidate(locked, "a", 10.0, 10.0),
@@ -208,8 +208,7 @@ class CompassLockServiceTest {
 
         fixture.locks().handleLeftClick(fixture.player());
 
-        verify(fixture.messages(), times(1)).messageRaw(fixture.player(), fixture.texts().getCompass().getLockedChat(),
-                Map.of("player", "a"));
+        verify(fixture.messages(), never()).messageRaw(eq(fixture.player()), any(), any());
     }
 
     @Test
@@ -223,8 +222,7 @@ class CompassLockServiceTest {
         fixture.locks().handleLeftClick(fixture.player());
 
         verify(fixture.renderer(), times(3)).accept(fixture.player());
-        verify(fixture.messages(), times(2)).messageRaw(eq(fixture.player()),
-                eq(fixture.texts().getCompass().getLockedChat()), any());
+        verify(fixture.messages(), never()).messageRaw(eq(fixture.player()), any(), any());
     }
 
     @Test
@@ -251,8 +249,6 @@ class CompassLockServiceTest {
         fixture.locks().handleLeftClick(fixture.player());
         fixture.locks().handleShiftLeft(fixture.player());
 
-        verify(fixture.messages(), never()).messageRaw(eq(fixture.player()),
-                eq(fixture.texts().getCompass().getLockedChat()), any());
         verify(fixture.messages(), never())
                 .messageRaw(fixture.player(), fixture.texts().getCompass().getTeammateOnChat());
         verify(fixture.messages(), never())

@@ -163,8 +163,10 @@ Speedrunners who die their final death come back as hunters via
 remain, the engine ends the match with a hunter win on its own.
 Engine elimination and win announcements still run, so Infection
 lines may duplicate engine chat and sounds. A second block runs every
-3 seconds per hunter: converted hunters get sporadic blindness and
-weakness plus rotten flesh and bones, while root hunters exit
-untouched. Effect durations and item counts live in the block's
-`effect_list` (`[id, amplifier, seconds]`) and `item_list`
-(`[item, min, max]`) settings.
+12 seconds per hunter: converted hunters get sporadic 5-second
+blindness plus occasional rotten flesh and bones (each item
+candidate independently fails `give_fail_chance` percent of the
+time, 92 by default), while root hunters exit untouched. Effect
+durations and item counts live in the block's `effect_list`
+(`[id, amplifier, seconds]`) and `item_list` (`[item, min, max]`)
+settings.

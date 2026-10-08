@@ -189,15 +189,22 @@ public class MatchSettings extends OkaeriConfig {
         @Comment({
                 "Gives speedrunners a head start at match start by holding hunters in",
                 "spectator mode.",
-                "Default: false"
+                "Default: true"
         })
-        private Headstart speedrunner = new Headstart();
+        private Headstart speedrunner = headstart(true, 20);
 
         @Comment({
                 "Same, but for hunters.",
                 "Default: false"
         })
-        private Headstart hunter = new Headstart();
+        private Headstart hunter = headstart(false, 20);
+
+        private static Headstart headstart(boolean enabled, int delaySeconds) {
+            Headstart headstart = new Headstart();
+            headstart.setEnabled(enabled);
+            headstart.setDelaySeconds(delaySeconds);
+            return headstart;
+        }
 
         /** One side's head start. */
         @Getter
@@ -209,9 +216,9 @@ public class MatchSettings extends OkaeriConfig {
             @CustomKey("delay-seconds")
             @Comment({
                     "Delay in seconds. Values <= 0 mean no delay.",
-                    "Default: 30"
+                    "Default: 20"
             })
-            private int delaySeconds = 30;
+            private int delaySeconds = 20;
 
         }
     }
