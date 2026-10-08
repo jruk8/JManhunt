@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.command.ManhuntCommand;
 import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.compass.CompassProtectionListener;
 import com.jruk8.jmanhunt.core.BukkitDebugSink;
+import com.jruk8.jmanhunt.core.CrashFlagService;
 import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.core.JManhuntExpansion;
 import com.jruk8.jmanhunt.core.JManhuntPlaceholders;
@@ -115,6 +116,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
     private GameManager game;
     private StatisticsRepository statistics;
     private EngineStateRepository engineState;
+    private CrashFlagService crashFlags;
     private JManhuntExpansion expansion;
     private JManhuntPlaceholders placeholderValues;
     private ConfigRegistrar configRegistrar;
@@ -240,31 +242,10 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
                         root.getAdvanced().getLobbies(), engineState, playerStates, fakeSpectators));
         worldEngine.deleteOrphanedEndCells();
         loadLobbyWorldOnBoot();
-        checkCrashFlag();
+        crashFlags.checkCrashFlag();
         updateCheckNotifier = new JManhuntUpdateCheckNotifier(messages);
         updateChecks = new UpdateCheckService(new JManhuntUpdateCheckHttp("jruk8", "JManhunt"),
                 updateCheckNotifier, new JManhuntUpdateCheckLogger(logger()));
-    }
-
-    /**
-     * Reads the crash flag left by the previous run: a set flag means the
-     * server crashed or still owes wipes, so stale end reservations are
-     * cleared after orphan deletion already consumed them. The flag stays
-     * untouched here; the crash cleanup load arms it for this run later.
-     */
-    private void checkCrashFlag() {
-        if (engineState == null) {
-            return;
-        }
-        try {
-            if (engineState.getCrashFlag()) {
-                logger().warning("JManhunt found unwiped crash state from an earlier run; "
-                        + "clearing stale match reservations from the engine database.");
-                engineState.clearEndReservations();
-            }
-        } catch (Exception exception) {
-            logger().warning("Could not check the crash flag: " + exception.getMessage());
-        }
     }
 
     /** Creates the game manager and wires it to the compass, world engine, and listeners. */
@@ -322,6 +303,8 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
                             + "the engine database could not be initialized: "
                             + exception.getMessage());
         }
+        crashFlags = new CrashFlagService(engineState,
+                () -> game != null && game.hasPendingCrashWipes(), logger(), getLogger());
     }
 
     private void setupPlaceholderApi() {
@@ -494,24 +477,14 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         if (stats != null) {
             stats.flush();
         }
-        writeCrashFlag();
+        if (crashFlags != null) {
+            crashFlags.writeCrashFlag();
+        }
         if (statistics != null) {
             statistics.close();
         }
         if (engineState != null) {
             engineState.close();
-        }
-    }
-
-    /** Clean-shutdown flag write; stays set while crash wipes are still owed. */
-    private void writeCrashFlag() {
-        if (engineState == null) {
-            return;
-        }
-        try {
-            engineState.setCrashFlag(game != null && game.hasPendingCrashWipes());
-        } catch (Exception exception) {
-            getLogger().warning("Could not write the crash flag: " + exception.getMessage());
         }
     }
 
