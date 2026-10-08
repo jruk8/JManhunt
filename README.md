@@ -23,12 +23,9 @@
 Most Manhunt plugins force full server restarts between matches. JManhunt solves this with a native **World Engine** that segments the world into near-infinite cells without server
 restarts. This makes matches feel seamless for not only small friend groups, but also dedicated servers.
 
-### Scriptable Mods
+### Mods and Twists
 
-We also built a complete [JMHScript DSL](https://jruk8.github.io/JManhunt/configuration/modifiers/) to make
-modifier development easy. Simple ones like starting kits, random rolls, or basic status effects need no scripting
-(like `give <p> cooked_beef 8`).
-Mods can be written in-game through the **Modifier/Preset GUI** or through YAML.
+The GUI allows you to one-click toggle between **20 default twists**. We also built a complete [JMHScript DSL](https://jruk8.github.io/JManhunt/configuration/modifiers/) to make modifier development easy. Simple ones like starting kits, random rolls, or basic status effects need no scripting (like `give <p> cooked_beef 8`). Mods can be written in-game through the **Modifier/Preset GUI** or through YAML.
 
 Find these modifiers on our [**Discord**](https://discord.gg/hkWmCVmWDC) community forum:
 
