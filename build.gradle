@@ -14,6 +14,9 @@ dependencies {
     // PlaceholderAPI
     compileOnly 'me.clip:placeholderapi:2.12.3'
 
+    // LuckPerms (softdepend): role contexts only, never bundled.
+    compileOnly 'net.luckperms:api:5.5'
+
     compileOnly 'com.zaxxer:HikariCP:7.1.0'
     compileOnly 'org.xerial:sqlite-jdbc:3.53.2.1'
     compileOnly 'org.postgresql:postgresql:42.7.13'
@@ -30,6 +33,10 @@ dependencies {
     // Tests mock JManhuntPlugin, and mocking resolves the PlaceholderAPI
     // expansion superclass, so PAPI must be present at test runtime too.
     testRuntimeOnly 'me.clip:placeholderapi:2.12.3'
+    // Context calculator tests import LuckPerms types and instantiate the
+    // calculator, so the API must be present at test compile and runtime.
+    testCompileOnly 'net.luckperms:api:5.5'
+    testRuntimeOnly 'net.luckperms:api:5.5'
 }
 
 // Publishes the JManhunt API so other plugins (e.g. JManhunt-Challenges) can

@@ -44,6 +44,23 @@ settings:
 ends when their lobby has a match running. `NONE` players keep their
 mode and wait in the lobby; use lobby queues to move them.
 
+## Name Colors
+
+Sides are visible at a glance: hunters red, speedrunners green,
+everyone else default. This uses vanilla team colors with zero
+dependencies, and LuckPerms prefixes apply on top untouched (see
+[LuckPerms](../../advanced/luckperms.md)).
+
+```yaml
+settings:
+  players:
+    name-colors:
+      enabled: true
+```
+
+Turn `enabled` off to leave every name default. Team membership is
+unaffected either way, so selectors keep working.
+
 ## Match Leave Destination
 
 Where players go when they leave a running match, voluntarily or

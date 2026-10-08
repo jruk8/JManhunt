@@ -9,6 +9,7 @@ import com.jruk8.jmanhunt.core.DebugService;
 import com.jruk8.jmanhunt.core.JManhuntExpansion;
 import com.jruk8.jmanhunt.core.JManhuntPlaceholders;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.LuckPermsHook;
 import com.jruk8.jmanhunt.core.StartupBanner;
 import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.config.ConfigRegistrar;
@@ -118,6 +119,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
     private EngineStateRepository engineState;
     private CrashFlagService crashFlags;
     private JManhuntExpansion expansion;
+    private LuckPermsHook luckPerms;
     private JManhuntPlaceholders placeholderValues;
     private ConfigRegistrar configRegistrar;
     private ConfigService configService;
@@ -151,6 +153,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         bootstrapServices();
         bootstrapGame();
         setupPlaceholderApi();
+        luckPerms = LuckPermsHook.start(playerStates, logger());
 
         Bukkit.getServicesManager().register(JManhuntApi.class,
                 new JManhuntApiImpl(game, playerStates, lobbyService), this, ServicePriority.High);
@@ -208,7 +211,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
                 lobbyConfigs.getLobbyConfig()::save);
         sounds = new SoundService(logger, configRegistrar.getSounds());
         playerStates = new PlayerStateStore();
-        roleTeams = new RoleTeamService(playerStates);
+        roleTeams = new RoleTeamService(playerStates, this::teamColorsEnabled);
         fakeSpectators = new FakeSpectatorService(this, playerStates);
         lobbyService = new LobbyService(new LobbyService.LobbyPlayers(this::game, fakeSpectators),
                 new LobbyService.LobbyTexts(messages, messages.manhunt()),
@@ -474,6 +477,9 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         if (expansion != null) {
             expansion.unregister();
         }
+        if (luckPerms != null) {
+            luckPerms.stop();
+        }
         if (stats != null) {
             stats.flush();
         }
@@ -486,6 +492,11 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         if (engineState != null) {
             engineState.close();
         }
+    }
+
+    /** Live read of the name-colors toggle for role team colors. */
+    private boolean teamColorsEnabled() {
+        return configRegistrar.getRoot().getSettings().getPlayers().getNameColors().isEnabled();
     }
 
     /** Single funnel for plugin console output; never null once onEnable starts. */
@@ -625,6 +636,10 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
 
         if (overrideService != null) {
             overrideService.reload(configService);
+        }
+
+        if (roleTeams != null) {
+            roleTeams.applyColors();
         }
 
         reloadSettingsListeners();

@@ -16,6 +16,15 @@ public class PlayerSettings extends OkaeriConfig {
     @Comment("How player roles are assigned and reset around the lifecycle of a match.")
     private Roles roles = new Roles();
 
+    @CustomKey("name-colors")
+    @Comment({
+            "Recolors scoreboard team names so sides are visible at a glance:",
+            "red hunters, green speedrunners, everyone else default. Works",
+            "with zero dependencies; LuckPerms prefixes are left untouched.",
+            "Default: true"
+    })
+    private Toggle nameColors = new Toggle(true);
+
     @Comment("Delayed respawn and lives, configured independently per role.")
     private Respawn respawn = new Respawn();
 

@@ -97,6 +97,7 @@ nav:
       - Sounds: configuration/sounds.md
   - Advanced:
       - Permissions: advanced/permissions.md
+      - LuckPerms: advanced/luckperms.md
       - Placeholders: advanced/placeholders.md
       - API: advanced/api.md
       - Developer Tools: advanced/dev-tools.md

@@ -85,6 +85,7 @@ categories:
   players/roles: NAME_TAG
   players/roles/reset-on-game-end: RECOVERY_COMPASS
   players/roles/reset-on-leave: MAGMA_CREAM
+  players/name-colors: PAINTING
   players/friendly-fire: TNT
   players/invulnerability: SHIELD
   players/invulnerability/none-players: GHAST_TEAR
@@ -223,6 +224,7 @@ descriptions:
   "settings.players.invulnerability": "Keep non-fighters safe from damage."
   "settings.players.invulnerability.none-players": "Protect players without a role."
   "settings.players.invulnerability.on-game-end": "Protect everyone when the match ends."
+  "settings.players.name-colors": "Red hunters, green speedrunners."
   "settings.players.respawn": "Second chances after dying."
   "settings.players.respawn.hunter": "Hunter lives and revive delay."
   "settings.players.respawn.speedrunner": "Speedrunner lives and revive delay."
@@ -391,6 +393,7 @@ descriptions:
   "settings.compass.signal.interference.weather.interfere-during": "Weather that interferes."
   "settings.players.roles.reset-on-game-end.enabled": "Reset roles to NONE when a match ends."
   "settings.players.roles.reset-on-leave.enabled": "Reset leavers to NONE."
+  "settings.players.name-colors.enabled": "Recolor hunter and speedrunner names."
   "settings.players.respawn.hunter.enabled": "Hunters respawn after dying."
   "settings.players.respawn.hunter.delay-seconds": "Seconds before hunters revive."
   "settings.players.respawn.hunter.lives": "Hunter lives; -1 is unlimited."

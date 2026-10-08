@@ -280,6 +280,8 @@ public final class GameManager implements MatchControl {
                 (oldValue, newValue) -> reads.worldEngine().onReload());
         reads.configService().onChange(LobbyService.COLLISIONS_PATH,
                 (oldValue, newValue) -> reads.lobbies().reapplyCollisions());
+        reads.configService().onChange("settings.players.name-colors.enabled",
+                (oldValue, newValue) -> edge.roleTeams().applyColors());
     }
 
     /** Connection listener with typed player and disconnect sections. */
