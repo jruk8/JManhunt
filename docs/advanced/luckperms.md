@@ -17,9 +17,40 @@ Use it in any context-aware command, for example (schematic):
 /lp user <name> permission set some.perk true jmh-role=hunter
 ```
 
-Name colors (red hunters, green speedrunners) only recolor the name
-itself; LuckPerms prefixes and suffixes apply on top untouched.
-Toggle them under `settings.players.name-colors` (default on). See
+## Quick Start: Role Suffixes (5 Minutes)
+
+Show a colored `[RUNNER]` or `[HUNTER]` tag after names in chat:
+
+1. Install a LuckPerms-compatible chat plugin so suffixes actually
+   render. [LPC Chat](https://modrinth.com/plugin/lpc-chat) works and
+   supports MiniMessage. Without one, the suffixes below exist in
+   LuckPerms data but never display.
+2. Add the speedrunner suffix:
+
+   ```
+   /lp group default meta setsuffix 100 "<gray>[<#74de66>RUNNER</#74de66>]" jmh-role=speedrunner
+   ```
+
+3. Add the hunter suffix:
+
+   ```
+   /lp group default meta setsuffix 100 "<gray>[<#de666e>HUNTER</#de666e>]" jmh-role=hunter
+   ```
+
+That is it: the `jmh-role` context swaps the suffix automatically as
+roles change. To avoid doubling up with the built-in team colors,
+turn them off:
+
+```yaml
+settings:
+  players:
+    name-colors:
+      enabled: false
+```
+
+The built-in colors (red hunters, green speedrunners) only recolor
+the name itself; LuckPerms prefixes and suffixes apply on top
+untouched. They stay on by default; see
 [Roles](../configuration/settings/roles.md#name-colors).
 
 Without LuckPerms installed the context is unavailable and the
