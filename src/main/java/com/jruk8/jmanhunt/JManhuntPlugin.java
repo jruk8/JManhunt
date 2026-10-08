@@ -174,7 +174,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         // every online player's membership from their current role.
         roleTeams.syncAll();
         game.validateLobbyWorldName();
-        StartupBanner.print(logger, getPluginMeta().getVersion());
+        StartupBanner.print(Bukkit.getConsoleSender()::sendMessage, getPluginMeta().getVersion());
     }
 
     /** Creates messaging, logging, lobby, and tutorial configuration services. */

@@ -1,14 +1,15 @@
 package com.jruk8.jmanhunt.core;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.junit.jupiter.api.Test;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 /** Startup banner: versioned, compact, console colors only. */
 class StartupBannerTest {
@@ -32,11 +33,22 @@ class StartupBannerTest {
     }
 
     @Test
-    void printLogsOneLinePerCall() {
-        JManhuntLogger log = mock(JManhuntLogger.class);
+    void printPadsWithTwoBlankLinesAroundThreeColoredLines() {
+        List<Component> sent = new ArrayList<>();
 
-        StartupBanner.print(log, "5.0.0");
+        StartupBanner.print(sent::add, "5.0.0");
 
-        verify(log, times(3)).info(anyString());
+        assertEquals(7, sent.size());
+        assertEquals(Component.empty(), sent.get(0));
+        assertEquals(Component.empty(), sent.get(1));
+        assertEquals(Component.empty(), sent.get(5));
+        assertEquals(Component.empty(), sent.get(6));
+        String first = LegacyComponentSerializer.legacySection().serialize(sent.get(2));
+        assertTrue(first.contains("\u00A7d"), first);
+        String body = sent.subList(2, 5).stream()
+                .map(PlainTextComponentSerializer.plainText()::serialize)
+                .collect(Collectors.joining("\n"));
+        assertTrue(body.contains("JManhunt"));
+        assertTrue(body.contains("5.0.0"));
     }
 }
