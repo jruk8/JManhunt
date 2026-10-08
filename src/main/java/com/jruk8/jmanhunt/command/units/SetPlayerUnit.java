@@ -229,15 +229,15 @@ public final class SetPlayerUnit implements SubcommandUnit {
             tally.assigned.add(player.getUniqueId());
             return;
         }
-        if (!member && !caps.capAllows(targetLobby, role, force, tally.cappedIn)) {
+        if (member) {
+            switchMemberRoleForSetPlayer(sender, player, role, silent, live, tally);
+            return;
+        }
+        if (!caps.capAllows(targetLobby, role, force, tally.cappedIn)) {
             return;
         }
         assignSetPlayerRole(sender, player, role, silent, tally);
-        if (member) {
-            cancelMatchIfInvalid(sender, live);
-        } else {
-            recordQueuedRole(player, role, silent, policy, tally);
-        }
+        recordQueuedRole(player, role, silent, policy, tally);
     }
 
     /** Tallies a non-member queued under a live match and tells them where they wait. */
@@ -296,6 +296,26 @@ public final class SetPlayerUnit implements SubcommandUnit {
                 Map.of("id", live.lobbyTag(), "reason", reason));
         logger.warning("Match " + live.lobbyTag() + " cancelled by setplayer: " + reason + ".");
         game.cancel(live);
+    }
+
+    /**
+     * Forced in-match member switch through the shared switch path:
+     * lives refresh, compass handover, and modifier catch-up ride
+     * along. Setplayer keeps its own messaging and cancel check.
+     */
+    private void switchMemberRoleForSetPlayer(CommandSender sender, Player player, Role role,
+            boolean silent, GameInstance live, SetPlayerTally tally) {
+        Role from = playerStates.role(player);
+        game.switchMemberRole(live, player, role);
+        tally.changed++;
+        tally.assigned.add(player.getUniqueId());
+        lobbies.applyLobbyCollisions(player);
+        if (!silent) {
+            game.messaging().announceRoleChange(player, from, role);
+            support.message(player, texts.getRoleAssigned(), Map.of("role", support.roleName(role)));
+            support.neutralSound(player);
+        }
+        cancelMatchIfInvalid(sender, live);
     }
 
     /** Sets one player's role with teams sync and announcements. */

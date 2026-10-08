@@ -387,35 +387,28 @@ public final class GameManager implements MatchControl {
         return matchStart.joinPlayers(instance, players, role);
     }
 
-    /**
-     * Switches one online match assignee to the named role with lives
-     * refreshed, then runs the standard bucket checks. False with no
-     * effect when the match is not live, the role is malformed, or the
-     * player is unknown or offline.
-     */
+    /** Switches one online assignee by name, then runs the bucket checks. */
     public boolean switchPlayerRole(long matchId, String playerName, String roleName) {
         Optional<Role> target = Role.parse(roleName);
-        if (target.isEmpty()) {
-            return false;
-        }
         Optional<GameInstance> match = store.instance(matchId);
-        if (match.isEmpty() || !match.get().active() || match.get().ending()) {
+        if (target.isEmpty() || match.isEmpty() || !match.get().active() || match.get().ending()) {
             return false;
         }
-        GameInstance instance = match.get();
-        Player player = MatchEliminationService.onlineAssignee(instance, playerName);
-        if (player == null) {
+        Player player = MatchEliminationService.onlineAssignee(match.get(), playerName);
+        if (player == null || !switchMemberRole(match.get(), player, target.get())) {
             return false;
         }
-        if (!matchStart.switchPlayerRole(instance, player, target.get())) {
-            return false;
-        }
-        if (instance.begun()) {
-            matchFinish.finishIfBucketEmpty(instance);
+        if (match.get().begun()) {
+            matchFinish.finishIfBucketEmpty(match.get());
         } else {
-            matchFinish.cancelIfPreStartUnviable(instance);
+            matchFinish.cancelIfPreStartUnviable(match.get());
         }
         return true;
+    }
+
+    /** Shared member switch without checks; callers run their own. */
+    public boolean switchMemberRole(GameInstance instance, Player player, Role target) {
+        return matchStart.switchPlayerRole(instance, player, target);
     }
 
     /** Begins the match when exactly one is live; a no-op otherwise. */

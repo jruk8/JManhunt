@@ -213,11 +213,15 @@ public final class RolePadService implements Listener {
                 return;
             }
             boolean member = live.get().isActive(player.getUniqueId());
-            if (!member && !capAllows(targetLobby, role)) {
+            if (member) {
+                switchMemberPadRole(player, role, live.get());
+                return;
+            }
+            if (!capAllows(targetLobby, role)) {
                 return;
             }
             setPadRole(player, role);
-            if (!member && !padSilent()) {
+            if (!padSilent()) {
                 texts.messages().messageRaw(player, policy.queueMessageTemplate(texts.manhunt()),
                         Map.of("role", texts.messages().roleName(role)));
             }
@@ -227,6 +231,24 @@ public final class RolePadService implements Listener {
             return;
         }
         setPadRole(player, role);
+    }
+
+    /** In-match member pad switch through the shared switch path. */
+    private void switchMemberPadRole(Player player, Role role, GameInstance instance) {
+        Role from = players.states().role(player);
+        game.switchMemberRole(instance, player, role);
+        lobby.lobbies().applyLobbyCollisions(player);
+        if (!padSilent()) {
+            texts.messages().messageRaw(player, texts.manhunt().getRoleAssigned(),
+                    Map.of("role", texts.messages().roleName(role)));
+            texts.sounds().playNeutralSound(player);
+        }
+        if (from != role) {
+            game.updateAutostartState();
+            if (!padSilent()) {
+                game.messaging().announceRoleChange(player, from, role);
+            }
+        }
     }
 
     private void setPadRole(Player player, Role role) {

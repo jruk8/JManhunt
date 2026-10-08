@@ -40,8 +40,7 @@ final class TagSyntaxErrors {
             case "rflag" -> RoleTagSyntax.flagError(name, args);
             case "placeholder" -> arityError(name, args, 1, "one key");
             case "loseplayer" -> loseplayerError(name, args);
-            case "win" -> winError(name, args);
-            case "pswitch" -> pswitchError(name, args);
+            case "win" -> winError(name, args); case "pswitch" -> pswitchError(name, args);
             case "args" -> argsError(name, args);
             case "list.append", "list.get", "list.set", "list.remove", "list.contains",
                     "list.clear", "list.pop", "len", "list.shuffle", "list.filter", "list.reverse",

@@ -465,15 +465,16 @@ public final class MatchStartService {
         if (plan.participantEdge()) {
             edge.tasks().run(() -> {
                 edge.fakes().disable(player);
-                services.compass().giveCompass(player);
+                if (services.compass().hasCompass(player)) {
+                    services.compass().refreshCompassIdentity(player);
+                } else {
+                    services.compass().giveCompass(player);
+                }
                 services.compass().refreshCompass(player);
             });
         }
         if (plan.watcherEdge()) {
-            edge.tasks().run(() -> {
-                edge.fakes().enable(player);
-                services.compass().removeCompasses(player);
-            });
+            edge.tasks().run(() -> edge.fakes().enable(player));
         }
     }
 

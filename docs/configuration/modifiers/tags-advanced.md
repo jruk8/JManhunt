@@ -534,7 +534,9 @@ role (any of `HUNTER`, `SPEEDRUNNER`, `SPECTATOR`, `NONE`, `AFK`; case
 does not matter) and refreshes their lives to that role's configured
 value. Position, inventory, pending respawns, and headstart holds stay
 untouched, and interval schedules keep running; only future events use
-the new role. Switching to a participant role also runs that role's
+the new role. A held compass is kept and restamped for the new role,
+never cleared; players without one are issued one when the new role is
+configured to receive compasses. Switching to a participant role also runs that role's
 `ON_START` lists when none ran for the player this game yet, and its
 `ON_RESPAWN` lists when none ran for their current life yet. Eliminated
 players can be switched back into the game this way. Unknown players,

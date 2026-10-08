@@ -378,8 +378,7 @@ final class CompassAnalysisRunner {
                                 "Tag <loseplayer> only works in modifiers: skipped."),
                         (role, reason) -> scope.warn(
                                 "Tag <win> only works in modifiers: skipped."),
-                        (target, role) -> scope.warn(
-                                "Tag <pswitch> only works in modifiers: skipped.")));
+                        (target, role) -> scope.warn("Tag <pswitch> only works in modifiers: skipped.")));
     }
 
     /**

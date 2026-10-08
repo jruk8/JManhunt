@@ -313,6 +313,11 @@ public final class CompassManager {
         items.giveCompass(player);
     }
 
+    /** True when the player already holds a plugin compass. */
+    public boolean hasCompass(Player player) {
+        return items.hasCompass(player);
+    }
+
     public void deduplicateCompasses(Player player) {
         items.deduplicateCompasses(player);
     }
