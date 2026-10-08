@@ -4,7 +4,7 @@
 
 <h3>JManhunt is a deeply customizable plugin for 26.x Manhunts.</h3>
 
-### [⭐Open Source](https://github.com/jruk8/JManhunt) · [Community Mods](https://discord.com/invite/hkWmCVmWDC) · [Wiki](https://jruk8.github.io/JManhunt/)
+### [Modrinth](https://modrinth.com/plugin/jmanhunt) · [Community Mods](https://discord.com/invite/hkWmCVmWDC) · [Wiki](https://jruk8.github.io/JManhunt/)
 
 <br>
 
