@@ -240,9 +240,7 @@ public final class PlayerCombatListener implements Listener {
             reads.fakes().enable(player);
             world.compass().removeCompasses(player);
         });
-        boolean suppressed =
-                this.match.game().stateCommands().anySuppressEngineLines(matchId);
-        if (!quiet && !suppressed) {
+        if (!quiet) {
             this.match.game().messaging().sendToInstance(instance,
                     reads.gameTexts().getSpeedrunnerOutOfLives(), Map.of());
         }
@@ -250,16 +248,14 @@ public final class PlayerCombatListener implements Listener {
         // line is sent: the win is the announcement.
         int playerCount = this.match.game().activeRunnerCount(instance);
         if (playerCount > 0) {
-            if (!quiet && !suppressed) {
+            if (!quiet) {
                 this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getSpeedrunnerDeath(),
                         Map.of("value", Integer.toString(playerCount)));
             }
         } else {
             this.match.game().finishLater(instance, Role.HUNTER, "All speedrunners eliminated");
         }
-        if (!suppressed) {
-            this.match.game().messaging().playInstanceSound(instance, "game.speedrunner-death");
-        }
+        this.match.game().messaging().playInstanceSound(instance, "game.speedrunner-death");
     }
 
     /** Announces a survived speedrunner death and schedules the world.respawn(). */

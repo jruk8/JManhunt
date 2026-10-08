@@ -486,11 +486,6 @@ public final class ConfigService {
         return modifiers.preStartOrder(name, index);
     }
 
-    /** True when the modifier replaces engine elimination lines. */
-    public boolean suppressEngineLines(String name) {
-        return modifiers.suppressEngineLines(name);
-    }
-
     public double intervalSeconds(String name, int index) {
         return modifiers.intervalSeconds(name, index);
     }

@@ -61,12 +61,6 @@ public final class ModifierStore {
         return files.getModifiers().get(name);
     }
 
-    /** True when the modifier replaces engine elimination lines. */
-    public boolean suppressEngineLines(String name) {
-        ModifierEntry entry = modifierEntry(name);
-        return entry != null && entry.isSuppressEngineLines();
-    }
-
     /** Raw preset, or null when unknown. */
     public ModifierPreset presetEntry(String id) {
         return files.getPresets().get(id);

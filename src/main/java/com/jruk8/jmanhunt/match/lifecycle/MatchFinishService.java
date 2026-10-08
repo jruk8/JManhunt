@@ -287,17 +287,8 @@ public final class MatchFinishService {
         edge.tasks().runLater(() -> finishEndPhase(instance), delay);
     }
 
-    /**
-     * Win chat line plus win sound. Silent for a hunter win with no
-     * runners left while a suppressing modifier owns the lines; the
-     * title screen and stats still run.
-     */
+    /** Win chat line plus win sound. */
     private void announceWin(GameInstance instance, Role winner, String reason) {
-        if (winner == Role.HUNTER
-                && services.stateCommands().anySuppressEngineLines(instance.matchId())
-                && services.store().activeRunnerCount(instance) == 0) {
-            return;
-        }
         texts.messaging().sendToInstanceComponent(instance, texts.messages().renderLiteral(
                 texts.messages().winAnnouncement(winner),
                 Map.of("wincon", reason, "rolecolor", texts.messages().roleColor(winner))));

@@ -211,16 +211,6 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
         toggles.syncModifierToggles(names);
     }
 
-    /** True when any modifier enabled for the match suppresses engine lines. */
-    public boolean anySuppressEngineLines(long matchId) {
-        for (String name : intervals.enabledModifiers(matchId)) {
-            if (reads.configService().suppressEngineLines(name)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @Override
     public void fireBehavior(String name, int index, long matchId) {
         runModifierCommands(name, index, matchId, List.of());

@@ -159,8 +159,6 @@ Speedrunners who die their final death come back as hunters via
 `<pswitch>`. The `ON_DEATH` guard reads the victim former role from
 `<args:2>`, so hunter deaths exit quietly and disconnect removals
 (which never fire `ON_DEATH`) are never converted. When no runners
-remain, the engine ends the match with a hunter win on its own. The
-file sets the top-level `suppress-engine-lines: true` key, which
-hands the out-of-lives, death-count, and elimination win
-announcements to the modifier so engine and modifier lines never
-double up. Any modifier can set the key; it defaults to false.
+remain, the engine ends the match with a hunter win on its own.
+Engine elimination and win announcements still run, so Infection
+lines may duplicate engine chat and sounds.

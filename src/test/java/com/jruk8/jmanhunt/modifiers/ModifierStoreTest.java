@@ -442,21 +442,6 @@ class ModifierStoreTest {
     }
 
     @Test
-    void suppressEngineLinesDefaultsFalseAndReadsTrue() {
-        Logger log = Logger.getAnonymousLogger();
-        log.setUseParentHandlers(false);
-        ModifierStore store = new ModifierStore(ModifierFiles.inMemory(), log);
-        store.addModifier("plain", new ModifierEntry());
-        ModifierEntry loud = new ModifierEntry();
-        loud.setSuppressEngineLines(true);
-        store.addModifier("loud", loud);
-
-        assertFalse(store.suppressEngineLines("plain"));
-        assertTrue(store.suppressEngineLines("loud"));
-        assertFalse(store.suppressEngineLines("missing"));
-    }
-
-    @Test
     void addPresetBumpsNameOnIdCollision() {
         Logger log = Logger.getAnonymousLogger();
         log.setUseParentHandlers(false);

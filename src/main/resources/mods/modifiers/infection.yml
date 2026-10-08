@@ -3,10 +3,9 @@
 # instead of dying permanently. The engine still ends the match with a
 # hunter win once no runners remain. Disconnects are never converted:
 # the strike system removes quitters without firing ON_DEATH, so this
-# block never sees them. suppress-engine-lines hands the elimination
-# and win announcements to this file (no double messaging).
+# block never sees them. Engine elimination and win announcements still
+# run, so Infection lines may duplicate engine chat and sounds.
 enabled: false
-suppress-engine-lines: true
 meta:
   name: "Infection"
   description: "Fallen runners rise as hunters."
