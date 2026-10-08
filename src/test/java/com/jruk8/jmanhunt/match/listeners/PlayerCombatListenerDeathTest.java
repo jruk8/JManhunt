@@ -133,7 +133,7 @@ class PlayerCombatListenerDeathTest {
         kill(fixture);
 
         verify(fixture.commands()).runEventModifiers(eq("ON_DEATH"), eq(fixture.victim()),
-                eq(7L), eq(List.of("Victor", "null")));
+                eq(7L), eq(List.of("Victor", "null", "HUNTER")));
     }
 
     @Test
@@ -147,7 +147,18 @@ class PlayerCombatListenerDeathTest {
         kill(fixture);
 
         verify(fixture.commands()).runEventModifiers(eq("ON_DEATH"), eq(fixture.victim()),
-                eq(7L), eq(List.of("Victor", "Kira")));
+                eq(7L), eq(List.of("Victor", "Kira", "SPEEDRUNNER")));
+    }
+
+    @Test
+    void finalDeathReportsFormerRoleAfterElimination() {
+        Fixture fixture = fixture(Role.SPEEDRUNNER, 1, true);
+
+        kill(fixture);
+
+        assertEquals(Role.SPECTATOR, fixture.players().role(fixture.victimId()));
+        verify(fixture.commands()).runEventModifiers(eq("ON_DEATH"), eq(fixture.victim()),
+                eq(7L), eq(List.of("Victor", "null", "SPEEDRUNNER")));
     }
 
     @Test

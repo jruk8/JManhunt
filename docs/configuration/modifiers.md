@@ -7,7 +7,7 @@ icon: material/puzzle
 > For: everyone spicing up the game. No scripting needed.
 
 Modifiers are ready-made game twists: starter kits, random chaos,
-buffs, and rule changes. 19 modifiers and 3 presets ship with the
+buffs, and rule changes. 21 modifiers and 3 presets ship with the
 plugin, all switched off until you switch them on.
 
 ## Switch Some On

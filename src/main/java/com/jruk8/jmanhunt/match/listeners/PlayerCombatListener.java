@@ -111,7 +111,7 @@ public final class PlayerCombatListener implements Listener {
             handleHunterDeath(player, instance, quiet);
         }
         if (role.isParticipant()) {
-            fireDeathTrigger(player, instance);
+            fireDeathTrigger(player, instance, role);
         }
         world.compass().clearLocksOnTargetDeath(player.getUniqueId());
         if (!quiet) {
@@ -122,12 +122,21 @@ public final class PlayerCombatListener implements Listener {
         tasks.run(() -> world.compass().refreshInstance(instance));
     }
 
-    /** Fires ON_DEATH for the dead player: dead name plus killer name or "null". */
-    private void fireDeathTrigger(Player player, GameInstance instance) {
+    /** Fires ON_DEATH for the dead player: dead, killer or "null", former role. */
+    private void fireDeathTrigger(Player player, GameInstance instance, Role role) {
         Player killer = player.getKiller();
         String killerName = killer == null ? "null" : killer.getName();
         this.match.game().stateCommands().runEventModifiers("ON_DEATH", player,
-                instance.matchId(), List.of(player.getName(), killerName));
+                instance.matchId(), deathArgs(player.getName(), killerName, role));
+    }
+
+    /**
+     * ON_DEATH event args in order: dead name, killer name, victim
+     * former role. The role is read before elimination rewrites it.
+     * Pure for tests.
+     */
+    static List<String> deathArgs(String deadName, String killerName, Role formerRole) {
+        return List.of(deadName, killerName, formerRole.name());
     }
 
     /** Mocking lobby broadcast for same-team kills, when enabled. */
@@ -231,7 +240,9 @@ public final class PlayerCombatListener implements Listener {
             reads.fakes().enable(player);
             world.compass().removeCompasses(player);
         });
-        if (!quiet) {
+        boolean suppressed =
+                this.match.game().stateCommands().anySuppressEngineLines(matchId);
+        if (!quiet && !suppressed) {
             this.match.game().messaging().sendToInstance(instance,
                     reads.gameTexts().getSpeedrunnerOutOfLives(), Map.of());
         }
@@ -239,14 +250,16 @@ public final class PlayerCombatListener implements Listener {
         // line is sent: the win is the announcement.
         int playerCount = this.match.game().activeRunnerCount(instance);
         if (playerCount > 0) {
-            if (!quiet) {
+            if (!quiet && !suppressed) {
                 this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getSpeedrunnerDeath(),
                         Map.of("value", Integer.toString(playerCount)));
             }
         } else {
             this.match.game().finishLater(instance, Role.HUNTER, "All speedrunners eliminated");
         }
-        this.match.game().messaging().playInstanceSound(instance, "game.speedrunner-death");
+        if (!suppressed) {
+            this.match.game().messaging().playInstanceSound(instance, "game.speedrunner-death");
+        }
     }
 
     /** Announces a survived speedrunner death and schedules the world.respawn(). */

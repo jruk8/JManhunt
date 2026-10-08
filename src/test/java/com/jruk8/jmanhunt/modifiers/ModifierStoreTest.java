@@ -336,7 +336,7 @@ class ModifierStoreTest {
 
     @Test
     void bundledDefaultsHaveCompleteMeta() throws Exception {
-        assertEquals(19, ModsDefaults.MODIFIERS.size());
+        assertEquals(21, ModsDefaults.MODIFIERS.size());
         for (String id : ModsDefaults.MODIFIERS) {
             YamlConfiguration yaml = bundledYaml("modifiers", id);
             assertTrue(yaml.contains("enabled"), id);
@@ -381,7 +381,7 @@ class ModifierStoreTest {
                 ModifierFiles.fromLoad(bundledRoot, seeder.load(bundledRoot)),
                 Logger.getAnonymousLogger());
 
-        assertEquals(19, bundled.modifierNames().size());
+        assertEquals(21, bundled.modifierNames().size());
         assertEquals(3, bundled.presetNames().size());
         assertEquals("PICK_RANDOM", bundled.selection("gear-dice", 0));
         assertEquals(15.0, bundled.intervalSeconds("gear-dice", 0));
@@ -439,6 +439,21 @@ class ModifierStoreTest {
 
         assertEquals("gear-dice-2", store.addModifier("gear-dice", second));
         assertEquals("Gear Dice 2", store.metaName("gear-dice-2"));
+    }
+
+    @Test
+    void suppressEngineLinesDefaultsFalseAndReadsTrue() {
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ModifierStore store = new ModifierStore(ModifierFiles.inMemory(), log);
+        store.addModifier("plain", new ModifierEntry());
+        ModifierEntry loud = new ModifierEntry();
+        loud.setSuppressEngineLines(true);
+        store.addModifier("loud", loud);
+
+        assertFalse(store.suppressEngineLines("plain"));
+        assertTrue(store.suppressEngineLines("loud"));
+        assertFalse(store.suppressEngineLines("missing"));
     }
 
     @Test

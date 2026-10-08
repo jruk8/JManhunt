@@ -661,4 +661,33 @@ class GameStateCommandManagerTest {
                 .thenReturn(false);
         assertFalse(manager.endWipeEnabled(3));
     }
+
+    @Test
+    void suppressPredicateReadsEnabledModifiers() {
+        JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        JManhuntLogger logger = mock(JManhuntLogger.class);
+        when(plugin.logger()).thenReturn(logger);
+        ConfigService config = mock(ConfigService.class);
+        when(config.modifierNames()).thenReturn(Set.of("plain", "loud"));
+        when(config.suppressEngineLines("plain")).thenReturn(false);
+        when(config.suppressEngineLines("loud")).thenReturn(true);
+        OverrideService overrides = mock(OverrideService.class);
+        when(overrides.modifierEnabled(any(), anyString())).thenReturn(true);
+        GameManager game = mock(GameManager.class);
+        when(game.lobbyOf(7L)).thenReturn(0);
+        GameStateCommandManager manager = new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(new PlayerStateStore(),
+                        config, new MiscConfig.Interop(),
+                        mock(PlayersSettingsFacade.class)),
+                new GameStateCommandManager.CommandEdge(
+                        plugin.engineStates(), plugin.fakeSpectators(),
+                        plugin.logger(), overrides,
+                        plugin.placeholderValues(), plugin),
+                mock(MessageService.class), mock(SoundService.class), game);
+
+        assertTrue(manager.anySuppressEngineLines(7L));
+
+        when(config.suppressEngineLines("loud")).thenReturn(false);
+        assertFalse(manager.anySuppressEngineLines(7L));
+    }
 }

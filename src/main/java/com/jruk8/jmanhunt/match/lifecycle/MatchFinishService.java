@@ -261,9 +261,7 @@ public final class MatchFinishService {
         services.prestart().cancelHeadstarts(instance);
         services.timeLimits().cancelTimeLimit(instance);
 
-        texts.messaging().sendToInstanceComponent(instance, texts.messages().renderLiteral(
-                texts.messages().winAnnouncement(winner),
-                Map.of("wincon", reason, "rolecolor", texts.messages().roleColor(winner))));
+        announceWin(instance, winner, reason);
         Component titleComponent = texts.messages().winTitle(winner);
         for (Player player : services.store().onlineAssignedPlayers(instance)) {
             player.showTitle(Title.title(titleComponent, Component.empty(),
@@ -271,7 +269,6 @@ public final class MatchFinishService {
         }
         markOfflineEndWipes(instance);
         services.playerStates().resetOfflinePlayers(Bukkit.getOnlinePlayers(), instance.assignedPlayerIds());
-        texts.messaging().playInstanceSound(instance, winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
         services.stats().completeMatch(instance.matchId(), winner);
 
         // Make all players invulnerable on game end if configured
@@ -288,6 +285,24 @@ public final class MatchFinishService {
         long delay = endDelayTicks(instance, immediate);
         edge.tasks().runLater(() -> showEndStatsOnce(instance), delay / 2);
         edge.tasks().runLater(() -> finishEndPhase(instance), delay);
+    }
+
+    /**
+     * Win chat line plus win sound. Silent for a hunter win with no
+     * runners left while a suppressing modifier owns the lines; the
+     * title screen and stats still run.
+     */
+    private void announceWin(GameInstance instance, Role winner, String reason) {
+        if (winner == Role.HUNTER
+                && services.stateCommands().anySuppressEngineLines(instance.matchId())
+                && services.store().activeRunnerCount(instance) == 0) {
+            return;
+        }
+        texts.messaging().sendToInstanceComponent(instance, texts.messages().renderLiteral(
+                texts.messages().winAnnouncement(winner),
+                Map.of("wincon", reason, "rolecolor", texts.messages().roleColor(winner))));
+        texts.messaging().playInstanceSound(instance,
+                winner == Role.HUNTER ? "game.fail-sound" : "game.win-sound");
     }
 
     /** Sends end-of-match statistics, exactly once per match. */

@@ -107,8 +107,8 @@ The bundled files ship more examples to copy from: `full-leather-kit`,
 `speedrunner-health-advantage`, `random-mob-spawner`,
 `random-item-giver`, `random-start-resources`, `gear-dice`,
 `regen-on-kill`, `diamond-on-advancement`, `fireres-on-nether-enter`,
-`hunter-start-debuffs`, `get-stronger-on-kill`, and
-`speedrunner-gapple-on-low-hp`.
+`hunter-start-debuffs`, `get-stronger-on-kill`,
+`speedrunner-gapple-on-low-hp`, `vip-escort`, and `infection`.
 
 ### Get Stronger On Kill
 
@@ -139,3 +139,28 @@ the cooldown read (no stamp), then the health check, then the
 inventory scan. The last line is the gate itself: `<pcooldown>` yields
 `true` and stamps at most every 300 seconds, so the apple lands only
 when all four pass. Runners who never got one are treated as due.
+
+### VIP Escort
+
+Flags one random speedrunner as the VIP after the pre-start window
+and announces them; the runners lose outright when the VIP dies. Run
+it with speedrunner lives at `-1` so everyone else respawns forever
+while the VIP stays mortal. Three blocks: an `ON_START` pick into a
+`gflag`, an `ON_DEATH` guard that eliminates the VIP and ends the
+match for the hunters, and a 1-second `INTERVAL` block with two
+toggles at the top of the console list: `effects` (the nested
+`effect_list` of `[id, amplifier]` pairs, reapplied with the
+interval seconds rounded up plus one) and `no_armor` (clears all
+four armor slots every second).
+
+### Infection
+
+Speedrunners who die their final death come back as hunters via
+`<pswitch>`. The `ON_DEATH` guard reads the victim former role from
+`<args:2>`, so hunter deaths exit quietly and disconnect removals
+(which never fire `ON_DEATH`) are never converted. When no runners
+remain, the engine ends the match with a hunter win on its own. The
+file sets the top-level `suppress-engine-lines: true` key, which
+hands the out-of-lives, death-count, and elimination win
+announcements to the modifier so engine and modifier lines never
+double up. Any modifier can set the key; it defaults to false.

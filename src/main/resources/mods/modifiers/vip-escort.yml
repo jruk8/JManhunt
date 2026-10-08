@@ -1,0 +1,70 @@
+# Bundled JManhunt modifier: vip-escort
+# VIP Escort: one random speedrunner becomes the VIP with a single life,
+# and the runners must protect them. Set
+# settings.players.respawn.speedrunner.lives to -1 so everyone else
+# respawns forever while the VIP stays mortal. Three blocks below:
+# ON_START picks and announces the VIP, ON_DEATH ends the game when the
+# VIP dies, and the INTERVAL block applies the optional debuffs.
+enabled: false
+meta:
+  name: "VIP Escort"
+  description: "Protect the one-life VIP."
+  item: BEACON
+  author: JManhunt
+behavior:
+  0:
+    # Block 1: flag one random speedrunner as the VIP after the
+    # pre-start window, then announce them to the match.
+    runs-on:
+      - ON_START
+    on-start:
+      pre-start-order: AFTER
+    commands:
+      console:
+        # No runners means no VIP: warn once and stop this list.
+        # MiniMessage brackets are backslash-escaped so the tag scanner
+        # skips them; real nested tags stay unescaped.
+        - '<if:"<len:<active-players:SPEEDRUNNER>> == 0","<gmsg:\<red\>No speedrunners: VIP pick skipped.>">'
+        - '<if:"<len:<active-players:SPEEDRUNNER>> == 0","exit">'
+        # The VIP identity lives in a global flag for all blocks.
+        - "<gflag:vip,<random-pick:<active-players:SPEEDRUNNER>>>"
+        - '<gmsg:\<green\>\<white\>\<bold\><gflag:vip>\</bold\>\</white\> is the VIP. Protect them!>'
+        - "<gsound:block.beacon.ambient>"
+  1:
+    # Block 2: when the VIP dies, announce it and end the game for
+    # the runners (elimination plus a hunter win).
+    runs-on:
+      - ON_DEATH
+    commands:
+      console:
+        # Anyone but the VIP leaves this list quietly.
+        - '<if:"<args:0> != <gflag:vip>","exit">'
+        - '<gmsg:\<green\>The VIP \<white\>\<bold\><gflag:vip>\</bold\>\</white\> has died!>'
+        - "<gsound:block.beacon.deactivate,0.8>"
+        - "<loseplayer:<gflag:vip>,VIP died>"
+        - "<win:HUNTER,VIP died>"
+  2:
+    # Block 3: optional VIP debuffs, reapplied every second. Both
+    # are enabled; only the effect amplifiers are configurable.
+    runs-on:
+      - INTERVAL
+    options:
+      interval-settings:
+        interval: 1
+    commands:
+      console:
+        # Settings: effect and armor debuff toggles, plus the nested
+        # effect list of [id, amplifier] pairs.
+        - "<lflag:effects,true>"
+        - "<lflag:no_armor,true>"
+        - "<lflag:effect_list,[[minecraft:glowing, 0], [minecraft:slowness, 0]]>"
+        # Skip when no VIP is flagged or they left the runner roster.
+        - '<if:"<list.contains:<active-players:SPEEDRUNNER>,<gflag:vip>> != true","exit">'
+        # Each effect in turn: duration is the interval seconds rounded
+        # up plus one (ceil(x + 1) equals ceil(x) + 1), particles hidden.
+        - '<if:"<lflag:effects> == true","<for:<lflag:effect_list>,<run:effect give <gflag:vip> <list.get:<i>,0> <ceil:<args:0>+1> <list.get:<i>,1> true>>">'
+        # Armor slots cleared every second while enabled.
+        - '<if:"<lflag:no_armor> == true","<run:item replace entity <gflag:vip> armor.head with air>">'
+        - '<if:"<lflag:no_armor> == true","<run:item replace entity <gflag:vip> armor.chest with air>">'
+        - '<if:"<lflag:no_armor> == true","<run:item replace entity <gflag:vip> armor.legs with air>">'
+        - '<if:"<lflag:no_armor> == true","<run:item replace entity <gflag:vip> armor.feet with air>">'

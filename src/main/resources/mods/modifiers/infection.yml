@@ -1,0 +1,35 @@
+# Bundled JManhunt modifier: infection
+# Infection: speedrunners who die their final death come back as hunters
+# instead of dying permanently. The engine still ends the match with a
+# hunter win once no runners remain. Disconnects are never converted:
+# the strike system removes quitters without firing ON_DEATH, so this
+# block never sees them. suppress-engine-lines hands the elimination
+# and win announcements to this file (no double messaging).
+enabled: false
+suppress-engine-lines: true
+meta:
+  name: "Infection"
+  description: "Fallen runners rise as hunters."
+  item: POISONOUS_POTATO
+  author: JManhunt
+behavior:
+  0:
+    # Final runner deaths convert to hunter; hunter deaths exit quietly.
+    runs-on:
+      - ON_DEATH
+    commands:
+      console:
+        # args:2 is the victim former role (only runners convert).
+        - '<if:"<args:2> != SPEEDRUNNER","exit">'
+        # The victim was already eliminated: switch them back in as a hunter.
+        - "<pswitch:<args:0>,HUNTER>"
+        # Count the runners left after the conversion.
+        - "<lflag:remaining,<len:<active-players:SPEEDRUNNER>>>"
+        # Everyone converted: the engine hunter win follows on its own.
+        # MiniMessage brackets are backslash-escaped so the tag scanner
+        # skips them; real nested tags stay unescaped.
+        - '<if:"<lflag:remaining> == 0","<gmsg:\<red\>Everyone got infected!>">'
+        - '<if:"<lflag:remaining> == 0","<gsound:item.bucket.fill_sulfur_cube,0.7>">'
+        # Otherwise announce this victim with a random middle phrase.
+        - '<if:"<lflag:remaining> != 0","<gmsg:\<red\>\<white\><args:0>\</white\> <random-pick:got infected,caught a cold,has fallen ill>! \<white\><lflag:remaining>\</white\> left.>">'
+        - '<if:"<lflag:remaining> != 0","<gsound:event.mob_effect.trial_omen,0.8>">'

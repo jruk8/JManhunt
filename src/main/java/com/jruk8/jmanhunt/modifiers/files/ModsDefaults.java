@@ -29,7 +29,9 @@ public final class ModsDefaults {
             "tpall-on-end",
             "start-with-luckyblocks-requires-challenges-addon",
             "get-stronger-on-kill",
-            "speedrunner-gapple-on-low-hp");
+            "speedrunner-gapple-on-low-hp",
+            "vip-escort",
+            "infection");
 
     /** Bundled preset ids, seeded when mods/presets is created. */
     public static final List<String> PRESETS = List.of(
