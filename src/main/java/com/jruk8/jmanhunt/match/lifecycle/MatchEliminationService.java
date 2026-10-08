@@ -67,7 +67,7 @@ public final class MatchEliminationService {
             return false;
         }
         GameInstance instance = match.get();
-        Player player = namedAssignee(instance, playerName);
+        Player player = onlineAssignee(instance, playerName);
         if (player == null) {
             return false;
         }
@@ -96,7 +96,7 @@ public final class MatchEliminationService {
     }
 
     /** Online match assignee by name, case-insensitive; null when none. */
-    private Player namedAssignee(GameInstance instance, String playerName) {
+    public static Player onlineAssignee(GameInstance instance, String playerName) {
         for (UUID id : instance.assignedPlayerIds()) {
             Player player = Bukkit.getPlayer(id);
             if (player != null && player.getName().equalsIgnoreCase(playerName)) {

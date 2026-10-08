@@ -72,6 +72,7 @@ public final class TagContext {
     private final SoundSink playerSound;
     private final BiConsumer<String, String> losePlayer;
     private final BiConsumer<String, String> winMatch;
+    private final BiConsumer<String, String> switchRole;
     private final long matchId;
     private final TagBackends backends;
     private final List<String> eventArgs;
@@ -122,13 +123,21 @@ public final class TagContext {
     /** Match id, backends, event args, limits, and outcomes. */
     public record TagMatch(long matchId, TagBackends backends, List<String> eventArgs,
             Consumer<String> loopLimit, BiConsumer<String, String> losePlayer,
-            BiConsumer<String, String> winMatch) {
+            BiConsumer<String, String> winMatch, BiConsumer<String, String> switchRole) {
         /** Match with empty args and a silent loop sink. */
         public static TagMatch simple(long matchId, TagBackends backends,
                 BiConsumer<String, String> losePlayer,
                 BiConsumer<String, String> winMatch) {
+            return simple(matchId, backends, losePlayer, winMatch, (player, role) -> { });
+        }
+
+        /** Match with empty args, a silent loop sink, and a role switch sink. */
+        public static TagMatch simple(long matchId, TagBackends backends,
+                BiConsumer<String, String> losePlayer,
+                BiConsumer<String, String> winMatch,
+                BiConsumer<String, String> switchRole) {
             return new TagMatch(matchId, backends, List.of(), detail -> { }, losePlayer,
-                    winMatch);
+                    winMatch, switchRole);
         }
     }
 
@@ -141,6 +150,7 @@ public final class TagContext {
         this.playerSound = sinks.playerSound();
         this.losePlayer = match.losePlayer();
         this.winMatch = match.winMatch();
+        this.switchRole = match.switchRole();
         this.matchId = match.matchId();
         this.backends = match.backends();
         this.eventArgs = List.copyOf(match.eventArgs());
@@ -352,5 +362,14 @@ public final class TagContext {
      */
     public void winMatch(String role, String reason) {
         winMatch.accept(role, reason);
+    }
+
+    /**
+     * Switches one player to the named role, behind
+     * {@code <pswitch:player,ROLE>}. The role is the canonical
+     * upper-case name.
+     */
+    public void switchPlayerRole(String playerName, String role) {
+        switchRole.accept(playerName, role);
     }
 }

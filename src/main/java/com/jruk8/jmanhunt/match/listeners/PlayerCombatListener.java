@@ -94,6 +94,7 @@ public final class PlayerCombatListener implements Listener {
         GameInstance instance = match.get();
         Role role = reads.states().role(player);
         if (role.isParticipant()) {
+            instance.noteDeath(player.getUniqueId());
             this.match.stats().recordDeath(player.getUniqueId());
             Stats deathSlice = this.match.stats().getOrCreate(instance.matchId(), player.getUniqueId());
             deathSlice.deaths++;

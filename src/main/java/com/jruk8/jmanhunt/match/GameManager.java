@@ -43,6 +43,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchControl;
+import com.jruk8.jmanhunt.match.lifecycle.MatchEliminationService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStartService;
@@ -188,7 +189,7 @@ public final class GameManager implements MatchControl {
                         services.stats(), stateCommands, reads.worldEngine(), reads.lobbies(),
                         store, timeLimits, prestart, autostart),
                 new MatchStartService.StartEdge(edge.fakes(), edge.roleTeams(),
-                        edge.respawn(), texts.sounds()),
+                        edge.respawn(), texts.sounds(), edge.tasks()),
                 new MatchStartService.StartTexts(texts.messages(), texts.gameTexts(),
                         texts.manhunt(), messaging));
     }
@@ -384,6 +385,37 @@ public final class GameManager implements MatchControl {
      */
     public int joinPlayers(GameInstance instance, List<Player> players, Role role) {
         return matchStart.joinPlayers(instance, players, role);
+    }
+
+    /**
+     * Switches one online match assignee to the named role with lives
+     * refreshed, then runs the standard bucket checks. False with no
+     * effect when the match is not live, the role is malformed, or the
+     * player is unknown or offline.
+     */
+    public boolean switchPlayerRole(long matchId, String playerName, String roleName) {
+        Optional<Role> target = Role.parse(roleName);
+        if (target.isEmpty()) {
+            return false;
+        }
+        Optional<GameInstance> match = store.instance(matchId);
+        if (match.isEmpty() || !match.get().active() || match.get().ending()) {
+            return false;
+        }
+        GameInstance instance = match.get();
+        Player player = MatchEliminationService.onlineAssignee(instance, playerName);
+        if (player == null) {
+            return false;
+        }
+        if (!matchStart.switchPlayerRole(instance, player, target.get())) {
+            return false;
+        }
+        if (instance.begun()) {
+            matchFinish.finishIfBucketEmpty(instance);
+        } else {
+            matchFinish.cancelIfPreStartUnviable(instance);
+        }
+        return true;
     }
 
     /** Begins the match when exactly one is live; a no-op otherwise. */

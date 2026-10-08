@@ -130,7 +130,9 @@ public final class ModifierTestService {
                         (target, reason) -> capturedMessages.add(
                                 "Would eliminate " + target + ": " + reason),
                         (wonRole, reason) -> capturedMessages.add(
-                                "Would end the match for " + wonRole + ": " + reason)));
+                                "Would end the match for " + wonRole + ": " + reason),
+                        (target, switchedRole) -> capturedMessages.add(
+                                "Would switch " + target + " to " + switchedRole)));
         long start = System.nanoTime();
         try {
             commands.runCommandList(lines, sender, context,

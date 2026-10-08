@@ -148,4 +148,38 @@ class GameInstanceTest {
         assertFalse(instance.markModifierCleaned("m"));
         assertTrue(instance.markModifierCleaned("other"));
     }
+
+    @Test
+    void startMarksFireOncePerPlayer() {
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+
+        assertTrue(instance.markStartFired(first));
+        assertFalse(instance.markStartFired(first));
+        assertTrue(instance.markStartFired(second));
+    }
+
+    @Test
+    void lifeIndexCountsDeathsFromZero() {
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+        UUID player = UUID.randomUUID();
+
+        assertEquals(0, instance.lifeOf(player));
+        instance.noteDeath(player);
+        assertEquals(1, instance.lifeOf(player));
+        instance.noteDeath(player);
+        assertEquals(2, instance.lifeOf(player));
+    }
+
+    @Test
+    void respawnMarksFireOncePerLife() {
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+        UUID player = UUID.randomUUID();
+
+        assertTrue(instance.markRespawnFired(player, 0));
+        assertFalse(instance.markRespawnFired(player, 0));
+        assertTrue(instance.markRespawnFired(player, 1));
+        assertFalse(instance.markRespawnFired(player, 1));
+    }
 }

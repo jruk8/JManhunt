@@ -40,7 +40,7 @@ public final class TagFunctions {
             "placeholder",
             "min", "max", "clamp", "root", "if",
             "gmessage", "gmsg", "pmessage", "pmsg", "rmessage", "rmsg", "gsound", "psound", "rsound",
-            "loseplayer", "win", "args",
+            "loseplayer", "win", "pswitch", "args",
             "list.append", "list.get", "list.set", "list.remove", "list.contains",
             "list.clear", "list.pop", "len", "list.shuffle", "range",
             "active-players", "plocation", "prole", "distance",

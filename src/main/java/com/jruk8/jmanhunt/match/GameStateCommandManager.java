@@ -89,6 +89,11 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     public void runStart(long matchId, List<Player> participants, List<Player> lobbySpectators, int lobbyId) {
         intervals.cancelPendingDelayed(matchId);
         defaults.runDefault("start", participants, lobbySpectators, lobbyId, false);
+        game.instance(matchId).ifPresent(instance -> {
+            for (Player player : participants) {
+                instance.markStartFired(player.getUniqueId());
+            }
+        });
         runModifierStarts(matchId);
     }
 
@@ -101,6 +106,11 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      * deferred modifiers still fire immediately.
      */
     public void runPostStartModifiers(long matchId) {
+        game.instance(matchId).ifPresent(instance -> {
+            for (Player player : game.onlineParticipants(matchId)) {
+                instance.markStartFired(player.getUniqueId());
+            }
+        });
         for (String name : intervals.enabledModifiers(matchId)) {
             for (int index : reads.configService().behaviorIndexes(name)) {
                 if (!ModifierTriggers.runsOn(reads.configService().runsOn(name, index), "ON_START")) {
@@ -110,6 +120,47 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                     continue;
                 }
                 runModifierCommands(name, index, matchId, List.of());
+            }
+        }
+    }
+
+    /**
+     * Runs ON_START behaviors for one switched player: BEFORE lists
+     * always, AFTER lists only once begun (pre-begin AFTER lists still
+     * arrive through the begin sequence). Single-target catch-up behind
+     * role switches; callers skip non-participant targets.
+     */
+    public void runStartForPlayer(long matchId, Player player) {
+        boolean begun = game.instance(matchId).map(GameInstance::begun).orElse(false);
+        for (String name : intervals.enabledModifiers(matchId)) {
+            for (int index : reads.configService().behaviorIndexes(name)) {
+                if (!ModifierTriggers.runsOn(reads.configService().runsOn(name, index),
+                        "ON_START")) {
+                    continue;
+                }
+                if (afterPrestart(name, index) && !begun) {
+                    continue;
+                }
+                dispatchModifier(name, index, List.of(player), matchId, List.of());
+            }
+        }
+    }
+
+    /**
+     * Runs ON_RESPAWN plus the live-role split for one switched
+     * player. Single-target catch-up behind role switches; callers
+     * skip non-participant targets.
+     */
+    public void runRespawnForPlayer(long matchId, Player player) {
+        Role role = reads.playerStates().role(player);
+        String split = role == Role.HUNTER ? "ON_HUNTER_RESPAWN" : "ON_SPEEDRUNNER_RESPAWN";
+        for (String name : intervals.enabledModifiers(matchId)) {
+            for (int index : reads.configService().behaviorIndexes(name)) {
+                List<String> runsOn = reads.configService().runsOn(name, index);
+                if (ModifierTriggers.runsOn(runsOn, "ON_RESPAWN")
+                        || ModifierTriggers.runsOn(runsOn, split)) {
+                    dispatchModifier(name, index, List.of(player), matchId, List.of());
+                }
             }
         }
     }
@@ -357,7 +408,9 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                         (target, reason) -> sinks.losePlayerByName(name, target, reason, scope,
                                 matchId),
                         (role, reason) -> sinks.winForRole(name, role, reason, scope,
-                                matchId)));
+                                matchId),
+                        (target, role) -> sinks.switchPlayerRoleByName(name, target, role,
+                                scope, matchId)));
         context.setCooldowns(game.cooldownStore());
         return context;
     }

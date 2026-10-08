@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.player.Role;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -405,6 +406,33 @@ public final class TagExpressions {
         }
         context.winMatch(EngineEscapes.restore(role),
                 EngineEscapes.restore(reasonArg(args)));
+        return "";
+    }
+
+    /**
+     * {@code <pswitch:player,ROLE>}: switches one player to the
+     * named role through the context sink and returns empty. The
+     * player is the text before the first comma (quote-checked);
+     * the role is everything after it and must parse. Match and
+     * roster failures warn from the sink, like {@code <loseplayer>}.
+     */
+    static String pswitch(String tag, String args, TagContext context) {
+        Optional<String> player = headArg(tag, args, context, "pswitch", "a player");
+        if (player.isEmpty()) {
+            return "";
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        if (parts.size() != 2) {
+            context.scope().warn("Tag <pswitch> needs a player and a role: " + tag);
+            return "";
+        }
+        Optional<String> rawRole = CommandPlaceholders.parsePickItem(parts.get(1));
+        Optional<Role> role = rawRole.flatMap(Role::parse);
+        if (role.isEmpty()) {
+            context.scope().warn("Tag <pswitch> needs a valid role: " + tag);
+            return "";
+        }
+        context.switchPlayerRole(EngineEscapes.restore(player.get()), role.get().name());
         return "";
     }
 

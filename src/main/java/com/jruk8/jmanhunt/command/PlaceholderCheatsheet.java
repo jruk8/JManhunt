@@ -59,6 +59,8 @@ public final class PlaceholderCheatsheet {
                     new String[]{"<loseplayer:player,reason>", "eliminate a player, returns empty"}),
             Map.entry("win",
                     new String[]{"<win:ROLE,reason>", "end the match for a role, returns empty"}),
+            Map.entry("pswitch",
+                    new String[]{"<pswitch:player,ROLE>", "switch a player role, returns empty"}),
             Map.entry("args", new String[]{"<args:index>", "trigger event arg, 0 when bare"}),
             Map.entry("list.append", new String[]{"<list.append:list,x>", "append x, store back, empty"}),
             Map.entry("list.get", new String[]{"<list.get:list,index>", "item at index, null when missing"}),

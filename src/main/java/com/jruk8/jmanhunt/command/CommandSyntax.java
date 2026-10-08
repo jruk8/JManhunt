@@ -34,7 +34,7 @@ public final class CommandSyntax {
                 "max", "clamp", "if", "gmessage", "gmsg", "pmessage", "pmsg", "gsound", "psound",
                 "pstat", "gstat", "phasitem", "gflag", "gf", "pflag", "pf", "lflag", "lf", "placeholder",
                 "rflag", "rmessage", "rmsg", "rsound",
-                "loseplayer", "win", "args", "list.append", "list.get", "list.set", "list.remove",
+                "loseplayer", "win", "pswitch", "args", "list.append", "list.get", "list.set", "list.remove",
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
                 "list.filter", "list.reverse", "list.join", "list.slice", "list.first", "list.last",
                 "active-players", "plocation", "prole", "distance",

@@ -31,7 +31,7 @@ class TagRunTest {
                                 (text, name) -> text, RosterValues.inert(),
                                 PlayerSinks.inert()),
                         List.of(), detail -> { }, (player, reason) -> { },
-                        (role, reason) -> { }));
+                        (role, reason) -> { }, (player, role) -> { }));
 
         String replace(String command) {
             return CommandPlaceholders.replace(command, "Steve", 0, 0, 0, context);

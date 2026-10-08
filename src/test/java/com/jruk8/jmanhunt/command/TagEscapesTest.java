@@ -37,7 +37,7 @@ class TagEscapesTest {
                     TagContext.TagRole.silent(),
                     new TagContext.TagMatch(7L, new TagBackends(StatValues.inert(), flags, (text,
                             name) -> text, RosterValues.inert(), players), List.of(), detail -> { }, (player,
-                            reason) -> { }, (role, reason) -> { }));
+                            reason) -> { }, (role, reason) -> { }, (player, role) -> { }));
         }
 
         String replace(String command, TagContext context) {

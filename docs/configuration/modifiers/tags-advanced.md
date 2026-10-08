@@ -177,6 +177,7 @@ see below for full rules.
 | --- | --- |
 | `<loseplayer:player,reason>` | Eliminate a player, empty. |
 | `<win:ROLE,reason>` | End the match for a role, empty. |
+| `<pswitch:player,ROLE>` | Switch a player to a role, empty. |
 
 ## Conditions
 
@@ -527,3 +528,14 @@ spectator, announcing `lost: <reason>` with that role's death sound.
 is everything after the first comma, so it may hold commas; an empty
 or missing reason becomes `unknown reason`. The win reason is posted
 on the win screen.
+
+`<pswitch:player,ROLE>` switches one online match assignee to the named
+role (any of `HUNTER`, `SPEEDRUNNER`, `SPECTATOR`, `NONE`, `AFK`; case
+does not matter) and refreshes their lives to that role's configured
+value. Position, inventory, pending respawns, and headstart holds stay
+untouched, and interval schedules keep running; only future events use
+the new role. Switching to a participant role also runs that role's
+`ON_START` lists when none ran for the player this game yet, and its
+`ON_RESPAWN` lists when none ran for their current life yet. Eliminated
+players can be switched back into the game this way. Unknown players,
+bad roles, and players outside a live match warn and change nothing.

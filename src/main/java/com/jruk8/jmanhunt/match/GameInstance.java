@@ -7,7 +7,9 @@ import org.bukkit.Location;
 import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.Set;
@@ -67,6 +69,12 @@ public final class GameInstance {
     private final Set<String> toggleCleanedModifiers = new HashSet<>();
     /** Permanent deaths in death order (oldest first). */
     private final List<DeadPlayer> deadPlayers = new ArrayList<>();
+    /** Players whose ON_START sequence already ran this match. */
+    private final Set<UUID> startFired = new HashSet<>();
+    /** Per-player death count: the current life index, 0 before any death. */
+    private final Map<UUID, Integer> lifeSequence = new HashMap<>();
+    /** Life index ON_RESPAWN last fired for, per player. */
+    private final Map<UUID, Integer> respawnFiredLife = new HashMap<>();
 
     public GameInstance(long matchId, int originLobbyId, OptionalLong cellIndex, long startedAtMillis) {
         this.matchId = matchId;
@@ -192,6 +200,36 @@ public final class GameInstance {
      */
     public boolean markModifierCleaned(String name) {
         return toggleCleanedModifiers.add(name);
+    }
+
+    /**
+     * Marks one player ON_START-fired. Returns false when it already
+     * fired for them this match (role-switch catch-up to skip).
+     */
+    public boolean markStartFired(UUID playerId) {
+        return startFired.add(playerId);
+    }
+
+    /** Advances one player to their next life after a death. */
+    public void noteDeath(UUID playerId) {
+        lifeSequence.merge(playerId, 1, Integer::sum);
+    }
+
+    /** Current life index: death count, 0 before any death. */
+    public int lifeOf(UUID playerId) {
+        return lifeSequence.getOrDefault(playerId, 0);
+    }
+
+    /**
+     * Marks ON_RESPAWN fired for one life. Returns false when it
+     * already fired for that life (role-switch catch-up to skip).
+     */
+    public boolean markRespawnFired(UUID playerId, int life) {
+        if (respawnFiredLife.getOrDefault(playerId, -1) == life) {
+            return false;
+        }
+        respawnFiredLife.put(playerId, life);
+        return true;
     }
 
     public boolean endPhaseDone() {

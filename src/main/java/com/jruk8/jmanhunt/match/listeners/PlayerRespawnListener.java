@@ -173,6 +173,9 @@ public final class PlayerRespawnListener implements Listener {
 
     /** Fires ON_RESPAWN plus the role split with the death-location arg. */
     private void fireRespawnTriggers(Player player, long matchId) {
+        game.instance(matchId).ifPresent(instance ->
+                instance.markRespawnFired(player.getUniqueId(),
+                        instance.lifeOf(player.getUniqueId())));
         List<String> eventArgs = deathArgs(player);
         game.stateCommands().runEventModifiers("ON_RESPAWN", player, matchId, eventArgs);
         Role role = players.states().role(player);

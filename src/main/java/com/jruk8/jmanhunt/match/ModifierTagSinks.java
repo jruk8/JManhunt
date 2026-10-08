@@ -162,6 +162,18 @@ public final class ModifierTagSinks {
     }
 
     /**
+     * {@code <pswitch:player,ROLE>} sink: switches one match
+     * assignee to the named role with lives refreshed.
+     */
+    void switchPlayerRoleByName(String name, String target, String role,
+            ModifierTagScope scope, long matchId) {
+        if (!game.switchPlayerRole(matchId, target, role)) {
+            scope.warn("Tag <pswitch:" + target + "," + role + "> skipped: '" + target
+                    + "' is not an online match assignee in '" + name + "'.");
+        }
+    }
+
+    /**
      * {@code <win:ROLE>} sink: ends the match for one role next
      * tick, with the tag reason on the win screen.
      */

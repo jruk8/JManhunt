@@ -177,6 +177,8 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <win:HUNTER> done").isEmpty());
         assertTrue(CommandSyntax.error("say <win:speedrunner> done").isEmpty());
         assertTrue(CommandSyntax.error("say <win:HUNTER,trapped> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <pswitch:Alex,HUNTER> done").isEmpty());
+        assertTrue(CommandSyntax.error("say <pswitch:Alex,spectator> done").isEmpty());
         assertTrue(CommandSyntax.error("say <args> done").isEmpty());
         assertTrue(CommandSyntax.error("say <args:0> done").isEmpty());
         assertTrue(CommandSyntax.error("say <args:2> done").isEmpty());
@@ -303,6 +305,9 @@ class CommandSyntaxTest {
         assertTrue(CommandSyntax.error("say <win> done").isPresent());
         assertTrue(CommandSyntax.error("say <win:ref> done").isPresent());
         assertTrue(CommandSyntax.error("say <win:ref,out> done").isPresent());
+        assertTrue(CommandSyntax.error("say <pswitch:Alex> done").isPresent());
+        assertTrue(CommandSyntax.error("say <pswitch:Alex,ref> done").isPresent());
+        assertTrue(CommandSyntax.error("say <pswitch:Alex,HUNTER,x> done").isPresent());
         assertTrue(CommandSyntax.error("say <args:x> done").isPresent());
         assertTrue(CommandSyntax.error("say <args:0,1> done").isPresent());
         assertTrue(CommandSyntax.error("say <list.get:[a]> done").isPresent());

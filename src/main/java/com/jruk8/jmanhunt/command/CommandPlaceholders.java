@@ -435,6 +435,7 @@ public final class CommandPlaceholders {
             case "gsound", "psound", "rsound" -> TagSinks.sound(tag, name, args, context);
             case "loseplayer" -> TagExpressions.loseplayer(tag, args, context);
             case "win" -> TagExpressions.win(tag, args, context);
+            case "pswitch" -> TagExpressions.pswitch(tag, args, context);
             case "args" -> TagArgs.resolve(tag, args, context);
             case "run" -> TagRun.run(tag, args, context); case "format" -> TagFormat.format(tag, args, context);
             default -> resolveDataTag(tag, name, args, playerName, context, eval);

@@ -28,7 +28,7 @@ class TagLoopsTest {
                     TagContext.TagRole.silent(),
                     new TagContext.TagMatch(7L, new TagBackends(StatValues.inert(), flags, (text,
                             name) -> text, RosterValues.inert(), PlayerSinks.inert()), List.of(), loopLimits::add,
-                            (player, reason) -> { }, (role, reason) -> { }));
+                            (player, reason) -> { }, (role, reason) -> { }, (player, role) -> { }));
         }
 
         String replace(String command, TagContext context) {

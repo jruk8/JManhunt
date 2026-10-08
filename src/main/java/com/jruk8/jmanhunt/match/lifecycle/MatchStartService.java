@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.match.lifecycle;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.core.DebugLevel;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
@@ -76,9 +77,9 @@ public final class MatchStartService {
             AutostartService autostart) {
     }
 
-    /** Fakes, role teams, respawn listener, and sounds. */
+    /** Fakes, role teams, respawn listener, sounds, and scheduler. */
     public record StartEdge(FakeSpectatorService fakes, RoleTeamService roleTeams,
-            PlayerRespawnListener respawn, SoundService sounds) {
+            PlayerRespawnListener respawn, SoundService sounds, TaskScheduler tasks) {
     }
 
     /** Message bus, game/manhunt texts, and match messaging. */
@@ -419,6 +420,100 @@ public final class MatchStartService {
                 Map.of("player", player.getName(), "role", texts.messages().roleName(role)));
         services.stateCommands().trackMatchEntry(List.of(playerId));
         return true;
+    }
+
+    /**
+     * Switches one match member to a new role with lives refreshed
+     * to the new role value. Position, inventory, pending respawns,
+     * and headstart holds stay untouched; future events use the new
+     * role. New-role ON_START and ON_RESPAWN catch-up runs when
+     * neither fired for this game or life yet. Same-role switches
+     * succeed without effect. Always true.
+     */
+    public boolean switchPlayerRole(GameInstance instance, Player player, Role target) {
+        UUID playerId = player.getUniqueId();
+        Role source = services.playerStates().role(player);
+        if (source == target) {
+            return true;
+        }
+        SwitchPlan plan = planSwitch(source, target, instance.isActive(playerId),
+                isHeadstartHeld(instance, playerId));
+        services.playerStates().setRole(player, target);
+        edge.roleTeams().sync(player);
+        if (plan.runnerAlive() != null) {
+            services.playerStates().setSpeedrunnerAlive(playerId, plan.runnerAlive());
+        }
+        services.playerStates().setLives(playerId, livesFor(instance.originLobbyId(), target));
+        if (plan.activate()) {
+            instance.activate(playerId);
+        }
+        if (plan.deactivate()) {
+            instance.deactivate(playerId);
+        }
+        applySwitchEdge(instance, player, playerId, plan, source, target);
+        runSwitchCatchup(instance, player, target);
+        return true;
+    }
+
+    /** Compass reconcile plus the deferred fakes/compass edge of a switch. */
+    private void applySwitchEdge(GameInstance instance, Player player, UUID playerId,
+            SwitchPlan plan, Role source, Role target) {
+        if (source.isParticipant() || target.isParticipant()) {
+            services.compass().clearHotspotHistory(playerId);
+            services.compass().reconcileTeammateModes(instance);
+        }
+        if (plan.participantEdge()) {
+            edge.tasks().run(() -> {
+                edge.fakes().disable(player);
+                services.compass().giveCompass(player);
+                services.compass().refreshCompass(player);
+            });
+        }
+        if (plan.watcherEdge()) {
+            edge.tasks().run(() -> {
+                edge.fakes().enable(player);
+                services.compass().removeCompasses(player);
+            });
+        }
+    }
+
+    /** New-role ON_START (once per game) and ON_RESPAWN (once per life) catch-up. */
+    private void runSwitchCatchup(GameInstance instance, Player player, Role target) {
+        if (!target.isParticipant()) {
+            return;
+        }
+        UUID playerId = player.getUniqueId();
+        if (instance.markStartFired(playerId)) {
+            services.stateCommands().runStartForPlayer(instance.matchId(), player);
+        }
+        if (instance.markRespawnFired(playerId, instance.lifeOf(playerId))) {
+            services.stateCommands().runRespawnForPlayer(instance.matchId(), player);
+        }
+    }
+
+    /** True while either headstart holds the player at a return point. */
+    private static boolean isHeadstartHeld(GameInstance instance, UUID playerId) {
+        return instance.headstart(Role.HUNTER).returnPoints().containsKey(playerId)
+                || instance.headstart(Role.SPEEDRUNNER).returnPoints().containsKey(playerId);
+    }
+
+    /** Pure role-switch roster plan behind pswitch. Pure for tests. */
+    static record SwitchPlan(boolean activate, boolean deactivate, Boolean runnerAlive,
+            boolean participantEdge, boolean watcherEdge) {
+    }
+
+    /**
+     * Plans one role switch: roster flips, the runner-alive flag
+     * (null when untouched), and which deferred edge applies. Held
+     * players keep their headstart hold, so no participant edge
+     * runs for them. Pure for tests.
+     */
+    static SwitchPlan planSwitch(Role source, Role target, boolean active, boolean held) {
+        Boolean runnerAlive = target == Role.SPEEDRUNNER ? Boolean.TRUE
+                : source == Role.SPEEDRUNNER ? Boolean.FALSE : null;
+        return new SwitchPlan(target.isParticipant() && !active,
+                !target.isParticipant() && active, runnerAlive,
+                target.isParticipant() && !held, !target.isParticipant());
     }
 
     /** Applies the fake spectator, pre-start, and headstart-hold modes for a joiner. */

@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.command;
 
+import com.jruk8.jmanhunt.player.Role;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -40,6 +41,7 @@ final class TagSyntaxErrors {
             case "placeholder" -> arityError(name, args, 1, "one key");
             case "loseplayer" -> loseplayerError(name, args);
             case "win" -> winError(name, args);
+            case "pswitch" -> pswitchError(name, args);
             case "args" -> argsError(name, args);
             case "list.append", "list.get", "list.set", "list.remove", "list.contains",
                     "list.clear", "list.pop", "len", "list.shuffle", "list.filter", "list.reverse",
@@ -209,6 +211,26 @@ final class TagSyntaxErrors {
         String role = item.get().strip().toUpperCase(Locale.ROOT);
         if (!role.equals("HUNTER") && !role.equals("SPEEDRUNNER")) {
             return Optional.of("Tag <win> needs HUNTER or SPEEDRUNNER.");
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Pswitch tag shape: a required head player plus a required
+     * role after the first comma.
+     */
+    static Optional<String> pswitchError(String name, String args) {
+        String usage = "Tag <pswitch> needs a player and a role like <pswitch:Steve,HUNTER>.";
+        if (args == null || args.isBlank()) {
+            return Optional.of(usage);
+        }
+        List<String> parts = CommandPlaceholders.splitPickArgs(args);
+        if (parts.size() != 2
+                || CommandPlaceholders.parsePickItem(parts.get(0)).isEmpty()) {
+            return Optional.of(usage);
+        }
+        if (CommandPlaceholders.parsePickItem(parts.get(1)).flatMap(Role::parse).isEmpty()) {
+            return Optional.of("Tag <pswitch> needs a valid role like <pswitch:Steve,HUNTER>.");
         }
         return Optional.empty();
     }
