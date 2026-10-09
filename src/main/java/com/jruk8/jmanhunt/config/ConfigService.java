@@ -446,6 +446,11 @@ public final class ConfigService {
         return modifiers.presetMembers(id);
     }
 
+    /** Member ids of a preset with no loaded modifier. */
+    public List<String> presetMissing(String id) {
+        return modifiers.presetMissing(id);
+    }
+
     /**
      * True when every member of the preset is enabled. Unknown or
      * memberless presets read as off.

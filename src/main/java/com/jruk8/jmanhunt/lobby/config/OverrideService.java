@@ -418,16 +418,20 @@ public final class OverrideService {
      * enabled. Unknown or memberless presets read as off, like globals.
      */
     public boolean presetEnabled(Integer lobbyId, String id) {
-        List<String> members = config.presetMembers(id);
-        if (members.isEmpty() || !config.presetNames().contains(id)) {
+        if (!config.presetNames().contains(id)) {
             return false;
         }
-        for (String member : members) {
+        boolean any = false;
+        for (String member : config.presetMembers(id)) {
+            if (!config.hasModifier(member)) {
+                continue;
+            }
+            any = true;
             if (!modifierEnabled(lobbyId, member)) {
                 return false;
             }
         }
-        return true;
+        return any;
     }
 
     /** Lobby entry for writes, created on demand for unknown ids. */

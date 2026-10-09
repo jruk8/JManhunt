@@ -538,7 +538,7 @@ public final class ModifierMenus {
         for (int index = 0; index < shown; index++) {
             String member = members.get(index);
             String color = modifierEnabled(lobby, member) ? "<green>" : "<red>";
-            lore.addAll(GuiTexts.lore(texts.messages(), color + "» " + store.metaName(member)));
+            lore.addAll(GuiTexts.lore(texts.messages(), color + "» " + store.memberName(member)));
         }
         if (members.size() > shown) {
             String wrapper = allOn ? "" : "<red>";
@@ -619,6 +619,12 @@ public final class ModifierMenus {
                     : !deps.overrides().presetEnabled(lobby, id);
             if (members.isEmpty() && next) {
                 texts.messages().messageRaw(player, texts.modifiers().getPresetEmpty(),
+                        Map.of("name", store.presetName(id)));
+                texts.sounds().playAngrySound(player);
+                return;
+            }
+            if (!members.isEmpty() && store.presetMissing(id).size() == members.size()) {
+                texts.messages().messageRaw(player, texts.modifiers().getPresetAllMissing(),
                         Map.of("name", store.presetName(id)));
                 texts.sounds().playAngrySound(player);
                 return;

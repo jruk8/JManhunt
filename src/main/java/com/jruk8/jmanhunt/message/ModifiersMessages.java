@@ -49,6 +49,9 @@ public class ModifiersMessages extends OkaeriConfig {
     @CustomKey("preset-empty")
     private String presetEmpty = "{prefix}<red>Preset <white>{name}<red> has no modifiers set to it.";
 
+    @CustomKey("preset-all-missing")
+    private String presetAllMissing = "{prefix}<red>Preset <white>{name}<red> has only missing modifiers.";
+
     @CustomKey("list-header")
     private String listHeader = "\n{prefix}\n<#de7766>Modifiers:";
 

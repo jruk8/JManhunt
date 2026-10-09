@@ -210,6 +210,20 @@ class OverrideServiceTest {
     }
 
     @Test
+    void presetEnabledIgnoresMissingMembers() {
+        ModifierPreset spectres = new ModifierPreset();
+        spectres.setModifiers(List.of("beef", "ghost"));
+        config.modifiers().addPreset("spectres", spectres);
+        ModifierPreset ghosts = new ModifierPreset();
+        ghosts.setModifiers(List.of("ghost"));
+        config.modifiers().addPreset("ghosts", ghosts);
+
+        assertTrue(overrides.presetEnabled(0, "spectres"));
+        assertTrue(overrides.presetEnabled(null, "spectres"));
+        assertFalse(overrides.presetEnabled(0, "ghosts"));
+    }
+
+    @Test
     void listOpsEditTheEffectiveList() {
         List<String> global = config.getStringList(LIST);
 

@@ -305,6 +305,33 @@ class ModifierStoreTest {
     }
 
     @Test
+    void missingMembersReadAsQuotedMissing() {
+        ModifierPreset preset = new ModifierPreset();
+        preset.setModifiers(List.of("beef", "ghost"));
+        config.getPresets().put("pack", preset);
+
+        assertEquals(List.of("ghost"), store.presetMissing("pack"));
+        assertEquals("Everyone Gets Beef", store.memberName("beef"));
+        assertEquals("'ghost' missing", store.memberName("ghost"));
+    }
+
+    @Test
+    void presetEnabledIgnoresMissingMembers() {
+        ModifierPreset preset = new ModifierPreset();
+        preset.setModifiers(List.of("beef", "ghost"));
+        config.getPresets().put("pack", preset);
+        ModifierPreset ghosts = new ModifierPreset();
+        ghosts.setModifiers(List.of("ghost"));
+        config.getPresets().put("ghosts", ghosts);
+
+        assertTrue(store.presetEnabled("pack"));
+        store.setEnabled("beef", false);
+        assertFalse(store.presetEnabled("pack"));
+        assertFalse(store.presetEnabled("ghosts"));
+        assertFalse(store.presetEnabled("nope"));
+    }
+
+    @Test
     void saveKeepsAbsentSectionsAbsent() {
         assertTrue(store.setEnabled("bare", true));
 

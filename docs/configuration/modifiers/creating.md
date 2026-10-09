@@ -69,6 +69,10 @@ modifiers:
   - random-item-giver
 ```
 
+Member ids with no loaded modifier show as `'id' missing` in red and
+are skipped by toggles; a preset with nothing but missing members
+refuses to toggle.
+
 Presets written in the old flat shape (display keys next to
 `modifiers:`) no longer load: re-indent the four display keys under
 `meta:`, and re-export old share strings. Upgrading from the single

@@ -8,6 +8,7 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
+import com.jruk8.jmanhunt.modifiers.config.ModifierMeta;
 import com.jruk8.jmanhunt.modifiers.config.ModifierPreset;
 import com.jruk8.jmanhunt.modifiers.files.ModifierFiles;
 import java.util.List;
@@ -44,8 +45,14 @@ class OverrideCommandTest {
         modifiers.getModifiers().put("beef", beef);
         ModifierEntry gapple = new ModifierEntry();
         gapple.setEnabled(false);
+        ModifierMeta gappleMeta = new ModifierMeta();
+        gappleMeta.setName("Gapple Mod");
+        gapple.setMeta(gappleMeta);
         modifiers.getModifiers().put("gapple", gapple);
         ModifierPreset chaos = new ModifierPreset();
+        ModifierMeta chaosMeta = new ModifierMeta();
+        chaosMeta.setName("Chaos Pack");
+        chaos.setMeta(chaosMeta);
         chaos.setModifiers(List.of("beef", "gapple"));
         modifiers.getPresets().put("chaos", chaos);
         ConfigService config =
@@ -131,7 +138,7 @@ class OverrideCommandTest {
                 new String[]{"override", "1", "modifiers", "set", "gapple", "true"}));
         assertTrue(overrides.modifierEnabled(1, "gapple"));
         assertEquals(List.of(messages.componentRaw(texts.getManhunt().getOverrideModifierSet(),
-                Map.of("lobby", "1", "modifier", "gapple", "state", "on"))),
+                Map.of("lobby", "1", "modifier", "Gapple Mod", "state", "on"))),
                 sender.received());
 
         FakeSender reader = FakeSender.permitted();
@@ -159,7 +166,7 @@ class OverrideCommandTest {
 
         assertTrue(overrides.presetEnabled(2, "chaos"));
         assertEquals(List.of(messages.componentRaw(texts.getManhunt().getOverridePresetSet(),
-                Map.of("lobby", "2", "preset", "chaos", "state", "on", "count", "2"))),
+                Map.of("lobby", "2", "preset", "Chaos Pack", "state", "on", "count", "2"))),
                 sender.received());
     }
 

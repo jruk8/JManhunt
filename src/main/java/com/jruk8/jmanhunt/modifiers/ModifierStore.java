@@ -590,20 +590,41 @@ public final class ModifierStore {
     }
 
     /**
-     * True when every member of the preset is enabled. Unknown or
-     * memberless presets read as off.
+     * True when every present member of the preset is enabled. Unknown
+     * presets and presets with no present members read as off; missing
+     * member ids never drag the flag down.
      */
     public boolean presetEnabled(String id) {
-        List<String> members = presetMembers(id);
-        if (members.isEmpty() || !presetNames().contains(id)) {
+        if (!presetNames().contains(id)) {
             return false;
         }
-        for (String member : members) {
+        boolean any = false;
+        for (String member : presetMembers(id)) {
+            if (!hasModifier(member)) {
+                continue;
+            }
+            any = true;
             if (!isEnabled(member)) {
                 return false;
             }
         }
-        return true;
+        return any;
+    }
+
+    /** Display name for a preset member; unknown ids read as quoted missing. */
+    public String memberName(String id) {
+        return hasModifier(id) ? metaName(id) : "'" + id + "' missing";
+    }
+
+    /** Member ids of a preset with no loaded modifier. */
+    public List<String> presetMissing(String id) {
+        List<String> missing = new ArrayList<>();
+        for (String member : presetMembers(id)) {
+            if (!hasModifier(member)) {
+                missing.add(member);
+            }
+        }
+        return missing;
     }
 
     public String presetName(String id) {

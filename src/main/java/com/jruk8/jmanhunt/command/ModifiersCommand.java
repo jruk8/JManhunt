@@ -199,11 +199,13 @@ public final class ModifiersCommand {
         if (quiet) {
             return true;
         }
+        String display = config.modifiers().metaName(name);
         texts.messages().messageRaw(sender, texts.modifiers().getSetmodSuccess(),
-                Map.of("name", name, "state", value ? "on" : "off"));
+                Map.of("name", display, "state", value ? "on" : "off"));
         SettingFeedback.announceSettingChange(texts.messages(),
                 config.server().isAnnounceConfigChanges(),
-                sender, texts.modifiers().getToggleAnnounced(), "modifier " + name, value ? "on" : "off");
+                sender, texts.modifiers().getToggleAnnounced(), "modifier " + display,
+                value ? "on" : "off");
         return true;
     }
 
@@ -252,22 +254,36 @@ public final class ModifiersCommand {
 
     /**
      * Flips one preset, optionally quiet for bulk runs. Returns false
-     * when the preset is unknown.
+     * when the preset is unknown or every member is missing (the
+     * refuse line still shows, even when quiet).
      */
     private boolean applyPresetToggle(CommandSender sender, String id, boolean value,
             boolean quiet) {
-        if (!config.setPreset(id, value)) {
+        if (!config.hasPreset(id)) {
             return false;
         }
+        List<String> members = config.presetMembers(id);
+        int missing = config.presetMissing(id).size();
+        if (!members.isEmpty() && missing == members.size()) {
+            texts.messages().messageRaw(sender, texts.modifiers().getPresetAllMissing(),
+                    Map.of("name", config.modifiers().presetName(id)));
+            if (sender instanceof Player player) {
+                texts.sounds().playAngrySound(player);
+            }
+            return false;
+        }
+        config.setPreset(id, value);
         if (quiet) {
             return true;
         }
+        String display = config.modifiers().presetName(id);
         texts.messages().messageRaw(sender, texts.modifiers().getSetpresetSuccess(),
-                Map.of("name", id, "state", value ? "on" : "off",
-                        "count", String.valueOf(config.presetMembers(id).size())));
+                Map.of("name", display, "state", value ? "on" : "off",
+                        "count", String.valueOf(members.size() - missing)));
         SettingFeedback.announceSettingChange(texts.messages(),
                 config.server().isAnnounceConfigChanges(),
-                sender, texts.modifiers().getToggleAnnounced(), "preset " + id, value ? "on" : "off");
+                sender, texts.modifiers().getToggleAnnounced(), "preset " + display,
+                value ? "on" : "off");
         return true;
     }
 

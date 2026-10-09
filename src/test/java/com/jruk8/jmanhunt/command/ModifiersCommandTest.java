@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.match.ModifierTestService;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
+import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.modifiers.ModifierCodec;
 import com.jruk8.jmanhunt.modifiers.ModifierStore;
 import com.jruk8.jmanhunt.modifiers.config.ModifierEntry;
@@ -237,6 +238,82 @@ class ModifiersCommandTest {
         assertEquals(before, service.modifierEnabled("beef"));
     }
 
+    @Test
+    void setpresetOnFlipsPresentMembersAndCountsThem() {
+        Fixture fixture = presetFixture(List.of("beef", "ghost"), false, null);
+        FakeSender sender = FakeSender.permitted();
+
+        assertTrue(fixture.command().execute(sender, new String[]{"setpreset", "pack", "true"}));
+
+        assertTrue(fixture.service().modifierEnabled("beef"));
+        Component expected = fixture.messages().componentRaw(
+                fixture.texts().getModifiers().getSetpresetSuccess(),
+                Map.of("name", "Party Pack", "state", "on", "count", "1"));
+        assertEquals(List.of(expected), sender.received());
+    }
+
+    @Test
+    void setpresetOffFlipsPresentMembersAndSkipsMissing() {
+        Fixture fixture = presetFixture(List.of("beef", "ghost"), true, null);
+        FakeSender sender = FakeSender.permitted();
+
+        assertTrue(fixture.command().execute(sender, new String[]{"setpreset", "pack", "false"}));
+
+        assertFalse(fixture.service().modifierEnabled("beef"));
+        Component expected = fixture.messages().componentRaw(
+                fixture.texts().getModifiers().getSetpresetSuccess(),
+                Map.of("name", "Party Pack", "state", "off", "count", "1"));
+        assertEquals(List.of(expected), sender.received());
+    }
+
+    @Test
+    void setpresetAllMissingRefuses() {
+        Fixture fixture = presetFixture(List.of("ghost"), false, null);
+        FakeSender sender = FakeSender.permitted();
+
+        assertTrue(fixture.command().execute(sender, new String[]{"setpreset", "pack", "true"}));
+
+        Component expected = fixture.messages().componentRaw(
+                fixture.texts().getModifiers().getPresetAllMissing(), Map.of("name", "Party Pack"));
+        assertEquals(List.of(expected), sender.received());
+    }
+
+    @Test
+    void setpresetAllMissingPlaysAngryForPlayers() {
+        SoundService sounds = mock(SoundService.class);
+        Fixture fixture = presetFixture(List.of("ghost"), false, sounds);
+        Player sender = mock(Player.class);
+        when(sender.hasPermission(ModifiersCommand.MODIFIERS_PERMISSION)).thenReturn(true);
+
+        assertTrue(fixture.command().execute(sender, new String[]{"setpreset", "pack", "true"}));
+
+        verify(sounds).playAngrySound(sender);
+    }
+
+    private static Fixture presetFixture(List<String> members, boolean enabled,
+            SoundService sounds) {
+        ModifierFiles config = ModifierFiles.inMemory();
+        ModifierEntry entry = new ModifierEntry();
+        entry.setEnabled(enabled);
+        config.getModifiers().put("beef", entry);
+        ModifierPreset preset = new ModifierPreset();
+        ModifierMeta presetMeta = new ModifierMeta();
+        presetMeta.setName("Party Pack");
+        preset.setMeta(presetMeta);
+        preset.setModifiers(members);
+        config.getPresets().put("pack", preset);
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ConfigService service = new ConfigService(null, new ModifierStore(config, log));
+        MessageService messages = new MessageService();
+        MessagesConfig texts = new MessagesConfig();
+        messages.reload(texts);
+        return new Fixture(new ModifiersCommand(service, new ModifiersCommand.ModifiersDeps(null, null, null),
+                new ModifiersCommand.ModifiersTexts(messages, texts.getModifiers(),
+                        texts.getCommand(), sounds)),
+                service, messages, texts);
+    }
+
     private record Fixture(ModifiersCommand command, ConfigService service, MessageService messages,
             MessagesConfig texts) {
     }
@@ -330,5 +407,65 @@ class ModifiersCommandTest {
 
         verify(service).run(player, "HUNTER", List.of("say hi"));
         verify(service).report(player, result);
+    }
+
+    @Test
+    void setmodSuccessShowsDisplayName() {
+        ModifierFiles config = ModifierFiles.inMemory();
+        ModifierEntry entry = new ModifierEntry();
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName("Alpha Mod");
+        entry.setMeta(meta);
+        config.getModifiers().put("alpha", entry);
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ConfigService service = new ConfigService(null, new ModifierStore(config, log));
+        MessageService messages = new MessageService();
+        MessagesConfig texts = new MessagesConfig();
+        messages.reload(texts);
+        ModifiersCommand command = new ModifiersCommand(service,
+                new ModifiersCommand.ModifiersDeps(null, null, null),
+                new ModifiersCommand.ModifiersTexts(messages, texts.getModifiers(),
+                        texts.getCommand(), null));
+        FakeSender sender = FakeSender.permitted();
+
+        assertTrue(command.execute(sender, new String[]{"setmod", "alpha", "true"}));
+
+        Component expected = messages.componentRaw(texts.getModifiers().getSetmodSuccess(),
+                Map.of("name", "Alpha Mod", "state", "on"));
+        assertEquals(List.of(expected), sender.received());
+    }
+
+    @Test
+    void setpresetSuccessShowsDisplayName() {
+        ModifierFiles config = ModifierFiles.inMemory();
+        ModifierEntry entry = new ModifierEntry();
+        ModifierMeta meta = new ModifierMeta();
+        meta.setName("Alpha Mod");
+        entry.setMeta(meta);
+        config.getModifiers().put("alpha", entry);
+        ModifierPreset preset = new ModifierPreset();
+        ModifierMeta presetMeta = new ModifierMeta();
+        presetMeta.setName("Zed Pack");
+        preset.setMeta(presetMeta);
+        preset.setModifiers(List.of("alpha"));
+        config.getPresets().put("zed", preset);
+        Logger log = Logger.getAnonymousLogger();
+        log.setUseParentHandlers(false);
+        ConfigService service = new ConfigService(null, new ModifierStore(config, log));
+        MessageService messages = new MessageService();
+        MessagesConfig texts = new MessagesConfig();
+        messages.reload(texts);
+        ModifiersCommand command = new ModifiersCommand(service,
+                new ModifiersCommand.ModifiersDeps(null, null, null),
+                new ModifiersCommand.ModifiersTexts(messages, texts.getModifiers(),
+                        texts.getCommand(), null));
+        FakeSender sender = FakeSender.permitted();
+
+        assertTrue(command.execute(sender, new String[]{"setpreset", "zed", "true"}));
+
+        Component expected = messages.componentRaw(texts.getModifiers().getSetpresetSuccess(),
+                Map.of("name", "Zed Pack", "state", "on", "count", "1"));
+        assertEquals(List.of(expected), sender.received());
     }
 }

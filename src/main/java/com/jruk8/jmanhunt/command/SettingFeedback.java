@@ -160,7 +160,8 @@ public final class SettingFeedback {
     /** Reports a modifier override write with announce and sound. */
     public void overrideModifierSet(CommandSender sender, int lobby, String id, boolean value) {
         messages.messageRaw(sender, manhunt.getOverrideModifierSet(), Map.of("lobby",
-                String.valueOf(lobby), "modifier", id, "state", value ? "on" : "off"));
+                String.valueOf(lobby), "modifier", config.modifiers().metaName(id),
+                "state", value ? "on" : "off"));
         announce(sender, "lobby." + lobby + ".modifiers." + id, value ? "on" : "off");
         neutralSound(sender);
     }
@@ -177,7 +178,8 @@ public final class SettingFeedback {
     public void overridePresetSet(CommandSender sender, int lobby, String id, boolean value,
             int count) {
         messages.messageRaw(sender, manhunt.getOverridePresetSet(), Map.of("lobby",
-                String.valueOf(lobby), "preset", id, "state", value ? "on" : "off",
+                String.valueOf(lobby), "preset", config.modifiers().presetName(id),
+                "state", value ? "on" : "off",
                 "count", String.valueOf(count)));
         announce(sender, "lobby." + lobby + ".preset." + id, value ? "on" : "off");
         neutralSound(sender);

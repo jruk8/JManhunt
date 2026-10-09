@@ -258,6 +258,59 @@ class ModifierTestServiceTest {
     }
 
     @Test
+    void runResolvesSenderForNamedPlayerSinks() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        doAnswer(call -> {
+            TagContext context = call.getArgument(2);
+            @SuppressWarnings("unchecked")
+            java.util.List<String> lines = (java.util.List<String>) call.getArgument(0);
+            for (String line : lines) {
+                com.jruk8.jmanhunt.command.CommandPlaceholders.replace(
+                        line, "Steve", 0, 64, 0, context);
+            }
+            return null;
+        }).when(commands).runCommandList(any(), any(), any(), any());
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
+        Player sender = mock(Player.class);
+        when(sender.getName()).thenReturn("Steve");
+
+        ModifierTestService.TestResult result = service.run(sender, "HUNTER",
+                List.of("<psound:<p>,good,1,1>", "<pmessage:<p>,hello>"));
+
+        assertTrue(result.warnings().isEmpty());
+        assertEquals(List.of(new ModifierTestService.CapturedSound("good", 1, 1)),
+                result.sounds());
+        assertEquals(List.of("[Steve] hello"), result.messages());
+    }
+
+    @Test
+    void runKeepsOfflineWarningForUnknownTestNames() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        doAnswer(call -> {
+            TagContext context = call.getArgument(2);
+            @SuppressWarnings("unchecked")
+            java.util.List<String> lines = (java.util.List<String>) call.getArgument(0);
+            for (String line : lines) {
+                com.jruk8.jmanhunt.command.CommandPlaceholders.replace(
+                        line, "Steve", 0, 64, 0, context);
+            }
+            return null;
+        }).when(commands).runCommandList(any(), any(), any(), any());
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
+        Player sender = mock(Player.class);
+        when(sender.getName()).thenReturn("Steve");
+
+        ModifierTestService.TestResult result = service.run(sender, "HUNTER",
+                List.of("<psound:Nobody,good,1,1>"));
+
+        assertEquals(1, result.warnings().size());
+        assertTrue(result.warnings().get(0).contains("is offline"));
+        assertTrue(result.sounds().isEmpty());
+    }
+
+    @Test
     void reportJoinsWarningsIntoFailure() {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         MessageService messages = mock(MessageService.class);

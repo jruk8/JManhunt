@@ -112,7 +112,8 @@ public final class ModifierTestService {
         List<CapturedSound> capturedSounds = new ArrayList<>();
         ModifierTagScope scope = ModifierTagScope.executor(sender.getName(), warnings::add);
         TagBackends backends = new TagBackends(testStats(), new FlagStore(),
-                PlaceholderResolver.inert(), testRoster(sender, role), PlayerSinks.inert());
+                PlaceholderResolver.inert(), testRoster(sender, role),
+                testPlayerSinks(sender.getName(), capturedMessages, capturedSounds));
         TagContext context = TagContext.run(new TagContext.TagIdentity(scope, "modifiers-test"),
                 new TagContext.TagSinks(capturedMessages::add, capturedMessages::add,
                         (id, pitch, volume) -> capturedSounds.add(
@@ -212,6 +213,56 @@ public final class ModifierTestService {
      */
     private static RosterValues testRoster(Player sender, String role) {
         return new TestRoster(sender, sender.getName(), role);
+    }
+
+    /**
+     * Named-player sinks for dry runs: only the sender resolves (the
+     * roster holds nobody else), capturing into the result instead
+     * of delivering. Anything else misses so the tags keep their
+     * offline warning for genuinely unknown names.
+     */
+    private static PlayerSinks testPlayerSinks(String senderName, List<String> capturedMessages,
+            List<CapturedSound> capturedSounds) {
+        return new PlayerSinks() {
+            @Override
+            public boolean message(String playerName, String text) {
+                if (!playerName.equalsIgnoreCase(senderName)) {
+                    return false;
+                }
+                capturedMessages.add("[" + playerName + "] " + text);
+                return true;
+            }
+
+            @Override
+            public boolean sound(String playerName, String soundId, float pitch, float volume) {
+                if (!playerName.equalsIgnoreCase(senderName)) {
+                    return false;
+                }
+                capturedSounds.add(new CapturedSound(soundId, pitch, volume));
+                return true;
+            }
+
+            @Override
+            public boolean title(String playerName, String title, String subtitle,
+                    double staySeconds, double inSeconds, double outSeconds) {
+                if (!playerName.equalsIgnoreCase(senderName)) {
+                    return false;
+                }
+                capturedMessages.add("[" + playerName + "] " + title + " / " + subtitle);
+                return true;
+            }
+
+            @Override
+            public boolean setSlot(String playerName, RosterValues.InventorySlot slot,
+                    String materialKey, int qty) {
+                if (!playerName.equalsIgnoreCase(senderName)) {
+                    return false;
+                }
+                capturedMessages.add("[" + playerName + "] slot " + slot + ": "
+                        + materialKey + " x" + qty);
+                return true;
+            }
+        };
     }
 
     /** Single-sender roster behind dry runs. */

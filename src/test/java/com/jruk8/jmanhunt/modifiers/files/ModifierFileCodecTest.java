@@ -175,6 +175,36 @@ class ModifierFileCodecTest {
         assertThrows(ModFileException.class, () -> ModifierFileCodec.readModifier(file));
     }
 
+    @Test
+    void nbtGiveCommandLoads() throws Exception {
+        String command = "give <p> potion[potion_contents={potion:\"minecraft:fire_resistance\","
+                + "custom_effects:[{id:\"minecraft:fire_resistance\",amplifier:0,duration:6000,"
+                + "show_particles:1b,show_icon:1b}]}]";
+        Path file = write("nether-fire-resistance.yml", """
+                enabled: false
+                meta:
+                  name: Nether Fire Resistance
+                  description: Fire resistance potion on entering the Nether
+                  item: MAGMA_CREAM
+                  author: JManhunt
+                behavior:
+                  '0':
+                    runs-on:
+                    - ON_NETHER_ENTER
+                    on-start: null
+                    options: null
+                    commands:
+                      player:
+                      - GIVE
+                        1
+                """.replace("GIVE", command));
+
+        ModifierEntry entry = ModifierFileCodec.readModifier(file);
+
+        assertEquals(List.of(command + " 1"),
+                entry.getBehavior().get("0").getCommands().getLists().get("player"));
+    }
+
     private Path write(String name, String body) throws Exception {
         Path file = tempDir.resolve(name);
         Files.writeString(file, body, StandardCharsets.UTF_8);

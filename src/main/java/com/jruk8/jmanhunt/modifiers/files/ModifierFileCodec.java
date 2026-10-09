@@ -101,7 +101,12 @@ public final class ModifierFileCodec {
             });
             // Self-managed stream: Okaeri never closes file loads, which
             // locks files on Windows and breaks temp-dir cleanup in tests.
-            try (InputStream stream = new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8))) {
+            // Trailing blank line: Okaeri rejoins stream lines and drops
+            // the trailing newline, and SnakeYAML cannot terminate a
+            // wrapped scalar at EOF, so files ending on a wrapped line
+            // would fail with "failed #load" without one smuggled in.
+            String padded = text.endsWith("\n") ? text + "\n" : text + "\n\n";
+            try (InputStream stream = new ByteArrayInputStream(padded.getBytes(StandardCharsets.UTF_8))) {
                 config.load(stream);
             }
             return config;
