@@ -184,6 +184,36 @@ class ModifierTestServiceTest {
     }
 
     @Test
+    void runSupportsMaxHealthRoundTrip() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        java.util.List<String> outputs = new java.util.ArrayList<>();
+        doAnswer(call -> {
+            TagContext context = call.getArgument(2);
+            @SuppressWarnings("unchecked")
+            java.util.List<String> lines = (java.util.List<String>) call.getArgument(0);
+            for (String line : lines) {
+                outputs.add(com.jruk8.jmanhunt.command.CommandPlaceholders.replace(
+                        line, "Steve", 0, 64, 0, context));
+            }
+            return null;
+        }).when(commands).runCommandList(any(), any(), any(), any());
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
+        Player sender = mock(Player.class);
+        when(sender.getName()).thenReturn("Steve");
+
+        ModifierTestService.TestResult result = service.run(sender, "HUNTER", List.of(
+                "<pmaxhp.set:<p>,boost,4>", "<pmaxhp.get:<p>,boost>",
+                "<pmaxhp.modify:<p>,boost,2>", "<pmaxhp.get:<p>,boost>",
+                "<pmaxhp.clear:<p>,boost>", "<pmaxhp.get:<p>,boost>",
+                "<pmaxhp.set:<p>,a,1>", "<pmaxhp.set:<p>,b,2>",
+                "<pmaxhp.clear:<p>>", "<pmaxhp.get:<p>,a>"));
+
+        assertEquals(List.of("", "4", "", "6", "", "0", "", "", "", "0"), outputs);
+        assertTrue(result.warnings().isEmpty(), result.warnings().toString());
+    }
+
+    @Test
     void reportReplaysOutputThenSuccess() {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         when(commands.formatEngineMessage(anyString()))

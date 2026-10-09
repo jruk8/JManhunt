@@ -23,6 +23,7 @@ class TagPlayersTest {
         final Map<String, Boolean> states = new HashMap<>();
         final Map<String, String> ground = new HashMap<>();
         final Map<String, RosterValues.SlotContent> slots = new HashMap<>();
+        final Map<String, Double> health = new HashMap<>();
         final Map<String, Integer> maxStacks = new HashMap<>(Map.of("DIAMOND_HELMET", 1,
                 "IRON_HELMET", 1, "GOLDEN_APPLE", 64, "STONE", 64));
         final List<Titled> titles = new ArrayList<>();
@@ -102,6 +103,45 @@ class TagPlayersTest {
                 }
                 slots.put(slotKey(slot), new RosterValues.SlotContent(material,
                         Math.min(Math.max(qty, 1), max)));
+                return true;
+            }
+
+            @Override
+            public boolean setMaxHealth(String playerName, String id, double amount) {
+                if (!playerName.equalsIgnoreCase("Steve")) {
+                    return false;
+                }
+                health.put(id, amount);
+                return true;
+            }
+
+            @Override
+            public boolean modifyMaxHealth(String playerName, String id, double amount) {
+                if (!playerName.equalsIgnoreCase("Steve")) {
+                    return false;
+                }
+                health.put(id, health.getOrDefault(id, 0.0) + amount);
+                return true;
+            }
+
+            @Override
+            public Optional<Double> getMaxHealth(String playerName, String id) {
+                if (!playerName.equalsIgnoreCase("Steve")) {
+                    return Optional.empty();
+                }
+                return Optional.of(health.getOrDefault(id, 0.0));
+            }
+
+            @Override
+            public boolean clearMaxHealth(String playerName, String idOrNull) {
+                if (!playerName.equalsIgnoreCase("Steve")) {
+                    return false;
+                }
+                if (idOrNull == null) {
+                    health.clear();
+                } else {
+                    health.remove(idOrNull);
+                }
                 return true;
             }
         };
@@ -248,5 +288,53 @@ class TagPlayersTest {
         assertEquals("[DIAMOND_HELMET, 1]",
                 fixture.replace("<pslot:Steve,helmet>", context));
         assertEquals(5, fixture.warnings.size());
+    }
+
+    @Test
+    void maxHealthRoundTrip() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+
+        assertEquals("", fixture.replace("<pmaxhp.set:Steve,boost,4>", context));
+        assertEquals("4", fixture.replace("<pmaxhp.get:Steve,boost>", context));
+        assertEquals("", fixture.replace("<pmaxhp.modify:Steve,boost,2.5>", context));
+        assertEquals("6.5", fixture.replace("<pmaxhp.get:Steve,boost>", context));
+        assertEquals("0", fixture.replace("<pmaxhp.get:Steve,missing>", context));
+        assertEquals("", fixture.replace("<pmaxhp.set:Steve,other,1>", context));
+        assertEquals("", fixture.replace("<pmaxhp.clear:Steve,boost>", context));
+        assertEquals("0", fixture.replace("<pmaxhp.get:Steve,boost>", context));
+        assertEquals("1", fixture.replace("<pmaxhp.get:Steve,other>", context));
+        assertEquals("", fixture.replace("<pmaxhp.clear:Steve>", context));
+        assertEquals("0", fixture.replace("<pmaxhp.get:Steve,other>", context));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void maxHealthRejectsMisuse() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+
+        assertEquals("null", fixture.replace("<pmaxhp.set:Steve,boost>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.get:Steve>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.clear:Steve,boost,extra>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.set:,boost,4>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.set:Steve,,4>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.set:Steve,boost,many>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.set:Steve,boost,NaN>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.set:Steve,boost,Infinity>", context));
+        assertEquals(8, fixture.warnings.size());
+    }
+
+    @Test
+    void maxHealthOfflineWarns() {
+        Fixture fixture = new Fixture();
+        TagContext context = fixture.context();
+
+        assertEquals("null", fixture.replace("<pmaxhp.set:Ghost,boost,4>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.modify:Ghost,boost,4>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.get:Ghost,boost>", context));
+        assertEquals("null", fixture.replace("<pmaxhp.clear:Ghost>", context));
+        assertEquals(4, fixture.warnings.size());
+        assertTrue(fixture.warnings.get(0).contains("offline"), fixture.warnings.toString());
     }
 }

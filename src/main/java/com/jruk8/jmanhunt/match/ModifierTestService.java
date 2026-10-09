@@ -24,6 +24,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -219,10 +220,12 @@ public final class ModifierTestService {
      * Named-player sinks for dry runs: only the sender resolves (the
      * roster holds nobody else), capturing into the result instead
      * of delivering. Anything else misses so the tags keep their
-     * offline warning for genuinely unknown names.
+     * offline warning for genuinely unknown names. Max-health ids
+     * live in a run-local map so the tags exercise fully.
      */
     private static PlayerSinks testPlayerSinks(String senderName, List<String> capturedMessages,
             List<CapturedSound> capturedSounds) {
+        Map<String, Double> maxHealth = new HashMap<>();
         return new PlayerSinks() {
             @Override
             public boolean message(String playerName, String text) {
@@ -260,6 +263,45 @@ public final class ModifierTestService {
                 }
                 capturedMessages.add("[" + playerName + "] slot " + slot + ": "
                         + materialKey + " x" + qty);
+                return true;
+            }
+
+            @Override
+            public boolean setMaxHealth(String playerName, String id, double amount) {
+                if (!playerName.equalsIgnoreCase(senderName)) {
+                    return false;
+                }
+                maxHealth.put(id, amount);
+                return true;
+            }
+
+            @Override
+            public boolean modifyMaxHealth(String playerName, String id, double amount) {
+                if (!playerName.equalsIgnoreCase(senderName)) {
+                    return false;
+                }
+                maxHealth.put(id, maxHealth.getOrDefault(id, 0.0) + amount);
+                return true;
+            }
+
+            @Override
+            public Optional<Double> getMaxHealth(String playerName, String id) {
+                if (!playerName.equalsIgnoreCase(senderName)) {
+                    return Optional.empty();
+                }
+                return Optional.of(maxHealth.getOrDefault(id, 0.0));
+            }
+
+            @Override
+            public boolean clearMaxHealth(String playerName, String idOrNull) {
+                if (!playerName.equalsIgnoreCase(senderName)) {
+                    return false;
+                }
+                if (idOrNull == null) {
+                    maxHealth.clear();
+                } else {
+                    maxHealth.remove(idOrNull);
+                }
                 return true;
             }
         };

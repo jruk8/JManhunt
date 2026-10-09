@@ -11,7 +11,8 @@ import java.util.Set;
  * sprinting, gliding, swimming, and grounded; {@code <pstandingon>}
  * reads the block below the feet; {@code <ptitle>} sends a
  * center-screen title; {@code <pslot>} gets and sets inventory
- * slots by name or raw index. Reads resolve {@code null} silently
+ * slots by name or raw index; {@code <pmaxhp>} gets and sets
+ * max-health id contributions. Reads resolve {@code null} silently
  * for offline or unknown players; writes warn. No Bukkit types:
  * every read and write runs through the context backends.
  */
@@ -59,6 +60,9 @@ public final class TagPlayers {
             case "pstate" -> state(tag, parsed, context);
             case "pstandingon" -> standingOn(tag, parsed.get(0), context);
             case "ptitle" -> title(tag, parsed, context);
+            case "pmaxhp.set", "pmaxhp.modify" -> maxHealthWrite(tag, name, parsed, context);
+            case "pmaxhp.get" -> maxHealthGet(tag, parsed, context);
+            case "pmaxhp.clear" -> maxHealthClear(tag, parsed, context);
             default -> slot(tag, parsed, context);
         };
     }
@@ -183,6 +187,115 @@ public final class TagPlayers {
         return "";
     }
 
+    /**
+     * Overwrites ({@code <pmaxhp.set:player,id,amount>}) or adds to
+     * ({@code <pmaxhp.modify:player,id,amount>}) one max-health id
+     * contribution. Blank player or id, and non-finite amounts,
+     * warn plus null; offline warns plus null; success returns
+     * empty.
+     */
+    private static String maxHealthWrite(String tag, String name, List<String> parsed,
+            TagContext context) {
+        if (parsed.get(0).isBlank()) {
+            context.scope().warn("Tag <" + name + "> needs a player like <" + name
+                    + ":Steve,boost,4>: " + tag);
+            return "null";
+        }
+        if (parsed.get(1).isBlank()) {
+            context.scope().warn("Tag <" + name + "> needs an id like <" + name
+                    + ":Steve,boost,4>: " + tag);
+            return "null";
+        }
+        Optional<Double> amount = maxHealthAmount(tag, name, parsed.get(2), context);
+        if (amount.isEmpty()) {
+            return "null";
+        }
+        boolean done = name.equals("pmaxhp.set")
+                ? context.playerSinks().setMaxHealth(parsed.get(0).strip(), parsed.get(1).strip(),
+                        amount.get())
+                : context.playerSinks().modifyMaxHealth(parsed.get(0).strip(),
+                        parsed.get(1).strip(), amount.get());
+        if (!done) {
+            context.scope().warn("Tag <" + name + "> player '" + parsed.get(0).strip()
+                    + "' is offline: " + tag);
+            return "null";
+        }
+        return "";
+    }
+
+    /**
+     * Reads ({@code <pmaxhp.get:player,id>}) one max-health id
+     * contribution, 0 when never set. Blank player or id warns
+     * plus null; offline warns plus null.
+     */
+    private static String maxHealthGet(String tag, List<String> parsed, TagContext context) {
+        if (parsed.get(0).isBlank()) {
+            context.scope().warn(
+                    "Tag <pmaxhp.get> needs a player like <pmaxhp.get:Steve,boost>: " + tag);
+            return "null";
+        }
+        if (parsed.get(1).isBlank()) {
+            context.scope().warn(
+                    "Tag <pmaxhp.get> needs an id like <pmaxhp.get:Steve,boost>: " + tag);
+            return "null";
+        }
+        Optional<Double> value = context.playerSinks().getMaxHealth(parsed.get(0).strip(),
+                parsed.get(1).strip());
+        if (value.isEmpty()) {
+            context.scope().warn("Tag <pmaxhp.get> player '" + parsed.get(0).strip()
+                    + "' is offline: " + tag);
+            return "null";
+        }
+        return TagMath.formatNumber(value.get());
+    }
+
+    /**
+     * Deletes ({@code <pmaxhp.clear:player,id>}) one max-health id,
+     * or every id when the id is omitted. Blank player warns plus
+     * null; offline warns plus null; success returns empty.
+     */
+    private static String maxHealthClear(String tag, List<String> parsed, TagContext context) {
+        if (parsed.get(0).isBlank()) {
+            context.scope().warn(
+                    "Tag <pmaxhp.clear> needs a player like <pmaxhp.clear:Steve,boost>: "
+                            + tag);
+            return "null";
+        }
+        String id = parsed.size() > 1 ? parsed.get(1).strip() : null;
+        if (id != null && id.isBlank()) {
+            context.scope().warn(
+                    "Tag <pmaxhp.clear> needs an id like <pmaxhp.clear:Steve,boost>: "
+                            + tag);
+            return "null";
+        }
+        boolean done = context.playerSinks().clearMaxHealth(parsed.get(0).strip(), id);
+        if (!done) {
+            context.scope().warn("Tag <pmaxhp.clear> player '" + parsed.get(0).strip()
+                    + "' is offline: " + tag);
+            return "null";
+        }
+        return "";
+    }
+
+    /** One finite amount; misuse warns plus empty. */
+    private static Optional<Double> maxHealthAmount(String tag, String name, String raw,
+            TagContext context) {
+        double amount;
+        try {
+            amount = Double.parseDouble(raw.strip());
+        } catch (NumberFormatException invalid) {
+            context.scope().warn("Tag <" + name + "> amount '" + raw.strip()
+                    + "' is not a number: " + tag);
+            return Optional.empty();
+        }
+        if (!Double.isFinite(amount)) {
+            context.scope().warn("Tag <" + name + "> amount '" + raw.strip()
+                    + "' is not a number: " + tag);
+            return Optional.empty();
+        }
+        return Optional.of(amount);
+    }
+
     /** One set value: upper-case material plus whole qty. */
     private record SetValue(String material, int qty) {
     }
@@ -272,6 +385,9 @@ public final class TagPlayers {
             case "pstate" -> count == 2;
             case "pstandingon" -> count == 1;
             case "ptitle" -> count >= 3 && count <= 6;
+            case "pmaxhp.set", "pmaxhp.modify" -> count == 3;
+            case "pmaxhp.get" -> count == 2;
+            case "pmaxhp.clear" -> count == 1 || count == 2;
             default -> count == 2 || count == 3;
         };
     }
@@ -281,6 +397,9 @@ public final class TagPlayers {
             case "pstate" -> "2 args";
             case "pstandingon" -> "1 arg";
             case "ptitle" -> "3 to 6 args";
+            case "pmaxhp.set", "pmaxhp.modify" -> "3 args";
+            case "pmaxhp.get" -> "2 args";
+            case "pmaxhp.clear" -> "1 or 2 args";
             default -> "2 or 3 args";
         };
     }
@@ -290,6 +409,10 @@ public final class TagPlayers {
             case "pstate" -> "<pstate:player,state>";
             case "pstandingon" -> "<pstandingon:player>";
             case "ptitle" -> "<ptitle:player,title,subtitle>";
+            case "pmaxhp.set" -> "<pmaxhp.set:player,id,amount>";
+            case "pmaxhp.modify" -> "<pmaxhp.modify:player,id,amount>";
+            case "pmaxhp.get" -> "<pmaxhp.get:player,id>";
+            case "pmaxhp.clear" -> "<pmaxhp.clear:player,id>";
             default -> "<pslot:player,slot>";
         };
     }

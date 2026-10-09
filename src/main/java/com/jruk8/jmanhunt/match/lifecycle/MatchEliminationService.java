@@ -18,9 +18,10 @@ import java.util.function.Consumer;
 
 /**
  * Mid-match elimination outside the death pipeline: the
- * {@code <loseplayer>} sink. Kills quietly, drops the player to
- * spectator, announces the loss, then runs the standard elimination
- * check through the finish hook.
+ * {@code <loseplayer>} sink and the max-health zero death share one
+ * core. Kills quietly, drops the player to spectator, announces the
+ * loss, then runs the standard elimination check through the finish
+ * hook.
  */
 public final class MatchEliminationService {
     /** Role plus fake-spectator state. */
@@ -75,6 +76,31 @@ public final class MatchEliminationService {
         if (role != Role.HUNTER && role != Role.SPEEDRUNNER) {
             return false;
         }
+        eliminate(instance, player, role, reason);
+        return true;
+    }
+
+    /**
+     * Any-role variant of {@link #losePlayer}: any assigned online
+     * player qualifies, including spectators. Backs engine deaths
+     * that ignore roles, like max health reaching zero.
+     */
+    public boolean eliminateAnyRole(long matchId, String playerName, String reason) {
+        Optional<GameInstance> match = this.match.store().instance(matchId);
+        if (match.isEmpty() || !match.get().begun() || match.get().ending()) {
+            return false;
+        }
+        GameInstance instance = match.get();
+        Player player = onlineAssignee(instance, playerName);
+        if (player == null) {
+            return false;
+        }
+        eliminate(instance, player, players.states().role(player), reason);
+        return true;
+    }
+
+    /** Shared kill, drop, announce, and finish-hook core. */
+    private void eliminate(GameInstance instance, Player player, Role role, String reason) {
         edge.spawnCamp().quietKill(player);
         instance.recordDeath(player.getUniqueId(), player.getName(), role);
         players.states().setRole(player.getUniqueId(), Role.SPECTATOR);
@@ -82,7 +108,7 @@ public final class MatchEliminationService {
         instance.deactivate(player.getUniqueId());
         compass.clearHotspotHistory(player.getUniqueId());
         compass.reconcileTeammateModes(instance);
-        this.match.flagStore().removePlayer(matchId, player.getName());
+        this.match.flagStore().removePlayer(instance.matchId(), player.getName());
         edge.tasks().run(() -> {
             players.fakes().enable(player);
             compass.removeCompasses(player);
@@ -92,7 +118,6 @@ public final class MatchEliminationService {
         messaging.playInstanceSound(instance,
                 role == Role.HUNTER ? "game.hunter-death" : "game.speedrunner-death");
         this.match.onEliminated().accept(instance);
-        return true;
     }
 
     /** Online match assignee by name, case-insensitive; null when none. */

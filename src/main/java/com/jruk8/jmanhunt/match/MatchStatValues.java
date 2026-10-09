@@ -8,27 +8,36 @@ import com.jruk8.jmanhunt.stats.StatsManager;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
 
 /**
  * Bukkit-backed stat values for one tag run, bound to its match id.
  * Vitals read the live player, counters read the match slice of any
- * assigned player (eliminated ones keep their numbers), duration
- * reads the match clock, and daytime reads the main world clock.
+ * assigned player, duration reads the match clock, and daytime
+ * reads the main world clock. Every player key reads -1 for
+ * assigned but inactive (eliminated or left) players.
  */
 public final class MatchStatValues implements StatValues {
 
     private final StatsManager stats;
     private final MatchStore store;
     private final long matchId;
+    private final Function<Player, AttributeInstance> attributes;
 
-    public MatchStatValues(StatsManager stats, MatchStore store, long matchId) {
+    /**
+     * @param attributes max-health instance lookup; injected because
+     *                 unit tests cannot link the attribute constant
+     */
+    public MatchStatValues(StatsManager stats, MatchStore store, long matchId,
+            Function<Player, AttributeInstance> attributes) {
         this.stats = stats;
         this.store = store;
         this.matchId = matchId;
+        this.attributes = attributes;
     }
 
     @Override
@@ -37,12 +46,14 @@ public final class MatchStatValues implements StatValues {
         if (player == null) {
             return Optional.empty();
         }
+        if (eliminated(player.getUniqueId())) {
+            return Optional.of("-1");
+        }
         return switch (key) {
             case "health" -> Optional.of(TagMath.formatNumber(player.getHealth()));
             case "hunger" -> Optional.of(Integer.toString(player.getFoodLevel()));
             case "exp-level" -> Optional.of(Integer.toString(player.getLevel()));
-            case "max-health" -> Optional.of(TagMath.formatNumber(
-                    player.getAttribute(Attribute.MAX_HEALTH).getValue()));
+            case "max-health" -> maxHealth(player);
             case "mobs-killed", "achievements-gained" ->
                     Optional.of(Integer.toString(counter(player.getUniqueId(), key)));
             default -> Optional.empty();
@@ -56,6 +67,23 @@ public final class MatchStatValues implements StatValues {
             case "daytime" -> daytime();
             default -> Optional.empty();
         };
+    }
+
+    /** Live max health, empty when the instance is missing. */
+    private Optional<String> maxHealth(Player player) {
+        AttributeInstance attribute = attributes.apply(player);
+        if (attribute == null) {
+            return Optional.empty();
+        }
+        return Optional.of(TagMath.formatNumber(attribute.getValue()));
+    }
+
+    /** True when the id is assigned to the bound match but not active in it. */
+    private boolean eliminated(UUID playerId) {
+        return store.instance(matchId)
+                .map(instance -> instance.assignedPlayerIds().contains(playerId)
+                        && !instance.isActive(playerId))
+                .orElse(false);
     }
 
     /** Match slice counter, or 0 without a slice or a match. */

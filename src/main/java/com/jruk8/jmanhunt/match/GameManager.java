@@ -31,6 +31,8 @@ import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.WorldEngineService;
 import org.bukkit.Location;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
 import java.util.Collection;
 import java.util.List;
@@ -104,6 +106,7 @@ public final class GameManager implements MatchControl {
     private final CountdownService countdowns;
     private final LimboFeedbackService limbo;
     private final DeathMessageService deaths;
+    private final MaxHealthService maxHealth;
     private final WinConditionTextService winConditions;
     private final MatchSettingsFacade matchSettings;
     private final PlayersSettingsFacade playersSettings;
@@ -140,6 +143,8 @@ public final class GameManager implements MatchControl {
                 root.getSettings().getServer(), store, reads.lobbies());
         this.limbo = newLimbo();
         this.deaths = newDeaths(players);
+        this.maxHealth = new MaxHealthService(this, edge.log()::warning,
+                GameManager::maxHealthAttribute);
         this.timeLimits = new TimeLimitService(
                 new TimeLimitService.TimeEdge(edge.log(), edge.tasks()), reads.winConditionEngine(),
                 store, new TimeLimitService.TimeTexts(messaging, texts.gameTexts()), this);
@@ -231,11 +236,20 @@ public final class GameManager implements MatchControl {
     public Integer lobbyOfPlayer(UUID playerId) { return store.lobbyOfPlayer(playerId); }
     /** Shared flag store behind command tags; cleared per match on teardown. */
     public FlagStore flagStore() { return flagStore; }
+
+    /** Shared max-health ledger behind the pmaxhp tags. */
+    public MaxHealthService maxHealth() { return maxHealth; }
+
+    /** Live max-health attribute instance; shared lookup edge for stats and ledger. */
+    private static AttributeInstance maxHealthAttribute(Player player) {
+        return player.getAttribute(Attribute.MAX_HEALTH);
+    }
     /** Shared cooldown stamps behind command tags; cleared per match on teardown. */
     public TagCooldownStore cooldownStore() { return cooldownStore; }
     /** Stat values bound to one match for one tag run. */
     public StatValues matchStatValues(long matchId) {
-        return new MatchStatValues(services.stats(), store, matchId);
+        return new MatchStatValues(services.stats(), store, matchId,
+                GameManager::maxHealthAttribute);
     }
 
     /** Live instances oldest first. */
@@ -559,6 +573,15 @@ public final class GameManager implements MatchControl {
      */
     public boolean losePlayer(long matchId, String playerName, String reason) {
         return matchFinish.losePlayer(matchId, playerName, reason);
+    }
+
+    /**
+     * Eliminates any assigned online player by name, regardless of
+     * role, with a loss announcement. Backs engine deaths that
+     * ignore roles, like max health reaching zero.
+     */
+    public boolean eliminateAnyRole(long matchId, String playerName, String reason) {
+        return matchFinish.eliminateAnyRole(matchId, playerName, reason);
     }
 
     /** Ends one match. */

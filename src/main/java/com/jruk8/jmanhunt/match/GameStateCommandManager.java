@@ -403,7 +403,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                                 new MatchRosterValues(game, reads.playerStates(), edge.fakes(),
                                         matchId),
                                 NamedPlayerSinks.of(messages, messages.modifiers(), sounds,
-                                        edge.log()::warning, name)),
+                                        edge.log()::warning, name, game.maxHealth())),
                         eventArgs, detail -> sinks.loopLimitExceeded(detail, matchId),
                         (target, reason) -> sinks.losePlayerByName(name, target, reason, scope,
                                 matchId),

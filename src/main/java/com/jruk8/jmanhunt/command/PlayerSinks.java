@@ -1,12 +1,15 @@
 package com.jruk8.jmanhunt.command;
 
+import java.util.Optional;
+
 /**
  * Named-player delivery behind {@code <pmessage>},
- * {@code <psound>}, {@code <ptitle>}, and {@code <pslot>} sets: the
- * tags name their audience, so delivery works in console-evaluated
- * runs with no executor. Implemented by the match and compass
- * layers so tags stay pure; managers own every Bukkit call. False
- * means the player is offline; callers warn.
+ * {@code <psound>}, {@code <ptitle>}, {@code <pslot>}, and
+ * {@code <pmaxhp>} sets: the tags name their audience, so delivery
+ * works in console-evaluated runs with no executor. Implemented by
+ * the match and compass layers so tags stay pure; managers own
+ * every Bukkit call. False means the player is offline; callers
+ * warn.
  */
 public interface PlayerSinks {
 
@@ -35,6 +38,41 @@ public interface PlayerSinks {
      */
     default boolean setSlot(String playerName, RosterValues.InventorySlot slot, String materialKey,
             int qty) {
+        return false;
+    }
+
+    /**
+     * Overwrites one max-health id contribution, then refreshes the
+     * player's max health attribute. False when offline, with no
+     * change. Defaults to missing.
+     */
+    default boolean setMaxHealth(String playerName, String id, double amount) {
+        return false;
+    }
+
+    /**
+     * Adds to one max-health id contribution, then refreshes the
+     * player's max health attribute. False when offline, with no
+     * change. Defaults to missing.
+     */
+    default boolean modifyMaxHealth(String playerName, String id, double amount) {
+        return false;
+    }
+
+    /**
+     * One max-health id contribution, 0.0 when never set. Empty when
+     * offline or unknown. Defaults to missing.
+     */
+    default Optional<Double> getMaxHealth(String playerName, String id) {
+        return Optional.empty();
+    }
+
+    /**
+     * Deletes max-health contributions, one id or every id when the
+     * id is null, then refreshes the player's max health attribute.
+     * False when offline, with no change. Defaults to missing.
+     */
+    default boolean clearMaxHealth(String playerName, String idOrNull) {
         return false;
     }
 

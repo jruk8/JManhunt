@@ -37,7 +37,7 @@ public final class CommandSyntax {
                 "loseplayer", "win", "pswitch", "args", "list.append", "list.get", "list.set", "list.remove",
                 "list.contains", "list.clear", "list.pop", "len", "list.shuffle", "range",
                 "list.filter", "list.reverse", "list.join", "list.slice", "list.first", "list.last",
-                "active-players", "plocation", "prole", "distance",
+                "active-players", "plocation", "prole", "peliminated", "distance",
                 "overlap-players", "nearby-players", "pworld", "world",
                 "px", "py", "pz", "pyaw", "ppitch",
                 "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt", "root",
@@ -47,7 +47,8 @@ public final class CommandSyntax {
                 "gcooldown", "gcooldown.get", "gcooldown.reset", "default", "pheld",
                 "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
                 "vec.dot", "vec.cross", "loc.shift", "pdir", "ploc",
-                "pstate", "pstandingon", "ptitle", "pslot");
+                "pstate", "pstandingon", "ptitle", "pslot",
+                "pmaxhp.set", "pmaxhp.modify", "pmaxhp.get", "pmaxhp.clear");
     }
 
     /**

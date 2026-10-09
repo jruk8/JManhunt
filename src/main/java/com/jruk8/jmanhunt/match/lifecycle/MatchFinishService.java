@@ -148,6 +148,11 @@ public final class MatchFinishService {
         return elimination.losePlayer(matchId, playerName, reason);
     }
 
+    /** Eliminates any assigned online player by name, regardless of role. */
+    public boolean eliminateAnyRole(long matchId, String playerName, String reason) {
+        return elimination.eliminateAnyRole(matchId, playerName, reason);
+    }
+
     /**
      * Cancels an unbegun match that lost a whole side through a leave.
      * Pre-start matches need at least one hunter and one speedrunner to

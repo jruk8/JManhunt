@@ -53,8 +53,8 @@ final class TagSyntaxErrors {
                     "gcooldown.reset" -> TagCooldowns.syntaxError(name, args);
             case "default" -> topLevelArityError(name, args, 2, "<default:value,fallback>");
             case "active-players" -> activePlayersError(name, args);
-            case "plocation", "ploc", "prole", "pworld", "world", "px", "py", "pz", "pyaw",
-                    "ppitch", "pheld" -> playerNameError(name, args);
+            case "plocation", "ploc", "prole", "peliminated", "pworld", "world", "px", "py",
+                    "pz", "pyaw", "ppitch", "pheld" -> playerNameError(name, args);
             case "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
                     "vec.dot", "vec.cross", "loc.shift", "pdir" ->
                     TagVectors.opError(name, args);
@@ -65,7 +65,8 @@ final class TagSyntaxErrors {
     /** Trailing tag names behind {@link #tagError}: proximity, math, loops, defs. */
     static Optional<String> tailError(String name, String args) {
         return switch (name) {
-            case "pstate", "pstandingon", "ptitle", "pslot" -> TagPlayers.opError(name, args);
+            case "pstate", "pstandingon", "ptitle", "pslot", "pmaxhp.set", "pmaxhp.modify",
+                    "pmaxhp.get", "pmaxhp.clear" -> TagPlayers.opError(name, args);
             case "overlap-players", "nearby-players" -> proximityError(name, args);
             case "distance" -> topLevelArityError(name, args, 2, "<distance:loc1,loc2>");
             case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" -> mathUnaryError(name, args);
@@ -356,7 +357,8 @@ final class TagSyntaxErrors {
     }
 
     /**
-     * Player-name shape for {@code <plocation>} and {@code <prole>}:
+     * Player-name shape for {@code <plocation>}, {@code <prole>}, and
+     * {@code <peliminated>}:
      * one present, quote-clean name. Like {@code <loseplayer>} the
      * name may resolve from a nested tag at runtime.
      */

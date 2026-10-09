@@ -80,6 +80,8 @@ public final class PlaceholderCheatsheet {
             Map.entry("active-players", new String[]{"<active-players:ROLE>", "eligible names as a list"}),
             Map.entry("plocation", new String[]{"<plocation:player>", "player location list"}),
             Map.entry("prole", new String[]{"<prole:player>", "HUNTER or SPEEDRUNNER, else null"}),
+            Map.entry("peliminated", new String[]{"<peliminated:player>",
+                    "true when eliminated or never in game"}),
             Map.entry("distance", new String[]{"<distance:loc1,loc2>", "3D distance, xyz only"}),
             Map.entry("overlap-players", new String[]{"<overlap-players:origin,role,radius,max>",
                     "names near an origin"}),
@@ -138,7 +140,15 @@ public final class PlaceholderCheatsheet {
             Map.entry("pstate", new String[]{"<pstate:player,state>", "true/false body state"}),
             Map.entry("pstandingon", new String[]{"<pstandingon:player>", "block below feet"}),
             Map.entry("ptitle", new String[]{"<ptitle:player,title,sub>", "center title, empty"}),
-            Map.entry("pslot", new String[]{"<pslot:player,slot>", "get [MATERIAL, qty]"}));
+            Map.entry("pslot", new String[]{"<pslot:player,slot>", "get [MATERIAL, qty]"}),
+            Map.entry("pmaxhp.set", new String[]{"<pmaxhp.set:player,id,amount>",
+                    "overwrite one max-hp id, empty"}),
+            Map.entry("pmaxhp.modify", new String[]{"<pmaxhp.modify:player,id,amount>",
+                    "add to one max-hp id, empty"}),
+            Map.entry("pmaxhp.get", new String[]{"<pmaxhp.get:player,id>",
+                    "one max-hp id, 0 when unset"}),
+            Map.entry("pmaxhp.clear", new String[]{"<pmaxhp.clear:player,id>",
+                    "drop one id, all when omitted"}));
 
     private PlaceholderCheatsheet() {
     }

@@ -19,6 +19,7 @@ import com.jruk8.jmanhunt.lobby.config.CompassSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.MatchRosterValues;
+import com.jruk8.jmanhunt.match.MaxHealthService;
 import com.jruk8.jmanhunt.match.NamedPlayerSinks;
 import com.jruk8.jmanhunt.message.CompassMessages;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -353,7 +354,9 @@ final class CompassAnalysisRunner {
         SoundService sounds = feedback.sounds();
         TagBackends backends = new TagBackends(stats, flags, placeholderPass, roster,
                 NamedPlayerSinks.of(messages, feedback.modifiers(), sounds,
-                        feedback.log()::warning, "debuffs"));
+                        feedback.log()::warning, "debuffs", game == null
+                                ? MaxHealthService.inert()
+                                : game.maxHealth()));
         return TagContext.run(new TagContext.TagIdentity(scope, "debuffs"),
                 TagContext.TagSinks.simple(
                         text -> messages.broadcastText(formatEngineMessage(text)),

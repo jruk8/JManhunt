@@ -515,7 +515,8 @@ public final class CommandPlaceholders {
             case "vec.add", "vec.sub", "vec.mult", "vec.normalize", "vec.sqrdist", "vec.dist",
                     "vec.dot", "vec.cross", "loc.shift", "pdir" ->
                     TagVectors.resolve(tag, name, args, context);
-            case "pstate", "pstandingon", "ptitle", "pslot" ->
+            case "pstate", "pstandingon", "ptitle", "pslot", "pmaxhp.set", "pmaxhp.modify",
+                    "pmaxhp.get", "pmaxhp.clear" ->
                     TagPlayers.resolve(tag, name, args, context);
             case "prole" -> TagRoster.role(tag, args, context);
             case "peliminated" -> TagRoster.eliminated(tag, args, context);

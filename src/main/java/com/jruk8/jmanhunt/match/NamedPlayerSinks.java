@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -32,7 +33,7 @@ public final class NamedPlayerSinks {
      * Unknown sound ids warn through the given logger and skip.
      */
     public static PlayerSinks of(MessageService messages, ModifiersMessages texts, SoundService sounds,
-            Consumer<String> logWarning, String containerId) {
+            Consumer<String> logWarning, String containerId, MaxHealthService maxHealth) {
         return new PlayerSinks() {
             @Override
             public boolean message(String playerName, String text) {
@@ -74,6 +75,42 @@ public final class NamedPlayerSinks {
                     return false;
                 }
                 return setSlotInto(target, slot, materialKey, qty);
+            }
+
+            @Override
+            public boolean setMaxHealth(String playerName, String id, double amount) {
+                Player target = onlinePlayer(playerName);
+                if (target == null) {
+                    return false;
+                }
+                return maxHealth.setContribution(target, id, amount);
+            }
+
+            @Override
+            public boolean modifyMaxHealth(String playerName, String id, double amount) {
+                Player target = onlinePlayer(playerName);
+                if (target == null) {
+                    return false;
+                }
+                return maxHealth.modifyContribution(target, id, amount);
+            }
+
+            @Override
+            public Optional<Double> getMaxHealth(String playerName, String id) {
+                Player target = onlinePlayer(playerName);
+                if (target == null) {
+                    return Optional.empty();
+                }
+                return Optional.of(maxHealth.getContribution(target.getUniqueId(), id));
+            }
+
+            @Override
+            public boolean clearMaxHealth(String playerName, String idOrNull) {
+                Player target = onlinePlayer(playerName);
+                if (target == null) {
+                    return false;
+                }
+                return maxHealth.clearContribution(target, idOrNull);
             }
         };
     }
