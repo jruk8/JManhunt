@@ -84,7 +84,6 @@ categories:
   players/respawn/speedrunner: LIME_BED
   players/roles: NAME_TAG
   players/roles/reset-on-game-end: RECOVERY_COMPASS
-  players/roles/reset-on-leave: MAGMA_CREAM
   players/name-colors: PAINTING
   players/friendly-fire: TNT
   players/invulnerability: SHIELD
@@ -228,9 +227,8 @@ descriptions:
   "settings.players.respawn": "Second chances after dying."
   "settings.players.respawn.hunter": "Hunter lives and revive delay."
   "settings.players.respawn.speedrunner": "Speedrunner lives and revive delay."
-  "settings.players.roles": "Reset roles on leave and match end."
+  "settings.players.roles": "Reset roles when a match ends."
   "settings.players.roles.reset-on-game-end": "Clear roles when a match ends."
-  "settings.players.roles.reset-on-leave": "Clear roles when players leave."
   "settings.players.spectator": "Spectator toolbar and lock-on follow."
   "settings.players.spectator.toolbar": "Hotbar buttons handed to spectators."
   "settings.players.spectator.travel": "Travel limit keeping spectators near the action."
@@ -392,7 +390,6 @@ descriptions:
   "settings.compass.signal.interference.weather.enabled": "Weather can interfere with tracking."
   "settings.compass.signal.interference.weather.interfere-during": "Weather that interferes."
   "settings.players.roles.reset-on-game-end.enabled": "Reset roles to NONE when a match ends."
-  "settings.players.roles.reset-on-leave.enabled": "Reset leavers to NONE."
   "settings.players.name-colors.enabled": "Recolor hunter and speedrunner names."
   "settings.players.respawn.hunter.enabled": "Hunters respawn after dying."
   "settings.players.respawn.hunter.delay-seconds": "Seconds before hunters revive."

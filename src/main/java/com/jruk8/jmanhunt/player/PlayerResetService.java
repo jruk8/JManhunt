@@ -117,7 +117,8 @@ public final class PlayerResetService {
         }
     }
 
-    private static void dropStack(World world, Location at, ItemStack item) {
+    /** Drops one non-air stack. Package-visible for snapshot expiry drops. */
+    static void dropStack(World world, Location at, ItemStack item) {
         if (item != null && !item.getType().isAir()) {
             world.dropItemNaturally(at, item);
         }

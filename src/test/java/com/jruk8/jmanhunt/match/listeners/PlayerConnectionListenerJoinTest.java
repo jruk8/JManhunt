@@ -63,7 +63,7 @@ class PlayerConnectionListenerJoinTest {
                 new PlayerConnectionListener.ConnectConfig(new PlayerSettings(),
                         new MatchConfig.DisconnectHandling()),
                 new PlayerConnectionListener.ConnectEdge(plugin.roleTeams(),
-                        mock(TaskScheduler.class)));
+                        mock(TaskScheduler.class), mock(PlayerRespawnListener.class)));
 
         listener.onJoin(new PlayerJoinEvent(player, "join"));
 
@@ -107,7 +107,7 @@ class PlayerConnectionListenerJoinTest {
                 new PlayerConnectionListener.ConnectConfig(config,
                         new MatchConfig.DisconnectHandling()),
                 new PlayerConnectionListener.ConnectEdge(plugin.roleTeams(),
-                        mock(TaskScheduler.class)));
+                        mock(TaskScheduler.class), mock(PlayerRespawnListener.class)));
         return new JoinFixture(listener, player, playerId, players, game, config, fakes);
     }
 

@@ -61,7 +61,7 @@ public final class MatchLeaveService {
 
     /** Configured leave destination, SPECTATOR by default. */
     public LeaveDestination leaveDestination(Integer lobby) {
-        return LeaveDestination.parse(reads.match().gameLeaveDestination(lobby));
+        return LeaveDestination.forLobby(reads.match(), lobby);
     }
 
     /**
@@ -106,6 +106,10 @@ public final class MatchLeaveService {
         }
         Role before = services.playerStates().role(player);
         if (instance.begun() && before.isParticipant()) {
+            // A held leaver's gear sits in the fake-spectator snapshot
+            // with an empty live inventory: restore first so the drop
+            // or wipe below runs on the real gear.
+            reads.fakes().restoreSnapshot(player);
             if (dropGear) {
                 PlayerResetService.dropAllGear(player);
                 services.stateCommands().resetVitals(player);

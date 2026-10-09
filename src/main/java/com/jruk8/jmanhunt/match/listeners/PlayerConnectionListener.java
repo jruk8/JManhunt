@@ -23,12 +23,15 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitTask;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.match.LeaveDestination;
 
 /** Joins, quits, disconnect strikes, and rejoins. */
 public final class PlayerConnectionListener implements Listener {
@@ -51,8 +54,9 @@ public final class PlayerConnectionListener implements Listener {
             MatchConfig.DisconnectHandling disconnectHandling) {
     }
 
-    /** Role teams plus delayed-disconnect scheduler. */
-    public record ConnectEdge(RoleTeamService roleTeams, TaskScheduler tasks) {
+    /** Role teams, delayed-disconnect scheduler, and respawn holds. */
+    public record ConnectEdge(RoleTeamService roleTeams, TaskScheduler tasks,
+            PlayerRespawnListener respawn) {
     }
 
     private final ConnectReads reads;
@@ -60,6 +64,12 @@ public final class PlayerConnectionListener implements Listener {
     private final ConnectWorld world;
     private final ConnectConfig config;
     private final ConnectEdge edge;
+    /**
+     * Players whose disconnect grace expired while they were offline:
+     * fully out of the game, owed a wipe plus destination routing on
+     * rejoin. Memory only, like the disconnect tasks.
+     */
+    private final Set<UUID> expiredOffline = new HashSet<>();
 
     public PlayerConnectionListener(ConnectReads reads, ConnectMatch match, ConnectWorld world,
             ConnectConfig config, ConnectEdge edge) {
@@ -94,6 +104,10 @@ public final class PlayerConnectionListener implements Listener {
             }
             return;
         }
+        if (expiredOffline.remove(player.getUniqueId())) {
+            handleExpiredRejoin(player);
+            return;
+        }
         int lobbyId = lobbyIdFor(player.getUniqueId());
         if (lobbyId >= 0 && this.match.game().instanceForLobby(lobbyId).isPresent()) {
             handleJoinDuringMatch(player, lobbyId);
@@ -122,13 +136,7 @@ public final class PlayerConnectionListener implements Listener {
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         edge.roleTeams().remove(player);
-        int lobbyId = lobbyIdFor(player.getUniqueId());
         this.match.lobbies().remove(player.getUniqueId());
-        if (config.players().getRoles().getResetOnLeave().isEnabled()
-                && reads.states().role(player) != Role.AFK
-                && (lobbyId < 0 || this.match.game().instanceForLobby(lobbyId).isEmpty())) {
-            reads.states().setRole(player.getUniqueId(), Role.NONE);
-        }
         Optional<GameInstance> match = this.match.game().instanceOf(player.getUniqueId());
         if (match.isPresent()) {
             Role role = reads.states().role(player);
@@ -136,13 +144,13 @@ public final class PlayerConnectionListener implements Listener {
             boolean preStart = !match.get().begun();
             if (role == Role.SPEEDRUNNER && reads.states().isActiveSpeedrunner(player.getUniqueId())) {
                 if (preStart) {
-                    eliminateDisconnectedPlayer(player.getUniqueId(), match.get().matchId(), role);
+                    eliminateDisconnectedPlayer(player.getUniqueId(), match.get().matchId(), role, false);
                 } else {
                     handleDisconnect(player, Role.SPEEDRUNNER, match.get().matchId());
                 }
             } else if (role == Role.HUNTER) {
                 if (preStart) {
-                    eliminateDisconnectedPlayer(player.getUniqueId(), match.get().matchId(), role);
+                    eliminateDisconnectedPlayer(player.getUniqueId(), match.get().matchId(), role, false);
                 } else {
                     handleDisconnect(player, Role.HUNTER, match.get().matchId());
                 }
@@ -189,7 +197,7 @@ public final class PlayerConnectionListener implements Listener {
                 this.match.disconnects().registerDisconnect(player.getUniqueId(), matchId, maxStrikes);
         cancelDisconnectTask(this.match.disconnectTasks(), player.getUniqueId());
         if (decision.forfeit()) {
-            eliminateDisconnectedPlayer(player.getUniqueId(), matchId, role);
+            eliminateDisconnectedPlayer(player.getUniqueId(), matchId, role, true);
             return;
         }
         String warning = role == Role.SPEEDRUNNER ? reads.gameTexts().getSpeedrunnerDisconnectWarning()
@@ -197,11 +205,19 @@ public final class PlayerConnectionListener implements Listener {
         this.match.game().messaging().sendToInstance(match.get(), warning,
                 Map.of("seconds", Integer.toString(graceSeconds)));
         BukkitTask task = edge.tasks().runLater(
-                () -> eliminateDisconnectedPlayer(player.getUniqueId(), matchId, role), graceSeconds * 20L);
+                () -> eliminateDisconnectedPlayer(player.getUniqueId(), matchId, role, true),
+                graceSeconds * 20L);
         this.match.disconnectTasks().put(player.getUniqueId(), task);
     }
 
-    private void eliminateDisconnectedPlayer(UUID playerId, long matchId, Role role) {
+    /**
+     * Removes a disconnected player from the match. Begun-match
+     * removals drop any retained hold gear at the hold location and
+     * mark the player expired for destination routing on rejoin.
+     * Pre-start removals only discard the retention: that gear is
+     * lobby gear and stays with the player.
+     */
+    private void eliminateDisconnectedPlayer(UUID playerId, long matchId, Role role, boolean begunMatch) {
         Optional<GameInstance> match = this.match.game().instance(matchId);
         if (match.isEmpty() || !match.get().active() || !match.get().isActive(playerId)
                 || reads.states().role(playerId) != role) {
@@ -210,6 +226,12 @@ public final class PlayerConnectionListener implements Listener {
         GameInstance instance = match.get();
         cancelDisconnectTask(this.match.disconnectTasks(), playerId);
         this.match.disconnects().clear(playerId);
+        if (begunMatch) {
+            reads.fakes().dropSnapshot(playerId);
+            expiredOffline.add(playerId);
+        } else {
+            reads.fakes().discardSnapshot(playerId);
+        }
 
         if (role == Role.SPEEDRUNNER) {
             reads.states().setSpeedrunnerAlive(playerId, false);
@@ -268,6 +290,7 @@ public final class PlayerConnectionListener implements Listener {
 
     private void handleRejoin(Player player) {
         UUID playerId = player.getUniqueId();
+        expiredOffline.remove(playerId);
         if (!this.match.disconnectTasks().containsKey(playerId)) {
             return;
         }
@@ -282,6 +305,44 @@ public final class PlayerConnectionListener implements Listener {
             this.match.game().messaging().sendToInstance(match.get(), cancelled, Map.of());
         } else {
             reads.messages().broadcastRaw(cancelled);
+        }
+        // A hold that survived the disconnect re-applies; an expired
+        // hold just drops the retention.
+        if (holdActive(playerId)) {
+            reads.fakes().enable(player);
+        } else {
+            reads.fakes().discardSnapshot(playerId);
+        }
+    }
+
+    /** True while a headstart or join hold still waits on the player. */
+    private boolean holdActive(UUID playerId) {
+        Optional<GameInstance> match = this.match.game().instanceOf(playerId);
+        if (match.isPresent() && match.get().isHeadstartHeld(playerId)) {
+            return true;
+        }
+        return edge.respawn().hasPendingRespawn(playerId);
+    }
+
+    /**
+     * Returns a player whose disconnect grace expired: fully out of
+     * the game, so the live inventory wipes (held gear already dropped
+     * at the hold location on expiry) and the leave destination
+     * decides between spectating and the lobby. With nowhere to
+     * spectate they fall back to the lobby.
+     */
+    private void handleExpiredRejoin(Player player) {
+        this.match.game().stateCommands().resetPlayer(player);
+        int lobbyId = lobbyIdFor(player.getUniqueId());
+        if (LeaveDestination.forLobby(this.match.game().matchSettings(), lobbyId)
+                == LeaveDestination.SPECTATOR
+                && this.match.game().joinLeastTimeMatch(player)) {
+            return;
+        }
+        if (lobbyId >= 0) {
+            world.lobbyTeleporter().teleportToLobby(List.of(player), lobbyId);
+            world.lobbyTeleporter().setSpawnToLobbyQuiet(List.of(player), lobbyId);
+            this.match.lobbies().applyLobbyCollisions(player);
         }
     }
 

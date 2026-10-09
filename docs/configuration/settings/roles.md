@@ -34,15 +34,12 @@ settings:
     roles:
       reset-on-game-end:
         enabled: true
-      reset-on-leave:
-        enabled: true
 ```
 
 `reset-on-game-end` returns every queued hunter and speedrunner to
 `NONE` when a match finishes, so players re-queue for the next one.
-`reset-on-leave` resets leavers to `NONE`, deferred until the game
-ends when their lobby has a match running. `NONE` players keep their
-mode and wait in the lobby; use lobby queues to move them.
+`NONE` players keep their mode and wait in the lobby; use lobby
+queues to move them.
 
 ## Name Colors
 
@@ -76,6 +73,14 @@ settings:
 `SPECTATOR` keeps them at the match as a watcher; `LOBBY` sends them
 back to their lobby as `NONE`. See [Joining and
 Leaving](../../play/commands.md#joining-and-leaving-a-running-match).
+
+The same destination routes players whose disconnect grace expires:
+their held gear (headstart holds, respawn waits) drops where the hold
+began, and when they rejoin they arrive with an empty inventory,
+either spectating or back in the lobby. Rejoining inside the grace
+window keeps everything and resumes the hold. Held players always
+watch with a completely empty inventory; their gear returns when
+they spawn.
 
 ## Anti-Spawn-Camp
 

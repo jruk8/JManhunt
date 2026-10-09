@@ -65,7 +65,6 @@ class PlayerConnectionListenerAbandonTest {
         when(game.instanceOf(quitterId)).thenReturn(Optional.of(instance));
         Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
         PlayerSettings settings = new PlayerSettings();
-        settings.getRoles().getResetOnLeave().setEnabled(false);
         PlayerConnectionListener listener = new PlayerConnectionListener(
                 new PlayerConnectionListener.ConnectReads(players,
                         mock(FakeSpectatorService.class), mock(MessageService.class),
@@ -78,7 +77,7 @@ class PlayerConnectionListenerAbandonTest {
                 new PlayerConnectionListener.ConnectConfig(settings,
                         new MatchConfig.DisconnectHandling()),
                 new PlayerConnectionListener.ConnectEdge(plugin.roleTeams(),
-                        mock(TaskScheduler.class)));
+                        mock(TaskScheduler.class), mock(PlayerRespawnListener.class)));
         return new Fixture(listener, quitter, other, game, instance, quitterId, otherId);
     }
 

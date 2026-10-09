@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,7 +17,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.CraftingInventory;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryView;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -35,11 +44,27 @@ class FakeSpectatorServiceTest {
         PlayerStateStore players = new PlayerStateStore();
         Player watched = mock(Player.class);
         when(watched.getUniqueId()).thenReturn(UUID.randomUUID());
+        stubOnlineInventory(watched);
         Player viewer = mock(Player.class);
         when(viewer.getUniqueId()).thenReturn(UUID.randomUUID());
+        stubOnlineInventory(viewer);
         FakeSpectatorService fakes =
                 new FakeSpectatorService(tasks, players, () -> List.of(watched, viewer));
         return new Fixture(fakes, plugin, players, watched, viewer);
+    }
+
+    /** Online player with an empty live inventory, location, and open view. */
+    private static void stubOnlineInventory(Player player) {
+        when(player.isOnline()).thenReturn(true);
+        PlayerInventory inventory = mock(PlayerInventory.class);
+        when(inventory.getContents()).thenReturn(new ItemStack[36]);
+        when(inventory.getArmorContents()).thenReturn(new ItemStack[4]);
+        when(player.getInventory()).thenReturn(inventory);
+        InventoryView view = mock(InventoryView.class);
+        when(view.getTopInventory()).thenReturn(mock(Inventory.class));
+        when(player.getOpenInventory()).thenReturn(view);
+        World world = mock(World.class);
+        when(player.getLocation()).thenReturn(new Location(world, 1.0, 2.0, 3.0));
     }
 
     @Test
@@ -247,6 +272,7 @@ class FakeSpectatorServiceTest {
         Player watched = mock(Player.class);
         UUID watchedId = UUID.randomUUID();
         when(watched.getUniqueId()).thenReturn(watchedId);
+        stubOnlineInventory(watched);
         List<Player> online = new ArrayList<>(List.of(watched));
         FakeSpectatorService fakes = new FakeSpectatorService(tasks, players, () -> online);
         players.setRole(watched, Role.SPECTATOR);
@@ -380,5 +406,203 @@ class FakeSpectatorServiceTest {
         fixture.fakes().clearDanglingState(fixture.watched());
 
         verify(fixture.watched(), never()).removePotionEffect(PotionEffectType.INVISIBILITY);
+    }
+
+    @Test
+    void enableSnapshotsAndClearsInventory() {
+        Fixture fixture = fixture();
+        ItemStack[] contents = new ItemStack[36];
+        contents[0] = new ItemStack(Material.DIAMOND_SWORD);
+        when(fixture.watched().getInventory().getContents()).thenReturn(contents);
+
+        fixture.fakes().enable(fixture.watched());
+
+        assertTrue(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+        verify(fixture.watched().getInventory()).clear();
+        verify(fixture.watched().getInventory()).setArmorContents(
+                argThat(cleared -> cleared != null && cleared.length == 4));
+        verify(fixture.watched().getInventory()).setItemInOffHand(null);
+        verify(fixture.watched().getOpenInventory()).setCursor(null);
+    }
+
+    @Test
+    void enableSnapshotsCraftingGrid() {
+        Fixture fixture = fixture();
+        CraftingInventory crafting = mock(CraftingInventory.class);
+        ItemStack[] matrix = new ItemStack[4];
+        matrix[0] = new ItemStack(Material.OAK_PLANKS);
+        when(crafting.getMatrix()).thenReturn(matrix);
+        when(crafting.getResult()).thenReturn(new ItemStack(Material.CRAFTING_TABLE));
+        when(fixture.watched().getOpenInventory().getTopInventory()).thenReturn(crafting);
+        fixture.fakes().enable(fixture.watched());
+
+        verify(crafting).clear();
+
+        fixture.fakes().disable(fixture.watched());
+
+        verify(crafting).setMatrix(
+                argThat(restored -> restored[0] != null
+                        && restored[0].getType() == Material.OAK_PLANKS));
+        verify(crafting).setResult(argThat(item -> item != null && item.getType() == Material.CRAFTING_TABLE));
+    }
+
+    @Test
+    void secondEnableKeepsFirstSnapshot() {
+        Fixture fixture = fixture();
+        ItemStack[] contents = new ItemStack[36];
+        contents[0] = new ItemStack(Material.DIAMOND_SWORD);
+        when(fixture.watched().getInventory().getContents()).thenReturn(contents);
+        clearInvocations(fixture.watched().getInventory());
+
+        fixture.fakes().enable(fixture.watched());
+        fixture.fakes().enable(fixture.watched());
+        fixture.fakes().disable(fixture.watched());
+
+        verify(fixture.watched().getInventory(), times(1)).getContents();
+        verify(fixture.watched().getInventory()).setContents(
+                argThat(restored -> restored[0] != null
+                        && restored[0].getType() == Material.DIAMOND_SWORD));
+    }
+
+    @Test
+    void disableRestoresSnapshot() {
+        Fixture fixture = fixture();
+        PlayerInventory inventory = fixture.watched().getInventory();
+        ItemStack[] contents = new ItemStack[36];
+        contents[0] = new ItemStack(Material.DIAMOND_SWORD);
+        ItemStack[] armor = new ItemStack[4];
+        armor[3] = new ItemStack(Material.DIAMOND_HELMET);
+        when(inventory.getContents()).thenReturn(contents);
+        when(inventory.getArmorContents()).thenReturn(armor);
+        when(inventory.getItemInOffHand()).thenReturn(new ItemStack(Material.SHIELD));
+        when(fixture.watched().getOpenInventory().getCursor())
+                .thenReturn(new ItemStack(Material.DIRT));
+        fixture.fakes().enable(fixture.watched());
+
+        fixture.fakes().disable(fixture.watched());
+
+        verify(inventory).setContents(
+                argThat(restored -> restored[0] != null
+                        && restored[0].getType() == Material.DIAMOND_SWORD));
+        verify(inventory).setArmorContents(
+                argThat(restored -> restored[3] != null
+                        && restored[3].getType() == Material.DIAMOND_HELMET));
+        verify(inventory).setItemInOffHand(argThat(item -> item != null && item.getType() == Material.SHIELD));
+        verify(fixture.watched().getOpenInventory()).setCursor(
+                argThat(item -> item != null && item.getType() == Material.DIRT));
+        assertFalse(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+    }
+
+    @Test
+    void quitRestoresButRetainsSnapshot() {
+        Fixture fixture = fixture();
+        ItemStack[] contents = new ItemStack[36];
+        contents[0] = new ItemStack(Material.DIAMOND_SWORD);
+        when(fixture.watched().getInventory().getContents()).thenReturn(contents);
+        fixture.fakes().enable(fixture.watched());
+
+        fixture.fakes().handleQuit(fixture.watched());
+
+        assertFalse(fixture.fakes().isFakeSpectator(fixture.watched()));
+        assertTrue(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+        verify(fixture.watched().getInventory()).setContents(
+                argThat(restored -> restored[0] != null
+                        && restored[0].getType() == Material.DIAMOND_SWORD));
+    }
+
+    @Test
+    void quitOfNonFakeDiscardsStaleSnapshot() {
+        Fixture fixture = fixture();
+        fixture.fakes().enable(fixture.watched());
+        fixture.fakes().handleQuit(fixture.watched());
+        assertTrue(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+
+        fixture.fakes().handleQuit(fixture.watched());
+
+        assertFalse(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+    }
+
+    @Test
+    void offlineEnableIsRefused() {
+        Fixture fixture = fixture();
+        when(fixture.watched().isOnline()).thenReturn(false);
+
+        fixture.fakes().enable(fixture.watched());
+
+        assertFalse(fixture.fakes().isFakeSpectator(fixture.watched()));
+        assertFalse(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+        verify(fixture.watched(), never()).setGameMode(GameMode.ADVENTURE);
+    }
+
+    @Test
+    void offlineDisableDiscardsWithoutRestore() {
+        Fixture fixture = fixture();
+        fixture.fakes().enable(fixture.watched());
+        when(fixture.watched().isOnline()).thenReturn(false);
+
+        fixture.fakes().disable(fixture.watched());
+
+        assertFalse(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+        verify(fixture.watched().getInventory(), never()).setContents(any());
+    }
+
+    @Test
+    void restoreSnapshotHandsGearBackWithoutModeChange() {
+        Fixture fixture = fixture();
+        ItemStack[] contents = new ItemStack[36];
+        contents[0] = new ItemStack(Material.DIAMOND_SWORD);
+        when(fixture.watched().getInventory().getContents()).thenReturn(contents);
+        fixture.fakes().enable(fixture.watched());
+
+        fixture.fakes().restoreSnapshot(fixture.watched());
+
+        verify(fixture.watched().getInventory()).setContents(
+                argThat(restored -> restored[0] != null
+                        && restored[0].getType() == Material.DIAMOND_SWORD));
+        assertFalse(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+        assertTrue(fixture.fakes().isFakeSpectator(fixture.watched()));
+    }
+
+    @Test
+    void dropSnapshotDropsAtHoldLocation() {
+        Fixture fixture = fixture();
+        ItemStack[] contents = new ItemStack[36];
+        contents[0] = new ItemStack(Material.DIAMOND_SWORD);
+        when(fixture.watched().getInventory().getContents()).thenReturn(contents);
+        fixture.fakes().enable(fixture.watched());
+        World world = fixture.watched().getLocation().getWorld();
+
+        assertTrue(fixture.fakes().dropSnapshot(fixture.watched().getUniqueId()));
+
+        verify(world).dropItemNaturally(
+                argThat(at -> new Location(world, 1.0, 2.0, 3.0).equals(at)),
+                argThat(item -> item != null && item.getType() == Material.DIAMOND_SWORD));
+        assertFalse(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+    }
+
+    @Test
+    void dropSnapshotWithoutSnapshotReturnsFalse() {
+        Fixture fixture = fixture();
+
+        assertFalse(fixture.fakes().dropSnapshot(fixture.watched().getUniqueId()));
+    }
+
+    @Test
+    void sweepDiscardsOnlyListedSnapshots() {
+        Fixture fixture = fixture();
+        fixture.fakes().enable(fixture.watched());
+        fixture.fakes().enable(fixture.viewer());
+
+        fixture.fakes().sweepSnapshots(List.of(fixture.watched().getUniqueId()));
+
+        assertFalse(fixture.fakes().hasSnapshot(fixture.watched().getUniqueId()));
+        assertTrue(fixture.fakes().hasSnapshot(fixture.viewer().getUniqueId()));
+    }
+
+    @Test
+    void snapshotCheckIsNullSafe() {
+        Fixture fixture = fixture();
+
+        assertFalse(fixture.fakes().hasSnapshot(null));
     }
 }

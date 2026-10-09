@@ -11,10 +11,12 @@ import com.jruk8.jmanhunt.message.SpectatorMessages;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -31,13 +33,14 @@ import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
- * Spectator hotbar toolbar: inventory snapshots, layout buttons, match
- * swapping, player teleporting, and lock-on follow.
+ * Spectator hotbar toolbar: layout buttons, match swapping, player
+ * teleporting, and lock-on follow.
  *
  * <p>The toolbar deploys only for the SPECTATOR role on fake-spectator
- * enable: headstart holds, death watches, and NONE watchers keep their
- * inventories. Snapshots live in memory; quit always restores, and join
- * strips toolbar items left behind by a crash.
+ * enable, onto the inventory the fake-spectator snapshot already
+ * cleared. Gear snapshots live in FakeSpectatorService alone; this
+ * service only places and strips its tagged buttons. Quit restores
+ * through fake mode, and join strips toolbar items left by a crash.
  */
 public final class SpectatorToolbarService implements FakeSpectatorService.ModeListener {
 
@@ -57,10 +60,6 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         SNOWBALL,
         BACK,
         EMPTY
-    }
-
-    /** Snapshot of a spectator's real inventory while the toolbar is out. */
-    public record InventorySnapshot(ItemStack[] contents, ItemStack[] armor, ItemStack offhand) {
     }
 
     /**
@@ -96,7 +95,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     private final ToolbarTexts texts;
     private final ToolbarMatch match;
     private final NamespacedKey toolbarKey;
-    private final Map<UUID, InventorySnapshot> snapshots = new HashMap<>();
+    private final Set<UUID> deployed = new HashSet<>();
     private final Map<UUID, UUID> locks = new HashMap<>();
     private final Map<UUID, Long> lastSneaks = new HashMap<>();
     private final Map<UUID, ItemStack> previousHelmets = new HashMap<>();
@@ -155,7 +154,7 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
             placeHead(player);
             return;
         }
-        restore(player);
+        undeploy(player);
         clearLock(player.getUniqueId());
         removeHead(player);
     }
@@ -214,20 +213,19 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
 
     /**
      * Join recovery: with no live deployment, toolbar items in the
-     * inventory are crash leftovers and go, and any surviving snapshot
-     * restores.
+     * inventory are crash leftovers and go. Gear itself restores
+     * through FakeSpectatorService.
      */
     public void handleJoin(Player player) {
         if (isDeployed(player)) {
             return;
         }
         stripToolbarItems(player);
-        restore(player);
     }
 
     /** True when the toolbar is currently deployed for the player. */
     public boolean isDeployed(Player player) {
-        return player != null && snapshots.containsKey(player.getUniqueId());
+        return player != null && deployed.contains(player.getUniqueId());
     }
 
     /** True when the stack is a toolbar button. Null-safe. */
@@ -525,17 +523,11 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
     }
 
     private void deploy(Player player) {
-        if (snapshots.containsKey(player.getUniqueId())) {
+        if (!deployed.add(player.getUniqueId())) {
             return;
         }
         stripToolbarItems(player);
         PlayerInventory inventory = player.getInventory();
-        snapshots.put(player.getUniqueId(), new InventorySnapshot(
-                cloneAll(inventory.getContents()), cloneAll(inventory.getArmorContents()),
-                cloneOne(inventory.getItemInOffHand())));
-        inventory.clear();
-        inventory.setArmorContents(new ItemStack[4]);
-        inventory.setItemInOffHand(null);
         ToolbarButton[] buttons = layout(player);
         boolean snowball = snowballEnabled(player);
         for (int slot = 0; slot < buttons.length; slot++) {
@@ -549,16 +541,11 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         }
     }
 
-    private void restore(Player player) {
-        InventorySnapshot snapshot = snapshots.remove(player.getUniqueId());
-        if (snapshot == null) {
+    private void undeploy(Player player) {
+        if (!deployed.remove(player.getUniqueId())) {
             return;
         }
         stripToolbarItems(player);
-        PlayerInventory inventory = player.getInventory();
-        inventory.setContents(snapshot.contents());
-        inventory.setArmorContents(snapshot.armor());
-        inventory.setItemInOffHand(snapshot.offhand());
     }
 
     private void stripToolbarItems(Player player) {
@@ -647,15 +634,4 @@ public final class SpectatorToolbarService implements FakeSpectatorService.ModeL
         return item;
     }
 
-    private static ItemStack[] cloneAll(ItemStack[] items) {
-        ItemStack[] clones = new ItemStack[items.length];
-        for (int index = 0; index < items.length; index++) {
-            clones[index] = cloneOne(items[index]);
-        }
-        return clones;
-    }
-
-    private static ItemStack cloneOne(ItemStack item) {
-        return item == null ? null : item.clone();
-    }
 }

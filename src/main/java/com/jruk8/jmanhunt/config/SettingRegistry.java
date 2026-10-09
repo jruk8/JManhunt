@@ -553,7 +553,6 @@ public final class SettingRegistry {
 
     private static void addPlayerEntries(List<SettingDescriptor> entries) {
         entries.add(bool("settings.players.roles.reset-on-game-end.enabled", true));
-        entries.add(bool("settings.players.roles.reset-on-leave.enabled", true));
         entries.add(bool("settings.players.name-colors.enabled", true));
         entries.add(bool("settings.players.respawn.hunter.enabled", true));
         entries.add(intVal("settings.players.respawn.hunter.delay-seconds", 15, null, null));

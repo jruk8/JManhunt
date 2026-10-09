@@ -1,5 +1,7 @@
 package com.jruk8.jmanhunt.match;
 
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
+
 /**
  * Where a match leaver goes, from
  * {@code settings.match.game-leave.destination}.
@@ -14,5 +16,14 @@ public enum LeaveDestination {
             return LOBBY;
         }
         return SPECTATOR;
+    }
+
+    /**
+     * Single destination resolver: the configured destination for the
+     * lobby, SPECTATOR by default. Shared by voluntary leave,
+     * auto-leave, and expired-disconnect rejoins.
+     */
+    public static LeaveDestination forLobby(MatchSettingsFacade match, Integer lobby) {
+        return parse(match.gameLeaveDestination(lobby));
     }
 }

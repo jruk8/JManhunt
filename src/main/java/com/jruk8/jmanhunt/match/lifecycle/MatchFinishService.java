@@ -356,6 +356,11 @@ public final class MatchFinishService {
         clearIds.removeAll(transferred);
         services.stateCommands().untrackMatchExit(clearIds);
         services.playerStates().clearMatchFor(clearIds);
+        // Retained hold snapshots never survive the match: online
+        // members already restored through the end-phase disable, and
+        // offline retentions die here. Transferred spectators are
+        // excluded from clearIds and keep watching with theirs.
+        edge.fakes().sweepSnapshots(clearIds);
         services.compass().clearHotspotHistories(clearIds);
         services.stats().clearMatch(teardownId);
         services.flagStore().clearMatch(teardownId);

@@ -74,7 +74,6 @@ class PlayerConnectionListenerEliminationWipeTest {
         // Someone else stays online, isolating elimination from the abandon cancel.
         when(game.onlineActivePlayers(instance)).thenReturn(List.of(quitter, other));
         PlayerSettings settings = new PlayerSettings();
-        settings.getRoles().getResetOnLeave().setEnabled(false);
         PlayerConnectionListener listener = new PlayerConnectionListener(
                 new PlayerConnectionListener.ConnectReads(players,
                         mock(FakeSpectatorService.class), mock(MessageService.class),
@@ -87,7 +86,7 @@ class PlayerConnectionListenerEliminationWipeTest {
                 new PlayerConnectionListener.ConnectConfig(settings,
                         new MatchConfig.DisconnectHandling()),
                 new PlayerConnectionListener.ConnectEdge(mock(RoleTeamService.class),
-                        mock(TaskScheduler.class)));
+                        mock(TaskScheduler.class), mock(PlayerRespawnListener.class)));
         return new Fixture(listener, players, stateCommands, quitter, quitterId);
     }
 

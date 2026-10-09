@@ -42,10 +42,13 @@ public final class MatchDefaultsService {
         }
         List<String> rules = overrides.getStringList(lobbyId,
                 MatchConfig.GameRules.RULES_PATH);
+        // Fake mode unwinds first: disabling restores held snapshots,
+        // and the wipe below must clear the restored gear, not run
+        // before the restore hands it back.
+        applyDefaultGamemodes(phase, participants, lobbySpectators);
         if (wipes.endWipeEnabled(lobbyId)) {
             participants.forEach(wipes::resetPlayer);
         }
-        applyDefaultGamemodes(phase, participants, lobbySpectators);
         applyWorldRules(Bukkit.getWorlds(), phase, lastMatch, rules);
         if (MatchConfig.GameRules.isRuleEnabled(rules, "SET_DAYTIME")) {
             Bukkit.getWorlds().forEach(this::setDaytime);

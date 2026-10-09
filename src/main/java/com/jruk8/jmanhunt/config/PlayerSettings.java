@@ -66,14 +66,6 @@ public class PlayerSettings extends OkaeriConfig {
         })
         private Toggle resetOnGameEnd = new Toggle(true);
 
-        @CustomKey("reset-on-leave")
-        @Comment({
-                "When true, players are reset to NONE when they leave the server.",
-                "(only when no game is running, otherwise they are reset to NONE on game end)",
-                "Default: true"
-        })
-        private Toggle resetOnLeave = new Toggle(true);
-
     }
 
     /** Per-role respawn delay and lives. */

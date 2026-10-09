@@ -298,7 +298,7 @@ public final class GameManager implements MatchControl {
                 new PlayerConnectionListener.ConnectWorld(reads.worldEngine().teleportService(),
                         reads.worldEngine()),
                 new PlayerConnectionListener.ConnectConfig(players, handling),
-                new PlayerConnectionListener.ConnectEdge(edge.roleTeams(), edge.tasks()));
+                new PlayerConnectionListener.ConnectEdge(edge.roleTeams(), edge.tasks(), respawn));
     }
 
     /** Combat listener with the typed player section. */
