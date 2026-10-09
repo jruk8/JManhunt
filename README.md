@@ -2,7 +2,7 @@
 
 ![JManhunt banner](docs/assets/core/banner-1280x640.png)
 
-<h3>JManhunt is a deeply customizable plugin for 26.x Manhunts.</h3>
+<h3>JManhunt is an easy-to-use, highly customizable plugin for 26.x Manhunts.</h3>
 
 ### [Modrinth](https://modrinth.com/plugin/jmanhunt) · [Community Mods](https://discord.com/invite/hkWmCVmWDC) · [Wiki](https://jruk8.github.io/JManhunt/)
 
@@ -15,6 +15,12 @@
 ### **Test server**: `play.alttari.games`
 
 </div>
+
+# Quick Start 🗺️
+
+1. Run **`/manhunt`** and click the **green button**. (or `/manhunt setup` for guided setup)
+
+**That's it!** Classic Manhunts (including World Engine and parallel matches) in one click. 
 
 # Why Choose JManhunt?
 
@@ -44,18 +50,12 @@ Find these modifiers on our [**Discord**](https://discord.gg/hkWmCVmWDC) communi
 - **Also for serious deployment** » PostgreSQL stats, multiple game queues, per-lobby
   mod/setting overrides, disconnect handling, 280+ config settings, and team chat.
 
-# Get Started 🗺️
-
-1. Run **`/manhunt`** and click the **green button**.
-
-**That's it!** Performant World Engine and parallel matches, all in one click. Alternatively, run `/manhunt setup` for a more intermediate dialogue-based setup.
-
 ### Requirements
 
 - Server Software » [Paper](https://papermc.io/downloads/paper) **26.2+**
 - Java Version » Java **25**
 - Dependencies » **None**
-- Soft Deps » [PlaceholderAPI](https://modrinth.com/plugin/placeholderapi) and [Chunky](https://modrinth.com/plugin/chunky) (or similar), plus [LuckPerms](https://modrinth.com/plugin/luckperms) for the `jmh-role` context
+- Soft Deps » [PlaceholderAPI](https://modrinth.com/plugin/placeholderapi), [Chunky](https://modrinth.com/plugin/chunky) (or similar), and [LuckPerms](https://modrinth.com/plugin/luckperms) (for `jmh-role` context)
 
 ### Links
 
