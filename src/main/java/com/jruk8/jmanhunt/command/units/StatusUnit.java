@@ -28,11 +28,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /** The status verb: own roster, one roster, or every match. */
 public final class StatusUnit implements SubcommandUnit {
     public record StatusDeps(GameManager game, LobbyService lobbies, ConfigService config,
-            StatusRosterService roster, PlayerRespawnListener respawns) {
+            StatusRosterService roster, Supplier<PlayerRespawnListener> respawns) {
     }
 
     public record StatusTexts(ManhuntMessages manhunt, CommandMessages command,
@@ -43,7 +44,7 @@ public final class StatusUnit implements SubcommandUnit {
     private final LobbyService lobbies;
     private final ConfigService config;
     private final StatusRosterService roster;
-    private final PlayerRespawnListener respawns;
+    private final Supplier<PlayerRespawnListener> respawns;
     private final ManhuntMessages texts;
     private final CommandMessages commandTexts;
     private final CommandSupport support;
@@ -162,7 +163,7 @@ public final class StatusUnit implements SubcommandUnit {
     /** The four role blocks plus the spectator roll call, shared by both rosters. */
     private void sendMatchRoleBlocks(CommandSender sender, List<Player> players,
             List<GameInstance.DeadPlayer> dead) {
-        Predicate<UUID> respawning = StatusRosterService.respawning(respawns);
+        Predicate<UUID> respawning = StatusRosterService.respawning(respawns.get());
         roster.sendRoleSection(sender, players, Role.SPEEDRUNNER, texts.getSpeedrunnersHeader(),
                 dead, respawning);
         roster.sendRoleSection(sender, players, Role.HUNTER, texts.getHuntersHeader(), dead,

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * Start-of-match announcements: per-role chat plus titles plus sounds,
@@ -29,7 +30,7 @@ public final class MatchAnnounceService {
 
     /** Roster state plus respawn reads. */
     public record AnnounceState(PlayerStateStore playerStates, MatchStore store,
-            StatusRosterService roster, PlayerRespawnListener respawnListener) {
+            StatusRosterService roster, Supplier<PlayerRespawnListener> respawnListener) {
     }
 
     private final PlayersSettingsFacade playerSettings;
@@ -118,7 +119,7 @@ public final class MatchAnnounceService {
      * exactly like status output.
      */
     public void showStatusToInstance(GameInstance instance, List<Player> players) {
-        Predicate<UUID> respawning = StatusRosterService.respawning(state.respawnListener());
+        Predicate<UUID> respawning = StatusRosterService.respawning(state.respawnListener().get());
         for (Player recipient : state.store().onlineAssignedPlayers(instance)) {
             texts.messages().messageRaw(recipient, texts.manhunt().getStatusHeader(), Map.of("status", "ACTIVE"));
             state.roster().sendRoleSection(recipient, players, Role.SPEEDRUNNER,

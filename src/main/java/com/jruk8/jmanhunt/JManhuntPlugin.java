@@ -262,7 +262,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
                 new GameManager.GameTexts(messages, gameTexts.getManhunt(), gameTexts.getGame(),
                         gameTexts.getWincon(), sounds),
                 new GameManager.GameEdge(engineState, fakeSpectators, logger, overrideService, placeholderValues,
-                        respawnListener, roleTeams, spawnCamp, lobbyConfig(), this, this::configRoot));
+                        this::respawnListener, roleTeams, spawnCamp, lobbyConfig(), this, this::configRoot));
         game.loadCrashCleanup();
         compass.setGameManager(game);
         worldEngine.setMatchRunningSupplier(game::isActive);

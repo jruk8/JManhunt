@@ -81,7 +81,7 @@ public final class GameManager implements MatchControl {
     /** Plugin-owned edges, narrowed. */
     public record GameEdge(EngineStateRepository engineStates, FakeSpectatorService fakes,
             JManhuntLogger log, OverrideService overrides, JManhuntPlaceholders placeholders,
-            PlayerRespawnListener respawn, RoleTeamService roleTeams,
+            Supplier<PlayerRespawnListener> respawn, RoleTeamService roleTeams,
             SpawnCampService spawnCamp, LobbyConfig lobbyConfig, TaskScheduler tasks,
             Supplier<JManhuntConfig> configRoot) {
     }

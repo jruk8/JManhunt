@@ -149,7 +149,7 @@ public final class ManhuntCommand implements CommandExecutor, TabCompleter {
         debugUnit = new DebugUnit(debugService, messages.manhunt(), support);
         statusUnit = new StatusUnit(
                 new StatusUnit.StatusDeps(game, lobbies, config, roster,
-                        plugin.respawnListener()),
+                        plugin::respawnListener),
                 new StatusUnit.StatusTexts(messages.manhunt(), messages.command(), support));
         gameUnit = new GameUnit(
                 new GameUnit.GameDeps(game, playerStates, confirms),

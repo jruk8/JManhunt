@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.GameMessages;
@@ -101,6 +103,22 @@ public final class PlayerRespawnListener implements Listener {
      */
     public static int effectiveRespawnDelay(boolean enabled, int delaySeconds) {
         return enabled && delaySeconds > 0 ? delaySeconds : 0;
+    }
+
+    /**
+     * Schedules a join hold through a lazily resolved listener. A null
+     * listener (wiring not finished yet) skips with one log line and never
+     * throws, so mid-match joins stay safe during startup ordering.
+     */
+    public static void scheduleHold(Supplier<PlayerRespawnListener> respawn, Player player,
+            GameInstance instance, int waitSeconds, Consumer<String> skipLog) {
+        PlayerRespawnListener listener = respawn.get();
+        if (listener == null) {
+            skipLog.accept("Skipping join hold for " + player.getName()
+                    + ": respawn listener not wired yet.");
+            return;
+        }
+        listener.scheduleJoinHold(player, instance, waitSeconds);
     }
 
     /**

@@ -44,6 +44,7 @@ import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
@@ -80,7 +81,7 @@ public final class MatchStartService {
 
     /** Fakes, role teams, respawn listener, sounds, and scheduler. */
     public record StartEdge(FakeSpectatorService fakes, RoleTeamService roleTeams,
-            PlayerRespawnListener respawn, SoundService sounds, TaskScheduler tasks) {
+            Supplier<PlayerRespawnListener> respawn, SoundService sounds, TaskScheduler tasks) {
     }
 
     /** Message bus, game/manhunt texts, and match messaging. */
@@ -663,7 +664,8 @@ public final class MatchStartService {
         int wait = joinWaitSeconds(target, headstartEnabled, headstartDelay,
                 respawnEnabled, respawnDelay);
         if (wait > 0) {
-            edge.respawn().scheduleJoinHold(player, instance, wait);
+            PlayerRespawnListener.scheduleHold(edge.respawn(), player, instance, wait,
+                    reads.log()::fine);
         }
     }
 
@@ -709,19 +711,6 @@ public final class MatchStartService {
         player.setRespawnLocation(spawn, true);
     }
 
-    /**
-     * Quick-starts a match by assigning eligible players of one lobby to
-     * teams and immediately starting the game, bypassing the autostart
-     * system. Queue caps never apply and NONE players always join the
-     * convertible pool.
-     *
-     * @param speedrunnerPercent the percentage of convertible players that
-     *                           should become speedrunners (0-100), or -1 for
-     *                           default (keep teams, converting only what is
-     *                           missing to start)
-     * @param lobbyId the lobby whose members form the convertible pool
-     * @return whether the match started
-     */
     /**
      * Quick-starts a match by assigning eligible players of one lobby to
      * teams and immediately starting the game, bypassing the autostart
