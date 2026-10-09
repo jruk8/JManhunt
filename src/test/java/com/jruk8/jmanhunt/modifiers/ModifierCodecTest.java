@@ -41,6 +41,17 @@ class ModifierCodecTest {
     }
 
     @Test
+    void exportForcesEnabledFalse() throws Exception {
+        ModifierEntry entry = namedEntry("Loud");
+        entry.setEnabled(true);
+
+        String payload = ModifierCodec.exportModifier("loud", entry);
+
+        assertTrue(framedJson(payload).contains("\"enabled\":false"));
+        assertTrue(entry.isEnabled());
+    }
+
+    @Test
     void rawEnvelopeDecodes() {
         String json = "{\"type\":\"preset\",\"id\":\"pack\",\"data\":{\"meta\":{\"name\":\"Pack\","
                 + "\"item\":\"CHEST\"},\"modifiers\":[\"a\"]}}";

@@ -128,7 +128,8 @@ public final class ModifierCodec {
 
     private static JsonObject modifierData(ModifierEntry entry) {
         JsonObject data = new JsonObject();
-        data.addProperty("enabled", entry.isEnabled());
+        // Exports always carry disabled: the entry itself is untouched.
+        data.addProperty("enabled", false);
         ModifierMeta meta = entry.getMeta();
         JsonObject written = new JsonObject();
         written.addProperty("name",
