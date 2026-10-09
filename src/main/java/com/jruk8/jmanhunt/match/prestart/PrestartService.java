@@ -118,25 +118,28 @@ public final class PrestartService {
                 Map.of("time", DurationFormat.format(state.remaining()),
                         "role", messages.roleName(held)));
         services.countdowns().start(key, state.remaining(),
-                remaining -> tickHeadstart(instance, role, state, remaining),
+                remaining -> tickHeadstart(instance, key, role, state, remaining),
                 () -> endHeadstart(instance, role));
     }
 
     /** One headstart tick: drop dead matches, else announce ladder marks. */
-    private void tickHeadstart(GameInstance instance, Role role, HeadstartState state, int remaining) {
+    private void tickHeadstart(GameInstance instance, HeadstartKey key, Role role,
+            HeadstartState state, int remaining) {
         if (services.store().instance(instance.matchId()).orElse(null) != instance
                 || !instance.active()) {
             services.countdowns().cancel(new HeadstartKey(instance.matchId(), role));
             return;
         }
         state.setRemaining(remaining);
-        if (CountdownService.onLadder(remaining)) {
-            messaging.sendToInstance(instance, manhunt.getHeadstartEnding(),
+        boolean mark = services.countdowns().pollMark(key, remaining);
+        if (mark) {
+            messaging.sendToInstanceExcept(instance, manhunt.getHeadstartEnding(),
                     Map.of("time", DurationFormat.format(remaining),
-                            "role", messages.roleName(role.opposite())));
+                            "role", messages.roleName(role.opposite())),
+                    services.limbo().waitingIds(instance));
             messaging.playInstanceSound(instance, "game.autostart-countdown");
         }
-        services.limbo().limboTick(instance, remaining);
+        services.limbo().limboTick(instance, remaining, mark);
     }
 
     /**
@@ -192,10 +195,8 @@ public final class PrestartService {
         }
     }
 
-    /** Finite must-hit wait: ladder ticks with expiry as the countdown end. */
+    /** Finite must-hit wait: the initial mark owns the opener, expiry ends it. */
     private void scheduleFiniteWaitingCountdown(GameInstance instance, int configured) {
-        messaging.sendToInstance(instance, manhunt.getWaitingForDamage(),
-                Map.of("time", DurationFormat.format(configured)));
         MustHitKey key = new MustHitKey(instance.matchId());
         services.countdowns().start(key, configured,
                 remaining -> tickWaitingCountdown(instance, key, remaining),
@@ -209,7 +210,7 @@ public final class PrestartService {
             services.countdowns().cancel(key);
             return;
         }
-        if (CountdownService.onLadder(remaining)) {
+        if (services.countdowns().pollMark(key, remaining)) {
             messaging.sendToInstance(instance, manhunt.getWaitingForDamage(),
                     Map.of("time", DurationFormat.format(remaining)));
         }

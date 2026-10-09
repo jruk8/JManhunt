@@ -103,6 +103,7 @@ public final class GameManager implements MatchControl {
     private final TagCooldownStore cooldownStore;
     private final CountdownService countdowns;
     private final LimboFeedbackService limbo;
+    private final DeathMessageService deaths;
     private final WinConditionTextService winConditions;
     private final MatchSettingsFacade matchSettings;
     private final PlayersSettingsFacade playersSettings;
@@ -137,10 +138,8 @@ public final class GameManager implements MatchControl {
                 new MatchMessaging.MessagingTexts(texts.messages(), texts.manhunt(),
                         texts.sounds()),
                 root.getSettings().getServer(), store, reads.lobbies());
-        this.limbo = new LimboFeedbackService(
-                new LimboFeedbackService.LimboReads(store, services.playerStates(), matchSettings,
-                        cooldownStore),
-                new LimboFeedbackService.LimboTexts(texts.messages(), texts.manhunt(), messaging));
+        this.limbo = newLimbo();
+        this.deaths = newDeaths(players);
         this.timeLimits = new TimeLimitService(
                 new TimeLimitService.TimeEdge(edge.log(), edge.tasks()), reads.winConditionEngine(),
                 store, new TimeLimitService.TimeTexts(messaging, texts.gameTexts()), this);
@@ -153,6 +152,19 @@ public final class GameManager implements MatchControl {
         this.winConditions = new WinConditionTextService(texts.messages(), texts.wincon(),
                 players.getRespawn(), reads.winConditionEngine());
         subscribeSettingChanges();
+    }
+
+    private LimboFeedbackService newLimbo() {
+        return new LimboFeedbackService(
+                new LimboFeedbackService.LimboReads(store, services.playerStates(), matchSettings,
+                        cooldownStore),
+                new LimboFeedbackService.LimboTexts(texts.messages(), texts.manhunt(), messaging));
+    }
+
+    private DeathMessageService newDeaths(PlayerSettings players) {
+        return new DeathMessageService(
+                new DeathMessageService.DeathTexts(messaging, texts.gameTexts()),
+                services.playerStates(), () -> players.getFriendlyFire().isBroadcastKills());
     }
 
     private PrestartService newPrestartService(
@@ -269,6 +281,16 @@ public final class GameManager implements MatchControl {
     /** Limbo feedback for players waiting to spawn. */
     public LimboFeedbackService limbo() {
         return limbo;
+    }
+
+    /** Single-line death announcements. */
+    public DeathMessageService deaths() {
+        return deaths;
+    }
+
+    /** Places one entrant on a match-origin spawn. */
+    public void scatterEntrantToSpawn(GameInstance instance, Player player) {
+        matchStart.scatterEntrantToSpawn(instance, player);
     }
 
     public MatchSettingsFacade matchSettings() {

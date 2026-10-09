@@ -66,12 +66,14 @@ public final class LimboFeedbackService {
     }
 
     /**
-     * One limbo tick for the match: ladder marks send every waiting
-     * player their personal return note plus the solo broadcast when
-     * exactly one waits; two or more waiting broadcast on the multi
-     * interval through the cooldown store.
+     * One limbo tick for the match: the source countdown passes its
+     * mark decision, so marks send every waiting player their personal
+     * return note plus the solo broadcast when exactly one waits; two
+     * or more waiting broadcast on the multi interval through the
+     * cooldown store. Waiting players hear only their personal note:
+     * broadcasts skip them (sounds still play match-wide as the cue).
      */
-    public void limboTick(GameInstance instance, int remaining) {
+    public void limboTick(GameInstance instance, int remaining, boolean mark) {
         if (!instance.active()) {
             return;
         }
@@ -79,7 +81,7 @@ public final class LimboFeedbackService {
         if (waiting.isEmpty()) {
             return;
         }
-        if (CountdownService.onLadder(remaining)) {
+        if (mark) {
             String time = DurationFormat.format(remaining);
             for (Player player : waiting) {
                 texts.messages().sendToRaw(List.of(player), texts.manhunt().getLimboSelf(),
@@ -87,19 +89,31 @@ public final class LimboFeedbackService {
             }
             if (waiting.size() == 1) {
                 Player player = waiting.get(0);
-                texts.messaging().sendToInstance(instance, texts.manhunt().getLimboSingle(),
-                        Map.of("player", player.getName(), "time", time));
+                texts.messaging().sendToInstanceExcept(instance, texts.manhunt().getLimboSingle(),
+                        Map.of("rolecolor",
+                                texts.messages().roleColor(reads.states().role(player)),
+                                "player", player.getName(), "time", time),
+                        Set.of(player.getUniqueId()));
                 texts.messaging().playInstanceSound(instance, "game.autostart-countdown");
             }
         }
         if (waiting.size() >= 2) {
             int interval = reads.match().limboMultiBroadcastInterval(instance.originLobbyId());
             if (reads.cooldowns().tryAcquire(instance.matchId(), MULTI_KEY, interval)) {
-                texts.messaging().sendToInstance(instance, texts.manhunt().getLimboMulti(),
-                        Map.of("total", Integer.toString(waiting.size())));
+                texts.messaging().sendToInstanceExcept(instance, texts.manhunt().getLimboMulti(),
+                        Map.of("total", Integer.toString(waiting.size())), waitingIds(waiting));
                 texts.messaging().playInstanceSound(instance, "game.autostart-countdown");
             }
         }
+    }
+
+    /** Ids of every player waiting to spawn, for broadcast exclusion. */
+    public Set<UUID> waitingIds(GameInstance instance) {
+        Set<UUID> held = new HashSet<>();
+        held.addAll(instance.headstart(Role.HUNTER).returnPoints().keySet());
+        held.addAll(instance.headstart(Role.SPEEDRUNNER).returnPoints().keySet());
+        held.addAll(pendingHolds);
+        return held;
     }
 
     /** Announces one player's spawn. */
@@ -109,12 +123,18 @@ public final class LimboFeedbackService {
                         "player", player.getName()));
     }
 
+    /** Ids of the given waiting players, for broadcast exclusion. */
+    private static Set<UUID> waitingIds(List<Player> waiting) {
+        Set<UUID> ids = new HashSet<>();
+        for (Player player : waiting) {
+            ids.add(player.getUniqueId());
+        }
+        return ids;
+    }
+
     /** Online, active players waiting to spawn: headstart-held plus holds. */
     private List<Player> waitingPlayers(GameInstance instance) {
-        Set<UUID> held = new HashSet<>();
-        held.addAll(instance.headstart(Role.HUNTER).returnPoints().keySet());
-        held.addAll(instance.headstart(Role.SPEEDRUNNER).returnPoints().keySet());
-        held.addAll(pendingHolds);
+        Set<UUID> held = waitingIds(instance);
         List<Player> waiting = new ArrayList<>();
         for (Player player : reads.store().onlineAssignedPlayers(instance)) {
             if (held.contains(player.getUniqueId()) && instance.isActive(player.getUniqueId())) {

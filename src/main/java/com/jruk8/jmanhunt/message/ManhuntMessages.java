@@ -193,7 +193,7 @@ public class ManhuntMessages extends OkaeriConfig {
     private String limboSelf = "{prefix}<yellow>You will return in <white>{time}</white>.";
 
     @CustomKey("limbo-single")
-    private String limboSingle = "{prefix}<yellow><white>{player}</white> returns in "
+    private String limboSingle = "{prefix}{rolecolor}{player}<yellow> returns in "
             + "<white>{time}</white>.";
 
     @CustomKey("limbo-multi")

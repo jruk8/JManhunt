@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.GameMessages;
@@ -40,9 +39,6 @@ import com.jruk8.jmanhunt.match.WinConditionEngine;
 
 /** Deaths, damage, kills, and item/advancement win triggers. */
 public final class PlayerCombatListener implements Listener {
-    /** Mocking friendly fire lines the broadcast picks between. */
-    static final int FRIENDLY_FIRE_LINES = 3;
-
     /** Role, visibility, player settings, and death text. */
     public record CombatReads(PlayerStateStore states, FakeSpectatorService fakes,
             PlayerSettings players, GameMessages gameTexts) {
@@ -111,14 +107,11 @@ public final class PlayerCombatListener implements Listener {
             handleHunterDeath(player, instance, quiet);
         }
         world.compass().clearLocksOnTargetDeath(player.getUniqueId());
-        if (!quiet) {
-            broadcastFriendlyFireKill(instance, player);
-        }
         // Next tick: state is final, and compass items are safe to touch
         // outside the death event. Unlocked picks re-resolve at once.
         tasks.run(() -> world.compass().refreshInstance(instance));
         // Scripts run last: a converter like Infection must not rewrite
-        // roles before the friendly-fire check reads them.
+        // roles before the death service reads them.
         if (role.isParticipant()) {
             fireDeathTrigger(player, instance, role);
         }
@@ -139,38 +132,6 @@ public final class PlayerCombatListener implements Listener {
      */
     static List<String> deathArgs(String deadName, String killerName, Role formerRole) {
         return List.of(deadName, killerName, formerRole.name());
-    }
-
-    /** Mocking lobby broadcast for same-team kills, when enabled. */
-    private void broadcastFriendlyFireKill(GameInstance instance, Player victim) {
-        if (!(victim.getKiller() instanceof Player killer)) {
-            return;
-        }
-        if (!isFriendlyFireKill(reads.states().role(killer), reads.states().role(victim),
-                killer.getUniqueId().equals(victim.getUniqueId()))) {
-            return;
-        }
-        if (!reads.players().getFriendlyFire().isBroadcastKills()) {
-            return;
-        }
-        int roll = ThreadLocalRandom.current().nextInt(FRIENDLY_FIRE_LINES);
-        this.match.game().messaging().sendToInstance(instance,
-                friendlyFireTemplate(reads.gameTexts(), roll),
-                Map.of("dead", victim.getName(), "killer", killer.getName()));
-    }
-
-    /** True for a kill of a teammate: same participant role, no suicides. Pure for tests. */
-    static boolean isFriendlyFireKill(Role killerRole, Role victimRole, boolean selfKill) {
-        return !selfKill && killerRole.isParticipant() && killerRole == victimRole;
-    }
-
-    /** Friendly fire line key for a roll in [0, 3). Pure for tests. */
-    static String friendlyFireTemplate(GameMessages texts, int roll) {
-        return switch (Math.floorMod(roll, FRIENDLY_FIRE_LINES)) {
-            case 0 -> texts.getFriendlyFire1();
-            case 1 -> texts.getFriendlyFire2();
-            default -> texts.getFriendlyFire3();
-        };
     }
 
     private void handleSpeedrunnerDeath(Player player, GameInstance instance, boolean quiet) {
@@ -201,9 +162,7 @@ public final class PlayerCombatListener implements Listener {
         // A speedrunner finishing the hunter earns the final kill,
         // mirroring the speedrunner elimination.
         creditHunterFinalKill(matchId, player);
-        if (!quiet) {
-            this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getHunterOutOfLives(), Map.of());
-        }
+        this.match.game().deaths().announceDeath(instance, player, Role.HUNTER, true, 0, quiet);
         instance.recordDeath(player.getUniqueId(), player.getName(), Role.HUNTER);
         reads.states().setRole(player.getUniqueId(), Role.SPECTATOR);
         edge.roleTeams().sync(player);
@@ -242,19 +201,13 @@ public final class PlayerCombatListener implements Listener {
             reads.fakes().enable(player);
             world.compass().removeCompasses(player);
         });
-        if (!quiet) {
-            this.match.game().messaging().sendToInstance(instance,
-                    reads.gameTexts().getSpeedrunnerOutOfLives(), Map.of());
-        }
-        // When nobody remains the win line follows, so no last-died
-        // line is sent: the win is the announcement.
+        // One death, one line: the service picks the teamkill, the
+        // out-of-lives, or the died line. When nobody remains the win
+        // line follows as the announcement.
         int playerCount = this.match.game().activeRunnerCount(instance);
-        if (playerCount > 0) {
-            if (!quiet) {
-                this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getSpeedrunnerDeath(),
-                        Map.of("value", Integer.toString(playerCount)));
-            }
-        } else {
+        this.match.game().deaths().announceDeath(instance, player, Role.SPEEDRUNNER, true,
+                playerCount, quiet);
+        if (playerCount <= 0) {
             this.match.game().finishLater(instance, Role.HUNTER, "All speedrunners eliminated");
         }
         this.match.game().messaging().playInstanceSound(instance, "game.speedrunner-death");
@@ -263,12 +216,10 @@ public final class PlayerCombatListener implements Listener {
     /** Announces a survived speedrunner death and schedules the world.respawn(). */
     private void surviveRunnerDeath(Player player, GameInstance instance, boolean quiet,
             long matchId, int delaySeconds) {
-        if (!quiet) {
-            // The dying runner is already flagged not-alive but will respawn, so count them.
-            int remaining = this.match.game().activeRunnerCount(instance) + 1;
-            this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getSpeedrunnerDeath(),
-                    Map.of("value", Integer.toString(remaining)));
-        }
+        // The dying runner is already flagged not-alive but will respawn, so count them.
+        int remaining = this.match.game().activeRunnerCount(instance) + 1;
+        this.match.game().deaths().announceDeath(instance, player, Role.SPEEDRUNNER, false,
+                remaining, quiet);
         this.match.game().messaging().playInstanceSound(instance, "game.speedrunner-death");
         world.respawn().scheduleRespawn(player, instance, quiet, delaySeconds,
                 reads.gameTexts().getSpeedrunnerRespawnScheduled(), matchId);
@@ -303,9 +254,7 @@ public final class PlayerCombatListener implements Listener {
                 return;
             }
         }
-        if (!quiet) {
-            this.match.game().messaging().sendToInstance(instance, reads.gameTexts().getHunterDeath(), Map.of());
-        }
+        this.match.game().deaths().announceDeath(instance, player, Role.HUNTER, false, 0, quiet);
         this.match.game().messaging().playInstanceSound(instance, "game.hunter-death");
         if (lives == -1 && !quiet && !instance.hunterUnlimitedAnnounced()) {
             instance.setHunterUnlimitedAnnounced(true);

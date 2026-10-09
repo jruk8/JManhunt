@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -163,5 +165,32 @@ class JoinSpawnTest {
                 Role.HUNTER));
 
         verify(fixture.player(), never()).setInvulnerable(false);
+    }
+
+    @Test
+    void switchIntoGameScattersToStartCenter() {
+        Fixture fixture = fixture();
+        fixture.players().setRole(fixture.player(), Role.SPECTATOR);
+
+        assertTrue(fixture.starts().switchPlayerRole(fixture.instance(), fixture.player(),
+                Role.HUNTER));
+
+        verify(fixture.player(), atLeastOnce()).teleport(argThat((Location spawn) ->
+                spawn != null && spawn.getWorld() == fixture.world()
+                        && Math.abs(spawn.getX() - 100.5) <= 5.0
+                        && Math.abs(spawn.getZ() - 200.5) <= 5.0));
+        verify(fixture.player()).setRespawnLocation(fixture.center(), true);
+    }
+
+    @Test
+    void switchIntoGameWhileDeadKeepsPosition() {
+        Fixture fixture = fixture();
+        fixture.players().setRole(fixture.player(), Role.SPECTATOR);
+        when(fixture.player().isDead()).thenReturn(true);
+
+        assertTrue(fixture.starts().switchPlayerRole(fixture.instance(), fixture.player(),
+                Role.HUNTER));
+
+        verify(fixture.player(), never()).teleport(any(Location.class));
     }
 }

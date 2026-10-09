@@ -24,6 +24,7 @@ import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
 import com.jruk8.jmanhunt.lobby.LobbyService;
+import com.jruk8.jmanhunt.match.DeathMessageService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
@@ -69,6 +70,15 @@ class PlayerCombatListenerDeathTest {
         return tasks;
     }
 
+    private static GameManager stubGame(GameStateCommandManager commands) {
+        GameManager game = mock(GameManager.class);
+        when(game.stateCommands()).thenReturn(commands);
+        when(game.flagStore()).thenReturn(mock(FlagStore.class));
+        when(game.messaging()).thenReturn(mock(MatchMessaging.class));
+        when(game.deaths()).thenReturn(mock(DeathMessageService.class));
+        return game;
+    }
+
     private static Fixture fixture(Role role, int lives, boolean begun) {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
         when(plugin.spawnCamp()).thenReturn(mock(SpawnCampService.class));
@@ -76,11 +86,8 @@ class PlayerCombatListenerDeathTest {
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
         when(plugin.fakeSpectators()).thenReturn(fakes);
         PlayerStateStore players = new PlayerStateStore();
-        GameManager game = mock(GameManager.class);
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
-        when(game.stateCommands()).thenReturn(commands);
-        when(game.flagStore()).thenReturn(mock(FlagStore.class));
-        when(game.messaging()).thenReturn(mock(MatchMessaging.class));
+        GameManager game = stubGame(commands);
         StatsManager stats = mock(StatsManager.class);
         when(stats.getOrCreate(anyLong(), any(UUID.class))).thenAnswer(invocation -> new Stats());
         CompassManager compass = mock(CompassManager.class);

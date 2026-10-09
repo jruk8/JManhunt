@@ -19,13 +19,14 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
 
-/** Limbo census, ladder-gated solo notes, and cooldown-gated multi notes. */
+/** Limbo census, mark-gated solo notes, and cooldown-gated multi notes. */
 class LimboFeedbackServiceTest {
 
     private record Fixture(LimboFeedbackService limbo, GameInstance instance, MatchStore store,
@@ -74,29 +75,33 @@ class LimboFeedbackServiceTest {
         Fixture fixture = fixture(List.of(player));
         fixture.hunterHeld().returnPoints().put(player.getUniqueId(), mock(Location.class));
 
-        fixture.limbo().limboTick(fixture.instance(), 15);
+        fixture.limbo().limboTick(fixture.instance(), 15, true);
+        UUID playerId = player.getUniqueId();
 
         verify(fixture.messages()).sendToRaw(eq(List.of(player)),
                 eq(fixture.manhunt().getLimboSelf()), eq(Map.of("time", "15s")));
-        verify(fixture.messaging()).sendToInstance(eq(fixture.instance()),
+        verify(fixture.messaging()).sendToInstanceExcept(eq(fixture.instance()),
                 eq(fixture.manhunt().getLimboSingle()),
-                eq(Map.of("player", "Alex", "time", "15s")));
+                eq(Map.of("rolecolor", "<red>", "player", "Alex", "time", "15s")),
+                eq(Set.of(playerId)));
+        verify(fixture.messaging(), never()).sendToInstance(any(), any(), any());
         verify(fixture.messaging()).playInstanceSound(fixture.instance(),
                 "game.autostart-countdown");
-        verify(fixture.messaging(), never()).sendToInstance(eq(fixture.instance()),
-                eq(fixture.manhunt().getLimboMulti()), any());
+        verify(fixture.messaging(), never()).sendToInstanceExcept(eq(fixture.instance()),
+                eq(fixture.manhunt().getLimboMulti()), any(), any());
     }
 
     @Test
-    void offLadderTickStaysSilentForSolo() {
+    void nonMarkTickStaysSilentForSolo() {
         Player player = namedPlayer("Alex");
         Fixture fixture = fixture(List.of(player));
         fixture.limbo().trackHold(player.getUniqueId());
 
-        fixture.limbo().limboTick(fixture.instance(), 14);
+        fixture.limbo().limboTick(fixture.instance(), 14, false);
 
         verify(fixture.messages(), never()).sendToRaw(any(), any(), any());
         verify(fixture.messaging(), never()).sendToInstance(any(), any(), any());
+        verify(fixture.messaging(), never()).sendToInstanceExcept(any(), any(), any(), any());
         verify(fixture.messaging(), never()).playInstanceSound(any(), any());
     }
 
@@ -105,35 +110,41 @@ class LimboFeedbackServiceTest {
         Player first = namedPlayer("Alex");
         Player second = namedPlayer("Bo");
         Fixture fixture = fixture(List.of(first, second));
-        fixture.limbo().trackHold(first.getUniqueId());
-        fixture.limbo().trackHold(second.getUniqueId());
+        UUID firstId = first.getUniqueId();
+        UUID secondId = second.getUniqueId();
+        fixture.limbo().trackHold(firstId);
+        fixture.limbo().trackHold(secondId);
 
-        fixture.limbo().limboTick(fixture.instance(), 14);
-        fixture.limbo().limboTick(fixture.instance(), 14);
-        verify(fixture.messaging(), times(1)).sendToInstance(eq(fixture.instance()),
-                eq(fixture.manhunt().getLimboMulti()), eq(Map.of("total", "2")));
+        fixture.limbo().limboTick(fixture.instance(), 14, false);
+        fixture.limbo().limboTick(fixture.instance(), 14, false);
+        verify(fixture.messaging(), times(1)).sendToInstanceExcept(eq(fixture.instance()),
+                eq(fixture.manhunt().getLimboMulti()), eq(Map.of("total", "2")),
+                eq(Set.of(firstId, secondId)));
 
         fixture.clock().addAndGet(20_000L);
-        fixture.limbo().limboTick(fixture.instance(), 14);
-        verify(fixture.messaging(), times(2)).sendToInstance(eq(fixture.instance()),
-                eq(fixture.manhunt().getLimboMulti()), eq(Map.of("total", "2")));
+        fixture.limbo().limboTick(fixture.instance(), 14, false);
+        verify(fixture.messaging(), times(2)).sendToInstanceExcept(eq(fixture.instance()),
+                eq(fixture.manhunt().getLimboMulti()), eq(Map.of("total", "2")),
+                eq(Set.of(firstId, secondId)));
     }
 
     @Test
     void censusSkipsOfflineAndInactive() {
         Player online = namedPlayer("Alex");
         Fixture fixture = fixture(List.of(online));
+        UUID onlineId = online.getUniqueId();
         when(fixture.instance().isActive(any())).thenAnswer(
-                invocation -> invocation.getArgument(0).equals(online.getUniqueId()));
-        fixture.hunterHeld().returnPoints().put(online.getUniqueId(), mock(Location.class));
+                invocation -> invocation.getArgument(0).equals(onlineId));
+        fixture.hunterHeld().returnPoints().put(onlineId, mock(Location.class));
         fixture.hunterHeld().returnPoints().put(UUID.randomUUID(), mock(Location.class));
         fixture.limbo().trackHold(UUID.randomUUID());
 
-        fixture.limbo().limboTick(fixture.instance(), 10);
+        fixture.limbo().limboTick(fixture.instance(), 10, true);
 
-        verify(fixture.messaging()).sendToInstance(eq(fixture.instance()),
+        verify(fixture.messaging()).sendToInstanceExcept(eq(fixture.instance()),
                 eq(fixture.manhunt().getLimboSingle()),
-                eq(Map.of("player", "Alex", "time", "10s")));
+                eq(Map.of("rolecolor", "<red>", "player", "Alex", "time", "10s")),
+                eq(Set.of(onlineId)));
     }
 
     @Test
@@ -143,10 +154,11 @@ class LimboFeedbackServiceTest {
         fixture.limbo().trackHold(player.getUniqueId());
         when(fixture.instance().active()).thenReturn(false);
 
-        fixture.limbo().limboTick(fixture.instance(), 10);
+        fixture.limbo().limboTick(fixture.instance(), 10, true);
 
         verify(fixture.messages(), never()).sendToRaw(any(), any(), any());
         verify(fixture.messaging(), never()).sendToInstance(any(), any(), any());
+        verify(fixture.messaging(), never()).sendToInstanceExcept(any(), any(), any(), any());
     }
 
     @Test

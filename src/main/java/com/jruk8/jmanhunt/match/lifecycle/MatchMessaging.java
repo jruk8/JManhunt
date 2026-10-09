@@ -13,6 +13,8 @@ import org.bukkit.entity.Player;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import com.jruk8.jmanhunt.match.GameInstance;
 
 /** Match and lobby message fan-out. */
@@ -37,12 +39,20 @@ public final class MatchMessaging {
 
     /** Sends a message to a match plus the console, never other matches. */
     public void sendToInstance(GameInstance instance, String template, Map<String, String> values) {
+        sendToInstanceExcept(instance, template, values, Set.of());
+    }
+
+    /** Sends to a match except the given ids, plus the console. */
+    public void sendToInstanceExcept(GameInstance instance, String template,
+            Map<String, String> values, Set<UUID> excluded) {
         if (texts.messages().blank(template)) {
             return;
         }
         Component rendered = texts.messages().componentRaw(template, values);
         for (Player recipient : store.onlineMatchAudience(instance)) {
-            recipient.sendMessage(rendered);
+            if (!excluded.contains(recipient.getUniqueId())) {
+                recipient.sendMessage(rendered);
+            }
         }
         Bukkit.getConsoleSender().sendMessage(rendered);
     }

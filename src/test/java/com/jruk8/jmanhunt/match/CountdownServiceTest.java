@@ -57,16 +57,82 @@ class CountdownServiceTest {
 
         fixture.countdowns().start("key", 3, seen::add, () -> done.set(true));
         assertTrue(fixture.countdowns().running("key"));
+        assertEquals(List.of(3), seen);
 
         fixture.tick().get().run();
         fixture.tick().get().run();
-        assertEquals(List.of(2, 1), seen);
+        assertEquals(List.of(3, 2, 1), seen);
         assertFalse(done.get());
 
         fixture.tick().get().run();
         assertTrue(done.get());
         assertFalse(fixture.countdowns().running("key"));
         verify(fixture.task()).cancel();
+    }
+
+    @Test
+    void initialTickFiresAtStartWithoutTimer() {
+        Fixture fixture = fixture();
+        List<Integer> seen = new ArrayList<>();
+
+        fixture.countdowns().start("key", 35, seen::add, () -> {
+        });
+
+        assertEquals(List.of(35), seen);
+        assertTrue(fixture.countdowns().running("key"));
+    }
+
+    @Test
+    void selfCancellingInitialTickSkipsTimer() {
+        Fixture fixture = fixture();
+        List<Integer> seen = new ArrayList<>();
+
+        fixture.countdowns().start("key", 35, remaining -> {
+            seen.add(remaining);
+            fixture.countdowns().cancel("key");
+        }, () -> {
+        });
+
+        assertEquals(List.of(35), seen);
+        assertFalse(fixture.countdowns().running("key"));
+    }
+
+    @Test
+    void pollMarkFiresInitialSkipsShadowThenLadder() {
+        Fixture fixture = fixture();
+
+        assertTrue(fixture.countdowns().pollMark("key", 35));
+        assertFalse(fixture.countdowns().pollMark("key", 34));
+        assertTrue(fixture.countdowns().pollMark("key", 30));
+        assertFalse(fixture.countdowns().pollMark("key", 29));
+        assertTrue(fixture.countdowns().pollMark("key", 15));
+        assertFalse(fixture.countdowns().pollMark("key", 0));
+        assertFalse(fixture.countdowns().pollMark("key", -1));
+    }
+
+    @Test
+    void pollMarkSkipsLadderInsideTwoSecondShadow() {
+        Fixture fixture = fixture();
+
+        assertTrue(fixture.countdowns().pollMark("key", 31));
+        assertFalse(fixture.countdowns().pollMark("key", 30));
+        assertTrue(fixture.countdowns().pollMark("key", 15));
+        assertTrue(fixture.countdowns().pollMark("key", 10));
+        assertTrue(fixture.countdowns().pollMark("key", 3));
+        assertTrue(fixture.countdowns().pollMark("key", 2));
+        assertTrue(fixture.countdowns().pollMark("key", 1));
+    }
+
+    @Test
+    void pollMarkStateClearsWithCancel() {
+        Fixture fixture = fixture();
+
+        assertTrue(fixture.countdowns().pollMark("key", 35));
+        assertTrue(fixture.countdowns().pollMark("other", 35));
+        fixture.countdowns().cancel("key");
+
+        assertTrue(fixture.countdowns().pollMark("key", 14));
+        assertFalse(fixture.countdowns().pollMark("other", 14));
     }
 
     @Test
@@ -93,7 +159,7 @@ class CountdownServiceTest {
         });
 
         fixture.tick().get().run();
-        assertEquals(List.of(1), seen);
+        assertEquals(List.of(100, 2, 1), seen);
         verify(fixture.task()).cancel();
     }
 
@@ -108,7 +174,7 @@ class CountdownServiceTest {
         assertFalse(fixture.countdowns().cancel("key"));
 
         fixture.tick().get().run();
-        assertTrue(seen.isEmpty());
+        assertEquals(List.of(5), seen);
         verify(fixture.task()).cancel();
     }
 }

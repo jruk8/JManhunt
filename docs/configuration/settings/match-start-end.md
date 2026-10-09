@@ -123,17 +123,18 @@ If [Start on Speedrunner Damage](#start-on-speedrunner-damage) is also
 enabled, countdowns do not begin until that first hit lands. Each held
 player's location is recorded when their countdown begins: held
 players may fly around freely, then teleport back to their recorded
-spawnpoint when the delay expires. Countdowns announce on a shared
-ladder (10h40m down to the final 3, 2, 1) with formatted times like
-`5m` or `1h 2m`. Players who join mid-match while their side is held
-are held too.
+spawnpoint when the delay expires. Every countdown announces its full
+delay at once, skips ladder marks within 2 seconds of that opener,
+then runs the shared ladder (10h40m down to the final 3, 2, 1) with
+formatted times like `5m` or `1h 2m`. Players who join mid-match
+while their side is held are held too.
 
 ## Limbo Feedback
 
 Players waiting to spawn (headstart holds, join holds, respawn waits)
-see personal return notes on the countdown ladder, and the match sees
-a solo note when exactly one waits. Two or more waiting players
-broadcast a headcount instead, at most every:
+see personal return notes on the countdown marks. The match sees a
+solo note with the waiter's role color when exactly one waits; two or
+more waiting players broadcast a headcount instead, at most every:
 
 ```yaml
 settings:
@@ -142,7 +143,9 @@ settings:
       multi-broadcast-interval: 20
 ```
 
-Every spawn announces in chat.
+Waiting players hear only their personal notes; the solo, headcount,
+and headstart broadcasts skip them (the countdown sound still plays
+match-wide). Every spawn announces in chat.
 
 ## Role Announcement
 
@@ -202,8 +205,9 @@ settings:
       reminder-interval: 30.0        # in seconds
 ```
 
-Finite pre-start timeouts announce on the shared countdown ladder
-(whatever marks fall inside the delay). The value above is only the
+Finite pre-start timeouts announce the full delay at once, then the
+shared countdown ladder (whatever marks fall inside the delay). The
+value above is only the
 repeat interval when the pre-start window waits indefinitely
 (`delay-seconds: -1`). Set it to `-1` to disable reminders while
 still waiting.

@@ -438,11 +438,7 @@ public final class MatchStartService {
             services.playerStates().setSpeedrunnerAlive(playerId, true);
         }
         services.playerStates().setLives(playerId, livesFor(instance.originLobbyId(), role));
-        if (instance.cellIndex().isPresent()) {
-            services.worldEngine().teleportJoinersToCell(instance, List.of(player), instance.cellIndex().getAsLong());
-        } else {
-            scatterJoinerToStartCenter(instance, player);
-        }
+        scatterEntrantToSpawn(instance, player);
         services.playerStates().recordLastSeen(player, player.getLocation());
         if (role.isParticipant()) {
             services.compass().giveCompass(player);
@@ -460,12 +456,29 @@ public final class MatchStartService {
     }
 
     /**
+     * Places one entrant on an origin spawn: the cell scatter when the
+     * match runs on cells, else the start-center scatter (a no-op
+     * before the start center exists). Shared by joins, role switches
+     * into the game, and join-hold releases.
+     */
+    public void scatterEntrantToSpawn(GameInstance instance, Player player) {
+        if (instance.cellIndex().isPresent()) {
+            services.worldEngine().teleportJoinersToCell(instance, List.of(player),
+                    instance.cellIndex().getAsLong());
+        } else {
+            scatterJoinerToStartCenter(instance, player);
+        }
+    }
+
+    /**
      * Switches one match member to a new role with lives refreshed
-     * to the new role value. Position, inventory, pending respawns,
-     * and headstart holds stay untouched; future events use the new
-     * role. New-role ON_START and ON_RESPAWN catch-up runs when
-     * neither fired for this game or life yet. Same-role switches
-     * succeed without effect. Always true.
+     * to the new role value. Switches into the game also land on an
+     * origin spawn (the living only: the dead keep their respawn
+     * flow); inventory, pending respawns, and headstart holds stay
+     * untouched, and future events use the new role. New-role
+     * ON_START and ON_RESPAWN catch-up runs when neither fired for
+     * this game or life yet. Same-role switches succeed without
+     * effect. Always true.
      */
     public boolean switchPlayerRole(GameInstance instance, Player player, Role target) {
         UUID playerId = player.getUniqueId();
@@ -496,6 +509,9 @@ public final class MatchStartService {
         // A swap back into the game un-dies the player (no status skull).
         if (target.isParticipant()) {
             instance.clearDeathRecord(playerId);
+        }
+        if (target.isParticipant() && !player.isDead()) {
+            scatterEntrantToSpawn(instance, player);
         }
         applySwitchEdge(instance, player, playerId, plan, source, target);
         runSwitchCatchup(instance, player, target);

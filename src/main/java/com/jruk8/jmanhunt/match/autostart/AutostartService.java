@@ -117,20 +117,21 @@ public final class AutostartService {
         sendAutostartEligible(lobby.get(), configured);
         messaging.playLobbySound(lobbyId, "game.autostart-countdown");
         // Eligible covered these seconds already; ticks announce the rest.
-        config.countdowns().start(new AutostartKey(lobbyId), configured,
-                remaining -> tickAutostart(lobbyId, remaining),
+        AutostartKey key = new AutostartKey(lobbyId);
+        config.countdowns().start(key, configured,
+                remaining -> tickAutostart(lobbyId, key, remaining),
                 () -> finishAutostart(lobbyId));
     }
 
     /** One autostart tick: drop blocked lobbies, else announce ladder marks. */
-    private void tickAutostart(int lobbyId, int remaining) {
+    private void tickAutostart(int lobbyId, AutostartKey key, int remaining) {
         Optional<Lobby> tickLobby = match.lobbies().get(lobbyId);
         if (liveMatchBlocks(lobbyId) || tickLobby.isEmpty()
                 || !isEligibleToStart(tickLobby.get())) {
             cancelAutostartCountdown(lobbyId, true);
             return;
         }
-        announceAutostartCheckpoint(lobbyId, tickLobby.get(), remaining);
+        announceAutostartCheckpoint(lobbyId, tickLobby.get(), key, remaining);
     }
 
     /** Autostart expiry: recheck eligibility, then clear and start. */
@@ -145,10 +146,12 @@ public final class AutostartService {
         match.control().start(lobbyId);
     }
 
-    private void announceAutostartCheckpoint(int lobbyId, Lobby lobby, int remainingSeconds) {
+    private void announceAutostartCheckpoint(int lobbyId, Lobby lobby, AutostartKey key,
+            int remainingSeconds) {
         Integer configured = autostartCountdowns.get(lobbyId);
         if (configured == null
-                || !AutostartCountdownMessages.shouldAnnounce(remainingSeconds, configured)) {
+                || !AutostartCountdownMessages.shouldAnnounce(config.countdowns(), key,
+                        remainingSeconds, configured)) {
             return;
         }
         if (isVersusStyle(countdownStyle(lobbyId))) {

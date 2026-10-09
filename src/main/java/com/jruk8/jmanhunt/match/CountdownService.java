@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.core.TaskScheduler;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.IntConsumer;
@@ -26,6 +27,31 @@ public final class CountdownService {
         return remainingSeconds > 0 && LADDER.contains(remainingSeconds);
     }
 
+    /**
+     * Announces one tick for the key: the first tick always
+     * announces (the initial mark), ladder marks within two seconds
+     * of it are skipped, then the plain ladder runs. Returns true
+     * when this tick is a broadcast mark. Marks clear with cancel.
+     */
+    public boolean pollMark(Object key, int remainingSeconds) {
+        if (remainingSeconds <= 0) {
+            return false;
+        }
+        Integer initial = marks.get(key);
+        if (initial == null) {
+            marks.put(key, remainingSeconds);
+            return true;
+        }
+        if (!settled.contains(key)) {
+            if (!onLadder(remainingSeconds) || Math.abs(remainingSeconds - initial) <= 2) {
+                return false;
+            }
+            settled.add(key);
+            return true;
+        }
+        return onLadder(remainingSeconds);
+    }
+
     private static final class Countdown {
         BukkitTask task;
         int remaining;
@@ -41,6 +67,8 @@ public final class CountdownService {
 
     private final TaskScheduler tasks;
     private final Map<Object, Countdown> countdowns = new HashMap<>();
+    private final Map<Object, Integer> marks = new HashMap<>();
+    private final Set<Object> settled = new HashSet<>();
 
     public CountdownService(TaskScheduler tasks) {
         this.tasks = tasks;
@@ -48,9 +76,11 @@ public final class CountdownService {
 
     /**
      * Starts a countdown under the key, replacing any previous one.
-     * Tick fires every second with the whole seconds remaining; done
+     * Tick fires at once with the full total (the initial mark),
+     * then every second with the whole seconds remaining; done
      * fires once at zero. A non-positive total runs done at once
-     * without scheduling.
+     * without scheduling. A tick that cancels its own key stops
+     * the countdown before the timer is scheduled.
      */
     public void start(Object key, int totalSeconds, IntConsumer tick, Runnable done) {
         cancel(key);
@@ -60,6 +90,10 @@ public final class CountdownService {
         }
         Countdown countdown = new Countdown(totalSeconds, tick, done);
         countdowns.put(key, countdown);
+        tick.accept(totalSeconds);
+        if (countdowns.get(key) != countdown) {
+            return;
+        }
         countdown.task = tasks.runTimer(() -> tick(key), 20L, 20L);
     }
 
@@ -79,6 +113,8 @@ public final class CountdownService {
 
     /** Cancels the countdown under the key. False when none ran. */
     public boolean cancel(Object key) {
+        marks.remove(key);
+        settled.remove(key);
         Countdown countdown = countdowns.remove(key);
         if (countdown == null) {
             return false;

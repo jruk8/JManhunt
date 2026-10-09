@@ -145,7 +145,7 @@ public final class PlayerRespawnListener implements Listener {
         tasks.run(() -> players.fakes().enable(player));
         players.limbo().trackHold(playerId);
         players.countdowns().start(key, waitSeconds,
-                remaining -> holdTick(matchId, playerId, remaining),
+                remaining -> holdTick(key, matchId, playerId, remaining),
                 () -> {
                     players.limbo().untrackHold(playerId);
                     if (game.isActiveInInstance(matchId, playerId)) {
@@ -154,16 +154,24 @@ public final class PlayerRespawnListener implements Listener {
                 });
     }
 
-    /** Join-hold tick: feeds the match limbo census. */
-    private void holdTick(long matchId, UUID playerId, int remaining) {
-        game.instance(matchId).ifPresent(instance -> players.limbo().limboTick(instance, remaining));
+    /** Join-hold tick: polls the mark, then feeds the match limbo census. */
+    private void holdTick(HoldKey key, long matchId, UUID playerId, int remaining) {
+        boolean mark = players.countdowns().pollMark(key, remaining);
+        game.instance(matchId).ifPresent(instance -> players.limbo().limboTick(instance, remaining, mark));
     }
 
-    /** Releases a join hold, keeping any headstart hold intact. */
+    /**
+     * Releases a join hold, keeping any headstart hold intact. The
+     * player lands on a fresh origin spawn, the same selection a
+     * match entrant gets, in case they flew off during the hold.
+     */
     private void releaseJoinHold(Player player, long matchId) {
         Optional<GameInstance> match = game.instance(matchId);
         if (match.isEmpty() || match.get().isHeadstartHeld(player.getUniqueId())) {
             return;
+        }
+        if (player.isOnline()) {
+            game.scatterEntrantToSpawn(match.get(), player);
         }
         players.fakes().disable(player);
         players.limbo().announceSpawned(match.get(), player);
@@ -185,7 +193,7 @@ public final class PlayerRespawnListener implements Listener {
         }
         players.limbo().trackHold(playerId);
         players.countdowns().start(key, delaySeconds,
-                remaining -> holdTick(matchId, playerId, remaining),
+                remaining -> holdTick(key, matchId, playerId, remaining),
                 () -> {
                     players.limbo().untrackHold(playerId);
                     if (game.isActiveInInstance(matchId, playerId)) {
