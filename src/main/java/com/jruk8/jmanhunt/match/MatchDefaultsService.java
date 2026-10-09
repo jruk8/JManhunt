@@ -12,6 +12,7 @@ import org.bukkit.GameRules;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Default match state per phase: inventory wipes, gamemodes, vanilla
@@ -26,17 +27,25 @@ public final class MatchDefaultsService {
     private final JManhuntLogger log;
     private final PlayerWipeService wipes;
     private final DefaultsStates states;
+    private final Consumer<World> immediateRespawn;
 
     public MatchDefaultsService(OverrideService overrides, JManhuntLogger log,
-            PlayerWipeService wipes, DefaultsStates states) {
+            PlayerWipeService wipes, DefaultsStates states, Consumer<World> immediateRespawn) {
         this.overrides = overrides;
         this.log = log;
         this.wipes = wipes;
         this.states = states;
+        this.immediateRespawn = immediateRespawn;
     }
 
     public void runDefault(String phase, List<Player> participants, List<Player> lobbySpectators,
             int lobbyId, boolean lastMatch) {
+        // Immediate respawn is mandatory, not a rule: state handling
+        // assumes instant respawns, so this runs above the enabled
+        // gate on every phase including end. The edge carries the
+        // gamerule call because the test classpath ships an older
+        // paper-api without it.
+        Bukkit.getWorlds().forEach(immediateRespawn);
         if (!overrides.getBoolean(lobbyId, "advanced.advanced-match-controls.game-rules.enabled", true)) {
             return;
         }
@@ -67,8 +76,6 @@ public final class MatchDefaultsService {
                 MatchConfig.GameRules.isRuleEnabled(rules, "DISABLE_PHANTOMS");
         worlds.forEach(world -> world.setGameRule(GameRules.SPAWN_PHANTOMS,
                 gameruleRestored(phase, lastMatch, disablePhantoms)));
-        worlds.forEach(world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN,
-                MatchConfig.GameRules.isRuleEnabled(rules, "SET_RESPAWN_IMMEDIATE")));
         // Prevent spectators from generating chunks while the match is active.
         // This is the native gamerule equivalent of the old spectator chunk
         // generation toggle and avoids lag from spectators exploring.

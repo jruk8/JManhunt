@@ -493,9 +493,10 @@ class GameStateCommandManagerTest {
                 "advanced.advanced-match-controls.game-rules.rules");
 
         assertTrue(rules instanceof List, "rules must be a list");
-        assertEquals(6, ((List<String>) rules).size());
+        assertEquals(5, ((List<String>) rules).size());
         assertTrue(((List<String>) rules).contains("DISABLE_PILLAGER_PATROLS"));
         assertFalse(((List<String>) rules).contains("AUTO_SET_GAMEMODE"));
+        assertFalse(((List<String>) rules).contains("SET_RESPAWN_IMMEDIATE"));
     }
 
     @Test

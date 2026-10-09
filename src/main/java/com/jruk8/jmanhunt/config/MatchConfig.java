@@ -57,7 +57,6 @@ public class MatchConfig extends OkaeriConfig {
         /** Known rule keys, in display order. */
         public static final transient List<String> KNOWN = List.of(
                 "DISABLE_LOCATOR_BAR",
-                "SET_RESPAWN_IMMEDIATE",
                 "SET_DAYTIME",
                 "DISABLE_PHANTOMS",
                 "DISABLE_PILLAGER_PATROLS",
@@ -66,7 +65,6 @@ public class MatchConfig extends OkaeriConfig {
         /** Rules enabled by default. */
         public static final transient List<String> DEFAULT_RULES = List.of(
                 "DISABLE_LOCATOR_BAR",
-                "SET_RESPAWN_IMMEDIATE",
                 "SET_DAYTIME",
                 "DISABLE_PHANTOMS",
                 "DISABLE_PILLAGER_PATROLS",
@@ -79,8 +77,8 @@ public class MatchConfig extends OkaeriConfig {
 
         @Comment({
                 "Enabled game-state rules. Unknown entries are ignored.",
-                "Known: DISABLE_LOCATOR_BAR, SET_RESPAWN_IMMEDIATE, SET_DAYTIME,",
-                "DISABLE_PHANTOMS, DISABLE_PILLAGER_PATROLS, DISABLE_WANDERING_TRADER."
+                "Known: DISABLE_LOCATOR_BAR, SET_DAYTIME, DISABLE_PHANTOMS,",
+                "DISABLE_PILLAGER_PATROLS, DISABLE_WANDERING_TRADER."
         })
         @Getter
         @Setter

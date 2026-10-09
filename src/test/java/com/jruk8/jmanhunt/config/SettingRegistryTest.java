@@ -395,7 +395,7 @@ class SettingRegistryTest {
                 "settings.match.start-on-speedrunner-damage.reminder-interval").defaultValue());
         assertTrue(SettingRegistry.isListPath(
                 "advanced.advanced-match-controls.game-rules.rules"));
-        assertEquals(6, MatchConfig.GameRules.DEFAULT_RULES.size());
+        assertEquals(5, MatchConfig.GameRules.DEFAULT_RULES.size());
         assertTrue(MatchConfig.GameRules.DEFAULT_RULES.contains("DISABLE_WANDERING_TRADER"));
         assertEquals("jmh_lobby", SettingRegistry.byPath(
                 "advanced.lobbies.lobby-world-name").defaultValue());

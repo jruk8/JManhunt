@@ -25,6 +25,7 @@ import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerResetService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import org.bukkit.GameRules;
 import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -80,7 +81,8 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                 new PlayerResetService(edge.overrides()));
         this.defaults = new MatchDefaultsService(edge.overrides(), edge.log(),
                 wipes, new MatchDefaultsService.DefaultsStates(reads.playerStates(),
-                        edge.fakes()));
+                        edge.fakes()),
+                world -> world.setGameRule(GameRules.IMMEDIATE_RESPAWN, true));
         this.sinks = new ModifierTagSinks(edge.log(),
                 new ModifierTagSinks.SinkBus(messages, messages.modifiers(), sounds),
                 game, reads.playerStates(), reads.interop());

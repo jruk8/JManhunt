@@ -11,9 +11,9 @@ import org.junit.jupiter.api.Test;
 class MatchConfigTest {
 
     @Test
-    void knownRulesCoverSixKeysWithSixDefaults() {
-        assertEquals(6, MatchConfig.GameRules.KNOWN.size());
-        assertEquals(6, MatchConfig.GameRules.DEFAULT_RULES.size());
+    void knownRulesCoverFiveKeysWithFiveDefaults() {
+        assertEquals(5, MatchConfig.GameRules.KNOWN.size());
+        assertEquals(5, MatchConfig.GameRules.DEFAULT_RULES.size());
         assertTrue(MatchConfig.GameRules.DEFAULT_RULES
                 .containsAll(MatchConfig.GameRules.KNOWN));
         assertEquals(MatchConfig.GameRules.DEFAULT_RULES,
