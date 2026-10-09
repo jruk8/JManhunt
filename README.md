@@ -29,9 +29,9 @@ The GUI allows you to one-click toggle between **20 default twists**. We also bu
 
 Find these modifiers on our [**Discord**](https://discord.gg/hkWmCVmWDC) community forum:
 
-- **Lifesteal** » All kills steal a full heart from the victim. Permadeath on 0.
+- **Infection** » Dead runners become hunters on all lives lost.
 - **Huddle for Warmth** » Stay close to teammates or wither away.
-- **Abilities** » Runners invisibility on damage taken, gapple on low health, blind nearby Hunters on
+- **Abilities** » Shift to invis, gapple on low health, blind nearby Hunters on
   kill...
 
 # Features
