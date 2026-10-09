@@ -29,7 +29,7 @@ The GUI allows you to one-click toggle between **20 default twists**. We also bu
 
 Find these modifiers on our [**Discord**](https://discord.gg/hkWmCVmWDC) community forum:
 
-- **Infection** » Dead runners become hunters on all lives lost.
+- **Infection** » Dead runners become hunters on final death.
 - **Huddle for Warmth** » Stay close to teammates or wither away.
 - **Abilities** » Shift to invis, gapple on low health, blind nearby Hunters on
   kill...
