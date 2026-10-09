@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match.autostart;
 
+import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.Lobby;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
@@ -13,7 +14,6 @@ import com.jruk8.jmanhunt.world.WorldEngineService;
 
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import com.jruk8.jmanhunt.match.CountdownService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchControl;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
@@ -34,8 +35,9 @@ import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
  * queued players which roles are still missing.
  */
 public final class AutostartService {
-    /** Match settings plus the scheduler. */
-    public record AutoConfig(MatchSettingsFacade settings, TaskScheduler tasks) {
+    /** Match settings, scheduler, and countdowns. */
+    public record AutoConfig(MatchSettingsFacade settings, TaskScheduler tasks,
+            CountdownService countdowns) {
     }
 
     /** States, lobbies, engine, store, and control. */
@@ -48,18 +50,15 @@ public final class AutostartService {
     private final MessageService messages;
     private final MatchMessaging messaging;
     private final ManhuntMessages manhunt;
-    /** Per-lobby autostart countdowns, keyed by lobby id. */
-    private final Map<Integer, AutostartCountdown> autostartCountdowns = new HashMap<>();
+    /** Configured autostart seconds per lobby with a live countdown. */
+    private final Map<Integer, Integer> autostartCountdowns = new HashMap<>();
     /** Last shortfall broadcast per lobby, for the needs-more interval. */
     private final Map<Integer, Long> lastShortfallBroadcast = new HashMap<>();
     /** Last-seen hunter/speedrunner sets per lobby, for nag seeding. */
     private final Map<Integer, Set<UUID>> lastNagTeams = new HashMap<>();
 
-    /** Mutable per-lobby countdown state; the task ticks in GameManager. */
-    private static final class AutostartCountdown {
-        BukkitTask task;
-        int remaining;
-        int configured;
+    /** Countdown key for one lobby's autostart. */
+    private record AutostartKey(int lobbyId) {
     }
 
     public AutostartService(AutoConfig config, AutoMatch match, MessageService messages,
@@ -114,33 +113,42 @@ public final class AutostartService {
             return;
         }
         match.worldEngine().prepareNextCell();
-        AutostartCountdown countdown = new AutostartCountdown();
-        countdown.configured = configured;
-        countdown.remaining = configured;
-        autostartCountdowns.put(lobbyId, countdown);
+        autostartCountdowns.put(lobbyId, configured);
         sendAutostartEligible(lobby.get(), configured);
         messaging.playLobbySound(lobbyId, "game.autostart-countdown");
         // Eligible covered these seconds already; ticks announce the rest.
-        countdown.task = config.tasks().runTimer(() -> {
-            Optional<Lobby> tickLobby = match.lobbies().get(lobbyId);
-            if (liveMatchBlocks(lobbyId) || tickLobby.isEmpty()
-                    || !isEligibleToStart(tickLobby.get())) {
-                cancelAutostartCountdown(lobbyId, true);
-                return;
-            }
-            countdown.remaining--;
-            if (countdown.remaining <= 0) {
-                cancelAutostartCountdown(lobbyId, false);
-                match.control().start(lobbyId);
-                return;
-            }
-            announceAutostartCheckpoint(lobbyId, tickLobby.get(), countdown, countdown.remaining);
-        }, 20L, 20L);
+        config.countdowns().start(new AutostartKey(lobbyId), configured,
+                remaining -> tickAutostart(lobbyId, remaining),
+                () -> finishAutostart(lobbyId));
     }
 
-    private void announceAutostartCheckpoint(int lobbyId, Lobby lobby,
-            AutostartCountdown countdown, int remainingSeconds) {
-        if (!AutostartCountdownMessages.shouldAnnounce(remainingSeconds, countdown.configured)) {
+    /** One autostart tick: drop blocked lobbies, else announce ladder marks. */
+    private void tickAutostart(int lobbyId, int remaining) {
+        Optional<Lobby> tickLobby = match.lobbies().get(lobbyId);
+        if (liveMatchBlocks(lobbyId) || tickLobby.isEmpty()
+                || !isEligibleToStart(tickLobby.get())) {
+            cancelAutostartCountdown(lobbyId, true);
+            return;
+        }
+        announceAutostartCheckpoint(lobbyId, tickLobby.get(), remaining);
+    }
+
+    /** Autostart expiry: recheck eligibility, then clear and start. */
+    private void finishAutostart(int lobbyId) {
+        Optional<Lobby> tickLobby = match.lobbies().get(lobbyId);
+        if (liveMatchBlocks(lobbyId) || tickLobby.isEmpty()
+                || !isEligibleToStart(tickLobby.get())) {
+            cancelAutostartCountdown(lobbyId, true);
+            return;
+        }
+        cancelAutostartCountdown(lobbyId, false);
+        match.control().start(lobbyId);
+    }
+
+    private void announceAutostartCheckpoint(int lobbyId, Lobby lobby, int remainingSeconds) {
+        Integer configured = autostartCountdowns.get(lobbyId);
+        if (configured == null
+                || !AutostartCountdownMessages.shouldAnnounce(remainingSeconds, configured)) {
             return;
         }
         if (isVersusStyle(countdownStyle(lobbyId))) {
@@ -150,7 +158,7 @@ public final class AutostartService {
                             counts[1], runnerColor()));
         } else {
             messaging.sendToLobby(lobbyId, manhunt.getAutostartCountdown(),
-                    Map.of("seconds", String.valueOf(remainingSeconds)));
+                    Map.of("time", DurationFormat.format(remainingSeconds)));
         }
         messaging.playLobbySound(lobbyId, "game.autostart-countdown");
     }
@@ -165,7 +173,7 @@ public final class AutostartService {
             return;
         }
         messaging.sendToLobby(lobby.id(), manhunt.getAutostartEligible(),
-                Map.of("seconds", String.valueOf(configured)));
+                Map.of("time", DurationFormat.format(configured)));
     }
 
     private String countdownStyle(int lobbyId) {
@@ -195,7 +203,7 @@ public final class AutostartService {
      */
     public static Map<String, String> versusValues(int seconds, int hunters, String hunterColor,
             int speedrunners, String runnerColor) {
-        return Map.of("seconds", String.valueOf(seconds),
+        return Map.of("time", DurationFormat.format(seconds),
                 "hunters", versusCount(hunters, hunterColor),
                 "runners", versusCount(speedrunners, runnerColor));
     }
@@ -251,15 +259,13 @@ public final class AutostartService {
     }
 
     public void cancelAutostartCountdown(int lobbyId, boolean announce) {
-        AutostartCountdown countdown = autostartCountdowns.remove(lobbyId);
-        if (countdown != null) {
-            if (countdown.task != null) {
-                countdown.task.cancel();
-            }
-            if (announce) {
-                messaging.sendToLobby(lobbyId, manhunt.getAutostartCancelled(), Map.of());
-                messaging.playLobbySound(lobbyId, "game.autostart-cancelled");
-            }
+        if (autostartCountdowns.remove(lobbyId) == null) {
+            return;
+        }
+        config.countdowns().cancel(new AutostartKey(lobbyId));
+        if (announce) {
+            messaging.sendToLobby(lobbyId, manhunt.getAutostartCancelled(), Map.of());
+            messaging.playLobbySound(lobbyId, "game.autostart-cancelled");
         }
     }
 

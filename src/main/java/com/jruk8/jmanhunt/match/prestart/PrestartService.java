@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match.prestart;
 
+import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
@@ -17,6 +18,7 @@ import org.bukkit.entity.Player;
 
 import java.util.List;
 import java.util.Map;
+import com.jruk8.jmanhunt.match.CountdownService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.lifecycle.MatchControl;
@@ -34,10 +36,18 @@ public final class PrestartService {
             PlayersSettingsFacade players, OverrideService overrides) {
     }
 
-    /** States, stats, commands, store, control, fakes, and scheduler. */
+    /** States, stats, commands, store, control, fakes, scheduler, and countdowns. */
     public record PrestartServices(PlayerStateStore playerStates, StatsManager stats,
             GameStateCommandManager stateCommands, MatchStore store, MatchControl control,
-            FakeSpectatorService fakes, TaskScheduler tasks) {
+            FakeSpectatorService fakes, TaskScheduler tasks, CountdownService countdowns) {
+    }
+
+    /** Countdown key for one side's headstart. */
+    private record HeadstartKey(long matchId, Role role) {
+    }
+
+    /** Countdown key for the pre-start must-hit wait. */
+    private record MustHitKey(long matchId) {
     }
 
     private final PrestartConfig config;
@@ -80,9 +90,15 @@ public final class PrestartService {
      * until the delay expires, then are teleported back to their recorded
      * spawnpoints and restored to survival.
      */
+    /** True while the side's headstart countdown runs. */
+    public boolean isCounting(GameInstance instance, Role role) {
+        return services.countdowns().running(new HeadstartKey(instance.matchId(), role));
+    }
+
     private void beginHeadstart(GameInstance instance, Role role) {
         HeadstartState state = instance.headstart(role);
-        if (!state.armed() || state.task() != null) {
+        HeadstartKey key = new HeadstartKey(instance.matchId(), role);
+        if (!state.armed() || services.countdowns().running(key)) {
             return;
         }
         Role held = role.opposite();
@@ -97,23 +113,27 @@ public final class PrestartService {
             }
         }
         messaging.sendToInstance(instance, manhunt.getHeadstartActive(),
-                Map.of("seconds", String.valueOf(state.remaining()), "role", messages.roleName(held)));
-        long headstartMatchId = instance.matchId();
-        state.setTask(services.tasks().runTimer(() -> {
-            if (services.store().instance(headstartMatchId).orElse(null) != instance || !instance.active()) {
-                cancelHeadstartTask(state);
-                return;
-            }
-            state.setRemaining(state.remaining() - 1);
-            if (state.remaining() <= 0) {
-                endHeadstart(instance, role);
-            } else if (state.remaining() <= 5) {
-                messaging.sendToInstance(instance, manhunt.getHeadstartEnding(),
-                        Map.of("seconds", String.valueOf(state.remaining()),
-                                "role", messages.roleName(role.opposite())));
-                messaging.playInstanceSound(instance, "game.autostart-countdown");
-            }
-        }, 20L, 20L));
+                Map.of("time", DurationFormat.format(state.remaining()),
+                        "role", messages.roleName(held)));
+        services.countdowns().start(key, state.remaining(),
+                remaining -> tickHeadstart(instance, role, state, remaining),
+                () -> endHeadstart(instance, role));
+    }
+
+    /** One headstart tick: drop dead matches, else announce ladder marks. */
+    private void tickHeadstart(GameInstance instance, Role role, HeadstartState state, int remaining) {
+        if (services.store().instance(instance.matchId()).orElse(null) != instance
+                || !instance.active()) {
+            services.countdowns().cancel(new HeadstartKey(instance.matchId(), role));
+            return;
+        }
+        state.setRemaining(remaining);
+        if (CountdownService.onLadder(remaining)) {
+            messaging.sendToInstance(instance, manhunt.getHeadstartEnding(),
+                    Map.of("time", DurationFormat.format(remaining),
+                            "role", messages.roleName(role.opposite())));
+            messaging.playInstanceSound(instance, "game.autostart-countdown");
+        }
     }
 
     /**
@@ -122,7 +142,7 @@ public final class PrestartService {
      */
     private void endHeadstart(GameInstance instance, Role role) {
         HeadstartState state = instance.headstart(role);
-        cancelHeadstartTask(state);
+        services.countdowns().cancel(new HeadstartKey(instance.matchId(), role));
         state.setArmed(false);
         Role held = role.opposite();
         for (Player player : services.store().onlineActivePlayers(instance)) {
@@ -146,7 +166,7 @@ public final class PrestartService {
     public void cancelHeadstarts(GameInstance instance) {
         for (Role role : List.of(Role.HUNTER, Role.SPEEDRUNNER)) {
             HeadstartState state = instance.headstart(role);
-            cancelHeadstartTask(state);
+            services.countdowns().cancel(new HeadstartKey(instance.matchId(), role));
             state.setArmed(false);
             state.returnPoints().clear();
             Role held = role.opposite();
@@ -159,58 +179,43 @@ public final class PrestartService {
         }
     }
 
-    private void cancelHeadstartTask(HeadstartState state) {
-        if (state.task() != null) {
-            state.task().cancel();
-            state.setTask(null);
-        }
-    }
-
     public void scheduleWaitingReminder(GameInstance instance) {
-        instance.setWaitingStartTime(System.currentTimeMillis());
         int configured = instance.waitingDelayConfigured();
         if (configured > 0) {
-            scheduleFiniteWaitingReminders(instance, configured);
-        } else if (!scheduleIndefiniteWaitingReminders(instance)) {
-            return;
-        }
-
-        // schedule expiry task which ends the waiting period if no damage occurs
-        if (configured > 0) {
-            scheduleWaitingExpiry(instance, configured);
+            scheduleFiniteWaitingCountdown(instance, configured);
+        } else {
+            scheduleIndefiniteWaitingReminders(instance);
         }
     }
 
-    /** Broadcasts the three finite-delay reminders at the delay and two slices. */
-    private void scheduleFiniteWaitingReminders(GameInstance instance, int configured) {
-        // Finite delay: broadcast exactly three reminders at the delay and
-        // two equally-sized slices (e.g. 30s -> 30, 20, 10).
-        int slice = WaitingReminder.sliceSeconds(configured);
-        List<Integer> checkpoints = List.of(configured,
-                Math.max(1, configured - slice),
-                Math.max(1, configured - 2 * slice));
+    /** Finite must-hit wait: ladder ticks with expiry as the countdown end. */
+    private void scheduleFiniteWaitingCountdown(GameInstance instance, int configured) {
         messaging.sendToInstance(instance, manhunt.getWaitingForDamage(),
-                Map.of("seconds", String.valueOf(configured)));
-        instance.setWaitingReminderTask(services.tasks().runTimer(() -> {
-            if (services.store().instance(instance.matchId()).orElse(null) != instance || instance.begun()) {
-                return;
-            }
-            long elapsedMillis = System.currentTimeMillis() - instance.waitingStartTime();
-            int remaining = (int) Math.round(configured - elapsedMillis / 1000.0);
-            if (remaining > 0 && checkpoints.contains(remaining)) {
-                messaging.sendToInstance(instance, manhunt.getWaitingForDamage(),
-                        Map.of("seconds", String.valueOf(remaining)));
-            }
-        }, 20L, 20L));
+                Map.of("time", DurationFormat.format(configured)));
+        MustHitKey key = new MustHitKey(instance.matchId());
+        services.countdowns().start(key, configured,
+                remaining -> tickWaitingCountdown(instance, key, remaining),
+                () -> expireWaitingCountdown(instance, configured));
+    }
+
+    /** One must-hit tick: drop started matches, else announce ladder marks. */
+    private void tickWaitingCountdown(GameInstance instance, MustHitKey key, int remaining) {
+        if (services.store().instance(instance.matchId()).orElse(null) != instance
+                || instance.begun()) {
+            services.countdowns().cancel(key);
+            return;
+        }
+        if (CountdownService.onLadder(remaining)) {
+            messaging.sendToInstance(instance, manhunt.getWaitingForDamage(),
+                    Map.of("time", DurationFormat.format(remaining)));
+        }
     }
 
     /** Schedules indefinite-waiting reminders. Returns false when reminders are disabled. */
     private boolean scheduleIndefiniteWaitingReminders(GameInstance instance) {
         // Indefinite waiting (-1): use the configured reminder interval and
         // never schedule an expiry.
-        double interval = config.overrides()
-                                .getFloat(instance.originLobbyId(),
-                        "advanced.advanced-match-controls.start-reminder-interval", 30.0f);
+        double interval = config.match().startReminderInterval(instance.originLobbyId());
         if (interval == -1.0) {
             return false;
         }
@@ -225,34 +230,31 @@ public final class PrestartService {
         return true;
     }
 
-    /** Schedules the expiry task that cancels or force-starts the waiting config.match(). */
-    private void scheduleWaitingExpiry(GameInstance instance, int configured) {
-        long expiryTicks = Math.max(1L, Math.round(configured * 20.0));
-        instance.setWaitingExpiryTask(services.tasks().runLater(() -> {
-            // only cancel if still active and game hasn't begun and match unchanged
-            if (services.store().instance(instance.matchId()).orElse(null) == instance
-                    && instance.active() && !instance.begun()) {
-                if (instance.waitingReminderTask() != null) {
-                    instance.waitingReminderTask().cancel();
-                    instance.setWaitingReminderTask(null);
-                }
-                boolean forceStart = config.match().startOnDamageOnExpire(instance.originLobbyId())
-                        == OnExpire.FORCE_START;
-                if (forceStart) {
-                    messaging.sendToInstance(instance, manhunt.getWaitingForDamageForceStarted(), Map.of());
-                } else {
-                    messaging.sendToInstance(instance, manhunt.getWaitingForDamageExhausted(),
-                            Map.of("seconds", String.valueOf(configured)));
-                }
-                // end match as cancelled if configured
-                if (!forceStart) {
-                    expireWaitingMatch(instance);
-                } else {
-                    // force start the game
-                    services.control().beginGame(instance);
-                }
+    /** Must-hit expiry: force-start or cancel once the countdown ends. */
+    private void expireWaitingCountdown(GameInstance instance, int configured) {
+        // only cancel if still active and game hasn't begun and match unchanged
+        if (services.store().instance(instance.matchId()).orElse(null) == instance
+                && instance.active() && !instance.begun()) {
+            if (instance.waitingReminderTask() != null) {
+                instance.waitingReminderTask().cancel();
+                instance.setWaitingReminderTask(null);
             }
-        }, expiryTicks));
+            boolean forceStart = config.match().startOnDamageOnExpire(instance.originLobbyId())
+                    == OnExpire.FORCE_START;
+            if (forceStart) {
+                messaging.sendToInstance(instance, manhunt.getWaitingForDamageForceStarted(), Map.of());
+            } else {
+                messaging.sendToInstance(instance, manhunt.getWaitingForDamageExhausted(),
+                        Map.of("time", DurationFormat.format(configured)));
+            }
+            // end match as cancelled if configured
+            if (!forceStart) {
+                expireWaitingMatch(instance);
+            } else {
+                // force start the game
+                services.control().beginGame(instance);
+            }
+        }
     }
 
     /** Aborts a match whose pre-start wait expired, without saving services.stats(). */
@@ -274,9 +276,6 @@ public final class PrestartService {
             instance.waitingReminderTask().cancel();
             instance.setWaitingReminderTask(null);
         }
-        if (instance.waitingExpiryTask() != null) {
-            instance.waitingExpiryTask().cancel();
-            instance.setWaitingExpiryTask(null);
-        }
+        services.countdowns().cancel(new MustHitKey(instance.matchId()));
     }
 }

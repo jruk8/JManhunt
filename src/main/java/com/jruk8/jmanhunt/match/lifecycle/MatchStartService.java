@@ -52,7 +52,6 @@ import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
 import com.jruk8.jmanhunt.match.StatusRosterService;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
-import com.jruk8.jmanhunt.match.prestart.HeadstartState;
 import com.jruk8.jmanhunt.match.prestart.PrestartService;
 import com.jruk8.jmanhunt.match.prestart.WaitingReminder;
 
@@ -575,9 +574,9 @@ public final class MatchStartService {
         }
         // A joiner is held while the opposite side's headstart runs: a
         // hunter headstart holds speedrunners, and vice versa.
-        HeadstartState headstart = instance.headstart(role.opposite());
-        if (role.isParticipant() && headstart.task() != null) {
-            headstart.returnPoints().put(player.getUniqueId(), player.getLocation());
+        if (role.isParticipant() && services.prestart().isCounting(instance, role.opposite())) {
+            instance.headstart(role.opposite()).returnPoints().put(player.getUniqueId(),
+                    player.getLocation());
             edge.fakes().enable(player);
         }
     }

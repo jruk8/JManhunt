@@ -101,6 +101,7 @@ public final class GameManager implements MatchControl {
     private final PseudoborderParticleService pseudoborderParticles;
     private final FlagStore flagStore;
     private final TagCooldownStore cooldownStore;
+    private final CountdownService countdowns;
     private final WinConditionTextService winConditions;
     private final MatchSettingsFacade matchSettings;
     private final PlayersSettingsFacade playersSettings;
@@ -130,6 +131,7 @@ public final class GameManager implements MatchControl {
         this.store = new MatchStore(services.playerStates());
         this.flagStore = new FlagStore();
         this.cooldownStore = new TagCooldownStore();
+        this.countdowns = new CountdownService(edge.tasks());
         this.messaging = new MatchMessaging(
                 new MatchMessaging.MessagingTexts(texts.messages(), texts.manhunt(),
                         texts.sounds()),
@@ -154,13 +156,13 @@ public final class GameManager implements MatchControl {
                 new PrestartService.PrestartConfig(headstarts, matchSettings,
                         playersSettings, edge.overrides()),
                 new PrestartService.PrestartServices(services.playerStates(), services.stats(),
-                        stateCommands, store, this, edge.fakes(), edge.tasks()),
+                        stateCommands, store, this, edge.fakes(), edge.tasks(), countdowns),
                 texts.messages(), messaging, texts.manhunt());
     }
 
     private AutostartService newAutostartService() {
         return new AutostartService(
-                new AutostartService.AutoConfig(matchSettings, edge.tasks()),
+                new AutostartService.AutoConfig(matchSettings, edge.tasks(), countdowns),
                 new AutostartService.AutoMatch(services.playerStates(), reads.lobbies(),
                         reads.worldEngine(), store, this),
                 texts.messages(), messaging, texts.manhunt());
@@ -251,6 +253,11 @@ public final class GameManager implements MatchControl {
     /** Match-scoped messaging; listeners announce through this. */
     public MatchMessaging messaging() {
         return messaging;
+    }
+
+    /** Shared per-second countdown ticker. */
+    public CountdownService countdowns() {
+        return countdowns;
     }
 
     public MatchSettingsFacade matchSettings() {

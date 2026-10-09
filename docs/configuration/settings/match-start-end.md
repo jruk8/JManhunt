@@ -66,6 +66,7 @@ settings:
       delay-seconds: 45
       on-expire: FORCE_START
       start-in-adventure-mode: true
+      reminder-interval: 30.0
 ```
 
 Players in the pre-start window are invulnerable and deal no damage.
@@ -178,17 +179,17 @@ How often players are reminded while waiting for the first
 speedrunner hit:
 
 ```yaml
-advanced:
-  advanced-match-controls:
-    start-reminder-interval: 30.0        # in seconds
+settings:
+  match:
+    start-on-speedrunner-damage:
+      reminder-interval: 30.0        # in seconds
 ```
 
-For finite pre-start timeouts this value is not used directly:
-exactly three reminders show, at the full delay and two equal slices
-(a 30-second delay reminds at 30, 20, and 10 seconds). The value above
-is only the repeat interval when the pre-start window waits
-indefinitely (`delay-seconds: -1`). Set it to `-1` to disable reminders
-while still waiting.
+Finite pre-start timeouts announce on the shared countdown ladder
+(whatever marks fall inside the delay). The value above is only the
+repeat interval when the pre-start window waits indefinitely
+(`delay-seconds: -1`). Set it to `-1` to disable reminders while
+still waiting.
 
 ## Disconnect Handling
 

@@ -58,7 +58,7 @@ class AutostartVersusTest {
     void versusValuesCarrySecondsAndCounts() {
         Map<String, String> values = AutostartService.versusValues(30, 5, "<red>", 3, "<green>");
 
-        assertEquals(Map.of("seconds", "30", "hunters", "<red>5</red>", "runners", "<green>3</green>"),
+        assertEquals(Map.of("time", "30s", "hunters", "<red>5</red>", "runners", "<green>3</green>"),
                 values);
     }
 
@@ -103,7 +103,7 @@ class AutostartVersusTest {
         ConfigPathMapper.set(config, "role-colors.hunter", hunterColor);
         ConfigPathMapper.set(config, "role-colors.speedrunner", runnerColor);
         ConfigPathMapper.set(config, "manhunt.autostart-versus-eligible",
-                "{prefix}<yellow>{runners}v{hunters} starts in <white>{seconds}</white>s.");
+                "{prefix}<yellow>{runners}v{hunters} starts in <white>{time}</white>.");
         MessageService messages = new MessageService();
         messages.reload(config);
         return new VersusFixture(messages, config);

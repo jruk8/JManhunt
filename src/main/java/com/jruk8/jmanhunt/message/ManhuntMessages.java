@@ -136,20 +136,20 @@ public class ManhuntMessages extends OkaeriConfig {
 
     @CustomKey("autostart-eligible")
     @Comment("SIMPLE countdown opener; settings.match.autostart.countdown-style picks SIMPLE or VERSUS.")
-    private String autostartEligible = "{prefix}<yellow>Manhunt starts in <white>{seconds}<yellow>s.";
+    private String autostartEligible = "{prefix}<yellow>Manhunt starts in <white>{time}</white>.";
 
     @CustomKey("autostart-countdown")
     @Comment("SIMPLE countdown checkpoints; settings.match.autostart.countdown-style picks SIMPLE or VERSUS.")
-    private String autostartCountdown = "{prefix}<yellow>Manhunt starts in <white>{seconds}<yellow>s.";
+    private String autostartCountdown = "{prefix}<yellow>Manhunt starts in <white>{time}</white>.";
 
     @CustomKey("autostart-versus-eligible")
     @Comment("VERSUS countdown opener; settings.match.autostart.countdown-style picks SIMPLE or VERSUS.")
-    private String autostartVersusEligible = "{prefix}<yellow>{runners}v{hunters} starts in <white>{seconds}</white>s.";
+    private String autostartVersusEligible = "{prefix}<yellow>{runners}v{hunters} starts in <white>{time}</white>.";
 
     @CustomKey("autostart-versus-countdown")
     @Comment("VERSUS countdown checkpoints; settings.match.autostart.countdown-style picks SIMPLE or VERSUS.")
     private String autostartVersusCountdown = "{prefix}<yellow>{runners}v{hunters} starts in "
-            + "<white>{seconds}</white>s.";
+            + "<white>{time}</white>.";
 
     @CustomKey("autostart-cancelled")
     private String autostartCancelled = "{prefix}<yellow>Auto-start cancelled.";
@@ -162,7 +162,7 @@ public class ManhuntMessages extends OkaeriConfig {
 
     @CustomKey("waiting-for-damage")
     private String waitingForDamage = "{prefix}<yellow>A speedrunner must hit a hunter within " +
-            "<white>{seconds}s</white> to start the game.";
+            "<white>{time}</white> to start the game.";
 
     @CustomKey("waiting-for-damage-indefinite")
     private String waitingForDamageIndefinite = "{prefix}<yellow>A speedrunner must hit a hunter to start the " +
@@ -170,7 +170,7 @@ public class ManhuntMessages extends OkaeriConfig {
 
     @CustomKey("waiting-for-damage-exhausted")
     private String waitingForDamageExhausted = "{prefix}<red>No speedrunner hit a hunter within " +
-            "<white>{seconds}s</white>. The game will not start.";
+            "<white>{time}</white>. The game will not start.";
 
     @CustomKey("waiting-for-damage-force-started")
     private String waitingForDamageForceStarted = "{prefix}<yellow>The game has automatically started because no " +
@@ -181,10 +181,10 @@ public class ManhuntMessages extends OkaeriConfig {
 
     @CustomKey("headstart-active")
     private String headstartActive = "{prefix}<yellow>{role}s <yellow>are in spectator mode for " +
-            "<white>{seconds}s</white>.";
+            "<white>{time}</white>.";
 
     @CustomKey("headstart-ending")
-    private String headstartEnding = "{prefix}<yellow>{role}s <yellow>return in <white>{seconds}s</white>.";
+    private String headstartEnding = "{prefix}<yellow>{role}s <yellow>return in <white>{time}</white>.";
 
     @CustomKey("headstart-ended")
     private String headstartEnded = "{prefix}<green>{role}s <green>have spawned!";

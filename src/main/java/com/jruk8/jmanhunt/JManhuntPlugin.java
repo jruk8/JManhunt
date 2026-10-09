@@ -400,8 +400,9 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
     /** Creates the respawn router and keeps it for roster skull lookups. */
     private PlayerRespawnListener createRespawnListener() {
         respawnListener = new PlayerRespawnListener(this,
-                new PlayerRespawnListener.RespawnPlayers(playerStates, fakeSpectators), game,
-                compass, messageConfigs.getMessagesConfig().getGame());
+                new PlayerRespawnListener.RespawnPlayers(playerStates, fakeSpectators,
+                        game.countdowns()),
+                game, compass, messageConfigs.getMessagesConfig().getGame());
         return respawnListener;
     }
 

@@ -11,22 +11,28 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerRespawnEvent;
-import org.bukkit.scheduler.BukkitTask;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import com.jruk8.jmanhunt.match.CountdownService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.GameMessages;
 
 /** Respawn routing: vanilla respawn hooks and delayed spectator revives. */
 public final class PlayerRespawnListener implements Listener {
-    /** Role plus fake-spectator state. */
-    public record RespawnPlayers(PlayerStateStore states, FakeSpectatorService fakes) {
+    /** Role, fake-spectator state, and countdowns. */
+    public record RespawnPlayers(PlayerStateStore states, FakeSpectatorService fakes,
+            CountdownService countdowns) {
+    }
+
+    /** Countdown key for one player's join hold or respawn delay. */
+    private record HoldKey(UUID playerId) {
     }
 
     private final TaskScheduler tasks;
@@ -34,7 +40,7 @@ public final class PlayerRespawnListener implements Listener {
     private final GameManager game;
     private final CompassManager compass;
     private final GameMessages gameTexts;
-    private final Map<UUID, BukkitTask> respawnTasks = new HashMap<>();
+    private final Set<HoldKey> holdKeys = new HashSet<>();
 
     public PlayerRespawnListener(TaskScheduler tasks, RespawnPlayers players, GameManager game,
             CompassManager compass, GameMessages gameTexts) {
@@ -50,7 +56,7 @@ public final class PlayerRespawnListener implements Listener {
 
     /** True when the player has a delayed revive pending. */
     public boolean hasPendingRespawn(UUID playerId) {
-        return respawnTasks.containsKey(playerId);
+        return players.countdowns().running(new HoldKey(playerId));
     }
 
     @EventHandler public void onRespawn(PlayerRespawnEvent event) {
@@ -131,23 +137,27 @@ public final class PlayerRespawnListener implements Listener {
      */
     public void scheduleJoinHold(Player player, GameInstance instance, int waitSeconds) {
         UUID playerId = player.getUniqueId();
-        BukkitTask existing = respawnTasks.remove(playerId);
-        if (existing != null) {
-            existing.cancel();
-        }
+        HoldKey key = new HoldKey(playerId);
+        players.countdowns().cancel(key);
+        holdKeys.remove(key);
         if (waitSeconds <= 0) {
             return;
         }
         long matchId = instance.matchId();
         tasks.run(() -> players.fakes().enable(player));
-        BukkitTask task = tasks.runLater(() -> {
-            respawnTasks.remove(playerId);
-            if (!game.isActiveInInstance(matchId, playerId)) {
-                return;
-            }
-            releaseJoinHold(player, matchId);
-        }, waitSeconds * 20L);
-        respawnTasks.put(playerId, task);
+        holdKeys.add(key);
+        players.countdowns().start(key, waitSeconds, remaining -> holdTick(playerId, remaining),
+                () -> {
+                    holdKeys.remove(key);
+                    if (game.isActiveInInstance(matchId, playerId)) {
+                        releaseJoinHold(player, matchId);
+                    }
+                });
+    }
+
+    /** Join-hold tick. Silent until limbo feedback wires in. */
+    private void holdTick(UUID playerId, int remaining) {
+        // Reserved for limbo broadcasts; the hold releases on done.
     }
 
     /** Releases a join hold, keeping any headstart hold intact. */
@@ -165,23 +175,22 @@ public final class PlayerRespawnListener implements Listener {
      */
     private void respawnParticipant(Player player, int delaySeconds, long matchId) {
         UUID playerId = player.getUniqueId();
-        BukkitTask existing = respawnTasks.remove(playerId);
-        if (existing != null) {
-            existing.cancel();
-        }
+        HoldKey key = new HoldKey(playerId);
+        players.countdowns().cancel(key);
+        holdKeys.remove(key);
         tasks.run(() -> players.fakes().enable(player));
         if (delaySeconds <= 0) {
             tasks.run(() -> revivePlayer(player, matchId, false));
             return;
         }
-        BukkitTask task = tasks.runLater(() -> {
-            respawnTasks.remove(playerId);
-            if (!game.isActiveInInstance(matchId, playerId)) {
-                return;
-            }
-            revivePlayer(player, matchId, true);
-        }, delaySeconds * 20L);
-        respawnTasks.put(playerId, task);
+        holdKeys.add(key);
+        players.countdowns().start(key, delaySeconds, remaining -> holdTick(playerId, remaining),
+                () -> {
+                    holdKeys.remove(key);
+                    if (game.isActiveInInstance(matchId, playerId)) {
+                        revivePlayer(player, matchId, true);
+                    }
+                });
     }
 
     private void revivePlayer(Player player, long matchId, boolean delayed) {
@@ -244,9 +253,9 @@ public final class PlayerRespawnListener implements Listener {
     }
 
     private void cancelAllRespawnTasks() {
-        for (BukkitTask task : respawnTasks.values()) {
-            task.cancel();
+        for (HoldKey key : List.copyOf(holdKeys)) {
+            players.countdowns().cancel(key);
         }
-        respawnTasks.clear();
+        holdKeys.clear();
     }
 }

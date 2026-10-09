@@ -178,6 +178,15 @@ public class MatchSettings extends OkaeriConfig {
         })
         private boolean startInAdventureMode = true;
 
+        @CustomKey("reminder-interval")
+        @Comment({
+                "Seconds between reminders while waiting for the first speedrunner hit.",
+                "Only used as the repeat interval when delay-seconds is -1 (wait",
+                "indefinitely). Set to -1 to disable the reminders entirely while",
+                "still waiting for damage."
+        })
+        private double reminderInterval = 30.0;
+
     }
 
     /** Per-side head starts. */

@@ -29,18 +29,6 @@ public class MatchConfig extends OkaeriConfig {
     @Setter
     private double endDelay = 10.0;
 
-    @CustomKey("start-reminder-interval")
-    @Comment({
-            "Seconds between reminders while waiting for the first speedrunner hit.",
-            "For finite delays, exactly three reminders are shown at the delay and two",
-            "equally-sized slices (e.g. 30s -> 30, 20, 10). This value is only used as",
-            "the repeat interval when delay-seconds is -1 (wait indefinitely).",
-            "Set to -1 to disable the reminders entirely while still waiting for damage."
-    })
-    @Getter
-    @Setter
-    private double startReminderInterval = 30.0;
-
     @CustomKey("disconnect-handling")
     @Comment("Disconnect rules for active participants.")
     @Getter

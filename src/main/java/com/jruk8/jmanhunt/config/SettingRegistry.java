@@ -463,7 +463,6 @@ public final class SettingRegistry {
         String root = "advanced.advanced-match-controls.";
         entries.add(bool(root + "game-rules.enabled", true));
         entries.add(floatVal(root + "end-delay", 10.0, null, null));
-        entries.add(floatMinusOne(root + "start-reminder-interval", 30.0, 0.0));
         entries.add(intVal(root + "disconnect-handling.speedrunner.reconnect-grace-seconds", 60, null, null));
         entries.add(intVal(root + "disconnect-handling.speedrunner.max-strikes", 3, 1, null));
         entries.add(intVal(root + "disconnect-handling.hunter.reconnect-grace-seconds", 60, null, null));
@@ -510,6 +509,8 @@ public final class SettingRegistry {
         entries.add(option("settings.match.start-on-speedrunner-damage.on-expire", "FORCE_START",
                 "CANCEL", "FORCE_START"));
         entries.add(bool("settings.match.start-on-speedrunner-damage.start-in-adventure-mode", true));
+        entries.add(floatMinusOne("settings.match.start-on-speedrunner-damage.reminder-interval",
+                30.0, 0.0));
         entries.add(bool("settings.match.headstarts.speedrunner.enabled", true));
         entries.add(intVal("settings.match.headstarts.speedrunner.delay-seconds", 20, 0, null));
         entries.add(bool("settings.match.headstarts.hunter.enabled", false));

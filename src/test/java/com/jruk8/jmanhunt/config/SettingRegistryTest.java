@@ -392,7 +392,7 @@ class SettingRegistryTest {
     @Test
     void movedDefaultsMirrorTheirSpecs() {
         assertEquals("30.0", SettingRegistry.byPath(
-                "advanced.advanced-match-controls.start-reminder-interval").defaultValue());
+                "settings.match.start-on-speedrunner-damage.reminder-interval").defaultValue());
         assertTrue(SettingRegistry.isListPath(
                 "advanced.advanced-match-controls.game-rules.rules"));
         assertEquals(6, MatchConfig.GameRules.DEFAULT_RULES.size());

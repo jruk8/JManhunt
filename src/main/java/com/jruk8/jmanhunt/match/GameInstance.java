@@ -48,11 +48,7 @@ public final class GameInstance {
     @Setter
     private BukkitTask waitingReminderTask;
     @Setter
-    private BukkitTask waitingExpiryTask;
-    @Setter
     private int waitingDelayConfigured;
-    @Setter
-    private long waitingStartTime;
     @Setter
     private BukkitTask timeLimitTask;
     private final java.util.Set<Long> timeAnnounced = new java.util.HashSet<>();
@@ -270,16 +266,8 @@ public final class GameInstance {
         return waitingReminderTask;
     }
 
-    public BukkitTask waitingExpiryTask() {
-        return waitingExpiryTask;
-    }
-
     public int waitingDelayConfigured() {
         return waitingDelayConfigured;
-    }
-
-    public long waitingStartTime() {
-        return waitingStartTime;
     }
 
     public BukkitTask timeLimitTask() {

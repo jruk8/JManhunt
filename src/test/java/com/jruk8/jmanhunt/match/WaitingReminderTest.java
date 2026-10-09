@@ -29,24 +29,4 @@ class WaitingReminderTest {
         assertEquals(-1, WaitingReminder.clampDelay(-1));
     }
 
-    @Test
-    void slicesThirtySecondsIntoThree() {
-        assertEquals(10, WaitingReminder.sliceSeconds(30));
-    }
-
-    @Test
-    void slicesFortyFiveSecondsIntoThree() {
-        assertEquals(15, WaitingReminder.sliceSeconds(45));
-    }
-
-    @Test
-    void slicesMinimumDelay() {
-        assertEquals(2, WaitingReminder.sliceSeconds(5));
-    }
-
-    @Test
-    void neverReturnsZero() {
-        assertEquals(1, WaitingReminder.sliceSeconds(1));
-    }
-
 }

@@ -1,9 +1,8 @@
 package com.jruk8.jmanhunt.match.prestart;
 
-/** Pure helpers for the start-on-speedrunner-damage waiting reminders. */
+/** Pure helpers for the start-on-speedrunner-damage wait. */
 public final class WaitingReminder {
     private static final int MIN_DELAY_SECONDS = 5;
-    private static final int REMINDER_COUNT = 3;
 
     private WaitingReminder() {
     }
@@ -20,28 +19,5 @@ public final class WaitingReminder {
             return -1;
         }
         return Math.max(MIN_DELAY_SECONDS, configured);
-    }
-
-    /**
-     * Returns the number of seconds between the configured countdown
-     * reminders: the delay divided by the reminder count.
-     *
-     * @param effectiveDelay the clamped delay in seconds (must be > 0)
-     * @return the slice in seconds
-     */
-    /**
-     * Returns the message key broadcast when the pre-start waiting period
-     * expires without a hit. Force-start expiry announces the automatic start
-     * instead of the cancellation message.
-     *
-     * @param forceStart true when on-expire is set to force start
-     * @return the message key to broadcast
-     */
-
-    public static int sliceSeconds(int effectiveDelay) {
-        if (effectiveDelay <= 0) {
-            return Math.max(1, effectiveDelay);
-        }
-        return Math.max(1, (int) Math.round(effectiveDelay / (double) REMINDER_COUNT));
     }
 }

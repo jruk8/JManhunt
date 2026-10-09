@@ -116,4 +116,11 @@ public final class MatchSettingsFacade {
                 BASE + "start-on-speedrunner-damage.start-in-adventure-mode",
                 global.getStartOnSpeedrunnerDamage().isStartInAdventureMode());
     }
+
+    /** Seconds between reminders on the indefinite pre-start wait. */
+    public float startReminderInterval(Integer lobby) {
+        return overrides.getFloat(lobby,
+                BASE + "start-on-speedrunner-damage.reminder-interval",
+                (float) global.getStartOnSpeedrunnerDamage().getReminderInterval());
+    }
 }
