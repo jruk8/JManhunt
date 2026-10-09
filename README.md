@@ -52,8 +52,8 @@ Find these modifiers on our [**Discord**](https://discord.gg/hkWmCVmWDC) communi
 
 ### Requirements
 
-- Server Software » [Paper](https://papermc.io/downloads/paper) **26.2+**
-- Java Version » Java **25**
+- Server Software » **[Paper 26.2+](https://papermc.io/downloads/paper)**
+- Java Version » **Java 25**
 - Dependencies » **None**
 - Soft Deps » [PlaceholderAPI](https://modrinth.com/plugin/placeholderapi), [Chunky](https://modrinth.com/plugin/chunky) (or similar), and [LuckPerms](https://modrinth.com/plugin/luckperms) (for `jmh-role` context)
 
