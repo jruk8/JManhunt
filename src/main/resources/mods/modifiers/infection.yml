@@ -22,6 +22,8 @@ behavior:
       console:
         # args:2 is the victim former role (only runners convert).
         - '<if:"<args:2> != SPEEDRUNNER","exit">'
+        # Non-final deaths keep the runner role: only the eliminated convert.
+        - '<if:"<prole:<args:0>> == SPEEDRUNNER","exit">'
         # The victim was already eliminated: switch them back in as a hunter.
         - "<pswitch:<args:0>,HUNTER>"
         # Remember the converted: the debuff block below tells infected

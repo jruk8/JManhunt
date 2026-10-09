@@ -130,7 +130,7 @@ class DeathMessageServiceTest {
     }
 
     @Test
-    void survivedRunnerDeathSendsTally() {
+    void survivedRunnerDeathSendsDiedLine() {
         Fixture fixture = fixture();
         Player victim = namedPlayer("Alex");
 
@@ -139,6 +139,7 @@ class DeathMessageServiceTest {
 
         verify(fixture.messaging(), times(1)).sendToInstance(fixture.instance(),
                 fixture.texts().getSpeedrunnerDeath(), Map.of("value", "2"));
+        assertFalse(fixture.texts().getSpeedrunnerDeath().contains("{value}"));
     }
 
     @Test

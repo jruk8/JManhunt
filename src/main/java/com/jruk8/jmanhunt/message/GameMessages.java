@@ -44,7 +44,7 @@ public class GameMessages extends OkaeriConfig {
     private String huntersUnlimitedLives = "{prefix}<yellow>Hunters have unlimited lives.";
 
     @CustomKey("speedrunner-death")
-    private String speedrunnerDeath = "{prefix}<yellow>A speedrunner has died! <white>({value} remaining)</white>";
+    private String speedrunnerDeath = "{prefix}<yellow>A speedrunner has died!";
 
     @CustomKey("loseplayer")
     private String loseplayer = "{prefix}<yellow><white>{player}</white> lost: {reason}";

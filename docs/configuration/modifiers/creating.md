@@ -161,10 +161,11 @@ sound when something was actually worn).
 ### Infection
 
 Speedrunners who die their final death come back as hunters via
-`<pswitch>`. The `ON_DEATH` guard reads the victim former role from
-`<args:2>`, so hunter deaths exit quietly and disconnect removals
-(which never fire `ON_DEATH`) are never converted. When no runners
-remain, the engine ends the match with a hunter win on its own.
+`<pswitch>`. The `ON_DEATH` guards read the victim former role from
+`<args:2>` plus their live role from `<prole>`, so hunter deaths and
+non-final runner deaths exit quietly, and disconnect removals (which
+never fire `ON_DEATH`) are never converted. When no runners remain,
+the engine ends the match with a hunter win on its own.
 Engine elimination and win announcements still run, so Infection
 lines may duplicate engine chat and sounds. A second block runs every
 12 seconds per hunter: converted hunters get sporadic 5-second
