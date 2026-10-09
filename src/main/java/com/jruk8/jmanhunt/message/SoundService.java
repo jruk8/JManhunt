@@ -2,6 +2,8 @@ package com.jruk8.jmanhunt.message;
 
 import com.jruk8.jmanhunt.config.SoundsConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
+import net.kyori.adventure.key.Key;
+import net.kyori.adventure.sound.Sound;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
@@ -42,7 +44,7 @@ public class SoundService {
             if (!settings.enabled() || settings.sound() == null) {
                 return;
             }
-            player.playSound(player.getLocation(), settings.sound(), settings.volume(), settings.pitch());
+            playFollowing(player, settings.sound(), settings.volume(), settings.pitch());
         } catch (IllegalArgumentException exception) {
             log.warning(
                     "Could not play configured sound '" + settings.configKey() + "': " + exception.getMessage());
@@ -91,10 +93,20 @@ public class SoundService {
                 log.warning("Sound '" + sound + "' is invalid. Using default sound.");
                 soundKey = NamespacedKey.fromString(FALLBACK_SOUND);
             }
-            player.playSound(player.getLocation(), soundKey.asString(), volume, pitch);
+            playFollowing(player, soundKey.asString(), volume, pitch);
         } catch (IllegalArgumentException exception) {
             log.warning("Could not play sound '" + sound + "': " + exception.getMessage());
         }
+    }
+
+    /**
+     * Plays one cue following the player entity instead of a world
+     * position, so moves and teleports after the send never strand
+     * it behind at the old spot. Volume and pitch keep their meaning.
+     */
+    private static void playFollowing(Player player, String soundId, float volume, float pitch) {
+        player.playSound(Sound.sound(Key.key(soundId), Sound.Source.MASTER, volume, pitch),
+                Sound.Emitter.self());
     }
 
     /** True when the id resolves to a real sound, with or without namespace. */
