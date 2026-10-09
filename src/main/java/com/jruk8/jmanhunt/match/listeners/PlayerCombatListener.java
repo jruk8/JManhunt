@@ -153,7 +153,8 @@ public final class PlayerCombatListener implements Listener {
             surviveRunnerDeath(player, instance, quiet, matchId, delaySeconds);
             return;
         }
-        handleUnlimitedRunnerDeath(player, instance, quiet, matchId, delaySeconds);
+        // Unlimited lives (-1): never eliminated permanently by lives.
+        surviveRunnerDeath(player, instance, quiet, matchId, delaySeconds);
     }
 
     /** Eliminates a hunter out of lives, mirroring the speedrunner path. */
@@ -221,22 +222,7 @@ public final class PlayerCombatListener implements Listener {
         this.match.game().deaths().announceDeath(instance, player, Role.SPEEDRUNNER, false,
                 remaining, quiet);
         this.match.game().messaging().playInstanceSound(instance, "game.speedrunner-death");
-        world.respawn().scheduleRespawn(player, instance, quiet, delaySeconds,
-                reads.gameTexts().getSpeedrunnerRespawnScheduled(), matchId);
-    }
-
-    /** Handles a speedrunner death with unlimited lives. */
-    private void handleUnlimitedRunnerDeath(Player player, GameInstance instance, boolean quiet,
-            long matchId, int delaySeconds) {
-        // Unlimited lives (-1): never eliminated permanently by lives. The
-        // unlimited line fires once per side per match; quiet deaths neither
-        // send nor consume it.
-        if (!quiet && !instance.runnerUnlimitedAnnounced()) {
-            instance.setRunnerUnlimitedAnnounced(true);
-            this.match.game().messaging().sendToInstance(instance,
-                    reads.gameTexts().getSpeedrunnersUnlimitedLives(), Map.of());
-        }
-        surviveRunnerDeath(player, instance, quiet, matchId, delaySeconds);
+        world.respawn().scheduleRespawn(player, delaySeconds, matchId);
     }
 
     private void handleHunterDeath(Player player, GameInstance instance, boolean quiet) {
@@ -256,16 +242,10 @@ public final class PlayerCombatListener implements Listener {
         }
         this.match.game().deaths().announceDeath(instance, player, Role.HUNTER, false, 0, quiet);
         this.match.game().messaging().playInstanceSound(instance, "game.hunter-death");
-        if (lives == -1 && !quiet && !instance.hunterUnlimitedAnnounced()) {
-            instance.setHunterUnlimitedAnnounced(true);
-            this.match.game().messaging().sendToInstance(instance,
-                    reads.gameTexts().getHuntersUnlimitedLives(), Map.of());
-        }
         // Undelayed hunters respawn through vanilla mechanics; only a
         // positive delay routes them through the spectator revive.
         if (delaySeconds > 0) {
-            world.respawn().scheduleRespawn(player, instance, quiet, delaySeconds,
-                    reads.gameTexts().getHunterRespawnScheduled(), matchId);
+            world.respawn().scheduleRespawn(player, delaySeconds, matchId);
         }
     }
 

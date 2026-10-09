@@ -150,11 +150,11 @@ class DeathMessageServiceTest {
         fixture.deaths().announceDeath(fixture.instance(), victim, Role.HUNTER, true, 0, false);
 
         verify(fixture.messaging(), times(1)).sendToInstance(fixture.instance(),
-                fixture.texts().getHunterOutOfLives(), Map.of());
+                fixture.texts().getHunterOutOfLives(), Map.of("remaining", "0 remain"));
     }
 
     @Test
-    void runnerEliminationSendsOutOfLives() {
+    void runnerEliminationSendsRemainingCount() {
         Fixture fixture = fixture();
         Player victim = namedPlayer("Alex");
 
@@ -162,7 +162,19 @@ class DeathMessageServiceTest {
                 false);
 
         verify(fixture.messaging(), times(1)).sendToInstance(fixture.instance(),
-                fixture.texts().getSpeedrunnerOutOfLives(), Map.of());
+                fixture.texts().getSpeedrunnerOutOfLives(), Map.of("remaining", "only 1 remains"));
+    }
+
+    @Test
+    void runnerEliminationCountsSeveralRemaining() {
+        Fixture fixture = fixture();
+        Player victim = namedPlayer("Alex");
+
+        fixture.deaths().announceDeath(fixture.instance(), victim, Role.SPEEDRUNNER, true, 3,
+                false);
+
+        verify(fixture.messaging(), times(1)).sendToInstance(fixture.instance(),
+                fixture.texts().getSpeedrunnerOutOfLives(), Map.of("remaining", "3 remain"));
     }
 
     @Test

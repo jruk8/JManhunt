@@ -82,7 +82,8 @@ class PrestartHeadstartTest {
         MatchMessaging messaging = mock(MatchMessaging.class);
         LimboFeedbackService limbo = new LimboFeedbackService(
                 new LimboFeedbackService.LimboReads(store, states, match,
-                        new TagCooldownStore(System::currentTimeMillis)),
+                        new TagCooldownStore(System::currentTimeMillis),
+                        mock(TaskScheduler.class)),
                 new LimboFeedbackService.LimboTexts(messages, manhunt, messaging));
         PrestartService prestart = new PrestartService(
                 new PrestartService.PrestartConfig(mock(MatchSettings.Headstarts.class), match,

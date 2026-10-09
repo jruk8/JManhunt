@@ -53,10 +53,6 @@ public final class GameInstance {
     private BukkitTask timeLimitTask;
     private final java.util.Set<Long> timeAnnounced = new java.util.HashSet<>();
     @Setter
-    private boolean runnerUnlimitedAnnounced;
-    @Setter
-    private boolean hunterUnlimitedAnnounced;
-    @Setter
     private Location startCenter;
     private long cachedElapsedMillis;
     /** Modifiers already ON_START-fired by mid-match toggles this match. */
@@ -277,16 +273,6 @@ public final class GameInstance {
     /** Announced countdown thresholds, in whole seconds remaining. */
     public java.util.Set<Long> timeAnnounced() {
         return timeAnnounced;
-    }
-
-    /** Whether the side's unlimited-lives line has fired this match. */
-    public boolean runnerUnlimitedAnnounced() {
-        return runnerUnlimitedAnnounced;
-    }
-
-    /** Whether the side's unlimited-lives line has fired this match. */
-    public boolean hunterUnlimitedAnnounced() {
-        return hunterUnlimitedAnnounced;
     }
 
     /** Elapsed millis between match start and the given moment; frozen once the match ends. */

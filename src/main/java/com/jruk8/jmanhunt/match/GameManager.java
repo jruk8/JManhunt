@@ -157,7 +157,7 @@ public final class GameManager implements MatchControl {
     private LimboFeedbackService newLimbo() {
         return new LimboFeedbackService(
                 new LimboFeedbackService.LimboReads(store, services.playerStates(), matchSettings,
-                        cooldownStore),
+                        cooldownStore, edge.tasks()),
                 new LimboFeedbackService.LimboTexts(texts.messages(), texts.manhunt(), messaging));
     }
 

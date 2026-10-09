@@ -114,9 +114,6 @@ public final class PrestartService {
                 services.fakes().enable(player);
             }
         }
-        messaging.sendToInstance(instance, manhunt.getHeadstartActive(),
-                Map.of("time", DurationFormat.format(state.remaining()),
-                        "role", messages.roleName(held)));
         services.countdowns().start(key, state.remaining(),
                 remaining -> tickHeadstart(instance, key, role, state, remaining),
                 () -> endHeadstart(instance, role));
@@ -144,7 +141,8 @@ public final class PrestartService {
 
     /**
      * Ends one side's headstart, returning held players to their recorded
-     * spawnpoints and restoring them to survival mode.
+     * spawnpoints and restoring them to survival mode. No per-player
+     * lines: the group line below is the whole announcement.
      */
     private void endHeadstart(GameInstance instance, Role role) {
         HeadstartState state = instance.headstart(role);
@@ -158,7 +156,6 @@ public final class PrestartService {
                     player.teleport(returnPoint);
                 }
                 services.fakes().disable(player);
-                services.limbo().announceSpawned(instance, player);
             }
         }
         state.returnPoints().clear();

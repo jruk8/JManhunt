@@ -18,15 +18,8 @@ public class GameMessages extends OkaeriConfig {
     @CustomKey("hunter-death")
     private String hunterDeath = "{prefix}<yellow>A hunter has died!";
 
-    @CustomKey("hunter-respawn-scheduled")
-    private String hunterRespawnScheduled = "{prefix}<yellow>{player} will respawn in <white>{seconds}s</white>.";
-
     @CustomKey("hunter-respawn-imminent")
     private String hunterRespawnImminent = "{prefix}<green>{player} has respawned.";
-
-    @CustomKey("speedrunner-respawn-scheduled")
-    private String speedrunnerRespawnScheduled = "{prefix}<yellow>{player} will respawn in " +
-            "<white>{seconds}s</white>.";
 
     @CustomKey("speedrunner-respawn-imminent")
     private String speedrunnerRespawnImminent = "{prefix}<green>{player} has respawned.";
@@ -35,13 +28,8 @@ public class GameMessages extends OkaeriConfig {
     private String hunterOutOfLives = "{prefix}<yellow>A hunter has run out of lives and is eliminated.";
 
     @CustomKey("speedrunner-out-of-lives")
-    private String speedrunnerOutOfLives = "{prefix}<yellow>A speedrunner has run out of lives and is eliminated.";
-
-    @CustomKey("speedrunners-unlimited-lives")
-    private String speedrunnersUnlimitedLives = "{prefix}<yellow>Speedrunners have unlimited lives.";
-
-    @CustomKey("hunters-unlimited-lives")
-    private String huntersUnlimitedLives = "{prefix}<yellow>Hunters have unlimited lives.";
+    private String speedrunnerOutOfLives = "{prefix}<yellow>A speedrunner was eliminated. "
+            + "(<white>{remaining}</white>)";
 
     @CustomKey("speedrunner-death")
     private String speedrunnerDeath = "{prefix}<yellow>A speedrunner has died!";

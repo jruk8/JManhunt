@@ -179,10 +179,6 @@ public class ManhuntMessages extends OkaeriConfig {
     @CustomKey("started-by-damage")
     private String startedByDamage = "{prefix}<green>The Manhunt has begun!";
 
-    @CustomKey("headstart-active")
-    private String headstartActive = "{prefix}<yellow>{role}s <yellow>are in limbo for " +
-            "<white>{time}</white>.";
-
     @CustomKey("headstart-ending")
     private String headstartEnding = "{prefix}<yellow>{role}s <yellow>return in <white>{time}</white>.";
 
@@ -201,6 +197,9 @@ public class ManhuntMessages extends OkaeriConfig {
 
     @CustomKey("limbo-spawned")
     private String limboSpawned = "{prefix}{rolecolor}{player} <green>has spawned!";
+
+    @CustomKey("limbo-spawned-multi")
+    private String limboSpawnedMulti = "{prefix}{rolecolor}{count} {role}s <green>have spawned!";
 
     @CustomKey("start-invalid")
     private String startInvalid = "{prefix}<red>A match needs at least one hunter and one speedrunner.";

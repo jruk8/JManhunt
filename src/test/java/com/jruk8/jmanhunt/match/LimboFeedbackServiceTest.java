@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.command.TagCooldownStore;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
@@ -19,19 +20,22 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /** Limbo census, mark-gated solo notes, and cooldown-gated multi notes. */
 class LimboFeedbackServiceTest {
 
     private record Fixture(LimboFeedbackService limbo, GameInstance instance, MatchStore store,
             MessageService messages, ManhuntMessages manhunt, MatchMessaging messaging,
-            HeadstartState hunterHeld, HeadstartState runnerHeld, AtomicLong clock) {
+            HeadstartState hunterHeld, HeadstartState runnerHeld, AtomicLong clock,
+            PlayerStateStore states, TaskScheduler tasks) {
     }
 
     private static Player namedPlayer(String name) {
@@ -62,11 +66,20 @@ class LimboFeedbackServiceTest {
         when(instance.headstart(any())).thenAnswer(
                 invocation -> invocation.getArgument(0) == Role.HUNTER ? hunterHeld : runnerHeld);
         when(store.onlineAssignedPlayers(instance)).thenReturn(online);
+        when(store.instance(7L)).thenReturn(Optional.of(instance));
+        TaskScheduler tasks = mock(TaskScheduler.class);
         LimboFeedbackService limbo = new LimboFeedbackService(
-                new LimboFeedbackService.LimboReads(store, states, match, cooldowns),
+                new LimboFeedbackService.LimboReads(store, states, match, cooldowns, tasks),
                 new LimboFeedbackService.LimboTexts(messages, manhunt, messaging));
         return new Fixture(limbo, instance, store, messages, manhunt, messaging, hunterHeld,
-                runnerHeld, clock);
+                runnerHeld, clock, states, tasks);
+    }
+
+    /** Runs the scheduled spawn flush, failing when none was scheduled. */
+    private static void flushSpawns(Fixture fixture) {
+        ArgumentCaptor<Runnable> flush = ArgumentCaptor.forClass(Runnable.class);
+        verify(fixture.tasks()).run(flush.capture());
+        flush.getValue().run();
     }
 
     @Test
@@ -167,9 +180,79 @@ class LimboFeedbackServiceTest {
         Fixture fixture = fixture(List.of(player));
 
         fixture.limbo().announceSpawned(fixture.instance(), player);
+        verify(fixture.messaging(), never()).sendToInstance(any(), any(), any());
+        flushSpawns(fixture);
 
         verify(fixture.messaging()).sendToInstance(eq(fixture.instance()),
                 eq(fixture.manhunt().getLimboSpawned()),
                 eq(Map.of("rolecolor", "<red>", "player", "Alex")));
+    }
+
+    @Test
+    void sameTickSpawnsCollapseIntoCountLine() {
+        Player first = namedPlayer("Alex");
+        Player second = namedPlayer("Blair");
+        Fixture fixture = fixture(List.of(first, second));
+        fixture.states().setRole(first.getUniqueId(), Role.HUNTER);
+        fixture.states().setRole(second.getUniqueId(), Role.HUNTER);
+
+        fixture.limbo().announceSpawned(fixture.instance(), first);
+        fixture.limbo().announceSpawned(fixture.instance(), second);
+        flushSpawns(fixture);
+
+        verify(fixture.tasks(), times(1)).run(any());
+        verify(fixture.messaging(), never()).sendToInstance(eq(fixture.instance()),
+                eq(fixture.manhunt().getLimboSpawned()), any());
+        verify(fixture.messaging()).sendToInstance(eq(fixture.instance()),
+                eq(fixture.manhunt().getLimboSpawnedMulti()),
+                eq(Map.of("rolecolor", "<red>", "count", "2", "role", "hunter")));
+    }
+
+    @Test
+    void mixedRoleSpawnsFlushOneLinePerRole() {
+        Player hunterFirst = namedPlayer("Alex");
+        Player hunterSecond = namedPlayer("Blair");
+        Player runner = namedPlayer("Casey");
+        Fixture fixture = fixture(List.of(hunterFirst, hunterSecond, runner));
+        fixture.states().setRole(hunterFirst.getUniqueId(), Role.HUNTER);
+        fixture.states().setRole(hunterSecond.getUniqueId(), Role.HUNTER);
+        fixture.states().setRole(runner.getUniqueId(), Role.SPEEDRUNNER);
+
+        fixture.limbo().announceSpawned(fixture.instance(), hunterFirst);
+        fixture.limbo().announceSpawned(fixture.instance(), runner);
+        fixture.limbo().announceSpawned(fixture.instance(), hunterSecond);
+        flushSpawns(fixture);
+
+        verify(fixture.messaging()).sendToInstance(eq(fixture.instance()),
+                eq(fixture.manhunt().getLimboSpawnedMulti()),
+                eq(Map.of("rolecolor", "<red>", "count", "2", "role", "hunter")));
+        verify(fixture.messaging()).sendToInstance(eq(fixture.instance()),
+                eq(fixture.manhunt().getLimboSpawned()),
+                eq(Map.of("rolecolor", "<red>", "player", "Casey")));
+    }
+
+    @Test
+    void flushSkipsPlayersWhoLeftWithinTheTick() {
+        Player player = namedPlayer("Alex");
+        Fixture fixture = fixture(List.of(player));
+        when(fixture.instance().isActive(player.getUniqueId())).thenReturn(false);
+
+        fixture.limbo().announceSpawned(fixture.instance(), player);
+        flushSpawns(fixture);
+
+        verify(fixture.messaging(), never()).sendToInstance(any(), any(), any());
+    }
+
+    @Test
+    void doubleQueuedSpawnAnnouncesOnce() {
+        Player player = namedPlayer("Alex");
+        Fixture fixture = fixture(List.of(player));
+
+        fixture.limbo().announceSpawned(fixture.instance(), player);
+        fixture.limbo().announceSpawned(fixture.instance(), player);
+        flushSpawns(fixture);
+
+        verify(fixture.messaging(), times(1)).sendToInstance(eq(fixture.instance()),
+                eq(fixture.manhunt().getLimboSpawned()), any());
     }
 }

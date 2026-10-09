@@ -58,7 +58,7 @@ public final class DeathMessageService {
             texts.messaging().sendToInstance(instance,
                     victimRole == Role.HUNTER ? texts.gameTexts().getHunterOutOfLives()
                             : texts.gameTexts().getSpeedrunnerOutOfLives(),
-                    Map.of());
+                    Map.of("remaining", remainingText(runnersRemaining)));
             return;
         }
         if (victimRole == Role.HUNTER) {
@@ -68,6 +68,17 @@ public final class DeathMessageService {
         }
         texts.messaging().sendToInstance(instance, texts.gameTexts().getSpeedrunnerDeath(),
                 Map.of("value", Integer.toString(runnersRemaining)));
+    }
+
+    /**
+     * Remaining-runners phrase for the elimination line: a lone callout
+     * at one, a plain count otherwise. Pure for tests.
+     */
+    static String remainingText(int runnersRemaining) {
+        if (runnersRemaining == 1) {
+            return "only 1 remains";
+        }
+        return runnersRemaining + " remain";
     }
 
     /** True for a kill of a teammate: same participant role, no suicides. Pure for tests. */

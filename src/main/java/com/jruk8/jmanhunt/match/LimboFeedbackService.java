@@ -2,6 +2,7 @@ package com.jruk8.jmanhunt.match;
 
 import com.jruk8.jmanhunt.config.DurationFormat;
 import com.jruk8.jmanhunt.command.TagCooldownStore;
+import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
@@ -11,7 +12,9 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -24,9 +27,9 @@ import org.bukkit.entity.Player;
  * the cooldown store, so no extra scheduler runs.
  */
 public final class LimboFeedbackService {
-    /** Store, states, settings, and cooldowns. */
+    /** Store, states, settings, cooldowns, and the flush scheduler. */
     public record LimboReads(MatchStore store, PlayerStateStore states, MatchSettingsFacade match,
-            TagCooldownStore cooldowns) {
+            TagCooldownStore cooldowns, TaskScheduler tasks) {
     }
 
     /** Messages plus match messaging. */
@@ -36,9 +39,19 @@ public final class LimboFeedbackService {
 
     private static final String MULTI_KEY = "limbo-multi";
 
+    /** One queued spawn notice, keyed by match plus player for dedupe. */
+    private record SpawnKey(long matchId, UUID playerId) {
+    }
+
+    /** Queued spawn notice: identity plus the role grouping key. */
+    private record SpawnNotice(long matchId, UUID playerId, String playerName, Role role) {
+    }
+
     private final LimboReads reads;
     private final LimboTexts texts;
     private final Set<UUID> pendingHolds = new HashSet<>();
+    private final Map<SpawnKey, SpawnNotice> pendingSpawns = new LinkedHashMap<>();
+    private boolean spawnFlushScheduled;
 
     public LimboFeedbackService(LimboReads reads, LimboTexts texts) {
         this.reads = reads;
@@ -116,11 +129,66 @@ public final class LimboFeedbackService {
         return held;
     }
 
-    /** Announces one player's spawn. */
+    /**
+     * Queues one player's spawn notice for the next-tick flush, so
+     * same-tick spawns collapse into one line per role instead of
+     * naming everyone. The flush re-checks liveness, so a player
+     * leaving within the tick stays silent.
+     */
     public void announceSpawned(GameInstance instance, Player player) {
-        texts.messaging().sendToInstance(instance, texts.manhunt().getLimboSpawned(),
-                Map.of("rolecolor", texts.messages().roleColor(reads.states().role(player)),
-                        "player", player.getName()));
+        pendingSpawns.put(new SpawnKey(instance.matchId(), player.getUniqueId()),
+                new SpawnNotice(instance.matchId(), player.getUniqueId(), player.getName(),
+                        reads.states().role(player)));
+        if (!spawnFlushScheduled) {
+            spawnFlushScheduled = true;
+            reads.tasks().run(this::flushSpawns);
+        }
+    }
+
+    /**
+     * Flushes queued spawn notices: one line per role per match, the
+     * name line for solo spawns and the count line once two or more
+     * of a role spawn on the same tick. Skips dead matches and
+     * players no longer active.
+     */
+    private void flushSpawns() {
+        spawnFlushScheduled = false;
+        if (pendingSpawns.isEmpty()) {
+            return;
+        }
+        Map<Long, List<SpawnNotice>> byMatch = new LinkedHashMap<>();
+        for (SpawnNotice notice : pendingSpawns.values()) {
+            byMatch.computeIfAbsent(notice.matchId(), match -> new ArrayList<>()).add(notice);
+        }
+        pendingSpawns.clear();
+        for (Map.Entry<Long, List<SpawnNotice>> entry : byMatch.entrySet()) {
+            GameInstance instance = reads.store().instance(entry.getKey()).orElse(null);
+            if (instance == null || !instance.active()) {
+                continue;
+            }
+            Map<Role, List<SpawnNotice>> byRole = new LinkedHashMap<>();
+            for (SpawnNotice notice : entry.getValue()) {
+                if (instance.isActive(notice.playerId())) {
+                    byRole.computeIfAbsent(notice.role(), role -> new ArrayList<>()).add(notice);
+                }
+            }
+            for (Map.Entry<Role, List<SpawnNotice>> group : byRole.entrySet()) {
+                announceSpawnGroup(instance, group.getKey(), group.getValue());
+            }
+        }
+    }
+
+    /** One spawn line for a role group: named solo, counted multi. */
+    private void announceSpawnGroup(GameInstance instance, Role role, List<SpawnNotice> group) {
+        String color = texts.messages().roleColor(role);
+        if (group.size() == 1) {
+            texts.messaging().sendToInstance(instance, texts.manhunt().getLimboSpawned(),
+                    Map.of("rolecolor", color, "player", group.get(0).playerName()));
+            return;
+        }
+        texts.messaging().sendToInstance(instance, texts.manhunt().getLimboSpawnedMulti(),
+                Map.of("rolecolor", color, "count", Integer.toString(group.size()),
+                        "role", role.displayName().toLowerCase(Locale.ROOT)));
     }
 
     /** Ids of the given waiting players, for broadcast exclusion. */

@@ -4,10 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
@@ -30,7 +28,6 @@ import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
-import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
@@ -123,9 +120,7 @@ class PlayerCombatListenerDeathTest {
     }
 
     private static GameMessages texts() {
-        MessagesConfig config = new MessagesConfig();
-        ConfigPathMapper.set(config, "game.speedrunner-respawn-scheduled", "respawn tpl");
-        return config.getGame();
+        return new MessagesConfig().getGame();
     }
 
     /** Runs the death with an immediately executing scheduler. */
@@ -241,8 +236,7 @@ class PlayerCombatListenerDeathTest {
         assertEquals(Role.SPEEDRUNNER, fixture.players().role(fixture.victimId()));
         assertTrue(fixture.instance().isActive(fixture.victimId()));
         assertTrue(fixture.instance().deadPlayers().isEmpty());
-        verify(fixture.respawn()).scheduleRespawn(fixture.victim(), fixture.instance(), false,
-                0, "respawn tpl", 7L);
+        verify(fixture.respawn()).scheduleRespawn(fixture.victim(), 0, 7L);
         verify(fixture.fakes(), never()).enable(any(Player.class));
         verify(fixture.compass(), never()).clearHotspotHistory(any(UUID.class));
     }
@@ -256,8 +250,8 @@ class PlayerCombatListenerDeathTest {
         assertEquals(Role.HUNTER, fixture.players().role(fixture.victimId()));
         assertTrue(fixture.instance().isActive(fixture.victimId()));
         assertTrue(fixture.instance().deadPlayers().isEmpty());
-        verify(fixture.respawn(), never()).scheduleRespawn(any(Player.class),
-                any(GameInstance.class), anyBoolean(), anyInt(), anyString(), anyLong());
+        verify(fixture.respawn(), never()).scheduleRespawn(any(Player.class), anyInt(),
+                anyLong());
     }
 
     @Test

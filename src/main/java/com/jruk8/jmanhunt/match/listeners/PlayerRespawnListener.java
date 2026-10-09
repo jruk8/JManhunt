@@ -88,15 +88,11 @@ public final class PlayerRespawnListener implements Listener {
     }
 
     /**
-     * Announces a delayed respawn, then routes through the spectator
-     * revive. A non-positive delay revives immediately without announcing.
+     * Routes through the spectator revive: the limbo countdown
+     * already announces the wait, so no line sends here. A
+     * non-positive delay revives immediately.
      */
-    void scheduleRespawn(Player player, GameInstance instance, boolean quiet,
-            int delaySeconds, String scheduledTemplate, long matchId) {
-        if (!quiet && delaySeconds > 0) {
-            game.messaging().sendToInstance(instance, scheduledTemplate,
-                    Map.of("player", player.getName(), "seconds", Integer.toString(delaySeconds)));
-        }
+    void scheduleRespawn(Player player, int delaySeconds, long matchId) {
         respawnParticipant(player, delaySeconds, matchId);
     }
 
