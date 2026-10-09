@@ -81,4 +81,26 @@ public final class TagRoster {
         }
         return upper;
     }
+
+    /**
+     * {@code <peliminated:player>}: {@code "true"} when the player is
+     * eliminated or was never in the game, {@code "false"} while they
+     * are active in a live match. Needs no live match: outside one,
+     * every name reads eliminated.
+     */
+    static String eliminated(String tag, String args, TagContext context) {
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 1) {
+            context.scope().warn("Tag <peliminated> needs a player like <peliminated:Steve>: "
+                    + tag);
+            return "null";
+        }
+        Optional<String> name = CommandPlaceholders.parsePickItem(parts.get(0));
+        if (name.isEmpty() || name.get().isBlank()) {
+            context.scope().warn("Tag <peliminated> needs a player like <peliminated:Steve>: "
+                    + tag);
+            return "null";
+        }
+        return context.roster().eliminated(name.get().strip()) ? "true" : "false";
+    }
 }

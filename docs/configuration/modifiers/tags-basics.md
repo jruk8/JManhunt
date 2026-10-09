@@ -100,6 +100,7 @@ creator editor validates them as you type:
 | `<range:1,5>` | The list `[1, 2, 3, 4]`, Python style (see Lists). |
 | `<active-players:HUNTER>` | Eligible hunters as a list, like `[Alex, Bo]` (`ALL` lists both sides). |
 | `<prole:Alex>` | `HUNTER` or `SPEEDRUNNER` for Alex, else `null`. |
+| `<peliminated:Alex>` | `true` when Alex is eliminated or was never in the game, else `false`. |
 | `<phasitem:Alex,golden_apple,2>` | `true` when Alex holds at least 2 golden apples, else `false` (the count is 1 when omitted). |
 | `<pheld:Alex>` | Alex's main-hand material, else `null`. |
 | `<plocation:Alex>` | Alex's spot as `[x, y, z, world, pitch, yaw]`. |
@@ -163,7 +164,9 @@ one list. `<prole:Alex>` reads one player's side, and
 `<plocation:Alex>` reads their spot as
 `[x, y, z, world, pitch, yaw]`, the same shape as the respawn
 event arg. Unknown or offline players yield `null` silently, as do
-spectators for `<prole>`.
+spectators for `<prole>`. `<peliminated:Alex>` reads `false` only
+while Alex is active in a live match; eliminated, left, and
+never-joined names all read `true`, with no live match needed.
 
 `<overlap-players:origin,role,radius,max>` and
 `<nearby-players:player,role,radius,max>` list names within

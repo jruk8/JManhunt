@@ -518,6 +518,7 @@ public final class CommandPlaceholders {
             case "pstate", "pstandingon", "ptitle", "pslot" ->
                     TagPlayers.resolve(tag, name, args, context);
             case "prole" -> TagRoster.role(tag, args, context);
+            case "peliminated" -> TagRoster.eliminated(tag, args, context);
             case "overlap-players" -> TagLocations.overlapPlayers(tag, args, context);
             case "nearby-players" -> TagLocations.nearbyPlayers(tag, args, playerName, context);
             case "pworld", "world" -> TagLocations.playerWorld(tag, name, args, context);

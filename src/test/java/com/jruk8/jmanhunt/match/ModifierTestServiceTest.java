@@ -158,6 +158,32 @@ class ModifierTestServiceTest {
     }
 
     @Test
+    void runReadsSenderActiveAndOthersEliminated() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        java.util.List<String> outputs = new java.util.ArrayList<>();
+        doAnswer(call -> {
+            TagContext context = call.getArgument(2);
+            @SuppressWarnings("unchecked")
+            java.util.List<String> lines = (java.util.List<String>) call.getArgument(0);
+            for (String line : lines) {
+                outputs.add(com.jruk8.jmanhunt.command.CommandPlaceholders.replace(
+                        line, "Steve", 0, 64, 0, context));
+            }
+            return null;
+        }).when(commands).runCommandList(any(), any(), any(), any());
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
+        Player sender = mock(Player.class);
+        when(sender.getName()).thenReturn("Steve");
+
+        ModifierTestService.TestResult result = service.run(sender, "HUNTER",
+                List.of("<peliminated:<p>>", "<peliminated:Nobody>"));
+
+        assertEquals(List.of("false", "true"), outputs);
+        assertTrue(result.warnings().isEmpty(), result.warnings().toString());
+    }
+
+    @Test
     void reportReplaysOutputThenSuccess() {
         GameStateCommandManager commands = mock(GameStateCommandManager.class);
         when(commands.formatEngineMessage(anyString()))

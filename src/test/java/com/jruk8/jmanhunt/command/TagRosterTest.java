@@ -19,6 +19,7 @@ class TagRosterTest {
         final Map<String, String> roles = new HashMap<>();
         final Map<String, List<String>> actives = new HashMap<>();
         final Map<String, Location> locations = new HashMap<>();
+        final java.util.Set<String> eliminated = new java.util.HashSet<>();
         final RosterValues roster = new RosterValues() {
             @Override
             public Optional<String> roleOf(String playerName) {
@@ -33,6 +34,11 @@ class TagRosterTest {
             @Override
             public Optional<Location> locationOf(String playerName) {
                 return Optional.ofNullable(locations.get(playerName));
+            }
+
+            @Override
+            public boolean eliminated(String playerName) {
+                return eliminated.contains(playerName);
             }
         };
 
@@ -106,6 +112,26 @@ class TagRosterTest {
         assertEquals("null", fixture.replace("<prole:Ghost>", 7L));
         assertEquals("null", fixture.replace("<prole:>", 7L));
         assertEquals("null", fixture.replace("<prole:Steve>", TagContext.NO_MATCH));
+        assertEquals(2, fixture.warnings.size());
+    }
+
+    @Test
+    void peliminatedMapsRosterFlagsWithoutMatch() {
+        Fixture fixture = new Fixture();
+        fixture.eliminated.add("Zed");
+
+        assertEquals("true", fixture.replace("<peliminated:Zed>", 7L));
+        assertEquals("false", fixture.replace("<peliminated:Amy>", 7L));
+        assertEquals("true", fixture.replace("<peliminated:Zed>", TagContext.NO_MATCH));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void peliminatedRejectsBadArity() {
+        Fixture fixture = new Fixture();
+
+        assertEquals("null", fixture.replace("<peliminated:>", 7L));
+        assertEquals("null", fixture.replace("<peliminated:Amy,Zed>", 7L));
         assertEquals(2, fixture.warnings.size());
     }
 }

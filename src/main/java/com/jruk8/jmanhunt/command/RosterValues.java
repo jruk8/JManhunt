@@ -21,6 +21,14 @@ public interface RosterValues {
     /** Alphabetical eligible names for one participant role. */
     List<String> activePlayers(String role);
 
+    /**
+     * True when the name is eliminated or was never in the game: only
+     * names active in a live instance read false. Defaults to true.
+     */
+    default boolean eliminated(String playerName) {
+        return true;
+    }
+
     /** Online player location by case-insensitive name, or empty. */
     Optional<Location> locationOf(String playerName);
 

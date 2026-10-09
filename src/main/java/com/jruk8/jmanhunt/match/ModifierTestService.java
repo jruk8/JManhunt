@@ -278,6 +278,11 @@ public final class ModifierTestService {
         }
 
         @Override
+        public boolean eliminated(String playerName) {
+            return !playerName.equalsIgnoreCase(name);
+        }
+
+        @Override
         public Optional<Location> locationOf(String playerName) {
             return playerName.equalsIgnoreCase(name)
                     ? Optional.ofNullable(sender.getLocation()) : Optional.empty();

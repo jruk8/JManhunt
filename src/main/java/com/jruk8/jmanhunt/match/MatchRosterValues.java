@@ -42,12 +42,27 @@ public final class MatchRosterValues implements RosterValues {
         if (match.isEmpty()) {
             return Optional.empty();
         }
-        for (UUID id : match.get().assignedPlayerIds()) {
+        return assignedId(match.get(), playerName).map(playerStates::role).map(Role::name);
+    }
+
+    @Override
+    public boolean eliminated(String playerName) {
+        Optional<GameInstance> match = game.instance(matchId);
+        if (match.isEmpty()) {
+            return true;
+        }
+        return assignedId(match.get(), playerName)
+                .map(id -> !match.get().isActive(id)).orElse(true);
+    }
+
+    /** Assigned id behind a case-blind name, online or offline. */
+    private static Optional<UUID> assignedId(GameInstance match, String playerName) {
+        for (UUID id : match.assignedPlayerIds()) {
             Player online = Bukkit.getPlayer(id);
             String name = online != null ? online.getName()
                     : Bukkit.getOfflinePlayer(id).getName();
             if (name != null && name.equalsIgnoreCase(playerName)) {
-                return Optional.of(playerStates.role(id).name());
+                return Optional.of(id);
             }
         }
         return Optional.empty();
