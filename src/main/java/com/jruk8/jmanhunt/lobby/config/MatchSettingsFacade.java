@@ -123,4 +123,11 @@ public final class MatchSettingsFacade {
                 BASE + "start-on-speedrunner-damage.reminder-interval",
                 (float) global.getStartOnSpeedrunnerDamage().getReminderInterval());
     }
+
+    /** Seconds between multi-player limbo broadcasts. Minimum 1. */
+    public int limboMultiBroadcastInterval(Integer lobby) {
+        return Math.max(1, overrides.getInt(lobby,
+                BASE + "limbo.multi-broadcast-interval",
+                global.getLimbo().getMultiBroadcastInterval()));
+    }
 }

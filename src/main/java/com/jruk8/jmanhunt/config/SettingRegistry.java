@@ -516,6 +516,7 @@ public final class SettingRegistry {
         entries.add(bool("settings.match.headstarts.hunter.enabled", false));
         entries.add(intVal("settings.match.headstarts.hunter.delay-seconds", 20, 0, null));
         entries.add(option("settings.match.game-leave.destination", "SPECTATOR", "SPECTATOR", "LOBBY"));
+        entries.add(intVal("settings.match.limbo.multi-broadcast-interval", 20, 1, null));
     }
 
     private static void addGameBoostsEntries(List<SettingDescriptor> entries) {

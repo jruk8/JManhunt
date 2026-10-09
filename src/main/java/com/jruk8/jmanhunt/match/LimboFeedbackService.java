@@ -1,0 +1,126 @@
+package com.jruk8.jmanhunt.match;
+
+import com.jruk8.jmanhunt.config.DurationFormat;
+import com.jruk8.jmanhunt.command.TagCooldownStore;
+import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
+import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
+import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
+import com.jruk8.jmanhunt.message.MessageService;
+import com.jruk8.jmanhunt.player.PlayerStateStore;
+import com.jruk8.jmanhunt.player.Role;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import org.bukkit.entity.Player;
+
+/**
+ * Limbo feedback for players waiting to spawn: headstart-held plus
+ * join and respawn holds. Ticks ride the shared countdown (every
+ * hold and headstart tick calls in); the multi broadcast gates on
+ * the cooldown store, so no extra scheduler runs.
+ */
+public final class LimboFeedbackService {
+    /** Store, states, settings, and cooldowns. */
+    public record LimboReads(MatchStore store, PlayerStateStore states, MatchSettingsFacade match,
+            TagCooldownStore cooldowns) {
+    }
+
+    /** Messages plus match messaging. */
+    public record LimboTexts(MessageService messages, ManhuntMessages manhunt,
+            MatchMessaging messaging) {
+    }
+
+    private static final String MULTI_KEY = "limbo-multi";
+
+    private final LimboReads reads;
+    private final LimboTexts texts;
+    private final Set<UUID> pendingHolds = new HashSet<>();
+
+    public LimboFeedbackService(LimboReads reads, LimboTexts texts) {
+        this.reads = reads;
+        this.texts = texts;
+    }
+
+    /** Tracks a join hold or respawn delay for the limbo census. */
+    public void trackHold(UUID playerId) {
+        pendingHolds.add(playerId);
+    }
+
+    /** Drops a finished hold from the census. */
+    public void untrackHold(UUID playerId) {
+        pendingHolds.remove(playerId);
+    }
+
+    /** Drops every tracked hold. */
+    public void clearHolds() {
+        pendingHolds.clear();
+    }
+
+    /** Tracked hold ids, for bulk cancels. */
+    public Set<UUID> pendingHoldIds() {
+        return Set.copyOf(pendingHolds);
+    }
+
+    /**
+     * One limbo tick for the match: ladder marks send every waiting
+     * player their personal return note plus the solo broadcast when
+     * exactly one waits; two or more waiting broadcast on the multi
+     * interval through the cooldown store.
+     */
+    public void limboTick(GameInstance instance, int remaining) {
+        if (!instance.active()) {
+            return;
+        }
+        List<Player> waiting = waitingPlayers(instance);
+        if (waiting.isEmpty()) {
+            return;
+        }
+        if (CountdownService.onLadder(remaining)) {
+            String time = DurationFormat.format(remaining);
+            for (Player player : waiting) {
+                texts.messages().sendToRaw(List.of(player), texts.manhunt().getLimboSelf(),
+                        Map.of("time", time));
+            }
+            if (waiting.size() == 1) {
+                Player player = waiting.get(0);
+                texts.messaging().sendToInstance(instance, texts.manhunt().getLimboSingle(),
+                        Map.of("player", player.getName(), "time", time));
+                texts.messaging().playInstanceSound(instance, "game.autostart-countdown");
+            }
+        }
+        if (waiting.size() >= 2) {
+            int interval = reads.match().limboMultiBroadcastInterval(instance.originLobbyId());
+            if (reads.cooldowns().tryAcquire(instance.matchId(), MULTI_KEY, interval)) {
+                texts.messaging().sendToInstance(instance, texts.manhunt().getLimboMulti(),
+                        Map.of("total", Integer.toString(waiting.size())));
+                texts.messaging().playInstanceSound(instance, "game.autostart-countdown");
+            }
+        }
+    }
+
+    /** Announces one player's spawn. */
+    public void announceSpawned(GameInstance instance, Player player) {
+        texts.messaging().sendToInstance(instance, texts.manhunt().getLimboSpawned(),
+                Map.of("rolecolor", texts.messages().roleColor(reads.states().role(player)),
+                        "player", player.getName()));
+    }
+
+    /** Online, active players waiting to spawn: headstart-held plus holds. */
+    private List<Player> waitingPlayers(GameInstance instance) {
+        Set<UUID> held = new HashSet<>();
+        held.addAll(instance.headstart(Role.HUNTER).returnPoints().keySet());
+        held.addAll(instance.headstart(Role.SPEEDRUNNER).returnPoints().keySet());
+        held.addAll(pendingHolds);
+        List<Player> waiting = new ArrayList<>();
+        for (Player player : reads.store().onlineAssignedPlayers(instance)) {
+            if (held.contains(player.getUniqueId()) && instance.isActive(player.getUniqueId())) {
+                waiting.add(player);
+            }
+        }
+        return waiting;
+    }
+}

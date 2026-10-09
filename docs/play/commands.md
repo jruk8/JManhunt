@@ -104,7 +104,8 @@ shares lobby 0. New to lobbies? Start with the
 
 `/manhunt game join` is the clean way to let someone watch: joiners
 move to the match's lobby, teleport into its cell, and receive lives,
-statistics, and a compass. Matches in their end delay cannot be joined.
+statistics, and a compass. Held joiners wait in limbo with countdown
+notes until they spawn. Matches in their end delay cannot be joined.
 `/manhunt game leave` removes them; living hunters and speedrunners drop
 their gear and become spectators (or return to the lobby, per
 `settings.game-leave.destination`), and if a side empties, the other

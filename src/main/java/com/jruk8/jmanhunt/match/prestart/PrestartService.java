@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import com.jruk8.jmanhunt.match.CountdownService;
 import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.match.LimboFeedbackService;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.lifecycle.MatchControl;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
@@ -36,10 +37,11 @@ public final class PrestartService {
             PlayersSettingsFacade players, OverrideService overrides) {
     }
 
-    /** States, stats, commands, store, control, fakes, scheduler, and countdowns. */
+    /** States, stats, commands, store, control, fakes, scheduler, countdowns, limbo. */
     public record PrestartServices(PlayerStateStore playerStates, StatsManager stats,
             GameStateCommandManager stateCommands, MatchStore store, MatchControl control,
-            FakeSpectatorService fakes, TaskScheduler tasks, CountdownService countdowns) {
+            FakeSpectatorService fakes, TaskScheduler tasks, CountdownService countdowns,
+            LimboFeedbackService limbo) {
     }
 
     /** Countdown key for one side's headstart. */
@@ -134,6 +136,7 @@ public final class PrestartService {
                             "role", messages.roleName(role.opposite())));
             messaging.playInstanceSound(instance, "game.autostart-countdown");
         }
+        services.limbo().limboTick(instance, remaining);
     }
 
     /**
@@ -152,6 +155,7 @@ public final class PrestartService {
                     player.teleport(returnPoint);
                 }
                 services.fakes().disable(player);
+                services.limbo().announceSpawned(instance, player);
             }
         }
         state.returnPoints().clear();

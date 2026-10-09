@@ -5,6 +5,7 @@ categories:
   match/autostart: REPEATER
   match/headstarts: FEATHER
   match/game-leave: OAK_DOOR
+  match/limbo: SOUL_LANTERN
   match/game-boosts: SUGAR
   match/start-on-speedrunner-damage: IRON_SWORD
   match/win-conditions: NETHER_STAR
@@ -136,6 +137,7 @@ descriptions:
   "settings.match.game-boosts.overworld-structures": "Boost overworld structure generation."
   "settings.match.game-boosts.disable-brutes": "Block natural piglin brute spawns."
   "settings.match.game-leave": "Where players go when they leave a live match."
+  "settings.match.limbo": "Feedback for players waiting to spawn."
   "settings.match.headstarts": "Hold one side back when the match starts."
   "settings.match.headstarts.hunter": "Hunters play while runners wait in spectator."
   "settings.match.headstarts.speedrunner": "Runners play while hunters wait in spectator."
@@ -266,6 +268,7 @@ descriptions:
   "settings.match.headstarts.speedrunner.enabled": "Hold hunters in spectator at match start."
   "settings.match.headstarts.speedrunner.delay-seconds": "Speedrunner head start length in seconds."
   "settings.match.game-leave.destination": "Where leavers go: SPECTATOR or LOBBY."
+  "settings.match.limbo.multi-broadcast-interval": "Seconds between multi-player limbo broadcasts."
   "settings.match.win-conditions.speedrunner.exit-end.enabled": "Speedrunners win by exiting the End."
   "settings.match.win-conditions.speedrunner.acquire-item.enabled": "Speedrunners win by holding an item."
   "settings.match.win-conditions.speedrunner.acquire-item.item": "Item that wins for speedrunners."

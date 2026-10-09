@@ -100,7 +100,7 @@ Everyone returns to survival the instant the game begins.
 ## Headstarts
 
 Either side can start ahead: a headstart configured for one side holds
-the *other* side in spectator mode while the configured side plays.
+the *other* side in limbo while the configured side plays.
 Each side is configured independently.
 
 ```yaml
@@ -123,9 +123,26 @@ If [Start on Speedrunner Damage](#start-on-speedrunner-damage) is also
 enabled, countdowns do not begin until that first hit lands. Each held
 player's location is recorded when their countdown begins: held
 players may fly around freely, then teleport back to their recorded
-spawnpoint when the delay expires. The last five seconds announce in
-chat each second. Players who join mid-match while their side is held
+spawnpoint when the delay expires. Countdowns announce on a shared
+ladder (10h40m down to the final 3, 2, 1) with formatted times like
+`5m` or `1h 2m`. Players who join mid-match while their side is held
 are held too.
+
+## Limbo Feedback
+
+Players waiting to spawn (headstart holds, join holds, respawn waits)
+see personal return notes on the countdown ladder, and the match sees
+a solo note when exactly one waits. Two or more waiting players
+broadcast a headcount instead, at most every:
+
+```yaml
+settings:
+  match:
+    limbo:
+      multi-broadcast-interval: 20
+```
+
+Every spawn announces in chat.
 
 ## Role Announcement
 

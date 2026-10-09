@@ -29,7 +29,7 @@ public class MatchSettings extends OkaeriConfig {
     private StartOnSpeedrunnerDamage startOnSpeedrunnerDamage = new StartOnSpeedrunnerDamage();
 
     @Comment({
-            "Head starts that hold one role in spectator mode while the other role",
+            "Head starts that hold one role in limbo while the other role",
             "plays. Each side is configured independently.",
             "If start-on-speedrunner-damage is also enabled, the",
             "headstarts only begin when a speedrunner first damages a hunter."
@@ -44,6 +44,13 @@ public class MatchSettings extends OkaeriConfig {
             "Default: SPECTATOR"
     })
     private GameLeave gameLeave = new GameLeave();
+
+    @CustomKey("limbo")
+    @Comment({
+            "Feedback for players waiting to spawn: headstart holds, join holds,",
+            "and respawn waits."
+    })
+    private Limbo limbo = new Limbo();
 
     @CustomKey("win-conditions")
     @Comment({
@@ -238,6 +245,22 @@ public class MatchSettings extends OkaeriConfig {
     @SuppressWarnings("FieldMayBeFinal")
     public static class GameLeave extends OkaeriConfig {
         private LeaveDestination destination = LeaveDestination.SPECTATOR;
+
+    }
+
+    /** Limbo feedback for players waiting to spawn. */
+    @Getter
+    @Setter
+    @SuppressWarnings("FieldMayBeFinal")
+    public static class Limbo extends OkaeriConfig {
+
+        @CustomKey("multi-broadcast-interval")
+        @Comment({
+                "Seconds between 'players will spawn soon' broadcasts while two or",
+                "more players wait to spawn. Minimum 1.",
+                "Default: 20"
+        })
+        private int multiBroadcastInterval = 20;
 
     }
 

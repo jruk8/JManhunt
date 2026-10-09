@@ -11,24 +11,23 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerRespawnEvent;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import com.jruk8.jmanhunt.match.CountdownService;
 import com.jruk8.jmanhunt.match.GameInstance;
+import com.jruk8.jmanhunt.match.LimboFeedbackService;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.GameMessages;
 
 /** Respawn routing: vanilla respawn hooks and delayed spectator revives. */
 public final class PlayerRespawnListener implements Listener {
-    /** Role, fake-spectator state, and countdowns. */
+    /** Role, fake-spectator state, countdowns, and limbo. */
     public record RespawnPlayers(PlayerStateStore states, FakeSpectatorService fakes,
-            CountdownService countdowns) {
+            CountdownService countdowns, LimboFeedbackService limbo) {
     }
 
     /** Countdown key for one player's join hold or respawn delay. */
@@ -40,7 +39,6 @@ public final class PlayerRespawnListener implements Listener {
     private final GameManager game;
     private final CompassManager compass;
     private final GameMessages gameTexts;
-    private final Set<HoldKey> holdKeys = new HashSet<>();
 
     public PlayerRespawnListener(TaskScheduler tasks, RespawnPlayers players, GameManager game,
             CompassManager compass, GameMessages gameTexts) {
@@ -139,25 +137,26 @@ public final class PlayerRespawnListener implements Listener {
         UUID playerId = player.getUniqueId();
         HoldKey key = new HoldKey(playerId);
         players.countdowns().cancel(key);
-        holdKeys.remove(key);
+        players.limbo().untrackHold(playerId);
         if (waitSeconds <= 0) {
             return;
         }
         long matchId = instance.matchId();
         tasks.run(() -> players.fakes().enable(player));
-        holdKeys.add(key);
-        players.countdowns().start(key, waitSeconds, remaining -> holdTick(playerId, remaining),
+        players.limbo().trackHold(playerId);
+        players.countdowns().start(key, waitSeconds,
+                remaining -> holdTick(matchId, playerId, remaining),
                 () -> {
-                    holdKeys.remove(key);
+                    players.limbo().untrackHold(playerId);
                     if (game.isActiveInInstance(matchId, playerId)) {
                         releaseJoinHold(player, matchId);
                     }
                 });
     }
 
-    /** Join-hold tick. Silent until limbo feedback wires in. */
-    private void holdTick(UUID playerId, int remaining) {
-        // Reserved for limbo broadcasts; the hold releases on done.
+    /** Join-hold tick: feeds the match limbo census. */
+    private void holdTick(long matchId, UUID playerId, int remaining) {
+        game.instance(matchId).ifPresent(instance -> players.limbo().limboTick(instance, remaining));
     }
 
     /** Releases a join hold, keeping any headstart hold intact. */
@@ -167,6 +166,7 @@ public final class PlayerRespawnListener implements Listener {
             return;
         }
         players.fakes().disable(player);
+        players.limbo().announceSpawned(match.get(), player);
     }
 
     /**
@@ -177,16 +177,17 @@ public final class PlayerRespawnListener implements Listener {
         UUID playerId = player.getUniqueId();
         HoldKey key = new HoldKey(playerId);
         players.countdowns().cancel(key);
-        holdKeys.remove(key);
+        players.limbo().untrackHold(playerId);
         tasks.run(() -> players.fakes().enable(player));
         if (delaySeconds <= 0) {
             tasks.run(() -> revivePlayer(player, matchId, false));
             return;
         }
-        holdKeys.add(key);
-        players.countdowns().start(key, delaySeconds, remaining -> holdTick(playerId, remaining),
+        players.limbo().trackHold(playerId);
+        players.countdowns().start(key, delaySeconds,
+                remaining -> holdTick(matchId, playerId, remaining),
                 () -> {
-                    holdKeys.remove(key);
+                    players.limbo().untrackHold(playerId);
                     if (game.isActiveInInstance(matchId, playerId)) {
                         revivePlayer(player, matchId, true);
                     }
@@ -253,9 +254,9 @@ public final class PlayerRespawnListener implements Listener {
     }
 
     private void cancelAllRespawnTasks() {
-        for (HoldKey key : List.copyOf(holdKeys)) {
-            players.countdowns().cancel(key);
+        for (UUID playerId : players.limbo().pendingHoldIds()) {
+            players.countdowns().cancel(new HoldKey(playerId));
         }
-        holdKeys.clear();
+        players.limbo().clearHolds();
     }
 }

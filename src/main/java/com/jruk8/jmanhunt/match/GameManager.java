@@ -102,6 +102,7 @@ public final class GameManager implements MatchControl {
     private final FlagStore flagStore;
     private final TagCooldownStore cooldownStore;
     private final CountdownService countdowns;
+    private final LimboFeedbackService limbo;
     private final WinConditionTextService winConditions;
     private final MatchSettingsFacade matchSettings;
     private final PlayersSettingsFacade playersSettings;
@@ -136,6 +137,10 @@ public final class GameManager implements MatchControl {
                 new MatchMessaging.MessagingTexts(texts.messages(), texts.manhunt(),
                         texts.sounds()),
                 root.getSettings().getServer(), store, reads.lobbies());
+        this.limbo = new LimboFeedbackService(
+                new LimboFeedbackService.LimboReads(store, services.playerStates(), matchSettings,
+                        cooldownStore),
+                new LimboFeedbackService.LimboTexts(texts.messages(), texts.manhunt(), messaging));
         this.timeLimits = new TimeLimitService(
                 new TimeLimitService.TimeEdge(edge.log(), edge.tasks()), reads.winConditionEngine(),
                 store, new TimeLimitService.TimeTexts(messaging, texts.gameTexts()), this);
@@ -156,7 +161,8 @@ public final class GameManager implements MatchControl {
                 new PrestartService.PrestartConfig(headstarts, matchSettings,
                         playersSettings, edge.overrides()),
                 new PrestartService.PrestartServices(services.playerStates(), services.stats(),
-                        stateCommands, store, this, edge.fakes(), edge.tasks(), countdowns),
+                        stateCommands, store, this, edge.fakes(), edge.tasks(), countdowns,
+                        limbo),
                 texts.messages(), messaging, texts.manhunt());
     }
 
@@ -258,6 +264,11 @@ public final class GameManager implements MatchControl {
     /** Shared per-second countdown ticker. */
     public CountdownService countdowns() {
         return countdowns;
+    }
+
+    /** Limbo feedback for players waiting to spawn. */
+    public LimboFeedbackService limbo() {
+        return limbo;
     }
 
     public MatchSettingsFacade matchSettings() {

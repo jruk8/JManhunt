@@ -401,7 +401,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
     private PlayerRespawnListener createRespawnListener() {
         respawnListener = new PlayerRespawnListener(this,
                 new PlayerRespawnListener.RespawnPlayers(playerStates, fakeSpectators,
-                        game.countdowns()),
+                        game.countdowns(), game.limbo()),
                 game, compass, messageConfigs.getMessagesConfig().getGame());
         return respawnListener;
     }
