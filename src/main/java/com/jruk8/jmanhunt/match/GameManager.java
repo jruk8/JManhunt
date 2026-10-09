@@ -242,6 +242,10 @@ public final class GameManager implements MatchControl {
     public List<GameInstance> liveInstances() { return store.liveInstances(); }
     /** The live instance a player actively participates in, if any. */
     public Optional<GameInstance> instanceOf(UUID playerId) { return store.instanceOf(playerId); }
+    /** Live instance an eliminated watcher is still assigned to, if any. */
+    public Optional<GameInstance> assignedInstanceOf(UUID playerId) {
+        return store.assignedInstanceOf(playerId);
+    }
     /** Live instance started from a lobby, if that lobby has one running. */
     public Optional<GameInstance> instanceForLobby(int lobbyId) { return store.instanceForLobby(lobbyId); }
     /** Live instances started from one lobby, sublobbies included. */

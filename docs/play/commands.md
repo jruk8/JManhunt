@@ -22,8 +22,9 @@ completion only suggests what the sender has permission to run.
 
 ### Match Status
 
-`/manhunt status` without an argument shows your own match, else your
-lobby queue. An id shows one match roster grouped by role; `all` lists
+`/manhunt status` without an argument shows your own match (watching
+one after elimination counts), else your lobby queue. An id shows one
+match roster grouped by role; `all` lists
 every running match first and then every populated lobby. Four extras
 can be toggled under `settings.server.status`: win conditions and the
 gray `L{lobby}|G{game}` tag (off by default), plus running time and

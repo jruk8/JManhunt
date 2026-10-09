@@ -273,7 +273,10 @@ public final class ModifierCodec {
 
     private static ModifierEntry readModifier(JsonObject data) {
         ModifierEntry entry = new ModifierEntry();
-        entry.setEnabled(optionalBoolean(data, "enabled", false));
+        // Imports always land disabled: the export value is validated
+        // for shape but never applied.
+        optionalBoolean(data, "enabled", false);
+        entry.setEnabled(false);
         JsonObject meta = optionalObject(data, "meta");
         if (meta == null) {
             throw new Invalid();

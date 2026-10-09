@@ -54,7 +54,7 @@ class ModifierCodecTest {
     }
 
     @Test
-    void fullModifierRoundTripsExactly() {
+    void fullModifierRoundTripsButLandsDisabled() {
         ModifierEntry entry = fullEntry();
 
         String payload = ModifierCodec.exportModifier("gear-dice", entry);
@@ -64,7 +64,7 @@ class ModifierCodecTest {
         assertEquals(ModifierCodec.Kind.MODIFIER, decoded.get().kind());
         assertEquals("gear-dice", decoded.get().id());
         ModifierEntry back = decoded.get().entry();
-        assertTrue(back.isEnabled());
+        assertFalse(back.isEnabled());
         assertEquals("Gear Dice", back.getMeta().getName());
         assertEquals("Roll for gear", back.getMeta().getDescription());
         assertEquals("TNT", back.getMeta().getItem());
@@ -83,6 +83,7 @@ class ModifierCodecTest {
                 back.getBehavior().get("0").getCommands().getLists().get("player"));
         assertEquals(List.of("say custom"),
                 back.getBehavior().get("0").getCommands().getLists().get("custom-list"));
+        back.setEnabled(true);
         assertEquals(payload, ModifierCodec.exportModifier(decoded.get().id(), back));
     }
 
@@ -210,6 +211,14 @@ class ModifierCodecTest {
 
         String badPreset = "{\"type\":\"preset\",\"id\":\"a\",\"data\":{\"name\":\"  \"}}";
         assertTrue(ModifierCodec.decode(envelope(badPreset)).isEmpty());
+    }
+
+    @Test
+    void mistypedEnabledDecodesEmpty() {
+        String badEnabled = "{\"type\":\"modifier\",\"id\":\"a\","
+                + "\"data\":{\"enabled\":\"yes\",\"meta\":{\"name\":\"A\",\"item\":\"STONE\"}}}";
+
+        assertTrue(ModifierCodec.decode(envelope(badEnabled)).isEmpty());
     }
 
     @Test

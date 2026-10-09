@@ -102,6 +102,12 @@ public final class MatchStore {
         return instances.values().stream().filter(instance -> instance.isActive(playerId)).findFirst();
     }
 
+    /** A live instance a player is assigned to but inactive in (an eliminated watcher), if any. */
+    public Optional<GameInstance> assignedInstanceOf(UUID playerId) {
+        return instances.values().stream().filter(instance -> !instance.isActive(playerId)
+                && instance.assignedPlayerIds().contains(playerId)).findFirst();
+    }
+
     /** Origin lobby of one match for override resolution, or null when gone. */
     public Integer lobbyOf(long matchId) {
         return instance(matchId).map(instance -> instance.originLobbyId()).orElse(null);

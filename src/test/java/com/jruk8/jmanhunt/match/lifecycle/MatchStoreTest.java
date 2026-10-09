@@ -81,6 +81,23 @@ class MatchStoreTest {
         }
     }
 
+    @Test
+    void assignedInstanceFindsInactiveWatchersOnly() {
+        MatchStore store = new MatchStore(new PlayerStateStore());
+        GameInstance instance = new GameInstance(1L, 0, OptionalLong.empty(), 1_000L);
+        UUID active = UUID.randomUUID();
+        UUID watcher = UUID.randomUUID();
+        UUID stranger = UUID.randomUUID();
+        instance.activate(active);
+        instance.activate(watcher);
+        instance.deactivate(watcher);
+        store.registerInstance(instance);
+
+        assertEquals(instance, store.assignedInstanceOf(watcher).orElseThrow());
+        assertTrue(store.assignedInstanceOf(active).isEmpty());
+        assertTrue(store.assignedInstanceOf(stranger).isEmpty());
+    }
+
     private static Player named(UUID id) {
         Player player = mock(Player.class);
         when(player.getUniqueId()).thenReturn(id);

@@ -111,6 +111,12 @@ public final class StatusUnit implements SubcommandUnit {
             if (own.isPresent()) {
                 return statusInstance(sender, own.get());
             }
+            // Eliminated watchers stay assigned but inactive: they see
+            // their match, while never-assigned queuers see the lobby.
+            Optional<GameInstance> watched = game.assignedInstanceOf(player.getUniqueId());
+            if (watched.isPresent()) {
+                return statusInstance(sender, watched.get());
+            }
             Optional<Lobby> lobby = lobbies.lobbyOf(player.getUniqueId());
             if (lobby.isEmpty()) {
                 return support.message(sender, texts.getNotInMatch());

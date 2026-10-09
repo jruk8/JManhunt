@@ -36,7 +36,8 @@ to leave joining players lobby-less until they join one manually.
 pass `-notp` to skip that teleport once.
 `announce-lobby-changes` (`ALL`, `SELF`, `MEMBERS`, `NONE`) picks who
 hears join and leave lines; lobby 0 moves never announce.
-`disable-player-collisions` lets lobby members pass through each other.
+`disable-player-collisions` lets everyone in the lobby world pass
+through each other, members and visitors alike.
 
 Move players between lobbies with:
 

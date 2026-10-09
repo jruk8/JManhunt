@@ -78,9 +78,10 @@ nothing migrates automatically.
 ## Sharing Modifiers and Presets
 
 Export any entry to a share string: a click-to-copy chat line for
-friends or the community. Import takes one back in; colliding names
-get numbered automatically. Strings that fail their checksum or schema
-check are refused without touching anything.
+friends or the community. Import takes one back in, always disabled
+no matter the export state; colliding names get numbered
+automatically. Strings that fail their checksum or schema check are
+refused without touching anything.
 
 ```text
 /manhunt modifiers export modifier gear-dice

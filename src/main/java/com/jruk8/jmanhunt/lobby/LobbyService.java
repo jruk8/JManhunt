@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
@@ -170,25 +171,43 @@ public final class LobbyService {
     }
 
     /**
-     * Disables collisions for a lobby member when the toggle is on:
-     * the lobby scoreboard team (collision rule NEVER) carries the
-     * no-push, and the collidable flag stays as belt and braces.
-     * Match members and lobby outsiders are left untouched, as is
-     * everyone when the toggle is off.
+     * Disables collisions when the toggle is on: lobby members get
+     * the lobby scoreboard team (collision rule NEVER) plus the
+     * collidable flag, while everyone standing in the lobby world
+     * gets the flag even without a membership or a role (match-end
+     * arrivals included). Match members outside the lobby world and
+     * outsiders anywhere else are left untouched, as is everyone
+     * when the toggle is off.
      */
     public void applyLobbyCollisions(Player player) {
         if (!lobbySettings.isDisablePlayerCollisions()) {
             return;
         }
-        if (players.games().get().instanceOf(player.getUniqueId()).isPresent()) {
+        boolean inWorld = inLobbyWorld(player);
+        if (players.games().get().instanceOf(player.getUniqueId()).isPresent() && !inWorld) {
             return;
         }
         Optional<Lobby> lobby = lobbyOf(player.getUniqueId());
-        if (lobby.isEmpty()) {
+        if (lobby.isEmpty() && !inWorld) {
             return;
         }
-        addLobbyTeamEntry(player, lobby.get().id());
+        if (roleTeams.syncTeam(player)) {
+            removeLobbyTeamEntry(player.getName());
+        } else if (lobby.isPresent()) {
+            addLobbyTeamEntry(player, lobby.get().id());
+        }
         player.setCollidable(false);
+    }
+
+    /** True when the player stands in the lobby world, never the game world. */
+    private boolean inLobbyWorld(Player player) {
+        World world = player.getWorld();
+        if (world == null) {
+            return false;
+        }
+        String name = world.getName();
+        return name.equals(lobbySettings.getLobbyWorldName())
+                && !name.equals(engineSettings.getWorldName());
     }
 
     /**
@@ -206,8 +225,9 @@ public final class LobbyService {
 
     /**
      * Re-applies collision state to everyone online after a toggle
-     * flip: fake spectators stay uncollidable, match members collide,
-     * lobby members follow the toggle, outsiders are never touched.
+     * flip: fake spectators stay uncollidable, lobby-world occupants
+     * and lobby members follow the toggle, match members outside the
+     * lobby world collide, and outsiders elsewhere are never touched.
      */
     public void reapplyCollisions() {
         reapplyCollisions(Bukkit.getOnlinePlayers());
@@ -222,22 +242,23 @@ public final class LobbyService {
         for (Player online : onlinePlayers) {
             if (players.fakes().isFakeSpectator(online)) {
                 online.setCollidable(false);
-            } else if (players.games().get().instanceOf(online.getUniqueId()).isPresent()) {
-                restoreCollisions(online);
-            } else if (lobbyOf(online.getUniqueId()).isPresent()) {
+            } else if (inLobbyWorld(online) || lobbyOf(online.getUniqueId()).isPresent()) {
                 if (disabled) {
                     applyLobbyCollisions(online);
                 } else {
                     restoreCollisions(online);
                 }
+            } else if (players.games().get().instanceOf(online.getUniqueId()).isPresent()) {
+                restoreCollisions(online);
             }
         }
     }
 
     /**
-     * Moves a player onto their lobby team, creating it with collision
-     * rule NEVER when missing. Single-team membership drops them from
-     * the role team; datapack team selectors miss queuers while waiting.
+     * Moves a teamless player (NONE or AFK) onto their lobby team,
+     * creating it with collision rule NEVER when missing. Role
+     * holders keep their role team for name colors and collide only
+     * through the flag.
      */
     private void addLobbyTeamEntry(Player player, int lobbyId) {
         Scoreboard board = mainBoard();

@@ -89,6 +89,16 @@ public final class RoleTeamService {
         }
     }
 
+    /**
+     * Repairs one player's role-team membership from their current
+     * role. True when the role holds a team (colored names keep it in
+     * the lobby); NONE and AFK hold none.
+     */
+    public boolean syncTeam(Player player) {
+        sync(player);
+        return teamFor(playerStates.role(player)).isPresent();
+    }
+
     /** Repairs one player's team membership from their current role. */
     public void sync(Player player) {
         ensureTeams();
