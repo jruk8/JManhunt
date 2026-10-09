@@ -1,5 +1,7 @@
 # Bundled JManhunt modifier: speedrunner-health-advantage
 # Speedrunners get a health advantage while hunters' health gets a debuff.
+# Uses the shared max-health ledger (pmaxhp tags): each entry stacks with
+# every other modifier instead of overwriting the attribute directly.
 enabled: false
 meta:
   name: "Speedrunner Health Advantage"
@@ -11,14 +13,15 @@ behavior:
     commands:
       hunter:
         # Runs only once for each Hunter, with <p> replaced by their name.
-        # Sets health to 8 full hearts for all hunters.
-        - "attribute <p> minecraft:max_health base set 16"
+        # Sets health to 8 full hearts for all hunters (base 20 minus 4).
+        - "<pmaxhp.set:<p>,health-advantage,-4>"
         - "effect give <p> minecraft:instant_health 1 50 true"
       speedrunner:
         # Runs only once for each Speedrunner, with <p> replaced by their name.
-        # Sets health to 15 full hearts for all speedrunners.
-        - "attribute <p> minecraft:max_health base set 30"
+        # Sets health to 15 full hearts for all speedrunners (base 20 plus 10).
+        - "<pmaxhp.set:<p>,health-advantage,10>"
         - "effect give <p> minecraft:instant_health 1 50 true"
       player-cleanup:
         # Runs for every participating player (only hunters and speedrunners, not including NONE)
-        - "attribute <p> minecraft:max_health base set 20"
+        # Drops this modifier's ledger entry; other modifiers keep theirs.
+        - "<pmaxhp.clear:<p>,health-advantage>"

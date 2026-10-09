@@ -1,6 +1,9 @@
 # Bundled JManhunt modifier: get-stronger-on-kill
 # Two new permanent hearts on every kill (plus a heal and a feed),
-# stacking up to 30 hearts total. Cleanup restores the baseline.
+# stacking up to 40 contribution points (30 hearts total with the base).
+# Uses the shared max-health ledger (pmaxhp tags): the 40 cap binds only
+# this modifier's own id, so other modifiers stack past it independently.
+# Cleanup drops this modifier's entry, leaving other entries untouched.
 enabled: false
 meta:
   name: "Get Stronger On Kill"
@@ -13,14 +16,17 @@ behavior:
       - ON_PLAYER_KILLS
     commands:
       player:
-        # SETTINGS (in half-hearts): total max health cap, and gain per kill.
-        - "<lflag:maxhp,60>"
+        # SETTINGS (in half-hearts): cap for this modifier's own ledger
+        # entry (contribution space, excluding the base 20), and gain
+        # per kill.
+        - "<lflag:cap,40>"
         - "<lflag:step,4>"
-        # Cache the baseline the first time this runs for a player.
-        - "<pflag:basehp,<default:<pflag:basehp>,<pstat:<p>,max-health>>>"
-        # Baseline + step per kill, capped at maxhp (0 kills = baseline).
-        - "<lflag:target,<min:<pflag:basehp>+<lflag:step>*<placeholder:jmanhunt_game_kills_this_session>,<lflag:maxhp>>>"
-        - "attribute <p> minecraft:max_health base set <lflag:target>"
+        # Room left before this id hits the cap, at most one step: the
+        # bump below never pushes this entry past 40.
+        - "<lflag:room,<clamp:<lflag:cap>-<pmaxhp.get:<p>,stronger-kills>,0,<lflag:step>>>"
+        # Only grow the entry when room remains (fractional-safe: gt 0,
+        # not ge 1). The heal and feed below always run, even at cap.
+        - "<if:'<lflag:room> gt 0','<pmaxhp.modify:<p>,stronger-kills,<lflag:room>>'>"
         # Always heals 2 hearts, even at the cap.
         - "effect give <p> minecraft:instant_health 1 0 true"
         # Missing hunger points (0 if already full).
@@ -28,5 +34,4 @@ behavior:
         # Only feed if something is missing.
         - "<if:'<lflag:missing> lt 1','exit','effect give <p> minecraft:saturation 1 <clamp:<lflag:missing>-1,0,19> true'>"
       player-cleanup:
-        # Nothing cached means this never ran for the player, so leave their max health alone.
-        - "<if:'<pflag:basehp> == null','exit','attribute <p> minecraft:max_health base set <pflag:basehp>'>"
+        - "<pmaxhp.clear:<p>,stronger-kills>"

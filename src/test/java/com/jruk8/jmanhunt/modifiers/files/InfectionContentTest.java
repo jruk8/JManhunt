@@ -19,7 +19,7 @@ class InfectionContentTest {
             text = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
         }
         assertTrue(text.contains("<lflag:give_fail_chance,80>"), text);
-        assertTrue(text.contains("<prole:<args:0>> == SPEEDRUNNER"), text);
+        assertTrue(text.contains("<peliminated:<args:0>> != true"), text);
         assertTrue(text.contains("[[rotten_flesh, 3, 7], [bone, 2, 4]]"), text);
         assertTrue(text.contains("[[blindness, 0, 5]]"), text);
         assertTrue(!text.contains("minecraft:rotten_flesh")
@@ -34,7 +34,7 @@ class InfectionContentTest {
 
     @Test
     void finalityGuardTagsBalance() throws Exception {
-        assertBalanced(lineWith(bundledText(), "<prole:<args:0>>"), "missing finality guard");
+        assertBalanced(lineWith(bundledText(), "<peliminated:<args:0>>"), "missing finality guard");
     }
 
     private static String bundledText() throws Exception {
