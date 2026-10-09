@@ -135,6 +135,7 @@ public final class PlayerConnectionListener implements Listener {
 
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        this.match.game().maxHealth().clearPlayer(player.getUniqueId());
         edge.roleTeams().remove(player);
         this.match.lobbies().remove(player.getUniqueId());
         Optional<GameInstance> match = this.match.game().instanceOf(player.getUniqueId());

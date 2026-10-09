@@ -15,6 +15,7 @@ import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.match.MaxHealthService;
 import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
@@ -38,7 +39,8 @@ import org.junit.jupiter.api.Test;
 class PlayerConnectionListenerAbandonTest {
 
     private record Fixture(PlayerConnectionListener listener, Player quitter, Player other,
-            GameManager game, GameInstance instance, UUID quitterId, UUID otherId) {
+            GameManager game, GameInstance instance, UUID quitterId, UUID otherId,
+            MaxHealthService maxHealth) {
     }
 
     private static Fixture fixture() {
@@ -46,6 +48,8 @@ class PlayerConnectionListenerAbandonTest {
         when(plugin.roleTeams()).thenReturn(mock(RoleTeamService.class));
         PlayerStateStore players = new PlayerStateStore();
         GameManager game = mock(GameManager.class);
+        MaxHealthService maxHealth = mock(MaxHealthService.class);
+        when(game.maxHealth()).thenReturn(maxHealth);
         LobbyService lobbies = mock(LobbyService.class);
         when(lobbies.lobbyOf(any(UUID.class))).thenReturn(Optional.empty());
         when(lobbies.multiLobbyAllowed()).thenReturn(false);
@@ -78,7 +82,8 @@ class PlayerConnectionListenerAbandonTest {
                         new MatchConfig.DisconnectHandling()),
                 new PlayerConnectionListener.ConnectEdge(plugin.roleTeams(),
                         mock(TaskScheduler.class), mock(PlayerRespawnListener.class)));
-        return new Fixture(listener, quitter, other, game, instance, quitterId, otherId);
+        return new Fixture(listener, quitter, other, game, instance, quitterId, otherId,
+                maxHealth);
     }
 
     @Test
@@ -114,5 +119,16 @@ class PlayerConnectionListenerAbandonTest {
         fixture.listener().onQuit(new PlayerQuitEvent(fixture.quitter(), "quit"));
 
         verify(fixture.game(), never()).cancel(fixture.instance(), true);
+    }
+
+    @Test
+    void quitClearsMaxHealthLedger() {
+        Fixture fixture = fixture();
+        when(fixture.game().onlineActivePlayers(fixture.instance()))
+                .thenReturn(List.of(fixture.quitter(), fixture.other()));
+
+        fixture.listener().onQuit(new PlayerQuitEvent(fixture.quitter(), "quit"));
+
+        verify(fixture.maxHealth()).clearPlayer(fixture.quitterId());
     }
 }

@@ -153,7 +153,8 @@ match- or world-wide ones. Keys match case-blindly:
 
 Unknown keys warn and yield nothing, listing the valid keys. Reading a
 stat of an offline player warns and yields nothing. `duration` outside
-a live match warns and yields 0.
+a live match warns and yields 0. Every `<pstat>` key yields `-1` for an
+eliminated player, so `-1` reliably means out of the game.
 
 ## Roster and locations
 

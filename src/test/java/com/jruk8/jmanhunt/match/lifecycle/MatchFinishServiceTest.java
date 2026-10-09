@@ -25,6 +25,7 @@ import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
+import com.jruk8.jmanhunt.match.MaxHealthService;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.match.prestart.PrestartService;
 import com.jruk8.jmanhunt.message.GameMessages;
@@ -52,7 +53,8 @@ class MatchFinishServiceTest {
 
     private record Fixture(MatchFinishService finish, PlayerStateStore states,
             GameStateCommandManager stateCommands, GameInstance instance,
-            List<Runnable> deferred, UUID hunterId, UUID spectatorId) {
+            List<Runnable> deferred, UUID hunterId, UUID spectatorId,
+            MaxHealthService maxHealth) {
     }
 
     private static Fixture fixture() {
@@ -74,6 +76,7 @@ class MatchFinishServiceTest {
         when(store.onlineActivePlayers(instance)).thenReturn(List.of());
         when(store.instances()).thenReturn(Map.of(11L, instance));
         List<Runnable> deferred = new ArrayList<>();
+        MaxHealthService maxHealth = mock(MaxHealthService.class);
         TaskScheduler tasks = mock(TaskScheduler.class);
         when(tasks.runLater(any(Runnable.class), anyLong())).thenAnswer(invocation -> {
             deferred.add(invocation.getArgument(0));
@@ -90,10 +93,11 @@ class MatchFinishServiceTest {
                         mock(TagCooldownStore.class)),
                 new MatchFinishService.FinishEdge(mock(FakeSpectatorService.class),
                         mock(RoleTeamService.class), mock(SpawnCampService.class), tasks,
-                        mock(LobbyService.class), JManhuntConfig::new),
+                        mock(LobbyService.class), JManhuntConfig::new, maxHealth),
                 new MatchFinishService.FinishTexts(mock(MessageService.class), new GameMessages(),
                         mock(MatchMessaging.class)));
-        return new Fixture(finish, players, stateCommands, instance, deferred, hunterId, spectatorId);
+        return new Fixture(finish, players, stateCommands, instance, deferred, hunterId,
+                spectatorId, maxHealth);
     }
 
     @Test
@@ -113,5 +117,18 @@ class MatchFinishServiceTest {
                 .markPendingEndWipe(argThat(ids -> ids.contains(fixture.hunterId())));
         verify(fixture.stateCommands(), never())
                 .markPendingEndWipe(argThat(ids -> ids.contains(fixture.spectatorId())));
+    }
+
+    @Test
+    void teardownNowClearsMaxHealthLedger() {
+        Fixture fixture = fixture();
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(Bukkit::getOnlinePlayers).thenReturn(List.of());
+
+            fixture.finish().teardownNow(fixture.instance());
+        }
+
+        verify(fixture.maxHealth())
+                .clearPlayers(Set.of(fixture.hunterId(), fixture.spectatorId()));
     }
 }

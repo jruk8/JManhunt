@@ -200,7 +200,8 @@ public final class GameManager implements MatchControl {
                         services.stats(), stateCommands, reads.worldEngine(), store, timeLimits,
                         prestart, autostart, flagStore, cooldownStore),
                 new MatchFinishService.FinishEdge(edge.fakes(), edge.roleTeams(),
-                        edge.spawnCamp(), edge.tasks(), reads.lobbies(), edge.configRoot()),
+                        edge.spawnCamp(), edge.tasks(), reads.lobbies(), edge.configRoot(),
+                        maxHealth),
                 new MatchFinishService.FinishTexts(texts.messages(), texts.gameTexts(),
                         messaging));
     }

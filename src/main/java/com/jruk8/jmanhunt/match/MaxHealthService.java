@@ -153,8 +153,8 @@ public final class MaxHealthService {
             warn.accept("Dirty Max HP Hack detected for " + player.getName() + ": max health is "
                     + TagMath.formatNumber(current) + " but the engine last set "
                     + TagMath.formatNumber(expected) + ". Another modifier is editing max "
-                    + "health directly; see the Dirty Max HP Hack docs page "
-                    + "(configuration/modifiers/dirty-max-hp).");
+                    + "health directly; switch it to the pmaxhp tags: "
+                    + "https://jruk8.github.io/JManhunt/configuration/modifiers/dirty-max-hp/");
         }
         if (total <= 0) {
             Optional<GameInstance> match = game.instanceOf(playerId);

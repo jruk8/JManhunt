@@ -50,6 +50,7 @@ import java.util.function.Supplier;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
+import com.jruk8.jmanhunt.match.MaxHealthService;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.match.prestart.PrestartService;
 
@@ -73,10 +74,10 @@ public final class MatchFinishService {
             TagCooldownStore cooldowns) {
     }
 
-    /** Fakes, role teams, spawn camp, scheduler, lobbies, and live config root. */
+    /** Fakes, role teams, spawn camp, scheduler, lobbies, live config root, and max HP. */
     public record FinishEdge(FakeSpectatorService fakes, RoleTeamService roleTeams,
             SpawnCampService spawnCamp, TaskScheduler tasks, LobbyService lobbies,
-            Supplier<JManhuntConfig> configRoot) {
+            Supplier<JManhuntConfig> configRoot, MaxHealthService maxHealth) {
     }
 
     /** Message bus, game texts, and match messaging. */
@@ -336,6 +337,7 @@ public final class MatchFinishService {
      * handling, and cleanup commands first.
      */
     public void teardownNow(GameInstance instance) {
+        edge.maxHealth().clearPlayers(instance.assignedPlayerIds());
         long teardownId = instance.matchId();
         List<Player> participants = services.store().onlineAssignedPlayers(instance).stream()
                 .filter(p -> services.playerStates().role(p).isParticipant()).toList();

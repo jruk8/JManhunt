@@ -92,6 +92,7 @@ nav:
           - Behaviors: configuration/modifiers/behaviors.md
           - Tags Basics: configuration/modifiers/tags-basics.md
           - Tags Advanced: configuration/modifiers/tags-advanced.md
+          - Dirty Max HP: configuration/modifiers/dirty-max-hp.md
       - Game Rules: configuration/game-rules.md
       - Statistics: configuration/statistics.md
       - Sounds: configuration/sounds.md

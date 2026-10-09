@@ -542,3 +542,38 @@ configured to receive compasses. Switching to a participant role also runs that 
 `ON_RESPAWN` lists when none ran for their current life yet. Eliminated
 players can be switched back into the game this way. Unknown players,
 bad roles, and players outside a live match warn and change nothing.
+
+## Shared max health
+
+Several modifiers may all want to change one player's max health.
+Instead of each keeping its own total, every modifier owns one named
+entry in a shared ledger and the engine sums them. Amounts are health
+points (20 is the vanilla 10 hearts); the engine always starts from a
+base of 20 and adds every entry:
+
+`<pmaxhp.set:Steve,lifesteal,4>` writes exactly 4 for that id,
+replacing the old value. `<pmaxhp.modify:Steve,lifesteal,-2>` adds -2
+to that id's current entry (an unset entry starts at 0).
+`<pmaxhp.get:Steve,lifesteal>` reads one id (0 when unset).
+`<pmaxhp.clear:Steve,lifesteal>` drops one id, and
+`<pmaxhp.clear:Steve>` with no id drops every entry the player has.
+Writes leave nothing behind; reads yield the entry formatted like
+other numbers.
+
+Each successful set, modify, or clear immediately applies the new
+total to the player's max health attribute. Increments also add the
+gained amount to current health; decreases never touch current health,
+letting vanilla clamp any overflow. When a player quits or their match
+tears down, their whole ledger clears automatically.
+
+A total of 0 or less kills permanently: the player dies at once, is
+eliminated regardless of lives left or role, and their ledger clears
+without applying the lethal total. Use `<peliminated:player>` after a
+write to check whether the player died this way, and `<pstat>` reads
+`-1` on every key for eliminated players.
+
+Never edit the max health attribute directly (with `attribute`
+commands or another plugin): the next ledger refresh detects the
+mismatch, warns once per player per match about a Dirty Max HP Hack,
+and overwrites the foreign value. See
+[Dirty Max HP Hack](dirty-max-hp.md) for details.

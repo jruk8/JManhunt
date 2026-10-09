@@ -19,6 +19,7 @@ import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
+import com.jruk8.jmanhunt.match.MaxHealthService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
 import com.jruk8.jmanhunt.message.GameMessages;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -50,6 +51,7 @@ class PlayerConnectionListenerEliminationWipeTest {
     private static Fixture fixture() {
         PlayerStateStore players = new PlayerStateStore();
         GameManager game = mock(GameManager.class);
+        when(game.maxHealth()).thenReturn(mock(MaxHealthService.class));
         GameStateCommandManager stateCommands = mock(GameStateCommandManager.class);
         when(game.stateCommands()).thenReturn(stateCommands);
         when(stateCommands.endWipeEnabled(anyInt())).thenReturn(true);
