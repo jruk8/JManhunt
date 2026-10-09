@@ -153,9 +153,21 @@ class SignalInaccuracyTest {
     }
 
     @Test
+    void schemaDefaultsForgiveNewPlayers() {
+        SignalInaccuracySettings settings = new SignalInaccuracySettings();
+
+        assertEquals(0.6, settings.getDriftRadius(), 0.0);
+        assertEquals(0.6, settings.getInnerDeadzone(), 0.0);
+    }
+
+    @Test
     void disabledServiceStaysExact() {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", false);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.drift-radius", 0.8);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.inner-deadzone", 0.65);
         Location tracker = new Location(fixture.world(), 0.0, 64.0, 0.0);
         Location truth = new Location(fixture.world(), 500.0, 64.0, 0.0);
         CompassInaccuracyService.Result result =
@@ -171,6 +183,10 @@ class SignalInaccuracyTest {
     void enabledServiceDriftsPastMin() {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.drift-radius", 0.8);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.inner-deadzone", 0.65);
         Location tracker = new Location(fixture.world(), 0.0, 64.0, 0.0);
         Location truth = new Location(fixture.world(), 500.0, 64.0, 0.0);
         CompassInaccuracyService.Result result =
@@ -187,6 +203,10 @@ class SignalInaccuracyTest {
     void belowMinStaysExact() {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.drift-radius", 0.8);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.inner-deadzone", 0.65);
         Location tracker = new Location(fixture.world(), 0.0, 64.0, 0.0);
         Location truth = new Location(fixture.world(), 50.0, 64.0, 0.0);
         CompassInaccuracyService.Result result =
@@ -200,6 +220,10 @@ class SignalInaccuracyTest {
     void nonCompassItemKeepsNeedleExact() {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.drift-radius", 0.8);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.inner-deadzone", 0.65);
         ConfigPathMapper.set(fixture.root(), "settings.compass.obtaining.item", "clock");
         Location tracker = new Location(fixture.world(), 0.0, 64.0, 0.0);
         Location truth = new Location(fixture.world(), 500.0, 64.0, 0.0);
@@ -214,6 +238,10 @@ class SignalInaccuracyTest {
     void hiddenDistanceDisablesDistanceOnlyMode() {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.drift-radius", 0.8);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.inner-deadzone", 0.65);
         ConfigPathMapper.set(fixture.root(),
                 "settings.compass.feedback.actionbar.show-distance", false);
         ConfigPathMapper.set(fixture.root(),
@@ -231,6 +259,10 @@ class SignalInaccuracyTest {
     void needleModeKeepsDistanceExact() {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.drift-radius", 0.8);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.inner-deadzone", 0.65);
         setTarget(fixture, SignalInaccuracy.InaccurateOn.NEEDLE);
         Location tracker = new Location(fixture.world(), 0.0, 64.0, 0.0);
         Location truth = new Location(fixture.world(), 500.0, 64.0, 0.0);
@@ -245,6 +277,10 @@ class SignalInaccuracyTest {
     void mismatchedWorldsStayExact() {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.drift-radius", 0.8);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.inner-deadzone", 0.65);
         Location tracker = new Location(fixture.world(), 0.0, 64.0, 0.0);
         Location truth = new Location(mock(World.class), 500.0, 64.0, 0.0);
         CompassInaccuracyService.Result result =
@@ -295,6 +331,10 @@ class SignalInaccuracyTest {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
         ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.drift-radius", 0.8);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.inner-deadzone", 0.65);
+        ConfigPathMapper.set(fixture.root(),
                 "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", true);
         UUID target = UUID.randomUUID();
         for (int point = 0; point < 20; point++) {
@@ -315,6 +355,10 @@ class SignalInaccuracyTest {
     void hotspotOffLeavesResolvedError() {
         ServiceFixture fixture = serviceFixture();
         ConfigPathMapper.set(fixture.root(), "settings.compass.signal.inaccuracy.enabled", true);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.drift-radius", 0.8);
+        ConfigPathMapper.set(fixture.root(),
+                "settings.compass.signal.inaccuracy.inner-deadzone", 0.65);
         ConfigPathMapper.set(fixture.root(),
                 "settings.compass.signal.inaccuracy.accuracy-hotspot.enabled", false);
         UUID target = UUID.randomUUID();

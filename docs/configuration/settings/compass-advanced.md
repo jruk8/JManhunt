@@ -198,11 +198,11 @@ as a share of it, and `inner-deadzone` sets the white hole as a share
 of that outer edge.
 
 - `enabled` (default on) is the master switch.
-- `inner-deadzone` (default 0.65) is the hole in the middle of the
+- `inner-deadzone` (default 0.6) is the hole in the middle of the
   donut, from 0 up to (but not including) 1. At 0.5 no sample ever
   lands inside half the drift radius; at 0 the sample may land right
   on the true spot.
-- `drift-radius` (default 0.8) is how far the readout may wander, as a
+- `drift-radius` (default 0.6) is how far the readout may wander, as a
   share of the true distance. At 1 the error reaches up to the full
   distance away; near 0 it hugs the truth. It clamps to 0.01 at the
   bottom so the error never fully vanishes while enabled.

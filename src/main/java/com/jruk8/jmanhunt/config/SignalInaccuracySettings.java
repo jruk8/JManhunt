@@ -19,9 +19,9 @@ public class SignalInaccuracySettings extends OkaeriConfig {
             "Hole in the middle of the error donut, from 0 up to (but not",
             "including) 1. 0.5 means no error ever lands inside half of the",
             "outer radius; 0 lets the error land right on the true spot.",
-            "Default: 0.65"
+            "Default: 0.6"
     })
-    private double innerDeadzone = 0.65;
+    private double innerDeadzone = 0.6;
 
     @CustomKey("drift-radius")
     @Comment({
@@ -29,9 +29,9 @@ public class SignalInaccuracySettings extends OkaeriConfig {
             "distance. 1 wanders up to the full distance away; values near",
             "0 stay near the truth. Clamped to 0.01 at the bottom so the",
             "error can never fully vanish while enabled.",
-            "Default: 0.8"
+            "Default: 0.6"
     })
-    private double driftRadius = 0.8;
+    private double driftRadius = 0.6;
 
     @Comment("Range gate for the error: when it starts and stops growing.")
     private Thresholds thresholds = new Thresholds();

@@ -25,8 +25,8 @@ final class CompassSettingEntries {
 private static void addSignalInaccuracyEntries(List<SettingDescriptor> entries) {
     String root = "settings.compass.signal.inaccuracy.";
     entries.add(bool(root + "enabled", true));
-    entries.add(floatVal(root + "inner-deadzone", 0.65, 0.0, 1.0));
-    entries.add(floatVal(root + "drift-radius", 0.8, 0.0, 1.0));
+    entries.add(floatVal(root + "inner-deadzone", 0.6, 0.0, 1.0));
+    entries.add(floatVal(root + "drift-radius", 0.6, 0.0, 1.0));
     entries.add(floatVal(root + "thresholds.min-distance", 100.0, -1.0, null));
     entries.add(floatVal(root + "thresholds.max-distance", 1000.0, -1.0, null));
     entries.add(option(root + "inaccurate-on", "BOTH", "NEEDLE", "DISTANCE_FEEDBACK", "BOTH"));
