@@ -62,6 +62,17 @@ class InfectionItemGateTest {
     }
 
     @Test
+    void forInsideFalseIfBranchNeverRuns() {
+        Fixture fixture = new Fixture();
+        fixture.setupItemFlags(0);
+
+        assertEquals("", fixture.replace(
+                "<if:\"1 == 2\",\"<for:<lflag:item_list>,<run:say hi>>\">"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+        assertTrue(fixture.commands.isEmpty(), fixture.commands.toString());
+    }
+
+    @Test
     void fullFailChanceGivesNothing() {
         Fixture fixture = new Fixture();
         fixture.setupItemFlags(100);

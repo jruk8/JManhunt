@@ -110,15 +110,44 @@ final class TagPrePass {
     }
 
     /**
+     * Loop spans nested inside an if-span of the same text. These wait
+     * for branch selection instead of running eagerly, so a loop in a
+     * dead branch never executes; the chosen branch evaluates them
+     * through the normal recursion. Computed fresh per walk on the
+     * current text.
+     */
+    static List<int[]> loopsInsideIfs(String command) {
+        List<TagControlFlow.IfSpan> ifs = TagControlFlow.findIfSpans(command);
+        List<int[]> deferred = new ArrayList<>();
+        for (TagLoops.LoopSpan loop : TagLoops.findLoopSpans(command)) {
+            for (TagControlFlow.IfSpan span : ifs) {
+                if (loop.start() > span.start() && loop.end() < span.end()) {
+                    deferred.add(new int[] {loop.start(), loop.end()});
+                    break;
+                }
+            }
+        }
+        return deferred;
+    }
+
+    /**
      * Resolves outermost loop spans, left to right, resolving the
      * strict-prefix plain window before each span through the gap
      * function. Nested loops wait for the body evaluation of their
      * enclosing loop, which recurses through the evaluation chain
-     * per iteration.
+     * per iteration. Loops nested in an if-span wait for branch
+     * selection the same way and stay inert meanwhile: protection
+     * spans shield their innards from plain windows.
      */
     static String resolveLoopSpans(String command, TagContext context, TagLoops.Evaluator eval,
             BiFunction<String, Integer, String> gap) {
-        List<TagLoops.LoopSpan> spans = TagLoops.findLoopSpans(command);
+        List<int[]> deferred = loopsInsideIfs(command);
+        List<TagLoops.LoopSpan> spans = new ArrayList<>();
+        for (TagLoops.LoopSpan span : TagLoops.findLoopSpans(command)) {
+            if (!covers(deferred, span.start(), span.end())) {
+                spans.add(span);
+            }
+        }
         if (spans.isEmpty()) {
             return command;
         }
@@ -129,18 +158,33 @@ final class TagPrePass {
     }
 
     /**
-     * Resolves if-spans without nested ifs, left to right, resolving
-     * the strict-prefix plain window before each span through the gap
+     * Resolves ready if-spans, left to right, resolving the
+     * strict-prefix plain window before each span through the gap
      * function, with lazy branches: only the condition and the chosen
-     * branch evaluate. Spans nesting another if still wait for the
-     * inner span, so an if nested in a dead branch resolves eagerly
-     * as before.
+     * branch evaluate. An if waits for nested ifs outside deferred
+     * loops; nested ifs inside a deferred loop resolve with the
+     * chosen branch, so they never block the outer if and never
+     * evaluate without their loop item. Ifs nested directly in a
+     * branch (not through a loop) still resolve first, as before.
      */
     static String resolveIfSpans(String command, TagContext context, TagLoops.Evaluator eval,
             BiFunction<String, Integer, String> gap) {
+        List<int[]> deferred = loopsInsideIfs(command);
+        List<Integer> nested = TagControlFlow.nestedIfStarts(command);
         List<TagControlFlow.IfSpan> ready = new ArrayList<>();
         for (TagControlFlow.IfSpan span : TagControlFlow.findIfSpans(command)) {
-            if (!TagControlFlow.hasNestedIf(span.args())) {
+            if (covers(deferred, span.start(), span.end())) {
+                continue;
+            }
+            boolean blocked = false;
+            for (int at : nested) {
+                if (at > span.start() && at < span.end()
+                        && !covers(deferred, at, at)) {
+                    blocked = true;
+                    break;
+                }
+            }
+            if (!blocked) {
                 ready.add(span);
             }
         }

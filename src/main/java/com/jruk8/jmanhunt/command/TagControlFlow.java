@@ -69,20 +69,31 @@ public final class TagControlFlow {
     }
 
     public static boolean hasNestedIf(String args) {
-        String lower = args.toLowerCase(Locale.ROOT);
+        return !nestedIfStarts(args).isEmpty();
+    }
+
+    /**
+     * Relative offsets of nested {@code <if} openers: the same
+     * case-insensitive match as {@link #hasNestedIf}, kept as one
+     * implementation so laziness checks cannot drift from it.
+     */
+    public static List<Integer> nestedIfStarts(String text) {
+        List<Integer> starts = new ArrayList<>();
+        String lower = text.toLowerCase(Locale.ROOT);
         int from = 0;
         while (true) {
             int at = lower.indexOf("<if", from);
             if (at < 0) {
-                return false;
+                return starts;
             }
             int after = at + 3;
             if (after >= lower.length()) {
-                return true;
+                starts.add(at);
+                return starts;
             }
             char next = lower.charAt(after);
             if (next == ':' || next == '>' || Character.isWhitespace(next)) {
-                return true;
+                starts.add(at);
             }
             from = after;
         }
