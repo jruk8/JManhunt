@@ -219,6 +219,59 @@ public final class CommandPlaceholders {
         return spans;
     }
 
+    /**
+     * Warns once per line when a converged result still holds an
+     * unterminated {@code <run>} tag, which can never dispatch and
+     * otherwise dies silently inside ignored branch results. Other
+     * tags surface visibly as literal output or warn downstream,
+     * so only run is checked. Passes the result through.
+     */
+    private static String checkUnterminatedRun(String result, TagContext context) {
+        int open = findUnterminatedRun(result);
+        if (open >= 0) {
+            int end = Math.min(open + 40, result.length());
+            context.unterminatedTag("Tag <run> never closes, so it never dispatches at "
+                    + context.provenance().describe() + ": " + result.substring(open, end));
+        }
+        return result;
+    }
+
+    /** First {@code <run} opener without its close; -1 when all run tags close. */
+    private static int findUnterminatedRun(String text) {
+        int index = 0;
+        while (index < text.length()) {
+            int open = text.indexOf('<', index);
+            if (open < 0) {
+                return -1;
+            }
+            if (isRunOpener(text, open) && spanClose(text, open) < 0) {
+                return open;
+            }
+            index = open + 1;
+        }
+        return -1;
+    }
+
+    /** True when the opener names run, mirroring the span finders. */
+    private static boolean isRunOpener(String text, int open) {
+        int cursor = open + 1;
+        while (cursor < text.length() && Character.isWhitespace(text.charAt(cursor))) {
+            cursor++;
+        }
+        int rootEnd = cursor;
+        while (rootEnd < text.length() && TagExpressions.isRootChar(text.charAt(rootEnd))) {
+            rootEnd++;
+        }
+        if (!text.substring(cursor, rootEnd).equalsIgnoreCase("run")) {
+            return false;
+        }
+        while (rootEnd < text.length() && Character.isWhitespace(text.charAt(rootEnd))) {
+            rootEnd++;
+        }
+        return rootEnd < text.length()
+                && (text.charAt(rootEnd) == ':' || text.charAt(rootEnd) == '>');
+    }
+
     /** Matching close of the tag opening at {@code open}; -1 when unclosed. Shared with the pre-pass. */
     static int spanClose(String command, int open) {
         int depth = 0;
@@ -343,12 +396,12 @@ public final class CommandPlaceholders {
             }
             current = swept;
             if (!changed) {
-                return current;
+                return checkUnterminatedRun(current, context);
             }
         }
         context.scope().warn(
                 "Stopped evaluating nested tags after " + MAX_TAG_PASSES + " passes: " + command);
-        return current;
+        return checkUnterminatedRun(current, context);
     }
 
     /** Loops walk with prefix windows over the current text. */

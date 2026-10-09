@@ -76,4 +76,4 @@ behavior:
         # beats the fail chance only on 81 to 100. Single quotes nest
         # the inner if inside the double-quoted for body (doubled for
         # YAML).
-        - '<if:"<lflag:items> == true","<for:<lflag:item_list>,<if:''<random-num:1,100> gt <lflag:give_fail_chance>'',''<run:give <p> <list.get:<i>,0> <random-num:<list.get:<i>,1>,<list.get:<i>,2>>''>>">'
+        - '<if:"<lflag:items> == true","<for:<lflag:item_list>,<if:''<random-num:1,100> gt <lflag:give_fail_chance>'',''<run:give <p> <list.get:<i>,0> <random-num:<list.get:<i>,1>,<list.get:<i>,2>>>''>>">'

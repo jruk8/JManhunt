@@ -46,6 +46,9 @@ are refused with an error, while unknown tags only warn. Set
 `advanced.misc.modifier-editor.validate-commands` to false to skip the
 root and item checks. See
 [Modifiers](../../play/commands.md#modifiers) for the create flags.
+Lines edited outside the GUI skip that check, so at runtime an
+unterminated `<run>` warns in the console naming the line instead of
+running silently.
 
 Toggling a modifier mid-match runs its start commands at most once and
 its cleanup at most once, so rewards never duplicate. Set

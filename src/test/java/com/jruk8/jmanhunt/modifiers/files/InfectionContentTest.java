@@ -25,4 +25,25 @@ class InfectionContentTest {
                 && !text.contains("minecraft:bone") && !text.contains("minecraft:blindness"),
                 text);
     }
+
+    @Test
+    void bundledItemLineTagsBalance() throws Exception {
+        String resource = "mods/modifiers/infection.yml";
+        InputStream stream = getClass().getClassLoader().getResourceAsStream(resource);
+        assertNotNull(stream, "missing bundled default: " + resource);
+        String text;
+        try (stream) {
+            text = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        String line = null;
+        for (String candidate : text.split("\n")) {
+            if (candidate.contains("<run:give")) {
+                line = candidate;
+            }
+        }
+        assertNotNull(line, "missing item giver line");
+        long opens = line.chars().filter(letter -> letter == '<').count();
+        long closes = line.chars().filter(letter -> letter == '>').count();
+        assertTrue(opens == closes && opens > 0, line);
+    }
 }

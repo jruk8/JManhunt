@@ -94,6 +94,7 @@ public final class TagContext {
     private TagCooldownStore cooldowns = new TagCooldownStore();
     private int stepBudget = TagLoops.LOOP_LIMIT;
     private boolean limitFired;
+    private boolean malformedWarned;
 
     /** Who evaluates plus the container id ({@code <id>}). */
     public record TagIdentity(ModifierTagScope scope, String containerId) {
@@ -243,10 +244,11 @@ public final class TagContext {
         return functions;
     }
 
-    /** Restores the per-line step budget; evaluation entry calls this per line. */
+    /** Restores the per-line step budget and warn flags; evaluation entry calls this per line. */
     public void resetStepBudget() {
         stepBudget = TagLoops.LOOP_LIMIT;
         limitFired = false;
+        malformedWarned = false;
     }
 
     /**
@@ -309,6 +311,15 @@ public final class TagContext {
         }
         limitFired = true;
         loopLimit.accept(detail);
+    }
+
+    /** Warns once per line about an unterminated tag; later hits stay silent. */
+    public void unterminatedTag(String detail) {
+        if (malformedWarned) {
+            return;
+        }
+        malformedWarned = true;
+        scope().warn(detail);
     }
 
     public void sendGlobalMessage(String text) {

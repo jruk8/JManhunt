@@ -18,6 +18,11 @@ class InfectionItemGateTest {
             + "'<run:give <p> <list.get:<i>,0> "
             + "<random-num:<list.get:<i>,1>,<list.get:<i>,2>>>'>>\">";
 
+    private static final String UNBALANCED_LINE = "<if:\"<lflag:items> == true\","
+            + "\"<for:<lflag:item_list>,<if:'<random-num:1,100> gt <lflag:give_fail_chance>',"
+            + "'<run:give <p> <list.get:<i>,0> "
+            + "<random-num:<list.get:<i>,1>,<list.get:<i>,2>>'>>\">";
+
     private static final class Fixture {
         final List<String> warnings = new ArrayList<>();
         final List<String> commands = new ArrayList<>();
@@ -70,6 +75,17 @@ class InfectionItemGateTest {
                 "<if:\"1 == 2\",\"<for:<lflag:item_list>,<run:say hi>>\">"));
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
         assertTrue(fixture.commands.isEmpty(), fixture.commands.toString());
+    }
+
+    @Test
+    void unterminatedRunWarnsOnceAndDispatchesNothing() {
+        Fixture fixture = new Fixture();
+        fixture.setupItemFlags(0);
+
+        assertEquals("", fixture.replace(UNBALANCED_LINE));
+        assertTrue(fixture.commands.isEmpty(), fixture.commands.toString());
+        assertEquals(1, fixture.warnings.size(), fixture.warnings.toString());
+        assertTrue(fixture.warnings.get(0).contains("never closes"), fixture.warnings.toString());
     }
 
     @Test
