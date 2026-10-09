@@ -19,6 +19,7 @@ import com.jruk8.jmanhunt.config.JManhuntConfig;
 import com.jruk8.jmanhunt.config.WorldEngineConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.core.TaskScheduler;
+import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
@@ -89,7 +90,7 @@ class MatchFinishServiceTest {
                         mock(TagCooldownStore.class)),
                 new MatchFinishService.FinishEdge(mock(FakeSpectatorService.class),
                         mock(RoleTeamService.class), mock(SpawnCampService.class), tasks,
-                        JManhuntConfig::new),
+                        mock(LobbyService.class), JManhuntConfig::new),
                 new MatchFinishService.FinishTexts(mock(MessageService.class), new GameMessages(),
                         mock(MatchMessaging.class)));
         return new Fixture(finish, players, stateCommands, instance, deferred, hunterId, spectatorId);

@@ -179,7 +179,7 @@ public final class MatchStartService {
         long currentMatchId = services.store().nextMatchId();
         List<UUID> assignees = prepareMatchPlayers(participants, currentMatchId);
         List<Player> spectators = lobbyNonePlayers(lobby.get());
-        participants.forEach(services.lobbies()::restoreCollisions); // match wins; fakes re-disable below
+        participants.forEach(services.lobbies()::restoreCollisions); // match wins
         spectators.forEach(services.lobbies()::applyLobbyCollisions); // stayers keep lobby rules
         OptionalLong matchCell = services.worldEngine().onMatchStart(participants, lobbyId);
         GameInstance instance = createMatchInstance(lobbyId, currentMatchId, matchCell, assignees);
@@ -444,7 +444,7 @@ public final class MatchStartService {
             services.compass().giveCompass(player);
             services.compass().refreshCompass(player);
         }
-        services.lobbies().restoreCollisions(player); // match wins; fake enable below re-disables
+        services.lobbies().restoreCollisions(player); // match wins
         applyJoinGameMode(instance, player, role);
         Bukkit.getPluginManager().callEvent(new JPlayerJoinMatchEvent(
                 instance.matchId(), playerId, GameManager.roleToPlayerRole(role)));

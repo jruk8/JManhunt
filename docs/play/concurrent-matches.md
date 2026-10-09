@@ -37,7 +37,10 @@ pass `-notp` to skip that teleport once.
 `announce-lobby-changes` (`ALL`, `SELF`, `MEMBERS`, `NONE`) picks who
 hears join and leave lines; lobby 0 moves never announce.
 `disable-player-collisions` lets everyone in the lobby world pass
-through each other, members and visitors alike.
+through each other, members and visitors alike, using per-role
+scoreboard teams. For collisions off everywhere including matches,
+set `collisions.enable-player-collisions: false` in
+`config/paper-global.yml` instead; that lives outside this plugin.
 
 Move players between lobbies with:
 

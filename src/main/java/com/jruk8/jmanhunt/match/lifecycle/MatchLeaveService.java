@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
+import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
@@ -32,10 +33,10 @@ import java.util.function.Consumer;
  * through the after-leave callback.
  */
 public final class MatchLeaveService {
-    /** Match settings, engine settings, fakes, and role teams. */
+    /** Match settings, engine settings, fakes, role teams, and lobbies. */
     public record LeaveReads(MatchSettingsFacade match,
             com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings,
-            FakeSpectatorService fakes, RoleTeamService roleTeams) {
+            FakeSpectatorService fakes, RoleTeamService roleTeams, LobbyService lobbies) {
     }
 
     /** States, compass, commands, engine, store, flags, and callback. */
@@ -125,6 +126,9 @@ public final class MatchLeaveService {
         services.compass().removeCompasses(player);
         applyLeaveDestination(instance, player, dropGear, destination);
         reads.roleTeams().sync(player);
+        if (destination == LeaveDestination.LOBBY) {
+            reads.lobbies().applyLobbyCollisions(player);
+        }
         messages.messageRaw(player, game.getLeaveSuccess(), Map.of());
         return before;
     }
@@ -144,6 +148,7 @@ public final class MatchLeaveService {
         services.worldEngine().setSpawnToLobbyQuiet(List.of(player), instance.originLobbyId());
         reads.fakes().disable(player);
         reads.roleTeams().sync(player);
+        reads.lobbies().applyLobbyCollisions(player);
         return removed;
     }
 

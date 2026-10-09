@@ -105,9 +105,11 @@ public class LobbiesConfig extends OkaeriConfig {
 
     @CustomKey("disable-player-collisions")
     @Comment({
-            "When true, lobby members pass through each other instead of",
-            "colliding. Match members always collide; players outside any",
-            "lobby are never affected.",
+            "When true, lobby members and lobby-world visitors pass",
+            "through each other on no-collision role teams. For",
+            "collisions off everywhere instead, set",
+            "collisions.enable-player-collisions to false in",
+            "config/paper-global.yml.",
             "Default: true"
     })
     private boolean disablePlayerCollisions = true;

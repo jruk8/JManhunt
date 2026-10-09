@@ -213,7 +213,7 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         playerStates = new PlayerStateStore();
         roleTeams = new RoleTeamService(playerStates, this::teamColorsEnabled);
         fakeSpectators = new FakeSpectatorService(this, playerStates);
-        lobbyService = new LobbyService(new LobbyService.LobbyPlayers(this::game, fakeSpectators),
+        lobbyService = new LobbyService(new LobbyService.LobbyPlayers(this::game),
                 new LobbyService.LobbyTexts(messages, messages.manhunt()),
                 configRegistrar.getRoot().getAdvanced().getLobbies(), configRegistrar.getRoot().getWorldEngine(),
                 roleTeams);

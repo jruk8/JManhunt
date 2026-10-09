@@ -14,6 +14,7 @@ import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.TagCooldownStore;
 import com.jruk8.jmanhunt.compass.CompassManager;
+import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.match.LeaveDestination;
@@ -72,9 +73,9 @@ public final class MatchFinishService {
             TagCooldownStore cooldowns) {
     }
 
-    /** Fakes, role teams, spawn camp, scheduler, and live config root. */
+    /** Fakes, role teams, spawn camp, scheduler, lobbies, and live config root. */
     public record FinishEdge(FakeSpectatorService fakes, RoleTeamService roleTeams,
-            SpawnCampService spawnCamp, TaskScheduler tasks,
+            SpawnCampService spawnCamp, TaskScheduler tasks, LobbyService lobbies,
             Supplier<JManhuntConfig> configRoot) {
     }
 
@@ -106,7 +107,7 @@ public final class MatchFinishService {
                         this::finishIfBucketEmpty));
         this.leave = new MatchLeaveService(
                 new MatchLeaveService.LeaveReads(reads.match(), reads.engineSettings(),
-                        edge.fakes(), edge.roleTeams()),
+                        edge.fakes(), edge.roleTeams(), edge.lobbies()),
                 new MatchLeaveService.LeaveMatch(services.playerStates(), services.compass(),
                         services.stateCommands(), services.worldEngine(),
                         services.store(), services.flagStore(), instance -> {

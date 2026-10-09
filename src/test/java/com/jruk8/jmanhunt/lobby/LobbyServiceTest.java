@@ -4,7 +4,6 @@ import com.jruk8.jmanhunt.config.LobbiesConfig;
 import com.jruk8.jmanhunt.config.WorldEngineConfig;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
-import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.RoleTeamService;
 import java.util.List;
 import java.util.Optional;
@@ -17,9 +16,11 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -153,20 +154,14 @@ class LobbyServiceTest {
     }
 
     @Test
-    void lobbyTeamNamesStayCompact() {
-        assertEquals("jl0", LobbyService.lobbyTeamName(0));
-        assertEquals("jl7", LobbyService.lobbyTeamName(7));
-        assertEquals("jl2147483647", LobbyService.lobbyTeamName(Integer.MAX_VALUE));
-    }
-
-    @Test
-    void lobbyJoinDisablesCollisionsForMembers() {
+    void lobbyJoinMovesMembersToLobbyTeams() {
         Fixture fixture = fixture(true);
         fixture.lobbies.setLobby(fixture.id, 0);
 
         fixture.lobbies.applyLobbyCollisions(fixture.player);
 
-        verify(fixture.player).setCollidable(false);
+        verify(fixture.roleTeams).moveToLobby(fixture.player);
+        verify(fixture.player, never()).setCollidable(anyBoolean());
     }
 
     @Test
@@ -177,35 +172,31 @@ class LobbyServiceTest {
 
         on.lobbies.applyLobbyCollisions(on.player);
 
-        verify(on.player, never()).setCollidable(anyBoolean());
+        verify(on.roleTeams, never()).moveToLobby(on.player);
 
         Fixture off = fixture(false);
         off.lobbies.setLobby(off.id, 0);
 
         off.lobbies.applyLobbyCollisions(off.player);
 
-        verify(off.player, never()).setCollidable(anyBoolean());
+        verify(off.roleTeams, never()).moveToLobby(off.player);
 
         Fixture outsider = fixture(true);
 
         outsider.lobbies.applyLobbyCollisions(outsider.player);
 
-        verify(outsider.player, never()).setCollidable(anyBoolean());
+        verify(outsider.roleTeams, never()).moveToLobby(outsider.player);
     }
 
     @Test
-    void restoreCollisionsSkipsFakeSpectators() {
+    void restoreCollisionsReturnsPlayerToRoleTeams() {
         Fixture fixture = fixture(true);
 
         fixture.lobbies.restoreCollisions(fixture.player);
 
-        verify(fixture.player).setCollidable(true);
-
-        when(fixture.fakes.isFakeSpectator(fixture.player)).thenReturn(true);
-
-        fixture.lobbies.restoreCollisions(fixture.player);
-
-        verify(fixture.player, never()).setCollidable(false);
+        verify(fixture.roleTeams).removeLobbyEntry("Alex");
+        verify(fixture.roleTeams).sync(fixture.player);
+        verify(fixture.player, never()).setCollidable(anyBoolean());
     }
 
     @Test
@@ -213,23 +204,30 @@ class LobbyServiceTest {
         Fixture fixture = fixture(false);
         when(fixture.game.instanceOf(fixture.id))
                 .thenReturn(Optional.of(mock(GameInstance.class)));
-        Player fake = mock(Player.class);
-        UUID fakeId = UUID.randomUUID();
-        when(fake.getUniqueId()).thenReturn(fakeId);
-        when(fixture.fakes.isFakeSpectator(fake)).thenReturn(true);
         Player member = mock(Player.class);
         UUID memberId = UUID.randomUUID();
         when(member.getUniqueId()).thenReturn(memberId);
+        when(member.getName()).thenReturn("Blair");
         fixture.lobbies.setLobby(memberId, 0);
         Player outsider = mock(Player.class);
         when(outsider.getUniqueId()).thenReturn(UUID.randomUUID());
 
-        fixture.lobbies.reapplyCollisions(List.of(fake, fixture.player, member, outsider));
+        fixture.lobbies.reapplyCollisions(List.of(fixture.player, member, outsider));
 
-        verify(fake).setCollidable(false);
-        verify(fixture.player).setCollidable(true);
-        verify(member).setCollidable(true);
-        verify(outsider, never()).setCollidable(anyBoolean());
+        verify(fixture.roleTeams).removeLobbyEntry("Alex");
+        verify(fixture.roleTeams).removeLobbyEntry("Blair");
+        verify(fixture.roleTeams, times(2)).sync(any(Player.class));
+        verify(fixture.roleTeams, never()).moveToLobby(any(Player.class));
+    }
+
+    @Test
+    void reapplyCollisionsAppliesForLobbyOccupantsWhenEnabled() {
+        Fixture fixture = fixture(true);
+        fixture.lobbies.setLobby(fixture.id, 0);
+
+        fixture.lobbies.reapplyCollisions(List.of(fixture.player));
+
+        verify(fixture.roleTeams).moveToLobby(fixture.player);
     }
 
     @Test
@@ -239,7 +237,7 @@ class LobbyServiceTest {
 
         fixture.lobbies.applyLobbyCollisions(fixture.player);
 
-        verify(fixture.player).setCollidable(false);
+        verify(fixture.roleTeams).moveToLobby(fixture.player);
     }
 
     @Test
@@ -250,7 +248,7 @@ class LobbyServiceTest {
 
         fixture.lobbies.applyLobbyCollisions(fixture.player);
 
-        verify(fixture.player).setCollidable(false);
+        verify(fixture.roleTeams).moveToLobby(fixture.player);
     }
 
     @Test
@@ -260,19 +258,8 @@ class LobbyServiceTest {
 
         fixture.lobbies.applyLobbyCollisions(fixture.player);
 
+        verify(fixture.roleTeams, never()).moveToLobby(fixture.player);
         verify(fixture.player, never()).setCollidable(anyBoolean());
-    }
-
-    @Test
-    void roleHolderConsultsRoleTeamForColors() {
-        Fixture fixture = fixture(true);
-        fixture.lobbies.setLobby(fixture.id, 0);
-        when(fixture.roleTeams.syncTeam(fixture.player)).thenReturn(true);
-
-        fixture.lobbies.applyLobbyCollisions(fixture.player);
-
-        verify(fixture.roleTeams).syncTeam(fixture.player);
-        verify(fixture.player).setCollidable(false);
     }
 
     private static void mockWorld(Player player, String name) {
@@ -281,25 +268,24 @@ class LobbyServiceTest {
         when(player.getWorld()).thenReturn(world);
     }
 
-    /** Wired service with one lobby-less non-fake player outside any match. */
+    /** Wired service with one lobby-less player outside any match. */
     private static Fixture fixture(boolean collisionsDisabled) {
         LobbiesConfig lobbySettings = new LobbiesConfig();
         lobbySettings.setDisablePlayerCollisions(collisionsDisabled);
         GameManager game = mock(GameManager.class);
-        FakeSpectatorService fakes = mock(FakeSpectatorService.class);
         RoleTeamService roleTeams = mock(RoleTeamService.class);
         Player player = mock(Player.class);
         UUID id = UUID.randomUUID();
         when(player.getUniqueId()).thenReturn(id);
+        when(player.getName()).thenReturn("Alex");
         when(game.instanceOf(id)).thenReturn(Optional.empty());
-        when(fakes.isFakeSpectator(player)).thenReturn(false);
         return new Fixture(
-                new LobbyService(new LobbyService.LobbyPlayers(() -> game, fakes), null,
+                new LobbyService(new LobbyService.LobbyPlayers(() -> game), null,
                         lobbySettings, new WorldEngineConfig(), roleTeams),
-                player, id, game, fakes, roleTeams);
+                player, id, game, roleTeams);
     }
 
     private record Fixture(LobbyService lobbies, Player player, UUID id,
-            GameManager game, FakeSpectatorService fakes, RoleTeamService roleTeams) {
+            GameManager game, RoleTeamService roleTeams) {
     }
 }
