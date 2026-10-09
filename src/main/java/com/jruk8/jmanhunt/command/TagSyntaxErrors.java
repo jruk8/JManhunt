@@ -26,8 +26,8 @@ final class TagSyntaxErrors {
             case "id", "i" -> noArgsError(name, args);
             case "min", "max" -> arityError(name, args, 2, "two numbers");
             case "clamp" -> arityError(name, args, 3, "a value plus low and high");
-            case "gmessage", "gmsg" -> arityError(name, args, 1, "one text");
-            case "pmessage", "pmsg" -> arityError(name, args, 2, "a player and a text");
+            case "gmessage", "gmsg" -> TagSinks.messageError(name, args);
+            case "pmessage", "pmsg" -> TagSinks.playerMessageError(name, args);
             case "rmessage", "rmsg" -> RoleTagSyntax.messageError(name, args);
             case "gsound" -> TagSinks.soundError(name, args);
             case "psound" -> TagSinks.playerSoundError(name, args);

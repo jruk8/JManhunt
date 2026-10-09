@@ -15,10 +15,22 @@ final class RoleTagSyntax {
     private RoleTagSyntax() {
     }
 
-    /** Role message shape: a role plus literal preset text, quotes parsed. */
+    /**
+     * Role message shape: a role plus literal preset text, quotes
+     * parsed, or a role plus an {@code [enabled,text]} array.
+     */
     static Optional<String> messageError(String name, String args) {
         if (args == null || args.isBlank()) {
             return Optional.of("Tag <" + name + "> needs a role and a text.");
+        }
+        Optional<TagSinks.AudienceArray> array = TagSinks.audienceArray(args);
+        if (array.isPresent()) {
+            Optional<String> elements = TagSinks.messageArrayError(name,
+                    array.get().elements());
+            if (elements.isPresent()) {
+                return elements;
+            }
+            return headError(name, array.get().audience());
         }
         List<String> parts = CommandPlaceholders.splitPickArgs(args);
         if (parts.size() != 2) {
@@ -32,10 +44,23 @@ final class RoleTagSyntax {
         return headError(name, parts.get(0));
     }
 
-    /** Role sound shape: a role plus an id, pitch, and volume, quotes parsed. */
+    /**
+     * Role sound shape: a role plus an id, pitch, and volume, quotes
+     * parsed, or a role plus an {@code [enabled,id,pitch,volume]}
+     * array.
+     */
     static Optional<String> soundError(String name, String args) {
         if (args == null || args.isBlank()) {
             return Optional.of("Tag <" + name + "> needs a role plus an id, pitch, and volume.");
+        }
+        Optional<TagSinks.AudienceArray> array = TagSinks.audienceArray(args);
+        if (array.isPresent()) {
+            Optional<String> elements = TagSinks.soundArrayError(name,
+                    array.get().elements());
+            if (elements.isPresent()) {
+                return elements;
+            }
+            return headError(name, array.get().audience());
         }
         List<String> parts = CommandPlaceholders.splitPickArgs(args);
         if (parts.size() < 2 || parts.size() > 4) {

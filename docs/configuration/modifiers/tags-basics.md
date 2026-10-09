@@ -123,6 +123,8 @@ creator editor validates them as you type:
 | `<rflag:hunter,boost>` | The flag of the named role, or `ALL` for both (see Flags). |
 | `<rmessage:hunter,push!>` | Tells the named role only (`ALL` tells both). |
 | `<rsound:hunter,block.note_block.pling>` | Plays for the named role only (`ALL` plays for both). |
+| `<gsound:[true,block.stone.break,0.5,2]>` | Plays only when the first element is `true` or `1`; anything else skips silently. Pitch and volume still default to `1`. |
+| `<gmsg:[true,hello]>` | Sends `hello` only when the first element is `true` or `1`; anything else skips silently. |
 
 `<min>`, `<max>`, and `<clamp>` accept math in their arguments
 (`<min:8+5,10>` is `10`) and yield `0` with a console warning when an
@@ -134,6 +136,17 @@ number. `<sqrt:x>` and `<cbrt:x>` follow the same one-arg rules
 negatives). `<root:x,n>` follows the two-arg rules: bad shapes, a
 zero index, and even roots of negatives yield `0` with a warning,
 while odd roots of negatives work (`<root:-8,3>` is `-2`).
+
+Every sound and message tag also takes an array form with an enabled
+gate as the first element: `<gsound:[enabled,id,pitch,volume]>`,
+`<psound:player,[enabled,id,pitch,volume]>`,
+`<rsound:role,[enabled,id,pitch,volume]>`, `<gmsg:[enabled,text]>`,
+`<pmsg:player,[enabled,text]>`, `<rmsg:role,[enabled,text]>` (the
+long `gmessage`, `pmessage`, `rmessage` names work too). The sound
+plays or the text sends only when the gate is `true` or `1`; any
+other value skips silently with no warning, so scripts can gate on
+flags (`<gmsg:[<lflag:loud>,hello]>`) without an `<if>`. Array pitch
+and volume behave exactly like the individual form.
 
 ## Stats
 
