@@ -57,12 +57,14 @@ behavior:
         # VIP list the duration is configurable per entry. Items are
         # [item, min, max] triples with a rolled count each firing,
         # and each candidate independently fails give_fail_chance
-        # percent of the time (92: a rare treat, not a steady stream).
+        # percent of the time (80: an uncommon treat, not a steady
+        # stream). Ids stay bare (no minecraft: prefix) for maximum
+        # give and effect compatibility.
         - "<lflag:effects,true>"
-        - "<lflag:effect_list,[[minecraft:blindness, 0, 5]]>"
+        - "<lflag:effect_list,[[blindness, 0, 5]]>"
         - "<lflag:items,true>"
-        - "<lflag:item_list,[[minecraft:rotten_flesh, 3, 7], [minecraft:bone, 2, 4]]>"
-        - "<lflag:give_fail_chance,92>"
+        - "<lflag:item_list,[[rotten_flesh, 3, 7], [bone, 2, 4]]>"
+        - "<lflag:give_fail_chance,80>"
         # Never converted means never debuffed. An unset flag reads
         # null, which contains no name, so this exits quietly too.
         - '<if:"<list.contains:<default:<gflag:infected>,[]>,<p>> != true","exit">'
@@ -71,7 +73,7 @@ behavior:
         - '<if:"<lflag:effects> == true and <random-num:1,3> == 1","<for:<lflag:effect_list>,<run:effect give <p> <list.get:<i>,0> <list.get:<i>,2> <list.get:<i>,1> true>>">'
         # Groceries on luck: each entry rolls its own count and its
         # own fail chance, so most firings hand out nothing. The roll
-        # beats the fail chance only on 93 to 100. Single quotes nest
+        # beats the fail chance only on 81 to 100. Single quotes nest
         # the inner if inside the double-quoted for body (doubled for
-        # YAML); the if splitter only respects quotes, not tag depth.
+        # YAML).
         - '<if:"<lflag:items> == true","<for:<lflag:item_list>,<if:''<random-num:1,100> gt <lflag:give_fail_chance>'',''<run:give <p> <list.get:<i>,0> <random-num:<list.get:<i>,1>,<list.get:<i>,2>>''>>">'

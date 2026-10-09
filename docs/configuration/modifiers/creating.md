@@ -166,7 +166,7 @@ lines may duplicate engine chat and sounds. A second block runs every
 12 seconds per hunter: converted hunters get sporadic 5-second
 blindness plus occasional rotten flesh and bones (each item
 candidate independently fails `give_fail_chance` percent of the
-time, 92 by default), while root hunters exit untouched. Effect
+time, 80 by default), while root hunters exit untouched. Effect
 durations and item counts live in the block's `effect_list`
 (`[id, amplifier, seconds]`) and `item_list` (`[item, min, max]`)
 settings.
