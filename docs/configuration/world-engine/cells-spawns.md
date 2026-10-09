@@ -59,6 +59,11 @@ picking player spawns. Keep it between 5 and 15; it hard-caps at
 `cell-size / 2`. The [Start Border](borders.md#start-border) uses this
 value in its size calculation.
 
+Mid-match joiners scatter the same way: into the match cell when the
+engine runs it, or around the recorded start center when it does not.
+Joiners also arrive vulnerable: any leftover game-end invulnerability
+is cleared on entry, so released holds play fair.
+
 ## Spawnpoint Algorithm
 
 Validates every spawn: below tree leaves, with air at the feet and head

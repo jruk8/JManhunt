@@ -23,6 +23,7 @@ import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.SoundService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
+import com.jruk8.jmanhunt.player.SpectatorSpawnResolver;
 import com.jruk8.jmanhunt.stats.Stats;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
@@ -368,6 +369,34 @@ public final class MatchStartService {
         return center;
     }
 
+    /**
+     * Cell-less join scatter: with no cell to join, the joiner
+     * scatters around the recorded start center with the same picker
+     * and radius match start used, and pins respawn there. Watchers
+     * resolve around the same center. A missing center or world
+     * leaves the joiner where they are.
+     */
+    private void scatterJoinerToStartCenter(GameInstance instance, Player player) {
+        Location center = instance.startCenter();
+        if (center == null || center.getWorld() == null) {
+            return;
+        }
+        World world = center.getWorld();
+        if (services.playerStates().role(player).isParticipant()) {
+            WorldEngineConfig spawnConfig = WorldEngineConfig.fromSettings(reads.engineSettings());
+            Location spawn = MatchTeleportService.spreadSpawnsForConfig(world, center.getBlockX(),
+                    center.getBlockZ(), SURROUND_RADIUS, List.of(player), spawnConfig).get(0);
+            player.teleport(spawn);
+        } else {
+            SpectatorSpawnResolver resolver =
+                    new SpectatorSpawnResolver(services.playerStates(), edge.fakes());
+            Location spawn = SpectatorSpawnResolver.resolve(resolver.candidatesOf(instance), center)
+                    .orElse(center);
+            player.teleport(spawn);
+        }
+        player.setRespawnLocation(center, true);
+    }
+
     /** Random origin in the game world for executor-less starts. */
     private Location fallbackOrigin() {
         World world = Bukkit.getWorld(reads.engineSettings().getWorldName());
@@ -402,6 +431,9 @@ public final class MatchStartService {
         services.playerStates().setRole(player, role);
         edge.roleTeams().sync(player);
         instance.activate(playerId);
+        // A stale game-end grant survives on players who missed the
+        // start clear: entrants always arrive vulnerable.
+        player.setInvulnerable(false);
         initMatchStats(instance.matchId(), player);
         if (role == Role.SPEEDRUNNER) {
             services.playerStates().setSpeedrunnerAlive(playerId, true);
@@ -409,6 +441,8 @@ public final class MatchStartService {
         services.playerStates().setLives(playerId, livesFor(instance.originLobbyId(), role));
         if (instance.cellIndex().isPresent()) {
             services.worldEngine().teleportJoinersToCell(instance, List.of(player), instance.cellIndex().getAsLong());
+        } else {
+            scatterJoinerToStartCenter(instance, player);
         }
         services.playerStates().recordLastSeen(player, player.getLocation());
         if (role.isParticipant()) {
@@ -444,6 +478,11 @@ public final class MatchStartService {
         SwitchPlan plan = planSwitch(source, target, instance.isActive(playerId),
                 instance.isHeadstartHeld(playerId));
         services.playerStates().setRole(player, target);
+        // A swap back into the game sheds any stale game-end grant,
+        // except mid-end-delay, where the end protection still owns it.
+        if (target.isParticipant() && !instance.ending()) {
+            player.setInvulnerable(false);
+        }
         edge.roleTeams().sync(player);
         if (plan.runnerAlive() != null) {
             services.playerStates().setSpeedrunnerAlive(playerId, plan.runnerAlive());
@@ -690,7 +729,7 @@ public final class MatchStartService {
         }
         GameInstance instance = target.get();
         joinPlayers(instance, List.of(player), Role.SPECTATOR);
-        if (instance.cellIndex().isEmpty()) {
+        if (instance.cellIndex().isEmpty() && instance.startCenter() == null) {
             teleportToGameWorldSpawn(player);
         }
         return true;
