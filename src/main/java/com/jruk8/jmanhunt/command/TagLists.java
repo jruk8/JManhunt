@@ -182,17 +182,14 @@ public final class TagLists {
         return Optional.empty();
     }
 
-    /** Largest list {@code <range>} builds before warning and capping. */
-    static final int RANGE_LIMIT = 1000;
-
     /**
      * Builds python-style {@code <range:stop>} /
      * {@code <range:start,stop>} / {@code <range:start,stop,step>}:
      * start inclusive, stop exclusive, bounds are whole numbers and
      * may be math. Counts down while start exceeds stop when the
      * step is negative. Any bad shape warns and yields
-     * {@code "null"}, and ranges past the cap warn and keep the
-     * first thousand.
+     * {@code "null"}, and ranges past the shared loop cap warn and
+     * keep the first {@value TagLoops#LOOP_LIMIT} items.
      */
     static String range(String tag, String args, TagContext context) {
         List<String> parts = splitTopLevel(args);
@@ -221,10 +218,10 @@ public final class TagLists {
                 climbing ? value < stop.get() : value > stop.get();
                 value += delta) {
             items.add(Long.toString(value));
-            if (items.size() > RANGE_LIMIT) {
+            if (items.size() > TagLoops.LOOP_LIMIT) {
                 context.scope().warn(
-                        "Tag <range> capped at " + RANGE_LIMIT + " items: " + tag);
-                return format(items.subList(0, RANGE_LIMIT));
+                        "Tag <range> capped at " + TagLoops.LOOP_LIMIT + " items: " + tag);
+                return format(items.subList(0, TagLoops.LOOP_LIMIT));
             }
         }
         return format(items);

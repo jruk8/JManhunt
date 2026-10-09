@@ -209,7 +209,7 @@ class TagFunctionsTest {
         assertEquals(1, fixture.loopLimits.size());
         String detail = fixture.loopLimits.get(0);
         assertTrue(detail.contains("boom"), detail);
-        assertTrue(detail.contains("1000"), detail);
+        assertTrue(detail.contains("20000"), detail);
     }
 
     @Test
@@ -232,7 +232,7 @@ class TagFunctionsTest {
         assertEquals(1, fixture.loopLimits.size());
         String detail = fixture.loopLimits.get(0);
         assertTrue(detail.contains("boom"), detail);
-        assertTrue(detail.contains("1000"), detail);
+        assertTrue(detail.contains("20000"), detail);
     }
 
     @Test
@@ -247,7 +247,7 @@ class TagFunctionsTest {
         assertEquals("0", fixture.replace("<gflag:n>", context));
 
         // 600 loop steps plus a self-call fit; the second lap exhausts
-        // the same 1000 budget instead of starting a fresh one. Both the
+        // the same 20000 budget instead of starting a fresh one. Both the
         // loop and the trailing call fail, but the line fires once.
         assertEquals("nullnull", fixture.replace("<spin>", context));
         assertEquals(1, fixture.loopLimits.size());

@@ -302,8 +302,9 @@ survive. Positions start at `0`, and out-of-range reads yield `null`:
 | `<range:5>` | `[0, 1, 2, 3, 4]`; `<range:1,5>` starts at `1`, and `<range:5,0,-1>` counts down. |
 
 `<range>` follows Python: start inclusive, stop exclusive, step `1`
-unless given. Ranges past 1000 items keep the first thousand with a
-warning; a zero step or a non-number warns and yields `null`.
+unless given. Ranges past 20000 items keep the first twenty thousand
+with a warning (the same cap as the loop step budget below); a zero
+step or a non-number warns and yields `null`.
 
 The mutating ops (`append`, `set`, `remove`, `clear`, `pop`,
 `shuffle`) write back when their list is a verbatim flag reference:
@@ -456,7 +457,7 @@ lt 3`); anything else warns and the whole tag becomes `null`.
 Two tripwires keep loops honest. A for loop over a flag reference
 snapshots the flag and cancels to `null` with a warning when the
 body changes it mid-loop (literals cannot change, so they never
-cancel). And every line gets 1000 shared steps, split between loop
+cancel). And every line gets 20000 shared steps, split between loop
 iterations and function calls: past that the tag becomes `null`,
 the match is cancelled, the console logs the modifier, behavior,
 list, and line, and the players are told to contact the
@@ -495,7 +496,7 @@ other lines in the same scope) never warn; genuinely unknown tags
 still warn, and still resolve at runtime.
 
 Recursion terminates through `<if>` base cases, since dead
-branches never run. Every call costs one of the line's 1000 shared
+branches never run. Every call costs one of the line's 20000 shared
 steps, and the budget never refunds: leaving a loop cannot launder
 steps back, so runaway recursion always ends at the limit above
 instead of crashing the server.

@@ -144,7 +144,7 @@ class TagLoopsTest {
         context.setProvenance(TagContext.Provenance.of("spin", 2, "console").withLine(4));
 
         assertEquals("null", fixture.replace("<while:true,<gmessage:x>>", context));
-        assertEquals(1000, fixture.messages.size());
+        assertEquals(20_000, fixture.messages.size());
         assertEquals(1, fixture.loopLimits.size());
         String detail = fixture.loopLimits.get(0);
         assertTrue(detail.contains("<while>"), detail);
@@ -158,13 +158,13 @@ class TagLoopsTest {
         Fixture fixture = new Fixture();
         TagContext context = fixture.context();
         List<String> items = new ArrayList<>();
-        for (int index = 0; index < 1005; index++) {
+        for (int index = 0; index < 20_005; index++) {
             items.add(String.valueOf(index));
         }
         fixture.flags.setGlobal(7L, "big", TagLists.format(items));
 
         assertEquals("null", fixture.replace("<for:<gflag:big>,<gmessage:x>>", context));
-        assertEquals(1000, fixture.messages.size());
+        assertEquals(20_000, fixture.messages.size());
         assertEquals(1, fixture.loopLimits.size());
         assertTrue(fixture.loopLimits.get(0).contains("<for>"), fixture.loopLimits.toString());
         assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());

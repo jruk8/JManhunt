@@ -22,8 +22,12 @@ import java.util.Optional;
  */
 public final class TagLoops {
 
-    /** Hard per-line step cap shared by loops and function calls; past it the match cancels. */
-    public static final int LOOP_LIMIT = 1000;
+    /**
+     * Hard per-line step cap shared by loops and function calls;
+     * past it the match cancels. Also caps the items a
+     * {@code <range>} builds.
+     */
+    public static final int LOOP_LIMIT = 20_000;
 
     /** One balanced loop span: offsets, op, and raw args. */
     public record LoopSpan(int start, int end, String op, String args) {

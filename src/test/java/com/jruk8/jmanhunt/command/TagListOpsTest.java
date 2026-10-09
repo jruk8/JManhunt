@@ -100,14 +100,14 @@ class TagListOpsTest {
     }
 
     @Test
-    void rangeCapsLongRunsAtOneThousand() {
+    void rangeCapsLongRunsAtSharedLimit() {
         Fixture fixture = new Fixture();
         TagContext context = fixture.context();
 
         String result = fixture.replace("<range:0,1000000>", context);
-        assertEquals(1000, TagLists.parse(result).size());
+        assertEquals(TagLoops.LOOP_LIMIT, TagLists.parse(result).size());
         assertEquals("0", TagLists.parse(result).get(0));
-        assertEquals("999", TagLists.parse(result).get(999));
+        assertEquals("19999", TagLists.parse(result).get(19_999));
         assertEquals(1, fixture.warnings.size());
         assertTrue(fixture.warnings.get(0).contains("capped"),
                 fixture.warnings.toString());
