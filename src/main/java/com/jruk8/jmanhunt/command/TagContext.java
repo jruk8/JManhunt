@@ -83,6 +83,8 @@ public final class TagContext {
     private final BiConsumer<String, String> roleMessage;
     private final RoleSoundSink roleSound;
     private final BiConsumer<String, String> commandRun;
+    private final Consumer<TagLocations.TeleportRequest> globalTeleport;
+    private final BiConsumer<String, TagLocations.TeleportRequest> roleTeleport;
     /** Stamps the source line; managers call this per line. */
     @Setter
     private Provenance provenance;
@@ -100,24 +102,27 @@ public final class TagContext {
     public record TagIdentity(ModifierTagScope scope, String containerId) {
     }
 
-    /** Message, sound, and command sinks behind the tag lines. */
+    /** Message, sound, teleport, and command sinks behind the tag lines. */
     public record TagSinks(Consumer<String> globalMessage, Consumer<String> playerMessage,
             SoundSink globalSound, SoundSink playerSound,
-            BiConsumer<String, String> commandRun) {
+            BiConsumer<String, String> commandRun,
+            Consumer<TagLocations.TeleportRequest> globalTeleport) {
         /** Sinks with the warn-only command fallback for the scope. */
         public static TagSinks simple(Consumer<String> globalMessage,
                 Consumer<String> playerMessage, SoundSink globalSound,
                 SoundSink playerSound, ModifierTagScope scope) {
             return new TagSinks(globalMessage, playerMessage, globalSound, playerSound,
-                    defaultCommandRun(scope));
+                    defaultCommandRun(scope), target -> { });
         }
     }
 
-    /** Role sinks behind {@code <rmessage>} and {@code <rsound>}. */
-    public record TagRole(BiConsumer<String, String> roleMessage, RoleSoundSink roleSound) {
+    /** Role sinks behind {@code <rmessage>}, {@code <rsound>}, and {@code <rteleport>}. */
+    public record TagRole(BiConsumer<String, String> roleMessage, RoleSoundSink roleSound,
+            BiConsumer<String, TagLocations.TeleportRequest> roleTeleport) {
         /** Silent role sinks. */
         public static TagRole silent() {
-            return new TagRole((role, text) -> { }, (role, id, pitch, volume) -> { });
+            return new TagRole((role, text) -> { }, (role, id, pitch, volume) -> { },
+                    (role, target) -> { });
         }
     }
 
@@ -161,6 +166,8 @@ public final class TagContext {
         this.roleMessage = role.roleMessage();
         this.roleSound = role.roleSound();
         this.commandRun = sinks.commandRun();
+        this.globalTeleport = sinks.globalTeleport();
+        this.roleTeleport = role.roleTeleport();
         this.provenance = Provenance.of(identity.containerId(), -1, "");
     }
 
@@ -360,6 +367,19 @@ public final class TagContext {
      */
     public void playRoleSound(String role, String soundId, float pitch, float volume) {
         roleSound.play(role, soundId, pitch, volume);
+    }
+
+    /** Teleports the run audience, behind {@code <gteleport>}. */
+    public void teleportGlobal(TagLocations.TeleportRequest target) {
+        globalTeleport.accept(target);
+    }
+
+    /**
+     * Teleports the named role members. The role is the canonical
+     * upper-case name.
+     */
+    public void teleportRole(String role, TagLocations.TeleportRequest target) {
+        roleTeleport.accept(role, target);
     }
 
     /** Eliminates one player by name, behind {@code <loseplayer>}. */

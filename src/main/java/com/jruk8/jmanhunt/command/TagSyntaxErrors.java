@@ -32,6 +32,9 @@ final class TagSyntaxErrors {
             case "gsound" -> TagSinks.soundError(name, args);
             case "psound" -> TagSinks.playerSoundError(name, args);
             case "rsound" -> RoleTagSyntax.soundError(name, args);
+            case "gteleport" -> TagSinks.teleportError(name, args);
+            case "pteleport" -> TagSinks.playerTeleportError(name, args);
+            case "rteleport" -> RoleTagSyntax.teleportError(name, args);
             case "if" -> ifError(args);
             case "pstat" -> statError(name, args, 1, TagStats.PSTAT_KEYS);
             case "gstat" -> statError(name, args, 0, TagStats.GSTAT_KEYS);

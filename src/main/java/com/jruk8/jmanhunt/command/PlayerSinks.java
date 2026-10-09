@@ -76,6 +76,15 @@ public interface PlayerSinks {
         return false;
     }
 
+    /**
+     * Teleports one online player to the target, keeping their view
+     * when the target carries no angles. False when offline, with no
+     * change. Defaults to missing.
+     */
+    default boolean teleport(String playerName, TagLocations.TeleportRequest target) {
+        return false;
+    }
+
     /** Sinks that deliver nothing: every lookup misses. */
     static PlayerSinks inert() {
         return new PlayerSinks() {

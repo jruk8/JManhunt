@@ -74,6 +74,28 @@ final class RoleTagSyntax {
         return headError(name, parts.get(0));
     }
 
+    /**
+     * Role teleport shape: a role plus one location
+     * {@code [x, y, z, world]} or
+     * {@code [x, y, z, world, pitch, yaw]}.
+     */
+    static Optional<String> teleportError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs a role and a location "
+                    + "[x, y, z, world, pitch, yaw].");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 2) {
+            return Optional.of("Tag <" + name + "> needs a role and a location "
+                    + "[x, y, z, world, pitch, yaw].");
+        }
+        Optional<String> loc = TagSinks.teleportLocationError(name, parts.get(1));
+        if (loc.isPresent()) {
+            return loc;
+        }
+        return headError(name, parts.get(0));
+    }
+
     /** Role flag shape: a role, a name, plus an optional value, quotes parsed. */
     static Optional<String> flagError(String name, String args) {
         if (args == null || args.isBlank()) {

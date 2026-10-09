@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.command.CommandSyntax;
 import com.jruk8.jmanhunt.command.EngineEscapes;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
+import com.jruk8.jmanhunt.command.TagLocations;
 import com.jruk8.jmanhunt.config.MiscConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -96,6 +97,55 @@ public final class ModifierTagSinks {
         for (Player member : members.get()) {
             bus.sounds().playCustomSound(member, soundId, pitch, volume);
         }
+    }
+
+    /**
+     * {@code <rteleport>} sink: teleports every online assigned
+     * player of the named role. Unknown worlds warn once and move
+     * nothing.
+     */
+    void teleportRole(String name, long matchId, ModifierTagScope scope,
+            String role, TagLocations.TeleportRequest target) {
+        roleMembers("rteleport", name, matchId, scope, role).ifPresent(members -> {
+            if (!teleportWorldKnown(name, target)) {
+                return;
+            }
+            for (Player member : members) {
+                TeleportService.teleport(member, target, Bukkit.getWorlds(), detail -> { });
+            }
+        });
+    }
+
+    /**
+     * {@code <gteleport>} sink: teleports every online hunter and
+     * speedrunner of the match. Spectators stay where they are so
+     * holds and watch spawns never break; {@code <pteleport>} names
+     * them directly when wanted.
+     */
+    void teleportGlobal(String name, long matchId, ModifierTagScope scope,
+            TagLocations.TeleportRequest target) {
+        roleMembers("gteleport", name, matchId, scope, "ALL").ifPresent(members -> {
+            if (!teleportWorldKnown(name, target)) {
+                return;
+            }
+            for (Player member : members) {
+                TeleportService.teleport(member, target, Bukkit.getWorlds(), detail -> { });
+            }
+        });
+    }
+
+    /**
+     * True when the target world resolves, warning once naming the
+     * modifier when it does not, so one bad world never spams per
+     * member.
+     */
+    private boolean teleportWorldKnown(String name, TagLocations.TeleportRequest target) {
+        if (TeleportService.resolveWorld(target.worldRef(), Bukkit.getWorlds()).isEmpty()) {
+            log.warning("modifier \"" + name + "\" teleport: unknown world '"
+                    + target.worldRef() + "'.");
+            return false;
+        }
+        return true;
     }
 
     /**

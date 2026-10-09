@@ -38,6 +38,35 @@ class TagLocationsTest {
     }
 
     @Test
+    void teleportRoundTripsFormattedLocations() {
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("world");
+        when(world.getEnvironment()).thenReturn(World.Environment.NORMAL);
+        String formatted =
+                TagLocations.formatLocation(new Location(world, 100, 64, -30, 90f, 12f));
+
+        Optional<TagLocations.TeleportRequest> parsed =
+                TagLocations.parseTeleport(formatted);
+
+        assertEquals(Optional.of(new TagLocations.TeleportRequest(100, 64, -30, "world",
+                12.0f, 90.0f)), parsed);
+        assertEquals(formatted, parsed.get().format());
+    }
+
+    @Test
+    void teleportAcceptsFourElementsAndRejectsBadShapes() {
+        assertEquals(Optional.of(new TagLocations.TeleportRequest(1, 2, 3, "world",
+                null, null)), TagLocations.parseTeleport("[1, 2, 3, world]"));
+        assertEquals("[1, 2, 3, world]",
+                TagLocations.parseTeleport("[1, 2, 3, world]").get().format());
+        assertTrue(TagLocations.parseTeleport("[1, 2, 3]").isEmpty());
+        assertTrue(TagLocations.parseTeleport("[1, 2, 3, world, 10]").isEmpty());
+        assertTrue(TagLocations.parseTeleport("[nope, 2, 3, world]").isEmpty());
+        assertTrue(TagLocations.parseTeleport("[1, 2, 3, world, NaN, 0]").isEmpty());
+        assertTrue(TagLocations.parseTeleport("hello").isEmpty());
+    }
+
+    @Test
     void worldAliasMapsEnvironments() {
         assertEquals("nether", TagLocations.worldAlias("NETHER", "world_nether"));
         assertEquals("nether", TagLocations.worldAlias("nether", "anything"));

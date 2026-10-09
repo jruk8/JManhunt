@@ -391,12 +391,15 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                                         + name + "'.");
                             }
                         },
-                        (line, provenance) -> sinks.runTagCommand(line, provenance)),
+                        (line, provenance) -> sinks.runTagCommand(line, provenance),
+                        target -> sinks.teleportGlobal(name, matchId, scope, target)),
                 new TagContext.TagRole(
                         (role, text) -> sinks.sendRoleMessage(name, matchId, scope, role,
                                 text),
                         (role, soundId, pitch, volume) -> sinks.playRoleSound(name, matchId,
-                                scope, role, soundId, pitch, volume)),
+                                scope, role, soundId, pitch, volume),
+                        (role, target) -> sinks.teleportRole(name, matchId, scope, role,
+                                target)),
                 new TagContext.TagMatch(matchId,
                         new TagBackends(game.matchStatValues(matchId), game.flagStore(),
                                 new PlaceholderPass(edge.placeholders()),

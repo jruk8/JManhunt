@@ -577,3 +577,20 @@ commands or another plugin): the next ledger refresh detects the
 mismatch, warns once per player per match about a Dirty Max HP Hack,
 and overwrites the foreign value. See
 [Dirty Max HP Hack](dirty-max-hp.md) for details.
+
+## Teleport
+
+`<pteleport:Alex,[100,64,-30,world]>` teleports one online player,
+`<rteleport:hunter,[100,64,-30,world]>` teleports every member of the
+named role (`ALL` covers hunters and speedrunners), and
+`<gteleport:[100,64,-30,world]>` teleports every hunter and
+speedrunner in the match. All three leave nothing behind. The
+location is `[x, y, z, world]` or
+`[x, y, z, world, pitch, yaw]`, pitch before yaw, the same shape
+`<plocation>` prints, so its output feeds straight back in. The
+world is mandatory: a raw name, or `nether` and `end` for those
+dimensions. Pitch and yaw come as a pair or not at all; without
+them each player keeps their current view. Offline players, unknown
+worlds, and malformed locations warn and move nothing. Spectators
+never move on `<gteleport>` (their holds and watch spawns stay
+intact); name them with `<pteleport>` when that is really wanted.

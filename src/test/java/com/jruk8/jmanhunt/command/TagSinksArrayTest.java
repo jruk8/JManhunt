@@ -54,7 +54,8 @@ class TagSinksArrayTest {
                             scope),
                     new TagContext.TagRole((role, text) -> roleMessages.add(role + ":" + text),
                             (role, id, pitch, volume) ->
-                                    roleSounds.add(new Played(role, id, pitch, volume))),
+                                    roleSounds.add(new Played(role, id, pitch, volume)),
+                            (role, target) -> { }),
                     TagContext.TagMatch.simple(7L,
                             new TagBackends(StatValues.inert(), new FlagStore(),
                                     PlaceholderResolver.inert(), RosterValues.inert(), sinks),

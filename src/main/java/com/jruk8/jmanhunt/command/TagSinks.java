@@ -294,6 +294,89 @@ final class TagSinks {
     }
 
     /**
+     * {@code <gteleport:loc>}, {@code <pteleport:player,loc>}, and
+     * {@code <rteleport:role,loc>}: teleports through the context
+     * sinks and returns empty. The location is
+     * {@code [x, y, z, world]} or
+     * {@code [x, y, z, world, pitch, yaw]}.
+     */
+    static String teleport(String tag, String name, String args, TagContext context) {
+        if (name.equals("rteleport")) {
+            return roleTeleport(tag, args, context);
+        }
+        if (name.equals("pteleport")) {
+            return playerTeleport(tag, args, context);
+        }
+        Optional<TagLocations.TeleportRequest> target = TagLocations.parseTeleport(args);
+        if (target.isEmpty()) {
+            context.scope().warn("Tag <" + name + "> needs a location "
+                    + "[x, y, z, world, pitch, yaw]: " + tag);
+            return "";
+        }
+        context.teleportGlobal(target.get());
+        return "";
+    }
+
+    /**
+     * {@code <pteleport:player,loc>}: teleports the named online
+     * player through the context sink and returns empty. Offline
+     * players warn and skip.
+     */
+    private static String playerTeleport(String tag, String args, TagContext context) {
+        Optional<AudienceArray> array = audienceArray(args);
+        if (array.isEmpty()) {
+            context.scope().warn("Tag <pteleport> needs a player and a location "
+                    + "[x, y, z, world, pitch, yaw]: " + tag);
+            return "";
+        }
+        Optional<String> name = CommandPlaceholders.parsePickItem(array.get().audience());
+        if (name.isEmpty() || name.get().isBlank()) {
+            context.scope().warn("Tag <pteleport> has a malformed player: " + tag);
+            return "";
+        }
+        Optional<TagLocations.TeleportRequest> target =
+                TagLocations.teleportFromElements(array.get().elements());
+        if (target.isEmpty()) {
+            context.scope().warn("Tag <pteleport> needs a location "
+                    + "[x, y, z, world, pitch, yaw]: " + tag);
+            return "";
+        }
+        String player = EngineEscapes.restore(name.get().strip());
+        if (!context.playerSinks().teleport(player, target.get())) {
+            context.scope().warn("Tag <pteleport> player '" + player
+                    + "' is offline: " + tag);
+        }
+        return "";
+    }
+
+    /**
+     * {@code <rteleport:role,loc>}: teleports the named role members
+     * through the context sink and returns empty.
+     */
+    private static String roleTeleport(String tag, String args, TagContext context) {
+        Optional<AudienceArray> array = audienceArray(args);
+        if (array.isEmpty()) {
+            context.scope().warn("Tag <rteleport> needs a role and a location "
+                    + "[x, y, z, world, pitch, yaw]: " + tag);
+            return "";
+        }
+        Optional<String> role = FlagStore.parseRole(tag, "rteleport",
+                array.get().audience(), context.scope());
+        if (role.isEmpty()) {
+            return "";
+        }
+        Optional<TagLocations.TeleportRequest> target =
+                TagLocations.teleportFromElements(array.get().elements());
+        if (target.isEmpty()) {
+            context.scope().warn("Tag <rteleport> needs a location "
+                    + "[x, y, z, world, pitch, yaw]: " + tag);
+            return "";
+        }
+        context.teleportRole(EngineEscapes.restore(role.get()), target.get());
+        return "";
+    }
+
+    /**
      * Shared enabled gate for every sound and message array form:
      * plays or sends only on {@code true} (any case) or {@code 1}.
      * Every other value skips silently.
@@ -543,6 +626,71 @@ final class TagSinks {
             if (CommandPlaceholders.parsePickItem(element).isEmpty() && !element.isBlank()) {
                 return Optional.of("Tag <" + name + "> mixes quotes.");
             }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Edit-time shape for {@code <gteleport>}: one location
+     * {@code [x, y, z, world]} or
+     * {@code [x, y, z, world, pitch, yaw]}. Mirrors the runtime
+     * warns.
+     */
+    static Optional<String> teleportError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs a location "
+                    + "[x, y, z, world, pitch, yaw].");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 1) {
+            return Optional.of("Tag <" + name + "> needs a location "
+                    + "[x, y, z, world, pitch, yaw].");
+        }
+        if (CommandPlaceholders.parsePickItem(parts.get(0)).isEmpty()
+                && !parts.get(0).isBlank()) {
+            return Optional.of("Tag <" + name + "> mixes quotes.");
+        }
+        return teleportLocationError(name, parts.get(0));
+    }
+
+    /**
+     * Edit-time shape for {@code <pteleport>}: a player plus one
+     * location. Mirrors the runtime warns.
+     */
+    static Optional<String> playerTeleportError(String name, String args) {
+        if (args == null || args.isBlank()) {
+            return Optional.of("Tag <" + name + "> needs a player and a location "
+                    + "[x, y, z, world, pitch, yaw].");
+        }
+        List<String> parts = TagLists.splitTopLevel(args);
+        if (parts.size() != 2) {
+            return Optional.of("Tag <" + name + "> needs a player and a location "
+                    + "[x, y, z, world, pitch, yaw].");
+        }
+        Optional<String> audience = audienceHygiene(name, parts.get(0));
+        if (audience.isPresent()) {
+            return audience;
+        }
+        return teleportLocationError(name, parts.get(1));
+    }
+
+    /**
+     * Edit-time shape for one teleport location: a 4- or 6-element
+     * list, or a collapsed nested tag the editor cannot see through
+     * (runtime validates it).
+     */
+    static Optional<String> teleportLocationError(String name, String loc) {
+        if (loc.strip().equals("?")) {
+            return Optional.empty();
+        }
+        if (!TagLists.isList(loc)) {
+            return Optional.of("Tag <" + name + "> needs a location "
+                    + "[x, y, z, world, pitch, yaw].");
+        }
+        int elements = TagLists.parse(loc).size();
+        if (elements != 4 && elements != 6) {
+            return Optional.of("Tag <" + name + "> needs a location "
+                    + "[x, y, z, world, pitch, yaw].");
         }
         return Optional.empty();
     }

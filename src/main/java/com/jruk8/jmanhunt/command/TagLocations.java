@@ -33,6 +33,84 @@ public final class TagLocations {
     }
 
     /**
+     * Pure teleport target behind {@code <pteleport>},
+     * {@code <rteleport>}, and {@code <gteleport>}: coords plus a
+     * world ref, with null angles meaning keep the player's view.
+     * No Bukkit types.
+     */
+    public record TeleportRequest(double x, double y, double z, String worldRef,
+            Float pitch, Float yaw) {
+        /** Canonical list shape, angles only when present. */
+        public String format() {
+            String base = "[" + TagMath.formatNumber(x) + ", " + TagMath.formatNumber(y)
+                    + ", " + TagMath.formatNumber(z) + ", " + worldRef;
+            if (pitch == null || yaw == null) {
+                return base + "]";
+            }
+            return base + ", " + TagMath.formatNumber(pitch) + ", "
+                    + TagMath.formatNumber(yaw) + "]";
+        }
+    }
+
+    /**
+     * Parses one location literal to a teleport target:
+     * {@code [x, y, z, world]} or
+     * {@code [x, y, z, world, pitch, yaw]}, pitch before yaw like
+     * {@link #formatLocation}. Anything else yields empty; callers
+     * warn.
+     */
+    public static Optional<TeleportRequest> parseTeleport(String raw) {
+        if (!TagLists.isList(raw)) {
+            return Optional.empty();
+        }
+        return teleportFromElements(TagLists.parse(raw));
+    }
+
+    /**
+     * Validates already-split location elements to a teleport
+     * target: 4 or 6 elements, finite numbers, a non-blank world.
+     * Anything else yields empty; callers warn.
+     */
+    public static Optional<TeleportRequest> teleportFromElements(List<String> elements) {
+        if (elements.size() != 4 && elements.size() != 6) {
+            return Optional.empty();
+        }
+        Optional<Double> x = teleportNumber(elements.get(0));
+        Optional<Double> y = teleportNumber(elements.get(1));
+        Optional<Double> z = teleportNumber(elements.get(2));
+        Optional<String> world = CommandPlaceholders.parsePickItem(elements.get(3));
+        if (x.isEmpty() || y.isEmpty() || z.isEmpty() || world.isEmpty()
+                || world.get().isBlank()) {
+            return Optional.empty();
+        }
+        if (elements.size() == 4) {
+            return Optional.of(new TeleportRequest(x.get(), y.get(), z.get(),
+                    world.get().strip(), null, null));
+        }
+        Optional<Double> pitch = teleportNumber(elements.get(4));
+        Optional<Double> yaw = teleportNumber(elements.get(5));
+        if (pitch.isEmpty() || yaw.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new TeleportRequest(x.get(), y.get(), z.get(),
+                world.get().strip(), pitch.get().floatValue(), yaw.get().floatValue()));
+    }
+
+    /** One finite location number, unquoted; empty when not a number. */
+    private static Optional<Double> teleportNumber(String raw) {
+        Optional<String> item = CommandPlaceholders.parsePickItem(raw);
+        if (item.isEmpty()) {
+            return Optional.empty();
+        }
+        try {
+            double value = Double.parseDouble(item.get().strip());
+            return Double.isFinite(value) ? Optional.of(value) : Optional.empty();
+        } catch (NumberFormatException invalid) {
+            return Optional.empty();
+        }
+    }
+
+    /**
      * Normalized world alias for primitives and {@code <pworld>}:
      * NETHER environments read {@code nether}, THE_END reads
      * {@code end} whatever the pooled name, and everything else

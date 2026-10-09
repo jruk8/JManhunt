@@ -374,7 +374,9 @@ final class CompassAnalysisRunner {
                         (role, text) -> scope.warn(
                                 "Tag <rmessage> only works in modifiers: skipped."),
                         (role, soundId, pitch, volume) -> scope.warn(
-                                "Tag <rsound> only works in modifiers: skipped.")),
+                                "Tag <rsound> only works in modifiers: skipped."),
+                        (role, target) -> scope.warn(
+                                "Tag <rteleport> only works in modifiers: skipped.")),
                 new TagContext.TagMatch(matchId, backends, List.of(),
                         detail -> loopLimitExceeded(detail, matchId),
                         (target, reason) -> scope.warn(

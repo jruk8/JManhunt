@@ -3,6 +3,7 @@ package com.jruk8.jmanhunt.match;
 import com.jruk8.jmanhunt.command.PlayerSinks;
 import com.jruk8.jmanhunt.command.RosterValues;
 import com.jruk8.jmanhunt.command.TagItems;
+import com.jruk8.jmanhunt.command.TagLocations;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.ModifiersMessages;
 import com.jruk8.jmanhunt.message.SoundService;
@@ -111,6 +112,19 @@ public final class NamedPlayerSinks {
                     return false;
                 }
                 return maxHealth.clearContribution(target, idOrNull);
+            }
+
+            @Override
+            public boolean teleport(String playerName,
+                    TagLocations.TeleportRequest target) {
+                Player online = onlinePlayer(playerName);
+                if (online == null) {
+                    return false;
+                }
+                TeleportService.teleport(online, target, Bukkit.getWorlds(),
+                        detail -> logWarning.accept("modifier \"" + containerId
+                                + "\" teleport: " + detail));
+                return true;
             }
         };
     }

@@ -11,6 +11,7 @@ import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.command.TagItems;
 import com.jruk8.jmanhunt.command.TagLists;
+import com.jruk8.jmanhunt.command.TagLocations;
 import com.jruk8.jmanhunt.command.TagMath;
 import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.ModifiersMessages;
@@ -121,12 +122,16 @@ public final class ModifierTestService {
                                 new CapturedSound(id, pitch, volume)),
                         (id, pitch, volume) -> capturedSounds.add(
                                 new CapturedSound(id, pitch, volume)),
-                        (line, provenance) -> commands.runTagCommand(line, provenance)),
+                        (line, provenance) -> commands.runTagCommand(line, provenance),
+                        target -> capturedMessages.add(
+                                "Would teleport everyone to " + target.format())),
                 new TagContext.TagRole(
                         (wonRole, text) -> capturedMessages.add(
                                 "[" + wonRole + "] " + text),
                         (wonRole, id, pitch, volume) -> capturedSounds.add(
-                                new CapturedSound(id, pitch, volume))),
+                                new CapturedSound(id, pitch, volume)),
+                        (wonRole, target) -> capturedMessages.add(
+                                "Would teleport " + wonRole + " to " + target.format())),
                 new TagContext.TagMatch(TagContext.NO_MATCH, backends, List.of(),
                         warnings::add,
                         (target, reason) -> capturedMessages.add(
@@ -242,6 +247,17 @@ public final class ModifierTestService {
                     return false;
                 }
                 capturedSounds.add(new CapturedSound(soundId, pitch, volume));
+                return true;
+            }
+
+            @Override
+            public boolean teleport(String playerName,
+                    TagLocations.TeleportRequest target) {
+                if (!playerName.equalsIgnoreCase(senderName)) {
+                    return false;
+                }
+                capturedMessages.add(
+                        "Would teleport " + playerName + " to " + target.format());
                 return true;
             }
 

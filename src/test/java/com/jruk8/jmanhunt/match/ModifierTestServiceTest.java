@@ -14,6 +14,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.jruk8.jmanhunt.command.CommandPlaceholders;
 import com.jruk8.jmanhunt.command.TagContext;
 import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -381,5 +382,31 @@ class ModifierTestServiceTest {
         verify(messages).messageRaw(sender, "failure tpl",
                 Map.of("error", "first; second"));
         verify(messages, never()).messageRaw(eq(sender), eq("success tpl"), any());
+    }
+
+    @Test
+    void runCapturesTeleportNotes() {
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
+        ModifierTestService service = new ModifierTestService(commands, new PlayerStateStore(),
+                mock(MessageService.class), new ModifiersMessages(), mock(SoundService.class));
+        Player sender = mock(Player.class);
+        when(sender.getName()).thenReturn("Steve");
+        doAnswer(invocation -> {
+            TagContext context = invocation.getArgument(2);
+            CommandPlaceholders.replace("<gteleport:[0, 64, 0, world]>", "Steve", 0, 0, 0,
+                    context);
+            CommandPlaceholders.replace("<rteleport:hunter,[0, 64, 0, world, 10, 20]>",
+                    "Steve", 0, 0, 0, context);
+            CommandPlaceholders.replace("<pteleport:Steve,[1, 2, 3, nether]>", "Steve", 0,
+                    0, 0, context);
+            return null;
+        }).when(commands).runCommandList(any(), eq(sender), any(), any());
+
+        ModifierTestService.TestResult result = service.run(sender, "HUNTER", List.of("x"));
+
+        assertTrue(result.messages().contains("Would teleport everyone to [0, 64, 0, world]"));
+        assertTrue(result.messages().contains("Would teleport HUNTER to [0, 64, 0, world, 10, 20]"));
+        assertTrue(result.messages().contains("Would teleport Steve to [1, 2, 3, nether]"));
+        assertTrue(result.warnings().isEmpty());
     }
 }

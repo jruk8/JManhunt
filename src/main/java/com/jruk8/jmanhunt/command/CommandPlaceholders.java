@@ -486,6 +486,8 @@ public final class CommandPlaceholders {
             case "gmessage", "gmsg", "pmessage", "pmsg", "rmessage", "rmsg" ->
                     TagSinks.message(tag, name, args, context);
             case "gsound", "psound", "rsound" -> TagSinks.sound(tag, name, args, context);
+            case "gteleport", "pteleport", "rteleport" ->
+                    TagSinks.teleport(tag, name, args, context);
             case "loseplayer" -> TagExpressions.loseplayer(tag, args, context);
             case "win" -> TagExpressions.win(tag, args, context);
             case "pswitch" -> TagExpressions.pswitch(tag, args, context);
