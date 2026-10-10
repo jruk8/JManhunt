@@ -83,10 +83,10 @@ class LimboFeedbackServiceTest {
     }
 
     @Test
-    void soloLimboSendsPersonalAndSingleOnLadder() {
+    void soloHoldSendsPersonalAndSingleOnLadder() {
         Player player = namedPlayer("Alex");
         Fixture fixture = fixture(List.of(player));
-        fixture.hunterHeld().returnPoints().put(player.getUniqueId(), mock(Location.class));
+        fixture.limbo().trackHold(player.getUniqueId());
 
         fixture.limbo().limboTick(fixture.instance(), 15, true);
         UUID playerId = player.getUniqueId();
@@ -148,8 +148,8 @@ class LimboFeedbackServiceTest {
         UUID onlineId = online.getUniqueId();
         when(fixture.instance().isActive(any())).thenAnswer(
                 invocation -> invocation.getArgument(0).equals(onlineId));
-        fixture.hunterHeld().returnPoints().put(onlineId, mock(Location.class));
-        fixture.hunterHeld().returnPoints().put(UUID.randomUUID(), mock(Location.class));
+        fixture.limbo().trackHold(onlineId);
+        fixture.limbo().trackHold(UUID.randomUUID());
         fixture.limbo().trackHold(UUID.randomUUID());
 
         fixture.limbo().limboTick(fixture.instance(), 10, true);
@@ -158,6 +158,25 @@ class LimboFeedbackServiceTest {
                 eq(fixture.manhunt().getLimboSingle()),
                 eq(Map.of("rolecolor", "<red>", "player", "Alex", "time", "10s")),
                 eq(Set.of(onlineId)));
+    }
+
+    @Test
+    void headstartScopeSendsPersonalOnly() {
+        Player first = namedPlayer("Alex");
+        Player second = namedPlayer("Bo");
+        Fixture fixture = fixture(List.of(first, second));
+        fixture.hunterHeld().returnPoints().put(first.getUniqueId(), mock(Location.class));
+        fixture.runnerHeld().returnPoints().put(second.getUniqueId(), mock(Location.class));
+
+        fixture.limbo().limboTick(fixture.instance(), 10, true);
+
+        verify(fixture.messages()).sendToRaw(eq(List.of(first)),
+                eq(fixture.manhunt().getLimboSelf()), eq(Map.of("time", "10s")));
+        verify(fixture.messages()).sendToRaw(eq(List.of(second)),
+                eq(fixture.manhunt().getLimboSelf()), eq(Map.of("time", "10s")));
+        verify(fixture.messaging(), never()).sendToInstanceExcept(any(), any(), any(), any());
+        verify(fixture.messaging(), never()).sendToInstance(any(), any(), any());
+        verify(fixture.messaging(), never()).playInstanceSound(any(), any());
     }
 
     @Test

@@ -85,6 +85,9 @@ public final class LimboFeedbackService {
      * or more waiting broadcast on the multi interval through the
      * cooldown store. Waiting players hear only their personal note:
      * broadcasts skip them (sounds still play match-wide as the cue).
+     * While a root headstart holds anyone, the headstart tick owns the
+     * global line, so limbo sends personal notes only and skips the
+     * solo and multi broadcasts with their sounds.
      */
     public void limboTick(GameInstance instance, int remaining, boolean mark) {
         if (!instance.active()) {
@@ -94,13 +97,15 @@ public final class LimboFeedbackService {
         if (waiting.isEmpty()) {
             return;
         }
+        boolean headstartScope = !instance.headstart(Role.HUNTER).returnPoints().isEmpty()
+                || !instance.headstart(Role.SPEEDRUNNER).returnPoints().isEmpty();
         if (mark) {
             String time = DurationFormat.format(remaining);
             for (Player player : waiting) {
                 texts.messages().sendToRaw(List.of(player), texts.manhunt().getLimboSelf(),
                         Map.of("time", time));
             }
-            if (waiting.size() == 1) {
+            if (!headstartScope && waiting.size() == 1) {
                 Player player = waiting.get(0);
                 texts.messaging().sendToInstanceExcept(instance, texts.manhunt().getLimboSingle(),
                         Map.of("rolecolor",
@@ -110,7 +115,7 @@ public final class LimboFeedbackService {
                 texts.messaging().playInstanceSound(instance, "game.autostart-countdown");
             }
         }
-        if (waiting.size() >= 2) {
+        if (!headstartScope && waiting.size() >= 2) {
             int interval = reads.match().limboMultiBroadcastInterval(instance.originLobbyId());
             if (reads.cooldowns().tryAcquire(instance.matchId(), MULTI_KEY, interval)) {
                 texts.messaging().sendToInstanceExcept(instance, texts.manhunt().getLimboMulti(),

@@ -97,7 +97,7 @@ class PrestartHeadstartTest {
     }
 
     @Test
-    void initialMarkAnnouncesAtStartAndSkipsHeld() {
+    void initialMarkAnnouncesRoleLineAndPersonalOnly() {
         Fixture fixture = fixture();
 
         fixture.prestart().beginHeadstarts(fixture.instance());
@@ -109,13 +109,11 @@ class PrestartHeadstartTest {
                 eq(Set.of(runnerId)));
         verify(fixture.messages()).sendToRaw(eq(List.of(fixture.runner())),
                 eq(fixture.manhunt().getLimboSelf()), eq(Map.of("time", "35s")));
-        verify(fixture.messaging()).sendToInstanceExcept(eq(fixture.instance()),
-                eq(fixture.manhunt().getLimboSingle()),
-                eq(Map.of("rolecolor", "<red>", "player", "Alex", "time", "35s")),
-                eq(Set.of(runnerId)));
+        verify(fixture.messaging(), never()).sendToInstanceExcept(eq(fixture.instance()),
+                eq(fixture.manhunt().getLimboSingle()), any(), any());
         verify(fixture.messaging(), never()).sendToInstance(eq(fixture.instance()),
                 eq(fixture.manhunt().getHeadstartEnding()), any());
-        verify(fixture.messaging(), times(2)).playInstanceSound(fixture.instance(),
+        verify(fixture.messaging(), times(1)).playInstanceSound(fixture.instance(),
                 "game.autostart-countdown");
     }
 }
