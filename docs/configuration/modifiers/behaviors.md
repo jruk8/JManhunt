@@ -99,13 +99,16 @@ behavior:
   0:
     on-start:
       # BEFORE runs at /manhunt start; AFTER waits until the speedrunner
-      # first hits a hunter (or the match force-starts). Defaults to BEFORE.
+      # first hits a hunter (or the match force-starts), plus any
+      # headstarts after that. Defaults to BEFORE.
       pre-start-order: AFTER
 ```
 
 This only applies when `runs-on` contains `ON_START` or is omitted (which
 defaults to `ON_START`). When `start-on-speedrunner-damage` is disabled
 there is no pre-start window, so both settings run at match start.
+With headstarts configured, AFTER waits until the last headstart ends;
+with none configured it runs at begin as before.
 
 ### Success Chance
 

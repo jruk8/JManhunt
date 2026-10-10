@@ -1,7 +1,10 @@
 package com.jruk8.jmanhunt.match.prestart;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -43,7 +46,7 @@ class PrestartHeadstartTest {
     private record Fixture(PrestartService prestart, GameInstance instance, Player runner,
             Player watcher, MatchMessaging messaging, MessageService messages,
             ManhuntMessages manhunt, GameStateCommandManager commands,
-            HeadstartState hunterSide) {
+            HeadstartState hunterSide, HeadstartState runnerSide) {
     }
 
     private static Player namedPlayer(String name) {
@@ -97,7 +100,7 @@ class PrestartHeadstartTest {
                         new CountdownService(mock(TaskScheduler.class)), limbo),
                 messages, messaging, manhunt);
         return new Fixture(prestart, instance, runner, watcher, messaging, messages, manhunt,
-                commands, hunterSide);
+                commands, hunterSide, runnerSide);
     }
 
     @Test
@@ -132,5 +135,38 @@ class PrestartHeadstartTest {
         verify(fixture.commands()).runRespawnForPlayer(7L, fixture.runner());
         verify(fixture.commands(), never()).runRespawnForPlayer(eq(7L),
                 eq(fixture.watcher()));
+    }
+
+    @Test
+    void headstartEndRunsPostStartWhenLast() {
+        Fixture fixture = fixture();
+        fixture.hunterSide().setRemaining(0);
+
+        fixture.prestart().beginHeadstarts(fixture.instance());
+
+        verify(fixture.commands()).runPostStartModifiers(7L);
+    }
+
+    @Test
+    void headstartEndSkipsPostStartWhileOtherSideArmed() {
+        Fixture fixture = fixture();
+        fixture.hunterSide().setRemaining(0);
+        fixture.runnerSide().setArmed(true);
+        fixture.runnerSide().setRemaining(35);
+
+        fixture.prestart().beginHeadstarts(fixture.instance());
+
+        verify(fixture.commands(), never()).runPostStartModifiers(anyLong());
+    }
+
+    @Test
+    void anyHeadstartReflectsArmedSides() {
+        Fixture fixture = fixture();
+
+        assertTrue(fixture.prestart().anyHeadstart(fixture.instance()));
+
+        fixture.hunterSide().setArmed(false);
+
+        assertFalse(fixture.prestart().anyHeadstart(fixture.instance()));
     }
 }

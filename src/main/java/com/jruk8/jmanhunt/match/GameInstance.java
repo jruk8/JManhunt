@@ -40,6 +40,8 @@ public final class GameInstance {
     @Setter
     private boolean ending;
     @Setter
+    private boolean postStartFired;
+    @Setter
     private boolean endPhaseDone;
     @Setter
     private boolean endStatsShown;
@@ -191,6 +193,10 @@ public final class GameInstance {
 
     public boolean ending() {
         return ending;
+    }
+
+    public boolean postStartFired() {
+        return postStartFired;
     }
 
     /**

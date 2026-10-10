@@ -97,6 +97,14 @@ public final class PrestartService {
         return services.countdowns().running(new HeadstartKey(instance.matchId(), role));
     }
 
+    /** True while either side's headstart is armed or counting. */
+    public boolean anyHeadstart(GameInstance instance) {
+        return instance.headstart(Role.HUNTER).armed()
+                || instance.headstart(Role.SPEEDRUNNER).armed()
+                || isCounting(instance, Role.HUNTER)
+                || isCounting(instance, Role.SPEEDRUNNER);
+    }
+
     private void beginHeadstart(GameInstance instance, Role role) {
         HeadstartState state = instance.headstart(role);
         HeadstartKey key = new HeadstartKey(instance.matchId(), role);
@@ -144,7 +152,8 @@ public final class PrestartService {
      * spawnpoints and restoring them to survival mode. No per-player
      * lines: the group line below is the whole announcement. Each
      * released player also runs the deferred ON_RESPAWN catch-up when
-     * this life has not fired it yet.
+     * this life has not fired it yet, and the last side out runs the
+     * deferred AFTER start modifiers.
      */
     private void endHeadstart(GameInstance instance, Role role) {
         HeadstartState state = instance.headstart(role);
@@ -167,6 +176,9 @@ public final class PrestartService {
         state.returnPoints().clear();
         messaging.sendToInstance(instance, manhunt.getHeadstartEnded(), Map.of("role", messages.roleName(held)));
         messaging.playInstanceNeutral(instance);
+        if (!anyHeadstart(instance)) {
+            services.stateCommands().runPostStartModifiers(instance.matchId());
+        }
     }
 
     /**

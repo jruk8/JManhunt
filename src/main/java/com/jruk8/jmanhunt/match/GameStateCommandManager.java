@@ -103,16 +103,25 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
      * Runs ON_START modifiers deferred past the pre-start sequence via
      * {@code on-start.pre-start-order: AFTER}. Called from
      * {@link GameManager#beginGame()} once the speedrunner first hits a
-     * hunter (or the match force-starts). With
+     * hunter (or the match force-starts), or from the last headstart
+     * end when headstarts run. With
      * start-on-speedrunner-damage disabled, begin runs inside start, so
-     * deferred modifiers still fire immediately.
+     * deferred modifiers still fire immediately. Runs once per match
+     * for live matches only.
      */
     public void runPostStartModifiers(long matchId) {
-        game.instance(matchId).ifPresent(instance -> {
-            for (Player player : game.onlineParticipants(matchId)) {
-                instance.markStartFired(player.getUniqueId());
-            }
-        });
+        Optional<GameInstance> match = game.instance(matchId);
+        if (match.isEmpty()) {
+            return;
+        }
+        GameInstance instance = match.get();
+        if (instance.postStartFired() || !instance.active() || instance.ending()) {
+            return;
+        }
+        instance.setPostStartFired(true);
+        for (Player player : game.onlineParticipants(matchId)) {
+            instance.markStartFired(player.getUniqueId());
+        }
         for (String name : intervals.enabledModifiers(matchId)) {
             for (int index : reads.configService().behaviorIndexes(name)) {
                 if (!ModifierTriggers.runsOn(reads.configService().runsOn(name, index), "ON_START")) {
@@ -145,22 +154,26 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
 
     /**
      * Runs ON_START behaviors for one switched player: BEFORE lists
-     * always, AFTER lists only once begun (pre-begin AFTER lists still
-     * arrive through the begin sequence). Single-target catch-up behind
-     * role switches; callers skip non-participant targets.
+     * always, AFTER lists only once begun and past any headstarts
+     * (pre-begin and mid-headstart AFTER lists still arrive through
+     * the deferred match run, which covers every online participant).
+     * Single-target catch-up behind role switches; callers skip
+     * non-participant targets.
      */
     public void runStartForPlayer(long matchId, Player player) {
         if (!catchupLive(matchId, player)) {
             return;
         }
-        boolean begun = game.instance(matchId).map(GameInstance::begun).orElse(false);
+        Optional<GameInstance> match = game.instance(matchId);
+        boolean begun = match.map(GameInstance::begun).orElse(false);
+        boolean postStart = match.map(GameInstance::postStartFired).orElse(false);
         for (String name : intervals.enabledModifiers(matchId)) {
             for (int index : reads.configService().behaviorIndexes(name)) {
                 if (!ModifierTriggers.runsOn(reads.configService().runsOn(name, index),
                         "ON_START")) {
                     continue;
                 }
-                if (afterPrestart(name, index) && !begun) {
+                if (afterPrestart(name, index) && (!begun || !postStart)) {
                     continue;
                 }
                 dispatchModifier(name, index, List.of(player), matchId, List.of());

@@ -584,13 +584,16 @@ public final class MatchStartService {
         texts.messaging().playInstanceSound(instance, "game.match-started");
         beginGameListeners.forEach(listener -> listener.accept(instance));
         Bukkit.getPluginManager().callEvent(new JGameBeginEvent(instance.matchId()));
-        // AFTER pre-start-order modifiers waited out the pre-start window;
-        // their ON_START sequence runs now instead of at match start.
-        services.stateCommands().runPostStartModifiers(instance.matchId());
-        services.stateCommands().startIntervalModifiers(instance.matchId());
         // Armed headstarts begin counting now (the countdown only starts once
         // the speedrunner first damages a hunter).
         services.prestart().beginHeadstarts(instance);
+        // AFTER pre-start-order modifiers waited out the pre-start window;
+        // they also wait out any headstarts, with the last headstart end
+        // running them instead. With none armed they run right here.
+        if (!services.prestart().anyHeadstart(instance)) {
+            services.stateCommands().runPostStartModifiers(instance.matchId());
+        }
+        services.stateCommands().startIntervalModifiers(instance.matchId());
     }
 
     /** Fresh per-match stat row for one participant; spectators never get one. */

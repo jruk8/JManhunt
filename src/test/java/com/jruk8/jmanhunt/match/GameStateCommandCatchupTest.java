@@ -1,17 +1,23 @@
 package com.jruk8.jmanhunt.match;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.jruk8.jmanhunt.JManhuntPlugin;
+import com.jruk8.jmanhunt.command.FlagStore;
+import com.jruk8.jmanhunt.command.StatValues;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.EngineStateRepository;
 import com.jruk8.jmanhunt.config.MiscConfig;
+import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.core.TaskScheduler;
 import com.jruk8.jmanhunt.lobby.config.OverrideService;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
@@ -21,6 +27,7 @@ import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import org.bukkit.entity.Player;
@@ -35,6 +42,7 @@ class GameStateCommandCatchupTest {
 
     private static Fixture fixture() {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
+        when(plugin.logger()).thenReturn(mock(JManhuntLogger.class));
         OverrideService overrides = mock(OverrideService.class);
         when(plugin.overrides()).thenReturn(overrides);
         when(overrides.modifierEnabled(any(), eq("herald"))).thenReturn(true);
@@ -122,5 +130,60 @@ class GameStateCommandCatchupTest {
         ending.manager().runStartForPlayer(7L, ending.player());
 
         verify(ending.config(), never()).behaviorIndexes(anyString());
+    }
+
+    @Test
+    void postStartRunsOnceWhenLive() {
+        Fixture fixture = fixture();
+        GameInstance live = new GameInstance(7L, 0, OptionalLong.empty(), 0L);
+        when(fixture.game().instance(7L)).thenReturn(Optional.of(live));
+
+        fixture.manager().runPostStartModifiers(7L);
+        fixture.manager().runPostStartModifiers(7L);
+
+        assertTrue(live.postStartFired());
+        verify(fixture.config(), times(1)).behaviorIndexes("herald");
+    }
+
+    @Test
+    void postStartSkipsDeadMatches() {
+        Fixture fixture = fixture();
+        GameInstance live = new GameInstance(7L, 0, OptionalLong.empty(), 0L);
+        live.setEnding(true);
+        when(fixture.game().instance(7L)).thenReturn(Optional.of(live));
+
+        fixture.manager().runPostStartModifiers(7L);
+
+        assertFalse(live.postStartFired());
+        verify(fixture.config(), never()).behaviorIndexes(anyString());
+    }
+
+    @Test
+    void startCatchupAfterWaitsForHeadstarts() {
+        Fixture waiting = fixture();
+        when(waiting.config().runsOn("herald", 0)).thenReturn(List.of("ON_START"));
+        when(waiting.config().preStartOrder("herald", 0)).thenReturn("AFTER");
+        when(waiting.instance().begun()).thenReturn(true);
+
+        waiting.manager().runStartForPlayer(7L, waiting.player());
+
+        verify(waiting.game(), never()).onlineParticipants(7L);
+    }
+
+    @Test
+    void startCatchupAfterRunsPastHeadstarts() {
+        Fixture past = fixture();
+        when(past.config().runsOn("herald", 0)).thenReturn(List.of("ON_START"));
+        when(past.config().preStartOrder("herald", 0)).thenReturn("AFTER");
+        when(past.config().commandList(eq("herald"), eq(0), anyString()))
+                .thenReturn(List.of());
+        when(past.game().matchStatValues(7L)).thenReturn(StatValues.inert());
+        when(past.game().flagStore()).thenReturn(new FlagStore());
+        when(past.instance().begun()).thenReturn(true);
+        when(past.instance().postStartFired()).thenReturn(true);
+
+        past.manager().runStartForPlayer(7L, past.player());
+
+        verify(past.game()).onlineParticipants(7L);
     }
 }
