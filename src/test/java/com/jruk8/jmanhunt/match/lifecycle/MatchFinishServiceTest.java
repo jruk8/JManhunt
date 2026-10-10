@@ -68,6 +68,7 @@ class MatchFinishServiceTest {
         when(instance.matchId()).thenReturn(11L);
         when(instance.originLobbyId()).thenReturn(0);
         when(instance.cellIndex()).thenReturn(OptionalLong.empty());
+        when(instance.cellString()).thenReturn("none");
         when(instance.assignedPlayerIds()).thenReturn(Set.of(hunterId, spectatorId));
         GameStateCommandManager stateCommands = mock(GameStateCommandManager.class);
         when(stateCommands.endWipeEnabled(anyInt())).thenReturn(true);

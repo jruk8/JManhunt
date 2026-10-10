@@ -6,7 +6,6 @@ import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -17,9 +16,9 @@ import java.util.Optional;
 
 /**
  * Blocks the WorldEdit selection wand mid match: hunters and
- * speedrunners in an active match cannot select with a wooden axe.
- * Only the item-in-hand use is denied, so vanilla breaking and
- * stripping still work. Passive, no WorldEdit dependency.
+ * speedrunners in an active match cannot use a wooden axe at all.
+ * The event is fully cancelled, so vanilla breaking and stripping
+ * with the axe stop too. Passive, no WorldEdit dependency.
  */
 public final class WorldEditWandListener implements Listener {
     private final MiscConfig.Interop interop;
@@ -54,6 +53,8 @@ public final class WorldEditWandListener implements Listener {
                 || !playerStates.role(player).isParticipant()) {
             return;
         }
-        event.setUseItemInHand(Event.Result.DENY);
+        // Full cancel: denying only the item use still let
+        // selections through, so the axe goes fully dead here.
+        event.setCancelled(true);
     }
 }

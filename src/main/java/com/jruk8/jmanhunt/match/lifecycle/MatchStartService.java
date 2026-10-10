@@ -1,34 +1,18 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
-import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.core.DebugLevel;
-import com.jruk8.jmanhunt.core.JManhuntLogger;
-import com.jruk8.jmanhunt.core.TaskScheduler;
-import com.jruk8.jmanhunt.player.FakeSpectatorService;
-import com.jruk8.jmanhunt.player.RoleTeamService;
 import com.jruk8.jmanhunt.api.events.JGameBeginEvent;
 import com.jruk8.jmanhunt.api.events.JMatchStartEvent;
 import com.jruk8.jmanhunt.api.events.JPlayerJoinMatchEvent;
-import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.lobby.JoinTiming;
 import com.jruk8.jmanhunt.lobby.Lobby;
-import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
-import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
-import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.SubLobby;
 import com.jruk8.jmanhunt.message.DebugMessages;
-import com.jruk8.jmanhunt.message.GameMessages;
-import com.jruk8.jmanhunt.message.ManhuntMessages;
-import com.jruk8.jmanhunt.message.MessageService;
-import com.jruk8.jmanhunt.message.SoundService;
-import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 import com.jruk8.jmanhunt.player.SpectatorSpawnResolver;
 import com.jruk8.jmanhunt.stats.Stats;
-import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.teleport.MatchTeleportService;
 import com.jruk8.jmanhunt.world.WorldEngineConfig;
-import com.jruk8.jmanhunt.world.WorldEngineService;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -45,14 +29,10 @@ import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
-import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
 import com.jruk8.jmanhunt.match.StatusRosterService;
-import com.jruk8.jmanhunt.match.autostart.AutostartService;
-import com.jruk8.jmanhunt.match.prestart.PrestartService;
 import com.jruk8.jmanhunt.match.prestart.WaitingReminder;
 
 /**
@@ -65,41 +45,17 @@ public final class MatchStartService {
     /** Fallback origin spread: random point within this of 0,0. */
     static final int SURROUND_FALLBACK_RADIUS = 5000;
 
-    /** Match/player settings, config service, engine settings, and logger. */
-    public record StartReads(MatchSettingsFacade match, PlayersSettingsFacade players,
-            ConfigService config,
-            com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings, JManhuntLogger log) {
-    }
-
-    /** States, compass, stats, commands, engine, lobbies, store, and phases. */
-    public record StartMatch(PlayerStateStore playerStates, CompassManager compass,
-            StatsManager stats, GameStateCommandManager stateCommands,
-            WorldEngineService worldEngine, LobbyService lobbies, MatchStore store,
-            TimeLimitService timeLimits, PrestartService prestart,
-            AutostartService autostart) {
-    }
-
-    /** Fakes, role teams, respawn listener, sounds, and scheduler. */
-    public record StartEdge(FakeSpectatorService fakes, RoleTeamService roleTeams,
-            Supplier<PlayerRespawnListener> respawn, SoundService sounds, TaskScheduler tasks) {
-    }
-
-    /** Message bus, game/manhunt texts, and match messaging. */
-    public record StartTexts(MessageService messages, GameMessages game,
-            ManhuntMessages manhunt, MatchMessaging messaging) {
-    }
-
-    private final StartReads reads;
-    private final StartMatch services;
-    private final StartEdge edge;
-    private final StartTexts texts;
+    private final MatchStartWiring.StartReads reads;
+    private final MatchStartWiring.StartMatch services;
+    private final MatchStartWiring.StartEdge edge;
+    private final MatchStartWiring.StartTexts texts;
     private final MatchAnnounceService announce;
     private final QuickStartService quickStart;
     private final List<Consumer<GameInstance>> gameStartListeners = new ArrayList<>();
     private final List<Consumer<GameInstance>> beginGameListeners = new ArrayList<>();
 
-    public MatchStartService(StartReads reads, StartMatch services, StartEdge edge,
-            StartTexts texts) {
+    public MatchStartService(MatchStartWiring.StartReads reads, MatchStartWiring.StartMatch services,
+            MatchStartWiring.StartEdge edge, MatchStartWiring.StartTexts texts) {
         this.reads = reads;
         this.services = services;
         this.edge = edge;
@@ -191,7 +147,7 @@ public final class MatchStartService {
         publishMatchStart(instance, participants, spectators, lobbyId, matchCell);
         beginMatchPlay(instance);
         reads.log().debug(DebugLevel.INFO, DebugMessages::getMatchStart,
-                Map.of("lobby", String.valueOf(lobbyId), "index", GameManager.cellString(instance)));
+                Map.of("lobby", String.valueOf(lobbyId), "index", instance.cellString()));
         return true;
     }
 
@@ -487,7 +443,7 @@ public final class MatchStartService {
             return true;
         }
         Role timingSource = entrantSourceRole(player, instance.originLobbyId());
-        SwitchPlan plan = planSwitch(source, target, instance.isActive(playerId),
+        SwitchPlan plan = SwitchPlan.planSwitch(source, target, instance.isActive(playerId),
                 instance.isHeadstartHeld(playerId));
         services.playerStates().setRole(player, target);
         // A swap back into the game sheds any stale game-end grant,
@@ -554,25 +510,6 @@ public final class MatchStartService {
         if (instance.markRespawnFired(playerId, instance.lifeOf(playerId))) {
             services.stateCommands().runRespawnForPlayer(instance.matchId(), player);
         }
-    }
-
-    /** Pure role-switch roster plan behind pswitch. Pure for tests. */
-    static record SwitchPlan(boolean activate, boolean deactivate, Boolean runnerAlive,
-            boolean participantEdge, boolean watcherEdge) {
-    }
-
-    /**
-     * Plans one role switch: roster flips, the runner-alive flag
-     * (null when untouched), and which deferred edge applies. Held
-     * players keep their headstart hold, so no participant edge
-     * runs for them. Pure for tests.
-     */
-    static SwitchPlan planSwitch(Role source, Role target, boolean active, boolean held) {
-        Boolean runnerAlive = target == Role.SPEEDRUNNER ? Boolean.TRUE
-                : source == Role.SPEEDRUNNER ? Boolean.FALSE : null;
-        return new SwitchPlan(target.isParticipant() && !active,
-                !target.isParticipant() && active, runnerAlive,
-                target.isParticipant() && !held, !target.isParticipant());
     }
 
     /** Applies the fake spectator, pre-start, and headstart-hold modes for a joiner. */

@@ -4,32 +4,14 @@ import com.jruk8.jmanhunt.compass.CompassManager;
 import com.jruk8.jmanhunt.config.ConfigService;
 import com.jruk8.jmanhunt.config.MatchConfig;
 import com.jruk8.jmanhunt.config.PlayerSettings;
-import com.jruk8.jmanhunt.config.EngineStateRepository;
-import com.jruk8.jmanhunt.config.JManhuntConfig;
-import com.jruk8.jmanhunt.core.JManhuntLogger;
-import com.jruk8.jmanhunt.core.JManhuntPlaceholders;
-import com.jruk8.jmanhunt.core.TaskScheduler;
-import com.jruk8.jmanhunt.lobby.config.LobbyConfig;
-import com.jruk8.jmanhunt.lobby.config.OverrideService;
-import com.jruk8.jmanhunt.player.FakeSpectatorService;
-import com.jruk8.jmanhunt.player.RoleTeamService;
-import com.jruk8.jmanhunt.player.SpawnCampService;
 import com.jruk8.jmanhunt.lobby.config.LobbyPreset;
 import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.WinConditionsSettingsFacade;
-import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.lobby.world.LobbyWorld;
 import com.jruk8.jmanhunt.message.GameMessages;
-import com.jruk8.jmanhunt.message.ManhuntMessages;
-import com.jruk8.jmanhunt.message.MessageService;
-import com.jruk8.jmanhunt.message.SoundService;
-import com.jruk8.jmanhunt.message.WinconMessages;
-import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
-import com.jruk8.jmanhunt.stats.StatsManager;
-import com.jruk8.jmanhunt.world.WorldEngineService;
 import org.bukkit.Location;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -42,20 +24,20 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchControl;
 import com.jruk8.jmanhunt.match.lifecycle.MatchEliminationService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchFinishService;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStartService;
+import com.jruk8.jmanhunt.match.lifecycle.MatchStartWiring;
 import com.jruk8.jmanhunt.command.FlagStore;
 import com.jruk8.jmanhunt.command.StatValues;
 import com.jruk8.jmanhunt.command.TagCooldownStore;
 import com.jruk8.jmanhunt.match.lifecycle.MatchStore;
 import com.jruk8.jmanhunt.match.lifecycle.QuickStartOutcome;
-import com.jruk8.jmanhunt.match.lifecycle.QuickStartService;
 import com.jruk8.jmanhunt.match.lifecycle.TimeLimitService;
+import com.jruk8.jmanhunt.match.listeners.MatchListenerFactory;
 import com.jruk8.jmanhunt.match.listeners.PlayerCombatListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerConnectionListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
@@ -65,33 +47,10 @@ import com.jruk8.jmanhunt.world.border.PseudoborderParticleService;
 import org.bukkit.scheduler.BukkitTask;
 
 public final class GameManager implements MatchControl {
-    /** States, compass, and stats. */
-    public record GameServices(PlayerStateStore playerStates, CompassManager compass,
-            StatsManager stats) {
-    }
-
-    /** Modifier reads, engine, win engine, and lobbies. */
-    public record GameReads(ConfigService configService, WorldEngineService worldEngine,
-            WinConditionEngine winConditionEngine, LobbyService lobbies) {
-    }
-
-    /** Message bus, texts, and sounds. */
-    public record GameTexts(MessageService messages, ManhuntMessages manhunt,
-            GameMessages gameTexts, WinconMessages wincon, SoundService sounds) {
-    }
-
-    /** Plugin-owned edges, narrowed. */
-    public record GameEdge(EngineStateRepository engineStates, FakeSpectatorService fakes,
-            JManhuntLogger log, OverrideService overrides, JManhuntPlaceholders placeholders,
-            Supplier<PlayerRespawnListener> respawn, RoleTeamService roleTeams,
-            SpawnCampService spawnCamp, LobbyConfig lobbyConfig, TaskScheduler tasks,
-            Supplier<JManhuntConfig> configRoot) {
-    }
-
-    private final GameServices services;
-    private final GameReads reads;
-    private final GameTexts texts;
-    private final GameEdge edge;
+    private final GameWiring.GameServices services;
+    private final GameWiring.GameReads reads;
+    private final GameWiring.GameTexts texts;
+    private final GameWiring.GameEdge edge;
     private final GameStateCommandManager stateCommands;
     private final MatchStore store;
     private final MatchMessaging messaging;
@@ -111,9 +70,10 @@ public final class GameManager implements MatchControl {
     private final MatchSettingsFacade matchSettings;
     private final PlayersSettingsFacade playersSettings;
     private final WinConditionsSettingsFacade winConditionsSettings;
+    private final MatchListenerFactory listeners;
 
-    public GameManager(GameServices services, GameReads reads, GameTexts texts,
-            GameEdge edge) {
+    public GameManager(GameWiring.GameServices services, GameWiring.GameReads reads,
+            GameWiring.GameTexts texts, GameWiring.GameEdge edge) {
         this.services = services;
         this.reads = reads;
         this.texts = texts;
@@ -126,13 +86,7 @@ public final class GameManager implements MatchControl {
         this.playersSettings = new PlayersSettingsFacade(edge.overrides(), players);
         this.winConditionsSettings = new WinConditionsSettingsFacade(edge.overrides(), match.getWinConditions());
         var interop = root.getAdvanced().getMisc().getInterop();
-        this.stateCommands = new GameStateCommandManager(
-                new GameStateCommandManager.CommandReads(services.playerStates(), reads.configService(), interop,
-                        playersSettings),
-                new GameStateCommandManager.CommandEdge(edge.engineStates(),
-                        edge.fakes(), edge.log(), edge.overrides(),
-                        edge.placeholders(), edge.tasks()),
-                texts.messages(), texts.sounds(), this);
+        this.stateCommands = newStateCommands(interop, playersSettings);
         this.store = new MatchStore(services.playerStates());
         this.flagStore = new FlagStore();
         this.cooldownStore = new TagCooldownStore();
@@ -156,7 +110,21 @@ public final class GameManager implements MatchControl {
                 edge.fakes(), engine, store, reads.worldEngine());
         this.winConditions = new WinConditionTextService(texts.messages(), texts.wincon(),
                 players.getRespawn(), reads.winConditionEngine());
-        subscribeSettingChanges();
+        this.listeners = new MatchListenerFactory(this, services, reads, texts, edge);
+        GameWiring.subscribeSettingChanges(reads.configService(), reads.lobbies(),
+                edge.roleTeams(), reads.worldEngine(), this::updateAutostartState);
+    }
+
+    private GameStateCommandManager newStateCommands(
+            com.jruk8.jmanhunt.config.MiscConfig.Interop interop,
+            PlayersSettingsFacade playersSettings) {
+        return new GameStateCommandManager(
+                new GameStateCommandManager.CommandReads(services.playerStates(),
+                        reads.configService(), interop, playersSettings),
+                new GameStateCommandManager.CommandEdge(edge.engineStates(),
+                        edge.fakes(), edge.log(), edge.overrides(),
+                        edge.placeholders(), edge.tasks()),
+                texts.messages(), texts.sounds(), this);
     }
 
     private LimboFeedbackService newLimbo() {
@@ -209,14 +177,14 @@ public final class GameManager implements MatchControl {
     private MatchStartService newMatchStart(
             com.jruk8.jmanhunt.config.WorldEngineConfig engine) {
         return new MatchStartService(
-                new MatchStartService.StartReads(matchSettings, playersSettings,
+                new MatchStartWiring.StartReads(matchSettings, playersSettings,
                         reads.configService(), engine, edge.log()),
-                new MatchStartService.StartMatch(services.playerStates(), services.compass(),
+                new MatchStartWiring.StartMatch(services.playerStates(), services.compass(),
                         services.stats(), stateCommands, reads.worldEngine(), reads.lobbies(),
                         store, timeLimits, prestart, autostart),
-                new MatchStartService.StartEdge(edge.fakes(), edge.roleTeams(),
+                new MatchStartWiring.StartEdge(edge.fakes(), edge.roleTeams(),
                         edge.respawn(), texts.sounds(), edge.tasks()),
-                new MatchStartService.StartTexts(texts.messages(), texts.gameTexts(),
+                new MatchStartWiring.StartTexts(texts.messages(), texts.gameTexts(),
                         texts.manhunt(), messaging));
     }
 
@@ -325,23 +293,7 @@ public final class GameManager implements MatchControl {
     }
 
     /** Live-reacts to the toggles this manager owns. */
-    private void subscribeSettingChanges() {
-        // assign events
-        reads.configService().onChange("settings.match.autostart.enabled",
-                (oldValue, newValue) -> updateAutostartState());
-        reads.configService().onChange("world-engine.enabled", (oldValue, newValue) -> reads.worldEngine().onReload());
-        // Structure datapacks refresh exactly like the world-engine datapack:
-        // toggling in-game applies or removes the files immediately instead of
-        // waiting for a restart.
-        reads.configService().onChange("settings.match.game-boosts.nether-structures.enabled",
-                (oldValue, newValue) -> reads.worldEngine().onReload());
-        reads.configService().onChange("settings.match.game-boosts.overworld-structures.enabled",
-                (oldValue, newValue) -> reads.worldEngine().onReload());
-        reads.configService().onChange(LobbyService.COLLISIONS_PATH,
-                (oldValue, newValue) -> reads.lobbies().reapplyCollisions());
-        reads.configService().onChange("settings.players.name-colors.enabled",
-                (oldValue, newValue) -> edge.roleTeams().applyColors());
-    }
+
 
     /** Connection listener with typed player and disconnect sections. */
     public PlayerConnectionListener connectionListener(PlayerSettings players,
@@ -349,15 +301,8 @@ public final class GameManager implements MatchControl {
             SpeedrunnerDisconnectTracker disconnects,
             Map<UUID, BukkitTask> disconnectTasks, CompassManager compass,
             GameMessages gameTexts) {
-        return new PlayerConnectionListener(
-                new PlayerConnectionListener.ConnectReads(services.playerStates(), edge.fakes(),
-                        texts.messages(), gameTexts),
-                new PlayerConnectionListener.ConnectMatch(this, reads.lobbies(), compass, disconnects,
-                        disconnectTasks),
-                new PlayerConnectionListener.ConnectWorld(reads.worldEngine().teleportService(),
-                        reads.worldEngine()),
-                new PlayerConnectionListener.ConnectConfig(players, handling),
-                new PlayerConnectionListener.ConnectEdge(edge.roleTeams(), edge.tasks(), respawn));
+        return listeners.connectionListener(players, handling, respawn, disconnects,
+                disconnectTasks, compass, gameTexts);
     }
 
     /** Combat listener with the typed player section. */
@@ -365,15 +310,8 @@ public final class GameManager implements MatchControl {
             PlayerRespawnListener respawn, SpeedrunnerDisconnectTracker disconnects,
             Map<UUID, BukkitTask> disconnectTasks, CompassManager compass,
             GameMessages gameTexts) {
-        return new PlayerCombatListener(
-                new PlayerCombatListener.CombatReads(services.playerStates(), edge.fakes(),
-                        players, gameTexts),
-                new PlayerCombatListener.CombatMatch(this, services.stats(), reads.winConditionEngine(),
-                        disconnects, disconnectTasks),
-                new PlayerCombatListener.CombatWorld(compass, reads.lobbies(), reads.worldEngine(), respawn),
-                new PlayerCombatListener.CombatEdge(edge.spawnCamp(), edge.roleTeams(),
-                        edge.log(), edge.lobbyConfig()),
-                edge.tasks());
+        return listeners.combatListener(players, respawn, disconnects, disconnectTasks, compass,
+                gameTexts);
     }
 
     public void updateAutostartState() { autostart.updateAutostartState(); }
@@ -705,33 +643,15 @@ public final class GameManager implements MatchControl {
 
 
     /**
-     * Mid-match join target for one role change: spectators under
-     * SUBLOBBY_WITH_SPECTATORS join the oldest running sublobby of
-     * their lobby, falling back to the lobby match when no sublobby
-     * runs; every other case keeps the lobby match.
+     * Mid-match join target for one role change, behind the match
+     * store.
      */
     public GameInstance midMatchJoinTarget(MidMatchPolicy policy, int lobbyId, GameInstance live,
             Role role) {
-        if (policy == MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS && role == Role.SPECTATOR) {
-            return MatchStore.oldestSubLobby(store.instancesForLobby(lobbyId)).orElse(live);
-        }
-        return live;
+        return store.midMatchJoinTarget(policy, lobbyId, live, role);
     }
 
-    /**
-     * Computes how many players of a convertible pool become speedrunners for
-     * a quick-start percentage. Delegates to the quick-start service.
-     */
-    static int quickStartSpeedrunnerCount(int poolSize, int percent) {
-        return QuickStartService.quickStartSpeedrunnerCount(poolSize, percent);
-    }
 
-    /** Debug label for a match cell, "none" when the engine is off. */
-    public static String cellString(GameInstance instance) {
-        return instance.cellIndex().isPresent()
-                ? String.valueOf(instance.cellIndex().getAsLong())
-                : "none";
-    }
 
 
     /** Current world-engine cell index, or empty when the store is unavailable. */

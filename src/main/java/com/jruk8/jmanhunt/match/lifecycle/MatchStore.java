@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.match.lifecycle;
 
+import com.jruk8.jmanhunt.lobby.MidMatchPolicy;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
 import com.jruk8.jmanhunt.player.Role;
 
@@ -144,6 +145,20 @@ public final class MatchStore {
     /** True when the player actively participates in any live match. */
     public boolean isInLiveInstance(UUID playerId) {
         return instanceOf(playerId).isPresent();
+    }
+
+    /**
+     * Mid-match join target for one role change: spectators under
+     * SUBLOBBY_WITH_SPECTATORS join the oldest running sublobby of
+     * their lobby, falling back to the lobby match when no sublobby
+     * runs; every other case keeps the lobby match.
+     */
+    public GameInstance midMatchJoinTarget(MidMatchPolicy policy, int lobbyId, GameInstance live,
+            Role role) {
+        if (policy == MidMatchPolicy.SUBLOBBY_WITH_SPECTATORS && role == Role.SPECTATOR) {
+            return oldestSubLobby(instancesForLobby(lobbyId)).orElse(live);
+        }
+        return live;
     }
 
     /** Online active participants of a match. */

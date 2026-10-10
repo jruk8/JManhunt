@@ -35,98 +35,103 @@ public final class NamedPlayerSinks {
      */
     public static PlayerSinks of(MessageService messages, ModifiersMessages texts, SoundService sounds,
             Consumer<String> logWarning, String containerId, MaxHealthService maxHealth) {
-        return new PlayerSinks() {
-            @Override
-            public boolean message(String playerName, String text) {
-                Player target = onlinePlayer(playerName);
-                if (target == null) {
-                    return false;
-                }
-                messages.sendText(target, formatEngineMessage(texts, messages, text));
-                return true;
-            }
+        return new NamedSinks(messages, texts, sounds, logWarning, containerId, maxHealth);
+    }
 
-            @Override
-            public boolean sound(String playerName, String soundId, float pitch, float volume) {
-                Player target = onlinePlayer(playerName);
-                if (target == null) {
-                    return false;
-                }
-                return playSinkSound(target, sounds, logWarning, containerId, soundId, pitch,
-                        volume);
+    /** Named-player sinks delivering engine-formatted output. */
+    private record NamedSinks(MessageService messages, ModifiersMessages texts,
+            SoundService sounds, Consumer<String> logWarning, String containerId,
+            MaxHealthService maxHealth) implements PlayerSinks {
+        @Override
+        public boolean message(String playerName, String text) {
+            Player target = onlinePlayer(playerName);
+            if (target == null) {
+                return false;
             }
+            messages.sendText(target, formatEngineMessage(texts, messages, text));
+            return true;
+        }
 
-            @Override
-            public boolean title(String playerName, String title, String subtitle,
-                    double staySeconds, double inSeconds, double outSeconds) {
-                Player target = onlinePlayer(playerName);
-                if (target == null) {
-                    return false;
-                }
-                showSinkTitle(target, messages, title, subtitle, staySeconds, inSeconds,
-                        outSeconds);
-                return true;
+        @Override
+        public boolean sound(String playerName, String soundId, float pitch, float volume) {
+            Player target = onlinePlayer(playerName);
+            if (target == null) {
+                return false;
             }
+            return playSinkSound(target, sounds, logWarning, containerId, soundId, pitch,
+                    volume);
+        }
 
-            @Override
-            public boolean setSlot(String playerName, RosterValues.InventorySlot slot,
-                    String materialKey, int qty) {
-                Player target = onlinePlayer(playerName);
-                if (target == null || target.getInventory() == null) {
-                    return false;
-                }
-                return setSlotInto(target, slot, materialKey, qty);
+        @Override
+        public boolean title(String playerName, String title, String subtitle,
+                double staySeconds, double inSeconds, double outSeconds) {
+            Player target = onlinePlayer(playerName);
+            if (target == null) {
+                return false;
             }
+            showSinkTitle(target, messages, title, subtitle, staySeconds, inSeconds,
+                    outSeconds);
+            return true;
+        }
 
-            @Override
-            public boolean setMaxHealth(String playerName, String id, double amount) {
-                Player target = onlinePlayer(playerName);
-                if (target == null) {
-                    return false;
-                }
-                return maxHealth.setContribution(target, id, amount);
+        @Override
+        public boolean setSlot(String playerName, RosterValues.InventorySlot slot,
+                String materialKey, int qty) {
+            Player target = onlinePlayer(playerName);
+            if (target == null || target.getInventory() == null) {
+                return false;
             }
+            return setSlotInto(target, slot, materialKey, qty);
+        }
 
-            @Override
-            public boolean modifyMaxHealth(String playerName, String id, double amount) {
-                Player target = onlinePlayer(playerName);
-                if (target == null) {
-                    return false;
-                }
-                return maxHealth.modifyContribution(target, id, amount);
+        @Override
+        public boolean setMaxHealth(String playerName, String id, double amount) {
+            Player target = onlinePlayer(playerName);
+            if (target == null) {
+                return false;
             }
+            return maxHealth.setContribution(target, id, amount);
+        }
 
-            @Override
-            public Optional<Double> getMaxHealth(String playerName, String id) {
-                Player target = onlinePlayer(playerName);
-                if (target == null) {
-                    return Optional.empty();
-                }
-                return Optional.of(maxHealth.getContribution(target.getUniqueId(), id));
+        @Override
+        public boolean modifyMaxHealth(String playerName, String id, double amount) {
+            Player target = onlinePlayer(playerName);
+            if (target == null) {
+                return false;
             }
+            return maxHealth.modifyContribution(target, id, amount);
+        }
 
-            @Override
-            public boolean clearMaxHealth(String playerName, String idOrNull) {
-                Player target = onlinePlayer(playerName);
-                if (target == null) {
-                    return false;
-                }
-                return maxHealth.clearContribution(target, idOrNull);
+        @Override
+        public Optional<Double> getMaxHealth(String playerName, String id) {
+            Player target = onlinePlayer(playerName);
+            if (target == null) {
+                return Optional.empty();
             }
+            return Optional.of(maxHealth.getContribution(target.getUniqueId(), id));
+        }
 
-            @Override
-            public boolean teleport(String playerName,
-                    TagLocations.TeleportRequest target) {
-                Player online = onlinePlayer(playerName);
-                if (online == null) {
-                    return false;
-                }
-                TeleportService.teleport(online, target, Bukkit.getWorlds(),
-                        detail -> logWarning.accept("modifier \"" + containerId
-                                + "\" teleport: " + detail));
-                return true;
+        @Override
+        public boolean clearMaxHealth(String playerName, String idOrNull) {
+            Player target = onlinePlayer(playerName);
+            if (target == null) {
+                return false;
             }
-        };
+            return maxHealth.clearContribution(target, idOrNull);
+        }
+
+        @Override
+        public boolean teleport(String playerName,
+                TagLocations.TeleportRequest target) {
+            Player online = onlinePlayer(playerName);
+            if (online == null) {
+                return false;
+            }
+            TeleportService.teleport(online, target, Bukkit.getWorlds(),
+                    detail -> logWarning.accept("modifier \"" + containerId
+                            + "\" teleport: " + detail));
+            return true;
+        }
     }
 
     private static boolean playSinkSound(Player target, SoundService sounds,

@@ -31,6 +31,7 @@ import com.jruk8.jmanhunt.lobby.LobbyService;
 import com.jruk8.jmanhunt.lobby.RolePadService;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
+import com.jruk8.jmanhunt.match.GameWiring;
 import com.jruk8.jmanhunt.match.TeamChatService;
 import com.jruk8.jmanhunt.match.listeners.PlayerMovementListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
@@ -258,11 +259,11 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
                 configRegistrar.getRoot().getSettings().getMatch().getWinConditions());
         winConditionEngine = new WinConditionEngine(winConditions);
         MessagesConfig gameTexts = messageConfigs.getMessagesConfig();
-        game = new GameManager(new GameManager.GameServices(playerStates, compass, stats),
-                new GameManager.GameReads(configService, worldEngine, winConditionEngine, lobbyService),
-                new GameManager.GameTexts(messages, gameTexts.getManhunt(), gameTexts.getGame(),
+        game = new GameManager(new GameWiring.GameServices(playerStates, compass, stats),
+                new GameWiring.GameReads(configService, worldEngine, winConditionEngine, lobbyService),
+                new GameWiring.GameTexts(messages, gameTexts.getManhunt(), gameTexts.getGame(),
                         gameTexts.getWincon(), sounds),
-                new GameManager.GameEdge(engineState, fakeSpectators, logger, overrideService, placeholderValues,
+                new GameWiring.GameEdge(engineState, fakeSpectators, logger, overrideService, placeholderValues,
                         this::respawnListener, roleTeams, spawnCamp, lobbyConfig(), this, this::configRoot));
         game.loadCrashCleanup();
         compass.setGameManager(game);

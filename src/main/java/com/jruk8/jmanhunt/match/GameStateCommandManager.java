@@ -373,28 +373,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     private TagContext tagContext(String name, Player executor, ModifierTagScope scope, long matchId,
             List<String> eventArgs) {
         TagContext context = TagContext.run(new TagContext.TagIdentity(scope, name),
-                new TagContext.TagSinks(
-                        text -> messages.broadcastText(sinks.formatEngineMessage(text)),
-                        text -> {
-                            if (executor != null) {
-                                messages.sendText(executor, sinks.formatEngineMessage(text));
-                            } else {
-                                scope.warn("Tag <pmessage> needs an executor player: skipped in '"
-                                        + name + "'.");
-                            }
-                        },
-                        (soundId, pitch, volume) -> sinks.playEngineSound(name, null, soundId,
-                                pitch, volume),
-                        (soundId, pitch, volume) -> {
-                            if (executor != null) {
-                                sinks.playEngineSound(name, executor, soundId, pitch, volume);
-                            } else {
-                                scope.warn("Tag <psound> needs an executor player: skipped in '"
-                                        + name + "'.");
-                            }
-                        },
-                        (line, provenance) -> sinks.runTagCommand(line, provenance),
-                        target -> sinks.teleportGlobal(name, matchId, scope, target)),
+                runSinks(name, executor, scope, matchId),
                 new TagContext.TagRole(
                         (role, text) -> sinks.sendRoleMessage(name, matchId, scope, role,
                                 text),
@@ -418,6 +397,33 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                                 scope, matchId)));
         context.setCooldowns(game.cooldownStore());
         return context;
+    }
+
+    /** Message, sound, teleport, and command sinks for one dispatch run. */
+    private TagContext.TagSinks runSinks(String name, Player executor, ModifierTagScope scope,
+            long matchId) {
+        return new TagContext.TagSinks(
+                text -> messages.broadcastText(sinks.formatEngineMessage(text)),
+                text -> {
+                    if (executor != null) {
+                        messages.sendText(executor, sinks.formatEngineMessage(text));
+                    } else {
+                        scope.warn("Tag <pmessage> needs an executor player: skipped in '"
+                                + name + "'.");
+                    }
+                },
+                (soundId, pitch, volume) -> sinks.playEngineSound(name, null, soundId,
+                        pitch, volume),
+                (soundId, pitch, volume) -> {
+                    if (executor != null) {
+                        sinks.playEngineSound(name, executor, soundId, pitch, volume);
+                    } else {
+                        scope.warn("Tag <psound> needs an executor player: skipped in '"
+                                + name + "'.");
+                    }
+                },
+                (line, provenance) -> sinks.runTagCommand(line, provenance),
+                target -> sinks.teleportGlobal(name, matchId, scope, target));
     }
 
     /**

@@ -370,13 +370,7 @@ final class CompassAnalysisRunner {
                             sounds.playCustomSound(holder, soundId, pitch, volume);
                         },
                         scope),
-                new TagContext.TagRole(
-                        (role, text) -> scope.warn(
-                                "Tag <rmessage> only works in modifiers: skipped."),
-                        (role, soundId, pitch, volume) -> scope.warn(
-                                "Tag <rsound> only works in modifiers: skipped."),
-                        (role, target) -> scope.warn(
-                                "Tag <rteleport> only works in modifiers: skipped.")),
+                modifierOnlyRole(scope),
                 new TagContext.TagMatch(matchId, backends, List.of(),
                         detail -> loopLimitExceeded(detail, matchId),
                         (target, reason) -> scope.warn(
@@ -384,6 +378,17 @@ final class CompassAnalysisRunner {
                         (role, reason) -> scope.warn(
                                 "Tag <win> only works in modifiers: skipped."),
                         (target, role) -> scope.warn("Tag <pswitch> only works in modifiers: skipped.")));
+    }
+
+    /** Role sinks that warn: debuff runs have no modifier roles. */
+    private static TagContext.TagRole modifierOnlyRole(ModifierTagScope scope) {
+        return new TagContext.TagRole(
+                (role, text) -> scope.warn(
+                        "Tag <rmessage> only works in modifiers: skipped."),
+                (role, soundId, pitch, volume) -> scope.warn(
+                        "Tag <rsound> only works in modifiers: skipped."),
+                (role, target) -> scope.warn(
+                        "Tag <rteleport> only works in modifiers: skipped."));
     }
 
     /**

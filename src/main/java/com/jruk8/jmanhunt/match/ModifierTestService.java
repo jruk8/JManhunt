@@ -112,11 +112,32 @@ public final class ModifierTestService {
         List<String> warnings = new ArrayList<>();
         List<String> capturedMessages = new ArrayList<>();
         List<CapturedSound> capturedSounds = new ArrayList<>();
+        TagContext context = testContext(sender, role, warnings, capturedMessages,
+                capturedSounds);
+        long start = System.nanoTime();
+        try {
+            commands.runCommandList(lines, sender, context,
+                    TagContext.Provenance.of("modifiers-test", -1, "test"));
+        } catch (Throwable thrown) {
+            long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+            int line = Math.max(1, context.provenance().lineIndex() + 1);
+            return new TestResult(elapsedMs, List.copyOf(warnings),
+                    List.copyOf(capturedMessages), List.copyOf(capturedSounds), line,
+                    EngineEscapes.restore(String.valueOf(thrown)));
+        }
+        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+        return new TestResult(elapsedMs, List.copyOf(warnings), List.copyOf(capturedMessages),
+                List.copyOf(capturedSounds), null, null);
+    }
+
+    /** Capturing tag context for one test run. */
+    private TagContext testContext(Player sender, String role, List<String> warnings,
+            List<String> capturedMessages, List<CapturedSound> capturedSounds) {
         ModifierTagScope scope = ModifierTagScope.executor(sender.getName(), warnings::add);
         TagBackends backends = new TagBackends(testStats(), new FlagStore(),
                 PlaceholderResolver.inert(), testRoster(sender, role),
                 testPlayerSinks(sender.getName(), capturedMessages, capturedSounds));
-        TagContext context = TagContext.run(new TagContext.TagIdentity(scope, "modifiers-test"),
+        return TagContext.run(new TagContext.TagIdentity(scope, "modifiers-test"),
                 new TagContext.TagSinks(capturedMessages::add, capturedMessages::add,
                         (id, pitch, volume) -> capturedSounds.add(
                                 new CapturedSound(id, pitch, volume)),
@@ -140,20 +161,6 @@ public final class ModifierTestService {
                                 "Would end the match for " + wonRole + ": " + reason),
                         (target, switchedRole) -> capturedMessages.add(
                                 "Would switch " + target + " to " + switchedRole)));
-        long start = System.nanoTime();
-        try {
-            commands.runCommandList(lines, sender, context,
-                    TagContext.Provenance.of("modifiers-test", -1, "test"));
-        } catch (Throwable thrown) {
-            long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-            int line = Math.max(1, context.provenance().lineIndex() + 1);
-            return new TestResult(elapsedMs, List.copyOf(warnings),
-                    List.copyOf(capturedMessages), List.copyOf(capturedSounds), line,
-                    EngineEscapes.restore(String.valueOf(thrown)));
-        }
-        long elapsedMs = (System.nanoTime() - start) / 1_000_000;
-        return new TestResult(elapsedMs, List.copyOf(warnings), List.copyOf(capturedMessages),
-                List.copyOf(capturedSounds), null, null);
     }
 
     /**
@@ -230,97 +237,102 @@ public final class ModifierTestService {
      */
     private static PlayerSinks testPlayerSinks(String senderName, List<String> capturedMessages,
             List<CapturedSound> capturedSounds) {
-        Map<String, Double> maxHealth = new HashMap<>();
-        return new PlayerSinks() {
-            @Override
-            public boolean message(String playerName, String text) {
-                if (!playerName.equalsIgnoreCase(senderName)) {
-                    return false;
-                }
-                capturedMessages.add("[" + playerName + "] " + text);
-                return true;
-            }
+        return new TestPlayerSinks(senderName, capturedMessages, capturedSounds,
+                new HashMap<>());
+    }
 
-            @Override
-            public boolean sound(String playerName, String soundId, float pitch, float volume) {
-                if (!playerName.equalsIgnoreCase(senderName)) {
-                    return false;
-                }
-                capturedSounds.add(new CapturedSound(soundId, pitch, volume));
-                return true;
+    /** Capturing named-player sinks for one dry run. */
+    private record TestPlayerSinks(String senderName, List<String> capturedMessages,
+            List<CapturedSound> capturedSounds, Map<String, Double> maxHealth)
+            implements PlayerSinks {
+        @Override
+        public boolean message(String playerName, String text) {
+            if (!playerName.equalsIgnoreCase(senderName)) {
+                return false;
             }
+            capturedMessages.add("[" + playerName + "] " + text);
+            return true;
+        }
 
-            @Override
-            public boolean teleport(String playerName,
-                    TagLocations.TeleportRequest target) {
-                if (!playerName.equalsIgnoreCase(senderName)) {
-                    return false;
-                }
-                capturedMessages.add(
-                        "Would teleport " + playerName + " to " + target.format());
-                return true;
+        @Override
+        public boolean sound(String playerName, String soundId, float pitch, float volume) {
+            if (!playerName.equalsIgnoreCase(senderName)) {
+                return false;
             }
+            capturedSounds.add(new CapturedSound(soundId, pitch, volume));
+            return true;
+        }
 
-            @Override
-            public boolean title(String playerName, String title, String subtitle,
-                    double staySeconds, double inSeconds, double outSeconds) {
-                if (!playerName.equalsIgnoreCase(senderName)) {
-                    return false;
-                }
-                capturedMessages.add("[" + playerName + "] " + title + " / " + subtitle);
-                return true;
+        @Override
+        public boolean teleport(String playerName,
+                TagLocations.TeleportRequest target) {
+            if (!playerName.equalsIgnoreCase(senderName)) {
+                return false;
             }
+            capturedMessages.add(
+                    "Would teleport " + playerName + " to " + target.format());
+            return true;
+        }
 
-            @Override
-            public boolean setSlot(String playerName, RosterValues.InventorySlot slot,
-                    String materialKey, int qty) {
-                if (!playerName.equalsIgnoreCase(senderName)) {
-                    return false;
-                }
-                capturedMessages.add("[" + playerName + "] slot " + slot + ": "
-                        + materialKey + " x" + qty);
-                return true;
+        @Override
+        public boolean title(String playerName, String title, String subtitle,
+                double staySeconds, double inSeconds, double outSeconds) {
+            if (!playerName.equalsIgnoreCase(senderName)) {
+                return false;
             }
+            capturedMessages.add("[" + playerName + "] " + title + " / " + subtitle);
+            return true;
+        }
 
-            @Override
-            public boolean setMaxHealth(String playerName, String id, double amount) {
-                if (!playerName.equalsIgnoreCase(senderName)) {
-                    return false;
-                }
-                maxHealth.put(id, amount);
-                return true;
+        @Override
+        public boolean setSlot(String playerName, RosterValues.InventorySlot slot,
+                String materialKey, int qty) {
+            if (!playerName.equalsIgnoreCase(senderName)) {
+                return false;
             }
+            capturedMessages.add("[" + playerName + "] slot " + slot + ": "
+                    + materialKey + " x" + qty);
+            return true;
+        }
 
-            @Override
-            public boolean modifyMaxHealth(String playerName, String id, double amount) {
-                if (!playerName.equalsIgnoreCase(senderName)) {
-                    return false;
-                }
-                maxHealth.put(id, maxHealth.getOrDefault(id, 0.0) + amount);
-                return true;
+        @Override
+        public boolean setMaxHealth(String playerName, String id, double amount) {
+            if (!playerName.equalsIgnoreCase(senderName)) {
+                return false;
             }
+            maxHealth.put(id, amount);
+            return true;
+        }
 
-            @Override
-            public Optional<Double> getMaxHealth(String playerName, String id) {
-                if (!playerName.equalsIgnoreCase(senderName)) {
-                    return Optional.empty();
-                }
-                return Optional.of(maxHealth.getOrDefault(id, 0.0));
+        @Override
+        public boolean modifyMaxHealth(String playerName, String id, double amount) {
+            if (!playerName.equalsIgnoreCase(senderName)) {
+                return false;
             }
+            maxHealth.put(id, maxHealth.getOrDefault(id, 0.0) + amount);
+            return true;
+        }
 
-            @Override
-            public boolean clearMaxHealth(String playerName, String idOrNull) {
-                if (!playerName.equalsIgnoreCase(senderName)) {
-                    return false;
-                }
-                if (idOrNull == null) {
-                    maxHealth.clear();
-                } else {
-                    maxHealth.remove(idOrNull);
-                }
-                return true;
+        @Override
+        public Optional<Double> getMaxHealth(String playerName, String id) {
+            if (!playerName.equalsIgnoreCase(senderName)) {
+                return Optional.empty();
             }
-        };
+            return Optional.of(maxHealth.getOrDefault(id, 0.0));
+        }
+
+        @Override
+        public boolean clearMaxHealth(String playerName, String idOrNull) {
+            if (!playerName.equalsIgnoreCase(senderName)) {
+                return false;
+            }
+            if (idOrNull == null) {
+                maxHealth.clear();
+            } else {
+                maxHealth.remove(idOrNull);
+            }
+            return true;
+        }
     }
 
     /** Single-sender roster behind dry runs. */

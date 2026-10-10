@@ -1,9 +1,6 @@
 package com.jruk8.jmanhunt.command;
 
-import org.bukkit.Material;
-import org.bukkit.entity.EntityType;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -50,11 +47,6 @@ public final class CommandPlaceholders {
     private static final int MAX_TAG_PASSES = 25;
     /** Random-pick draws at most ten candidates (indexes 0-9). */
     private static final int MAX_PICK_ATTEMPTS = 10;
-
-    // Lazily initialized to avoid IllegalStateException when the class is
-    // loaded in a unit test without a running Bukkit server.
-    private static volatile List<EntityType> spawnableLiving;
-    private static volatile List<Material> items;
 
     private CommandPlaceholders() {
     }
@@ -717,35 +709,6 @@ public final class CommandPlaceholders {
         }
         matcher.appendTail(result);
         return result.toString();
-    }
-
-    /** Returns the list of spawnable living entity types. Package-private for testing. */
-    static List<EntityType> spawnableLivingEntities() {
-        if (spawnableLiving == null) {
-            synchronized (CommandPlaceholders.class) {
-                if (spawnableLiving == null) {
-                    spawnableLiving = Arrays.stream(EntityType.values())
-                            .filter(EntityType::isSpawnable)
-                            .filter(EntityType::isAlive)
-                            .toList();
-                }
-            }
-        }
-        return spawnableLiving;
-    }
-
-    /** Returns the list of item materials. Package-private for testing. */
-    static List<Material> items() {
-        if (items == null) {
-            synchronized (CommandPlaceholders.class) {
-                if (items == null) {
-                    items = Arrays.stream(Material.values())
-                            .filter(Material::isItem)
-                            .toList();
-                }
-            }
-        }
-        return items;
     }
 
 }

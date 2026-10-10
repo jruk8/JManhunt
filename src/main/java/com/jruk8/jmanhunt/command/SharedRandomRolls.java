@@ -1,5 +1,6 @@
 package com.jruk8.jmanhunt.command;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -9,6 +10,11 @@ import org.bukkit.entity.EntityType;
 
 /** Shared random draws behind {@link CommandPlaceholders}. */
 public final class SharedRandomRolls {
+    // Lazily initialized to avoid IllegalStateException when the class is
+    // loaded in a unit test without a running Bukkit server.
+    private static volatile List<EntityType> spawnableLiving;
+    private static volatile List<Material> items;
+
     private SharedRandomRolls() {
     }
 
@@ -37,12 +43,41 @@ public final class SharedRandomRolls {
     }
 
     static String randomMob() {
-        List<EntityType> mobs = CommandPlaceholders.spawnableLivingEntities();
+        List<EntityType> mobs = spawnableLivingEntities();
         return mobs.get(ThreadLocalRandom.current().nextInt(mobs.size())).name().toLowerCase(Locale.ROOT);
     }
 
     static String randomItem() {
-        List<Material> itemList = CommandPlaceholders.items();
+        List<Material> itemList = items();
         return itemList.get(ThreadLocalRandom.current().nextInt(itemList.size())).name().toLowerCase(Locale.ROOT);
+    }
+
+    /** Cached spawnable living entity types behind {@code <random-mob>}. */
+    static List<EntityType> spawnableLivingEntities() {
+        if (spawnableLiving == null) {
+            synchronized (SharedRandomRolls.class) {
+                if (spawnableLiving == null) {
+                    spawnableLiving = Arrays.stream(EntityType.values())
+                            .filter(EntityType::isSpawnable)
+                            .filter(EntityType::isAlive)
+                            .toList();
+                }
+            }
+        }
+        return spawnableLiving;
+    }
+
+    /** Cached item materials behind {@code <random-item>}. */
+    static List<Material> items() {
+        if (items == null) {
+            synchronized (SharedRandomRolls.class) {
+                if (items == null) {
+                    items = Arrays.stream(Material.values())
+                            .filter(Material::isItem)
+                            .toList();
+                }
+            }
+        }
+        return items;
     }
 }

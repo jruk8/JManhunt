@@ -96,17 +96,17 @@ class JoinSpawnTest {
                 new JManhuntConfig().getWorldEngine();
         engineSettings.getSpawnpointAlgorithm().setEnabled(false);
         MatchStartService starts = new MatchStartService(
-                new MatchStartService.StartReads(mock(MatchSettingsFacade.class),
+                new MatchStartWiring.StartReads(mock(MatchSettingsFacade.class),
                         mock(PlayersSettingsFacade.class), mock(ConfigService.class),
                         engineSettings, mock(JManhuntLogger.class)),
-                new MatchStartService.StartMatch(players, mock(CompassManager.class), stats,
+                new MatchStartWiring.StartMatch(players, mock(CompassManager.class), stats,
                         mock(GameStateCommandManager.class), mock(WorldEngineService.class),
                         lobbies, mock(MatchStore.class), mock(TimeLimitService.class),
                         mock(PrestartService.class), mock(AutostartService.class)),
-                new MatchStartService.StartEdge(mock(FakeSpectatorService.class),
+                new MatchStartWiring.StartEdge(mock(FakeSpectatorService.class),
                         mock(RoleTeamService.class), () -> null, mock(SoundService.class),
                         mock(TaskScheduler.class)),
-                new MatchStartService.StartTexts(messages, texts(), new ManhuntMessages(),
+                new MatchStartWiring.StartTexts(messages, texts(), new ManhuntMessages(),
                         mock(MatchMessaging.class)));
         return new Fixture(starts, instance, players, player, world, center);
     }

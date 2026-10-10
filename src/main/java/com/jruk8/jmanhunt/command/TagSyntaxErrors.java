@@ -26,15 +26,6 @@ final class TagSyntaxErrors {
             case "id", "i" -> noArgsError(name, args);
             case "min", "max" -> arityError(name, args, 2, "two numbers");
             case "clamp" -> arityError(name, args, 3, "a value plus low and high");
-            case "gmessage", "gmsg" -> TagSinks.messageError(name, args);
-            case "pmessage", "pmsg" -> TagSinks.playerMessageError(name, args);
-            case "rmessage", "rmsg" -> RoleTagSyntax.messageError(name, args);
-            case "gsound" -> TagSinks.soundError(name, args);
-            case "psound" -> TagSinks.playerSoundError(name, args);
-            case "rsound" -> RoleTagSyntax.soundError(name, args);
-            case "gteleport" -> TagSinks.teleportError(name, args);
-            case "pteleport" -> TagSinks.playerTeleportError(name, args);
-            case "rteleport" -> RoleTagSyntax.teleportError(name, args);
             case "if" -> ifError(args);
             case "pstat" -> statError(name, args, 1, TagStats.PSTAT_KEYS);
             case "gstat" -> statError(name, args, 0, TagStats.GSTAT_KEYS);
@@ -65,9 +56,18 @@ final class TagSyntaxErrors {
         };
     }
 
-    /** Trailing tag names behind {@link #tagError}: proximity, math, loops, defs. */
+    /** Trailing tag names behind {@link #tagError}: sinks, proximity, math, loops, defs. */
     static Optional<String> tailError(String name, String args) {
         return switch (name) {
+            case "gmessage", "gmsg" -> TagSinks.messageError(name, args);
+            case "pmessage", "pmsg" -> TagSinks.playerMessageError(name, args);
+            case "rmessage", "rmsg" -> RoleTagSyntax.messageError(name, args);
+            case "gsound" -> TagSinks.soundError(name, args);
+            case "psound" -> TagSinks.playerSoundError(name, args);
+            case "rsound" -> RoleTagSyntax.soundError(name, args);
+            case "gteleport" -> TagSinks.teleportError(name, args);
+            case "pteleport" -> TagSinks.playerTeleportError(name, args);
+            case "rteleport" -> RoleTagSyntax.teleportError(name, args);
             case "pstate", "pstandingon", "ptitle", "pslot", "pmaxhp.set", "pmaxhp.modify",
                     "pmaxhp.get", "pmaxhp.clear" -> TagPlayers.opError(name, args);
             case "overlap-players", "nearby-players" -> proximityError(name, args);

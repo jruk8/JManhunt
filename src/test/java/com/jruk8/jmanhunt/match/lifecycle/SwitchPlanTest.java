@@ -12,7 +12,7 @@ class SwitchPlanTest {
 
     @Test
     void participantToParticipantKeepsRosterAndEdges() {
-        MatchStartService.SwitchPlan plan = MatchStartService.planSwitch(Role.HUNTER,
+        SwitchPlan plan = SwitchPlan.planSwitch(Role.HUNTER,
                 Role.SPEEDRUNNER, true, false);
 
         assertFalse(plan.activate());
@@ -24,7 +24,7 @@ class SwitchPlanTest {
 
     @Test
     void leavingRunnerClearsAlive() {
-        MatchStartService.SwitchPlan plan = MatchStartService.planSwitch(Role.SPEEDRUNNER,
+        SwitchPlan plan = SwitchPlan.planSwitch(Role.SPEEDRUNNER,
                 Role.HUNTER, true, false);
 
         assertEquals(Boolean.FALSE, plan.runnerAlive());
@@ -34,7 +34,7 @@ class SwitchPlanTest {
 
     @Test
     void eliminatedRejoinReactivates() {
-        MatchStartService.SwitchPlan plan = MatchStartService.planSwitch(Role.SPECTATOR,
+        SwitchPlan plan = SwitchPlan.planSwitch(Role.SPECTATOR,
                 Role.HUNTER, false, false);
 
         assertTrue(plan.activate());
@@ -46,7 +46,7 @@ class SwitchPlanTest {
 
     @Test
     void participantToWatcherDeactivatesAndEdges() {
-        MatchStartService.SwitchPlan plan = MatchStartService.planSwitch(Role.HUNTER,
+        SwitchPlan plan = SwitchPlan.planSwitch(Role.HUNTER,
                 Role.SPECTATOR, true, false);
 
         assertFalse(plan.activate());
@@ -58,7 +58,7 @@ class SwitchPlanTest {
 
     @Test
     void inactiveWatcherStaysInactive() {
-        MatchStartService.SwitchPlan plan = MatchStartService.planSwitch(Role.HUNTER,
+        SwitchPlan plan = SwitchPlan.planSwitch(Role.HUNTER,
                 Role.NONE, false, false);
 
         assertFalse(plan.activate());
@@ -68,7 +68,7 @@ class SwitchPlanTest {
 
     @Test
     void heldPlayerKeepsHeadstartHold() {
-        MatchStartService.SwitchPlan plan = MatchStartService.planSwitch(Role.HUNTER,
+        SwitchPlan plan = SwitchPlan.planSwitch(Role.HUNTER,
                 Role.SPEEDRUNNER, true, true);
 
         assertFalse(plan.activate());
@@ -78,7 +78,7 @@ class SwitchPlanTest {
 
     @Test
     void watcherToWatcherOnlyEdges() {
-        MatchStartService.SwitchPlan plan = MatchStartService.planSwitch(Role.SPECTATOR,
+        SwitchPlan plan = SwitchPlan.planSwitch(Role.SPECTATOR,
                 Role.NONE, true, false);
 
         assertTrue(plan.deactivate());

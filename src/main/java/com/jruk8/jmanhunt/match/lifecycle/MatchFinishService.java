@@ -375,7 +375,7 @@ public final class MatchFinishService {
         services.cooldowns().clearMatch(teardownId);
         services.store().removeInstance(teardownId);
         reads.log().debug(DebugLevel.INFO, DebugMessages::getMatchEnd,
-                Map.of("index", GameManager.cellString(instance)));
+                Map.of("index", instance.cellString()));
         services.worldEngine().prepareNextCell();
         services.autostart().updateAutostartState();
     }

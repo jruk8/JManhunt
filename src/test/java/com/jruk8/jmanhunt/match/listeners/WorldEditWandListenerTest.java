@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match.listeners;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -14,7 +15,6 @@ import java.util.UUID;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -29,6 +29,7 @@ class WorldEditWandListenerTest {
 
     private static Fixture fixture(Role role, boolean inMatch) {
         MiscConfig.Interop interop = new MiscConfig.Interop();
+        interop.setBlockWorldeditWandInMatch(true);
         GameManager game = mock(GameManager.class);
         PlayerStateStore states = new PlayerStateStore();
         Player player = mock(Player.class);
@@ -60,12 +61,10 @@ class WorldEditWandListenerTest {
         Fixture fixture = fixture(Role.HUNTER, true);
         PlayerInteractEvent event = interact(fixture.player(), Action.LEFT_CLICK_BLOCK,
                 Material.WOODEN_AXE, EquipmentSlot.HAND);
-        Event.Result blockBefore = event.useInteractedBlock();
 
         fixture.listener().onInteract(event);
 
-        assertEquals(Event.Result.DENY, event.useItemInHand());
-        assertEquals(blockBefore, event.useInteractedBlock());
+        assertTrue(event.isCancelled());
     }
 
     @Test
@@ -76,7 +75,7 @@ class WorldEditWandListenerTest {
 
         fixture.listener().onInteract(event);
 
-        assertEquals(Event.Result.DENY, event.useItemInHand());
+        assertTrue(event.isCancelled());
     }
 
     @Test
@@ -86,34 +85,34 @@ class WorldEditWandListenerTest {
         PlayerInteractEvent disabled = interact(hunter.player(), Action.LEFT_CLICK_BLOCK,
                 Material.WOODEN_AXE, EquipmentSlot.HAND);
         hunter.listener().onInteract(disabled);
-        assertEquals(Event.Result.DEFAULT, disabled.useItemInHand());
+        assertFalse(disabled.isCancelled());
 
         Fixture on = fixture(Role.HUNTER, true);
         PlayerInteractEvent offhand = interact(on.player(), Action.LEFT_CLICK_BLOCK,
                 Material.WOODEN_AXE, EquipmentSlot.OFF_HAND);
         on.listener().onInteract(offhand);
-        assertEquals(Event.Result.DEFAULT, offhand.useItemInHand());
+        assertFalse(offhand.isCancelled());
 
         PlayerInteractEvent pickaxe = interact(on.player(), Action.LEFT_CLICK_BLOCK,
                 Material.DIAMOND_PICKAXE, EquipmentSlot.HAND);
         on.listener().onInteract(pickaxe);
-        assertEquals(Event.Result.DEFAULT, pickaxe.useItemInHand());
+        assertFalse(pickaxe.isCancelled());
 
         PlayerInteractEvent air = interact(on.player(), Action.LEFT_CLICK_AIR,
                 Material.WOODEN_AXE, EquipmentSlot.HAND);
         on.listener().onInteract(air);
-        assertEquals(Event.Result.DEFAULT, air.useItemInHand());
+        assertFalse(air.isCancelled());
 
         Fixture spectator = fixture(Role.SPECTATOR, true);
         PlayerInteractEvent watching = interact(spectator.player(), Action.LEFT_CLICK_BLOCK,
                 Material.WOODEN_AXE, EquipmentSlot.HAND);
         spectator.listener().onInteract(watching);
-        assertEquals(Event.Result.DEFAULT, watching.useItemInHand());
+        assertFalse(watching.isCancelled());
 
         Fixture lobby = fixture(Role.HUNTER, false);
         PlayerInteractEvent outside = interact(lobby.player(), Action.LEFT_CLICK_BLOCK,
                 Material.WOODEN_AXE, EquipmentSlot.HAND);
         lobby.listener().onInteract(outside);
-        assertEquals(Event.Result.DEFAULT, outside.useItemInHand());
+        assertFalse(outside.isCancelled());
     }
 }

@@ -45,17 +45,18 @@ public class MiscConfig extends OkaeriConfig {
 
         @CustomKey("block-worldedit-wand-in-match")
         @Comment({
-                "When true, wooden axe clicks never trigger WorldEdit's",
-                "selection wand for hunters and speedrunners inside an",
-                "active match. Only the selection part is denied: vanilla",
-                "breaking and stripping still work.",
+                "When true, hunters and speedrunners inside an active",
+                "match cannot use a wooden axe at all, so WorldEdit's",
+                "selection wand stays dead. The clicks are fully",
+                "cancelled: vanilla breaking and stripping with the axe",
+                "stop too.",
                 "Purely passive, requires no dependency. If no WorldEdit is installed,",
                 "feel free to leave off.",
                 "",
                 "Performance impact: none",
-                "Default: true"
+                "Default: false"
         })
-        private boolean blockWorldeditWandInMatch = true;
+        private boolean blockWorldeditWandInMatch = false;
 
         @CustomKey("blacklisted-modifier-commands")
         @Comment({

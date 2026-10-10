@@ -90,6 +90,13 @@ public final class GameInstance {
         return cellIndex;
     }
 
+    /** Debug label for the match cell, "none" when the engine is off. */
+    public String cellString() {
+        return cellIndex.isPresent()
+                ? String.valueOf(cellIndex.getAsLong())
+                : "none";
+    }
+
     public long startedAtMillis() {
         return startedAtMillis;
     }

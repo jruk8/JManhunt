@@ -133,13 +133,13 @@ suicides never trigger it.
 
 ## WorldEdit Wand
 
-Hunters and speedrunners cannot select WorldEdit regions mid match:
-`advanced.misc.interop.block-worldedit-wand-in-match` (default on)
-denies wooden axe clicks for them while their match is active, with
-no WorldEdit install needed. Only the selection is blocked; breaking
-and stripping blocks still works, and spectators and lobby players
-are unaffected. Turn it off if your players need the wand during
-matches.
+Hunters and speedrunners cannot use a wooden axe mid match:
+`advanced.misc.interop.block-worldedit-wand-in-match` (default off)
+fully cancels their axe clicks while their match is active, which
+kills WorldEdit selections with no WorldEdit install needed.
+Breaking and stripping with the axe stop too, so hand them another
+tool. Spectators and lobby players are unaffected. Turn it on if
+your players should not reach the wand during matches.
 
 ## Respawn & Lives
 
