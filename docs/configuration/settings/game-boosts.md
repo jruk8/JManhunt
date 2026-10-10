@@ -47,10 +47,10 @@ of truth.
 
 ## Disable Brutes
 
-`disable-brutes` cancels natural piglin brute spawns, imitating
-1.16.1 where brutes never spawned. Spawner eggs, spawners, and commands
-still work. Unlike the structure boosts, it is checked live on every
-spawn, so toggling it needs no restart.
+`disable-brutes` cancels every piglin brute spawn, imitating
+1.16.1 where brutes never spawned: natural spawns, spawner eggs,
+spawners, and commands all cancel. Unlike the structure boosts, it is
+checked live on every spawn, so toggling it needs no restart.
 
 ## Custom Piglin Barter
 

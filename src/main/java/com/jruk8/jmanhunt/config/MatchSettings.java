@@ -291,10 +291,10 @@ public class MatchSettings extends OkaeriConfig {
 
         @CustomKey("disable-brutes")
         @Comment({
-                "When true, piglin brutes never spawn naturally, imitating",
-                "1.16.1 where they did not spawn. Spawner eggs, spawners,",
-                "and commands still work. Checked live on each spawn, so",
-                "no restart is needed.",
+                "When true, piglin brutes never spawn from any source,",
+                "imitating 1.16.1 where they did not spawn: natural",
+                "spawns, spawner eggs, spawners, and commands all cancel.",
+                "Checked live on each spawn, so no restart is needed.",
                 "Default: true"
         })
         private Toggle disableBrutes = new Toggle(true);
