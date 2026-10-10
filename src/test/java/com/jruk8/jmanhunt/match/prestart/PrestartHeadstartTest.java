@@ -1,6 +1,7 @@
 package com.jruk8.jmanhunt.match.prestart;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -41,7 +42,8 @@ class PrestartHeadstartTest {
 
     private record Fixture(PrestartService prestart, GameInstance instance, Player runner,
             Player watcher, MatchMessaging messaging, MessageService messages,
-            ManhuntMessages manhunt) {
+            ManhuntMessages manhunt, GameStateCommandManager commands,
+            HeadstartState hunterSide) {
     }
 
     private static Player namedPlayer(String name) {
@@ -85,15 +87,17 @@ class PrestartHeadstartTest {
                         new TagCooldownStore(System::currentTimeMillis),
                         mock(TaskScheduler.class)),
                 new LimboFeedbackService.LimboTexts(messages, manhunt, messaging));
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
         PrestartService prestart = new PrestartService(
                 new PrestartService.PrestartConfig(mock(MatchSettings.Headstarts.class), match,
                         mock(PlayersSettingsFacade.class), mock(OverrideService.class)),
                 new PrestartService.PrestartServices(states, mock(StatsManager.class),
-                        mock(GameStateCommandManager.class), store, mock(MatchControl.class),
+                        commands, store, mock(MatchControl.class),
                         mock(FakeSpectatorService.class), mock(TaskScheduler.class),
                         new CountdownService(mock(TaskScheduler.class)), limbo),
                 messages, messaging, manhunt);
-        return new Fixture(prestart, instance, runner, watcher, messaging, messages, manhunt);
+        return new Fixture(prestart, instance, runner, watcher, messaging, messages, manhunt,
+                commands, hunterSide);
     }
 
     @Test
@@ -115,5 +119,18 @@ class PrestartHeadstartTest {
                 eq(fixture.manhunt().getHeadstartEnding()), any());
         verify(fixture.messaging(), times(1)).playInstanceSound(fixture.instance(),
                 "game.autostart-countdown");
+    }
+
+    @Test
+    void headstartEndFiresDeferredRespawnCatchupForReleased() {
+        Fixture fixture = fixture();
+        fixture.hunterSide().setRemaining(0);
+        when(fixture.instance().markRespawnFired(any(), anyInt())).thenReturn(true);
+
+        fixture.prestart().beginHeadstarts(fixture.instance());
+
+        verify(fixture.commands()).runRespawnForPlayer(7L, fixture.runner());
+        verify(fixture.commands(), never()).runRespawnForPlayer(eq(7L),
+                eq(fixture.watcher()));
     }
 }

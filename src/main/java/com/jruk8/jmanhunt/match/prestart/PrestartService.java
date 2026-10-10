@@ -142,7 +142,9 @@ public final class PrestartService {
     /**
      * Ends one side's headstart, returning held players to their recorded
      * spawnpoints and restoring them to survival mode. No per-player
-     * lines: the group line below is the whole announcement.
+     * lines: the group line below is the whole announcement. Each
+     * released player also runs the deferred ON_RESPAWN catch-up when
+     * this life has not fired it yet.
      */
     private void endHeadstart(GameInstance instance, Role role) {
         HeadstartState state = instance.headstart(role);
@@ -156,6 +158,10 @@ public final class PrestartService {
                     player.teleport(returnPoint);
                 }
                 services.fakes().disable(player);
+                if (returnPoint != null && instance.markRespawnFired(player.getUniqueId(),
+                        instance.lifeOf(player.getUniqueId()))) {
+                    services.stateCommands().runRespawnForPlayer(instance.matchId(), player);
+                }
             }
         }
         state.returnPoints().clear();

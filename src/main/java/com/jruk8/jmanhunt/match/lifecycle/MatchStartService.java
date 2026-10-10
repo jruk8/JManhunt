@@ -433,8 +433,9 @@ public final class MatchStartService {
      * flow); inventory, pending respawns, and headstart holds stay
      * untouched, and future events use the new role. New-role
      * ON_START and ON_RESPAWN catch-up runs when neither fired for
-     * this game or life yet. Same-role switches succeed without
-     * effect. Always true.
+     * this game or life yet, except ON_RESPAWN defers past holds to
+     * the hold release. Same-role switches succeed without effect.
+     * Always true.
      */
     public boolean switchPlayerRole(GameInstance instance, Player player, Role target) {
         UUID playerId = player.getUniqueId();
@@ -470,8 +471,8 @@ public final class MatchStartService {
             scatterEntrantToSpawn(instance, player);
         }
         applySwitchEdge(instance, player, playerId, plan, source, target);
-        runSwitchCatchup(instance, player, target);
         applyJoinTiming(instance, player, timingSource, target);
+        runSwitchCatchup(instance, player, target);
         return true;
     }
 
@@ -498,18 +499,33 @@ public final class MatchStartService {
         }
     }
 
-    /** New-role ON_START (once per game) and ON_RESPAWN (once per life) catch-up. */
+    /**
+     * New-role ON_START (once per game) and ON_RESPAWN (once per
+     * life) catch-up. Live matches only, so ending matches consume
+     * no marks. Held players fire ON_RESPAWN at their release,
+     * never here: the join timing above already started any join
+     * hold, and headstart holds predate the switch.
+     */
     private void runSwitchCatchup(GameInstance instance, Player player, Role target) {
-        if (!target.isParticipant()) {
+        if (!target.isParticipant() || !instance.active() || instance.ending()) {
             return;
         }
         UUID playerId = player.getUniqueId();
         if (instance.markStartFired(playerId)) {
             services.stateCommands().runStartForPlayer(instance.matchId(), player);
         }
+        if (instance.isHeadstartHeld(playerId) || joinHoldRunning(playerId)) {
+            return;
+        }
         if (instance.markRespawnFired(playerId, instance.lifeOf(playerId))) {
             services.stateCommands().runRespawnForPlayer(instance.matchId(), player);
         }
+    }
+
+    /** True when a join or respawn hold countdown runs for the player. */
+    private boolean joinHoldRunning(UUID playerId) {
+        PlayerRespawnListener respawn = edge.respawn().get();
+        return respawn != null && respawn.hasPendingRespawn(playerId);
     }
 
     /** Applies the fake spectator, pre-start, and headstart-hold modes for a joiner. */

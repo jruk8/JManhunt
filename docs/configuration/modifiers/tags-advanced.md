@@ -542,9 +542,13 @@ the new role. A held compass is kept and restamped for the new role,
 never cleared; players without one are issued one when the new role is
 configured to receive compasses. Switching to a participant role also runs that role's
 `ON_START` lists when none ran for the player this game yet, and its
-`ON_RESPAWN` lists when none ran for their current life yet. Eliminated
-players can be switched back into the game this way. Unknown players,
-bad roles, and players outside a live match warn and change nothing.
+`ON_RESPAWN` lists when none ran for their current life yet, but the
+respawn catch-up waits for any headstart or join hold to release first.
+`ON_START` and `ON_RESPAWN` catch-ups only run while the match is live
+(not ending or cancelled) and the player is an active participant.
+Eliminated players can be switched back into the game this way. Unknown
+players, bad roles, and players outside a live match warn and change
+nothing.
 
 ## Shared max health
 

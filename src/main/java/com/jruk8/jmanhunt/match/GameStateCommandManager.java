@@ -127,12 +127,32 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
     }
 
     /**
+     * True when per-player catch-up may run: the match is live (not
+     * cancelled, inactive, or ending) and the player is an active
+     * participant (never eliminated). Single gate behind both
+     * catch-up runs below.
+     */
+    private boolean catchupLive(long matchId, Player player) {
+        Optional<GameInstance> match = game.instance(matchId);
+        if (match.isEmpty()) {
+            return false;
+        }
+        GameInstance instance = match.get();
+        return instance.active() && !instance.ending()
+                && instance.isActive(player.getUniqueId())
+                && reads.playerStates().role(player).isParticipant();
+    }
+
+    /**
      * Runs ON_START behaviors for one switched player: BEFORE lists
      * always, AFTER lists only once begun (pre-begin AFTER lists still
      * arrive through the begin sequence). Single-target catch-up behind
      * role switches; callers skip non-participant targets.
      */
     public void runStartForPlayer(long matchId, Player player) {
+        if (!catchupLive(matchId, player)) {
+            return;
+        }
         boolean begun = game.instance(matchId).map(GameInstance::begun).orElse(false);
         for (String name : intervals.enabledModifiers(matchId)) {
             for (int index : reads.configService().behaviorIndexes(name)) {
@@ -150,10 +170,13 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
 
     /**
      * Runs ON_RESPAWN plus the live-role split for one switched
-     * player. Single-target catch-up behind role switches; callers
-     * skip non-participant targets.
+     * player. Single-target catch-up behind role switches and hold
+     * releases; callers skip non-participant targets.
      */
     public void runRespawnForPlayer(long matchId, Player player) {
+        if (!catchupLive(matchId, player)) {
+            return;
+        }
         Role role = reads.playerStates().role(player);
         String split = role == Role.HUNTER ? "ON_HUNTER_RESPAWN" : "ON_SPEEDRUNNER_RESPAWN";
         for (String name : intervals.enabledModifiers(matchId)) {

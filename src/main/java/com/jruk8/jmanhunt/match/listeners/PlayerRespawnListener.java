@@ -70,6 +70,13 @@ public final class PlayerRespawnListener implements Listener {
         if (match.isEmpty() || !match.get().begun() || !players.states().role(player).isParticipant()) {
             return;
         }
+        // Holds own the trigger: a pending delay or headstart hold
+        // fires ON_RESPAWN at its release, never at this vanilla
+        // respawn.
+        if (hasPendingRespawn(player.getUniqueId())
+                || match.get().isHeadstartHeld(player.getUniqueId())) {
+            return;
+        }
         long matchId = match.get().matchId();
         fireRespawnTriggers(player, matchId);
     }
@@ -124,10 +131,11 @@ public final class PlayerRespawnListener implements Listener {
     /**
      * Holds a match joiner in fake spectator mode for the WAIT timing,
      * then releases them into play without the respawn revive (no
-     * teleport, no heal, no triggers). A non-positive wait joins
-     * instantly with no hold. Replaces any pending task for the
-     * player and cancels cleanly on leave or match end, like a
-     * respawn schedule.
+     * teleport, no heal). The release runs the deferred ON_RESPAWN
+     * catch-up when this life has not fired it yet. A non-positive
+     * wait joins instantly with no hold. Replaces any pending task
+     * for the player and cancels cleanly on leave or match end,
+     * like a respawn schedule.
      */
     public void scheduleJoinHold(Player player, GameInstance instance, int waitSeconds) {
         UUID playerId = player.getUniqueId();
@@ -159,7 +167,9 @@ public final class PlayerRespawnListener implements Listener {
     /**
      * Releases a join hold, keeping any headstart hold intact. The
      * player lands on a fresh origin spawn, the same selection a
-     * match entrant gets, in case they flew off during the hold.
+     * match entrant gets, in case they flew off during the hold,
+     * then runs the deferred ON_RESPAWN catch-up when this life
+     * has not fired it yet.
      */
     private void releaseJoinHold(Player player, long matchId) {
         Optional<GameInstance> match = game.instance(matchId);
@@ -171,6 +181,11 @@ public final class PlayerRespawnListener implements Listener {
         }
         players.fakes().disable(player);
         players.limbo().announceSpawned(match.get(), player);
+        GameInstance instance = match.get();
+        if (instance.markRespawnFired(player.getUniqueId(),
+                instance.lifeOf(player.getUniqueId()))) {
+            game.stateCommands().runRespawnForPlayer(matchId, player);
+        }
     }
 
     /**
@@ -235,20 +250,37 @@ public final class PlayerRespawnListener implements Listener {
                 }
             }
         }
-        if (!instance.begun() || !players.states().role(player).isParticipant()) {
+        if (!instance.begun() || !players.states().role(player).isParticipant()
+                || instance.isHeadstartHeld(player.getUniqueId())) {
             return;
         }
         fireRespawnTriggers(player, matchId);
     }
 
-    /** Fires ON_RESPAWN plus the role split with the death-location arg. */
+    /**
+     * Fires ON_RESPAWN plus the role split with the death-location
+     * arg: live matches and live players only, once per life (shared
+     * mark with the switch catch-up and hold releases).
+     */
     private void fireRespawnTriggers(Player player, long matchId) {
-        game.instance(matchId).ifPresent(instance ->
-                instance.markRespawnFired(player.getUniqueId(),
-                        instance.lifeOf(player.getUniqueId())));
+        Optional<GameInstance> match = game.instance(matchId);
+        if (match.isEmpty()) {
+            return;
+        }
+        GameInstance instance = match.get();
+        UUID playerId = player.getUniqueId();
+        if (!instance.active() || instance.ending() || !instance.isActive(playerId)) {
+            return;
+        }
+        Role role = players.states().role(player);
+        if (!role.isParticipant()) {
+            return;
+        }
+        if (!instance.markRespawnFired(playerId, instance.lifeOf(playerId))) {
+            return;
+        }
         List<String> eventArgs = deathArgs(player);
         game.stateCommands().runEventModifiers("ON_RESPAWN", player, matchId, eventArgs);
-        Role role = players.states().role(player);
         if (role == Role.HUNTER) {
             game.stateCommands().runEventModifiers("ON_HUNTER_RESPAWN", player, matchId, eventArgs);
         } else if (role == Role.SPEEDRUNNER) {

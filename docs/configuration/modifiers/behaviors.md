@@ -74,9 +74,9 @@ The commands (other than cleanup) run on these triggers:
 | `ON_FIRST_NETHER_ENTER` | When the first participating player enters the Nether (once per match) |
 | `ON_FIRST_END_ENTER` | When the first participating player enters the End (once per match) |
 | `ON_EVERY_ADVANCEMENT` | When a participating player earns any advancement (recipe book unlocks excluded) |
-| `ON_RESPAWN` | When a player respawns (only the executing player) |
-| `ON_SPEEDRUNNER_RESPAWN` | When a speedrunner respawns (only the executing player) |
-| `ON_HUNTER_RESPAWN` | When a hunter respawns (only the executing player) |
+| `ON_RESPAWN` | When a player is back in play after respawning (only the executing player; fires once per life, after headstart and respawn holds release) |
+| `ON_SPEEDRUNNER_RESPAWN` | When a speedrunner is back in play after respawning (only the executing player; same once-per-life rule) |
+| `ON_HUNTER_RESPAWN` | When a hunter is back in play after respawning (only the executing player; same once-per-life rule) |
 | `ON_DAMAGE_TAKEN` | When a player takes damage from any source (runs for the damaged player only) |
 | `ON_DEATH` | When a participant dies (runs for the dead player only; `<args:0>` is the exact dead-player name, `<args:1>` is the exact killer name or null) |
 

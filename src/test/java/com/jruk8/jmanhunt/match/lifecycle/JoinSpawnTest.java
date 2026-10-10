@@ -3,8 +3,10 @@ package com.jruk8.jmanhunt.match.lifecycle;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -23,6 +25,7 @@ import com.jruk8.jmanhunt.lobby.config.MatchSettingsFacade;
 import com.jruk8.jmanhunt.lobby.config.PlayersSettingsFacade;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameStateCommandManager;
+import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
 import com.jruk8.jmanhunt.match.autostart.AutostartService;
 import com.jruk8.jmanhunt.match.prestart.HeadstartState;
 import com.jruk8.jmanhunt.match.prestart.PrestartService;
@@ -44,6 +47,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -57,7 +61,7 @@ import org.mockito.MockedStatic;
 class JoinSpawnTest {
 
     private record Fixture(MatchStartService starts, GameInstance instance, PlayerStateStore players,
-            Player player, World world, Location center) {
+            Player player, World world, Location center, GameStateCommandManager commands) {
     }
 
     private static GameMessages texts() {
@@ -67,6 +71,10 @@ class JoinSpawnTest {
     }
 
     private static Fixture fixture() {
+        return fixture(() -> null);
+    }
+
+    private static Fixture fixture(Supplier<PlayerRespawnListener> respawn) {
         PlayerStateStore players = new PlayerStateStore();
         LobbyService lobbies = mock(LobbyService.class);
         when(lobbies.joinTiming()).thenReturn(JoinTiming.INSTANT);
@@ -95,20 +103,21 @@ class JoinSpawnTest {
         com.jruk8.jmanhunt.config.WorldEngineConfig engineSettings =
                 new JManhuntConfig().getWorldEngine();
         engineSettings.getSpawnpointAlgorithm().setEnabled(false);
+        GameStateCommandManager commands = mock(GameStateCommandManager.class);
         MatchStartService starts = new MatchStartService(
                 new MatchStartWiring.StartReads(mock(MatchSettingsFacade.class),
                         mock(PlayersSettingsFacade.class), mock(ConfigService.class),
                         engineSettings, mock(JManhuntLogger.class)),
                 new MatchStartWiring.StartMatch(players, mock(CompassManager.class), stats,
-                        mock(GameStateCommandManager.class), mock(WorldEngineService.class),
+                        commands, mock(WorldEngineService.class),
                         lobbies, mock(MatchStore.class), mock(TimeLimitService.class),
                         mock(PrestartService.class), mock(AutostartService.class)),
                 new MatchStartWiring.StartEdge(mock(FakeSpectatorService.class),
-                        mock(RoleTeamService.class), () -> null, mock(SoundService.class),
+                        mock(RoleTeamService.class), respawn, mock(SoundService.class),
                         mock(TaskScheduler.class)),
                 new MatchStartWiring.StartTexts(messages, texts(), new ManhuntMessages(),
                         mock(MatchMessaging.class)));
-        return new Fixture(starts, instance, players, player, world, center);
+        return new Fixture(starts, instance, players, player, world, center, commands);
     }
 
     @Test
@@ -192,5 +201,52 @@ class JoinSpawnTest {
                 Role.HUNTER));
 
         verify(fixture.player(), never()).teleport(any(Location.class));
+    }
+
+    @Test
+    void switchWithoutHoldsFiresBothCatchups() {
+        Fixture fixture = fixture();
+        fixture.players().setRole(fixture.player(), Role.SPECTATOR);
+        when(fixture.instance().markStartFired(any())).thenReturn(true);
+        when(fixture.instance().markRespawnFired(any(), anyInt())).thenReturn(true);
+
+        assertTrue(fixture.starts().switchPlayerRole(fixture.instance(), fixture.player(),
+                Role.HUNTER));
+
+        verify(fixture.commands()).runStartForPlayer(7L, fixture.player());
+        verify(fixture.commands()).runRespawnForPlayer(7L, fixture.player());
+    }
+
+    @Test
+    void switchWhileHeadstartHeldDefersRespawnCatchup() {
+        Fixture fixture = fixture();
+        fixture.players().setRole(fixture.player(), Role.SPECTATOR);
+        when(fixture.instance().isHeadstartHeld(any())).thenReturn(true);
+        when(fixture.instance().markStartFired(any())).thenReturn(true);
+        when(fixture.instance().markRespawnFired(any(), anyInt())).thenReturn(true);
+
+        assertTrue(fixture.starts().switchPlayerRole(fixture.instance(), fixture.player(),
+                Role.HUNTER));
+
+        verify(fixture.commands()).runStartForPlayer(7L, fixture.player());
+        verify(fixture.commands(), never()).runRespawnForPlayer(anyLong(),
+                eq(fixture.player()));
+    }
+
+    @Test
+    void switchWhileJoinHoldRunsDefersRespawnCatchup() {
+        PlayerRespawnListener respawn = mock(PlayerRespawnListener.class);
+        when(respawn.hasPendingRespawn(any())).thenReturn(true);
+        Fixture fixture = fixture(() -> respawn);
+        fixture.players().setRole(fixture.player(), Role.SPECTATOR);
+        when(fixture.instance().markStartFired(any())).thenReturn(true);
+        when(fixture.instance().markRespawnFired(any(), anyInt())).thenReturn(true);
+
+        assertTrue(fixture.starts().switchPlayerRole(fixture.instance(), fixture.player(),
+                Role.HUNTER));
+
+        verify(fixture.commands()).runStartForPlayer(7L, fixture.player());
+        verify(fixture.commands(), never()).runRespawnForPlayer(anyLong(),
+                eq(fixture.player()));
     }
 }
