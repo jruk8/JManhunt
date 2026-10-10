@@ -201,6 +201,10 @@ public class ManhuntMessages extends OkaeriConfig {
     @CustomKey("limbo-spawned-multi")
     private String limboSpawnedMulti = "{prefix}{rolecolor}{count} {role}s <green>have spawned!";
 
+    @CustomKey("advancement-made")
+    private String advancementMade = "{prefix}{rolecolor}{player} <white>has made the advancement "
+            + "{brandcolor}[{advancement}]";
+
     @CustomKey("start-invalid")
     private String startInvalid = "{prefix}<red>A match needs at least one hunter and one speedrunner.";
 

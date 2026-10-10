@@ -13,6 +13,9 @@ import java.util.Locale;
 import java.util.Map;
 
 public final class MessageService {
+    /** Brand red behind the {brandcolor} placeholder in templates. */
+    public static final String BRAND_COLOR = "<#de7766>";
+
     private static final java.util.regex.Pattern LEGACY_CODE =
             java.util.regex.Pattern.compile("(?i)&([0-9a-fk-or])");
     private static final Map<Character, String> LEGACY_TAGS = Map.ofEntries(
@@ -112,6 +115,7 @@ public final class MessageService {
             rendered = rendered.replace("{role-color-" + role.name().toLowerCase(Locale.ROOT) + "}",
                     roleColor(role));
         }
+        rendered = rendered.replace("{brandcolor}", BRAND_COLOR);
         return parse(rendered);
     }
 

@@ -15,7 +15,12 @@ import com.jruk8.jmanhunt.player.SpeedrunnerDisconnectTracker;
 import com.jruk8.jmanhunt.stats.Stats;
 import com.jruk8.jmanhunt.stats.StatsManager;
 import com.jruk8.jmanhunt.world.WorldEngineService;
+import io.papermc.paper.advancement.AdvancementDisplay;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.GameRule;
 import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.advancement.Advancement;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -35,13 +40,16 @@ import java.util.UUID;
 import com.jruk8.jmanhunt.match.GameInstance;
 import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.message.GameMessages;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
+import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 
-/** Deaths, damage, kills, and item/advancement win triggers. */
+/** Deaths, damage, kills, item wins, and advancement announcements. */
 public final class PlayerCombatListener implements Listener {
-    /** Role, visibility, player settings, and death text. */
+    /** Role, visibility, player settings, death text, and bus texts. */
     public record CombatReads(PlayerStateStore states, FakeSpectatorService fakes,
-            PlayerSettings players, GameMessages gameTexts) {
+            PlayerSettings players, GameMessages gameTexts, MessageService messages,
+            ManhuntMessages manhunt) {
     }
 
     /** Match, stats, win checks, and disconnect tracking. */
@@ -525,6 +533,7 @@ public final class PlayerCombatListener implements Listener {
 
     @EventHandler public void onAdvancement(org.bukkit.event.player.PlayerAdvancementDoneEvent event) {
         Player player = event.getPlayer();
+        silenceAdvancementWorld(player);
         Optional<GameInstance> match = this.match.game().instanceOf(player.getUniqueId());
         if (match.isEmpty() || !match.get().begun() || !reads.states().role(player).isParticipant()) {
             return;
@@ -535,10 +544,12 @@ public final class PlayerCombatListener implements Listener {
         if (event.getAdvancement().getKey().getKey().startsWith("recipes/")) {
             return;
         }
+        event.message(null);
         long matchId = match.get().matchId();
         this.match.stats().recordAdvancement(matchId, player.getUniqueId(), reads.states().role(player));
         this.match.game().stateCommands().runEventModifiers("ON_EVERY_ADVANCEMENT", player, matchId,
                 List.of(event.getAdvancement().getKey().toString()));
+        announceAdvancement(player, match.get(), event.getAdvancement());
         Integer lobby = match.map(GameInstance::originLobbyId).orElse(null);
         if (reads.states().role(player) == Role.SPEEDRUNNER
                 && this.match.winConditionEngine().hasReachAdvancement(lobby, player, Role.SPEEDRUNNER)) {
@@ -550,6 +561,52 @@ public final class PlayerCombatListener implements Listener {
             this.match.game().finishLater(match.get(), Role.HUNTER, "Reached "
                     + WinConditionEngine.prettyKey(this.match.winConditionEngine().advancement(lobby, Role.HUNTER)));
         }
+    }
+
+    /**
+     * Forces announceAdvancements off on the player's world when on.
+     * Runs pre-gate for every advancement: announcements are handled
+     * internally, so vanilla never broadcasts them. Internal only,
+     * never restored, never configurable.
+     */
+    private static void silenceAdvancementWorld(Player player) {
+        World world = player.getWorld();
+        if (Boolean.TRUE.equals(world.getGameRuleValue(GameRule.ANNOUNCE_ADVANCEMENTS))) {
+            world.setGameRule(GameRule.ANNOUNCE_ADVANCEMENTS, false);
+        }
+    }
+
+    /**
+     * Posts the match-scoped advancement line: running matches only
+     * (never pre-start), announced advancements with a display title
+     * only.
+     */
+    private void announceAdvancement(Player player, GameInstance instance,
+            Advancement advancement) {
+        if (!instance.active() || instance.ending()) {
+            return;
+        }
+        String title = advancementTitle(advancement);
+        if (title == null) {
+            return;
+        }
+        Role role = reads.states().role(player);
+        this.match.game().messaging().sendToInstance(instance, reads.manhunt().getAdvancementMade(),
+                Map.of("rolecolor", reads.messages().roleColor(role), "player",
+                        player.getName(), "advancement", title));
+    }
+
+    /**
+     * Chat title for an advancement: null when display-less or not
+     * announced to chat, mirroring the vanilla announce gates. Pure
+     * for tests.
+     */
+    static String advancementTitle(Advancement advancement) {
+        AdvancementDisplay display = advancement.getDisplay();
+        if (display == null || !display.doesAnnounceToChat()) {
+            return null;
+        }
+        return PlainTextComponentSerializer.plainText().serialize(display.title());
     }
 
     /** True when the player actively participates in the given match. */

@@ -41,6 +41,13 @@ triggers, headstart holds, and elimination flows all assume the player
 respawns instantly, and a waiting death screen leaves those states
 dangling.
 
+`announceAdvancements` is forced off internally the same way: any world
+still announcing goes silent the first time anyone earns an advancement
+there, and it is never turned back on. Advancement chat is handled
+internally instead, so only the earner's own running match sees it
+(see [Match Start and End](settings/match-start-end.md#advancement-announcements)).
+Lobby players and pre-start matches see no advancement lines at all.
+
 - `DISABLE_LOCATOR_BAR` turns off the vanilla locator bar in every world for
   the duration of the match.
 - `SET_DAYTIME` sets every world to daytime.

@@ -57,7 +57,7 @@ public final class MatchListenerFactory {
             GameMessages gameTexts) {
         return new PlayerCombatListener(
                 new PlayerCombatListener.CombatReads(services.playerStates(), edge.fakes(),
-                        players, gameTexts),
+                        players, gameTexts, texts.messages(), texts.manhunt()),
                 new PlayerCombatListener.CombatMatch(game, services.stats(), reads.winConditionEngine(),
                         disconnects, disconnectTasks),
                 new PlayerCombatListener.CombatWorld(compass, reads.lobbies(), reads.worldEngine(), respawn),

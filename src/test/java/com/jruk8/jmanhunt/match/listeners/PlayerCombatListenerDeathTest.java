@@ -29,6 +29,8 @@ import com.jruk8.jmanhunt.match.GameStateCommandManager;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
 import com.jruk8.jmanhunt.match.lifecycle.MatchMessaging;
 import com.jruk8.jmanhunt.message.GameMessages;
+import com.jruk8.jmanhunt.message.ManhuntMessages;
+import com.jruk8.jmanhunt.message.MessageService;
 import com.jruk8.jmanhunt.message.MessagesConfig;
 import com.jruk8.jmanhunt.player.FakeSpectatorService;
 import com.jruk8.jmanhunt.player.PlayerStateStore;
@@ -107,7 +109,8 @@ class PlayerCombatListenerDeathTest {
         PlayerSettings settings = new PlayerSettings();
         settings.getRespawn().getHunter().setEnabled(false);
         PlayerCombatListener listener = new PlayerCombatListener(
-                new PlayerCombatListener.CombatReads(players, fakes, settings, texts()),
+                new PlayerCombatListener.CombatReads(players, fakes, settings, texts(),
+                        mock(MessageService.class), new ManhuntMessages()),
                 new PlayerCombatListener.CombatMatch(game, stats,
                         mock(WinConditionEngine.class),
                         mock(SpeedrunnerDisconnectTracker.class), new HashMap<>()),

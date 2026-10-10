@@ -4,6 +4,7 @@ import com.jruk8.jmanhunt.config.ConfigPathMapper;
 import com.jruk8.jmanhunt.player.Role;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.TextColor;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -123,6 +124,22 @@ class MessageServiceTest {
                 "No {role-color-hunter}Hunter<gray> here.", Map.of());
 
         assertEquals("No Hunter here.", plain(rendered));
+    }
+
+    @Test
+    void brandcolorPlaceholderResolvesToBrandRed() {
+        MessageService messages = new MessageService();
+
+        Component rendered = messages.renderLiteral("A {brandcolor}B", Map.of());
+
+        assertEquals("A B", plain(rendered));
+        TextComponent colored = rendered.children().stream()
+                .filter(TextComponent.class::isInstance)
+                .map(TextComponent.class::cast)
+                .filter(child -> child.content().equals("B"))
+                .findFirst()
+                .orElseThrow();
+        assertEquals(TextColor.color(0xde7766), colored.color());
     }
 
 

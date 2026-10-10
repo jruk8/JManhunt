@@ -173,6 +173,22 @@ announced too; only `none` and `afk` players are skipped. Each role
 hears its own sound (`sounds.announce.*`). When both chat and title
 are disabled, no announcement plays at all.
 
+## Advancement Announcements
+
+Advancement chat is match-scoped: when a participant earns an
+advancement in a running match, only their own match sees the line.
+The message key is `manhunt.advancement-made` with placeholders
+`rolecolor`, `player`, and `advancement`:
+
+```yaml
+manhunt:
+  advancement-made: "{prefix}{rolecolor}{player} <white>has made the advancement {brandcolor}[{advancement}]"
+```
+
+Recipe unlocks, hidden advancements, and display-less advancements
+stay silent, as do pre-start matches. Vanilla announcement is forced
+off (see [Game Rules](../game-rules.md)).
+
 ## Match End Delay
 
 How long the plugin waits between the win or cancel announcement and
