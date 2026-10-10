@@ -131,6 +131,16 @@ whenever a player kills a teammate, picked from
 `game.friendly-fire-1/2/3` in `messages.yml`. Cross-team kills and
 suicides never trigger it.
 
+## WorldEdit Wand
+
+Hunters and speedrunners cannot select WorldEdit regions mid match:
+`advanced.misc.interop.block-worldedit-wand-in-match` (default on)
+denies wooden axe clicks for them while their match is active, with
+no WorldEdit install needed. Only the selection is blocked; breaking
+and stripping blocks still works, and spectators and lobby players
+are unaffected. Turn it off if your players need the wand during
+matches.
+
 ## Respawn & Lives
 
 Each role configures its own respawn delay and lives before

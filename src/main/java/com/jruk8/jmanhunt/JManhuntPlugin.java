@@ -34,6 +34,7 @@ import com.jruk8.jmanhunt.match.GameManager;
 import com.jruk8.jmanhunt.match.TeamChatService;
 import com.jruk8.jmanhunt.match.listeners.PlayerMovementListener;
 import com.jruk8.jmanhunt.match.listeners.PlayerRespawnListener;
+import com.jruk8.jmanhunt.match.listeners.WorldEditWandListener;
 import com.jruk8.jmanhunt.match.listeners.PrestartTargetListener;
 import com.jruk8.jmanhunt.match.listeners.TeamChatListener;
 import com.jruk8.jmanhunt.match.WinConditionEngine;
@@ -355,6 +356,8 @@ public final class JManhuntPlugin extends JavaPlugin implements TaskScheduler {
         var manager = getServer().getPluginManager();
         manager.registerEvents(new CompassProtectionListener(
                 this, advanced.getMisc().getInterop(), compass, game), this);
+        manager.registerEvents(new WorldEditWandListener(
+                advanced.getMisc().getInterop(), game, playerStates), this);
         manager.registerEvents(new PortalRouter(logger, game, worldEngine, root.getWorldEngine()), this);
         PlayerRespawnListener respawn = createRespawnListener();
         SpeedrunnerDisconnectTracker disconnects = new SpeedrunnerDisconnectTracker();
