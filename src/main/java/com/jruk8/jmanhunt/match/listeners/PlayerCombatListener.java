@@ -117,8 +117,15 @@ public final class PlayerCombatListener implements Listener {
         }
     }
 
-    /** Fires ON_DEATH for the dead player: dead, killer or "null", former role. */
+    /**
+     * Fires ON_DEATH for the dead player: dead, killer or "null",
+     * former role. Trigger-suppressed kills (max-health elimination)
+     * skip the scripts; their state changes already ran above.
+     */
     private void fireDeathTrigger(Player player, GameInstance instance, Role role) {
+        if (edge.spawnCamp().isDeathTriggerSuppressed(player.getUniqueId())) {
+            return;
+        }
         Player killer = player.getKiller();
         String killerName = killer == null ? "null" : killer.getName();
         this.match.game().stateCommands().runEventModifiers("ON_DEATH", player,

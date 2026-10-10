@@ -389,6 +389,7 @@ public final class GameStateCommandManager implements ModifierToggleService.Comm
                                 NamedPlayerSinks.of(messages, messages.modifiers(), sounds,
                                         edge.log()::warning, name, game.maxHealth())),
                         eventArgs, detail -> sinks.loopLimitExceeded(detail, matchId),
+                        detail -> sinks.stackExhausted(detail, matchId),
                         (target, reason) -> sinks.losePlayerByName(name, target, reason, scope,
                                 matchId),
                         (role, reason) -> sinks.winForRole(name, role, reason, scope,

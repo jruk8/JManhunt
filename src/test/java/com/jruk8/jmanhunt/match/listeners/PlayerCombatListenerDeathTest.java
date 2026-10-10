@@ -55,7 +55,7 @@ class PlayerCombatListenerDeathTest {
     private record Fixture(PlayerCombatListener listener, Player victim, UUID victimId,
             PlayerStateStore players, GameInstance instance, CompassManager compass,
             FakeSpectatorService fakes, PlayerRespawnListener respawn,
-            GameStateCommandManager commands) {
+            GameStateCommandManager commands, SpawnCampService spawnCamp) {
     }
 
     private static TaskScheduler immediateTasks() {
@@ -78,7 +78,8 @@ class PlayerCombatListenerDeathTest {
 
     private static Fixture fixture(Role role, int lives, boolean begun) {
         JManhuntPlugin plugin = mock(JManhuntPlugin.class);
-        when(plugin.spawnCamp()).thenReturn(mock(SpawnCampService.class));
+        SpawnCampService spawnCamp = mock(SpawnCampService.class);
+        when(plugin.spawnCamp()).thenReturn(spawnCamp);
         when(plugin.roleTeams()).thenReturn(mock(RoleTeamService.class));
         FakeSpectatorService fakes = mock(FakeSpectatorService.class);
         when(plugin.fakeSpectators()).thenReturn(fakes);
@@ -116,7 +117,7 @@ class PlayerCombatListenerDeathTest {
                         mock(JManhuntLogger.class), mock(LobbyConfig.class)),
                 immediateTasks());
         return new Fixture(listener, victim, victimId, players, instance, compass, fakes,
-                respawn, commands);
+                respawn, commands, spawnCamp);
     }
 
     private static GameMessages texts() {
@@ -128,6 +129,19 @@ class PlayerCombatListenerDeathTest {
         PlayerDeathEvent event = mock(PlayerDeathEvent.class);
         when(event.getEntity()).thenReturn(fixture.victim());
         fixture.listener().onDeath(event);
+    }
+
+    @Test
+    void suppressedDeathSkipsTriggerButKeepsStateChanges() {
+        Fixture fixture = fixture(Role.HUNTER, -1, true);
+        when(fixture.spawnCamp().isDeathTriggerSuppressed(fixture.victimId()))
+                .thenReturn(true);
+
+        kill(fixture);
+
+        verify(fixture.commands(), never()).runEventModifiers(eq("ON_DEATH"),
+                any(Player.class), anyLong(), any());
+        verify(fixture.compass()).clearLocksOnTargetDeath(fixture.victimId());
     }
 
     @Test

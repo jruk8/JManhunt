@@ -155,6 +155,7 @@ public final class ModifierTestService {
                                 "Would teleport " + wonRole + " to " + target.format())),
                 new TagContext.TagMatch(TagContext.NO_MATCH, backends, List.of(),
                         warnings::add,
+                        warnings::add,
                         (target, reason) -> capturedMessages.add(
                                 "Would eliminate " + target + ": " + reason),
                         (wonRole, reason) -> capturedMessages.add(

@@ -52,6 +52,7 @@ public final class SpawnCampService {
     private final Map<KillKey, Deque<Long>> kills = new HashMap<>();
     private final Map<OffenseKey, Integer> offenses = new HashMap<>();
     private final Set<UUID> quietPunishment = new HashSet<>();
+    private final Set<UUID> noDeathTrigger = new HashSet<>();
     private final Set<String> warnedRoles = new HashSet<>();
     private final LongSupplier clock;
 
@@ -145,6 +146,27 @@ public final class SpawnCampService {
     /** True while the player is dying from spawncamp punishment. */
     public boolean isQuietPunishment(UUID playerId) {
         return quietPunishment.contains(playerId);
+    }
+
+    /**
+     * Runs an elimination kill without its ON_DEATH trigger: the
+     * death below re-enters onDeath synchronously, which applies
+     * state changes but skips the script trigger while the tag is
+     * set. try/finally keeps the tag exact even if a totem saves
+     * them.
+     */
+    public void suppressDeathTrigger(Player player, Runnable action) {
+        noDeathTrigger.add(player.getUniqueId());
+        try {
+            action.run();
+        } finally {
+            noDeathTrigger.remove(player.getUniqueId());
+        }
+    }
+
+    /** True while the player is dying from a trigger-suppressed kill. */
+    public boolean isDeathTriggerSuppressed(UUID playerId) {
+        return noDeathTrigger.contains(playerId);
     }
 
     /**

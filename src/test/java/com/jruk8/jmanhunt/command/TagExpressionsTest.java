@@ -354,7 +354,7 @@ class TagExpressionsTest {
                 new TagContext.TagRole((role, text) -> roleMessages.add(role + ":" + text),
                         (role, id, pitch, volume) -> roleSounds.add(role + ":" + id + ":" + pitch + ":" + volume),
                         (role, target) -> { }),
-                new TagContext.TagMatch(7L, TagBackends.inert(), List.of(), detail -> { },
+                new TagContext.TagMatch(7L, TagBackends.inert(), List.of(), detail -> { }, detail -> { },
                         (player, reason) -> { }, (role, reason) -> { }, (player, role) -> { }));
 
         assertEquals("", CommandPlaceholders.replace("<rmessage:hunter,hi>", "Steve", 0, 0, 0, context));
@@ -414,7 +414,7 @@ class TagExpressionsTest {
                                 ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add)),
                 new TagContext.TagRole((role, text) -> roleMessages.add(role + ":" + text),
                         (role, id, pitch, volume) -> { }, (role, target) -> { }),
-                new TagContext.TagMatch(7L, TagBackends.inert(), List.of(), detail -> { },
+                new TagContext.TagMatch(7L, TagBackends.inert(), List.of(), detail -> { }, detail -> { },
                         (player, reason) -> { }, (role, reason) -> { }, (player, role) -> { }));
         assertEquals("", CommandPlaceholders.replace("<rmsg:hunter,hi>", "Steve", 0, 0, 0, context));
         assertEquals("", CommandPlaceholders.replace("<rmsg:hi>", "Steve", 0, 0, 0, context));

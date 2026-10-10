@@ -83,7 +83,9 @@ public final class MatchEliminationService {
     /**
      * Any-role variant of {@link #losePlayer}: any assigned online
      * player qualifies, including spectators. Backs engine deaths
-     * that ignore roles, like max health reaching zero.
+     * that ignore roles, like max health reaching zero. The kill
+     * skips ON_DEATH: a maxhp script re-entered through its own
+     * elimination would recurse until the stack runs out.
      */
     public boolean eliminateAnyRole(long matchId, String playerName, String reason) {
         Optional<GameInstance> match = this.match.store().instance(matchId);
@@ -95,7 +97,9 @@ public final class MatchEliminationService {
         if (player == null) {
             return false;
         }
-        eliminate(instance, player, players.states().role(player), reason);
+        Role role = players.states().role(player);
+        edge.spawnCamp().suppressDeathTrigger(player,
+                () -> eliminate(instance, player, role, reason));
         return true;
     }
 

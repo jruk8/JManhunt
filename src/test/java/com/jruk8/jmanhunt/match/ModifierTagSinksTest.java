@@ -53,4 +53,40 @@ class ModifierTagSinksTest {
         assertTrue(logged.getValue().contains(String.valueOf(TagLoops.LOOP_LIMIT)));
         assertFalse(logged.getValue().contains("1000 steps"));
     }
+
+    @Test
+    void stackExhaustedCancelsMatchWithOwnMessage() {
+        JManhuntLogger log = mock(JManhuntLogger.class);
+        GameManager game = mock(GameManager.class);
+        GameInstance instance = mock(GameInstance.class);
+        when(game.instance(7L)).thenReturn(Optional.of(instance));
+        ModifierTagSinks sinks = new ModifierTagSinks(log,
+                new ModifierTagSinks.SinkBus(mock(MessageService.class),
+                        mock(ModifiersMessages.class), mock(SoundService.class)),
+                game, new PlayerStateStore(), new MiscConfig.Interop());
+
+        sinks.stackExhausted("evaluating <for> at prov", 7L);
+
+        ArgumentCaptor<String> logged = ArgumentCaptor.forClass(String.class);
+        verify(log).severe(logged.capture());
+        assertTrue(logged.getValue().contains("stack exhausted"));
+        assertFalse(logged.getValue().contains("steps"));
+        verify(game).cancel(instance);
+    }
+
+    @Test
+    void loopLimitExceededCancelsLiveMatch() {
+        JManhuntLogger log = mock(JManhuntLogger.class);
+        GameManager game = mock(GameManager.class);
+        GameInstance instance = mock(GameInstance.class);
+        when(game.instance(7L)).thenReturn(Optional.of(instance));
+        ModifierTagSinks sinks = new ModifierTagSinks(log,
+                new ModifierTagSinks.SinkBus(mock(MessageService.class),
+                        mock(ModifiersMessages.class), mock(SoundService.class)),
+                game, new PlayerStateStore(), new MiscConfig.Interop());
+
+        sinks.loopLimitExceeded("detail", 7L);
+
+        verify(game).cancel(instance);
+    }
 }

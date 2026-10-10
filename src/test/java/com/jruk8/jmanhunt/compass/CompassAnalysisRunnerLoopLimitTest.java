@@ -36,4 +36,22 @@ class CompassAnalysisRunnerLoopLimitTest {
         assertTrue(logged.getValue().contains(String.valueOf(TagLoops.LOOP_LIMIT)));
         assertFalse(logged.getValue().contains("1000 steps"));
     }
+
+    @Test
+    void stackExhaustedLogsWithoutStepCount() {
+        JManhuntLogger log = mock(JManhuntLogger.class);
+        CompassAnalysisRunner runner = new CompassAnalysisRunner(
+                mock(CompassSettingsFacade.class),
+                new CompassAnalysisRunner.RunnerFeedback(mock(MessageService.class),
+                        mock(CompassMessages.class), mock(ModifiersMessages.class),
+                        mock(SoundService.class), log),
+                null, null, null);
+
+        runner.stackExhausted("evaluating <for> at prov", TagContext.NO_MATCH);
+
+        ArgumentCaptor<String> logged = ArgumentCaptor.forClass(String.class);
+        verify(log).severe(logged.capture());
+        assertTrue(logged.getValue().contains("stack exhausted"));
+        assertFalse(logged.getValue().contains("steps"));
+    }
 }

@@ -459,11 +459,14 @@ snapshots the flag and cancels to `null` with a warning when the
 body changes it mid-loop (literals cannot change, so they never
 cancel). And every line gets 20000 shared steps, split between loop
 iterations and function calls: past that the tag becomes `null`,
-the match is cancelled, the console logs the modifier, behavior,
-list, and line, and the players are told to contact the
-administrator. Escape literal `<` and `>` inside loop bodies
-(see Escaping Special Characters): quotes never hid tags from
-the scanner.
+the match is cancelled, the console logs `JMHScript loop exceeded
+20000 steps at` plus the modifier, behavior, list, and line, and
+the players are told to contact the administrator. A line that
+overflows the stack before the budget trips cancels the same way
+but logs `JMHScript stack exhausted evaluating` instead, so the
+two failures are easy to tell apart. Escape literal `<` and `>`
+inside loop bodies (see Escaping Special Characters): quotes never
+hid tags from the scanner.
 
 ## Functions
 
@@ -568,9 +571,11 @@ tears down, their whole ledger clears automatically.
 
 A total of 0 or less kills permanently: the player dies at once, is
 eliminated regardless of lives left or role, and their ledger clears
-without applying the lethal total. Use `<peliminated:player>` after a
-write to check whether the player died this way, and `<pstat>` reads
-`-1` on every key for eliminated players.
+without applying the lethal total. These deaths never fire
+`ON_DEATH`, so a death script that writes max health cannot recurse
+into itself. Use `<peliminated:player>` after a write to check
+whether the player died this way, and `<pstat>` reads `-1` on every
+key for eliminated players.
 
 Never edit the max health attribute directly (with `attribute`
 commands or another plugin): the next ledger refresh detects the

@@ -23,7 +23,8 @@ class TagFormatTest {
                     TagContext.TagRole.silent(),
                     new TagContext.TagMatch(7L, new TagBackends(StatValues.inert(), flags, (text,
                             name) -> text, RosterValues.inert(), PlayerSinks.inert()), List.of(), detail -> { },
-                            (player, reason) -> { }, (role, reason) -> { }, (player, role) -> { }));
+                            detail -> { }, (player, reason) -> { }, (role, reason) -> { },
+                            (player, role) -> { }));
         }
 
         String replace(String command, TagContext context) {

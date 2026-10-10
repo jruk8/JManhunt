@@ -36,8 +36,9 @@ class TagEscapesTest {
                             ModifierTagScope.match("Steve", List.of(), new Random(9), warnings::add)),
                     TagContext.TagRole.silent(),
                     new TagContext.TagMatch(7L, new TagBackends(StatValues.inert(), flags, (text,
-                            name) -> text, RosterValues.inert(), players), List.of(), detail -> { }, (player,
-                            reason) -> { }, (role, reason) -> { }, (player, role) -> { }));
+                            name) -> text, RosterValues.inert(), players), List.of(), detail -> { },
+                            detail -> { }, (player, reason) -> { }, (role, reason) -> { },
+                            (player, role) -> { }));
         }
 
         String replace(String command, TagContext context) {

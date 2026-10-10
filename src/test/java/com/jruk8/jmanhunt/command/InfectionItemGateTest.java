@@ -40,7 +40,7 @@ class InfectionItemGateTest {
                         new TagBackends(StatValues.inert(), new FlagStore(),
                                 (text, name) -> text, RosterValues.inert(),
                                 PlayerSinks.inert()),
-                        List.of(), detail -> { }, (player, reason) -> { },
+                        List.of(), detail -> { }, detail -> { }, (player, reason) -> { },
                         (role, reason) -> { }, (player, role) -> { }));
 
         String replace(String command) {

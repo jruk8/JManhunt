@@ -80,6 +80,7 @@ public final class TagContext {
     private final Map<String, TagFunctions.Definition> functions = new HashMap<>();
     private final Deque<String> loopItems;
     private final Consumer<String> loopLimit;
+    private final Consumer<String> stackExhausted;
     private final BiConsumer<String, String> roleMessage;
     private final RoleSoundSink roleSound;
     private final BiConsumer<String, String> commandRun;
@@ -128,22 +129,23 @@ public final class TagContext {
 
     /** Match id, backends, event args, limits, and outcomes. */
     public record TagMatch(long matchId, TagBackends backends, List<String> eventArgs,
-            Consumer<String> loopLimit, BiConsumer<String, String> losePlayer,
-            BiConsumer<String, String> winMatch, BiConsumer<String, String> switchRole) {
-        /** Match with empty args and a silent loop sink. */
+            Consumer<String> loopLimit, Consumer<String> stackExhausted,
+            BiConsumer<String, String> losePlayer, BiConsumer<String, String> winMatch,
+            BiConsumer<String, String> switchRole) {
+        /** Match with empty args and silent limit sinks. */
         public static TagMatch simple(long matchId, TagBackends backends,
                 BiConsumer<String, String> losePlayer,
                 BiConsumer<String, String> winMatch) {
             return simple(matchId, backends, losePlayer, winMatch, (player, role) -> { });
         }
 
-        /** Match with empty args, a silent loop sink, and a role switch sink. */
+        /** Match with empty args, silent limit sinks, and a role switch sink. */
         public static TagMatch simple(long matchId, TagBackends backends,
                 BiConsumer<String, String> losePlayer,
                 BiConsumer<String, String> winMatch,
                 BiConsumer<String, String> switchRole) {
-            return new TagMatch(matchId, backends, List.of(), detail -> { }, losePlayer,
-                    winMatch, switchRole);
+            return new TagMatch(matchId, backends, List.of(), detail -> { }, detail -> { },
+                    losePlayer, winMatch, switchRole);
         }
     }
 
@@ -163,6 +165,7 @@ public final class TagContext {
         this.localFlags = new HashMap<>();
         this.loopItems = new ArrayDeque<>();
         this.loopLimit = match.loopLimit();
+        this.stackExhausted = match.stackExhausted();
         this.roleMessage = role.roleMessage();
         this.roleSound = role.roleSound();
         this.commandRun = sinks.commandRun();
@@ -318,6 +321,20 @@ public final class TagContext {
         }
         limitFired = true;
         loopLimit.accept(detail);
+    }
+
+    /**
+     * Fires the stack-exhausted response behind a line whose
+     * evaluation overflowed the stack. Shares the once-per-line
+     * guard with {@link #loopLimitExceeded}: a line reports once
+     * total, whichever trips first.
+     */
+    public void stackExhausted(String detail) {
+        if (limitFired) {
+            return;
+        }
+        limitFired = true;
+        stackExhausted.accept(detail);
     }
 
     /** Warns once per line about an unterminated tag; later hits stay silent. */

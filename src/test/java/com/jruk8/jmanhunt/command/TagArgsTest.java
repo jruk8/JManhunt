@@ -24,7 +24,8 @@ class TagArgsTest {
                             ModifierTagScope.match("Steve", List.of(), new Random(7), warnings::add)),
                     TagContext.TagRole.silent(),
                     new TagContext.TagMatch(TagContext.NO_MATCH, TagBackends.inert(), eventArgs,
-                            detail -> { }, (player, reason) -> { }, (role, reason) -> { }, (player, role) -> { }));
+                            detail -> { }, detail -> { }, (player, reason) -> { }, (role, reason) -> { },
+                            (player, role) -> { }));
         }
 
         String replace(String command, List<String> eventArgs) {

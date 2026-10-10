@@ -374,6 +374,7 @@ final class CompassAnalysisRunner {
                 modifierOnlyRole(scope),
                 new TagContext.TagMatch(matchId, backends, List.of(),
                         detail -> loopLimitExceeded(detail, matchId),
+                        detail -> stackExhausted(detail, matchId),
                         (target, reason) -> scope.warn(
                                 "Tag <loseplayer> only works in modifiers: skipped."),
                         (role, reason) -> scope.warn(
@@ -395,11 +396,26 @@ final class CompassAnalysisRunner {
     /**
      * Loop-limit sink for debuff lines: without a live match there is
      * nothing to cancel, so the source line is only logged.
+     * Package-private for tests.
      */
-    /** Package-private for tests. */
     void loopLimitExceeded(String detail, long matchId) {
         feedback.log().severe("JMHScript loop exceeded " + TagLoops.LOOP_LIMIT + " steps at "
                 + detail);
+        cancelForLimitFailure(matchId);
+    }
+
+    /**
+     * Stack-exhausted sink for debuff lines: same notify-plus-cancel
+     * core as the loop limit, with its own log line.
+     * Package-private for tests.
+     */
+    void stackExhausted(String detail, long matchId) {
+        feedback.log().severe("JMHScript stack exhausted " + detail);
+        cancelForLimitFailure(matchId);
+    }
+
+    /** Shared notify-plus-cancel core behind both limit sinks. */
+    private void cancelForLimitFailure(long matchId) {
         if (game == null || matchId == TagContext.NO_MATCH) {
             return;
         }

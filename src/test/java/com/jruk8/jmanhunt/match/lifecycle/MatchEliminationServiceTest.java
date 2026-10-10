@@ -21,6 +21,8 @@ import org.mockito.MockedStatic;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -111,6 +113,10 @@ class MatchEliminationServiceTest {
     void eliminateAnyRoleRunsSharedCore() {
         Fixture fixture = fixture(Role.HUNTER, true, false);
         SpawnCampService spawnCamp = mock(SpawnCampService.class);
+        doAnswer(invocation -> {
+            invocation.getArgument(1, Runnable.class).run();
+            return null;
+        }).when(spawnCamp).suppressDeathTrigger(any(Player.class), any(Runnable.class));
         MatchMessaging messaging = mock(MatchMessaging.class);
         @SuppressWarnings("unchecked")
         Consumer<GameInstance> onEliminated = mock(Consumer.class);
@@ -129,6 +135,7 @@ class MatchEliminationServiceTest {
             assertTrue(elimination.eliminateAnyRole(7L, "Alex", "zero hp"));
         }
 
+        verify(spawnCamp).suppressDeathTrigger(eq(fixture.player()), any(Runnable.class));
         verify(spawnCamp).quietKill(fixture.player());
         verify(fixture.instance()).recordDeath(fixture.id(), "Alex", Role.HUNTER);
         verify(fixture.states()).setRole(fixture.id(), Role.SPECTATOR);
@@ -137,6 +144,31 @@ class MatchEliminationServiceTest {
                 Map.of("player", "Alex", "reason", "zero hp"));
         verify(messaging).playInstanceSound(fixture.instance(), "game.hunter-death");
         verify(onEliminated).accept(fixture.instance());
+    }
+
+    @Test
+    void losePlayerKillsWithoutTriggerSuppression() {
+        Fixture fixture = fixture(Role.HUNTER, true, false);
+        SpawnCampService spawnCamp = mock(SpawnCampService.class);
+        @SuppressWarnings("unchecked")
+        Consumer<GameInstance> onEliminated = mock(Consumer.class);
+        MatchEliminationService elimination = new MatchEliminationService(
+                new MatchEliminationService.ElimPlayers(fixture.states(),
+                        mock(FakeSpectatorService.class)),
+                new MatchEliminationService.ElimEdge(mock(TaskScheduler.class), spawnCamp,
+                        mock(RoleTeamService.class)),
+                mock(CompassManager.class), mock(MatchMessaging.class),
+                new MatchEliminationService.ElimMatch(fixture.store(), mock(FlagStore.class),
+                        onEliminated));
+
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class)) {
+            bukkit.when(() -> Bukkit.getPlayer(fixture.id())).thenReturn(fixture.player());
+
+            assertTrue(elimination.losePlayer(7L, "Alex", "fell"));
+        }
+
+        verify(spawnCamp, never()).suppressDeathTrigger(any(Player.class), any(Runnable.class));
+        verify(spawnCamp).quietKill(fixture.player());
     }
 
     @Test

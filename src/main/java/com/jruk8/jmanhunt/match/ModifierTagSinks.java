@@ -189,6 +189,21 @@ public final class ModifierTagSinks {
      */
     void loopLimitExceeded(String detail, long matchId) {
         log.severe("JMHScript loop exceeded " + TagLoops.LOOP_LIMIT + " steps at " + detail);
+        cancelForLimitFailure(matchId);
+    }
+
+    /**
+     * Stack-exhausted sink: evaluation overflowed the stack before
+     * the step budget tripped. Same notify-plus-cancel core as the
+     * loop limit, with its own log line.
+     */
+    void stackExhausted(String detail, long matchId) {
+        log.severe("JMHScript stack exhausted " + detail);
+        cancelForLimitFailure(matchId);
+    }
+
+    /** Shared notify-plus-cancel core behind both limit sinks. */
+    private void cancelForLimitFailure(long matchId) {
         Optional<GameInstance> instance = game.instance(matchId);
         if (instance.isEmpty()) {
             return;

@@ -18,6 +18,7 @@ class TagFunctionsTest {
         final List<String> warnings = new ArrayList<>();
         final List<String> messages = new ArrayList<>();
         final List<String> loopLimits = new ArrayList<>();
+        final List<String> stackExhausted = new ArrayList<>();
         final FlagStore flags = new FlagStore();
 
         TagContext context() {
@@ -29,7 +30,8 @@ class TagFunctionsTest {
                     TagContext.TagRole.silent(),
                     new TagContext.TagMatch(7L, new TagBackends(StatValues.inert(), flags, (text,
                             name) -> text, RosterValues.inert(), PlayerSinks.inert()), List.of(), loopLimits::add,
-                            (player, reason) -> { }, (role, reason) -> { }, (player, role) -> { }));
+                            stackExhausted::add, (player, reason) -> { }, (role, reason) -> { },
+                            (player, role) -> { }));
         }
 
         String replace(String command, TagContext context) {
@@ -199,21 +201,22 @@ class TagFunctionsTest {
     }
 
     @Test
-    void infiniteRecursionHitsBudget() {
+    void infiniteRecursionReportsStackExhausted() {
         Fixture fixture = new Fixture();
         TagContext context = fixture.context();
         context.setProvenance(TagContext.Provenance.of("boom", 0, "console").withLine(1));
 
         assertEquals("", fixture.replace("<def:boom,<boom>>", context));
         assertEquals("null", fixture.replace("<boom>", context));
-        assertEquals(1, fixture.loopLimits.size());
-        String detail = fixture.loopLimits.get(0);
+        assertEquals(1, fixture.stackExhausted.size());
+        assertTrue(fixture.loopLimits.isEmpty());
+        String detail = fixture.stackExhausted.get(0);
         assertTrue(detail.contains("boom"), detail);
-        assertTrue(detail.contains("20000"), detail);
+        assertTrue(detail.contains("evaluating"), detail);
     }
 
     @Test
-    void infiniteRecursionOnTinyStackReportsLoopLimit() throws Exception {
+    void infiniteRecursionOnTinyStackReportsStackExhausted() throws Exception {
         Fixture fixture = new Fixture();
         TagContext context = fixture.context();
         context.setProvenance(TagContext.Provenance.of("boom", 0, "console").withLine(1));
@@ -221,18 +224,19 @@ class TagFunctionsTest {
 
         String[] result = new String[1];
         // A thread with an explicit tiny stack overflows before the
-        // step budget trips; JVMs that ignore the size still pass
-        // through the budget path with identical assertions.
+        // step budget trips; even default stacks overflow first for
+        // this shape, so both paths report on the stack channel.
         Thread eval = new Thread(null, () -> result[0] = fixture.replace("<boom>", context),
                 "tiny-stack-eval", 256 * 1024L);
         eval.start();
         eval.join(30_000);
 
         assertEquals("null", result[0]);
-        assertEquals(1, fixture.loopLimits.size());
-        String detail = fixture.loopLimits.get(0);
+        assertEquals(1, fixture.stackExhausted.size());
+        assertTrue(fixture.loopLimits.isEmpty());
+        String detail = fixture.stackExhausted.get(0);
         assertTrue(detail.contains("boom"), detail);
-        assertTrue(detail.contains("20000"), detail);
+        assertTrue(detail.contains("evaluating"), detail);
     }
 
     @Test
