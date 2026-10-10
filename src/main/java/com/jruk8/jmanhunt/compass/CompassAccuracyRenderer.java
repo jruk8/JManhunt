@@ -63,12 +63,12 @@ public final class CompassAccuracyRenderer {
     }
 
     /**
-     * Accuracy segment for tracking bars: gray parens around the
+     * Accuracy segment for tracking bars: white parens around the
      * hex-colored percent, with the hex color closed before the closing
      * paren so it cannot bleed into the rest of the bar. Pure.
      */
     public static String segment(int percent, String hex) {
-        return "<gray>(<" + hex + ">" + percent + "%<gray>)</gray>";
+        return "<white>(<" + hex + ">" + percent + "%<white>)</white>";
     }
 
     /** Value clamped to [0, 1]; NaN maps to 0. Pure. */

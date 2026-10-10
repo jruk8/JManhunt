@@ -59,7 +59,7 @@ class CompassAccuracyRendererTest {
 
     @Test
     void segmentClosesItsOwnColor() {
-        assertEquals("<gray>(<#a1b2c3>80%<gray>)</gray>",
+        assertEquals("<white>(<#a1b2c3>80%<white>)</white>",
                 CompassAccuracyRenderer.segment(80, "#a1b2c3"));
     }
 }

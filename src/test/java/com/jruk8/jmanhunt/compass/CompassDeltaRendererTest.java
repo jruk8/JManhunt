@@ -133,7 +133,7 @@ class CompassDeltaRendererTest {
 
         String mini = mini(fixture.bars().get(fixture.player().getUniqueId()));
         String hex = CompassAccuracyRenderer.lerpColor("#cc472d", "#63d42a", 0.5);
-        assertTrue(mini.contains("(<" + hex + ">50%<gray>)"), mini);
+        assertTrue(mini.contains("(<" + hex + ">50%<white>)"), mini);
     }
 
     @Test
