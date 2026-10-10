@@ -517,10 +517,12 @@ public final class CommandPlaceholders {
             case "overlap-players" -> TagLocations.overlapPlayers(tag, args, context);
             case "nearby-players" -> TagLocations.nearbyPlayers(tag, args, playerName, context);
             case "pworld", "world" -> TagLocations.playerWorld(tag, name, args, context);
-            case "px", "py", "pz", "pyaw", "ppitch" ->
+            case "px", "py", "pz", "pyaw", "ppitch", "pdirx", "pdiry", "pdirz" ->
                     TagLocations.playerCoord(tag, name, args, context);
             case "distance" -> TagLocations.distance(tag, args, context);
-            case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt" ->
+            case "floor", "ceil", "round", "abs", "sign", "sqrt", "cbrt", "cos", "sin",
+                    "tan", "arccos", "arcsin", "arctan", "radtodeg", "r2d", "degtorad",
+                    "d2r" ->
                     TagExpressions.mathUnary(tag, name, args, context);
             default -> TagFunctions.call(tag, name, args, context, eval);
         };

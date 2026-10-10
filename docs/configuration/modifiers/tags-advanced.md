@@ -55,6 +55,7 @@ see below for full rules.
 | `<nearby-players:player,role,radius,max>` | Names near a player, sender excluded. |
 | `<pworld:player>` | `nether`, `end`, or the raw world name (`<world:player>` alias). |
 | `<px:player>` | Single coords (`py`, `pz`, `pyaw`, `ppitch`). |
+| `<pdirx:player>` | Look-direction components (`pdiry`, `pdirz`). |
 | `<prole:player>` | `HUNTER` or `SPEEDRUNNER`, else `null`. |
 | `<distance:loc1,loc2>` | 3D distance on xyz; cross-dimension full lists yield silent `null`. |
 
@@ -72,6 +73,10 @@ see below for full rules.
 | `<sign:-4>` | `-1`, else `0` or `1`. |
 | `<sqrt:9>` | `3`, square root (`null` for negatives). |
 | `<cbrt:-8>` | `-2`, cube root. |
+| `<cos:0>` | `1`; `<sin>` and `<tan>` likewise take radians. |
+| `<arcsin:1>` | About `1.5708`; inverse trig returns radians (`null` outside [-1, 1]). |
+| `<radtodeg:3.1416>` | About `180` (`<r2d>` alias). |
+| `<degtorad:180>` | About `3.1416` (`<d2r>` alias). |
 | `<root:16,4>` | `2`, the nth root of `x`. |
 | `<range:1,5>` | `[1, 2, 3, 4]`, Python style. |
 | `<len:list>` | Item count, `0` when no list. |

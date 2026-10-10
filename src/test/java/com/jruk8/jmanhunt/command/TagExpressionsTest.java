@@ -333,6 +333,35 @@ class TagExpressionsTest {
     }
 
     @Test
+    void trigAndConversionsEvaluate() {
+        Fixture fixture = new Fixture();
+        assertEquals("1", replace(fixture, "<cos:0>"));
+        assertEquals(TagMath.formatNumber(Math.sin(1)), replace(fixture, "<sin:1>"));
+        assertEquals("0", replace(fixture, "<tan:0>"));
+        assertEquals(TagMath.formatNumber(Math.asin(1)), replace(fixture, "<arcsin:1>"));
+        assertEquals(TagMath.formatNumber(Math.acos(-1)), replace(fixture, "<arccos:-1>"));
+        assertEquals(TagMath.formatNumber(Math.atan(1)), replace(fixture, "<arctan:1>"));
+        assertEquals(TagMath.formatNumber(Math.toDegrees(Math.PI)),
+                replace(fixture, "<radtodeg:3.141592653589793>"));
+        assertEquals(TagMath.formatNumber(Math.toDegrees(Math.PI)),
+                replace(fixture, "<r2d:3.141592653589793>"));
+        assertEquals(TagMath.formatNumber(Math.toRadians(180)),
+                replace(fixture, "<degtorad:180>"));
+        assertEquals(TagMath.formatNumber(Math.toRadians(180)),
+                replace(fixture, "<d2r:180>"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
+    void trigRejectsBadInput() {
+        Fixture fixture = new Fixture();
+        assertEquals("null", replace(fixture, "<arcsin:2>"));
+        assertEquals("null", replace(fixture, "<arccos:-1.5>"));
+        assertEquals("null", replace(fixture, "<cos:abc>"));
+        assertEquals(3, fixture.warnings.size());
+    }
+
+    @Test
     void ifSkipsDeadBranch() {
         Fixture fixture = new Fixture();
         assertEquals("ok", replace(fixture, "<if:\"1 == 2\",<gmessage:bad>,ok>"));

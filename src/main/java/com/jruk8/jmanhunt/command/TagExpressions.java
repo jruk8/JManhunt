@@ -28,10 +28,12 @@ public final class TagExpressions {
 
     /**
      * One-arg math tags ({@code floor}, {@code ceil}, {@code round},
-     * {@code abs}, {@code sign}): the arg may itself be math.
+     * {@code abs}, {@code sign}, trig plus inverse trig, and the
+     * degree-radian converters): the arg may itself be math.
      * Non-numeric input (including {@code null}) warns plus
      * {@code "null"}. Rounds half up like {@code Math.round} without
-     * long overflow.
+     * long overflow. Trig takes radians; inverse trig returns
+     * radians and yields {@code "null"} outside [-1, 1].
      */
     static String mathUnary(String tag, String op, String args, TagContext context) {
         List<String> parts = CommandPlaceholders.splitPickArgs(args);
@@ -56,6 +58,14 @@ public final class TagExpressions {
             case "abs" -> Math.abs(num.number());
             case "sqrt" -> Math.sqrt(num.number());
             case "cbrt" -> Math.cbrt(num.number());
+            case "cos" -> Math.cos(num.number());
+            case "sin" -> Math.sin(num.number());
+            case "tan" -> Math.tan(num.number());
+            case "arccos" -> Math.acos(num.number());
+            case "arcsin" -> Math.asin(num.number());
+            case "arctan" -> Math.atan(num.number());
+            case "radtodeg", "r2d" -> Math.toDegrees(num.number());
+            case "degtorad", "d2r" -> Math.toRadians(num.number());
             default -> Math.signum(num.number());
         };
         if (Double.isNaN(result)) {

@@ -177,8 +177,10 @@ public final class TagLocations {
     /**
      * {@code <px:player>}, {@code <py>}, {@code <pz>},
      * {@code <pyaw>}, {@code <ppitch>}: one coordinate of the online
-     * player. Offline or unknown players resolve {@code "null"}
-     * silently; only blank or malformed args warn.
+     * player, plus {@code <pdirx>}, {@code <pdiry>}, {@code <pdirz>}
+     * for the look-direction vector components. Offline or unknown
+     * players resolve {@code "null"} silently; only blank or
+     * malformed args warn.
      */
     static String playerCoord(String tag, String name, String args, TagContext context) {
         Optional<Location> spot = playerSpot(tag, args, name, context);
@@ -194,6 +196,9 @@ public final class TagLocations {
             case "py" -> TagMath.formatNumber(location.getY());
             case "pz" -> TagMath.formatNumber(location.getZ());
             case "pyaw" -> TagMath.formatNumber(location.getYaw());
+            case "pdirx" -> TagMath.formatNumber(location.getDirection().getX());
+            case "pdiry" -> TagMath.formatNumber(location.getDirection().getY());
+            case "pdirz" -> TagMath.formatNumber(location.getDirection().getZ());
             default -> TagMath.formatNumber(location.getPitch());
         };
     }

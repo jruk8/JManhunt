@@ -108,10 +108,15 @@ creator editor validates them as you type:
 | `<nearby-players:Alex,ALL,10,5>` | Up to 5 players within 10 blocks of Alex, sender excluded. |
 | `<pworld:Alex>` | `nether`, `end`, or the raw world name (`<world:Alex>` is the same tag). |
 | `<px:Alex>` | Alex's x; `<py>`, `<pz>`, `<pyaw>`, `<ppitch>` read the rest. |
+| `<pdirx:Alex>` | Alex's look-direction x; `<pdiry>`, `<pdirz>` read the rest. |
 | `<distance:[0,0,0],[3,4,0]>` | Blocks between two spots: `5`. Full location lists in different dimensions yield `null` silently. |
 | `<floor:2.7>` | `2`; `<ceil:2.3>` is `3`, `<round:2.5>` is `3`. |
 | `<abs:-4>` | `4`; `<sign:-4>` is `-1` (`0` and `1` for the rest). |
 | `<sqrt:9>` | `3`; `<cbrt:-8>` is `-2`. |
+| `<sin:1.5708>` | About `1`; `<cos:0>` is `1`, `<tan:0>` is `0`. All take radians. |
+| `<arcsin:1>` | About `1.5708`; inverse trig returns radians. |
+| `<radtodeg:3.1416>` | About `180`; `<r2d>` is the alias. |
+| `<degtorad:180>` | About `3.1416`; `<d2r>` is the alias. |
 | `<root:16,4>` | `2`, the nth root of `x`. |
 | `<for:[a,b],...>` | Repeats the body per item with the item behind `<i>` (see Loops). |
 | `<while:1==1,...>` | Repeats the body while the condition holds (see Loops). |
@@ -133,7 +138,13 @@ and `<sign>` also accept math (`<floor:7/2>` is `3`), round halves
 up, and yield `null` with a warning when the argument is not a
 number. `<sqrt:x>` and `<cbrt:x>` follow the same one-arg rules
 (`<sqrt:-1>` is `null` with a warning; cube roots accept
-negatives). `<root:x,n>` follows the two-arg rules: bad shapes, a
+negatives), as do `<cos>`, `<sin>`, `<tan>`, `<arccos>`,
+`<arcsin>`, `<arctan>`, `<radtodeg>` (`<r2d>`), and
+`<degtorad>` (`<d2r>`): trig takes radians, inverse trig
+returns radians (`<arcsin:2>` is `null` with a warning),
+`<radtodeg:3.1416>` is about `180`, and `<degtorad:180>`
+is about `3.1416`. `<root:x,n>` follows the two-arg rules: bad
+shapes, a
 zero index, and even roots of negatives yield `0` with a warning,
 while odd roots of negatives work (`<root:-8,3>` is `-2`).
 

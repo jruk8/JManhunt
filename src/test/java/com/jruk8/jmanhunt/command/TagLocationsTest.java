@@ -274,6 +274,24 @@ class TagLocationsTest {
     }
 
     @Test
+    void directionReadsLookVector() {
+        ProximityFixture fixture = new ProximityFixture();
+
+        assertEquals("0", fixture.replace("<pdirx:Zoe>", "Steve"));
+        assertEquals("0", fixture.replace("<pdiry:Zoe>", "Steve"));
+        assertEquals("1", fixture.replace("<pdirz:Zoe>", "Steve"));
+        Location amy = new Location(null, 3, 64, 4, 45.5f, -7.25f);
+        assertEquals(TagMath.formatNumber(amy.getDirection().getX()),
+                fixture.replace("<pdirx:Amy>", "Steve"));
+        assertEquals(TagMath.formatNumber(amy.getDirection().getY()),
+                fixture.replace("<pdiry:Amy>", "Steve"));
+        assertEquals(TagMath.formatNumber(amy.getDirection().getZ()),
+                fixture.replace("<pdirz:Amy>", "Steve"));
+        assertEquals("null", fixture.replace("<pdirx:Ghost>", "Steve"));
+        assertTrue(fixture.warnings.isEmpty(), fixture.warnings.toString());
+    }
+
+    @Test
     void distanceRejectsMalformedLists() {
         List<String> warnings = new ArrayList<>();
         TagContext context = TagContext.run(new TagContext.TagIdentity(ModifierTagScope.match("Steve",
