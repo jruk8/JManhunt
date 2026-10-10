@@ -44,7 +44,8 @@ queues to move them.
 ## Name Colors
 
 Sides are visible at a glance: hunters red, speedrunners green,
-everyone else default, in matches and in the lobby alike. This uses
+AFK yellow, spectators gray, everyone else default, in matches and
+in the lobby alike. This uses
 vanilla team colors with zero dependencies, and LuckPerms prefixes
 apply on top untouched (see
 [LuckPerms](../../advanced/luckperms.md)).

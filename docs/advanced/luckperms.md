@@ -49,7 +49,8 @@ settings:
       enabled: false
 ```
 
-The built-in colors (red hunters, green speedrunners) only recolor
+The built-in colors (red hunters, green speedrunners, yellow AFK,
+gray spectators) only recolor
 the name itself; LuckPerms prefixes and suffixes apply on top
 untouched. They stay on by default; see
 [Roles](../configuration/settings/roles.md#name-colors).

@@ -19,8 +19,9 @@ public class PlayerSettings extends OkaeriConfig {
     @CustomKey("name-colors")
     @Comment({
             "Recolors scoreboard team names so sides are visible at a glance:",
-            "red hunters, green speedrunners, everyone else default. Works",
-            "with zero dependencies; LuckPerms prefixes are left untouched.",
+            "red hunters, green speedrunners, yellow AFK, gray spectators,",
+            "everyone else default. Works with zero dependencies; LuckPerms",
+            "prefixes are left untouched.",
             "Default: true"
     })
     private Toggle nameColors = new Toggle(true);

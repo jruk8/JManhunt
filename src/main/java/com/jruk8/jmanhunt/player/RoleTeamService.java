@@ -13,25 +13,28 @@ import java.util.function.Supplier;
 /**
  * Mirrors manhunt roles onto vanilla scoreboard teams so datapacks and
  * custom modifiers can target sides with selectors like
- * {@code @a[distance=..15,team=HUNTER]}. NONE and AFK players sit in no
- * role team. Team colors recolor names (red hunters, green
- * speedrunners) while the name-colors toggle is on; membership works
- * either way. The lobby twins below carry the same colors with
- * collision rule NEVER, so lobby occupants pass through each other
- * (NEVER exempts members from every pairing, not just teammates);
- * the lobby service moves players between the two sets.
+ * {@code @a[distance=..15,team=HUNTER]}. NONE players sit in no role
+ * team. Team colors recolor names (red hunters, green speedrunners,
+ * yellow AFK, gray spectators) while the name-colors toggle is on;
+ * membership works either way. The lobby twins below carry the same
+ * colors with collision rule NEVER, so lobby occupants pass through
+ * each other (NEVER exempts members from every pairing, not just
+ * teammates); the lobby service moves players between the two sets.
  */
 public final class RoleTeamService {
     public static final String HUNTER_TEAM = "HUNTER";
     public static final String SPEEDRUNNER_TEAM = "SPEEDRUNNER";
     public static final String SPECTATOR_TEAM = "SPECTATOR";
-    private static final List<String> TEAMS = List.of(HUNTER_TEAM, SPEEDRUNNER_TEAM, SPECTATOR_TEAM);
+    public static final String AFK_TEAM = "AFK";
+    private static final List<String> TEAMS = List.of(HUNTER_TEAM, SPEEDRUNNER_TEAM, SPECTATOR_TEAM,
+            AFK_TEAM);
     public static final String LOBBY_HUNTER_TEAM = "jl_hunter";
     public static final String LOBBY_SPEEDRUNNER_TEAM = "jl_speedrunner";
     public static final String LOBBY_SPECTATOR_TEAM = "jl_spectator";
     public static final String LOBBY_NONE_TEAM = "jl_none";
+    public static final String LOBBY_AFK_TEAM = "jl_afk";
     private static final List<String> LOBBY_TEAMS = List.of(LOBBY_HUNTER_TEAM,
-            LOBBY_SPEEDRUNNER_TEAM, LOBBY_SPECTATOR_TEAM, LOBBY_NONE_TEAM);
+            LOBBY_SPEEDRUNNER_TEAM, LOBBY_SPECTATOR_TEAM, LOBBY_NONE_TEAM, LOBBY_AFK_TEAM);
 
     private final PlayerStateStore playerStates;
     private final Supplier<Boolean> teamColors;
@@ -41,7 +44,7 @@ public final class RoleTeamService {
         this.teamColors = teamColors;
     }
 
-    /** Team name for a role, empty for NONE and AFK. Pure for tests. */
+    /** Team name for a role, empty for NONE. Pure for tests. */
     public static Optional<String> teamFor(Role role) {
         if (role == null) {
             return Optional.empty();
@@ -50,13 +53,14 @@ public final class RoleTeamService {
             case HUNTER -> Optional.of(HUNTER_TEAM);
             case SPEEDRUNNER -> Optional.of(SPEEDRUNNER_TEAM);
             case SPECTATOR -> Optional.of(SPECTATOR_TEAM);
-            case NONE, AFK -> Optional.empty();
+            case AFK -> Optional.of(AFK_TEAM);
+            case NONE -> Optional.empty();
         };
     }
 
     /**
-     * Lobby team for a role: every role holds one, NONE and AFK
-     * sharing the colorless twin. Pure for tests.
+     * Lobby team for a role: every role holds one, NONE alone on the
+     * colorless twin. Pure for tests.
      */
     public static String lobbyTeamFor(Role role) {
         if (role == null) {
@@ -66,11 +70,15 @@ public final class RoleTeamService {
             case HUNTER -> LOBBY_HUNTER_TEAM;
             case SPEEDRUNNER -> LOBBY_SPEEDRUNNER_TEAM;
             case SPECTATOR -> LOBBY_SPECTATOR_TEAM;
-            case NONE, AFK -> LOBBY_NONE_TEAM;
+            case AFK -> LOBBY_AFK_TEAM;
+            case NONE -> LOBBY_NONE_TEAM;
         };
     }
 
-    /** Name color for a role: red hunters, green speedrunners, default otherwise. Pure for tests. */
+    /**
+     * Name color for a role: red hunters, green speedrunners, yellow
+     * AFK, gray spectators, default otherwise. Pure for tests.
+     */
     public static NamedTextColor colorFor(Role role) {
         if (role == null) {
             return NamedTextColor.WHITE;
@@ -78,7 +86,9 @@ public final class RoleTeamService {
         return switch (role) {
             case HUNTER -> NamedTextColor.RED;
             case SPEEDRUNNER -> NamedTextColor.GREEN;
-            case SPECTATOR, NONE, AFK -> NamedTextColor.WHITE;
+            case AFK -> NamedTextColor.YELLOW;
+            case SPECTATOR -> NamedTextColor.GRAY;
+            case NONE -> NamedTextColor.WHITE;
         };
     }
 
@@ -106,10 +116,12 @@ public final class RoleTeamService {
         paint(board, HUNTER_TEAM, Role.HUNTER, colors);
         paint(board, SPEEDRUNNER_TEAM, Role.SPEEDRUNNER, colors);
         paint(board, SPECTATOR_TEAM, Role.SPECTATOR, colors);
+        paint(board, AFK_TEAM, Role.AFK, colors);
         paint(board, LOBBY_HUNTER_TEAM, Role.HUNTER, colors);
         paint(board, LOBBY_SPEEDRUNNER_TEAM, Role.SPEEDRUNNER, colors);
         paint(board, LOBBY_SPECTATOR_TEAM, Role.SPECTATOR, colors);
         paint(board, LOBBY_NONE_TEAM, Role.NONE, colors);
+        paint(board, LOBBY_AFK_TEAM, Role.AFK, colors);
     }
 
     private void paint(Scoreboard board, String name, Role role, boolean colors) {

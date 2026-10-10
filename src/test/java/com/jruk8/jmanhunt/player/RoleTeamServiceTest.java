@@ -13,12 +13,12 @@ class RoleTeamServiceTest {
         assertEquals(Optional.of("HUNTER"), RoleTeamService.teamFor(Role.HUNTER));
         assertEquals(Optional.of("SPEEDRUNNER"), RoleTeamService.teamFor(Role.SPEEDRUNNER));
         assertEquals(Optional.of("SPECTATOR"), RoleTeamService.teamFor(Role.SPECTATOR));
+        assertEquals(Optional.of("AFK"), RoleTeamService.teamFor(Role.AFK));
     }
 
     @Test
-    void teamForLeavesNonSidesUnteamed() {
+    void teamForLeavesNoneUnteamed() {
         assertEquals(Optional.empty(), RoleTeamService.teamFor(Role.NONE));
-        assertEquals(Optional.empty(), RoleTeamService.teamFor(Role.AFK));
         assertEquals(Optional.empty(), RoleTeamService.teamFor(null));
     }
 
@@ -26,13 +26,13 @@ class RoleTeamServiceTest {
     void colorForPaintsSides() {
         assertEquals(NamedTextColor.RED, RoleTeamService.colorFor(Role.HUNTER));
         assertEquals(NamedTextColor.GREEN, RoleTeamService.colorFor(Role.SPEEDRUNNER));
+        assertEquals(NamedTextColor.YELLOW, RoleTeamService.colorFor(Role.AFK));
+        assertEquals(NamedTextColor.GRAY, RoleTeamService.colorFor(Role.SPECTATOR));
     }
 
     @Test
     void colorForLeavesOthersDefault() {
-        assertEquals(NamedTextColor.WHITE, RoleTeamService.colorFor(Role.SPECTATOR));
         assertEquals(NamedTextColor.WHITE, RoleTeamService.colorFor(Role.NONE));
-        assertEquals(NamedTextColor.WHITE, RoleTeamService.colorFor(Role.AFK));
         assertEquals(NamedTextColor.WHITE, RoleTeamService.colorFor(null));
     }
 
@@ -42,7 +42,7 @@ class RoleTeamServiceTest {
         assertEquals("jl_speedrunner", RoleTeamService.lobbyTeamFor(Role.SPEEDRUNNER));
         assertEquals("jl_spectator", RoleTeamService.lobbyTeamFor(Role.SPECTATOR));
         assertEquals("jl_none", RoleTeamService.lobbyTeamFor(Role.NONE));
-        assertEquals("jl_none", RoleTeamService.lobbyTeamFor(Role.AFK));
+        assertEquals("jl_afk", RoleTeamService.lobbyTeamFor(Role.AFK));
         assertEquals("jl_none", RoleTeamService.lobbyTeamFor(null));
     }
 }
