@@ -48,6 +48,18 @@ class ListFormatterTest {
     }
 
     @Test
+    void joinOxfordColoredWrapsEntriesWhite() {
+        assertEquals("", ListFormatter.joinOxfordColored(List.of(), "<white>", "</white>"));
+        assertEquals("<white>a</white>",
+                ListFormatter.joinOxfordColored(List.of("a"), "<white>", "</white>"));
+        assertEquals("<white>a</white> <gray>and</gray> <white>b</white>",
+                ListFormatter.joinOxfordColored(List.of("a", "b"), "<white>", "</white>"));
+        assertEquals("<white>a</white><gray>,</gray> <white>b</white><gray>,</gray> "
+                        + "<gray>and</gray> <white>c</white>",
+                ListFormatter.joinOxfordColored(List.of("a", "b", "c"), "<white>", "</white>"));
+    }
+
+    @Test
     void chunkSplitsLinesAtLimit() {
         assertEquals(List.of("a, b", "c"),
                 ListFormatter.chunk(List.of("a", "b", "c"), 2));

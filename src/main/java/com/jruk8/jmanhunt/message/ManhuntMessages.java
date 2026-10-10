@@ -85,10 +85,10 @@ public class ManhuntMessages extends OkaeriConfig {
     private String statusWinHunters = "\n{role-color-hunter}Hunters <white>🏆 on: <gray>{conditions}";
 
     @CustomKey("status-modifiers")
-    private String statusModifiers = "\n<white>Modifiers: <gray>{modifiers}";
+    private String statusModifiers = "\n<#de7766>🚀: {modifiers}";
 
     @CustomKey("status-elapsed")
-    private String statusElapsed = "\n<white>Elapsed: <gray>{duration}";
+    private String statusElapsed = "<gray>⏱ {duration}";
 
     @CustomKey("status-ids")
     private String statusIds = "\n<gray>{value}";

@@ -148,7 +148,7 @@ public class ServerSettings extends OkaeriConfig {
 
         @CustomKey("show-modifiers")
         @Comment({
-                "Show enabled custom modifiers as \"Modifiers: a, b, and c\".",
+                "Show enabled custom modifiers as rocket, a, b, and c.",
                 "Hidden when no custom modifier is enabled.",
                 "Default: true"
         })

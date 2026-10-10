@@ -143,10 +143,10 @@ public final class StatusUnit implements SubcommandUnit {
         List<Player> players = game.onlineMatchRoster(instance);
         support.message(sender, texts.getStatusHeader(),
                 Map.of("status", instance.ending() ? "ENDING" : "ACTIVE"));
+        sendElapsedLine(sender, instance);
         sendMatchRoleBlocks(sender, players, instance.deadPlayers());
         sendWinConditionLines(sender);
         sendModifiersLine(sender);
-        sendElapsedLine(sender, instance);
         sendIdLine(sender, instance.lobbyTag() + "|G" + instance.matchId());
         support.neutralSound(sender);
         return true;
@@ -206,7 +206,8 @@ public final class StatusUnit implements SubcommandUnit {
         }
         enabled.sort(String.CASE_INSENSITIVE_ORDER);
         support.message(sender, texts.getStatusModifiers(),
-                Map.of("modifiers", ListFormatter.joinOxford(enabled)));
+                Map.of("modifiers",
+                        ListFormatter.joinOxfordColored(enabled, "<white>", "</white>")));
     }
 
     /** Optional match runtime, on by default. */

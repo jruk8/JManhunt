@@ -33,6 +33,19 @@ public final class ListFormatter {
     }
 
     /**
+     * Oxford join with every entry wrapped in the given MiniMessage
+     * tags; separators stay the default gray pair from
+     * {@link #joinOxford(List)}. An empty list renders "".
+     */
+    public static String joinOxfordColored(List<String> names, String itemOpen, String itemClose) {
+        List<String> wrapped = new ArrayList<>(names.size());
+        for (String name : names) {
+            wrapped.add(itemOpen + name + itemClose);
+        }
+        return joinOxford(wrapped);
+    }
+
+    /**
      * Oxford join showing at most {@code maxShown} names with an "and n
      * more" tail when names overflow. A non-positive {@code maxShown}
      * renders the overflow alone with {@code overflowOnlyWord} ("5
