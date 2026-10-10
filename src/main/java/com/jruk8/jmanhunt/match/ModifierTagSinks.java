@@ -5,6 +5,7 @@ import com.jruk8.jmanhunt.command.EngineEscapes;
 import com.jruk8.jmanhunt.command.ModifierTagScope;
 import com.jruk8.jmanhunt.command.QuietConsoleDispatch;
 import com.jruk8.jmanhunt.command.TagLocations;
+import com.jruk8.jmanhunt.command.TagLoops;
 import com.jruk8.jmanhunt.config.MiscConfig;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.message.MessageService;
@@ -182,12 +183,12 @@ public final class ModifierTagSinks {
     }
 
     /**
-     * Loop-limit sink: a {@code <while>} or {@code <for>} passed 1000
-     * steps. Logs the source line, tells the match to contact an
-     * administrator, and cancels the match.
+     * Loop-limit sink: a {@code <while>} or {@code <for>} passed the
+     * TagLoops step limit. Logs the source line, tells the match to
+     * contact an administrator, and cancels the match.
      */
     void loopLimitExceeded(String detail, long matchId) {
-        log.severe("JMHScript loop exceeded 1000 steps at " + detail);
+        log.severe("JMHScript loop exceeded " + TagLoops.LOOP_LIMIT + " steps at " + detail);
         Optional<GameInstance> instance = game.instance(matchId);
         if (instance.isEmpty()) {
             return;

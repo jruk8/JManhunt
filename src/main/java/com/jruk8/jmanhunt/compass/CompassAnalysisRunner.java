@@ -11,6 +11,7 @@ import com.jruk8.jmanhunt.command.StatValues;
 import com.jruk8.jmanhunt.command.TagBackends;
 import com.jruk8.jmanhunt.command.TagControlFlow;
 import com.jruk8.jmanhunt.command.TagContext;
+import com.jruk8.jmanhunt.command.TagLoops;
 import com.jruk8.jmanhunt.core.JManhuntLogger;
 import com.jruk8.jmanhunt.core.JManhuntPlaceholders;
 import com.jruk8.jmanhunt.core.PlaceholderPass;
@@ -395,8 +396,10 @@ final class CompassAnalysisRunner {
      * Loop-limit sink for debuff lines: without a live match there is
      * nothing to cancel, so the source line is only logged.
      */
-    private void loopLimitExceeded(String detail, long matchId) {
-        feedback.log().severe("JMHScript loop exceeded 1000 steps at " + detail);
+    /** Package-private for tests. */
+    void loopLimitExceeded(String detail, long matchId) {
+        feedback.log().severe("JMHScript loop exceeded " + TagLoops.LOOP_LIMIT + " steps at "
+                + detail);
         if (game == null || matchId == TagContext.NO_MATCH) {
             return;
         }
